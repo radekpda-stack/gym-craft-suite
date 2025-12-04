@@ -41,8 +41,25 @@ function loadPreferences(): LayoutPreferences {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+      
+      // Merge new items that might be missing from stored preferences
+      let sidebarOrder = parsed.sidebarOrder || DEFAULT_SIDEBAR_ORDER;
+      
+      // Add any missing items from DEFAULT_SIDEBAR_ORDER
+      DEFAULT_SIDEBAR_ORDER.forEach(item => {
+        if (!sidebarOrder.includes(item)) {
+          // Insert before 'settings' if possible, otherwise at the end
+          const settingsIndex = sidebarOrder.indexOf('settings');
+          if (settingsIndex !== -1) {
+            sidebarOrder.splice(settingsIndex, 0, item);
+          } else {
+            sidebarOrder.push(item);
+          }
+        }
+      });
+      
       return {
-        sidebarOrder: parsed.sidebarOrder || DEFAULT_SIDEBAR_ORDER,
+        sidebarOrder,
         dashboardStatsOrder: parsed.dashboardStatsOrder || DEFAULT_DASHBOARD_STATS_ORDER,
         dashboardSectionsOrder: parsed.dashboardSectionsOrder || DEFAULT_DASHBOARD_SECTIONS_ORDER,
       };
