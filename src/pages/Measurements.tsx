@@ -5,7 +5,9 @@ import { Plus, Download, Activity, TrendingUp, TrendingDown, Scale, Percent, Fla
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { mockClients, mockMeasurements } from '@/data/mockData';
+import { useClients } from '@/hooks/useClients';
+import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
+import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { cn } from '@/lib/utils';
 import {
   LineChart,
@@ -20,27 +22,55 @@ import {
 } from 'recharts';
 
 export default function Measurements() {
-  const [selectedClientId, setSelectedClientId] = useState<string>(mockClients[0].id);
+  const { data: clients = [] } = useClients();
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  
+  const effectiveClientId = selectedClientId || clients[0]?.id || '';
+  const { data: measurements = [] } = useMeasurements(effectiveClientId);
+  const createMeasurement = useCreateMeasurement();
 
-  const selectedClient = mockClients.find((c) => c.id === selectedClientId);
-  const clientMeasurements = mockMeasurements.filter((m) => m.clientId === selectedClientId);
+  const selectedClient = clients.find((c) => c.id === effectiveClientId);
 
-  const chartData = clientMeasurements.map((m) => ({
-    date: format(m.date, 'd.M.', { locale: cs }),
-    fullDate: format(m.date, 'd. MMMM yyyy', { locale: cs }),
+  const chartData = measurements.map((m) => ({
+    date: format(new Date(m.date), 'd.M.', { locale: cs }),
+    fullDate: format(new Date(m.date), 'd. MMMM yyyy', { locale: cs }),
     weight: m.weight,
-    bodyFat: m.bodyFatPercentage,
-    muscle: m.muscleMass,
-    metabolism: m.basalMetabolism,
+    bodyFat: m.body_fat_percentage,
+    muscle: m.muscle_mass,
+    metabolism: m.basal_metabolism,
   }));
 
-  const latestMeasurement = clientMeasurements[clientMeasurements.length - 1];
-  const previousMeasurement = clientMeasurements[clientMeasurements.length - 2];
+  const latestMeasurement = measurements[0];
+  const previousMeasurement = measurements[1];
 
-  const getChange = (current?: number, previous?: number) => {
+  const getChange = (current?: number | null, previous?: number | null) => {
     if (!current || !previous) return null;
     return ((current - previous) / previous * 100).toFixed(1);
+  };
+
+  const handleCreateMeasurement = async (data: any) => {
+    await createMeasurement.mutateAsync({
+      client_id: data.clientId,
+      date: data.date,
+      weight: data.weight,
+      body_fat_percentage: data.bodyFatPercentage,
+      muscle_mass: data.muscleMass,
+      basal_metabolism: data.basalMetabolism,
+      chest: data.chest,
+      waist: data.waist,
+      hips: data.hips,
+      bicep_left: data.bicepLeft,
+      bicep_right: data.bicepRight,
+      thigh_left: data.thighLeft,
+      thigh_right: data.thighRight,
+      calf_left: data.calfLeft,
+      calf_right: data.calfRight,
+      mental_state: data.mentalState,
+      notes: data.notes,
+    });
+    setIsCreateOpen(false);
   };
 
   const stats = [
@@ -54,25 +84,25 @@ export default function Measurements() {
     },
     {
       label: 'Tělesný tuk',
-      value: latestMeasurement?.bodyFatPercentage,
+      value: latestMeasurement?.body_fat_percentage,
       unit: '%',
-      change: getChange(latestMeasurement?.bodyFatPercentage, previousMeasurement?.bodyFatPercentage),
+      change: getChange(latestMeasurement?.body_fat_percentage, previousMeasurement?.body_fat_percentage),
       icon: Percent,
       positive: false,
     },
     {
       label: 'Svalová hmota',
-      value: latestMeasurement?.muscleMass,
+      value: latestMeasurement?.muscle_mass,
       unit: 'kg',
-      change: getChange(latestMeasurement?.muscleMass, previousMeasurement?.muscleMass),
+      change: getChange(latestMeasurement?.muscle_mass, previousMeasurement?.muscle_mass),
       icon: Activity,
       positive: true,
     },
     {
       label: 'Bazální metabolismus',
-      value: latestMeasurement?.basalMetabolism,
+      value: latestMeasurement?.basal_metabolism,
       unit: 'kcal',
-      change: getChange(latestMeasurement?.basalMetabolism, previousMeasurement?.basalMetabolism),
+      change: getChange(latestMeasurement?.basal_metabolism, previousMeasurement?.basal_metabolism),
       icon: Flame,
       positive: true,
     },
@@ -96,12 +126,21 @@ export default function Measurements() {
             <Download className="w-4 h-4" />
             Export PDF
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
             <Plus className="w-4 h-4" />
             Nové měření
           </Button>
         </div>
       </div>
+
+      <CreateMeasurementSheet
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSubmit={handleCreateMeasurement}
+        isLoading={createMeasurement.isPending}
+        clients={clients}
+        defaultClientId={effectiveClientId}
+      />
 
       {/* Client & Time Selection */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -110,7 +149,7 @@ export default function Measurements() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {mockClients.map((client) => (
+            {clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 <div className="flex items-center gap-2">
                   <ClientAvatar name={client.name} size="sm" />
@@ -262,25 +301,25 @@ export default function Measurements() {
           <p className="text-muted-foreground mt-1">
             Přidejte první měření pro tohoto klienta
           </p>
-          <Button className="mt-4">Přidat měření</Button>
+          <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>Přidat měření</Button>
         </div>
       )}
 
       {/* Measurements History */}
-      {clientMeasurements.length > 0 && (
+      {measurements.length > 0 && (
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">
             Historie měření
           </h3>
           <div className="space-y-3">
-            {clientMeasurements.reverse().map((measurement) => (
+            {[...measurements].reverse().map((measurement) => (
               <div
                 key={measurement.id}
                 className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200"
               >
                 <div>
                   <p className="font-medium text-foreground">
-                    {format(measurement.date, 'd. MMMM yyyy', { locale: cs })}
+                    {format(new Date(measurement.date), 'd. MMMM yyyy', { locale: cs })}
                   </p>
                   {measurement.notes && (
                     <p className="text-sm text-muted-foreground mt-0.5">
@@ -295,11 +334,11 @@ export default function Measurements() {
                   </div>
                   <div className="text-right">
                     <p className="text-muted-foreground">Tuk</p>
-                    <p className="font-semibold text-foreground">{measurement.bodyFatPercentage}%</p>
+                    <p className="font-semibold text-foreground">{measurement.body_fat_percentage}%</p>
                   </div>
                   <div className="text-right">
                     <p className="text-muted-foreground">Svaly</p>
-                    <p className="font-semibold text-foreground">{measurement.muscleMass} kg</p>
+                    <p className="font-semibold text-foreground">{measurement.muscle_mass} kg</p>
                   </div>
                 </div>
               </div>
