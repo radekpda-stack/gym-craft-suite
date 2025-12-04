@@ -281,6 +281,42 @@ export type Database = {
           },
         ]
       }
+      exercises: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          equipment: string[] | null
+          id: string
+          muscle_groups: string[] | null
+          name: string
+          subcategory: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          equipment?: string[] | null
+          id?: string
+          muscle_groups?: string[] | null
+          name: string
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          equipment?: string[] | null
+          id?: string
+          muscle_groups?: string[] | null
+          name?: string
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       measurements: {
         Row: {
           basal_metabolism: number | null
