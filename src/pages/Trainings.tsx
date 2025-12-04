@@ -1,21 +1,51 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, Filter, Dumbbell, Calendar, Clock, Star } from 'lucide-react';
+import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { mockSessions, mockClients } from '@/data/mockData';
+import { useClients } from '@/hooks/useClients';
+import {
+  useTrainingSessions,
+  useCreateTrainingSession,
+  useUpdateTrainingSession,
+  useDeleteTrainingSession,
+  TrainingSession,
+} from '@/hooks/useTrainingSessions';
+import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
+import { EditTrainingSheet } from '@/components/trainings/EditTrainingSheet';
+import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+import { RatingDisplay } from '@/components/ui/rating-input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
 export default function Trainings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [editingTraining, setEditingTraining] = useState<TrainingSession | null>(null);
+  const [deletingTraining, setDeletingTraining] = useState<TrainingSession | null>(null);
 
-  const filteredSessions = mockSessions.filter((session) => {
-    const client = mockClients.find((c) => c.id === session.clientId);
+  const { data: clients = [] } = useClients();
+  const { data: sessions = [], isLoading } = useTrainingSessions();
+  const createTraining = useCreateTrainingSession();
+  const updateTraining = useUpdateTrainingSession();
+  const deleteTraining = useDeleteTrainingSession();
+
+  const filteredSessions = sessions.filter((session) => {
+    const client = clients.find((c) => c.id === session.client_id);
     const matchesSearch =
       client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      session.notes.toLowerCase().includes(searchQuery.toLowerCase());
+      (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = !statusFilter || session.status === statusFilter;
 
@@ -34,6 +64,39 @@ export default function Trainings() {
     canceled: 'Zrušeno',
   };
 
+  const handleCreateTraining = async (data: TrainingFormValues) => {
+    await createTraining.mutateAsync({
+      client_id: data.client_id,
+      date: new Date(data.date).toISOString(),
+      duration: data.duration,
+      notes: data.notes,
+      subjective_rating: data.subjective_rating || undefined,
+      status: data.status,
+    });
+    setIsCreateSheetOpen(false);
+  };
+
+  const handleEditTraining = async (data: TrainingFormValues) => {
+    if (!editingTraining) return;
+    await updateTraining.mutateAsync({
+      id: editingTraining.id,
+      input: {
+        date: new Date(data.date).toISOString(),
+        duration: data.duration,
+        notes: data.notes,
+        subjective_rating: data.subjective_rating || undefined,
+        status: data.status,
+      },
+    });
+    setEditingTraining(null);
+  };
+
+  const handleDeleteTraining = async () => {
+    if (!deletingTraining) return;
+    await deleteTraining.mutateAsync(deletingTraining.id);
+    setDeletingTraining(null);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -43,21 +106,52 @@ export default function Trainings() {
             Tréninky
           </h1>
           <p className="text-muted-foreground mt-1">
-            {mockSessions.length} tréninků celkem
+            {sessions.length} tréninků celkem
           </p>
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            Šablony
-          </Button>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nový trénink
-          </Button>
-        </div>
+        <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Nový trénink
+        </Button>
       </div>
+
+      <CreateTrainingSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        onSubmit={handleCreateTraining}
+        isLoading={createTraining.isPending}
+        clients={clients}
+      />
+
+      <EditTrainingSheet
+        open={!!editingTraining}
+        onOpenChange={(open) => !open && setEditingTraining(null)}
+        onSubmit={handleEditTraining}
+        isLoading={updateTraining.isPending}
+        clients={clients}
+        training={editingTraining}
+      />
+
+      <AlertDialog open={!!deletingTraining} onOpenChange={(open) => !open && setDeletingTraining(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat trénink?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento trénink? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTraining}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -93,77 +187,102 @@ export default function Trainings() {
       </div>
 
       {/* Sessions List */}
-      <div className="space-y-4">
-        {filteredSessions.map((session, index) => {
-          const client = mockClients.find((c) => c.id === session.clientId);
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredSessions.map((session, index) => {
+            const client = clients.find((c) => c.id === session.client_id);
 
-          return (
-            <div
-              key={session.id}
-              className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.01] hover:glow cursor-pointer group animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Dumbbell className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {client?.name || 'Klient'}
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                      {session.notes}
-                    </p>
-                    <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {format(session.date, 'd. MMMM yyyy', { locale: cs })}
-                        </span>
+            return (
+              <div
+                key={session.id}
+                className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.01] hover:glow group animate-slide-up relative"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Action buttons */}
+                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setEditingTraining(session)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setDeletingTraining(session)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Dumbbell className="w-7 h-7 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {client?.name || 'Klient'}
+                      </h3>
+                      {session.notes && (
+                        <p className="text-muted-foreground mt-1">
+                          {session.notes}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {format(new Date(session.date), 'd. MMMM yyyy', { locale: cs })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4" />
+                          <span>
+                            {format(new Date(session.date), 'HH:mm', { locale: cs })}
+                          </span>
+                        </div>
+                        <span>•</span>
+                        <span>{session.duration} min</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" />
-                        <span>
-                          {format(session.date, 'HH:mm', { locale: cs })}
-                        </span>
-                      </div>
-                      <span>•</span>
-                      <span>{session.duration} min</span>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary">
-                    <Star className="w-4 h-4 text-primary fill-primary" />
-                    <span className="font-medium text-foreground">
-                      {session.subjectiveRating}/10
+                  <div className="flex items-center gap-3">
+                    <RatingDisplay value={session.subjective_rating} />
+                    <span
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-sm font-medium border',
+                        statusColors[session.status]
+                      )}
+                    >
+                      {statusLabels[session.status]}
                     </span>
                   </div>
-                  <span
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-sm font-medium border',
-                      statusColors[session.status]
-                    )}
-                  >
-                    {statusLabels[session.status]}
-                  </span>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      {filteredSessions.length === 0 && (
+      {!isLoading && filteredSessions.length === 0 && (
         <div className="glass rounded-2xl p-12 text-center">
           <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground">
-            Žádné tréninky nenalezeny
+            {sessions.length === 0 ? "Zatím nemáte žádné tréninky" : "Žádné tréninky nenalezeny"}
           </h3>
           <p className="text-muted-foreground mt-1">
-            Zkuste upravit vyhledávání nebo filtry
+            {sessions.length === 0
+              ? "Vytvořte první trénink kliknutím na tlačítko výše"
+              : "Zkuste upravit vyhledávání nebo filtry"}
           </p>
         </div>
       )}

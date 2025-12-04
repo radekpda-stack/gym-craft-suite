@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { useClients, useCreateClient, useUpdateClient, Client } from '@/hooks/useClients';
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
+import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
 import { ClientFormValues } from '@/lib/validations/client';
 import { cn } from '@/lib/utils';
 
@@ -15,10 +16,12 @@ export default function Clients() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
 
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
 
@@ -42,6 +45,12 @@ export default function Clients() {
     if (!editingClient) return;
     await updateClient.mutateAsync({ id: editingClient.id, values: data });
     setEditingClient(null);
+  };
+
+  const handleDeleteClient = async () => {
+    if (!deletingClient) return;
+    await deleteClient.mutateAsync(deletingClient.id);
+    setDeletingClient(null);
   };
 
   const getCreditColor = (credit: number) => {
@@ -82,6 +91,14 @@ export default function Clients() {
         onSubmit={handleEditClient}
         isLoading={updateClient.isPending}
         client={editingClient}
+      />
+
+      <DeleteClientDialog
+        open={!!deletingClient}
+        onOpenChange={(open) => !open && setDeletingClient(null)}
+        onConfirm={handleDeleteClient}
+        clientName={deletingClient?.name || ""}
+        isLoading={deleteClient.isPending}
       />
 
       {/* Search & Filters */}
@@ -130,26 +147,40 @@ export default function Clients() {
               className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              {/* Edit button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setEditingClient(client);
-                }}
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
+              {/* Action buttons */}
+              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setEditingClient(client);
+                  }}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeletingClient(client);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
 
               <Link to={`/clients/${client.id}`} className="block">
                 <div className="flex items-start gap-4">
                   <ClientAvatar name={client.name} size="lg" />
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-8">
+                    <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-16">
                       {client.name}
                     </h3>
                     
