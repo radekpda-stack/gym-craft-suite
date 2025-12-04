@@ -135,6 +135,7 @@ export function DateTimePicker({
                     {hours.map((hour) => (
                       <button
                         key={hour}
+                        type="button"
                         onClick={() => handleHourChange(hour)}
                         className={cn(
                           "w-full px-3 py-1.5 text-sm rounded-md transition-colors",
@@ -156,6 +157,7 @@ export function DateTimePicker({
                     {minutes.map((minute) => (
                       <button
                         key={minute}
+                        type="button"
                         onClick={() => handleMinuteChange(minute)}
                         className={cn(
                           "w-full px-3 py-1.5 text-sm rounded-md transition-colors",

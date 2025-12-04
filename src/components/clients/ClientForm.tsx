@@ -148,7 +148,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="birthDate"
@@ -179,8 +179,16 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
                     step="0.01"
                     placeholder="0"
                     className="bg-secondary border-border"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    value={field.value === 0 ? '' : field.value}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      field.onChange(val === '' ? 0 : parseFloat(val));
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === '') {
+                        field.onChange(0);
+                      }
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
