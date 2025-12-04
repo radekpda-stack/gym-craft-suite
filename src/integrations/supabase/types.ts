@@ -151,7 +151,7 @@ export type Database = {
           birth_date: string | null
           created_at: string
           credit_balance: number | null
-          email: string
+          email: string | null
           health_restrictions: string | null
           id: string
           name: string
@@ -165,7 +165,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
-          email: string
+          email?: string | null
           health_restrictions?: string | null
           id?: string
           name: string
@@ -179,7 +179,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
-          email?: string
+          email?: string | null
           health_restrictions?: string | null
           id?: string
           name?: string
