@@ -11,6 +11,7 @@ export interface Product {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 export interface CreateProductInput {
@@ -46,6 +47,9 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: async (input: CreateProductInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -54,6 +58,7 @@ export function useCreateProduct() {
           purchase_price: input.purchase_price || 0,
           category: input.category || "supplement",
           is_active: input.is_active ?? true,
+          user_id: user.id,
         })
         .select()
         .single();

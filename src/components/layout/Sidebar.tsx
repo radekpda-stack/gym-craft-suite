@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   DndContext,
@@ -33,11 +33,14 @@ import {
   GripVertical,
   Pencil,
   Check,
+  LogOut,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { QuickProductSale } from '@/components/sales/QuickProductSale';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 
 interface NavItem {
   id: string;
@@ -122,7 +125,9 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { preferences, updateSidebarOrder } = useLayoutPreferences();
+  const { signOut, user } = useAuth();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -152,6 +157,23 @@ export function Sidebar() {
       const newIndex = filteredOrder.indexOf(over.id as string);
       const newOrder = arrayMove(filteredOrder, oldIndex, newIndex);
       updateSidebarOrder(newOrder);
+    }
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se odhlásit.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Odhlášení úspěšné',
+        description: 'Byli jste odhlášeni.',
+      });
+      navigate('/auth', { replace: true });
     }
   };
 
@@ -211,8 +233,24 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Edit Mode Toggle & Collapse Toggle */}
+      {/* User & Controls */}
       <div className="px-3 pb-6 space-y-2">
+        {/* User email display */}
+        {!collapsed && user && (
+          <div className="px-4 py-2 text-xs text-sidebar-foreground/50 truncate">
+            {user.email}
+          </div>
+        )}
+        
+        {/* Logout button */}
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl glass-subtle text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span className="text-sm font-medium">Odhlásit se</span>}
+        </button>
+
         {!collapsed && (
           <button
             onClick={() => setIsEditMode(!isEditMode)}

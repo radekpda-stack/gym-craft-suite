@@ -15,6 +15,7 @@ export interface CreditTransaction {
   product_id: string | null;
   created_at: string;
   created_by: string | null;
+  user_id: string | null;
 }
 
 export interface CreateTransactionInput {
@@ -51,6 +52,9 @@ export function useCreateTransaction() {
 
   return useMutation({
     mutationFn: async (input: CreateTransactionInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       // First, create the transaction
       const { data: transaction, error: transactionError } = await supabase
         .from("credit_transactions")
@@ -61,6 +65,7 @@ export function useCreateTransaction() {
           description: input.description || null,
           training_session_id: input.training_session_id || null,
           product_id: input.product_id || null,
+          user_id: user.id,
         })
         .select()
         .single();

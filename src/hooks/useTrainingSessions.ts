@@ -17,6 +17,7 @@ export interface TrainingSession {
   participant_count: number;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 export interface CreateTrainingInput {
@@ -65,6 +66,9 @@ export function useCreateTrainingSession() {
 
   return useMutation({
     mutationFn: async (input: CreateTrainingInput & { trainingPrices?: { "1": number; "2": number; "3": number } }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("training_sessions")
         .insert({
@@ -75,6 +79,7 @@ export function useCreateTrainingSession() {
           subjective_rating: input.subjective_rating || null,
           status: input.status || "scheduled",
           participant_count: input.participant_count || 1,
+          user_id: user.id,
         })
         .select()
         .single();
@@ -102,6 +107,7 @@ export function useCreateTrainingSession() {
             type: "training",
             description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
             training_session_id: data.id,
+            user_id: user.id,
           });
 
         // Update client's credit balance
@@ -156,6 +162,9 @@ export function useUpdateTrainingSession() {
       input: UpdateTrainingInput; 
       trainingPrices?: { "1": number; "2": number; "3": number } 
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       // First, get the current training to check if status is changing to completed
       const { data: oldTraining } = await supabase
         .from("training_sessions")
@@ -198,6 +207,7 @@ export function useUpdateTrainingSession() {
             type: "training",
             description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
             training_session_id: id,
+            user_id: user.id,
           });
 
         // Update client's credit balance
@@ -287,6 +297,9 @@ export function useCancelTrainingSession() {
       trainingPrices: { "1": number; "2": number; "3": number };
       deductCredit?: boolean;
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       // Calculate price based on participant count
       let price: number = 0;
       if (deductCredit) {
@@ -325,6 +338,7 @@ export function useCancelTrainingSession() {
             type: "canceled_training",
             description: `Zrušený trénink${isLateCancellation ? ' (pozdě)' : ''} (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
             training_session_id: id,
+            user_id: user.id,
           });
 
         if (transactionError) throw transactionError;
@@ -398,6 +412,9 @@ export function useCompleteTrainingSession() {
       notes,
       trainingPrices 
     }: CompleteTrainingInput & { trainingPrices: { "1": number; "2": number; "3": number } }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       // Calculate price based on participant count
       let price: number;
       if (participant_count >= 3) {
@@ -438,6 +455,7 @@ export function useCompleteTrainingSession() {
           type: "training",
           description: `Trénink (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
           training_session_id: id,
+          user_id: user.id,
         });
 
       if (transactionError) throw transactionError;

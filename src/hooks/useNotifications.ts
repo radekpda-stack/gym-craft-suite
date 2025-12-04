@@ -17,6 +17,7 @@ export interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  user_id: string | null;
 }
 
 export function useNotifications() {
@@ -96,9 +97,12 @@ export function useCreateNotification() {
       title: string;
       message: string;
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("notifications")
-        .insert(notification)
+        .insert({ ...notification, user_id: user.id })
         .select()
         .single();
 

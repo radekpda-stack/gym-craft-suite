@@ -13,6 +13,7 @@ export interface Diagnostic {
   findings: string;
   notes: string;
   created_at: string;
+  user_id: string | null;
 }
 
 export interface CreateDiagnosticInput {
@@ -81,6 +82,9 @@ export function useCreateDiagnostic() {
 
   return useMutation({
     mutationFn: async (input: CreateDiagnosticInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("diagnostics")
         .insert({
@@ -90,6 +94,7 @@ export function useCreateDiagnostic() {
           area_name: input.area_name,
           findings: input.findings,
           notes: input.notes || "",
+          user_id: user.id,
         })
         .select()
         .single();
