@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users } from 'lucide-react';
+import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
@@ -11,6 +11,7 @@ import {
   useUpdateTrainingSession,
   useDeleteTrainingSession,
   useCompleteTrainingSession,
+  useCancelTrainingSession,
   TrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
@@ -48,6 +49,7 @@ export default function Trainings() {
   const [editingTraining, setEditingTraining] = useState<TrainingSession | null>(null);
   const [deletingTraining, setDeletingTraining] = useState<TrainingSession | null>(null);
   const [completingTraining, setCompletingTraining] = useState<TrainingSession | null>(null);
+  const [cancelingTraining, setCancelingTraining] = useState<TrainingSession | null>(null);
   const [completeParticipants, setCompleteParticipants] = useState(1);
   const [completeRating, setCompleteRating] = useState<number | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
@@ -58,6 +60,7 @@ export default function Trainings() {
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const completeTraining = useCompleteTrainingSession();
+  const cancelTraining = useCancelTrainingSession();
   const trainingPrices = useTrainingPrices();
 
   const filteredSessions = sessions.filter((session) => {
@@ -142,6 +145,29 @@ export default function Trainings() {
 
   const getExpectedPrice = () => {
     return getTrainingPrice(completeParticipants, trainingPrices);
+  };
+
+  const handleCancelTraining = async () => {
+    if (!cancelingTraining) return;
+    
+    const trainingDate = new Date(cancelingTraining.date);
+    const hoursUntilTraining = differenceInHours(trainingDate, new Date());
+    const isLateCancellation = hoursUntilTraining < 24;
+
+    await cancelTraining.mutateAsync({
+      id: cancelingTraining.id,
+      client_id: cancelingTraining.client_id,
+      participant_count: cancelingTraining.participant_count || 1,
+      isLateCancellation,
+      trainingPrices,
+    });
+    
+    setCancelingTraining(null);
+  };
+
+  const getCancelPrice = () => {
+    if (!cancelingTraining) return 0;
+    return getTrainingPrice(cancelingTraining.participant_count || 1, trainingPrices);
   };
 
   return (
@@ -276,7 +302,57 @@ export default function Trainings() {
         </DialogContent>
       </Dialog>
 
-      {/* Search & Filters */}
+      {/* Cancel Training Dialog */}
+      <Dialog open={!!cancelingTraining} onOpenChange={(open) => !open && setCancelingTraining(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Zrušit trénink</DialogTitle>
+            <DialogDescription>
+              Opravdu chcete zrušit tento trénink? Kredit bude automaticky odečten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 rounded-lg bg-secondary/50 border">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Počet účastníků:</span>
+                <span className="font-medium">{cancelingTraining?.participant_count || 1}</span>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-sm text-muted-foreground">Cena za trénink:</span>
+                <span className="text-lg font-bold text-destructive">{getCancelPrice()} Kč</span>
+              </div>
+              {cancelingTraining && differenceInHours(new Date(cancelingTraining.date), new Date()) < 24 && (
+                <div className="mt-3 p-2 rounded bg-warning/10 text-warning text-sm">
+                  ⚠️ Pozdní zrušení (méně než 24h před tréninkem)
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelingTraining(null)}>
+              Zpět
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelTraining} 
+              disabled={cancelTraining.isPending}
+            >
+              {cancelTraining.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Ruším...
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Zrušit a odečíst kredit
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -328,15 +404,26 @@ export default function Trainings() {
                 {/* Action buttons */}
                 <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {session.status === 'scheduled' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 gap-1 text-success hover:text-success hover:bg-success/10"
-                      onClick={() => openCompleteDialog(session)}
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Dokončit
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-success hover:text-success hover:bg-success/10"
+                        onClick={() => openCompleteDialog(session)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Dokončit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setCancelingTraining(session)}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Zrušit
+                      </Button>
+                    </>
                   )}
                   <Button
                     variant="ghost"

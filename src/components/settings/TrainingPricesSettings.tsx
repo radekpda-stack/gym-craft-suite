@@ -12,16 +12,18 @@ export function TrainingPricesSettings() {
   const [price1, setPrice1] = useState('');
   const [price2, setPrice2] = useState('');
   const [price3, setPrice3] = useState('');
+  const [priceFirstTraining, setPriceFirstTraining] = useState('');
   const [lowCreditThreshold, setLowCreditThreshold] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  const currentPrices = settings?.training_prices || { "1": 800, "2": 1000, "3": 1200 };
+  const currentPrices = settings?.training_prices || { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
   const currentThreshold = settings?.low_credit_threshold || 500;
 
   const startEditing = () => {
     setPrice1(currentPrices["1"].toString());
     setPrice2(currentPrices["2"].toString());
     setPrice3(currentPrices["3"].toString());
+    setPriceFirstTraining((currentPrices["first_training"] || 1000).toString());
     setLowCreditThreshold(currentThreshold.toString());
     setIsEditing(true);
   };
@@ -33,6 +35,7 @@ export function TrainingPricesSettings() {
         "1": parseInt(price1) || 800,
         "2": parseInt(price2) || 1000,
         "3": parseInt(price3) || 1200,
+        "first_training": parseInt(priceFirstTraining) || 1000,
       },
     });
 
@@ -58,7 +61,7 @@ export function TrainingPricesSettings() {
         <h3 className="text-lg font-semibold text-foreground mb-4">Ceny tréninků</h3>
         {isEditing ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label>1 osoba</Label>
                 <Input
@@ -86,6 +89,15 @@ export function TrainingPricesSettings() {
                   className="mt-2"
                 />
               </div>
+              <div>
+                <Label>1. trénink/diagnostika</Label>
+                <Input
+                  type="number"
+                  value={priceFirstTraining}
+                  onChange={(e) => setPriceFirstTraining(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
             </div>
             <div className="flex gap-3">
               <Button onClick={handleSave} disabled={updateSetting.isPending}>
@@ -98,7 +110,7 @@ export function TrainingPricesSettings() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-secondary/50">
                 <p className="text-sm text-muted-foreground">1 osoba</p>
                 <p className="text-xl font-bold text-foreground">{currentPrices["1"]} Kč</p>
@@ -110,6 +122,10 @@ export function TrainingPricesSettings() {
               <div className="p-4 rounded-xl bg-secondary/50">
                 <p className="text-sm text-muted-foreground">3+ osoby</p>
                 <p className="text-xl font-bold text-foreground">{currentPrices["3"]} Kč</p>
+              </div>
+              <div className="p-4 rounded-xl bg-secondary/50">
+                <p className="text-sm text-muted-foreground">1. trénink/diagnostika</p>
+                <p className="text-xl font-bold text-foreground">{currentPrices["first_training"] || 1000} Kč</p>
               </div>
             </div>
             <Button variant="outline" onClick={startEditing}>

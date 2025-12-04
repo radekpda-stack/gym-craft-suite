@@ -14,6 +14,7 @@ export interface TrainingPrices {
   "1": number;
   "2": number;
   "3": number;
+  "first_training": number;
 }
 
 export function useAppSettings() {
@@ -40,7 +41,7 @@ export function useAppSettings() {
 export function useTrainingPrices() {
   const { data: settings } = useAppSettings();
   
-  const defaultPrices: TrainingPrices = { "1": 800, "2": 1000, "3": 1200 };
+  const defaultPrices: TrainingPrices = { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
   
   return settings?.training_prices || defaultPrices;
 }
