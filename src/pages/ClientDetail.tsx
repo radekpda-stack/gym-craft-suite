@@ -19,6 +19,7 @@ import {
   XCircle,
   Calendar,
   Clock,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +32,7 @@ import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
 import { ClientMediaTab } from '@/components/media/ClientMediaTab';
+import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -114,6 +116,9 @@ export default function ClientDetail() {
               Klient od{' '}
               {format(new Date(client.created_at), 'MMMM yyyy', { locale: cs })}
             </p>
+            <div className="mt-2">
+              <ClientTagsManager clientId={client.id} />
+            </div>
           </div>
         </div>
 

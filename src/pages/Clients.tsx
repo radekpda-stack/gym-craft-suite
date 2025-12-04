@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
 import { useCreateTransaction, useCreditTransactions } from '@/hooks/useCreditTransactions';
+import { useClientsWithTags } from '@/hooks/useClientTags';
+import { useTags } from '@/hooks/useTags';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
@@ -26,6 +29,7 @@ export default function Clients() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [lowCreditFilter, setLowCreditFilter] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -40,6 +44,8 @@ export default function Clients() {
   const deleteClient = useDeleteClient();
   const createTransaction = useCreateTransaction();
   const { data: creditClientTransactions = [] } = useCreditTransactions(creditClient?.id);
+  const { data: clientTagsMap = {} } = useClientsWithTags();
+  const { data: allTags = [] } = useTags();
 
   // Handle URL filter parameter
   useEffect(() => {
@@ -55,19 +61,27 @@ export default function Clients() {
     setSearchParams(searchParams);
   };
 
+  const clearAllFilters = () => {
+    setSelectedGoal(null);
+    setSelectedTagId(null);
+    clearLowCreditFilter();
+  };
+
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (client.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (client.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
     
     const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
+    
+    const matchesTag = !selectedTagId || (clientTagsMap[client.id] || []).some(t => t.id === selectedTagId);
 
-    return matchesSearch && matchesGoal && matchesLowCredit;
+    return matchesSearch && matchesGoal && matchesLowCredit && matchesTag;
   });
 
   const handleCreateClient = async (data: ClientFormValues) => {
@@ -280,9 +294,25 @@ export default function Clients() {
               <X className="w-4 h-4" />
             </Button>
           )}
+          {selectedTagId && (
+            <Button
+              variant="secondary"
+              onClick={() => setSelectedTagId(null)}
+              className="rounded-xl gap-2"
+              style={{ 
+                backgroundColor: allTags.find(t => t.id === selectedTagId)?.color + '20',
+                color: allTags.find(t => t.id === selectedTagId)?.color,
+                borderColor: allTags.find(t => t.id === selectedTagId)?.color
+              }}
+            >
+              <Tag className="w-3 h-3" />
+              {allTags.find(t => t.id === selectedTagId)?.name}
+              <X className="w-4 h-4" />
+            </Button>
+          )}
           <Button
-            variant={selectedGoal === null && !lowCreditFilter ? 'default' : 'outline'}
-            onClick={() => { setSelectedGoal(null); clearLowCreditFilter(); }}
+            variant={selectedGoal === null && !lowCreditFilter && !selectedTagId ? 'default' : 'outline'}
+            onClick={clearAllFilters}
             className="rounded-xl"
           >
             Všichni
@@ -297,6 +327,21 @@ export default function Clients() {
               {goal}
             </Button>
           ))}
+          {allTags.length > 0 && !selectedTagId && (
+            <div className="flex gap-1 items-center">
+              <span className="text-muted-foreground text-sm mx-1">|</span>
+              {allTags.slice(0, 4).map((tag) => (
+                <Badge
+                  key={tag.id}
+                  style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                  className="border cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setSelectedTagId(tag.id)}
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -307,7 +352,9 @@ export default function Clients() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredClients.map((client, index) => (
+          {filteredClients.map((client, index) => {
+            const clientTags = clientTagsMap[client.id] || [];
+            return (
             <div
               key={client.id}
               className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative"
@@ -372,22 +419,33 @@ export default function Clients() {
                       <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(client.training_goals || []).slice(0, 2).map((goal) => (
-                        <span
-                          key={goal}
-                          className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium"
-                        >
-                          {goal}
-                        </span>
-                      ))}
-                    </div>
+                    {/* Client Tags */}
+                    {clientTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {clientTags.slice(0, 3).map((tag) => (
+                          <Badge
+                            key={tag.id}
+                            style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                            className="border text-xs px-1.5 py-0.5"
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {clientTags.length > 3 && (
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                            +{clientTags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mt-3 space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="w-4 h-4" />
-                        <span className="truncate">{client.email}</span>
-                      </div>
+                      {client.email && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="w-4 h-4" />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                      )}
                       {client.phone && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Phone className="w-4 h-4" />
@@ -407,7 +465,7 @@ export default function Clients() {
                 </div>
               </Link>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
