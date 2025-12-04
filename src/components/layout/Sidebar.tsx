@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Zap,
 } from 'lucide-react';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -39,16 +40,19 @@ export function Sidebar() {
         collapsed ? 'w-20' : 'w-64'
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-sidebar-border">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-          <Zap className="w-6 h-6 text-primary-foreground" />
+      {/* Logo & Notifications */}
+      <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <Zap className="w-6 h-6 text-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <span className="text-xl font-bold text-sidebar-foreground tracking-tight">
+              FitCoach
+            </span>
+          )}
         </div>
-        {!collapsed && (
-          <span className="text-xl font-bold text-sidebar-foreground tracking-tight">
-            FitCoach
-          </span>
-        )}
+        {!collapsed && <NotificationCenter />}
       </div>
 
       {/* Navigation */}

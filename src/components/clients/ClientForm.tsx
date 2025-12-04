@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -16,10 +16,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { clientFormSchema, ClientFormValues } from "@/lib/validations/client";
+import { Client } from "@/hooks/useClients";
 
 interface ClientFormProps {
   onSubmit: (data: ClientFormValues) => Promise<void>;
   isLoading?: boolean;
+  defaultValues?: Partial<Client>;
+  submitLabel?: string;
 }
 
 const SUGGESTED_GOALS = [
@@ -32,20 +35,37 @@ const SUGGESTED_GOALS = [
   "Obecná fitness",
 ];
 
-export function ClientForm({ onSubmit, isLoading }: ClientFormProps) {
+export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "Vytvořit klienta" }: ClientFormProps) {
   const [newGoal, setNewGoal] = useState("");
   
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      trainingGoals: [],
-      notes: "",
-      healthRestrictions: "",
+      name: defaultValues?.name || "",
+      email: defaultValues?.email || "",
+      phone: defaultValues?.phone || "",
+      trainingGoals: defaultValues?.training_goals || [],
+      notes: defaultValues?.notes || "",
+      healthRestrictions: defaultValues?.health_restrictions || "",
+      creditBalance: defaultValues?.credit_balance || 0,
+      birthDate: defaultValues?.birth_date || "",
     },
   });
+
+  useEffect(() => {
+    if (defaultValues) {
+      form.reset({
+        name: defaultValues.name || "",
+        email: defaultValues.email || "",
+        phone: defaultValues.phone || "",
+        trainingGoals: defaultValues.training_goals || [],
+        notes: defaultValues.notes || "",
+        healthRestrictions: defaultValues.health_restrictions || "",
+        creditBalance: defaultValues.credit_balance || 0,
+        birthDate: defaultValues.birth_date || "",
+      });
+    }
+  }, [defaultValues, form]);
 
   const trainingGoals = form.watch("trainingGoals");
 
@@ -89,42 +109,85 @@ export function ClientForm({ onSubmit, isLoading }: ClientFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email *</FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="jan@example.com"
-                  className="bg-secondary border-border"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="jan@example.com"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Telefon</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="+420 123 456 789"
-                  className="bg-secondary border-border"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefon</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="+420 123 456 789"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="birthDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Datum narození</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="creditBalance"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kredit (CZK)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0"
+                    className="bg-secondary border-border"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="space-y-3">
           <Label>Tréninkové cíle</Label>
@@ -229,7 +292,7 @@ export function ClientForm({ onSubmit, isLoading }: ClientFormProps) {
               Ukládám...
             </>
           ) : (
-            "Vytvořit klienta"
+            submitLabel
           )}
         </Button>
       </form>

@@ -7,34 +7,40 @@ import {
 } from "@/components/ui/sheet";
 import { ClientForm } from "./ClientForm";
 import { ClientFormValues } from "@/lib/validations/client";
+import { Client } from "@/hooks/useClients";
 
-interface CreateClientSheetProps {
+interface EditClientSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: ClientFormValues) => Promise<void>;
   isLoading?: boolean;
+  client: Client | null;
 }
 
-export function CreateClientSheet({
+export function EditClientSheet({
   open,
   onOpenChange,
   onSubmit,
   isLoading,
-}: CreateClientSheetProps) {
+  client,
+}: EditClientSheetProps) {
+  if (!client) return null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Nový klient</SheetTitle>
+          <SheetTitle>Upravit klienta</SheetTitle>
           <SheetDescription>
-            Vyplňte údaje o novém klientovi. Pole označená * jsou povinná.
+            Upravte údaje klienta {client.name}
           </SheetDescription>
         </SheetHeader>
         <div className="mt-6">
           <ClientForm 
             onSubmit={onSubmit} 
-            isLoading={isLoading}
-            submitLabel="Vytvořit klienta"
+            isLoading={isLoading} 
+            defaultValues={client}
+            submitLabel="Uložit změny"
           />
         </div>
       </SheetContent>

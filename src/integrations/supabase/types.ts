@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
+          birth_date: string | null
           created_at: string
+          credit_balance: number | null
           email: string
           health_restrictions: string | null
           id: string
@@ -27,7 +29,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birth_date?: string | null
           created_at?: string
+          credit_balance?: number | null
           email: string
           health_restrictions?: string | null
           id?: string
@@ -38,7 +42,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birth_date?: string | null
           created_at?: string
+          credit_balance?: number | null
           email?: string
           health_restrictions?: string | null
           id?: string
@@ -49,6 +55,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

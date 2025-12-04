@@ -11,6 +11,8 @@ export interface Client {
   training_goals: string[];
   notes: string;
   health_restrictions: string;
+  credit_balance: number;
+  birth_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +32,24 @@ export function useClients() {
   });
 }
 
+export function useClient(id: string | undefined) {
+  return useQuery({
+    queryKey: ["clients", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Client | null;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useCreateClient() {
   const queryClient = useQueryClient();
 
@@ -44,6 +64,8 @@ export function useCreateClient() {
           training_goals: values.trainingGoals,
           notes: values.notes || "",
           health_restrictions: values.healthRestrictions || "",
+          credit_balance: values.creditBalance || 0,
+          birth_date: values.birthDate || null,
         })
         .select()
         .single();
@@ -63,6 +85,79 @@ export function useCreateClient() {
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit klienta. Zkuste to prosím znovu.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: ClientFormValues }) => {
+      const { data, error } = await supabase
+        .from("clients")
+        .update({
+          name: values.name,
+          email: values.email,
+          phone: values.phone || null,
+          training_goals: values.trainingGoals,
+          notes: values.notes || "",
+          health_restrictions: values.healthRestrictions || "",
+          credit_balance: values.creditBalance || 0,
+          birth_date: values.birthDate || null,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.id] });
+      toast({
+        title: "Klient aktualizován",
+        description: "Údaje klienta byly úspěšně uloženy.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating client:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se aktualizovat klienta.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDeleteClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast({
+        title: "Klient smazán",
+        description: "Klient byl úspěšně odstraněn.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting client:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se smazat klienta.",
         variant: "destructive",
       });
     },

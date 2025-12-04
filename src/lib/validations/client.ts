@@ -32,6 +32,14 @@ export const clientFormSchema = z.object({
     .max(1000, { message: "Zdravotní omezení mohou mít maximálně 1000 znaků" })
     .optional()
     .or(z.literal("")),
+  creditBalance: z
+    .number()
+    .optional()
+    .default(0),
+  birthDate: z
+    .string()
+    .optional()
+    .or(z.literal("")),
 });
 
 export type ClientFormValues = z.infer<typeof clientFormSchema>;
