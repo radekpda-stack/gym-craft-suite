@@ -1,0 +1,120 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
+
+export interface DashboardStats {
+  totalClients: number;
+  sessionsThisWeek: number;
+  sessionsThisMonth: number;
+  averageRating: number;
+  canceledSessions: number;
+  lateCancellations: number;
+}
+
+export function useDashboardStats() {
+  return useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const now = new Date();
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      const thirtyDaysAgo = subDays(now, 30);
+
+      // Fetch all stats in parallel
+      const [
+        clientsResult,
+        weekSessionsResult,
+        monthSessionsResult,
+        ratingsResult,
+        canceledResult,
+        lateCanceledResult,
+      ] = await Promise.all([
+        // Total clients
+        supabase.from("clients").select("*", { count: "exact", head: true }),
+        
+        // Sessions this week
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .gte("date", weekStart.toISOString())
+          .lte("date", weekEnd.toISOString()),
+        
+        // Sessions this month
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .gte("date", monthStart.toISOString())
+          .lte("date", monthEnd.toISOString()),
+        
+        // Average rating from last 30 days
+        supabase
+          .from("training_sessions")
+          .select("subjective_rating")
+          .gte("date", thirtyDaysAgo.toISOString())
+          .not("subjective_rating", "is", null),
+        
+        // Total canceled sessions
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "canceled"),
+        
+        // Late cancellations
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "canceled")
+          .eq("is_late_cancellation", true),
+      ]);
+
+      // Calculate average rating
+      let averageRating = 0;
+      if (ratingsResult.data && ratingsResult.data.length > 0) {
+        const ratings = ratingsResult.data
+          .map((r) => r.subjective_rating)
+          .filter((r): r is number => r !== null);
+        if (ratings.length > 0) {
+          averageRating = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+        }
+      }
+
+      return {
+        totalClients: clientsResult.count || 0,
+        sessionsThisWeek: weekSessionsResult.count || 0,
+        sessionsThisMonth: monthSessionsResult.count || 0,
+        averageRating,
+        canceledSessions: canceledResult.count || 0,
+        lateCancellations: lateCanceledResult.count || 0,
+      } as DashboardStats;
+    },
+  });
+}
+
+export function useTodaySessions() {
+  return useQuery({
+    queryKey: ["today-sessions"],
+    queryFn: async () => {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart);
+      todayEnd.setDate(todayEnd.getDate() + 1);
+
+      const { data, error } = await supabase
+        .from("training_sessions")
+        .select("*")
+        .gte("date", todayStart.toISOString())
+        .lt("date", todayEnd.toISOString())
+        .order("date", { ascending: true });
+
+      if (error) throw error;
+      
+      // Cast the status to proper type
+      return (data || []).map(session => ({
+        ...session,
+        status: session.status as 'scheduled' | 'completed' | 'canceled'
+      }));
+    },
+  });
+}

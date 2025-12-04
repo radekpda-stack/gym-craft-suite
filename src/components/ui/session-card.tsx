@@ -1,12 +1,14 @@
 import { cn } from '@/lib/utils';
-import { Clock, User } from 'lucide-react';
-import { TrainingSession, Client } from '@/types';
+import { Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { TrainingSession } from '@/hooks/useTrainingSessions';
+import { Client } from '@/hooks/useClients';
+import { RatingDisplay } from './rating-input';
 
 interface SessionCardProps {
   session: TrainingSession;
-  client?: Client;
+  client?: Client | null;
   compact?: boolean;
   className?: string;
   onClick?: () => void;
@@ -18,6 +20,8 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
     completed: 'border-l-success',
     canceled: 'border-l-destructive',
   };
+
+  const sessionDate = new Date(session.date);
 
   if (compact) {
     return (
@@ -33,13 +37,15 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
           <p className="font-medium text-foreground truncate">
             {client?.name || 'Klient'}
           </p>
-          <p className="text-sm text-muted-foreground truncate">
-            {session.notes}
-          </p>
+          {session.notes && (
+            <p className="text-sm text-muted-foreground truncate">
+              {session.notes}
+            </p>
+          )}
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-sm font-medium text-foreground">
-            {format(session.date, 'HH:mm', { locale: cs })}
+            {format(sessionDate, 'HH:mm', { locale: cs })}
           </p>
           <p className="text-xs text-muted-foreground">
             {session.duration} min
@@ -63,19 +69,19 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
           <h4 className="font-semibold text-foreground text-lg">
             {client?.name || 'Klient'}
           </h4>
-          <p className="text-sm text-muted-foreground mt-1">
-            {session.notes}
-          </p>
+          {session.notes && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {session.notes}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-          {session.subjectiveRating}/10
-        </div>
+        <RatingDisplay value={session.subjective_rating} />
       </div>
       
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4" />
-          <span>{format(session.date, 'HH:mm', { locale: cs })}</span>
+          <span>{format(sessionDate, 'HH:mm', { locale: cs })}</span>
         </div>
         <span>•</span>
         <span>{session.duration} min</span>

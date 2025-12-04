@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -10,17 +9,30 @@ import {
   Calendar,
   Activity,
   ChevronRight,
+  Loader2,
+  CreditCard,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Button } from '@/components/ui/button';
-import { mockTrainerStats, mockSessions, mockClients } from '@/data/mockData';
 import { Link } from 'react-router-dom';
+import { useClients } from '@/hooks/useClients';
+import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
-  const stats = mockTrainerStats;
-  const todaySessions = mockSessions.filter(s => s.status === 'scheduled');
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: todaySessions = [], isLoading: sessionsLoading } = useTodaySessions();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
+
+  const isLoading = statsLoading || sessionsLoading || clientsLoading;
+
+  const getCreditColor = (credit: number) => {
+    if (credit < 0) return "text-destructive";
+    if (credit < 500) return "text-warning";
+    return "text-success";
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -36,48 +48,55 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
-            <Calendar className="w-4 h-4" />
-            Kalendář
-          </Button>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Rychlá akce
-          </Button>
+          <Link to="/calendar">
+            <Button variant="outline" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Kalendář
+            </Button>
+          </Link>
+          <Link to="/trainings">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Nový trénink
+            </Button>
+          </Link>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Klienti"
-          value={stats.totalClients}
-          subtitle="Aktivních klientů"
-          icon={Users}
-          trend={{ value: 12, positive: true }}
-        />
-        <StatCard
-          title="Tréninky tento týden"
-          value={stats.sessionsThisWeek}
-          subtitle={`${stats.sessionsThisMonth} tento měsíc`}
-          icon={Dumbbell}
-          trend={{ value: 8, positive: true }}
-        />
-        <StatCard
-          title="Průměrné hodnocení"
-          value={stats.averageSessionRating.toFixed(1)}
-          subtitle="Z posledních 30 dnů"
-          icon={TrendingUp}
-          trend={{ value: 5, positive: true }}
-        />
-        <StatCard
-          title="Pozdní zrušení"
-          value={stats.lateCancellations}
-          subtitle={`${stats.canceledSessions} celkem zrušeno`}
-          icon={XCircle}
-          iconClassName="bg-destructive/10 text-destructive group-hover:bg-destructive"
-        />
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Klienti"
+            value={stats?.totalClients || 0}
+            subtitle="Aktivních klientů"
+            icon={Users}
+          />
+          <StatCard
+            title="Tréninky tento týden"
+            value={stats?.sessionsThisWeek || 0}
+            subtitle={`${stats?.sessionsThisMonth || 0} tento měsíc`}
+            icon={Dumbbell}
+          />
+          <StatCard
+            title="Průměrné hodnocení"
+            value={stats?.averageRating ? stats.averageRating.toFixed(1) : '—'}
+            subtitle="Z posledních 30 dnů"
+            icon={TrendingUp}
+          />
+          <StatCard
+            title="Pozdní zrušení"
+            value={stats?.lateCancellations || 0}
+            subtitle={`${stats?.canceledSessions || 0} celkem zrušeno`}
+            icon={XCircle}
+            iconClassName="bg-destructive/10 text-destructive group-hover:bg-destructive"
+          />
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -97,9 +116,13 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-3">
-            {todaySessions.length > 0 ? (
+            {sessionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : todaySessions.length > 0 ? (
               todaySessions.map((session) => {
-                const client = mockClients.find(c => c.id === session.clientId);
+                const client = clients.find(c => c.id === session.client_id);
                 return (
                   <SessionCard
                     key={session.id}
@@ -129,7 +152,7 @@ export default function Dashboard() {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <Link
-                to="/clients/new"
+                to="/clients"
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
               >
                 <Users className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -138,7 +161,7 @@ export default function Dashboard() {
                 </span>
               </Link>
               <Link
-                to="/trainings/new"
+                to="/trainings"
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
               >
                 <Dumbbell className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -147,7 +170,7 @@ export default function Dashboard() {
                 </span>
               </Link>
               <Link
-                to="/measurements/new"
+                to="/measurements"
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
               >
                 <Activity className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -181,24 +204,38 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="space-y-3">
-              {mockClients.slice(0, 4).map((client) => (
-                <Link
-                  key={client.id}
-                  to={`/clients/${client.id}`}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all duration-200 group"
-                >
-                  <ClientAvatar name={client.name} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {client.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {client.trainingGoals[0]}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              ))}
+              {clientsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                </div>
+              ) : clients.length > 0 ? (
+                clients.slice(0, 4).map((client) => (
+                  <Link
+                    key={client.id}
+                    to={`/clients/${client.id}`}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all duration-200 group"
+                  >
+                    <ClientAvatar name={client.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {client.name}
+                      </p>
+                      <div className={cn(
+                        "flex items-center gap-1 text-sm",
+                        getCreditColor(client.credit_balance || 0)
+                      )}>
+                        <CreditCard className="w-3 h-3" />
+                        <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Zatím nemáte žádné klienty
+                </p>
+              )}
             </div>
           </div>
         </div>
