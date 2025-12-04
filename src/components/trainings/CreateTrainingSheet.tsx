@@ -11,7 +11,7 @@ import { Client } from "@/hooks/useClients";
 interface CreateTrainingSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: TrainingFormValues) => Promise<void>;
+  onSubmit: (data: TrainingFormValues, tagIds: string[]) => Promise<void>;
   isLoading?: boolean;
   clients: Client[];
   defaultClientId?: string;
