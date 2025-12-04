@@ -1,0 +1,357 @@
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, CreditTransaction } from '@/hooks/useCreditTransactions';
+import { useProducts, Product } from '@/hooks/useProducts';
+import { useTrainingPrices, getTrainingPrice, calculateRemainingTrainings } from '@/hooks/useAppSettings';
+import { cn } from '@/lib/utils';
+
+interface CreditManagementProps {
+  clientId: string;
+  clientName: string;
+  currentBalance: number;
+}
+
+export function CreditManagement({ clientId, clientName, currentBalance }: CreditManagementProps) {
+  const { data: transactions = [] } = useCreditTransactions(clientId);
+  const { data: products = [] } = useProducts(true);
+  const trainingPrices = useTrainingPrices();
+  const createTransaction = useCreateTransaction();
+  const deleteTransaction = useDeleteTransaction();
+
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const [isManualOpen, setIsManualOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDescription, setPaymentDescription] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [productQuantity, setProductQuantity] = useState(1);
+  const [manualAmount, setManualAmount] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualIsDeduction, setManualIsDeduction] = useState(false);
+
+  const remainingTrainings = calculateRemainingTrainings(currentBalance, trainingPrices);
+
+  const handleAddPayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    await createTransaction.mutateAsync({
+      client_id: clientId,
+      amount: amount,
+      type: 'payment',
+      description: paymentDescription || 'Platba kreditu',
+    });
+
+    setPaymentAmount('');
+    setPaymentDescription('');
+    setIsPaymentOpen(false);
+  };
+
+  const handleProductPurchase = async () => {
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product) return;
+
+    const totalAmount = product.price * productQuantity;
+
+    await createTransaction.mutateAsync({
+      client_id: clientId,
+      amount: -totalAmount,
+      type: 'product',
+      description: `${product.name}${productQuantity > 1 ? ` (${productQuantity}x)` : ''}`,
+      product_id: product.id,
+    });
+
+    setSelectedProduct('');
+    setProductQuantity(1);
+    setIsProductOpen(false);
+  };
+
+  const handleManualAdjustment = async () => {
+    const amount = parseFloat(manualAmount);
+    if (isNaN(amount) || amount === 0) return;
+
+    await createTransaction.mutateAsync({
+      client_id: clientId,
+      amount: manualIsDeduction ? -Math.abs(amount) : Math.abs(amount),
+      type: 'manual',
+      description: manualDescription || 'Manuální úprava',
+    });
+
+    setManualAmount('');
+    setManualDescription('');
+    setIsManualOpen(false);
+  };
+
+  const handleDeleteTransaction = async (transaction: CreditTransaction) => {
+    await deleteTransaction.mutateAsync({
+      id: transaction.id,
+      clientId: transaction.client_id,
+      amount: transaction.amount,
+    });
+  };
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'payment':
+        return <Plus className="w-4 h-4 text-success" />;
+      case 'training':
+        return <Dumbbell className="w-4 h-4 text-primary" />;
+      case 'product':
+        return <Package className="w-4 h-4 text-warning" />;
+      default:
+        return <Edit3 className="w-4 h-4 text-muted-foreground" />;
+    }
+  };
+
+  const selectedProductData = products.find(p => p.id === selectedProduct);
+
+  return (
+    <div className="space-y-6">
+      {/* Credit Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-3 text-muted-foreground mb-2">
+            <CreditCard className="w-4 h-4" />
+            <span className="text-sm">Aktuální kredit</span>
+          </div>
+          <p className={cn(
+            "font-bold text-2xl",
+            currentBalance < 0 ? "text-destructive" : currentBalance < 500 ? "text-warning" : "text-success"
+          )}>
+            {currentBalance.toLocaleString('cs-CZ')} Kč
+          </p>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-3 text-muted-foreground mb-2">
+            <Dumbbell className="w-4 h-4" />
+            <span className="text-sm">Zbývající tréninky</span>
+          </div>
+          <p className="font-bold text-2xl text-foreground">
+            ~{remainingTrainings}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            při ceně {trainingPrices["1"]} Kč/trénink
+          </p>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-3 text-muted-foreground mb-2">
+            <Package className="w-4 h-4" />
+            <span className="text-sm">Ceny tréninků</span>
+          </div>
+          <div className="text-sm text-foreground space-y-1">
+            <p>1 osoba: {trainingPrices["1"]} Kč</p>
+            <p>2 osoby: {trainingPrices["2"]} Kč</p>
+            <p>3+ osoby: {trainingPrices["3"]} Kč</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-wrap gap-3">
+        <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Přidat platbu
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Přidat platbu</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label>Částka (Kč)</Label>
+                <Input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="1000"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Popis (volitelné)</Label>
+                <Input
+                  value={paymentDescription}
+                  onChange={(e) => setPaymentDescription(e.target.value)}
+                  placeholder="Platba kreditu"
+                  className="mt-2"
+                />
+              </div>
+              <Button onClick={handleAddPayment} disabled={createTransaction.isPending} className="w-full">
+                Přidat platbu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isProductOpen} onOpenChange={setIsProductOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Package className="w-4 h-4" />
+              Prodat produkt
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Prodat produkt</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label>Produkt</Label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Vyberte produkt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - {product.price} Kč
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Počet</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={productQuantity}
+                  onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+                  className="mt-2"
+                />
+              </div>
+              {selectedProductData && (
+                <div className="p-4 rounded-xl bg-secondary/50">
+                  <p className="text-sm text-muted-foreground">Celkem k odečtení:</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {(selectedProductData.price * productQuantity).toLocaleString('cs-CZ')} Kč
+                  </p>
+                </div>
+              )}
+              <Button onClick={handleProductPurchase} disabled={!selectedProduct || createTransaction.isPending} className="w-full">
+                Odečíst z kreditu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Edit3 className="w-4 h-4" />
+              Manuální úprava
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manuální úprava kreditu</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="flex gap-2">
+                <Button
+                  variant={!manualIsDeduction ? 'default' : 'outline'}
+                  onClick={() => setManualIsDeduction(false)}
+                  className="flex-1"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Přidat
+                </Button>
+                <Button
+                  variant={manualIsDeduction ? 'default' : 'outline'}
+                  onClick={() => setManualIsDeduction(true)}
+                  className="flex-1"
+                >
+                  <Minus className="w-4 h-4 mr-2" />
+                  Odečíst
+                </Button>
+              </div>
+              <div>
+                <Label>Částka (Kč)</Label>
+                <Input
+                  type="number"
+                  value={manualAmount}
+                  onChange={(e) => setManualAmount(e.target.value)}
+                  placeholder="100"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Důvod</Label>
+                <Input
+                  value={manualDescription}
+                  onChange={(e) => setManualDescription(e.target.value)}
+                  placeholder="Důvod úpravy"
+                  className="mt-2"
+                />
+              </div>
+              <Button onClick={handleManualAdjustment} disabled={createTransaction.isPending} className="w-full">
+                Provést úpravu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Transaction History */}
+      <div className="glass rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
+          Historie transakcí
+        </h3>
+        {transactions.length > 0 ? (
+          <div className="space-y-3">
+            {transactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-lg bg-background">
+                    {getTransactionIcon(transaction.type)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {transaction.description || transaction.type}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(transaction.created_at), 'd. MMMM yyyy, HH:mm', { locale: cs })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className={cn(
+                    "font-bold text-lg",
+                    transaction.amount > 0 ? "text-success" : "text-destructive"
+                  )}>
+                    {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString('cs-CZ')} Kč
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteTransaction(transaction)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-8">
+            Zatím žádné transakce
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
