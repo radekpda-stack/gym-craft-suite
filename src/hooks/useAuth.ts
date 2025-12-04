@@ -55,6 +55,24 @@ export function useAuth() {
     return { error };
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    const redirectUrl = `${window.location.origin}/auth?type=recovery`;
+    
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+    
+    return { data, error };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    return { data, error };
+  }, []);
+
   return {
     user,
     session,
@@ -62,6 +80,8 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
+    resetPassword,
+    updatePassword,
     isAuthenticated: !!session,
   };
 }

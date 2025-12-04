@@ -221,87 +221,88 @@ export default function Dashboard() {
   // Stats components
   const statsComponents: Record<string, ReactNode> = {
     income: (
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center gap-3 text-muted-foreground mb-2">
-          <div className="p-2 rounded-xl bg-success/10">
-            <Wallet className="w-4 h-4 text-success" />
+      <div className="glass rounded-2xl p-4 md:p-5">
+        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-success/10">
+            <Wallet className="w-3.5 h-3.5 md:w-4 md:h-4 text-success" />
           </div>
-          <span className="text-sm">Příjmy tento měsíc</span>
+          <span className="text-xs md:text-sm">Příjmy měsíc</span>
         </div>
-        <p className="text-2xl font-bold text-foreground">
+        <p className="text-lg md:text-2xl font-bold text-foreground">
           {(financialStats?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč
         </p>
         {incomeChange !== 0 && (
           <div className={cn(
-            "flex items-center gap-1 mt-1 text-sm",
+            "flex items-center gap-1 mt-1 text-xs md:text-sm",
             incomeChange > 0 ? "text-success" : "text-destructive"
           )}>
             {incomeChange > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-            <span>{Math.abs(incomeChange).toFixed(0)}% oproti minulému měsíci</span>
+            <span className="hidden sm:inline">{Math.abs(incomeChange).toFixed(0)}% oproti min. měsíci</span>
+            <span className="sm:hidden">{Math.abs(incomeChange).toFixed(0)}%</span>
           </div>
         )}
       </div>
     ),
     profit: (
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center gap-3 text-muted-foreground mb-2">
-          <div className="p-2 rounded-xl bg-success/10">
-            <TrendingUp className="w-4 h-4 text-success" />
+      <div className="glass rounded-2xl p-4 md:p-5">
+        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-success/10">
+            <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-success" />
           </div>
-          <span className="text-sm">Čistý zisk (produkty)</span>
+          <span className="text-xs md:text-sm">Zisk produkty</span>
         </div>
-        <p className="text-2xl font-bold text-success">
+        <p className="text-lg md:text-2xl font-bold text-success">
           {(financialStats?.productProfit || 0).toLocaleString('cs-CZ')} Kč
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
           Tržby: {(financialStats?.productIncome || 0).toLocaleString('cs-CZ')} Kč
         </p>
       </div>
     ),
     credit: (
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center gap-3 text-muted-foreground mb-2">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <CreditCard className="w-4 h-4 text-primary" />
+      <div className="glass rounded-2xl p-4 md:p-5">
+        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+            <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
           </div>
-          <span className="text-sm">Celkový kredit klientů</span>
+          <span className="text-xs md:text-sm">Kredit klientů</span>
         </div>
-        <p className="text-2xl font-bold text-foreground">
+        <p className="text-lg md:text-2xl font-bold text-foreground">
           {(financialStats?.totalCredit || 0).toLocaleString('cs-CZ')} Kč
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
           {clients.length} klientů celkem
         </p>
       </div>
     ),
     costs: (
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center gap-3 text-muted-foreground mb-2">
-          <div className="p-2 rounded-xl bg-warning/10">
-            <Package className="w-4 h-4 text-warning" />
+      <div className="glass rounded-2xl p-4 md:p-5">
+        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-warning/10">
+            <Package className="w-3.5 h-3.5 md:w-4 md:h-4 text-warning" />
           </div>
-          <span className="text-sm">Náklady na produkty</span>
+          <span className="text-xs md:text-sm">Náklady</span>
         </div>
-        <p className="text-2xl font-bold text-foreground">
+        <p className="text-lg md:text-2xl font-bold text-foreground">
           {(financialStats?.productCost || 0).toLocaleString('cs-CZ')} Kč
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
           Nákupní ceny
         </p>
       </div>
     ),
     lowCredit: (
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center gap-3 text-muted-foreground mb-2">
-          <div className="p-2 rounded-xl bg-destructive/10">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
+      <div className="glass rounded-2xl p-4 md:p-5">
+        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-destructive/10">
+            <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-destructive" />
           </div>
-          <span className="text-sm">Nízký kredit</span>
+          <span className="text-xs md:text-sm">Nízký kredit</span>
         </div>
-        <p className="text-2xl font-bold text-foreground">
+        <p className="text-lg md:text-2xl font-bold text-foreground">
           {financialStats?.clientsWithLowCredit || 0}
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
           Klientů pod 500 Kč
         </p>
       </div>
@@ -381,13 +382,13 @@ export default function Dashboard() {
   );
 
   const renderStatsAndCreditsSection = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 md:gap-4">
           <StatCard
             title="Klienti"
             value={stats?.totalClients || 0}
@@ -395,21 +396,21 @@ export default function Dashboard() {
             icon={Users}
           />
           <StatCard
-            title="Tréninky tento týden"
+            title="Tréninky týden"
             value={stats?.sessionsThisWeek || 0}
-            subtitle={`${stats?.sessionsThisMonth || 0} tento měsíc`}
+            subtitle={`${stats?.sessionsThisMonth || 0} měsíc`}
             icon={Dumbbell}
           />
           <StatCard
-            title="Průměrné hodnocení"
+            title="Hodnocení"
             value={stats?.averageRating ? stats.averageRating.toFixed(1) : '—'}
-            subtitle="Z posledních 30 dnů"
+            subtitle="Posledních 30 dnů"
             icon={TrendingUp}
           />
           <StatCard
             title="Pozdní zrušení"
             value={stats?.lateCancellations || 0}
-            subtitle={`${stats?.canceledSessions || 0} celkem zrušeno`}
+            subtitle={`${stats?.canceledSessions || 0} zrušeno`}
             icon={XCircle}
             iconClassName="bg-destructive/10 text-destructive group-hover:bg-destructive"
           />
@@ -467,8 +468,8 @@ export default function Dashboard() {
   );
 
   const renderMainContentSection = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+      <div className="lg:col-span-2 space-y-3 md:space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">
             Dnešní tréninky
@@ -607,19 +608,20 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             Dashboard
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: cs })}
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        {/* Desktop actions */}
+        <div className="hidden md:flex items-center gap-3">
           <Button
             variant={isEditMode ? "default" : "outline"}
             className="gap-2"
@@ -633,7 +635,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <Pencil className="w-4 h-4" />
-                Upravit rozložení
+                Upravit
               </>
             )}
           </Button>
@@ -693,6 +695,25 @@ export default function Dashboard() {
             Nový trénink
           </Button>
         </div>
+
+        {/* Mobile actions */}
+        <div className="flex md:hidden items-center gap-2 flex-wrap">
+          <Button 
+            size="sm" 
+            className="gap-1.5 flex-1" 
+            onClick={() => setIsTrainingSheetOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Trénink
+          </Button>
+          <Link to="/calendar" className="flex-1">
+            <Button variant="outline" size="sm" className="gap-1.5 w-full">
+              <Calendar className="w-4 h-4" />
+              Kalendář
+            </Button>
+          </Link>
+          <DashboardSettings layout={dashboardLayout} />
+        </div>
       </div>
 
       {/* Sheets */}
@@ -735,7 +756,7 @@ export default function Dashboard() {
             items={preferences.dashboardStatsOrder}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
               {preferences.dashboardStatsOrder.map((id) => (
                 <SortableItem key={id} id={id} isEditMode={isEditMode} horizontal>
                   {statsComponents[id]}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,26 +8,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Loader2, Dumbbell, Users, Calendar, TrendingUp } from 'lucide-react';
+import { Loader2, Dumbbell, Users, Calendar, TrendingUp, ArrowLeft } from 'lucide-react';
 
 const authSchema = z.object({
   email: z.string().email({ message: 'Neplatná e-mailová adresa' }),
   password: z.string().min(6, { message: 'Heslo musí mít alespoň 6 znaků' }),
 });
 
+const emailSchema = z.object({
+  email: z.string().email({ message: 'Neplatná e-mailová adresa' }),
+});
+
+const passwordSchema = z.object({
+  password: z.string().min(6, { message: 'Heslo musí mít alespoň 6 znaků' }),
+});
+
+type AuthView = 'main' | 'forgot-password' | 'reset-password';
+
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { signIn, signUp, resetPassword, updatePassword, isAuthenticated, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [view, setView] = useState<AuthView>('main');
 
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    // Check if this is a password recovery redirect
+    const type = searchParams.get('type');
+    if (type === 'recovery') {
+      setView('reset-password');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && view !== 'reset-password') {
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, view]);
 
   const validateForm = () => {
     const result = authSchema.safeParse({ email, password });
@@ -38,6 +58,26 @@ export default function Auth() {
         if (err.path[0] === 'password') fieldErrors.password = err.message;
       });
       setErrors(fieldErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
+  const validateEmail = () => {
+    const result = emailSchema.safeParse({ email });
+    if (!result.success) {
+      setErrors({ email: result.error.errors[0].message });
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
+  const validatePassword = () => {
+    const result = passwordSchema.safeParse({ password });
+    if (!result.success) {
+      setErrors({ password: result.error.errors[0].message });
       return false;
     }
     setErrors({});
@@ -106,6 +146,52 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateEmail()) return;
+
+    setIsLoading(true);
+    const { error } = await resetPassword(email);
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'E-mail odeslán',
+        description: 'Zkontrolujte svou e-mailovou schránku pro odkaz na obnovení hesla.',
+      });
+      setView('main');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validatePassword()) return;
+
+    setIsLoading(true);
+    const { error } = await updatePassword(password);
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Heslo změněno',
+        description: 'Vaše heslo bylo úspěšně změněno.',
+      });
+      navigate('/', { replace: true });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -119,6 +205,117 @@ export default function Auth() {
     { icon: Calendar, title: 'Plánování tréninků', desc: 'Organizujte svůj kalendář efektivně' },
     { icon: TrendingUp, title: 'Sledování výsledků', desc: 'Měření a diagnostika v jednom' },
   ];
+
+  // Forgot password view
+  if (view === 'forgot-password') {
+    return (
+      <div className="min-h-screen flex flex-col justify-center px-6 py-12 sm:px-8 bg-background">
+        <div className="w-full max-w-sm mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+              <Dumbbell className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Obnovení hesla</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Zadejte svůj e-mail pro obnovení hesla
+            </p>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="pt-6 pb-6">
+              <form onSubmit={handleForgotPassword} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-sm">E-mail</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="vas@email.cz"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="h-11"
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-destructive">{errors.email}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Odesílání...
+                    </>
+                  ) : (
+                    'Odeslat odkaz pro obnovení'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setView('main')}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Zpět na přihlášení
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Reset password view (after clicking email link)
+  if (view === 'reset-password') {
+    return (
+      <div className="min-h-screen flex flex-col justify-center px-6 py-12 sm:px-8 bg-background">
+        <div className="w-full max-w-sm mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+              <Dumbbell className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Nové heslo</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Zadejte nové heslo pro svůj účet
+            </p>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="pt-6 pb-6">
+              <form onSubmit={handleResetPassword} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="text-sm">Nové heslo</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="h-11"
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-destructive">{errors.password}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Ukládání...
+                    </>
+                  ) : (
+                    'Změnit heslo'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background">
@@ -201,7 +398,16 @@ export default function Auth() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signin-password" className="text-sm">Heslo</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password" className="text-sm">Heslo</Label>
+                        <button
+                          type="button"
+                          onClick={() => setView('forgot-password')}
+                          className="text-xs text-primary hover:text-primary/80 transition-colors"
+                        >
+                          Zapomenuté heslo?
+                        </button>
+                      </div>
                       <Input
                         id="signin-password"
                         type="password"
