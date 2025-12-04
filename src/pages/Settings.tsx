@@ -12,6 +12,7 @@ import {
   Tag,
   Dumbbell,
   Wallet,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,47 +23,83 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
+import { useLanguage, Language } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [appleConnected, setAppleConnected] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [autoBackup, setAutoBackup] = useState(true);
+  const { language, setLanguage, t } = useLanguage();
 
   const settingsSections = [
     {
-      title: 'Ceny a kredit',
-      description: 'Nastavení cen tréninků a limitů kreditu',
+      title: t.settings.language,
+      description: t.settings.languageDesc,
+      icon: Globe,
+      content: (
+        <div className="flex gap-3">
+          <button
+            onClick={() => setLanguage('cs')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
+              language === 'cs'
+                ? 'bg-primary text-primary-foreground'
+                : 'glass-subtle hover:bg-secondary/50 text-foreground'
+            )}
+          >
+            <span className="text-lg">🇨🇿</span>
+            <span className="font-medium">{t.settings.languageCzech}</span>
+          </button>
+          <button
+            onClick={() => setLanguage('en')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
+              language === 'en'
+                ? 'bg-primary text-primary-foreground'
+                : 'glass-subtle hover:bg-secondary/50 text-foreground'
+            )}
+          >
+            <span className="text-lg">🇬🇧</span>
+            <span className="font-medium">{t.settings.languageEnglish}</span>
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: t.settings.prices,
+      description: t.settings.pricesDesc,
       icon: CreditCard,
       content: <TrainingPricesSettings />,
     },
     {
-      title: 'Platební tagy',
-      description: 'Správa platebních tagů pro kreditové transakce (hotovost, účet 1, účet 2...)',
+      title: t.settings.paymentTags,
+      description: t.settings.paymentTagsDesc,
       icon: Wallet,
       content: <PaymentTagsManagement />,
     },
     {
-      title: 'Produkty a služby',
-      description: 'Správa produktů k prodeji (elektrolyty, drinky, měření...)',
+      title: t.settings.products,
+      description: t.settings.productsDesc,
       icon: Package,
       content: <ProductsManagement />,
     },
     {
-      title: 'Knihovna cviků',
-      description: 'Správa databáze cviků pro tréninky',
+      title: t.settings.exercises,
+      description: t.settings.exercisesDesc,
       icon: Dumbbell,
       content: <ExercisesManagement />,
     },
     {
-      title: 'Tagy',
-      description: 'Správa tagů pro označování položek',
+      title: t.settings.tags,
+      description: t.settings.tagsDesc,
       icon: Tag,
       content: <TagsManagement />,
     },
     {
-      title: 'Integrace kalendářů',
-      description: 'Propojte své kalendáře pro synchronizaci tréninků',
+      title: t.settings.calendar,
+      description: t.settings.calendarDesc,
       icon: Calendar,
       content: (
         <div className="space-y-4">
@@ -77,9 +114,9 @@ export default function Settings() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-foreground">Google Calendar</p>
+                <p className="font-medium text-foreground">{t.settings.googleCalendar}</p>
                 <p className="text-sm text-muted-foreground">
-                  {googleConnected ? 'Propojeno' : 'Nepropojeno'}
+                  {googleConnected ? t.settings.connected : t.settings.notConnected}
                 </p>
               </div>
             </div>
@@ -91,12 +128,12 @@ export default function Settings() {
               {googleConnected ? (
                 <>
                   <Check className="w-4 h-4" />
-                  Odpojit
+                  {t.settings.disconnect}
                 </>
               ) : (
                 <>
                   <Link2 className="w-4 h-4" />
-                  Propojit
+                  {t.settings.connect}
                 </>
               )}
             </Button>
@@ -110,9 +147,9 @@ export default function Settings() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-foreground">Apple Calendar</p>
+                <p className="font-medium text-foreground">{t.settings.appleCalendar}</p>
                 <p className="text-sm text-muted-foreground">
-                  {appleConnected ? 'Propojeno' : 'Nepropojeno'}
+                  {appleConnected ? t.settings.connected : t.settings.notConnected}
                 </p>
               </div>
             </div>
@@ -124,12 +161,12 @@ export default function Settings() {
               {appleConnected ? (
                 <>
                   <Check className="w-4 h-4" />
-                  Odpojit
+                  {t.settings.disconnect}
                 </>
               ) : (
                 <>
                   <Link2 className="w-4 h-4" />
-                  Propojit
+                  {t.settings.connect}
                 </>
               )}
             </Button>
@@ -138,34 +175,34 @@ export default function Settings() {
       ),
     },
     {
-      title: 'Notifikace',
-      description: 'Nastavení upozornění a připomínek',
+      title: t.settings.notifications,
+      description: t.settings.notificationsDesc,
       icon: Bell,
       content: (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-foreground">Push notifikace</Label>
+              <Label className="text-foreground">{t.settings.pushNotifications}</Label>
               <p className="text-sm text-muted-foreground">
-                Dostávat upozornění na nadcházející tréninky
+                {t.settings.pushNotificationsDesc}
               </p>
             </div>
             <Switch checked={notifications} onCheckedChange={setNotifications} />
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-foreground">Email připomínky</Label>
+              <Label className="text-foreground">{t.settings.emailReminders}</Label>
               <p className="text-sm text-muted-foreground">
-                Denní přehled tréninků emailem
+                {t.settings.emailRemindersDesc}
               </p>
             </div>
             <Switch />
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-foreground">Upozornění na nízký kredit</Label>
+              <Label className="text-foreground">{t.settings.lowCreditAlert}</Label>
               <p className="text-sm text-muted-foreground">
-                Upozornit při poklesu kreditu pod limit
+                {t.settings.lowCreditAlertDesc}
               </p>
             </div>
             <Switch defaultChecked />
@@ -174,13 +211,13 @@ export default function Settings() {
       ),
     },
     {
-      title: 'Pracovní doba',
-      description: 'Nastavení pracovních hodin',
+      title: t.settings.workingHours,
+      description: t.settings.workingHoursDesc,
       icon: Clock,
       content: (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-muted-foreground text-sm">Začátek</Label>
+            <Label className="text-muted-foreground text-sm">{t.settings.start}</Label>
             <Input
               type="time"
               defaultValue="06:00"
@@ -188,7 +225,7 @@ export default function Settings() {
             />
           </div>
           <div>
-            <Label className="text-muted-foreground text-sm">Konec</Label>
+            <Label className="text-muted-foreground text-sm">{t.settings.end}</Label>
             <Input
               type="time"
               defaultValue="20:00"
@@ -199,16 +236,16 @@ export default function Settings() {
       ),
     },
     {
-      title: 'Export a zálohy',
-      description: 'Správa dat a zálohování',
+      title: t.settings.backup,
+      description: t.settings.backupDesc,
       icon: Download,
       content: (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-foreground">Automatické zálohy</Label>
+              <Label className="text-foreground">{t.settings.autoBackup}</Label>
               <p className="text-sm text-muted-foreground">
-                Týdenní záloha všech dat
+                {t.settings.autoBackupDesc}
               </p>
             </div>
             <Switch checked={autoBackup} onCheckedChange={setAutoBackup} />
@@ -216,11 +253,11 @@ export default function Settings() {
           <div className="flex gap-3">
             <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
               <Download className="w-4 h-4" />
-              Exportovat vše
+              {t.settings.exportAll}
             </Button>
             <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
               <Upload className="w-4 h-4" />
-              Import dat
+              {t.settings.importData}
             </Button>
           </div>
         </div>
@@ -233,10 +270,10 @@ export default function Settings() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground tracking-tight">
-          Nastavení
+          {t.settings.title}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Konfigurace aplikace a integrace
+          {t.settings.subtitle}
         </p>
       </div>
 

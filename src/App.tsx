@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { LanguageProvider } from "@/lib/i18n";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
@@ -23,38 +24,40 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/clients" element={<Clients />} />
-                    <Route path="/clients/:id" element={<ClientDetail />} />
-                    <Route path="/trainings" element={<Trainings />} />
-                    <Route path="/trainings/:id" element={<TrainingDetail />} />
-                    <Route path="/diagnostics" element={<Diagnostics />} />
-                    <Route path="/measurements" element={<Measurements />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
-                    <Route path="/canceled" element={<CanceledTrainings />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/ai-assistant" element={<AIAssistant />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <LanguageProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/clients" element={<Clients />} />
+                      <Route path="/clients/:id" element={<ClientDetail />} />
+                      <Route path="/trainings" element={<Trainings />} />
+                      <Route path="/trainings/:id" element={<TrainingDetail />} />
+                      <Route path="/diagnostics" element={<Diagnostics />} />
+                      <Route path="/measurements" element={<Measurements />} />
+                      <Route path="/calendar" element={<CalendarPage />} />
+                      <Route path="/canceled" element={<CanceledTrainings />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/ai-assistant" element={<AIAssistant />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 
