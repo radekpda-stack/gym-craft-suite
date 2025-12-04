@@ -13,6 +13,7 @@ export interface Client {
   health_restrictions: string;
   credit_balance: number;
   birth_date: string | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -25,6 +26,7 @@ export function useClients() {
       const { data, error } = await supabase
         .from("clients")
         .select("*")
+        .order("is_favorite", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;

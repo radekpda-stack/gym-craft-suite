@@ -3,7 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Repeat } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -11,6 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -19,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
@@ -31,6 +34,10 @@ const trainingFormSchema = z.object({
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "completed", "canceled"]),
+  // Recurrence fields
+  is_recurring: z.boolean().optional(),
+  recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
+  recurrence_count: z.number().min(1).max(52).optional(),
 });
 
 export type TrainingFormValues = z.infer<typeof trainingFormSchema>;
@@ -41,6 +48,7 @@ interface TrainingFormProps {
   clients: Client[];
   defaultValues?: Partial<TrainingFormValues>;
   submitLabel?: string;
+  showRecurrence?: boolean;
 }
 
 export function TrainingForm({
@@ -49,6 +57,7 @@ export function TrainingForm({
   clients,
   defaultValues,
   submitLabel = "Vytvořit trénink",
+  showRecurrence = true,
 }: TrainingFormProps) {
   const form = useForm<TrainingFormValues>({
     resolver: zodResolver(trainingFormSchema),
@@ -60,8 +69,13 @@ export function TrainingForm({
       notes: defaultValues?.notes || "",
       subjective_rating: defaultValues?.subjective_rating || null,
       status: defaultValues?.status || "scheduled",
+      is_recurring: false,
+      recurrence_type: null,
+      recurrence_count: 4,
     },
   });
+
+  const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
     await onSubmit(data);
@@ -177,11 +191,91 @@ export function TrainingForm({
                   <SelectItem value="completed">Dokončeno</SelectItem>
                   <SelectItem value="canceled">Zrušeno</SelectItem>
                 </SelectContent>
-              </Select>
+          </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Recurrence Settings */}
+        {showRecurrence && form.watch("status") === "scheduled" && (
+          <div className="space-y-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+            <FormField
+              control={form.control}
+              name="is_recurring"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel className="flex items-center gap-2">
+                      <Repeat className="w-4 h-4" />
+                      Opakující se trénink
+                    </FormLabel>
+                    <FormDescription className="text-xs">
+                      Automaticky vytvořit sérii tréninků
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isRecurring && (
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <FormField
+                  control={form.control}
+                  name="recurrence_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frekvence</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-secondary border-border">
+                            <SelectValue placeholder="Vyberte" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-popover border-border">
+                          <SelectItem value="weekly">Každý týden</SelectItem>
+                          <SelectItem value="biweekly">Každé 2 týdny</SelectItem>
+                          <SelectItem value="monthly">Každý měsíc</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="recurrence_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Počet opakování</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={52}
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          className="bg-secondary border-border"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <FormField
           control={form.control}
