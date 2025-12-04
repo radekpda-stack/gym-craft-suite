@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { QuickProductSale } from '@/components/sales/QuickProductSale';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -82,6 +83,11 @@ export function Sidebar() {
             </NavLink>
           );
         })}
+        
+        {/* Quick Product Sale */}
+        <div className="pt-2 border-t border-sidebar-border mt-2">
+          <QuickProductSale collapsed={collapsed} />
+        </div>
       </nav>
 
       {/* Collapse Toggle */}
