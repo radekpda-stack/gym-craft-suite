@@ -7,6 +7,7 @@ export type MediaType = 'photo' | 'audio';
 export interface ClientMedia {
   id: string;
   client_id: string;
+  diagnostic_id: string | null;
   type: MediaType;
   file_url: string;
   file_name: string;
@@ -30,6 +31,7 @@ export interface CreateMediaInput {
   body_area?: string;
   date?: string;
   duration_seconds?: number;
+  diagnostic_id?: string;
 }
 
 export interface UpdateMediaInput {
@@ -39,6 +41,7 @@ export interface UpdateMediaInput {
   category?: string;
   body_area?: string;
   date?: string;
+  diagnostic_id?: string | null;
 }
 
 export const BODY_AREA_OPTIONS = [
@@ -61,9 +64,9 @@ export const CATEGORY_OPTIONS = [
   { value: 'general', label: 'Obecné' },
 ];
 
-export function useClientMedia(clientId?: string, type?: MediaType) {
+export function useClientMedia(clientId?: string, type?: MediaType, diagnosticId?: string) {
   return useQuery({
-    queryKey: ["client-media", clientId, type],
+    queryKey: ["client-media", clientId, type, diagnosticId],
     queryFn: async () => {
       let query = supabase
         .from("client_media")
@@ -75,6 +78,9 @@ export function useClientMedia(clientId?: string, type?: MediaType) {
       }
       if (type) {
         query = query.eq("type", type);
+      }
+      if (diagnosticId) {
+        query = query.eq("diagnostic_id", diagnosticId);
       }
 
       const { data, error } = await query;
@@ -120,6 +126,7 @@ export function useCreateMedia() {
           body_area: input.body_area,
           date: input.date || new Date().toISOString().split('T')[0],
           duration_seconds: input.duration_seconds,
+          diagnostic_id: input.diagnostic_id,
         })
         .select()
         .single();
