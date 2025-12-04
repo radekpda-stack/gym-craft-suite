@@ -68,6 +68,25 @@ export function useTrainingSessions(clientId?: string) {
   });
 }
 
+export function useTrainingSession(trainingId?: string) {
+  return useQuery({
+    queryKey: ["training_session", trainingId],
+    queryFn: async () => {
+      if (!trainingId) return null;
+      
+      const { data, error } = await supabase
+        .from("training_sessions")
+        .select("*")
+        .eq("id", trainingId)
+        .single();
+      
+      if (error) throw error;
+      return data as TrainingSession;
+    },
+    enabled: !!trainingId,
+  });
+}
+
 // Helper function to generate recurring dates
 function generateRecurringDates(
   startDate: Date,

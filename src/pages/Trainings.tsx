@@ -1,23 +1,22 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users, XCircle, Repeat } from 'lucide-react';
+import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Trash2, CheckCircle, Users, XCircle, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
   useCreateTrainingSession,
-  useUpdateTrainingSession,
   useDeleteTrainingSession,
   useCompleteTrainingSession,
   useCancelTrainingSession,
   TrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
-import { useAddTrainingSessionTags, useUpdateTrainingSessionTags, useTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
+import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
-import { EditTrainingSheet } from '@/components/trainings/EditTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import {
@@ -48,7 +47,6 @@ export default function Trainings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-  const [editingTraining, setEditingTraining] = useState<TrainingSession | null>(null);
   const [deletingTraining, setDeletingTraining] = useState<TrainingSession | null>(null);
   const [completingTraining, setCompletingTraining] = useState<TrainingSession | null>(null);
   const [cancelingTraining, setCancelingTraining] = useState<TrainingSession | null>(null);
@@ -60,16 +58,11 @@ export default function Trainings() {
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
   const createTraining = useCreateTrainingSession();
-  const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const completeTraining = useCompleteTrainingSession();
   const cancelTraining = useCancelTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
-  const updateTrainingTags = useUpdateTrainingSessionTags();
-  
-  // Get tags for editing training
-  const { data: editingTrainingTags = [] } = useTrainingSessionTags(editingTraining?.id);
 
   const filteredSessions = sessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
@@ -142,30 +135,6 @@ export default function Trainings() {
     }
     
     setIsCreateSheetOpen(false);
-  };
-
-  const handleEditTraining = async (data: TrainingFormValues, tagIds: string[]) => {
-    if (!editingTraining) return;
-    await updateTraining.mutateAsync({
-      id: editingTraining.id,
-      input: {
-        date: new Date(data.date).toISOString(),
-        duration: data.duration,
-        notes: data.notes,
-        subjective_rating: data.subjective_rating || undefined,
-        status: data.status,
-        participant_count: data.participant_count,
-      },
-      trainingPrices, // Pass prices for credit deduction if status changes to "completed"
-    });
-    
-    // Update tags
-    await updateTrainingTags.mutateAsync({
-      trainingSessionId: editingTraining.id,
-      tagIds,
-    });
-    
-    setEditingTraining(null);
   };
 
   const handleDeleteTraining = async () => {
@@ -255,16 +224,6 @@ export default function Trainings() {
         onSubmit={handleCreateTraining}
         isLoading={createTraining.isPending}
         clients={clients}
-      />
-
-      <EditTrainingSheet
-        open={!!editingTraining}
-        onOpenChange={(open) => !open && setEditingTraining(null)}
-        onSubmit={handleEditTraining}
-        isLoading={updateTraining.isPending}
-        clients={clients}
-        training={editingTraining}
-        defaultTagIds={editingTrainingTags.map(t => t.tag_id)}
       />
 
       <AlertDialog open={!!deletingTraining} onOpenChange={(open) => !open && setDeletingTraining(null)}>
@@ -482,14 +441,18 @@ export default function Trainings() {
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Action buttons */}
-                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   {session.status === 'scheduled' && (
                     <>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 gap-1 text-success hover:text-success hover:bg-success/10"
-                        onClick={() => openCompleteDialog(session)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openCompleteDialog(session);
+                        }}
                       >
                         <CheckCircle className="w-4 h-4" />
                         Dokončit
@@ -498,7 +461,11 @@ export default function Trainings() {
                         variant="ghost"
                         size="sm"
                         className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => openCancelDialog(session)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openCancelDialog(session);
+                        }}
                       >
                         <XCircle className="w-4 h-4" />
                         Zrušit
@@ -508,84 +475,82 @@ export default function Trainings() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setEditingTraining(session)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => setDeletingTraining(session)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDeletingTraining(session);
+                    }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
 
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Dumbbell className="w-7 h-7 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {client?.name || 'Klient'}
-                      </h3>
-                      {session.notes && (
-                        <p className="text-muted-foreground mt-1">
-                          {session.notes}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4" />
-                          <span>
-                            {format(new Date(session.date), 'd. MMMM yyyy', { locale: cs })}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {format(new Date(session.date), 'HH:mm', { locale: cs })}
-                          </span>
-                        </div>
-                        <span>•</span>
-                        <span>{session.duration} min</span>
-                        {session.participant_count > 1 && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Users className="w-4 h-4" />
-                              <span>{session.participant_count} osob</span>
-                            </div>
-                          </>
+                <Link to={`/trainings/${session.id}`} className="block">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Dumbbell className="w-7 h-7 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {client?.name || 'Klient'}
+                        </h3>
+                        {session.notes && (
+                          <p className="text-muted-foreground mt-1">
+                            {session.notes}
+                          </p>
                         )}
-                        {(session.recurrence_type || session.parent_session_id) && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center gap-1 text-primary">
-                              <Repeat className="w-4 h-4" />
-                              <span>Opakující se</span>
-                            </div>
-                          </>
-                        )}
+                        <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              {format(new Date(session.date), 'd. MMMM yyyy', { locale: cs })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              {format(new Date(session.date), 'HH:mm', { locale: cs })}
+                            </span>
+                          </div>
+                          <span>•</span>
+                          <span>{session.duration} min</span>
+                          {session.participant_count > 1 && (
+                            <>
+                              <span>•</span>
+                              <div className="flex items-center gap-1">
+                                <Users className="w-4 h-4" />
+                                <span>{session.participant_count} osob</span>
+                              </div>
+                            </>
+                          )}
+                          {(session.recurrence_type || session.parent_session_id) && (
+                            <>
+                              <span>•</span>
+                              <div className="flex items-center gap-1 text-primary">
+                                <Repeat className="w-4 h-4" />
+                                <span>Opakující se</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3">
-                    <RatingDisplay value={session.subjective_rating} />
-                    <span
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-sm font-medium border',
-                        statusColors[session.status]
-                      )}
-                    >
-                      {statusLabels[session.status]}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <RatingDisplay value={session.subjective_rating} />
+                      <span
+                        className={cn(
+                          'px-3 py-1.5 rounded-full text-sm font-medium border',
+                          statusColors[session.status]
+                        )}
+                      >
+                        {statusLabels[session.status]}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </div>
             );
           })}
