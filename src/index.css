@@ -215,6 +215,24 @@
     }
   }
 
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.25s ease-out;
+  }
+
+  /* Safe area for bottom navigation on iOS */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
   .stat-card {
     @apply glass rounded-2xl p-6 transition-all duration-300;
   }

@@ -312,13 +312,13 @@ export default function Dashboard() {
   // Section components
   const renderChartsSection = () => (
     (dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart) && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {dashboardLayout.showIncomeChart && (
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
-              Příjmy za posledních 30 dní
+          <div className="glass rounded-2xl p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
+              Příjmy za 30 dní
             </h3>
-            <div className="h-64">
+            <div className="h-48 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={financialStats?.incomeByDay || []}>
                   <defs>
@@ -328,13 +328,14 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tickMargin={8} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} width={40} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '12px',
+                      fontSize: '12px',
                     }}
                     formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Platby']}
                   />
@@ -352,21 +353,22 @@ export default function Dashboard() {
           </div>
         )}
         {dashboardLayout.showMonthlyChart && (
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+          <div className="glass rounded-2xl p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
               Měsíční přehled
             </h3>
-            <div className="h-64">
+            <div className="h-48 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={financialStats?.incomeByMonth || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} tickMargin={8} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} width={40} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '12px',
+                      fontSize: '12px',
                     }}
                     formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`]}
                   />
@@ -417,28 +419,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="lg:col-span-2 glass rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">
-            Přehled kreditů klientů
+      <div className="lg:col-span-2 glass rounded-2xl p-4 md:p-6">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
+          <h3 className="text-base md:text-lg font-semibold text-foreground">
+            Kredity klientů
           </h3>
           <Link to="/clients" className="text-sm text-primary hover:text-primary/80">
-            Všichni klienti
+            Vše
           </Link>
         </div>
-        <div className="space-y-3 max-h-80 overflow-y-auto">
-          {clientCredits.map((client) => (
+        <div className="space-y-2 md:space-y-3 max-h-60 md:max-h-80 overflow-y-auto">
+          {clientCredits.slice(0, 10).map((client) => (
             <Link
               key={client.id}
               to={`/clients/${client.id}`}
-              className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-all"
+              className="flex items-center justify-between p-2.5 md:p-3 rounded-xl hover:bg-secondary/50 transition-all"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
                 <ClientAvatar name={client.name} size="sm" />
-                <span className="font-medium text-foreground">{client.name}</span>
+                <span className="font-medium text-foreground text-sm md:text-base truncate">{client.name}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
+              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                <div className="hidden md:block w-24 h-2 bg-secondary rounded-full overflow-hidden">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
@@ -449,7 +451,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <span className={cn(
-                  "font-bold text-sm min-w-[80px] text-right",
+                  "font-bold text-sm min-w-[70px] md:min-w-[80px] text-right",
                   getCreditColor(client.credit_balance || 0)
                 )}>
                   {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
@@ -458,7 +460,7 @@ export default function Dashboard() {
             </Link>
           ))}
           {clientCredits.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-muted-foreground py-6 text-sm">
               Zatím nemáte žádné klienty
             </p>
           )}
@@ -469,102 +471,55 @@ export default function Dashboard() {
 
   const renderMainContentSection = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-      <div className="lg:col-span-2 space-y-3 md:space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-foreground">
-            Dnešní tréninky
-          </h2>
-          <Link
-            to="/calendar"
-            className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-          >
-            Zobrazit vše
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="space-y-3">
-          {sessionsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : todaySessions.length > 0 ? (
-            todaySessions.map((session) => {
-              const client = clients.find(c => c.id === session.client_id);
-              return (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  client={client}
-                  onClick={() => {}}
-                />
-              );
-            })
-          ) : (
-            <div className="glass rounded-2xl p-8 text-center">
-              <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">
-                Dnes nemáte naplánované žádné tréninky
-              </p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setIsTrainingSheetOpen(true)}
-              >
-                Přidat trénink
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
+      {/* Quick Actions - shown first on mobile */}
+      <div className="order-first lg:order-last space-y-4 md:space-y-6">
+        <div className="glass rounded-2xl p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
             Rychlé akce
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-4 md:grid-cols-2 gap-2 md:gap-3">
             <button
               onClick={() => setIsTrainingSheetOpen(true)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              className="flex flex-col items-center gap-1.5 md:gap-2 p-3 md:p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
             >
-              <Dumbbell className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                Nový trénink
+              <Dumbbell className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground text-center">
+                Trénink
               </span>
             </button>
             <button
               onClick={() => setIsMeasurementSheetOpen(true)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              className="flex flex-col items-center gap-1.5 md:gap-2 p-3 md:p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
             >
-              <Activity className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                Nové měření
+              <Activity className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground text-center">
+                Měření
               </span>
             </button>
             <button
               onClick={() => setIsDiagnosticSheetOpen(true)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              className="flex flex-col items-center gap-1.5 md:gap-2 p-3 md:p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
             >
-              <Stethoscope className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+              <Stethoscope className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground text-center">
                 Diagnostika
               </span>
             </button>
             <Link
               to="/clients"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              className="flex flex-col items-center gap-1.5 md:gap-2 p-3 md:p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
             >
-              <Users className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                Nový klient
+              <Users className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground text-center">
+                Klient
               </span>
             </Link>
           </div>
         </div>
 
+        {/* Product breakdown - hidden on mobile */}
         {dashboardLayout.showProductBreakdown && financialStats?.productBreakdown && financialStats.productBreakdown.length > 0 && (
-          <div className="glass rounded-2xl p-6">
+          <div className="hidden md:block glass rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Prodej produktů
             </h3>
@@ -587,6 +542,58 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Today's sessions */}
+      <div className="lg:col-span-2 space-y-3 md:space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg md:text-xl font-semibold text-foreground">
+            Dnešní tréninky
+          </h2>
+          <Link
+            to="/calendar"
+            className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+          >
+            Vše
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="space-y-2 md:space-y-3">
+          {sessionsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : todaySessions.length > 0 ? (
+            todaySessions.map((session) => {
+              const client = clients.find(c => c.id === session.client_id);
+              return (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  client={client}
+                  compact
+                  onClick={() => {}}
+                />
+              );
+            })
+          ) : (
+            <div className="glass rounded-2xl p-6 md:p-8 text-center">
+              <Dumbbell className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mx-auto mb-2 md:mb-3" />
+              <p className="text-sm md:text-base text-muted-foreground">
+                Dnes nemáte žádné tréninky
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="mt-3 md:mt-4"
+                onClick={() => setIsTrainingSheetOpen(true)}
+              >
+                Přidat trénink
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
