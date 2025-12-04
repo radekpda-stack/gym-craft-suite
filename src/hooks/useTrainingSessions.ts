@@ -277,22 +277,26 @@ export function useCancelTrainingSession() {
       client_id,
       participant_count,
       isLateCancellation,
-      trainingPrices 
+      trainingPrices,
+      deductCredit = true
     }: { 
       id: string; 
       client_id: string;
       participant_count: number;
       isLateCancellation: boolean;
       trainingPrices: { "1": number; "2": number; "3": number };
+      deductCredit?: boolean;
     }) => {
       // Calculate price based on participant count
-      let price: number;
-      if (participant_count >= 3) {
-        price = trainingPrices["3"];
-      } else if (participant_count === 2) {
-        price = trainingPrices["2"];
-      } else {
-        price = trainingPrices["1"];
+      let price: number = 0;
+      if (deductCredit) {
+        if (participant_count >= 3) {
+          price = trainingPrices["3"];
+        } else if (participant_count === 2) {
+          price = trainingPrices["2"];
+        } else {
+          price = trainingPrices["1"];
+        }
       }
 
       // Update training status to canceled
@@ -309,47 +313,59 @@ export function useCancelTrainingSession() {
 
       if (error) throw error;
 
-      // Create credit transaction (negative amount for deduction)
-      const { error: transactionError } = await supabase
-        .from("credit_transactions")
-        .insert({
-          client_id,
-          amount: -price,
-          type: "canceled_training",
-          description: `Zrušený trénink${isLateCancellation ? ' (pozdě)' : ''} (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
-          training_session_id: id,
-        });
+      let newBalance: number | null = null;
 
-      if (transactionError) throw transactionError;
+      // Only create credit transaction if deductCredit is true
+      if (deductCredit && price > 0) {
+        const { error: transactionError } = await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id,
+            amount: -price,
+            type: "canceled_training",
+            description: `Zrušený trénink${isLateCancellation ? ' (pozdě)' : ''} (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
+            training_session_id: id,
+          });
 
-      // Update client's credit balance
-      const { data: client, error: clientError } = await supabase
-        .from("clients")
-        .select("credit_balance")
-        .eq("id", client_id)
-        .single();
+        if (transactionError) throw transactionError;
 
-      if (clientError) throw clientError;
+        // Update client's credit balance
+        const { data: client, error: clientError } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", client_id)
+          .single();
 
-      const newBalance = (client.credit_balance || 0) - price;
+        if (clientError) throw clientError;
 
-      const { error: updateError } = await supabase
-        .from("clients")
-        .update({ credit_balance: newBalance })
-        .eq("id", client_id);
+        newBalance = (client.credit_balance || 0) - price;
 
-      if (updateError) throw updateError;
+        const { error: updateError } = await supabase
+          .from("clients")
+          .update({ credit_balance: newBalance })
+          .eq("id", client_id);
 
-      return { data, price, newBalance };
+        if (updateError) throw updateError;
+      }
+
+      return { data, price, newBalance, deductCredit };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast({
-        title: "Trénink zrušen",
-        description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
-      });
+      
+      if (result.deductCredit && result.price > 0) {
+        toast({
+          title: "Trénink zrušen",
+          description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
+        });
+      } else {
+        toast({
+          title: "Trénink zrušen",
+          description: "Trénink byl zrušen bez odečtení kreditu.",
+        });
+      }
     },
     onError: (error) => {
       console.error("Error canceling training:", error);

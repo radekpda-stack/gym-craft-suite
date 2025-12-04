@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { cn } from '@/lib/utils';
 
 export default function Trainings() {
@@ -50,6 +51,7 @@ export default function Trainings() {
   const [deletingTraining, setDeletingTraining] = useState<TrainingSession | null>(null);
   const [completingTraining, setCompletingTraining] = useState<TrainingSession | null>(null);
   const [cancelingTraining, setCancelingTraining] = useState<TrainingSession | null>(null);
+  const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
   const [completeParticipants, setCompleteParticipants] = useState(1);
   const [completeRating, setCompleteRating] = useState<number | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
@@ -162,9 +164,16 @@ export default function Trainings() {
       participant_count: cancelingTraining.participant_count || 1,
       isLateCancellation,
       trainingPrices,
+      deductCredit: cancelDeductCredit,
     });
     
     setCancelingTraining(null);
+    setCancelDeductCredit(true); // Reset for next time
+  };
+
+  const openCancelDialog = (session: TrainingSession) => {
+    setCancelingTraining(session);
+    setCancelDeductCredit(true); // Default to deduct credit
   };
 
   const getCancelPrice = () => {
@@ -310,7 +319,7 @@ export default function Trainings() {
           <DialogHeader>
             <DialogTitle>Zrušit trénink</DialogTitle>
             <DialogDescription>
-              Opravdu chcete zrušit tento trénink? Kredit bude automaticky odečten.
+              Opravdu chcete zrušit tento trénink?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -319,15 +328,34 @@ export default function Trainings() {
                 <span className="text-sm text-muted-foreground">Počet účastníků:</span>
                 <span className="font-medium">{cancelingTraining?.participant_count || 1}</span>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-sm text-muted-foreground">Cena za trénink:</span>
-                <span className="text-lg font-bold text-destructive">{getCancelPrice()} Kč</span>
-              </div>
+              {cancelDeductCredit && (
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm text-muted-foreground">Cena za trénink:</span>
+                  <span className="text-lg font-bold text-destructive">{getCancelPrice()} Kč</span>
+                </div>
+              )}
               {cancelingTraining && differenceInHours(new Date(cancelingTraining.date), new Date()) < 24 && (
                 <div className="mt-3 p-2 rounded bg-warning/10 text-warning text-sm">
                   ⚠️ Pozdní zrušení (méně než 24h před tréninkem)
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+              <div>
+                <Label htmlFor="deduct-credit" className="font-medium">Odečíst kredit</Label>
+                <p className="text-sm text-muted-foreground">
+                  {cancelDeductCredit 
+                    ? `Bude odečteno ${getCancelPrice()} Kč z kreditu klienta`
+                    : "Kredit klienta zůstane beze změny"
+                  }
+                </p>
+              </div>
+              <Switch
+                id="deduct-credit"
+                checked={cancelDeductCredit}
+                onCheckedChange={setCancelDeductCredit}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -347,7 +375,7 @@ export default function Trainings() {
               ) : (
                 <>
                   <XCircle className="w-4 h-4 mr-2" />
-                  Zrušit a odečíst kredit
+                  {cancelDeductCredit ? "Zrušit a odečíst kredit" : "Zrušit bez odečtení"}
                 </>
               )}
             </Button>
@@ -420,7 +448,7 @@ export default function Trainings() {
                         variant="ghost"
                         size="sm"
                         className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setCancelingTraining(session)}
+                        onClick={() => openCancelDialog(session)}
                       >
                         <XCircle className="w-4 h-4" />
                         Zrušit
