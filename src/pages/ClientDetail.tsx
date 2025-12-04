@@ -20,14 +20,17 @@ import {
   Calendar,
   Clock,
   Tag,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { SessionCard } from '@/components/ui/session-card';
 import { StatCard } from '@/components/ui/stat-card';
+import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
+import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
@@ -41,6 +44,7 @@ export default function ClientDetail() {
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: allSessions = [] } = useTrainingSessions(id);
   const updateClient = useUpdateClient();
+  const toggleFavorite = useToggleFavorite();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Cast sessions to proper type
@@ -97,21 +101,36 @@ export default function ClientDetail() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
+      {/* Breadcrumbs */}
+      <PageBreadcrumbs
+        items={[
+          { label: 'Klienti', href: '/clients' },
+          { label: client.name },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <Link
-            to="/clients"
-            className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
           <ClientAvatar name={client.name} size="xl" />
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">
-              {client.name}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                {client.name}
+              </h1>
+              <button
+                onClick={() => toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite })}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  client.is_favorite 
+                    ? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20" 
+                    : "text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
+                )}
+              >
+                <Star className={cn("w-5 h-5", client.is_favorite && "fill-current")} />
+              </button>
+            </div>
             <p className="text-muted-foreground mt-1">
               Klient od{' '}
               {format(new Date(client.created_at), 'MMMM yyyy', { locale: cs })}

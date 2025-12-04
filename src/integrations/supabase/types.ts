@@ -190,6 +190,7 @@ export type Database = {
           email: string | null
           health_restrictions: string | null
           id: string
+          is_favorite: boolean
           name: string
           notes: string | null
           phone: string | null
@@ -204,6 +205,7 @@ export type Database = {
           email?: string | null
           health_restrictions?: string | null
           id?: string
+          is_favorite?: boolean
           name: string
           notes?: string | null
           phone?: string | null
@@ -218,6 +220,7 @@ export type Database = {
           email?: string | null
           health_restrictions?: string | null
           id?: string
+          is_favorite?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
@@ -559,7 +562,10 @@ export type Database = {
           id: string
           is_late_cancellation: boolean | null
           notes: string | null
+          parent_session_id: string | null
           participant_count: number | null
+          recurrence_end_date: string | null
+          recurrence_type: string | null
           status: string
           subjective_rating: number | null
           updated_at: string
@@ -574,7 +580,10 @@ export type Database = {
           id?: string
           is_late_cancellation?: boolean | null
           notes?: string | null
+          parent_session_id?: string | null
           participant_count?: number | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
           status?: string
           subjective_rating?: number | null
           updated_at?: string
@@ -589,7 +598,10 @@ export type Database = {
           id?: string
           is_late_cancellation?: boolean | null
           notes?: string | null
+          parent_session_id?: string | null
           participant_count?: number | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
           status?: string
           subjective_rating?: number | null
           updated_at?: string
@@ -601,6 +613,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_parent_session_id_fkey"
+            columns: ["parent_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
             referencedColumns: ["id"]
           },
         ]

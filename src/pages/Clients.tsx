@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
 import { useCreateTransaction, useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { useClientsWithTags } from '@/hooks/useClientTags';
 import { useTags } from '@/hooks/useTags';
+import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
@@ -21,6 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -37,12 +49,15 @@ export default function Clients() {
   const [creditClient, setCreditClient] = useState<Client | null>(null);
   const [creditAmount, setCreditAmount] = useState('');
   const [creditDescription, setCreditDescription] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   const createTransaction = useCreateTransaction();
+  const toggleFavorite = useToggleFavorite();
   const { data: creditClientTransactions = [] } = useCreditTransactions(creditClient?.id);
   const { data: clientTagsMap = {} } = useClientsWithTags();
   const { data: allTags = [] } = useTags();
@@ -124,6 +139,34 @@ export default function Clients() {
     return "text-success";
   };
 
+  const toggleSelectClient = (clientId: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
+      } else {
+        newSet.add(clientId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredClients.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredClients.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    for (const id of selectedIds) {
+      await deleteClient.mutateAsync(id);
+    }
+    setSelectedIds(new Set());
+    setShowBulkDeleteDialog(false);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -165,6 +208,27 @@ export default function Clients() {
         clientName={deletingClient?.name || ""}
         isLoading={deleteClient.isPending}
       />
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat {selectedIds.size} klientů?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce je nevratná. Všechna data vybraných klientů budou trvale odstraněna.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Smazat {selectedIds.size} klientů
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Credit Dialog */}
       <Dialog open={!!creditClient} onOpenChange={(open) => !open && setCreditClient(null)}>
@@ -345,6 +409,38 @@ export default function Clients() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-4 glass rounded-xl animate-slide-up">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={selectedIds.size === filteredClients.length}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span className="text-sm font-medium">
+              {selectedIds.size} vybráno
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Zrušit výběr
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowBulkDeleteDialog(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Smazat vybrané
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Clients Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -354,12 +450,42 @@ export default function Clients() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredClients.map((client, index) => {
             const clientTags = clientTagsMap[client.id] || [];
+            const isSelected = selectedIds.has(client.id);
             return (
             <div
               key={client.id}
-              className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative"
+              className={cn(
+                "glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative",
+                isSelected && "ring-2 ring-primary"
+              )}
               style={{ animationDelay: `${index * 50}ms` }}
             >
+              {/* Selection checkbox */}
+              <div className="absolute top-3 left-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => toggleSelectClient(client.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              {/* Favorite button */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite });
+                }}
+                className={cn(
+                  "absolute top-3 left-10 p-1 rounded transition-all",
+                  client.is_favorite 
+                    ? "text-yellow-500" 
+                    : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500"
+                )}
+              >
+                <Star className={cn("w-4 h-4", client.is_favorite && "fill-current")} />
+              </button>
+
               {/* Action buttons */}
               <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
