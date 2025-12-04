@@ -7,6 +7,7 @@ export interface Tag {
   name: string;
   color: string;
   created_at: string;
+  user_id: string | null;
 }
 
 export function useTags() {
@@ -29,9 +30,12 @@ export function useCreateTag() {
 
   return useMutation({
     mutationFn: async ({ name, color }: { name: string; color?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("tags")
-        .insert({ name, color: color || "#6366f1" })
+        .insert({ name, color: color || "#6366f1", user_id: user.id })
         .select()
         .single();
 

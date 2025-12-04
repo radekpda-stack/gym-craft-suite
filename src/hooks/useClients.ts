@@ -15,6 +15,7 @@ export interface Client {
   birth_date: string | null;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 export function useClients() {
@@ -55,6 +56,9 @@ export function useCreateClient() {
 
   return useMutation({
     mutationFn: async (values: ClientFormValues) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("clients")
         .insert({
@@ -66,6 +70,7 @@ export function useCreateClient() {
           health_restrictions: values.healthRestrictions || "",
           credit_balance: values.creditBalance || 0,
           birth_date: values.birthDate || null,
+          user_id: user.id,
         })
         .select()
         .single();

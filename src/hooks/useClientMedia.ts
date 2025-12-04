@@ -19,6 +19,7 @@ export interface ClientMedia {
   duration_seconds: number | null;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 export interface CreateMediaInput {
@@ -96,9 +97,13 @@ export function useCreateMedia() {
 
   return useMutation({
     mutationFn: async (input: CreateMediaInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const bucket = input.type === 'photo' ? 'client-photos' : 'client-audio';
       const fileExt = input.file.name.split('.').pop();
-      const fileName = `${input.client_id}/${Date.now()}.${fileExt}`;
+      // Use user.id as the folder prefix for storage policies
+      const fileName = `${user.id}/${input.client_id}/${Date.now()}.${fileExt}`;
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
@@ -107,10 +112,12 @@ export function useCreateMedia() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // Get signed URL (buckets are now private)
+      const { data: urlData, error: urlError } = await supabase.storage
         .from(bucket)
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600); // 1 hour expiry
+
+      if (urlError) throw urlError;
 
       // Create database record
       const { data, error } = await supabase
@@ -118,7 +125,7 @@ export function useCreateMedia() {
         .insert({
           client_id: input.client_id,
           type: input.type,
-          file_url: urlData.publicUrl,
+          file_url: fileName, // Store file path instead of public URL
           file_name: input.file.name,
           description: input.description || "",
           tags: input.tags || [],
@@ -127,12 +134,13 @@ export function useCreateMedia() {
           date: input.date || new Date().toISOString().split('T')[0],
           duration_seconds: input.duration_seconds,
           diagnostic_id: input.diagnostic_id,
+          user_id: user.id,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return { ...data, signedUrl: urlData.signedUrl };
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["client-media", variables.client_id] });
@@ -191,13 +199,10 @@ export function useDeleteMedia() {
 
   return useMutation({
     mutationFn: async ({ id, fileUrl, type }: { id: string; fileUrl: string; type: MediaType }) => {
-      // Extract file path from URL
       const bucket = type === 'photo' ? 'client-photos' : 'client-audio';
-      const urlParts = fileUrl.split(`/${bucket}/`);
-      if (urlParts.length > 1) {
-        const filePath = urlParts[1];
-        await supabase.storage.from(bucket).remove([filePath]);
-      }
+      
+      // fileUrl now contains the file path directly
+      await supabase.storage.from(bucket).remove([fileUrl]);
 
       const { error } = await supabase
         .from("client_media")
@@ -221,5 +226,24 @@ export function useDeleteMedia() {
         variant: "destructive",
       });
     },
+  });
+}
+
+// Helper hook to get signed URLs for media
+export function useSignedUrl(filePath: string | undefined, type: MediaType) {
+  return useQuery({
+    queryKey: ["signed-url", filePath, type],
+    queryFn: async () => {
+      if (!filePath) return null;
+      const bucket = type === 'photo' ? 'client-photos' : 'client-audio';
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    enabled: !!filePath,
+    staleTime: 1000 * 60 * 50, // 50 minutes (refresh before 1 hour expiry)
   });
 }

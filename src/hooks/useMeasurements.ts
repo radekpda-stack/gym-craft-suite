@@ -22,6 +22,7 @@ export interface Measurement {
   mental_state: number | null;
   notes: string;
   created_at: string;
+  user_id: string | null;
 }
 
 export interface CreateMeasurementInput {
@@ -69,6 +70,9 @@ export function useCreateMeasurement() {
 
   return useMutation({
     mutationFn: async (input: CreateMeasurementInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("measurements")
         .insert({
@@ -89,6 +93,7 @@ export function useCreateMeasurement() {
           calf_right: input.calf_right || null,
           mental_state: input.mental_state || null,
           notes: input.notes || "",
+          user_id: user.id,
         })
         .select()
         .single();
