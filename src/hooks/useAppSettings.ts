@@ -50,6 +50,30 @@ export function useLowCreditThreshold() {
   return settings?.low_credit_threshold || 500;
 }
 
+export interface DashboardLayout {
+  showIncomeChart: boolean;
+  showMonthlyChart: boolean;
+  showClientCredits: boolean;
+  showProductBreakdown: boolean;
+  showTaxCalculator: boolean;
+  showQuickActions: boolean;
+}
+
+export function useDashboardLayout() {
+  const { data: settings } = useAppSettings();
+  
+  const defaultLayout: DashboardLayout = {
+    showIncomeChart: true,
+    showMonthlyChart: true,
+    showClientCredits: true,
+    showProductBreakdown: true,
+    showTaxCalculator: true,
+    showQuickActions: true,
+  };
+  
+  return settings?.dashboard_layout || defaultLayout;
+}
+
 export function useUpdateSetting() {
   const queryClient = useQueryClient();
 
