@@ -43,34 +43,36 @@ import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useLanguage } from '@/lib/i18n';
 
 interface NavItem {
   id: string;
   to: string;
   icon: LucideIcon;
-  label: string;
+  labelKey: keyof typeof import('@/lib/i18n/translations/cs').cs.nav;
 }
 
 const navItemsMap: Record<string, NavItem> = {
-  dashboard: { id: 'dashboard', to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  clients: { id: 'clients', to: '/clients', icon: Users, label: 'Klienti' },
-  trainings: { id: 'trainings', to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-  diagnostics: { id: 'diagnostics', to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
-  measurements: { id: 'measurements', to: '/measurements', icon: Activity, label: 'Měření' },
-  calendar: { id: 'calendar', to: '/calendar', icon: Calendar, label: 'Kalendář' },
-  canceled: { id: 'canceled', to: '/canceled', icon: XCircle, label: 'Zrušené' },
-  'ai-assistant': { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
-  settings: { id: 'settings', to: '/settings', icon: Settings, label: 'Nastavení' },
+  dashboard: { id: 'dashboard', to: '/', icon: LayoutDashboard, labelKey: 'dashboard' },
+  clients: { id: 'clients', to: '/clients', icon: Users, labelKey: 'clients' },
+  trainings: { id: 'trainings', to: '/trainings', icon: Dumbbell, labelKey: 'trainings' },
+  diagnostics: { id: 'diagnostics', to: '/diagnostics', icon: Stethoscope, labelKey: 'diagnostics' },
+  measurements: { id: 'measurements', to: '/measurements', icon: Activity, labelKey: 'measurements' },
+  calendar: { id: 'calendar', to: '/calendar', icon: Calendar, labelKey: 'calendar' },
+  canceled: { id: 'canceled', to: '/canceled', icon: XCircle, labelKey: 'canceled' },
+  'ai-assistant': { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, labelKey: 'aiAssistant' },
+  settings: { id: 'settings', to: '/settings', icon: Settings, labelKey: 'settings' },
 };
 
 interface SortableNavItemProps {
   item: NavItem;
+  label: string;
   isActive: boolean;
   collapsed: boolean;
   isEditMode: boolean;
 }
 
-function SortableNavItem({ item, isActive, collapsed, isEditMode }: SortableNavItemProps) {
+function SortableNavItem({ item, label, isActive, collapsed, isEditMode }: SortableNavItemProps) {
   const {
     attributes,
     listeners,
@@ -117,7 +119,7 @@ function SortableNavItem({ item, isActive, collapsed, isEditMode }: SortableNavI
           !isActive && 'group-hover:scale-110'
         )} />
         {!collapsed && (
-          <span className="font-medium truncate">{item.label}</span>
+          <span className="font-medium truncate">{label}</span>
         )}
       </NavLink>
     </div>
@@ -131,6 +133,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { preferences, updateSidebarOrder } = useLayoutPreferences();
   const { signOut, user } = useAuth();
+  const { t } = useLanguage();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -167,14 +170,14 @@ export function Sidebar() {
     const { error } = await signOut();
     if (error) {
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se odhlásit.',
+        title: t.errors.generic,
+        description: t.auth.logoutError,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Odhlášení úspěšné',
-        description: 'Byli jste odhlášeni.',
+        title: t.auth.logoutSuccess,
+        description: t.auth.logoutSuccessDesc,
       });
       navigate('/auth', { replace: true });
     }
@@ -221,6 +224,7 @@ export function Sidebar() {
                 <SortableNavItem
                   key={item.id}
                   item={item}
+                  label={t.nav[item.labelKey]}
                   isActive={isActive}
                   collapsed={collapsed}
                   isEditMode={isEditMode}
@@ -252,7 +256,7 @@ export function Sidebar() {
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl glass-subtle text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
         >
           <LogOut className="w-4 h-4" />
-          {!collapsed && <span className="text-sm font-medium">Odhlásit se</span>}
+          {!collapsed && <span className="text-sm font-medium">{t.nav.logout}</span>}
         </button>
 
         {!collapsed && (
@@ -268,12 +272,12 @@ export function Sidebar() {
             {isEditMode ? (
               <>
                 <Check className="w-4 h-4" />
-                <span className="text-sm font-medium">Hotovo</span>
+                <span className="text-sm font-medium">{t.common.done}</span>
               </>
             ) : (
               <>
                 <Pencil className="w-4 h-4" />
-                <span className="text-sm font-medium">Upravit pořadí</span>
+                <span className="text-sm font-medium">{t.nav.editOrder}</span>
               </>
             )}
           </button>
@@ -287,7 +291,7 @@ export function Sidebar() {
           ) : (
             <>
               <ChevronLeft className="w-5 h-5" />
-              <span className="font-medium">Sbalit menu</span>
+              <span className="font-medium">{t.nav.collapseMenu}</span>
             </>
           )}
         </button>
