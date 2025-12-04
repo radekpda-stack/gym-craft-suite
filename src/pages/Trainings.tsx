@@ -95,6 +95,7 @@ export default function Trainings() {
       subjective_rating: data.subjective_rating || undefined,
       status: data.status,
       participant_count: data.participant_count,
+      trainingPrices, // Pass prices for credit deduction if status is "completed"
     });
     setIsCreateSheetOpen(false);
   };
@@ -111,6 +112,7 @@ export default function Trainings() {
         status: data.status,
         participant_count: data.participant_count,
       },
+      trainingPrices, // Pass prices for credit deduction if status changes to "completed"
     });
     setEditingTraining(null);
   };
