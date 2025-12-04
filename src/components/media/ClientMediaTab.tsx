@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useClientMedia, ClientMedia, CATEGORY_OPTIONS } from "@/hooks/useClientMedia";
+import { useDiagnostics } from "@/hooks/useDiagnostics";
 import { PhotoUpload } from "./PhotoUpload";
 import { PhotoGallery } from "./PhotoGallery";
 import { PhotoCompare } from "./PhotoCompare";
@@ -24,6 +25,7 @@ export function ClientMediaTab({ clientId }: ClientMediaTabProps) {
   
   const { data: photos, isLoading: photosLoading } = useClientMedia(clientId, 'photo');
   const { data: audioNotes, isLoading: audioLoading } = useClientMedia(clientId, 'audio');
+  const { data: diagnostics = [] } = useDiagnostics(clientId);
 
   const filterMedia = (items: ClientMedia[] | undefined) => {
     if (!items) return [];
@@ -60,8 +62,8 @@ export function ClientMediaTab({ clientId }: ClientMediaTabProps) {
           </TabsList>
           
           <div className="flex gap-2">
-            {activeTab === "photos" && <PhotoUpload clientId={clientId} />}
-            {activeTab === "audio" && <VoiceRecorder clientId={clientId} />}
+            {activeTab === "photos" && <PhotoUpload clientId={clientId} diagnostics={diagnostics} />}
+            {activeTab === "audio" && <VoiceRecorder clientId={clientId} diagnostics={diagnostics} />}
           </div>
         </div>
 

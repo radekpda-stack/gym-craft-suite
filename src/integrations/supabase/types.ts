@@ -79,6 +79,7 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          diagnostic_id: string | null
           duration_seconds: number | null
           file_name: string
           file_url: string
@@ -94,6 +95,7 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          diagnostic_id?: string | null
           duration_seconds?: number | null
           file_name: string
           file_url: string
@@ -109,6 +111,7 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          diagnostic_id?: string | null
           duration_seconds?: number | null
           file_name?: string
           file_url?: string
@@ -123,6 +126,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_media_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostics"
             referencedColumns: ["id"]
           },
         ]

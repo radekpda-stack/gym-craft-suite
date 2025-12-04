@@ -12,13 +12,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Diagnostic } from "@/hooks/useDiagnostics";
 
 interface VoiceRecorderProps {
   clientId: string;
+  diagnosticId?: string;
+  diagnostics?: Diagnostic[];
   onSuccess?: () => void;
 }
 
-export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
+export function VoiceRecorder({ clientId, diagnosticId, diagnostics = [], onSuccess }: VoiceRecorderProps) {
   const [open, setOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -29,6 +32,7 @@ export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
   const [category, setCategory] = useState("diagnostic");
   const [tags, setTags] = useState("");
   const [date, setDate] = useState<Date>(new Date());
+  const [selectedDiagnosticId, setSelectedDiagnosticId] = useState<string>(diagnosticId || "");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -126,6 +130,7 @@ export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       date: date.toISOString().split('T')[0],
       duration_seconds: duration,
+      diagnostic_id: selectedDiagnosticId || undefined,
     });
 
     setOpen(false);
@@ -139,6 +144,7 @@ export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
     setCategory("diagnostic");
     setTags("");
     setDate(new Date());
+    setSelectedDiagnosticId(diagnosticId || "");
   };
 
   const formatTime = (seconds: number) => {
@@ -155,7 +161,7 @@ export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
           Nahrát poznámku
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Hlasová poznámka</DialogTitle>
         </DialogHeader>
@@ -217,6 +223,25 @@ export function VoiceRecorder({ clientId, onSuccess }: VoiceRecorderProps) {
                   </PopoverContent>
                 </Popover>
               </div>
+
+              {diagnostics.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Propojit s diagnostikou (volitelné)</Label>
+                  <Select value={selectedDiagnosticId} onValueChange={setSelectedDiagnosticId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Vyberte diagnostiku" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Bez propojení</SelectItem>
+                      {diagnostics.map(diag => (
+                        <SelectItem key={diag.id} value={diag.id}>
+                          {format(new Date(diag.date), "d. M. yyyy")} - {diag.area_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Kategorie</Label>

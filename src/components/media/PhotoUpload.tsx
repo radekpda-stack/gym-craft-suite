@@ -12,13 +12,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Diagnostic } from "@/hooks/useDiagnostics";
 
 interface PhotoUploadProps {
   clientId: string;
+  diagnosticId?: string;
+  diagnostics?: Diagnostic[];
   onSuccess?: () => void;
 }
 
-export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
+export function PhotoUpload({ clientId, diagnosticId, diagnostics = [], onSuccess }: PhotoUploadProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -27,6 +30,7 @@ export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
   const [bodyArea, setBodyArea] = useState("");
   const [tags, setTags] = useState("");
   const [date, setDate] = useState<Date>(new Date());
+  const [selectedDiagnosticId, setSelectedDiagnosticId] = useState<string>(diagnosticId || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const createMedia = useCreateMedia();
@@ -55,6 +59,7 @@ export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
       body_area: bodyArea || undefined,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       date: date.toISOString().split('T')[0],
+      diagnostic_id: selectedDiagnosticId || undefined,
     });
 
     setOpen(false);
@@ -70,6 +75,7 @@ export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
     setBodyArea("");
     setTags("");
     setDate(new Date());
+    setSelectedDiagnosticId(diagnosticId || "");
   };
 
   return (
@@ -80,7 +86,7 @@ export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
           Přidat fotku
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nahrát fotografii</DialogTitle>
         </DialogHeader>
@@ -129,6 +135,25 @@ export function PhotoUpload({ clientId, onSuccess }: PhotoUploadProps) {
               </PopoverContent>
             </Popover>
           </div>
+
+          {diagnostics.length > 0 && (
+            <div className="space-y-2">
+              <Label>Propojit s diagnostikou (volitelné)</Label>
+              <Select value={selectedDiagnosticId} onValueChange={setSelectedDiagnosticId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Vyberte diagnostiku" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Bez propojení</SelectItem>
+                  {diagnostics.map(diag => (
+                    <SelectItem key={diag.id} value={diag.id}>
+                      {format(new Date(diag.date), "d. M. yyyy")} - {diag.area_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Kategorie</Label>
