@@ -12,10 +12,11 @@ import { TrainingSession } from "@/hooks/useTrainingSessions";
 interface EditTrainingSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: TrainingFormValues) => Promise<void>;
+  onSubmit: (data: TrainingFormValues, tagIds: string[]) => Promise<void>;
   isLoading?: boolean;
   clients: Client[];
   training: TrainingSession | null;
+  defaultTagIds?: string[];
 }
 
 export function EditTrainingSheet({
@@ -25,6 +26,7 @@ export function EditTrainingSheet({
   isLoading,
   clients,
   training,
+  defaultTagIds = [],
 }: EditTrainingSheetProps) {
   if (!training) return null;
 
@@ -51,7 +53,9 @@ export function EditTrainingSheet({
               subjective_rating: training.subjective_rating,
               status: training.status,
             }}
+            defaultTagIds={defaultTagIds}
             submitLabel="Uložit změny"
+            showRecurrence={false}
           />
         </div>
       </SheetContent>

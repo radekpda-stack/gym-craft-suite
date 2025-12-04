@@ -1,10 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat } from "lucide-react";
+import { Loader2, Repeat, Tag } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -24,6 +25,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
+import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
 
 const trainingFormSchema = z.object({
@@ -43,10 +45,11 @@ const trainingFormSchema = z.object({
 export type TrainingFormValues = z.infer<typeof trainingFormSchema>;
 
 interface TrainingFormProps {
-  onSubmit: (data: TrainingFormValues) => Promise<void>;
+  onSubmit: (data: TrainingFormValues, tagIds: string[]) => Promise<void>;
   isLoading?: boolean;
   clients: Client[];
   defaultValues?: Partial<TrainingFormValues>;
+  defaultTagIds?: string[];
   submitLabel?: string;
   showRecurrence?: boolean;
 }
@@ -56,9 +59,12 @@ export function TrainingForm({
   isLoading,
   clients,
   defaultValues,
+  defaultTagIds = [],
   submitLabel = "Vytvořit trénink",
   showRecurrence = true,
 }: TrainingFormProps) {
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
+  
   const form = useForm<TrainingFormValues>({
     resolver: zodResolver(trainingFormSchema),
     defaultValues: {
@@ -75,10 +81,14 @@ export function TrainingForm({
     },
   });
 
+  useEffect(() => {
+    setSelectedTagIds(defaultTagIds);
+  }, [defaultTagIds]);
+
   const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
-    await onSubmit(data);
+    await onSubmit(data, selectedTagIds);
   };
 
   return (
@@ -295,6 +305,21 @@ export function TrainingForm({
           )}
         />
 
+        {/* Training Tags */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Tag className="w-4 h-4" />
+            Štítky tréninku
+          </label>
+          <TrainingTagsSelector
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+          <p className="text-xs text-muted-foreground">
+            Přidejte štítky pro kategorizaci tréninku (např. horní část, síla, mobilita)
+          </p>
+        </div>
+
         <FormField
           control={form.control}
           name="notes"
@@ -303,8 +328,8 @@ export function TrainingForm({
               <FormLabel>Poznámky</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Poznámky k tréninku..."
-                  className="bg-secondary border-border min-h-[100px]"
+                  placeholder="Poznámky k tréninku - popište průběh, cviky, pokroky..."
+                  className="bg-secondary border-border min-h-[120px]"
                   {...field}
                 />
               </FormControl>

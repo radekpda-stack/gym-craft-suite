@@ -15,6 +15,7 @@ import {
   TrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { useAddTrainingSessionTags, useUpdateTrainingSessionTags, useTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { EditTrainingSheet } from '@/components/trainings/EditTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
@@ -64,6 +65,11 @@ export default function Trainings() {
   const completeTraining = useCompleteTrainingSession();
   const cancelTraining = useCancelTrainingSession();
   const trainingPrices = useTrainingPrices();
+  const addTrainingTags = useAddTrainingSessionTags();
+  const updateTrainingTags = useUpdateTrainingSessionTags();
+  
+  // Get tags for editing training
+  const { data: editingTrainingTags = [] } = useTrainingSessionTags(editingTraining?.id);
 
   const filteredSessions = sessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
@@ -88,7 +94,7 @@ export default function Trainings() {
     canceled: 'Zrušeno',
   };
 
-  const handleCreateTraining = async (data: TrainingFormValues) => {
+  const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     // Calculate recurrence end date if recurring
     let recurrence_end_date: string | undefined;
     let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
@@ -114,7 +120,7 @@ export default function Trainings() {
       recurrence_end_date = endDate.toISOString();
     }
     
-    await createTraining.mutateAsync({
+    const result = await createTraining.mutateAsync({
       client_id: data.client_id,
       date: new Date(data.date).toISOString(),
       duration: data.duration,
@@ -126,10 +132,19 @@ export default function Trainings() {
       recurrence_end_date,
       trainingPrices,
     });
+    
+    // Add tags to the created training
+    if (tagIds.length > 0 && result?.session?.id) {
+      await addTrainingTags.mutateAsync({
+        trainingSessionId: result.session.id,
+        tagIds,
+      });
+    }
+    
     setIsCreateSheetOpen(false);
   };
 
-  const handleEditTraining = async (data: TrainingFormValues) => {
+  const handleEditTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     if (!editingTraining) return;
     await updateTraining.mutateAsync({
       id: editingTraining.id,
@@ -143,6 +158,13 @@ export default function Trainings() {
       },
       trainingPrices, // Pass prices for credit deduction if status changes to "completed"
     });
+    
+    // Update tags
+    await updateTrainingTags.mutateAsync({
+      trainingSessionId: editingTraining.id,
+      tagIds,
+    });
+    
     setEditingTraining(null);
   };
 
@@ -242,6 +264,7 @@ export default function Trainings() {
         isLoading={updateTraining.isPending}
         clients={clients}
         training={editingTraining}
+        defaultTagIds={editingTrainingTags.map(t => t.tag_id)}
       />
 
       <AlertDialog open={!!deletingTraining} onOpenChange={(open) => !open && setDeletingTraining(null)}>

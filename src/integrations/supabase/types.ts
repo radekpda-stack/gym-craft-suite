@@ -555,6 +555,42 @@ export type Database = {
         }
         Relationships: []
       }
+      training_session_tags: {
+        Row: {
+          created_at: string
+          id: string
+          tag_id: string
+          training_session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tag_id: string
+          training_session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tag_id?: string
+          training_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_session_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_session_tags_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_sessions: {
         Row: {
           canceled_at: string | null

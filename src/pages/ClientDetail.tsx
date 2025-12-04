@@ -21,6 +21,7 @@ import {
   Clock,
   Tag,
   Star,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,6 +37,8 @@ import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
 import { ClientMediaTab } from '@/components/media/ClientMediaTab';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
+import { TrainingHistory } from '@/components/trainings/TrainingHistory';
+import { TrainingStats } from '@/components/trainings/TrainingStats';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -233,36 +236,50 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-secondary/50 p-1 rounded-xl">
+        <TabsList className="bg-secondary/50 p-1 rounded-xl flex-wrap h-auto gap-1">
           <TabsTrigger
             value="overview"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
           >
             Přehled
           </TabsTrigger>
           <TabsTrigger
+            value="history"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
+          >
+            <Tag className="w-4 h-4 mr-2" />
+            Historie
+          </TabsTrigger>
+          <TabsTrigger
+            value="stats"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
+          >
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Statistiky
+          </TabsTrigger>
+          <TabsTrigger
             value="credit"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
           >
             <Wallet className="w-4 h-4 mr-2" />
             Kredit
           </TabsTrigger>
           <TabsTrigger
             value="trainings"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
           >
             Tréninky ({clientSessions.filter(s => s.status !== 'canceled').length})
           </TabsTrigger>
           <TabsTrigger
             value="canceled"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
           >
             <XCircle className="w-4 h-4 mr-2" />
             Zrušené ({canceledSessions.length})
           </TabsTrigger>
           <TabsTrigger
             value="media"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
           >
             <Camera className="w-4 h-4 mr-2" />
             Média
@@ -338,6 +355,14 @@ export default function ClientDetail() {
               <p className="text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <TrainingHistory clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="stats" className="space-y-6">
+          <TrainingStats clientId={client.id} />
         </TabsContent>
 
         <TabsContent value="credit" className="space-y-6">
