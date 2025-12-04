@@ -11,6 +11,7 @@ import {
   Package,
   Tag,
   Dumbbell,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ import { ProductsManagement } from '@/components/settings/ProductsManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
+import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
 
 export default function Settings() {
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -33,6 +35,12 @@ export default function Settings() {
       description: 'Nastavení cen tréninků a limitů kreditu',
       icon: CreditCard,
       content: <TrainingPricesSettings />,
+    },
+    {
+      title: 'Platební tagy',
+      description: 'Správa platebních tagů pro kreditové transakce (hotovost, účet 1, účet 2...)',
+      icon: Wallet,
+      content: <PaymentTagsManagement />,
     },
     {
       title: 'Produkty a služby',
