@@ -15,6 +15,7 @@ const DEFAULT_SIDEBAR_ORDER = [
   'measurements',
   'calendar',
   'canceled',
+  'ai-assistant',
   'settings',
 ];
 

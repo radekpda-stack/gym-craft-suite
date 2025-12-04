@@ -34,6 +34,7 @@ import {
   Pencil,
   Check,
   LogOut,
+  Sparkles,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -57,6 +58,7 @@ const navItemsMap: Record<string, NavItem> = {
   measurements: { id: 'measurements', to: '/measurements', icon: Activity, label: 'Měření' },
   calendar: { id: 'calendar', to: '/calendar', icon: Calendar, label: 'Kalendář' },
   canceled: { id: 'canceled', to: '/canceled', icon: XCircle, label: 'Zrušené' },
+  'ai-assistant': { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
   settings: { id: 'settings', to: '/settings', icon: Settings, label: 'Nastavení' },
 };
 
