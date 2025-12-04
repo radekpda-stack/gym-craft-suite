@@ -56,6 +56,121 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnostics: {
+        Row: {
+          area_name: string
+          area_type: string
+          client_id: string
+          created_at: string
+          date: string
+          findings: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          area_name: string
+          area_type: string
+          client_id: string
+          created_at?: string
+          date?: string
+          findings: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          area_name?: string
+          area_type?: string
+          client_id?: string
+          created_at?: string
+          date?: string
+          findings?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurements: {
+        Row: {
+          basal_metabolism: number | null
+          bicep_left: number | null
+          bicep_right: number | null
+          body_fat_percentage: number | null
+          calf_left: number | null
+          calf_right: number | null
+          chest: number | null
+          client_id: string
+          created_at: string
+          date: string
+          hips: number | null
+          id: string
+          mental_state: number | null
+          muscle_mass: number | null
+          notes: string | null
+          thigh_left: number | null
+          thigh_right: number | null
+          waist: number | null
+          weight: number | null
+        }
+        Insert: {
+          basal_metabolism?: number | null
+          bicep_left?: number | null
+          bicep_right?: number | null
+          body_fat_percentage?: number | null
+          calf_left?: number | null
+          calf_right?: number | null
+          chest?: number | null
+          client_id: string
+          created_at?: string
+          date?: string
+          hips?: number | null
+          id?: string
+          mental_state?: number | null
+          muscle_mass?: number | null
+          notes?: string | null
+          thigh_left?: number | null
+          thigh_right?: number | null
+          waist?: number | null
+          weight?: number | null
+        }
+        Update: {
+          basal_metabolism?: number | null
+          bicep_left?: number | null
+          bicep_right?: number | null
+          body_fat_percentage?: number | null
+          calf_left?: number | null
+          calf_right?: number | null
+          chest?: number | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          hips?: number | null
+          id?: string
+          mental_state?: number | null
+          muscle_mass?: number | null
+          notes?: string | null
+          thigh_left?: number | null
+          thigh_right?: number | null
+          waist?: number | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           client_id: string | null
