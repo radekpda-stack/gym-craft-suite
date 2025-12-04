@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RatingInput } from "@/components/ui/rating-input";
+import { DatePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 
 const measurementFormSchema = z.object({
@@ -88,7 +89,7 @@ export function MeasurementForm({
                     <SelectValue placeholder="Vyberte klienta" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border">
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
@@ -108,7 +109,11 @@ export function MeasurementForm({
             <FormItem>
               <FormLabel>Datum *</FormLabel>
               <FormControl>
-                <Input type="date" className="bg-secondary border-border" {...field} />
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Vyberte datum"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

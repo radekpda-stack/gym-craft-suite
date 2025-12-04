@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import {
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 import { JOINT_OPTIONS, MUSCLE_OPTIONS } from "@/hooks/useDiagnostics";
 
@@ -81,7 +81,7 @@ export function DiagnosticForm({
                     <SelectValue placeholder="Vyberte klienta" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border">
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
@@ -101,7 +101,11 @@ export function DiagnosticForm({
             <FormItem>
               <FormLabel>Datum *</FormLabel>
               <FormControl>
-                <Input type="date" className="bg-secondary border-border" {...field} />
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Vyberte datum"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -124,7 +128,7 @@ export function DiagnosticForm({
                       <SelectValue placeholder="Vyberte typ" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border-border">
                     <SelectItem value="joint">Kloub</SelectItem>
                     <SelectItem value="muscle">Svalová skupina</SelectItem>
                   </SelectContent>
@@ -150,7 +154,7 @@ export function DiagnosticForm({
                       <SelectValue placeholder={areaType ? "Vyberte oblast" : "Nejdřív vyberte typ"} />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border-border">
                     {areaOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
