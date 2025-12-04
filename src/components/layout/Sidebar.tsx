@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { QuickProductSale } from '@/components/sales/QuickProductSale';
+import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -229,8 +230,9 @@ export function Sidebar() {
           </SortableContext>
         </DndContext>
         
-        {/* Quick Product Sale */}
-        <div className="pt-2 border-t border-sidebar-border/50 mt-2">
+        {/* Quick Actions */}
+        <div className="pt-2 border-t border-sidebar-border/50 mt-2 space-y-1">
+          <QuickCreditModal collapsed={collapsed} />
           <QuickProductSale collapsed={collapsed} />
         </div>
       </nav>
