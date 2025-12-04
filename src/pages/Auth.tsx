@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Dumbbell, Users, Calendar, TrendingUp } from 'lucide-react';
 
 const authSchema = z.object({
   email: z.string().email({ message: 'Neplatná e-mailová adresa' }),
@@ -114,110 +114,169 @@ export default function Auth() {
     );
   }
 
+  const features = [
+    { icon: Users, title: 'Správa klientů', desc: 'Evidujte své klienty a jejich pokroky' },
+    { icon: Calendar, title: 'Plánování tréninků', desc: 'Organizujte svůj kalendář efektivně' },
+    { icon: TrendingUp, title: 'Sledování výsledků', desc: 'Měření a diagnostika v jednom' },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Trainer App</CardTitle>
-          <CardDescription>
-            Přihlaste se nebo vytvořte nový účet
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Přihlášení</TabsTrigger>
-              <TabsTrigger value="signup">Registrace</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">E-mail</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="vas@email.cz"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+      {/* Left side - Branding (hidden on mobile, visible on lg+) */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 bg-gradient-to-br from-primary/20 via-background to-background p-12 flex-col justify-center items-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsl(var(--primary)/0.15),_transparent_50%)]" />
+        <div className="relative z-10 max-w-lg text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-8">
+            <Dumbbell className="w-10 h-10 text-primary" />
+          </div>
+          <h1 className="text-4xl xl:text-5xl font-bold text-foreground mb-4">
+            Trainer App
+          </h1>
+          <p className="text-lg text-muted-foreground mb-12">
+            Profesionální nástroj pro osobní trenéry
+          </p>
+          
+          <div className="space-y-6">
+            {features.map((feature, index) => (
+              <div 
+                key={index}
+                className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
+              >
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <feature.icon className="w-6 h-6 text-primary" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Heslo</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
+                <div className="text-left">
+                  <h3 className="font-semibold text-foreground">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.desc}</p>
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Přihlašování...
-                    </>
-                  ) : (
-                    'Přihlásit se'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">E-mail</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="vas@email.cz"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Heslo</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Registrace...
-                    </>
-                  ) : (
-                    'Vytvořit účet'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Auth form */}
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-8 lg:px-12 xl:px-16">
+        {/* Mobile header */}
+        <div className="lg:hidden text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+            <Dumbbell className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Trainer App</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Profesionální nástroj pro osobní trenéry
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm mx-auto">
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-xl text-center">Vítejte</CardTitle>
+              <CardDescription className="text-center text-sm">
+                Přihlaste se nebo vytvořte nový účet
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-6">
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="signin" className="text-sm">Přihlášení</TabsTrigger>
+                  <TabsTrigger value="signup" className="text-sm">Registrace</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="signin" className="mt-0">
+                  <form onSubmit={handleSignIn} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email" className="text-sm">E-mail</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="vas@email.cz"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        className="h-11"
+                      />
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password" className="text-sm">Heslo</Label>
+                      <Input
+                        id="signin-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="h-11"
+                      />
+                      {errors.password && (
+                        <p className="text-xs text-destructive">{errors.password}</p>
+                      )}
+                    </div>
+                    <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Přihlašování...
+                        </>
+                      ) : (
+                        'Přihlásit se'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup" className="mt-0">
+                  <form onSubmit={handleSignUp} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email" className="text-sm">E-mail</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="vas@email.cz"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        className="h-11"
+                      />
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password" className="text-sm">Heslo</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="h-11"
+                      />
+                      {errors.password && (
+                        <p className="text-xs text-destructive">{errors.password}</p>
+                      )}
+                    </div>
+                    <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Registrace...
+                        </>
+                      ) : (
+                        'Vytvořit účet'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
