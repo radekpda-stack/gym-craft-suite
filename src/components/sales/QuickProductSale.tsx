@@ -1,17 +1,21 @@
 import { useState } from 'react';
-import { Package, ShoppingCart } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Minus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { cn } from '@/lib/utils';
 
 interface QuickProductSaleProps {
   collapsed?: boolean;
+}
+
+interface CartItem {
+  product: Product;
+  quantity: number;
 }
 
 export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
@@ -21,35 +25,82 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [productQuantity, setProductQuantity] = useState(1);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedProductToAdd, setSelectedProductToAdd] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedClientData = clients.find(c => c.id === selectedClient);
-  const selectedProductData = products.find(p => p.id === selectedProduct);
-  const totalAmount = selectedProductData ? selectedProductData.price * productQuantity : 0;
+  const totalAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  const addToCart = () => {
+    const product = products.find(p => p.id === selectedProductToAdd);
+    if (!product) return;
+
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id);
+      if (existing) {
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+    setSelectedProductToAdd('');
+  };
+
+  const updateQuantity = (productId: string, delta: number) => {
+    setCart(prev => {
+      return prev
+        .map(item => {
+          if (item.product.id === productId) {
+            const newQuantity = item.quantity + delta;
+            return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
+          }
+          return item;
+        })
+        .filter((item): item is CartItem => item !== null);
+    });
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart(prev => prev.filter(item => item.product.id !== productId));
+  };
 
   const handleSale = async () => {
-    if (!selectedClient || !selectedProductData) return;
+    if (!selectedClient || cart.length === 0) return;
 
-    await createTransaction.mutateAsync({
-      client_id: selectedClient,
-      amount: -totalAmount,
-      type: 'product',
-      description: `${selectedProductData.name}${productQuantity > 1 ? ` (${productQuantity}x)` : ''}`,
-      product_id: selectedProductData.id,
-    });
+    setIsProcessing(true);
+    try {
+      // Create a transaction for each product in cart
+      for (const item of cart) {
+        const itemTotal = item.product.price * item.quantity;
+        await createTransaction.mutateAsync({
+          client_id: selectedClient,
+          amount: -itemTotal,
+          type: 'product',
+          description: `${item.product.name}${item.quantity > 1 ? ` (${item.quantity}x)` : ''}`,
+          product_id: item.product.id,
+        });
+      }
 
-    setSelectedClient('');
-    setSelectedProduct('');
-    setProductQuantity(1);
-    setIsOpen(false);
+      resetForm();
+      setIsOpen(false);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const resetForm = () => {
     setSelectedClient('');
-    setSelectedProduct('');
-    setProductQuantity(1);
+    setCart([]);
+    setSelectedProductToAdd('');
   };
+
+  const availableProducts = products.filter(
+    p => !cart.some(item => item.product.id === p.id)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -69,11 +120,11 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
           )}
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Rychlý prodej produktu
+            Prodej produktů
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
@@ -114,34 +165,83 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
             </div>
           )}
 
+          {/* Add product */}
           <div>
-            <Label>Produkt</Label>
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Vyberte produkt" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name} - {product.price.toLocaleString('cs-CZ')} Kč
-                  </SelectItem>
+            <Label>Přidat produkt</Label>
+            <div className="flex gap-2 mt-2">
+              <Select value={selectedProductToAdd} onValueChange={setSelectedProductToAdd}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Vyberte produkt" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProducts.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} - {product.price.toLocaleString('cs-CZ')} Kč
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={addToCart} 
+                disabled={!selectedProductToAdd}
+                size="icon"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Cart */}
+          {cart.length > 0 && (
+            <div className="space-y-2">
+              <Label>Košík ({cart.length} položek)</Label>
+              <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+                {cart.map((item) => (
+                  <div key={item.product.id} className="flex items-center justify-between p-3 bg-secondary/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{item.product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.product.price.toLocaleString('cs-CZ')} Kč × {item.quantity} = {' '}
+                        <span className="font-medium text-foreground">
+                          {(item.product.price * item.quantity).toLocaleString('cs-CZ')} Kč
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 ml-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => updateQuantity(item.product.id, -1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => updateQuantity(item.product.id, 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => removeFromCart(item.product.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
+          )}
 
-          <div>
-            <Label>Počet</Label>
-            <Input
-              type="number"
-              min="1"
-              value={productQuantity}
-              onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
-              className="mt-2"
-            />
-          </div>
-
-          {selectedProductData && (
+          {/* Total */}
+          {cart.length > 0 && (
             <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
               <p className="text-sm text-muted-foreground">Celkem k odečtení:</p>
               <p className="text-2xl font-bold text-foreground">
@@ -163,11 +263,11 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
           <Button 
             onClick={handleSale} 
-            disabled={!selectedClient || !selectedProduct || createTransaction.isPending} 
+            disabled={!selectedClient || cart.length === 0 || isProcessing} 
             className="w-full"
           >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            Prodat a odečíst z kreditu
+            {isProcessing ? 'Zpracovávám...' : `Prodat (${cart.length} položek)`}
           </Button>
         </div>
       </DialogContent>
