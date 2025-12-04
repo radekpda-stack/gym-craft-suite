@@ -10,6 +10,7 @@ export interface Exercise {
   description: string | null;
   muscle_groups: string[];
   equipment: string[];
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,10 +34,13 @@ export function useExercises() {
   });
 
   const createExercise = useMutation({
-    mutationFn: async (exercise: Omit<Exercise, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (exercise: Omit<Exercise, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      
       const { data, error } = await supabase
         .from('exercises')
-        .insert(exercise)
+        .insert({ ...exercise, user_id: user.id })
         .select()
         .single();
 
