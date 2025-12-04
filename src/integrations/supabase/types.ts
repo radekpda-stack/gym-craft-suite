@@ -71,6 +71,62 @@ export type Database = {
         }
         Relationships: []
       }
+      client_media: {
+        Row: {
+          body_area: string | null
+          category: string | null
+          client_id: string
+          created_at: string
+          date: string
+          description: string | null
+          duration_seconds: number | null
+          file_name: string
+          file_url: string
+          id: string
+          tags: string[] | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body_area?: string | null
+          category?: string | null
+          client_id: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_name: string
+          file_url: string
+          id?: string
+          tags?: string[] | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          body_area?: string | null
+          category?: string | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_media_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           birth_date: string | null

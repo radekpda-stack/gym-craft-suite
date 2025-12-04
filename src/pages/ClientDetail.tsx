@@ -15,6 +15,7 @@ import {
   CreditCard,
   Cake,
   Wallet,
+  Camera,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +27,7 @@ import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
+import { ClientMediaTab } from '@/components/media/ClientMediaTab';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -219,6 +221,13 @@ export default function ClientDetail() {
           >
             Tréninky ({clientSessions.length})
           </TabsTrigger>
+          <TabsTrigger
+            value="media"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            Média
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -279,6 +288,10 @@ export default function ClientDetail() {
               </Link>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="media" className="space-y-6">
+          <ClientMediaTab clientId={client.id} />
         </TabsContent>
       </Tabs>
     </div>
