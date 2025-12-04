@@ -14,6 +14,7 @@ export interface TrainingSession {
   status: TrainingStatus;
   canceled_at: string | null;
   is_late_cancellation: boolean;
+  participant_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +26,7 @@ export interface CreateTrainingInput {
   notes?: string;
   subjective_rating?: number;
   status?: TrainingStatus;
+  participant_count?: number;
 }
 
 export interface UpdateTrainingInput {
@@ -35,6 +37,7 @@ export interface UpdateTrainingInput {
   status?: TrainingStatus;
   canceled_at?: string;
   is_late_cancellation?: boolean;
+  participant_count?: number;
 }
 
 export function useTrainingSessions(clientId?: string) {
@@ -71,6 +74,7 @@ export function useCreateTrainingSession() {
           notes: input.notes || "",
           subjective_rating: input.subjective_rating || null,
           status: input.status || "scheduled",
+          participant_count: input.participant_count || 1,
         })
         .select()
         .single();
@@ -191,6 +195,114 @@ export function useCancelTrainingSession() {
       toast({
         title: "Chyba",
         description: "Nepodařilo se zrušit trénink.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export interface CompleteTrainingInput {
+  id: string;
+  client_id: string;
+  participant_count: number;
+  subjective_rating?: number;
+  notes?: string;
+}
+
+export function useCompleteTrainingSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      client_id, 
+      participant_count, 
+      subjective_rating,
+      notes,
+      trainingPrices 
+    }: CompleteTrainingInput & { trainingPrices: { "1": number; "2": number; "3": number } }) => {
+      // Calculate price based on participant count
+      let price: number;
+      if (participant_count >= 3) {
+        price = trainingPrices["3"];
+      } else if (participant_count === 2) {
+        price = trainingPrices["2"];
+      } else {
+        price = trainingPrices["1"];
+      }
+
+      // Update training status to completed
+      const updateData: Record<string, any> = {
+        status: "completed",
+        participant_count,
+      };
+      if (subjective_rating !== undefined) {
+        updateData.subjective_rating = subjective_rating;
+      }
+      if (notes !== undefined) {
+        updateData.notes = notes;
+      }
+
+      const { data: training, error: trainingError } = await supabase
+        .from("training_sessions")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (trainingError) throw trainingError;
+
+      // Create credit transaction (negative amount for deduction)
+      const { error: transactionError } = await supabase
+        .from("credit_transactions")
+        .insert({
+          client_id,
+          amount: -price,
+          type: "training",
+          description: `Trénink (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
+          training_session_id: id,
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Update client's credit balance
+      const { data: client, error: clientError } = await supabase
+        .from("clients")
+        .select("credit_balance")
+        .eq("id", client_id)
+        .single();
+
+      if (clientError) throw clientError;
+
+      const newBalance = (client.credit_balance || 0) - price;
+
+      const { error: updateError } = await supabase
+        .from("clients")
+        .update({ credit_balance: newBalance })
+        .eq("id", client_id);
+
+      if (updateError) throw updateError;
+
+      return { training, price, newBalance };
+    },
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["client", variables.client_id] });
+      
+      toast({
+        title: "Trénink dokončen",
+        description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
+      });
+    },
+    onError: (error) => {
+      console.error("Error completing training:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se dokončit trénink.",
         variant: "destructive",
       });
     },

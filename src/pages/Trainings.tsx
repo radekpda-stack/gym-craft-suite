@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
@@ -10,12 +10,14 @@ import {
   useCreateTrainingSession,
   useUpdateTrainingSession,
   useDeleteTrainingSession,
+  useCompleteTrainingSession,
   TrainingSession,
 } from '@/hooks/useTrainingSessions';
+import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { EditTrainingSheet } from '@/components/trainings/EditTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
-import { RatingDisplay } from '@/components/ui/rating-input';
+import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from '@/lib/utils';
 
 export default function Trainings() {
@@ -34,12 +47,18 @@ export default function Trainings() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingTraining, setEditingTraining] = useState<TrainingSession | null>(null);
   const [deletingTraining, setDeletingTraining] = useState<TrainingSession | null>(null);
+  const [completingTraining, setCompletingTraining] = useState<TrainingSession | null>(null);
+  const [completeParticipants, setCompleteParticipants] = useState(1);
+  const [completeRating, setCompleteRating] = useState<number | null>(null);
+  const [completeNotes, setCompleteNotes] = useState('');
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
+  const completeTraining = useCompleteTrainingSession();
+  const trainingPrices = useTrainingPrices();
 
   const filteredSessions = sessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
@@ -72,6 +91,7 @@ export default function Trainings() {
       notes: data.notes,
       subjective_rating: data.subjective_rating || undefined,
       status: data.status,
+      participant_count: data.participant_count,
     });
     setIsCreateSheetOpen(false);
   };
@@ -86,6 +106,7 @@ export default function Trainings() {
         notes: data.notes,
         subjective_rating: data.subjective_rating || undefined,
         status: data.status,
+        participant_count: data.participant_count,
       },
     });
     setEditingTraining(null);
@@ -95,6 +116,32 @@ export default function Trainings() {
     if (!deletingTraining) return;
     await deleteTraining.mutateAsync(deletingTraining.id);
     setDeletingTraining(null);
+  };
+
+  const openCompleteDialog = (session: TrainingSession) => {
+    setCompletingTraining(session);
+    setCompleteParticipants(session.participant_count || 1);
+    setCompleteRating(session.subjective_rating);
+    setCompleteNotes(session.notes || '');
+  };
+
+  const handleCompleteTraining = async () => {
+    if (!completingTraining) return;
+    
+    await completeTraining.mutateAsync({
+      id: completingTraining.id,
+      client_id: completingTraining.client_id,
+      participant_count: completeParticipants,
+      subjective_rating: completeRating || undefined,
+      notes: completeNotes || undefined,
+      trainingPrices,
+    });
+    
+    setCompletingTraining(null);
+  };
+
+  const getExpectedPrice = () => {
+    return getTrainingPrice(completeParticipants, trainingPrices);
   };
 
   return (
@@ -153,6 +200,82 @@ export default function Trainings() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Complete Training Dialog */}
+      <Dialog open={!!completingTraining} onOpenChange={(open) => !open && setCompletingTraining(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dokončit trénink</DialogTitle>
+            <DialogDescription>
+              Vyplňte údaje a potvrďte dokončení tréninku. Kredit bude automaticky odečten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Počet účastníků</Label>
+              <Select 
+                value={completeParticipants.toString()} 
+                onValueChange={(v) => setCompleteParticipants(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-4 rounded-lg bg-secondary/50 border">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Cena za trénink:</span>
+                <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Hodnocení (volitelné)</Label>
+              <RatingInput
+                value={completeRating}
+                onChange={setCompleteRating}
+                max={10}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Poznámky</Label>
+              <Textarea
+                value={completeNotes}
+                onChange={(e) => setCompleteNotes(e.target.value)}
+                placeholder="Poznámky k tréninku..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompletingTraining(null)}>
+              Zrušit
+            </Button>
+            <Button onClick={handleCompleteTraining} disabled={completeTraining.isPending}>
+              {completeTraining.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Ukládám...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Dokončit a odečíst kredit
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -204,6 +327,17 @@ export default function Trainings() {
               >
                 {/* Action buttons */}
                 <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {session.status === 'scheduled' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1 text-success hover:text-success hover:bg-success/10"
+                      onClick={() => openCompleteDialog(session)}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Dokončit
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -251,6 +385,15 @@ export default function Trainings() {
                         </div>
                         <span>•</span>
                         <span>{session.duration} min</span>
+                        {session.participant_count > 1 && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <Users className="w-4 h-4" />
+                              <span>{session.participant_count} osob</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
