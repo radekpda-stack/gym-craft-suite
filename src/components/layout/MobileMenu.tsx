@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -13,10 +14,12 @@ import {
   X,
   Zap,
   Sparkles,
+  Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
 
 interface MobileMenuProps {
   open: boolean;
@@ -39,6 +42,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const [quickCreditOpen, setQuickCreditOpen] = useState(false);
 
   const handleNavigation = (to: string) => {
     navigate(to);
@@ -96,6 +100,15 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
         {/* Navigation */}
         <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
+          {/* Quick Credit Button */}
+          <button
+            onClick={() => setQuickCreditOpen(true)}
+            className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all text-left bg-primary/10 text-primary hover:bg-primary/20 mb-2"
+          >
+            <Wallet className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium">Rychlá práce s kreditem</span>
+          </button>
+
           {navItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/' && location.pathname.startsWith(item.to));
@@ -135,6 +148,13 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           </button>
         </div>
       </div>
+
+      {/* Quick Credit Modal */}
+      <QuickCreditModal 
+        open={quickCreditOpen} 
+        onOpenChange={setQuickCreditOpen}
+        showTrigger={false}
+      />
     </>
   );
 }

@@ -16,6 +16,9 @@ import { toast } from '@/hooks/use-toast';
 
 interface QuickCreditModalProps {
   collapsed?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 type OperationType = 'add' | 'subtract';
@@ -23,13 +26,23 @@ type OperationType = 'add' | 'subtract';
 // Default credit tags that should be created if they don't exist
 const DEFAULT_CREDIT_TAGS = ['hotovost', 'účet 1', 'účet 2'];
 
-export function QuickCreditModal({ collapsed = false }: QuickCreditModalProps) {
+export function QuickCreditModal({ 
+  collapsed = false, 
+  open: controlledOpen, 
+  onOpenChange: controlledOnOpenChange,
+  showTrigger = true 
+}: QuickCreditModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
+  
   const { data: clients = [] } = useClients();
   const { data: tags = [] } = useTags();
   const createTransaction = useCreateTransaction();
   const createTag = useCreateTag();
 
-  const [isOpen, setIsOpen] = useState(false);
+  
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [clientSearchQuery, setClientSearchQuery] = useState('');
@@ -103,8 +116,9 @@ export function QuickCreditModal({ collapsed = false }: QuickCreditModalProps) {
         description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${Math.abs(finalAmount).toLocaleString('cs-CZ')} Kč pro ${selectedClient?.name}`,
       });
 
+
       resetForm();
-      setIsOpen(false);
+      setOpen(false);
     } catch (error) {
       console.error('Error creating transaction:', error);
       toast({
@@ -136,23 +150,25 @@ export function QuickCreditModal({ collapsed = false }: QuickCreditModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      setIsOpen(open);
-      if (!open) resetForm();
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      if (!newOpen) resetForm();
     }}>
-      <DialogTrigger asChild>
-        <button
-          className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full',
-            'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}
-        >
-          <CreditCard className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
-          {!collapsed && (
-            <span className="font-medium truncate">Rychlý kredit</span>
-          )}
-        </button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <button
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full',
+              'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            )}
+          >
+            <CreditCard className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+            {!collapsed && (
+              <span className="font-medium truncate">Rychlý kredit</span>
+            )}
+          </button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -343,7 +359,7 @@ export function QuickCreditModal({ collapsed = false }: QuickCreditModalProps) {
             variant="outline"
             onClick={() => {
               resetForm();
-              setIsOpen(false);
+              setOpen(false);
             }}
           >
             Zrušit
