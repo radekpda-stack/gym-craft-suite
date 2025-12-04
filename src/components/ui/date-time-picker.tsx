@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DateTimePickerProps {
   value?: Date | string;
@@ -112,8 +111,12 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-popover border-border" align="start">
-        <div className="flex">
+      <PopoverContent 
+        className="w-auto p-0 bg-popover border-border z-[100]" 
+        align="start"
+        sideOffset={4}
+      >
+        <div className="flex flex-col sm:flex-row">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -122,60 +125,53 @@ export function DateTimePicker({
             initialFocus
             className="p-3 pointer-events-auto"
           />
-          <div className="border-l border-border p-3 space-y-3">
+          <div className="border-t sm:border-t-0 sm:border-l border-border p-3 space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
               <Clock className="w-4 h-4" />
               <span>Čas</span>
             </div>
-            <div className="flex gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Hodina</p>
-                <ScrollArea className="h-48 rounded-md border border-border">
-                  <div className="p-1">
+            <div className="flex gap-4 justify-center">
+              <div className="flex-1 min-w-[80px]">
+                <p className="text-xs text-muted-foreground mb-1 text-center">Hodina</p>
+                <Select value={selectedHour} onValueChange={handleHourChange}>
+                  <SelectTrigger className="w-full bg-secondary border-border">
+                    <SelectValue placeholder="HH" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-48 z-[110]">
                     {hours.map((hour) => (
-                      <button
-                        key={hour}
-                        type="button"
-                        onClick={() => handleHourChange(hour)}
-                        className={cn(
-                          "w-full px-3 py-1.5 text-sm rounded-md transition-colors",
-                          selectedHour === hour
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-secondary"
-                        )}
-                      >
+                      <SelectItem key={hour} value={hour}>
                         {hour}
-                      </button>
+                      </SelectItem>
                     ))}
-                  </div>
-                </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Minuta</p>
-                <ScrollArea className="h-48 rounded-md border border-border">
-                  <div className="p-1">
-                    {minutes.map((minute) => (
-                      <button
-                        key={minute}
-                        type="button"
-                        onClick={() => handleMinuteChange(minute)}
-                        className={cn(
-                          "w-full px-3 py-1.5 text-sm rounded-md transition-colors",
-                          selectedMinute === minute
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-secondary"
-                        )}
-                      >
+              <div className="flex items-end pb-2 text-xl font-bold text-muted-foreground">:</div>
+              <div className="flex-1 min-w-[80px]">
+                <p className="text-xs text-muted-foreground mb-1 text-center">Minuta</p>
+                <Select value={selectedMinute} onValueChange={handleMinuteChange}>
+                  <SelectTrigger className="w-full bg-secondary border-border">
+                    <SelectValue placeholder="MM" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-48 z-[110]">
+                    {minutes.filter((_, i) => i % 5 === 0).map((minute) => (
+                      <SelectItem key={minute} value={minute}>
                         {minute}
-                      </button>
+                      </SelectItem>
                     ))}
-                  </div>
-                </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            {/* Time display preview */}
+            <div className="text-center py-2 px-4 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-2xl font-bold text-primary">
+                {selectedHour}:{selectedMinute}
+              </p>
             </div>
             <Button 
               size="sm" 
-              className="w-full mt-2"
+              className="w-full"
               onClick={() => setIsOpen(false)}
             >
               Potvrdit
