@@ -10,12 +10,18 @@ import {
   Palette,
   Clock,
   Check,
+  CreditCard,
+  Package,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { ProductsManagement } from '@/components/settings/ProductsManagement';
+import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
+import { TagsManagement } from '@/components/settings/TagsManagement';
 
 export default function Settings() {
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -24,6 +30,24 @@ export default function Settings() {
   const [autoBackup, setAutoBackup] = useState(true);
 
   const settingsSections = [
+    {
+      title: 'Ceny a kredit',
+      description: 'Nastavení cen tréninků a limitů kreditu',
+      icon: CreditCard,
+      content: <TrainingPricesSettings />,
+    },
+    {
+      title: 'Produkty a služby',
+      description: 'Správa produktů k prodeji (elektrolyty, drinky, měření...)',
+      icon: Package,
+      content: <ProductsManagement />,
+    },
+    {
+      title: 'Tagy',
+      description: 'Správa tagů pro označování položek',
+      icon: Tag,
+      content: <TagsManagement />,
+    },
     {
       title: 'Integrace kalendářů',
       description: 'Propojte své kalendáře pro synchronizaci tréninků',
@@ -124,6 +148,15 @@ export default function Settings() {
               </p>
             </div>
             <Switch />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-foreground">Upozornění na nízký kredit</Label>
+              <p className="text-sm text-muted-foreground">
+                Upozornit při poklesu kreditu pod limit
+              </p>
+            </div>
+            <Switch defaultChecked />
           </div>
         </div>
       ),

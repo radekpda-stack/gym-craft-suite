@@ -14,6 +14,7 @@ import {
   Loader2,
   CreditCard,
   Cake,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,6 +25,7 @@ import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
+import { CreditManagement } from '@/components/credit/CreditManagement';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -205,6 +207,13 @@ export default function ClientDetail() {
             Přehled
           </TabsTrigger>
           <TabsTrigger
+            value="credit"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
+          >
+            <Wallet className="w-4 h-4 mr-2" />
+            Kredit
+          </TabsTrigger>
+          <TabsTrigger
             value="trainings"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-6"
           >
@@ -241,6 +250,14 @@ export default function ClientDetail() {
               <p className="text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="credit" className="space-y-6">
+          <CreditManagement
+            clientId={client.id}
+            clientName={client.name}
+            currentBalance={client.credit_balance || 0}
+          />
         </TabsContent>
 
         <TabsContent value="trainings" className="space-y-4">
