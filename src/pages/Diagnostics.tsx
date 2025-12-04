@@ -3,17 +3,35 @@ import { Plus, Search, Stethoscope, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { mockClients, mockJoints, mockMuscleGroups } from '@/data/mockData';
+import { useClients } from '@/hooks/useClients';
+import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
+import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { mockJoints, mockMuscleGroups } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
 export default function Diagnostics() {
+  const { data: clients = [] } = useClients();
+  const createDiagnostic = useCreateDiagnostic();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedBodyPart, setSelectedBodyPart] = useState<'lower' | 'upper' | 'spine' | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const filteredClients = mockClients.filter((client) =>
+  const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCreateDiagnostic = async (data: any) => {
+    await createDiagnostic.mutateAsync({
+      client_id: data.clientId,
+      date: data.date,
+      area_type: data.areaType,
+      area_name: data.areaName,
+      findings: data.findings,
+      notes: data.notes,
+    });
+    setIsCreateOpen(false);
+  };
 
   const filteredJoints = mockJoints.filter(
     (joint) => !selectedBodyPart || joint.bodyPart === selectedBodyPart
@@ -40,11 +58,20 @@ export default function Diagnostics() {
           </p>
         </div>
 
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
           <Plus className="w-4 h-4" />
-          Nový záznam
+          Nová diagnostika
         </Button>
       </div>
+
+      <CreateDiagnosticSheet
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSubmit={handleCreateDiagnostic}
+        isLoading={createDiagnostic.isPending}
+        clients={clients}
+        defaultClientId={selectedClient || undefined}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Client Selection */}
@@ -81,7 +108,7 @@ export default function Diagnostics() {
                       ? 'text-primary-foreground/70'
                       : 'text-muted-foreground'
                   )}>
-                    {client.trainingGoals[0]}
+                    {client.training_goals?.[0] || 'Bez cíle'}
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-50" />
