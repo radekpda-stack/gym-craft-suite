@@ -1,11 +1,13 @@
 import { useClientMedia, ClientMedia } from "@/hooks/useClientMedia";
 import { PhotoUpload } from "./PhotoUpload";
 import { VoiceRecorder } from "./VoiceRecorder";
+import { PhotoCompare } from "./PhotoCompare";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Camera, Mic, Play, Pause, ZoomIn, Trash2, Image, Volume2 } from "lucide-react";
+import { Camera, Mic, Play, Pause, ZoomIn, Trash2, Image, Volume2, ArrowLeftRight } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useState } from "react";
@@ -26,8 +28,25 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
   const [selectedPhoto, setSelectedPhoto] = useState<ClientMedia | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
   
   const deleteMedia = useDeleteMedia();
+
+  const handleToggleCompare = (photoId: string) => {
+    setSelectedForCompare(prev => {
+      if (prev.includes(photoId)) {
+        return prev.filter(id => id !== photoId);
+      }
+      if (prev.length < 2) {
+        return [...prev, photoId];
+      }
+      return [prev[1], photoId];
+    });
+  };
+
+  const photosForCompare = photos.filter(p => selectedForCompare.includes(p.id));
 
   const handlePlay = (note: ClientMedia) => {
     if (playingId === note.id) {
@@ -91,25 +110,70 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
       {/* Photos */}
       {photos.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium flex items-center gap-2">
-            <Camera className="h-4 w-4" />
-            Fotografie
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              Fotografie
+            </h4>
+            {photos.length >= 2 && (
+              <div className="flex items-center gap-2">
+                {compareMode && selectedForCompare.length === 2 && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setCompareDialogOpen(true)}
+                  >
+                    <ArrowLeftRight className="h-4 w-4 mr-2" />
+                    Porovnat
+                  </Button>
+                )}
+                <Button
+                  variant={compareMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setCompareMode(!compareMode);
+                    setSelectedForCompare([]);
+                  }}
+                >
+                  {compareMode ? "Zrušit výběr" : "Porovnat fotky"}
+                </Button>
+              </div>
+            )}
+          </div>
+          {compareMode && (
+            <p className="text-xs text-muted-foreground">
+              Vyberte 2 fotografie pro porovnání ({selectedForCompare.length}/2)
+            </p>
+          )}
           <div className="grid grid-cols-4 gap-2">
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                className="relative group cursor-pointer rounded-lg overflow-hidden aspect-square"
-                onClick={() => setSelectedPhoto(photo)}
+                className={`relative group cursor-pointer rounded-lg overflow-hidden aspect-square ${
+                  compareMode && selectedForCompare.includes(photo.id) 
+                    ? "ring-2 ring-primary" 
+                    : ""
+                }`}
+                onClick={() => compareMode ? handleToggleCompare(photo.id) : setSelectedPhoto(photo)}
               >
                 <img
                   src={photo.file_url}
                   alt={photo.description || "Foto"}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <ZoomIn className="h-6 w-6 text-white" />
-                </div>
+                {compareMode ? (
+                  <div className={`absolute inset-0 flex items-center justify-center transition-colors ${
+                    selectedForCompare.includes(photo.id) ? "bg-primary/30" : "bg-black/30"
+                  }`}>
+                    <Checkbox 
+                      checked={selectedForCompare.includes(photo.id)}
+                      className="h-6 w-6 border-2 border-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ZoomIn className="h-6 w-6 text-white" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -227,6 +291,19 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Photo Compare Dialog */}
+      <PhotoCompare
+        photos={photosForCompare}
+        open={compareDialogOpen}
+        onOpenChange={(open) => {
+          setCompareDialogOpen(open);
+          if (!open) {
+            setCompareMode(false);
+            setSelectedForCompare([]);
+          }
+        }}
+      />
     </div>
   );
 }
