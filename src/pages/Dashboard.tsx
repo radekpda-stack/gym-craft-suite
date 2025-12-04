@@ -20,6 +20,7 @@ import {
   FileText,
   Activity,
   Stethoscope,
+  TrendingDown,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
@@ -30,12 +31,15 @@ import { Link } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
 import { useFinancialStats, useClientCredits } from '@/hooks/useFinancialStats';
+import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { TaxCalculator } from '@/components/dashboard/TaxCalculator';
+import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
@@ -61,6 +65,7 @@ export default function Dashboard() {
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: financialStats, isLoading: financialLoading } = useFinancialStats();
   const { data: clientCredits = [] } = useClientCredits();
+  const dashboardLayout = useDashboardLayout();
 
   const [isTrainingSheetOpen, setIsTrainingSheetOpen] = useState(false);
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
@@ -181,6 +186,7 @@ export default function Dashboard() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          <DashboardSettings layout={dashboardLayout} />
           <Link to="/calendar">
             <Button variant="outline" className="gap-2">
               <Calendar className="w-4 h-4" />
@@ -225,7 +231,7 @@ export default function Dashboard() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <div className="p-2 rounded-xl bg-success/10">
@@ -248,6 +254,20 @@ export default function Dashboard() {
           </div>
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
+              <div className="p-2 rounded-xl bg-success/10">
+                <TrendingUp className="w-4 h-4 text-success" />
+              </div>
+              <span className="text-sm">Čistý zisk (produkty)</span>
+            </div>
+            <p className="text-2xl font-bold text-success">
+              {(financialStats?.productProfit || 0).toLocaleString('cs-CZ')} Kč
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tržby: {(financialStats?.productIncome || 0).toLocaleString('cs-CZ')} Kč
+            </p>
+          </div>
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <div className="p-2 rounded-xl bg-primary/10">
                 <CreditCard className="w-4 h-4 text-primary" />
               </div>
@@ -265,13 +285,13 @@ export default function Dashboard() {
               <div className="p-2 rounded-xl bg-warning/10">
                 <Package className="w-4 h-4 text-warning" />
               </div>
-              <span className="text-sm">Příjmy z produktů</span>
+              <span className="text-sm">Náklady na produkty</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {(financialStats?.productIncome || 0).toLocaleString('cs-CZ')} Kč
+              {(financialStats?.productCost || 0).toLocaleString('cs-CZ')} Kč
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Celkem prodáno
+              Nákupní ceny
             </p>
           </div>
           <div className="glass rounded-2xl p-5">
@@ -292,71 +312,77 @@ export default function Dashboard() {
       )}
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Income Chart */}
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Příjmy za posledních 30 dní
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={financialStats?.incomeByDay || []}>
-                <defs>
-                  <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                  }}
-                  formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Platby']}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="payments"
-                  stroke="hsl(var(--success))"
-                  strokeWidth={2}
-                  fill="url(#incomeGradient)"
-                  name="Platby"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {(dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Income Chart */}
+          {dashboardLayout.showIncomeChart && (
+            <div className="glass rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Příjmy za posledních 30 dní
+              </h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={financialStats?.incomeByDay || []}>
+                    <defs>
+                      <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '12px',
+                      }}
+                      formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Platby']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="payments"
+                      stroke="hsl(var(--success))"
+                      strokeWidth={2}
+                      fill="url(#incomeGradient)"
+                      name="Platby"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
-        {/* Monthly Comparison */}
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Měsíční přehled
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={financialStats?.incomeByMonth || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                  }}
-                  formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`]}
-                />
-                <Bar dataKey="payments" fill="hsl(var(--success))" name="Platby" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="products" fill="hsl(var(--warning))" name="Produkty" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {/* Monthly Comparison */}
+          {dashboardLayout.showMonthlyChart && (
+            <div className="glass rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Měsíční přehled
+              </h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={financialStats?.incomeByMonth || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '12px',
+                      }}
+                      formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`]}
+                    />
+                    <Bar dataKey="payments" fill="hsl(var(--success))" name="Platby" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="products" fill="hsl(var(--warning))" name="Produkty" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Training Stats + Client Credits */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -544,7 +570,7 @@ export default function Dashboard() {
           </div>
 
           {/* Product Breakdown */}
-          {financialStats?.productBreakdown && financialStats.productBreakdown.length > 0 && (
+          {dashboardLayout.showProductBreakdown && financialStats?.productBreakdown && financialStats.productBreakdown.length > 0 && (
             <div className="glass rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">
                 Prodej produktů
@@ -561,7 +587,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-foreground">{product.amount.toLocaleString('cs-CZ')} Kč</p>
-                      <p className="text-xs text-muted-foreground">{product.count}x prodáno</p>
+                      <p className="text-xs text-success">zisk: {product.profit.toLocaleString('cs-CZ')} Kč</p>
                     </div>
                   </div>
                 ))}
@@ -570,6 +596,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Tax Calculator */}
+      {dashboardLayout.showTaxCalculator && financialStats && (
+        <TaxCalculator 
+          yearlyIncome={financialStats.yearlyIncome} 
+          yearlyExpenses={financialStats.yearlyExpenses} 
+        />
+      )}
     </div>
   );
 }

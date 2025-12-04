@@ -18,11 +18,13 @@ export function ProductsManagement() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
   const [category, setCategory] = useState('supplement');
 
   const resetForm = () => {
     setName('');
     setPrice('');
+    setPurchasePrice('');
     setCategory('supplement');
     setEditingProduct(null);
   };
@@ -33,6 +35,7 @@ export function ProductsManagement() {
     await createProduct.mutateAsync({
       name,
       price: parseFloat(price),
+      purchase_price: parseFloat(purchasePrice) || 0,
       category,
     });
 
@@ -47,6 +50,7 @@ export function ProductsManagement() {
       id: editingProduct.id,
       name,
       price: parseFloat(price),
+      purchase_price: parseFloat(purchasePrice) || 0,
       category,
     });
 
@@ -68,6 +72,7 @@ export function ProductsManagement() {
     setEditingProduct(product);
     setName(product.name);
     setPrice(product.price.toString());
+    setPurchasePrice(product.purchase_price?.toString() || '0');
     setCategory(product.category);
   };
 
@@ -96,15 +101,27 @@ export function ProductsManagement() {
                   className="mt-2"
                 />
               </div>
-              <div>
-                <Label>Cena (Kč)</Label>
-                <Input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="65"
-                  className="mt-2"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Prodejní cena (Kč)</Label>
+                  <Input
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="65"
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label>Nákupní cena (Kč)</Label>
+                  <Input
+                    type="number"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    placeholder="30"
+                    className="mt-2"
+                  />
+                </div>
               </div>
               <div>
                 <Label>Kategorie</Label>
@@ -119,6 +136,17 @@ export function ProductsManagement() {
                   </SelectContent>
                 </Select>
               </div>
+              {price && purchasePrice && (
+                <div className="p-3 rounded-lg bg-secondary/50">
+                  <p className="text-sm text-muted-foreground">Marže:</p>
+                  <p className="text-lg font-bold text-success">
+                    {(parseFloat(price) - parseFloat(purchasePrice)).toLocaleString('cs-CZ')} Kč
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      ({((1 - parseFloat(purchasePrice) / parseFloat(price)) * 100).toFixed(0)}%)
+                    </span>
+                  </p>
+                </div>
+              )}
               <Button onClick={handleCreate} disabled={createProduct.isPending} className="w-full">
                 Vytvořit produkt
               </Button>
@@ -134,20 +162,29 @@ export function ProductsManagement() {
             className="flex items-center justify-between p-4 rounded-xl bg-secondary/50"
           >
             {editingProduct?.id === product.id ? (
-              <div className="flex-1 flex items-center gap-3">
+              <div className="flex-1 flex items-center gap-3 flex-wrap">
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-40"
+                  className="w-36"
+                  placeholder="Název"
                 />
                 <Input
                   type="number"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-24"
+                  className="w-20"
+                  placeholder="Cena"
+                />
+                <Input
+                  type="number"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  className="w-20"
+                  placeholder="Nákup"
                 />
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-28">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -177,7 +214,14 @@ export function ProductsManagement() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <p className="font-bold text-foreground">{product.price} Kč</p>
+                  <div className="text-right">
+                    <p className="font-bold text-foreground">{product.price} Kč</p>
+                    {product.purchase_price > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        nákup: {product.purchase_price} Kč • marže: {(product.price - product.purchase_price)} Kč
+                      </p>
+                    )}
+                  </div>
                   <Switch
                     checked={product.is_active}
                     onCheckedChange={() => handleToggleActive(product)}

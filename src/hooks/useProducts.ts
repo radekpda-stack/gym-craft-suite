@@ -6,6 +6,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  purchase_price: number;
   category: string;
   is_active: boolean;
   created_at: string;
@@ -15,6 +16,7 @@ export interface Product {
 export interface CreateProductInput {
   name: string;
   price: number;
+  purchase_price?: number;
   category?: string;
   is_active?: boolean;
 }
@@ -49,6 +51,7 @@ export function useCreateProduct() {
         .insert({
           name: input.name,
           price: input.price,
+          purchase_price: input.purchase_price || 0,
           category: input.category || "supplement",
           is_active: input.is_active ?? true,
         })
