@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3 } from 'lucide-react';
+import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, CreditTransaction } from '@/hooks/useCreditTransactions';
-import { useProducts, Product } from '@/hooks/useProducts';
-import { useTrainingPrices, getTrainingPrice, calculateRemainingTrainings } from '@/hooks/useAppSettings';
+import { useProducts } from '@/hooks/useProducts';
+import { useTrainingPrices, calculateRemainingTrainings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
-
+import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
 interface CreditManagementProps {
   clientId: string;
   clientName: string;
@@ -304,9 +305,49 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
 
       {/* Transaction History */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          Historie transakcí
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground">
+            Historie transakcí
+          </h3>
+          {transactions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  const data: TransactionExportData[] = transactions.map(t => ({
+                    date: format(new Date(t.created_at), 'd.M.yyyy HH:mm'),
+                    type: t.type,
+                    description: t.description || '',
+                    amount: t.amount,
+                    clientName: clientName,
+                  }));
+                  exportTransactionsToCSV(data, `transakce-${clientName.toLowerCase().replace(/\s+/g, '-')}`);
+                }}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export do CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const data: TransactionExportData[] = transactions.map(t => ({
+                    date: format(new Date(t.created_at), 'd.M.yyyy HH:mm'),
+                    type: t.type,
+                    description: t.description || '',
+                    amount: t.amount,
+                    clientName: clientName,
+                  }));
+                  exportTransactionsToPDF(data, `Transakce - ${clientName}`, `transakce-${clientName.toLowerCase().replace(/\s+/g, '-')}`);
+                }}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export do PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         {transactions.length > 0 ? (
           <div className="space-y-3">
             {transactions.map((transaction) => (

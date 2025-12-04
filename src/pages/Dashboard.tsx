@@ -8,21 +8,24 @@ import {
   XCircle,
   Plus,
   Calendar,
-  Activity,
   ChevronRight,
   Loader2,
   CreditCard,
-  Stethoscope,
   Wallet,
   Package,
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
+  FileText,
+  Activity,
+  Stethoscope,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Link } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
@@ -37,6 +40,7 @@ import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
 import { cn } from '@/lib/utils';
+import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
 import {
   AreaChart,
   Area,
@@ -47,9 +51,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
@@ -136,6 +137,50 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-3">
+          {financialStats && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  const data: FinancialSummaryData = {
+                    totalIncome: financialStats.totalIncome,
+                    incomeThisMonth: financialStats.incomeThisMonth,
+                    productIncome: financialStats.productIncome,
+                    trainingIncome: financialStats.trainingIncome,
+                    totalCredit: financialStats.totalCredit,
+                    clientsWithLowCredit: financialStats.clientsWithLowCredit,
+                    incomeByMonth: financialStats.incomeByMonth,
+                    productBreakdown: financialStats.productBreakdown,
+                  };
+                  exportFinancialSummaryToCSV(data);
+                }}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export do CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const data: FinancialSummaryData = {
+                    totalIncome: financialStats.totalIncome,
+                    incomeThisMonth: financialStats.incomeThisMonth,
+                    productIncome: financialStats.productIncome,
+                    trainingIncome: financialStats.trainingIncome,
+                    totalCredit: financialStats.totalCredit,
+                    clientsWithLowCredit: financialStats.clientsWithLowCredit,
+                    incomeByMonth: financialStats.incomeByMonth,
+                    productBreakdown: financialStats.productBreakdown,
+                  };
+                  exportFinancialSummaryToPDF(data);
+                }}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export do PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Link to="/calendar">
             <Button variant="outline" className="gap-2">
               <Calendar className="w-4 h-4" />
