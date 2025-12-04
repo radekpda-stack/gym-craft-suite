@@ -4,6 +4,8 @@ import { toast } from "@/hooks/use-toast";
 
 export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
 
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
+
 export interface TrainingSession {
   id: string;
   client_id: string;
@@ -15,6 +17,9 @@ export interface TrainingSession {
   canceled_at: string | null;
   is_late_cancellation: boolean;
   participant_count: number;
+  recurrence_type: string | null;
+  recurrence_end_date: string | null;
+  parent_session_id: string | null;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -28,6 +33,8 @@ export interface CreateTrainingInput {
   subjective_rating?: number;
   status?: TrainingStatus;
   participant_count?: number;
+  recurrence_type?: RecurrenceType;
+  recurrence_end_date?: string;
 }
 
 export interface UpdateTrainingInput {
@@ -61,6 +68,48 @@ export function useTrainingSessions(clientId?: string) {
   });
 }
 
+// Helper function to generate recurring dates
+function generateRecurringDates(
+  startDate: Date,
+  recurrenceType: RecurrenceType,
+  endDate: Date
+): Date[] {
+  const dates: Date[] = [new Date(startDate)];
+  let currentDate = new Date(startDate);
+  
+  while (currentDate < endDate) {
+    let nextDate: Date;
+    
+    switch (recurrenceType) {
+      case 'daily':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case 'weekly':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case 'biweekly':
+        nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + 14);
+        break;
+      case 'monthly':
+        nextDate = new Date(currentDate);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      default:
+        return dates;
+    }
+    
+    if (nextDate <= endDate) {
+      dates.push(nextDate);
+    }
+    currentDate = nextDate;
+  }
+  
+  return dates;
+}
+
 export function useCreateTrainingSession() {
   const queryClient = useQueryClient();
 
@@ -69,7 +118,11 @@ export function useCreateTrainingSession() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      const recurrenceType = input.recurrence_type || 'none';
+      const hasRecurrence = recurrenceType !== 'none' && input.recurrence_end_date;
+      
+      // Create the first (parent) training session
+      const { data: parentSession, error: parentError } = await supabase
         .from("training_sessions")
         .insert({
           client_id: input.client_id,
@@ -79,12 +132,47 @@ export function useCreateTrainingSession() {
           subjective_rating: input.subjective_rating || null,
           status: input.status || "scheduled",
           participant_count: input.participant_count || 1,
+          recurrence_type: hasRecurrence ? recurrenceType : null,
+          recurrence_end_date: hasRecurrence ? input.recurrence_end_date : null,
           user_id: user.id,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (parentError) throw parentError;
+
+      let createdCount = 1;
+
+      // If there's recurrence, create child sessions
+      if (hasRecurrence && input.recurrence_end_date) {
+        const startDate = new Date(input.date);
+        const endDate = new Date(input.recurrence_end_date);
+        const recurringDates = generateRecurringDates(startDate, recurrenceType, endDate);
+        
+        // Skip the first date (already created as parent)
+        const childDates = recurringDates.slice(1);
+        
+        if (childDates.length > 0) {
+          const childSessions = childDates.map(date => ({
+            client_id: input.client_id,
+            date: date.toISOString(),
+            duration: input.duration || 60,
+            notes: input.notes || "",
+            subjective_rating: null,
+            status: "scheduled" as const,
+            participant_count: input.participant_count || 1,
+            parent_session_id: parentSession.id,
+            user_id: user.id,
+          }));
+
+          const { error: childError } = await supabase
+            .from("training_sessions")
+            .insert(childSessions);
+
+          if (childError) throw childError;
+          createdCount += childDates.length;
+        }
+      }
 
       // If training is created with "completed" status, deduct credit
       if (input.status === "completed" && input.trainingPrices) {
@@ -98,7 +186,6 @@ export function useCreateTrainingSession() {
           price = input.trainingPrices["1"];
         }
 
-        // Create credit transaction
         await supabase
           .from("credit_transactions")
           .insert({
@@ -106,11 +193,10 @@ export function useCreateTrainingSession() {
             amount: -price,
             type: "training",
             description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
-            training_session_id: data.id,
+            training_session_id: parentSession.id,
             user_id: user.id,
           });
 
-        // Update client's credit balance
         const { data: client } = await supabase
           .from("clients")
           .select("credit_balance")
@@ -126,16 +212,21 @@ export function useCreateTrainingSession() {
         }
       }
 
-      return data;
+      return { session: parentSession, createdCount };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      
+      const message = result.createdCount > 1
+        ? `Vytvořeno ${result.createdCount} opakujících se tréninků.`
+        : "Nový trénink byl úspěšně přidán.";
+      
       toast({
         title: "Trénink vytvořen",
-        description: "Nový trénink byl úspěšně přidán.",
+        description: message,
       });
     },
     onError: (error) => {
