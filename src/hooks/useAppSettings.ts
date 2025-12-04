@@ -80,10 +80,24 @@ export function useUpdateSetting() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
+      // First try to get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Use upsert to create or update the setting
       const { data, error } = await supabase
         .from("app_settings")
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq("key", key)
+        .upsert(
+          { 
+            key, 
+            value, 
+            updated_at: new Date().toISOString(),
+            user_id: user?.id 
+          },
+          { 
+            onConflict: 'key,user_id',
+            ignoreDuplicates: false 
+          }
+        )
         .select()
         .single();
 

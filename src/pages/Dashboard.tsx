@@ -59,7 +59,7 @@ import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { TaxCalculator } from '@/components/dashboard/TaxCalculator';
+
 import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
@@ -600,20 +600,11 @@ export default function Dashboard() {
     </div>
   );
 
-  const renderTaxCalculatorSection = () => (
-    dashboardLayout.showTaxCalculator && financialStats && (
-      <TaxCalculator 
-        yearlyIncome={financialStats.yearlyIncome} 
-        yearlyExpenses={financialStats.yearlyExpenses} 
-      />
-    )
-  );
 
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
     statsAndCredits: renderStatsAndCreditsSection,
     mainContent: renderMainContentSection,
-    taxCalculator: renderTaxCalculatorSection,
   };
 
   return (
