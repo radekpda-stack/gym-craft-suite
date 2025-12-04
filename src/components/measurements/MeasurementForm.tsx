@@ -41,7 +41,7 @@ const measurementFormSchema = z.object({
 export type MeasurementFormValues = z.infer<typeof measurementFormSchema>;
 
 interface MeasurementFormProps {
-  onSubmit: (data: MeasurementFormValues) => Promise<void>;
+  onSubmit: (data: MeasurementFormValues) => Promise<string | void>;
   isLoading?: boolean;
   clients: Client[];
   defaultClientId?: string;

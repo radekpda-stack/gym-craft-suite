@@ -50,8 +50,8 @@ export default function Measurements() {
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
-  const handleCreateMeasurement = async (data: any) => {
-    await createMeasurement.mutateAsync({
+  const handleCreateMeasurement = async (data: any): Promise<string | void> => {
+    const result = await createMeasurement.mutateAsync({
       client_id: data.client_id,
       date: data.date,
       weight: data.weight,
@@ -71,6 +71,7 @@ export default function Measurements() {
       notes: data.notes,
     });
     setIsCreateOpen(false);
+    return result?.id;
   };
 
   const stats = [

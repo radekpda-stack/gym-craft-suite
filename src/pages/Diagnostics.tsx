@@ -21,8 +21,8 @@ export default function Diagnostics() {
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateDiagnostic = async (data: any) => {
-    await createDiagnostic.mutateAsync({
+  const handleCreateDiagnostic = async (data: any): Promise<string | void> => {
+    const result = await createDiagnostic.mutateAsync({
       client_id: data.client_id,
       date: data.date,
       area_type: data.area_type,
@@ -31,6 +31,7 @@ export default function Diagnostics() {
       notes: data.notes,
     });
     setIsCreateOpen(false);
+    return result?.id;
   };
 
   const filteredJoints = mockJoints.filter(
