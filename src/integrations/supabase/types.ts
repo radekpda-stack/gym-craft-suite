@@ -94,6 +94,56 @@ export type Database = {
           },
         ]
       }
+      training_sessions: {
+        Row: {
+          canceled_at: string | null
+          client_id: string
+          created_at: string
+          date: string
+          duration: number
+          id: string
+          is_late_cancellation: boolean | null
+          notes: string | null
+          status: string
+          subjective_rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          client_id: string
+          created_at?: string
+          date: string
+          duration?: number
+          id?: string
+          is_late_cancellation?: boolean | null
+          notes?: string | null
+          status?: string
+          subjective_rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          duration?: number
+          id?: string
+          is_late_cancellation?: boolean | null
+          notes?: string | null
+          status?: string
+          subjective_rating?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
