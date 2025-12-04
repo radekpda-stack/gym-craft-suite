@@ -64,7 +64,7 @@ export function useCreateTrainingSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateTrainingInput) => {
+    mutationFn: async (input: CreateTrainingInput & { trainingPrices?: { "1": number; "2": number; "3": number } }) => {
       const { data, error } = await supabase
         .from("training_sessions")
         .insert({
@@ -80,11 +80,53 @@ export function useCreateTrainingSession() {
         .single();
 
       if (error) throw error;
+
+      // If training is created with "completed" status, deduct credit
+      if (input.status === "completed" && input.trainingPrices) {
+        const participantCount = input.participant_count || 1;
+        let price: number;
+        if (participantCount >= 3) {
+          price = input.trainingPrices["3"];
+        } else if (participantCount === 2) {
+          price = input.trainingPrices["2"];
+        } else {
+          price = input.trainingPrices["1"];
+        }
+
+        // Create credit transaction
+        await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id: input.client_id,
+            amount: -price,
+            type: "training",
+            description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+            training_session_id: data.id,
+          });
+
+        // Update client's credit balance
+        const { data: client } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", input.client_id)
+          .single();
+
+        if (client) {
+          const newBalance = (client.credit_balance || 0) - price;
+          await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", input.client_id);
+        }
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({
         title: "Trénink vytvořen",
         description: "Nový trénink byl úspěšně přidán.",
@@ -105,7 +147,22 @@ export function useUpdateTrainingSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateTrainingInput }) => {
+    mutationFn: async ({ 
+      id, 
+      input, 
+      trainingPrices 
+    }: { 
+      id: string; 
+      input: UpdateTrainingInput; 
+      trainingPrices?: { "1": number; "2": number; "3": number } 
+    }) => {
+      // First, get the current training to check if status is changing to completed
+      const { data: oldTraining } = await supabase
+        .from("training_sessions")
+        .select("*")
+        .eq("id", id)
+        .single();
+
       const { data, error } = await supabase
         .from("training_sessions")
         .update(input)
@@ -114,10 +171,57 @@ export function useUpdateTrainingSession() {
         .single();
 
       if (error) throw error;
+
+      // If status is changing to "completed" from another status, deduct credit
+      if (
+        oldTraining && 
+        oldTraining.status !== "completed" && 
+        input.status === "completed" && 
+        trainingPrices
+      ) {
+        const participantCount = input.participant_count || oldTraining.participant_count || 1;
+        let price: number;
+        if (participantCount >= 3) {
+          price = trainingPrices["3"];
+        } else if (participantCount === 2) {
+          price = trainingPrices["2"];
+        } else {
+          price = trainingPrices["1"];
+        }
+
+        // Create credit transaction
+        await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id: oldTraining.client_id,
+            amount: -price,
+            type: "training",
+            description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+            training_session_id: id,
+          });
+
+        // Update client's credit balance
+        const { data: client } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", oldTraining.client_id)
+          .single();
+
+        if (client) {
+          const newBalance = (client.credit_balance || 0) - price;
+          await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", oldTraining.client_id);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({
         title: "Trénink aktualizován",
         description: "Změny byly úspěšně uloženy.",
