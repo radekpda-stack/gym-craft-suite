@@ -1,27 +1,25 @@
 import { useState } from 'react';
 import {
-  Settings as SettingsIcon,
   Calendar,
   Download,
   Upload,
   Link2,
   Bell,
-  Shield,
-  Palette,
   Clock,
   Check,
   CreditCard,
   Package,
   Tag,
+  Dumbbell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { ProductsManagement } from '@/components/settings/ProductsManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
+import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 
 export default function Settings() {
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -43,6 +41,12 @@ export default function Settings() {
       content: <ProductsManagement />,
     },
     {
+      title: 'Knihovna cviků',
+      description: 'Správa databáze cviků pro tréninky',
+      icon: Dumbbell,
+      content: <ExercisesManagement />,
+    },
+    {
       title: 'Tagy',
       description: 'Správa tagů pro označování položek',
       icon: Tag,
@@ -54,7 +58,7 @@ export default function Settings() {
       icon: Calendar,
       content: (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50">
+          <div className="flex items-center justify-between p-4 rounded-xl glass-subtle">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-[#4285F4]/10 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#4285F4]">
@@ -90,7 +94,7 @@ export default function Settings() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50">
+          <div className="flex items-center justify-between p-4 rounded-xl glass-subtle">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-foreground/10 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-6 h-6 text-foreground">
@@ -172,7 +176,7 @@ export default function Settings() {
             <Input
               type="time"
               defaultValue="06:00"
-              className="mt-2 bg-secondary border-border rounded-xl"
+              className="mt-2 glass-input rounded-xl"
             />
           </div>
           <div>
@@ -180,7 +184,7 @@ export default function Settings() {
             <Input
               type="time"
               defaultValue="20:00"
-              className="mt-2 bg-secondary border-border rounded-xl"
+              className="mt-2 glass-input rounded-xl"
             />
           </div>
         </div>
@@ -202,11 +206,11 @@ export default function Settings() {
             <Switch checked={autoBackup} onCheckedChange={setAutoBackup} />
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="gap-2 flex-1">
+            <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
               <Download className="w-4 h-4" />
               Exportovat vše
             </Button>
-            <Button variant="outline" className="gap-2 flex-1">
+            <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
               <Upload className="w-4 h-4" />
               Import dat
             </Button>

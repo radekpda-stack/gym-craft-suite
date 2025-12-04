@@ -22,7 +22,6 @@ import {
   LayoutDashboard,
   Users,
   Dumbbell,
-  Library,
   Stethoscope,
   Activity,
   Calendar,
@@ -51,7 +50,6 @@ const navItemsMap: Record<string, NavItem> = {
   dashboard: { id: 'dashboard', to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   clients: { id: 'clients', to: '/clients', icon: Users, label: 'Klienti' },
   trainings: { id: 'trainings', to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-  exercises: { id: 'exercises', to: '/exercises', icon: Library, label: 'Knihovna cviků' },
   diagnostics: { id: 'diagnostics', to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
   measurements: { id: 'measurements', to: '/measurements', icon: Activity, label: 'Měření' },
   calendar: { id: 'calendar', to: '/calendar', icon: Calendar, label: 'Kalendář' },
@@ -138,7 +136,9 @@ export function Sidebar() {
   );
 
   const orderedItems = useMemo(() => {
-    return preferences.sidebarOrder
+    // Filter out exercises from the order and map to nav items
+    const filteredOrder = preferences.sidebarOrder.filter(id => id !== 'exercises');
+    return filteredOrder
       .map(id => navItemsMap[id])
       .filter(Boolean);
   }, [preferences.sidebarOrder]);
@@ -147,9 +147,10 @@ export function Sidebar() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = preferences.sidebarOrder.indexOf(active.id as string);
-      const newIndex = preferences.sidebarOrder.indexOf(over.id as string);
-      const newOrder = arrayMove(preferences.sidebarOrder, oldIndex, newIndex);
+      const filteredOrder = preferences.sidebarOrder.filter(id => id !== 'exercises');
+      const oldIndex = filteredOrder.indexOf(active.id as string);
+      const newIndex = filteredOrder.indexOf(over.id as string);
+      const newOrder = arrayMove(filteredOrder, oldIndex, newIndex);
       updateSidebarOrder(newOrder);
     }
   };
@@ -157,14 +158,14 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col',
+        'fixed left-0 top-0 z-40 h-screen sidebar-glass transition-all duration-300 ease-in-out flex flex-col',
         collapsed ? 'w-20' : 'w-64'
       )}
     >
       {/* Logo & Notifications */}
-      <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
+      <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border/50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
             <Zap className="w-6 h-6 text-primary-foreground" />
           </div>
           {!collapsed && (
@@ -205,7 +206,7 @@ export function Sidebar() {
         </DndContext>
         
         {/* Quick Product Sale */}
-        <div className="pt-2 border-t border-sidebar-border mt-2">
+        <div className="pt-2 border-t border-sidebar-border/50 mt-2">
           <QuickProductSale collapsed={collapsed} />
         </div>
       </nav>
@@ -219,7 +220,7 @@ export function Sidebar() {
               "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl transition-all duration-200",
               isEditMode
                 ? "bg-primary text-primary-foreground"
-                : "bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                : "glass-subtle text-sidebar-foreground/70 hover:text-sidebar-foreground"
             )}
           >
             {isEditMode ? (
@@ -237,7 +238,7 @@ export function Sidebar() {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl glass-subtle text-sidebar-foreground/70 hover:text-sidebar-foreground transition-all duration-200"
         >
           {collapsed ? (
             <ChevronRight className="w-5 h-5" />
