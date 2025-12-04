@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard, Search, Plus, Minus, Check } from 'lucide-react';
+import { CreditCard, Search, Plus, Minus, Check, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
-import { useTags, useCreateTag } from '@/hooks/useTags';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,8 +23,8 @@ interface QuickCreditModalProps {
 
 type OperationType = 'add' | 'subtract';
 
-// Default credit tags that should be created if they don't exist
-const DEFAULT_CREDIT_TAGS = ['hotovost', 'účet 1', 'účet 2'];
+// Default credit tags
+const DEFAULT_PAYMENT_TAGS = ['hotovost', 'účet 1', 'účet 2'];
 
 export function QuickCreditModal({ 
   collapsed = false, 
@@ -38,9 +38,16 @@ export function QuickCreditModal({
   const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
   
   const { data: clients = [] } = useClients();
-  const { data: tags = [] } = useTags();
+  const { data: settings } = useAppSettings();
   const createTransaction = useCreateTransaction();
-  const createTag = useCreateTag();
+
+  // Get payment tags from settings or use defaults
+  const paymentTags = useMemo(() => {
+    if (settings?.payment_tags && Array.isArray(settings.payment_tags)) {
+      return settings.payment_tags as string[];
+    }
+    return DEFAULT_PAYMENT_TAGS;
+  }, [settings]);
 
   
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
@@ -49,7 +56,7 @@ export function QuickCreditModal({
   const [amount, setAmount] = useState('');
   const [operationType, setOperationType] = useState<OperationType>('add');
   const [note, setNote] = useState('');
-  const [selectedTagId, setSelectedTagId] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -62,16 +69,6 @@ export function QuickCreditModal({
       client.name.toLowerCase().includes(query)
     );
   }, [clients, clientSearchQuery]);
-
-  // Get credit-related tags (filter by tags used for transactions)
-  const creditTags = useMemo(() => {
-    // Check if default tags exist, if not they should be created in settings
-    return tags.filter(tag => 
-      DEFAULT_CREDIT_TAGS.some(defaultTag => 
-        tag.name.toLowerCase() === defaultTag.toLowerCase()
-      ) || tag.name.toLowerCase().includes('účet') || tag.name.toLowerCase().includes('hotovost')
-    );
-  }, [tags]);
 
   const handleSubmit = async () => {
     if (!selectedClientId) {
@@ -96,12 +93,11 @@ export function QuickCreditModal({
     setIsProcessing(true);
     try {
       const finalAmount = operationType === 'add' ? Math.abs(numericAmount) : -Math.abs(numericAmount);
-      const selectedTag = tags.find(t => t.id === selectedTagId);
       
       // Create description with tag info if selected
       let description = note || (operationType === 'add' ? 'Dobití kreditu' : 'Odečtení kreditu');
       if (selectedTag) {
-        description = `[${selectedTag.name}] ${description}`;
+        description = `[${selectedTag}] ${description}`;
       }
 
       await createTransaction.mutateAsync({
@@ -137,7 +133,7 @@ export function QuickCreditModal({
     setAmount('');
     setOperationType('add');
     setNote('');
-    setSelectedTagId('');
+    setSelectedTag('');
   };
 
   const handleClientSelect = (clientId: string) => {
@@ -291,20 +287,17 @@ export function QuickCreditModal({
           {/* Tag selection */}
           <div className="space-y-2">
             <Label>Způsob platby</Label>
-            <Select value={selectedTagId} onValueChange={setSelectedTagId}>
+            <Select value={selectedTag} onValueChange={setSelectedTag}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte způsob platby" />
               </SelectTrigger>
               <SelectContent>
-                {creditTags.length > 0 ? (
-                  creditTags.map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
+                {paymentTags.length > 0 ? (
+                  paymentTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
+                        <Wallet className="w-3 h-3 text-primary" />
+                        {tag}
                       </div>
                     </SelectItem>
                   ))
@@ -316,7 +309,7 @@ export function QuickCreditModal({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Tagy můžete spravovat v Nastavení → Štítky
+              Tagy můžete spravovat v Nastavení → Platební tagy
             </p>
           </div>
 
