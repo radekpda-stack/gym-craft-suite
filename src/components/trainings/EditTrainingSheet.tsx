@@ -46,6 +46,7 @@ export function EditTrainingSheet({
               client_id: training.client_id,
               date: training.date.slice(0, 16),
               duration: training.duration,
+              participant_count: training.participant_count || 1,
               notes: training.notes,
               subjective_rating: training.subjective_rating,
               status: training.status,

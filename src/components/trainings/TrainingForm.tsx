@@ -27,6 +27,7 @@ const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
   date: z.string().min(1, "Zadejte datum"),
   duration: z.number().min(15, "Minimálně 15 minut").max(300, "Maximálně 300 minut"),
+  participant_count: z.number().min(1, "Minimálně 1 účastník").max(10, "Maximálně 10 účastníků"),
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "completed", "canceled"]),
@@ -55,6 +56,7 @@ export function TrainingForm({
       client_id: defaultValues?.client_id || "",
       date: defaultValues?.date || new Date().toISOString().slice(0, 16),
       duration: defaultValues?.duration || 60,
+      participant_count: defaultValues?.participant_count || 1,
       notes: defaultValues?.notes || "",
       subjective_rating: defaultValues?.subjective_rating || null,
       status: defaultValues?.status || "scheduled",
@@ -93,12 +95,12 @@ export function TrainingForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="date"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2">
                 <FormLabel>Datum a čas *</FormLabel>
                 <FormControl>
                   <DateTimePicker
@@ -114,21 +116,49 @@ export function TrainingForm({
 
           <FormField
             control={form.control}
-            name="duration"
+            name="participant_count"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Délka tréninku</FormLabel>
-                <FormControl>
-                  <DurationPicker
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
+                <FormLabel>Počet osob</FormLabel>
+                <Select 
+                  onValueChange={(v) => field.onChange(parseInt(v))} 
+                  value={field.value?.toString()}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="1" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-popover border-border">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="duration"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Délka tréninku</FormLabel>
+              <FormControl>
+                <DurationPicker
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
