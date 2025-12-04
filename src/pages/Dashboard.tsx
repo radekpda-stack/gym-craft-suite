@@ -61,6 +61,7 @@ import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurem
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 
 import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
+import { AIWidget } from '@/components/ai/AIWidget';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
@@ -601,9 +602,41 @@ export default function Dashboard() {
   );
 
 
+  const renderAIWidgetSection = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <AIWidget />
+      {/* Product breakdown - moved here for better layout */}
+      {dashboardLayout.showProductBreakdown && financialStats?.productBreakdown && financialStats.productBreakdown.length > 0 && (
+        <div className="glass rounded-2xl p-4 md:p-6 h-[320px] md:h-[380px] flex flex-col">
+          <h3 className="text-base md:text-lg font-semibold text-foreground mb-4">
+            Prodej produktů
+          </h3>
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {financialStats.productBreakdown.map((product, index) => (
+              <div key={product.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  />
+                  <span className="text-sm text-foreground">{product.name}</span>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-foreground">{product.amount.toLocaleString('cs-CZ')} Kč</p>
+                  <p className="text-xs text-success">zisk: {product.profit.toLocaleString('cs-CZ')} Kč</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
     statsAndCredits: renderStatsAndCreditsSection,
+    aiWidget: renderAIWidgetSection,
     mainContent: renderMainContentSection,
   };
 
