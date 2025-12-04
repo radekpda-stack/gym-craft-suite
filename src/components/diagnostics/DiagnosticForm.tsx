@@ -35,7 +35,7 @@ const diagnosticFormSchema = z.object({
 export type DiagnosticFormValues = z.infer<typeof diagnosticFormSchema>;
 
 interface DiagnosticFormProps {
-  onSubmit: (data: DiagnosticFormValues) => Promise<void>;
+  onSubmit: (data: DiagnosticFormValues) => Promise<string | void>;
   isLoading?: boolean;
   clients: Client[];
   defaultClientId?: string;
