@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,8 +23,10 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export default function Clients() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
+  const [lowCreditFilter, setLowCreditFilter] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
@@ -39,6 +41,20 @@ export default function Clients() {
   const createTransaction = useCreateTransaction();
   const { data: creditClientTransactions = [] } = useCreditTransactions(creditClient?.id);
 
+  // Handle URL filter parameter
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+    if (filter === 'lowCredit') {
+      setLowCreditFilter(true);
+    }
+  }, [searchParams]);
+
+  const clearLowCreditFilter = () => {
+    setLowCreditFilter(false);
+    searchParams.delete('filter');
+    setSearchParams(searchParams);
+  };
+
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
 
   const filteredClients = clients.filter((client) => {
@@ -48,8 +64,10 @@ export default function Clients() {
       (client.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
+    
+    const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
 
-    return matchesSearch && matchesGoal;
+    return matchesSearch && matchesGoal && matchesLowCredit;
   });
 
   const handleCreateClient = async (data: ClientFormValues) => {
@@ -165,10 +183,14 @@ export default function Clients() {
               <div>
                 <Label>Částka (Kč)</Label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={creditAmount}
-                  onChange={(e) => setCreditAmount(e.target.value)}
-                  placeholder="1000"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setCreditAmount(value);
+                  }}
+                  placeholder="Zadejte částku"
                   className="mt-2"
                 />
               </div>
@@ -248,9 +270,19 @@ export default function Clients() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          {lowCreditFilter && (
+            <Button
+              variant="destructive"
+              onClick={clearLowCreditFilter}
+              className="rounded-xl gap-2"
+            >
+              Nízký kredit
+              <X className="w-4 h-4" />
+            </Button>
+          )}
           <Button
-            variant={selectedGoal === null ? 'default' : 'outline'}
-            onClick={() => setSelectedGoal(null)}
+            variant={selectedGoal === null && !lowCreditFilter ? 'default' : 'outline'}
+            onClick={() => { setSelectedGoal(null); clearLowCreditFilter(); }}
             className="rounded-xl"
           >
             Všichni

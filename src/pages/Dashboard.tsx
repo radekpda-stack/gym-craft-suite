@@ -292,20 +292,22 @@ export default function Dashboard() {
       </div>
     ),
     lowCredit: (
-      <div className="glass rounded-2xl p-4 md:p-5">
-        <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
-          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-destructive/10">
-            <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-destructive" />
+      <Link to="/clients?filter=lowCredit" className="block">
+        <div className="glass rounded-2xl p-4 md:p-5 hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-destructive/10">
+              <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-destructive" />
+            </div>
+            <span className="text-xs md:text-sm">Nízký kredit</span>
           </div>
-          <span className="text-xs md:text-sm">Nízký kredit</span>
+          <p className="text-lg md:text-2xl font-bold text-foreground">
+            {financialStats?.clientsWithLowCredit || 0}
+          </p>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
+            Klientů pod 500 Kč →
+          </p>
         </div>
-        <p className="text-lg md:text-2xl font-bold text-foreground">
-          {financialStats?.clientsWithLowCredit || 0}
-        </p>
-        <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
-          Klientů pod 500 Kč
-        </p>
-      </div>
+      </Link>
     ),
   };
 

@@ -173,10 +173,14 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
               <div>
                 <Label>Částka (Kč)</Label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="1000"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setPaymentAmount(value);
+                  }}
+                  placeholder="Zadejte částku"
                   className="mt-2"
                 />
               </div>
@@ -281,10 +285,14 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
               <div>
                 <Label>Částka (Kč)</Label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={manualAmount}
-                  onChange={(e) => setManualAmount(e.target.value)}
-                  placeholder="100"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setManualAmount(value);
+                  }}
+                  placeholder="Zadejte částku"
                   className="mt-2"
                 />
               </div>
