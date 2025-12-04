@@ -31,7 +31,6 @@ export function DashboardSettings({ layout }: DashboardSettingsProps) {
     { key: 'showMonthlyChart' as const, label: 'Měsíční přehled' },
     { key: 'showClientCredits' as const, label: 'Přehled kreditů' },
     { key: 'showProductBreakdown' as const, label: 'Prodej produktů' },
-    { key: 'showTaxCalculator' as const, label: 'Kalkulátor daní' },
     { key: 'showQuickActions' as const, label: 'Rychlé akce' },
   ];
 

@@ -10,7 +10,9 @@ export const clientFormSchema = z.object({
     .string()
     .trim()
     .email({ message: "Neplatná emailová adresa" })
-    .max(255, { message: "Email může mít maximálně 255 znaků" }),
+    .max(255, { message: "Email může mít maximálně 255 znaků" })
+    .optional()
+    .or(z.literal("")),
   phone: z
     .string()
     .trim()
