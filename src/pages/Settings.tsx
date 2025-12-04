@@ -170,21 +170,21 @@ export default function Settings() {
       description: 'Nastavení pracovních hodin',
       icon: Clock,
       content: (
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 min-w-0">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <Label className="text-muted-foreground text-sm">Začátek</Label>
             <Input
               type="time"
               defaultValue="06:00"
-              className="mt-2 glass-input rounded-xl w-full"
+              className="mt-2 glass-input rounded-xl text-center"
             />
           </div>
-          <div className="flex-1 min-w-0">
+          <div>
             <Label className="text-muted-foreground text-sm">Konec</Label>
             <Input
               type="time"
               defaultValue="20:00"
-              className="mt-2 glass-input rounded-xl w-full"
+              className="mt-2 glass-input rounded-xl text-center"
             />
           </div>
         </div>
