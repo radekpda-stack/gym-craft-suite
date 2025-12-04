@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import {
@@ -21,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RatingInput } from "@/components/ui/rating-input";
+import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 
 const trainingFormSchema = z.object({
@@ -80,7 +80,7 @@ export function TrainingForm({
                     <SelectValue placeholder="Vyberte klienta" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border">
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
@@ -101,10 +101,10 @@ export function TrainingForm({
               <FormItem>
                 <FormLabel>Datum a čas *</FormLabel>
                 <FormControl>
-                  <Input
-                    type="datetime-local"
-                    className="bg-secondary border-border"
-                    {...field}
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Vyberte datum a čas"
                   />
                 </FormControl>
                 <FormMessage />
@@ -117,16 +117,11 @@ export function TrainingForm({
             name="duration"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Délka (min)</FormLabel>
+                <FormLabel>Délka tréninku</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    min={15}
-                    max={300}
-                    step={15}
-                    className="bg-secondary border-border"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 60)}
+                  <DurationPicker
+                    value={field.value}
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />
@@ -147,7 +142,7 @@ export function TrainingForm({
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="scheduled">Naplánováno</SelectItem>
                   <SelectItem value="completed">Dokončeno</SelectItem>
                   <SelectItem value="canceled">Zrušeno</SelectItem>
