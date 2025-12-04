@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-export type TransactionType = 'payment' | 'training' | 'product' | 'manual';
+export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training';
 
 export interface CreditTransaction {
   id: string;
