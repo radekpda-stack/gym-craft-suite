@@ -23,10 +23,10 @@ export default function Diagnostics() {
 
   const handleCreateDiagnostic = async (data: any) => {
     await createDiagnostic.mutateAsync({
-      client_id: data.clientId,
+      client_id: data.client_id,
       date: data.date,
-      area_type: data.areaType,
-      area_name: data.areaName,
+      area_type: data.area_type,
+      area_name: data.area_name,
       findings: data.findings,
       notes: data.notes,
     });

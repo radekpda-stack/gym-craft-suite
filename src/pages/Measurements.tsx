@@ -52,22 +52,22 @@ export default function Measurements() {
 
   const handleCreateMeasurement = async (data: any) => {
     await createMeasurement.mutateAsync({
-      client_id: data.clientId,
+      client_id: data.client_id,
       date: data.date,
       weight: data.weight,
-      body_fat_percentage: data.bodyFatPercentage,
-      muscle_mass: data.muscleMass,
-      basal_metabolism: data.basalMetabolism,
+      body_fat_percentage: data.body_fat_percentage,
+      muscle_mass: data.muscle_mass,
+      basal_metabolism: data.basal_metabolism,
       chest: data.chest,
       waist: data.waist,
       hips: data.hips,
-      bicep_left: data.bicepLeft,
-      bicep_right: data.bicepRight,
-      thigh_left: data.thighLeft,
-      thigh_right: data.thighRight,
-      calf_left: data.calfLeft,
-      calf_right: data.calfRight,
-      mental_state: data.mentalState,
+      bicep_left: data.bicep_left,
+      bicep_right: data.bicep_right,
+      thigh_left: data.thigh_left,
+      thigh_right: data.thigh_right,
+      calf_left: data.calf_left,
+      calf_right: data.calf_right,
+      mental_state: data.mental_state,
       notes: data.notes,
     });
     setIsCreateOpen(false);

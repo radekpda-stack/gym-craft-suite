@@ -168,7 +168,30 @@ export function useCancelTrainingSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, isLateCancellation }: { id: string; isLateCancellation: boolean }) => {
+    mutationFn: async ({ 
+      id, 
+      client_id,
+      participant_count,
+      isLateCancellation,
+      trainingPrices 
+    }: { 
+      id: string; 
+      client_id: string;
+      participant_count: number;
+      isLateCancellation: boolean;
+      trainingPrices: { "1": number; "2": number; "3": number };
+    }) => {
+      // Calculate price based on participant count
+      let price: number;
+      if (participant_count >= 3) {
+        price = trainingPrices["3"];
+      } else if (participant_count === 2) {
+        price = trainingPrices["2"];
+      } else {
+        price = trainingPrices["1"];
+      }
+
+      // Update training status to canceled
       const { data, error } = await supabase
         .from("training_sessions")
         .update({
@@ -181,13 +204,47 @@ export function useCancelTrainingSession() {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Create credit transaction (negative amount for deduction)
+      const { error: transactionError } = await supabase
+        .from("credit_transactions")
+        .insert({
+          client_id,
+          amount: -price,
+          type: "canceled_training",
+          description: `Zrušený trénink${isLateCancellation ? ' (pozdě)' : ''} (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
+          training_session_id: id,
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Update client's credit balance
+      const { data: client, error: clientError } = await supabase
+        .from("clients")
+        .select("credit_balance")
+        .eq("id", client_id)
+        .single();
+
+      if (clientError) throw clientError;
+
+      const newBalance = (client.credit_balance || 0) - price;
+
+      const { error: updateError } = await supabase
+        .from("clients")
+        .update({ credit_balance: newBalance })
+        .eq("id", client_id);
+
+      if (updateError) throw updateError;
+
+      return { data, price, newBalance };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({
         title: "Trénink zrušen",
-        description: "Trénink byl označen jako zrušený.",
+        description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
       });
     },
     onError: (error) => {

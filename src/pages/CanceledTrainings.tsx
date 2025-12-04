@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { XCircle, AlertTriangle, TrendingUp, Calendar, Clock, User } from 'lucide-react';
+import { XCircle, AlertTriangle, TrendingUp, Calendar, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatCard } from '@/components/ui/stat-card';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { mockClients } from '@/data/mockData';
+import { useClients } from '@/hooks/useClients';
+import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { cn } from '@/lib/utils';
 import {
   BarChart,
@@ -17,59 +18,38 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// Mock canceled trainings data
-const mockCanceledTrainings = [
-  {
-    id: '1',
-    clientId: '1',
-    date: subDays(new Date(), 2),
-    canceledAt: subDays(new Date(), 2),
-    isLateCancellation: true,
-    reason: 'Nemoc',
-  },
-  {
-    id: '2',
-    clientId: '2',
-    date: subDays(new Date(), 5),
-    canceledAt: subDays(new Date(), 6),
-    isLateCancellation: false,
-    reason: 'Pracovní povinnosti',
-  },
-  {
-    id: '3',
-    clientId: '1',
-    date: subDays(new Date(), 10),
-    canceledAt: subDays(new Date(), 10),
-    isLateCancellation: true,
-    reason: 'Osobní důvody',
-  },
-  {
-    id: '4',
-    clientId: '3',
-    date: subDays(new Date(), 15),
-    canceledAt: subDays(new Date(), 16),
-    isLateCancellation: false,
-    reason: 'Dovolená',
-  },
-];
-
-const chartData = [
-  { month: 'Říjen', late: 2, onTime: 3 },
-  { month: 'Listopad', late: 3, onTime: 5 },
-  { month: 'Prosinec', late: 2, onTime: 2 },
-];
-
 export default function CanceledTrainings() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const { data: clients = [] } = useClients();
+  const { data: sessions = [], isLoading } = useTrainingSessions();
 
-  const totalCanceled = mockCanceledTrainings.length;
-  const lateCancellations = mockCanceledTrainings.filter((t) => t.isLateCancellation).length;
-  const latePercentage = ((lateCancellations / totalCanceled) * 100).toFixed(1);
+  // Filter only canceled trainings
+  const canceledTrainings = sessions.filter(s => s.status === 'canceled');
+
+  // Filter by time range
+  const now = new Date();
+  const filteredCanceled = canceledTrainings.filter(training => {
+    const trainingDate = new Date(training.date);
+    if (timeRange === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return trainingDate >= weekAgo;
+    } else if (timeRange === 'month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return trainingDate >= monthAgo;
+    } else {
+      const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      return trainingDate >= yearAgo;
+    }
+  });
+
+  const totalCanceled = filteredCanceled.length;
+  const lateCancellations = filteredCanceled.filter((t) => t.is_late_cancellation).length;
+  const latePercentage = totalCanceled > 0 ? ((lateCancellations / totalCanceled) * 100).toFixed(1) : '0';
 
   // Group by client
-  const canceledByClient = mockClients.map((client) => {
-    const clientCancellations = mockCanceledTrainings.filter((t) => t.clientId === client.id);
-    const lateCount = clientCancellations.filter((t) => t.isLateCancellation).length;
+  const canceledByClient = clients.map((client) => {
+    const clientCancellations = filteredCanceled.filter((t) => t.client_id === client.id);
+    const lateCount = clientCancellations.filter((t) => t.is_late_cancellation).length;
     return {
       client,
       total: clientCancellations.length,
@@ -77,6 +57,39 @@ export default function CanceledTrainings() {
       percentage: clientCancellations.length > 0 ? ((lateCount / clientCancellations.length) * 100).toFixed(0) : '0',
     };
   }).filter((c) => c.total > 0).sort((a, b) => b.late - a.late);
+
+  // Generate chart data for last 3 months
+  const getChartData = () => {
+    const months = [];
+    for (let i = 2; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      
+      const monthCanceled = canceledTrainings.filter(t => {
+        const trainingDate = new Date(t.date);
+        return trainingDate >= monthStart && trainingDate <= monthEnd;
+      });
+
+      months.push({
+        month: format(date, 'LLLL', { locale: cs }),
+        late: monthCanceled.filter(t => t.is_late_cancellation).length,
+        onTime: monthCanceled.filter(t => !t.is_late_cancellation).length,
+      });
+    }
+    return months;
+  };
+
+  const chartData = getChartData();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -169,30 +182,36 @@ export default function CanceledTrainings() {
           <h3 className="text-lg font-semibold text-foreground mb-4">
             Podle klienta
           </h3>
-          <div className="space-y-3">
-            {canceledByClient.map(({ client, total, late, percentage }) => (
-              <div
-                key={client.id}
-                className="flex items-center gap-4 p-4 rounded-xl bg-secondary/50"
-              >
-                <ClientAvatar name={client.name} size="md" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{client.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {total} zrušeno, {late} pozdě
-                  </p>
+          {canceledByClient.length > 0 ? (
+            <div className="space-y-3">
+              {canceledByClient.map(({ client, total, late, percentage }) => (
+                <div
+                  key={client.id}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-secondary/50"
+                >
+                  <ClientAvatar name={client.name} size="md" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{client.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {total} zrušeno, {late} pozdě
+                    </p>
+                  </div>
+                  <div className={cn(
+                    'px-3 py-1.5 rounded-full text-sm font-medium',
+                    parseInt(percentage) > 50
+                      ? 'bg-warning/10 text-warning'
+                      : 'bg-secondary text-muted-foreground'
+                  )}>
+                    {percentage}% pozdě
+                  </div>
                 </div>
-                <div className={cn(
-                  'px-3 py-1.5 rounded-full text-sm font-medium',
-                  parseInt(percentage) > 50
-                    ? 'bg-warning/10 text-warning'
-                    : 'bg-secondary text-muted-foreground'
-                )}>
-                  {percentage}% pozdě
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Žádní klienti se zrušenými tréninky
+            </p>
+          )}
         </div>
       </div>
 
@@ -201,51 +220,61 @@ export default function CanceledTrainings() {
         <h3 className="text-lg font-semibold text-foreground mb-4">
           Nedávno zrušené
         </h3>
-        <div className="space-y-3">
-          {mockCanceledTrainings.map((training) => {
-            const client = mockClients.find((c) => c.id === training.clientId);
-            return (
-              <div
-                key={training.id}
-                className={cn(
-                  'flex items-center gap-4 p-4 rounded-xl border-l-4',
-                  training.isLateCancellation
-                    ? 'bg-warning/5 border-l-warning'
-                    : 'bg-secondary/50 border-l-muted-foreground'
-                )}
-              >
-                <ClientAvatar name={client?.name || ''} size="md" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground">
-                      {client?.name}
-                    </p>
-                    {training.isLateCancellation && (
-                      <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                        Pozdní zrušení
-                      </span>
+        {filteredCanceled.length > 0 ? (
+          <div className="space-y-3">
+            {filteredCanceled.slice(0, 10).map((training) => {
+              const client = clients.find((c) => c.id === training.client_id);
+              return (
+                <div
+                  key={training.id}
+                  className={cn(
+                    'flex items-center gap-4 p-4 rounded-xl border-l-4',
+                    training.is_late_cancellation
+                      ? 'bg-warning/5 border-l-warning'
+                      : 'bg-secondary/50 border-l-muted-foreground'
+                  )}
+                >
+                  <ClientAvatar name={client?.name || ''} size="md" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">
+                        {client?.name || 'Klient'}
+                      </p>
+                      {training.is_late_cancellation && (
+                        <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
+                          Pozdní zrušení
+                        </span>
+                      )}
+                    </div>
+                    {training.notes && (
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {training.notes}
+                      </p>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {training.reason}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>{format(training.date, 'd.M.yyyy', { locale: cs })}</span>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span>{format(new Date(training.date), 'd.M.yyyy', { locale: cs })}</span>
+                    </div>
+                    {training.canceled_at && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                        <Clock className="w-4 h-4" />
+                        <span>
+                          Zrušeno {format(new Date(training.canceled_at), 'd.M.', { locale: cs })}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                    <Clock className="w-4 h-4" />
-                    <span>
-                      Zrušeno {format(training.canceledAt, 'd.M.', { locale: cs })}
-                    </span>
-                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            Žádné zrušené tréninky za vybrané období
+          </p>
+        )}
       </div>
     </div>
   );
