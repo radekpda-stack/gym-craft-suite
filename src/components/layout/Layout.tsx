@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
+import { MobileNav } from './MobileNav';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -30,17 +31,28 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
+      {/* Desktop Sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+      
+      {/* Main Content */}
       <main
         className={cn(
           'min-h-screen transition-all duration-300 ease-in-out',
-          sidebarCollapsed ? 'ml-20' : 'ml-64'
+          'md:ml-64', // Desktop: margin for sidebar
+          sidebarCollapsed && 'md:ml-20',
+          'pb-20 md:pb-0' // Mobile: padding for bottom nav
         )}
       >
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           {children}
         </div>
       </main>
+
+      {/* Mobile Navigation - hidden on desktop */}
+      <MobileNav />
     </div>
   );
 }
+
