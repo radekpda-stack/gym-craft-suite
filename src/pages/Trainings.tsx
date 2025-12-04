@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users, XCircle } from 'lucide-react';
+import { Search, Plus, Dumbbell, Calendar, Clock, Loader2, Pencil, Trash2, CheckCircle, Users, XCircle, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
@@ -89,6 +89,31 @@ export default function Trainings() {
   };
 
   const handleCreateTraining = async (data: TrainingFormValues) => {
+    // Calculate recurrence end date if recurring
+    let recurrence_end_date: string | undefined;
+    let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
+    
+    if (data.is_recurring && data.recurrence_type && data.recurrence_count) {
+      const startDate = new Date(data.date);
+      const count = data.recurrence_count;
+      recurrence_type = data.recurrence_type;
+      
+      // Calculate end date based on recurrence type
+      const endDate = new Date(startDate);
+      switch (data.recurrence_type) {
+        case 'weekly':
+          endDate.setDate(endDate.getDate() + (count * 7));
+          break;
+        case 'biweekly':
+          endDate.setDate(endDate.getDate() + (count * 14));
+          break;
+        case 'monthly':
+          endDate.setMonth(endDate.getMonth() + count);
+          break;
+      }
+      recurrence_end_date = endDate.toISOString();
+    }
+    
     await createTraining.mutateAsync({
       client_id: data.client_id,
       date: new Date(data.date).toISOString(),
@@ -97,7 +122,9 @@ export default function Trainings() {
       subjective_rating: data.subjective_rating || undefined,
       status: data.status,
       participant_count: data.participant_count,
-      trainingPrices, // Pass prices for credit deduction if status is "completed"
+      recurrence_type,
+      recurrence_end_date,
+      trainingPrices,
     });
     setIsCreateSheetOpen(false);
   };
@@ -508,6 +535,15 @@ export default function Trainings() {
                             <div className="flex items-center gap-1">
                               <Users className="w-4 h-4" />
                               <span>{session.participant_count} osob</span>
+                            </div>
+                          </>
+                        )}
+                        {(session.recurrence_type || session.parent_session_id) && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center gap-1 text-primary">
+                              <Repeat className="w-4 h-4" />
+                              <span>Opakující se</span>
                             </div>
                           </>
                         )}
