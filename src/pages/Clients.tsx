@@ -1,20 +1,24 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2 } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { useClients, useCreateClient } from '@/hooks/useClients';
+import { useClients, useCreateClient, useUpdateClient, Client } from '@/hooks/useClients';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
+import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
+import { cn } from '@/lib/utils';
 
 export default function Clients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
+  const updateClient = useUpdateClient();
 
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
 
@@ -31,7 +35,19 @@ export default function Clients() {
 
   const handleCreateClient = async (data: ClientFormValues) => {
     await createClient.mutateAsync(data);
-    setIsSheetOpen(false);
+    setIsCreateSheetOpen(false);
+  };
+
+  const handleEditClient = async (data: ClientFormValues) => {
+    if (!editingClient) return;
+    await updateClient.mutateAsync({ id: editingClient.id, values: data });
+    setEditingClient(null);
+  };
+
+  const getCreditColor = (credit: number) => {
+    if (credit < 0) return "text-destructive";
+    if (credit < 500) return "text-warning";
+    return "text-success";
   };
 
   return (
@@ -47,17 +63,25 @@ export default function Clients() {
           </p>
         </div>
 
-        <Button className="gap-2" onClick={() => setIsSheetOpen(true)}>
+        <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
           <Plus className="w-4 h-4" />
           Nový klient
         </Button>
       </div>
 
       <CreateClientSheet
-        open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
         onSubmit={handleCreateClient}
         isLoading={createClient.isPending}
+      />
+
+      <EditClientSheet
+        open={!!editingClient}
+        onOpenChange={(open) => !open && setEditingClient(null)}
+        onSubmit={handleEditClient}
+        isLoading={updateClient.isPending}
+        client={editingClient}
       />
 
       {/* Search & Filters */}
@@ -101,54 +125,78 @@ export default function Clients() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredClients.map((client, index) => (
-            <Link
+            <div
               key={client.id}
-              to={`/clients/${client.id}`}
-              className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up"
+              className="glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="flex items-start gap-4">
-                <ClientAvatar name={client.name} size="lg" />
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate">
-                    {client.name}
-                  </h3>
-                  
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(client.training_goals || []).slice(0, 2).map((goal) => (
-                      <span
-                        key={goal}
-                        className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium"
-                      >
-                        {goal}
-                      </span>
-                    ))}
-                  </div>
+              {/* Edit button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingClient(client);
+                }}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
 
-                  <div className="mt-4 space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="w-4 h-4" />
-                      <span className="truncate">{client.email}</span>
+              <Link to={`/clients/${client.id}`} className="block">
+                <div className="flex items-start gap-4">
+                  <ClientAvatar name={client.name} size="lg" />
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-8">
+                      {client.name}
+                    </h3>
+                    
+                    {/* Credit Balance */}
+                    <div className={cn(
+                      "flex items-center gap-1.5 mt-1 font-semibold",
+                      getCreditColor(client.credit_balance || 0)
+                    )}>
+                      <CreditCard className="w-4 h-4" />
+                      <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
                     </div>
-                    {client.phone && (
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(client.training_goals || []).slice(0, 2).map((goal) => (
+                        <span
+                          key={goal}
+                          className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium"
+                        >
+                          {goal}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 space-y-1">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="w-4 h-4" />
-                        <span>{client.phone}</span>
+                        <Mail className="w-4 h-4" />
+                        <span className="truncate">{client.email}</span>
                       </div>
+                      {client.phone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="w-4 h-4" />
+                          <span>{client.phone}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {client.health_restrictions && (
+                      <p className="mt-3 text-sm text-warning/80 line-clamp-1">
+                        ⚠️ {client.health_restrictions}
+                      </p>
                     )}
                   </div>
 
-                  {client.health_restrictions && (
-                    <p className="mt-3 text-sm text-warning/80 line-clamp-1">
-                      ⚠️ {client.health_restrictions}
-                    </p>
-                  )}
+                  <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-6" />
                 </div>
-
-                <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       )}
