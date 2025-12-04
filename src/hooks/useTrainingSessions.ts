@@ -272,6 +272,11 @@ export function useUpdateTrainingSession() {
 
       if (error) throw error;
 
+      let creditDeducted = false;
+      let price = 0;
+      let newBalance: number | null = null;
+      let clientId: string | null = null;
+
       // If status is changing to "completed" from another status, deduct credit
       if (
         oldTraining && 
@@ -279,8 +284,9 @@ export function useUpdateTrainingSession() {
         input.status === "completed" && 
         trainingPrices
       ) {
+        clientId = oldTraining.client_id;
         const participantCount = input.participant_count || oldTraining.participant_count || 1;
-        let price: number;
+        
         if (participantCount >= 3) {
           price = trainingPrices["3"];
         } else if (participantCount === 2) {
@@ -290,7 +296,7 @@ export function useUpdateTrainingSession() {
         }
 
         // Create credit transaction
-        await supabase
+        const { error: transactionError } = await supabase
           .from("credit_transactions")
           .insert({
             client_id: oldTraining.client_id,
@@ -301,6 +307,11 @@ export function useUpdateTrainingSession() {
             user_id: user.id,
           });
 
+        if (transactionError) {
+          console.error("Error creating credit transaction:", transactionError);
+          throw transactionError;
+        }
+
         // Update client's credit balance
         const { data: client } = await supabase
           .from("clients")
@@ -309,24 +320,45 @@ export function useUpdateTrainingSession() {
           .single();
 
         if (client) {
-          const newBalance = (client.credit_balance || 0) - price;
-          await supabase
+          newBalance = (client.credit_balance || 0) - price;
+          const { error: updateError } = await supabase
             .from("clients")
             .update({ credit_balance: newBalance })
             .eq("id", oldTraining.client_id);
+            
+          if (updateError) {
+            console.error("Error updating client balance:", updateError);
+            throw updateError;
+          }
+          
+          creditDeducted = true;
         }
       }
 
-      return data;
+      return { data, creditDeducted, price, newBalance, clientId };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast({
-        title: "Trénink aktualizován",
-        description: "Změny byly úspěšně uloženy.",
-      });
+      
+      if (result.clientId) {
+        queryClient.invalidateQueries({ queryKey: ["training_sessions", result.clientId] });
+        queryClient.invalidateQueries({ queryKey: ["credit_transactions", result.clientId] });
+        queryClient.invalidateQueries({ queryKey: ["client", result.clientId] });
+      }
+      
+      if (result.creditDeducted) {
+        toast({
+          title: "Trénink dokončen",
+          description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
+        });
+      } else {
+        toast({
+          title: "Trénink aktualizován",
+          description: "Změny byly úspěšně uloženy.",
+        });
+      }
     },
     onError: (error) => {
       console.error("Error updating training:", error);
