@@ -2,53 +2,36 @@ import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
-  ArrowLeft,
-  Edit2,
-  Phone,
-  Mail,
-  Target,
-  AlertTriangle,
   Dumbbell,
   Activity,
   TrendingUp,
   Loader2,
-  CreditCard,
-  Cake,
   Wallet,
   Camera,
   XCircle,
-  Calendar,
   Clock,
   Tag,
-  Star,
-  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClientAvatar } from '@/components/ui/client-avatar';
 import { SessionCard } from '@/components/ui/session-card';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
-import { useToggleFavorite } from '@/hooks/useFavoriteClients';
-import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
 import { ClientMediaTab } from '@/components/media/ClientMediaTab';
-import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { TrainingHistory } from '@/components/trainings/TrainingHistory';
 import { TrainingStats } from '@/components/trainings/TrainingStats';
+import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 
 export default function ClientDetail() {
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: allSessions = [] } = useTrainingSessions(id);
   const updateClient = useUpdateClient();
-  const toggleFavorite = useToggleFavorite();
-  const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Cast sessions to proper type
   const clientSessions = allSessions.map(s => ({
@@ -79,12 +62,6 @@ export default function ClientDetail() {
     );
   }
 
-  const getCreditColor = (credit: number) => {
-    if (credit < 0) return "text-destructive";
-    if (credit < 500) return "text-warning";
-    return "text-success";
-  };
-
   const completedSessions = clientSessions.filter(s => s.status === 'completed');
   const canceledSessions = clientSessions.filter(s => s.status === 'canceled');
   const lateCancellations = canceledSessions.filter(s => s.is_late_cancellation);
@@ -98,9 +75,9 @@ export default function ClientDetail() {
         completedSessions.filter(s => s.subjective_rating !== null).length
     : 0;
 
-  const handleEditClient = async (data: ClientFormValues) => {
+  /** Handle client data save */
+  const handleSaveClient = async (data: ClientFormValues) => {
     await updateClient.mutateAsync({ id: client.id, values: data });
-    setIsEditOpen(false);
   };
 
   return (
@@ -113,126 +90,12 @@ export default function ClientDetail() {
         ]}
       />
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <ClientAvatar name={client.name} size="xl" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-foreground tracking-tight">
-                {client.name}
-              </h1>
-              <button
-                onClick={() => toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite })}
-                className={cn(
-                  "p-1.5 rounded-lg transition-all",
-                  client.is_favorite 
-                    ? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20" 
-                    : "text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
-                )}
-              >
-                <Star className={cn("w-5 h-5", client.is_favorite && "fill-current")} />
-              </button>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Klient od{' '}
-              {format(new Date(client.created_at), 'MMMM yyyy', { locale: cs })}
-            </p>
-            <div className="mt-2">
-              <ClientTagsManager clientId={client.id} />
-            </div>
-          </div>
-        </div>
-
-        <Button variant="outline" className="gap-2" onClick={() => setIsEditOpen(true)}>
-          <Edit2 className="w-4 h-4" />
-          Upravit
-        </Button>
-      </div>
-
-      <EditClientSheet
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-        onSubmit={handleEditClient}
-        isLoading={updateClient.isPending}
+      {/* Client Detail View with inline editing */}
+      <ClientDetailView
         client={client}
+        onSave={handleSaveClient}
+        isLoading={updateClient.isPending}
       />
-
-      {/* Quick Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-3 text-muted-foreground mb-2">
-            <Mail className="w-4 h-4" />
-            <span className="text-sm">Email</span>
-          </div>
-          <p className="font-medium text-foreground">{client.email}</p>
-        </div>
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-3 text-muted-foreground mb-2">
-            <Phone className="w-4 h-4" />
-            <span className="text-sm">Telefon</span>
-          </div>
-          <p className="font-medium text-foreground">{client.phone || '—'}</p>
-        </div>
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-3 text-muted-foreground mb-2">
-            <CreditCard className="w-4 h-4" />
-            <span className="text-sm">Kredit</span>
-          </div>
-          <p className={cn(
-            "font-bold text-lg",
-            getCreditColor(client.credit_balance || 0)
-          )}>
-            {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-          </p>
-        </div>
-        {client.birth_date && (
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <Cake className="w-4 h-4" />
-              <span className="text-sm">Datum narození</span>
-            </div>
-            <p className="font-medium text-foreground">
-              {format(new Date(client.birth_date), 'd. MMMM yyyy', { locale: cs })}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Goals & Restrictions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-3 text-muted-foreground mb-3">
-            <Target className="w-4 h-4" />
-            <span className="text-sm font-medium">Tréninkové cíle</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(client.training_goals || []).length > 0 ? (
-              client.training_goals.map((goal) => (
-                <span
-                  key={goal}
-                  className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-sm font-medium"
-                >
-                  {goal}
-                </span>
-              ))
-            ) : (
-              <span className="text-muted-foreground">Žádné cíle</span>
-            )}
-          </div>
-        </div>
-        {client.health_restrictions && (
-          <div className="glass rounded-2xl p-5 border-l-4 border-l-warning">
-            <div className="flex items-center gap-3 text-warning mb-3">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm font-medium">Zdravotní omezení</span>
-            </div>
-            <p className="text-foreground">
-              {client.health_restrictions}
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
@@ -345,16 +208,6 @@ export default function ClientDetail() {
               </div>
             </div>
           )}
-
-          {/* Notes */}
-          {client.notes && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-3">
-                Poznámky
-              </h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
@@ -442,14 +295,6 @@ export default function ClientDetail() {
                           </>
                         )}
                       </div>
-                    </div>
-                    <div className="text-right text-sm text-muted-foreground">
-                      {session.canceled_at && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4" />
-                          <span>Zrušeno {format(new Date(session.canceled_at), 'd.M.yyyy', { locale: cs })}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
