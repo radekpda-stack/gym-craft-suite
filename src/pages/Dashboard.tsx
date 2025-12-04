@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -11,6 +12,7 @@ import {
   ChevronRight,
   Loader2,
   CreditCard,
+  Stethoscope,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
@@ -19,6 +21,15 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
+import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useCreateMeasurement } from '@/hooks/useMeasurements';
+import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
+import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
+import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
+import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
+import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
@@ -26,12 +37,61 @@ export default function Dashboard() {
   const { data: todaySessions = [], isLoading: sessionsLoading } = useTodaySessions();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
 
+  const [isTrainingSheetOpen, setIsTrainingSheetOpen] = useState(false);
+  const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
+  const [isDiagnosticSheetOpen, setIsDiagnosticSheetOpen] = useState(false);
+
+  const createTraining = useCreateTrainingSession();
+  const createMeasurement = useCreateMeasurement();
+  const createDiagnostic = useCreateDiagnostic();
+
   const isLoading = statsLoading || sessionsLoading || clientsLoading;
 
   const getCreditColor = (credit: number) => {
     if (credit < 0) return "text-destructive";
     if (credit < 500) return "text-warning";
     return "text-success";
+  };
+
+  const handleCreateTraining = async (data: TrainingFormValues) => {
+    await createTraining.mutateAsync({
+      client_id: data.client_id,
+      date: new Date(data.date).toISOString(),
+      duration: data.duration,
+      notes: data.notes,
+      subjective_rating: data.subjective_rating || undefined,
+      status: data.status,
+    });
+    setIsTrainingSheetOpen(false);
+  };
+
+  const handleCreateMeasurement = async (data: MeasurementFormValues) => {
+    await createMeasurement.mutateAsync({
+      client_id: data.client_id,
+      date: data.date,
+      weight: data.weight,
+      body_fat_percentage: data.body_fat_percentage,
+      muscle_mass: data.muscle_mass,
+      basal_metabolism: data.basal_metabolism,
+      chest: data.chest,
+      waist: data.waist,
+      hips: data.hips,
+      mental_state: data.mental_state || undefined,
+      notes: data.notes,
+    });
+    setIsMeasurementSheetOpen(false);
+  };
+
+  const handleCreateDiagnostic = async (data: DiagnosticFormValues) => {
+    await createDiagnostic.mutateAsync({
+      client_id: data.client_id,
+      date: data.date,
+      area_type: data.area_type,
+      area_name: data.area_name,
+      findings: data.findings,
+      notes: data.notes,
+    });
+    setIsDiagnosticSheetOpen(false);
   };
 
   return (
@@ -54,14 +114,37 @@ export default function Dashboard() {
               Kalendář
             </Button>
           </Link>
-          <Link to="/trainings">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nový trénink
-            </Button>
-          </Link>
+          <Button className="gap-2" onClick={() => setIsTrainingSheetOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Nový trénink
+          </Button>
         </div>
       </div>
+
+      {/* Sheets */}
+      <CreateTrainingSheet
+        open={isTrainingSheetOpen}
+        onOpenChange={setIsTrainingSheetOpen}
+        onSubmit={handleCreateTraining}
+        isLoading={createTraining.isPending}
+        clients={clients}
+      />
+
+      <CreateMeasurementSheet
+        open={isMeasurementSheetOpen}
+        onOpenChange={setIsMeasurementSheetOpen}
+        onSubmit={handleCreateMeasurement}
+        isLoading={createMeasurement.isPending}
+        clients={clients}
+      />
+
+      <CreateDiagnosticSheet
+        open={isDiagnosticSheetOpen}
+        onOpenChange={setIsDiagnosticSheetOpen}
+        onSubmit={handleCreateDiagnostic}
+        isLoading={createDiagnostic.isPending}
+        clients={clients}
+      />
 
       {/* Stats Grid */}
       {isLoading ? (
@@ -138,6 +221,13 @@ export default function Dashboard() {
                 <p className="text-muted-foreground">
                   Dnes nemáte naplánované žádné tréninky
                 </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setIsTrainingSheetOpen(true)}
+                >
+                  Přidat trénink
+                </Button>
               </div>
             )}
           </div>
@@ -151,6 +241,33 @@ export default function Dashboard() {
               Rychlé akce
             </h3>
             <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setIsTrainingSheetOpen(true)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              >
+                <Dumbbell className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                  Nový trénink
+                </span>
+              </button>
+              <button
+                onClick={() => setIsMeasurementSheetOpen(true)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              >
+                <Activity className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                  Nové měření
+                </span>
+              </button>
+              <button
+                onClick={() => setIsDiagnosticSheetOpen(true)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
+              >
+                <Stethoscope className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                  Diagnostika
+                </span>
+              </button>
               <Link
                 to="/clients"
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
@@ -158,33 +275,6 @@ export default function Dashboard() {
                 <Users className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
                   Nový klient
-                </span>
-              </Link>
-              <Link
-                to="/trainings"
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
-              >
-                <Dumbbell className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                  Nový trénink
-                </span>
-              </Link>
-              <Link
-                to="/measurements"
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
-              >
-                <Activity className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                  Nové měření
-                </span>
-              </Link>
-              <Link
-                to="/calendar"
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-200 group"
-              >
-                <Calendar className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
-                  Kalendář
                 </span>
               </Link>
             </div>
