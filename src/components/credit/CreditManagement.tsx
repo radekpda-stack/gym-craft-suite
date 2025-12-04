@@ -104,6 +104,8 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
         return <Plus className="w-4 h-4 text-success" />;
       case 'training':
         return <Dumbbell className="w-4 h-4 text-primary" />;
+      case 'canceled_training':
+        return <Dumbbell className="w-4 h-4 text-destructive" />;
       case 'product':
         return <Package className="w-4 h-4 text-warning" />;
       default:
