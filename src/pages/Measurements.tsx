@@ -9,6 +9,8 @@ import { useClients } from '@/hooks/useClients';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { cn } from '@/lib/utils';
+import { exportMeasurementsToPDF } from '@/lib/export';
+import { toast } from '@/hooks/use-toast';
 import {
   LineChart,
   Line,
@@ -123,7 +125,41 @@ export default function Measurements() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            disabled={!selectedClient || measurements.length === 0}
+            onClick={() => {
+              if (selectedClient && measurements.length > 0) {
+                exportMeasurementsToPDF({
+                  clientName: selectedClient.name,
+                  measurements: measurements.map(m => ({
+                    id: m.id,
+                    date: m.date,
+                    weight: m.weight,
+                    body_fat_percentage: m.body_fat_percentage,
+                    muscle_mass: m.muscle_mass,
+                    basal_metabolism: m.basal_metabolism,
+                    chest: m.chest,
+                    waist: m.waist,
+                    hips: m.hips,
+                    bicep_left: m.bicep_left,
+                    bicep_right: m.bicep_right,
+                    thigh_left: m.thigh_left,
+                    thigh_right: m.thigh_right,
+                    calf_left: m.calf_left,
+                    calf_right: m.calf_right,
+                    mental_state: m.mental_state,
+                    notes: m.notes,
+                  })),
+                });
+                toast({
+                  title: "PDF exportováno",
+                  description: `Měření pro ${selectedClient.name} bylo úspěšně exportováno.`,
+                });
+              }
+            }}
+          >
             <Download className="w-4 h-4" />
             Export PDF
           </Button>
