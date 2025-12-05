@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, subDays } from "date-fns";
 
 export interface DashboardStats {
   totalClients: number;
   sessionsThisWeek: number;
   sessionsThisMonth: number;
+  sessionsThisYear: number;
+  sessionsAllTime: number;
+  averagePerWeek: number;
   averageRating: number;
   canceledSessions: number;
   lateCancellations: number;
@@ -20,6 +23,7 @@ export function useDashboardStats() {
       const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
       const monthStart = startOfMonth(now);
       const monthEnd = endOfMonth(now);
+      const yearStart = startOfYear(now);
       const thirtyDaysAgo = subDays(now, 30);
 
       // Fetch all stats in parallel
@@ -27,6 +31,8 @@ export function useDashboardStats() {
         clientsResult,
         weekSessionsResult,
         monthSessionsResult,
+        yearSessionsResult,
+        allTimeSessionsResult,
         ratingsResult,
         canceledResult,
         lateCanceledResult,
@@ -39,14 +45,29 @@ export function useDashboardStats() {
           .from("training_sessions")
           .select("*", { count: "exact", head: true })
           .gte("date", weekStart.toISOString())
-          .lte("date", weekEnd.toISOString()),
+          .lte("date", weekEnd.toISOString())
+          .neq("status", "canceled"),
         
         // Sessions this month
         supabase
           .from("training_sessions")
           .select("*", { count: "exact", head: true })
           .gte("date", monthStart.toISOString())
-          .lte("date", monthEnd.toISOString()),
+          .lte("date", monthEnd.toISOString())
+          .neq("status", "canceled"),
+        
+        // Sessions this year
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .gte("date", yearStart.toISOString())
+          .neq("status", "canceled"),
+        
+        // All time sessions
+        supabase
+          .from("training_sessions")
+          .select("*", { count: "exact", head: true })
+          .neq("status", "canceled"),
         
         // Average rating from last 30 days
         supabase
@@ -80,10 +101,17 @@ export function useDashboardStats() {
         }
       }
 
+      // Calculate average per week (based on year sessions and weeks elapsed)
+      const weeksInYear = Math.ceil((now.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)) || 1;
+      const averagePerWeek = (yearSessionsResult.count || 0) / weeksInYear;
+
       return {
         totalClients: clientsResult.count || 0,
         sessionsThisWeek: weekSessionsResult.count || 0,
         sessionsThisMonth: monthSessionsResult.count || 0,
+        sessionsThisYear: yearSessionsResult.count || 0,
+        sessionsAllTime: allTimeSessionsResult.count || 0,
+        averagePerWeek,
         averageRating,
         canceledSessions: canceledResult.count || 0,
         lateCancellations: lateCanceledResult.count || 0,
