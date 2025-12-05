@@ -26,27 +26,27 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div className={cn('stat-card group', className)}>
-      <div className="flex items-start justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <span className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
           {title}
         </span>
         {Icon && (
           <div className={cn(
-            'p-2 rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground',
+            'p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground',
             iconClassName
           )}>
-            <Icon className="w-5 h-5" />
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         )}
       </div>
       
-      <div className="flex items-end gap-3">
-        <span className="text-4xl font-bold text-foreground tracking-tight">
+      <div className="flex items-end gap-2 sm:gap-3">
+        <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight">
           {value}
         </span>
         {trend && (
           <span className={cn(
-            'text-sm font-medium mb-1',
+            'text-xs sm:text-sm font-medium mb-0.5 sm:mb-1',
             trend.positive ? 'text-success' : 'text-destructive'
           )}>
             {trend.positive ? '+' : ''}{trend.value}%
@@ -55,7 +55,7 @@ export function StatCard({
       </div>
       
       {subtitle && (
-        <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
+        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-muted-foreground">{subtitle}</p>
       )}
     </div>
   );

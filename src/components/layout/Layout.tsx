@@ -72,10 +72,10 @@ export function Layout({ children }: LayoutProps) {
           'min-h-screen transition-all duration-300 ease-in-out',
           'md:ml-64', // Desktop: margin for sidebar
           sidebarCollapsed && 'md:ml-20',
-          'pb-20 md:pb-0' // Mobile: padding for bottom nav
+          'pb-24 md:pb-0' // Mobile: increased padding for bottom nav
         )}
       >
-        {/* Top bar with search trigger */}
+        {/* Top bar with search trigger - Desktop only */}
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 md:px-8 py-3 hidden md:flex items-center justify-between">
           <Button
             variant="outline"
@@ -89,7 +89,8 @@ export function Layout({ children }: LayoutProps) {
           <KeyboardShortcutsHelp />
         </div>
         
-        <div className="p-4 md:p-8">
+        {/* Content area - optimized padding for mobile */}
+        <div className="px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
           {children}
         </div>
       </main>
@@ -99,4 +100,3 @@ export function Layout({ children }: LayoutProps) {
     </div>
   );
 }
-

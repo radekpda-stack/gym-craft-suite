@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Dumbbell, Loader2 } from 'lucide-react';
+import { Search, Plus, Dumbbell, Loader2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
@@ -12,8 +12,15 @@ import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { SessionCard } from '@/components/ui/session-card';
+import { cn } from '@/lib/utils';
 
 const statusLabels = {
+  scheduled: 'Plán',
+  completed: 'Hotovo',
+  canceled: 'Zrušeno',
+};
+
+const statusLabelsLong = {
   scheduled: 'Naplánováno',
   completed: 'Dokončeno',
   canceled: 'Zrušeno',
@@ -92,19 +99,20 @@ export default function Trainings() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Header - Mobile optimized */}
+      <div className="flex items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             Tréninky
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {sessions.length} tréninků celkem
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {sessions.length} celkem
           </p>
         </div>
 
-        <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
+        {/* Desktop button */}
+        <Button className="gap-2 hidden sm:flex" onClick={() => setIsCreateSheetOpen(true)}>
           <Plus className="w-4 h-4" />
           Nový trénink
         </Button>
@@ -118,23 +126,26 @@ export default function Trainings() {
         clients={clients}
       />
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      {/* Search and Filters - Mobile optimized */}
+      <div className="space-y-3">
+        {/* Search */}
+        <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Hledat tréninky..."
+            placeholder="Hledat..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 bg-secondary border-border rounded-xl"
+            className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
           />
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        {/* Filter pills - horizontally scrollable on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
           <Button
             variant={statusFilter === null ? 'default' : 'outline'}
             onClick={() => setStatusFilter(null)}
-            className="rounded-xl"
+            className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
+            size="sm"
           >
             Všechny
           </Button>
@@ -143,9 +154,11 @@ export default function Trainings() {
               key={status}
               variant={statusFilter === status ? 'default' : 'outline'}
               onClick={() => setStatusFilter(status)}
-              className="rounded-xl"
+              className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
+              size="sm"
             >
-              {statusLabels[status]}
+              <span className="sm:hidden">{statusLabels[status]}</span>
+              <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
             </Button>
           ))}
         </div>
@@ -153,7 +166,7 @@ export default function Trainings() {
 
       {/* Sessions List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
@@ -165,7 +178,7 @@ export default function Trainings() {
               <div
                 key={session.id}
                 className="animate-slide-up"
-                style={{ animationDelay: `${index * 30}ms` }}
+                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
               >
                 <SessionCard
                   session={session}
@@ -178,18 +191,40 @@ export default function Trainings() {
       )}
 
       {!isLoading && filteredSessions.length === 0 && (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground">
-            {sessions.length === 0 ? "Zatím nemáte žádné tréninky" : "Žádné tréninky nenalezeny"}
+        <div className="glass rounded-2xl p-8 sm:p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Dumbbell className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">
+            {sessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
           </h3>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1 max-w-[280px] mx-auto">
             {sessions.length === 0
-              ? "Vytvořte první trénink kliknutím na tlačítko výše"
-              : "Zkuste upravit vyhledávání nebo filtry"}
+              ? "Vytvořte první trénink"
+              : "Upravte vyhledávání nebo filtry"}
           </p>
+          {sessions.length === 0 && (
+            <Button 
+              className="mt-4 gap-2"
+              onClick={() => setIsCreateSheetOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+              Nový trénink
+            </Button>
+          )}
         </div>
       )}
+
+      {/* Mobile FAB */}
+      <div className="fixed bottom-24 right-4 sm:hidden z-40">
+        <Button
+          size="lg"
+          className="w-14 h-14 rounded-full shadow-lg glow p-0"
+          onClick={() => setIsCreateSheetOpen(true)}
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
     </div>
   );
 }
