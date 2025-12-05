@@ -29,6 +29,9 @@ export function DashboardSettings({ layout }: DashboardSettingsProps) {
   const sections = [
     { key: 'showIncomeChart' as const, label: 'Graf příjmů (30 dní)' },
     { key: 'showMonthlyChart' as const, label: 'Měsíční přehled' },
+    { key: 'showTrainingTrend' as const, label: 'Trend tréninků (12 měsíců)' },
+    { key: 'showTrainingStats' as const, label: 'Statistiky tréninků' },
+    { key: 'showTopClients' as const, label: 'Nejčastější klienti' },
     { key: 'showClientCredits' as const, label: 'Přehled kreditů' },
     { key: 'showProductBreakdown' as const, label: 'Prodej produktů' },
     { key: 'showQuickActions' as const, label: 'Rychlé akce' },

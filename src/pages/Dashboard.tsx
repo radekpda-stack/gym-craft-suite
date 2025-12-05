@@ -1,4 +1,4 @@
-import { useState, useMemo, ReactNode } from 'react';
+import { useState, ReactNode } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -41,6 +41,8 @@ import {
   GripVertical,
   Pencil,
   Check,
+  CalendarDays,
+  BarChart3,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
@@ -51,6 +53,8 @@ import { Link } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
 import { useFinancialStats, useClientCredits } from '@/hooks/useFinancialStats';
+import { useTrainingTrend } from '@/hooks/useTrainingTrend';
+import { useTopClients } from '@/hooks/useTopClients';
 import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
@@ -61,6 +65,8 @@ import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurem
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 
 import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
+import { TrainingTrendChart } from '@/components/dashboard/TrainingTrendChart';
+import { TopClientsTable } from '@/components/dashboard/TopClientsTable';
 import { AIWidget } from '@/components/ai/AIWidget';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
@@ -131,6 +137,8 @@ export default function Dashboard() {
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: financialStats, isLoading: financialLoading } = useFinancialStats();
   const { data: clientCredits = [] } = useClientCredits();
+  const { data: trainingTrend = [], isLoading: trendLoading } = useTrainingTrend();
+  const { data: topClients = [], isLoading: topClientsLoading } = useTopClients(5);
   const dashboardLayout = useDashboardLayout();
   const { preferences, updateDashboardStatsOrder, updateDashboardSectionsOrder } = useLayoutPreferences();
 
@@ -633,8 +641,86 @@ export default function Dashboard() {
     </div>
   );
 
+  const renderTrainingStatsSection = () => {
+    if (!dashboardLayout.showTrainingStats) return null;
+    
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="glass rounded-2xl p-4 md:p-5">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+              <CalendarDays className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+            </div>
+            <span className="text-xs md:text-sm">Měsíc</span>
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-foreground">
+            {stats?.sessionsThisMonth || 0}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+            tréninků
+          </p>
+        </div>
+        <div className="glass rounded-2xl p-4 md:p-5">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-success/10">
+              <BarChart3 className="w-3.5 h-3.5 md:w-4 md:h-4 text-success" />
+            </div>
+            <span className="text-xs md:text-sm">Rok {new Date().getFullYear()}</span>
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-foreground">
+            {stats?.sessionsThisYear || 0}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+            tréninků
+          </p>
+        </div>
+        <div className="glass rounded-2xl p-4 md:p-5">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-warning/10">
+              <Dumbbell className="w-3.5 h-3.5 md:w-4 md:h-4 text-warning" />
+            </div>
+            <span className="text-xs md:text-sm">Celkově</span>
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-foreground">
+            {stats?.sessionsAllTime || 0}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+            tréninků
+          </p>
+        </div>
+        <div className="glass rounded-2xl p-4 md:p-5">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+              <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+            </div>
+            <span className="text-xs md:text-sm">Průměr</span>
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-foreground">
+            {stats?.averagePerWeek?.toFixed(1) || '0'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+            /týden
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTrainingTrendSection = () => {
+    if (!dashboardLayout.showTrainingTrend) return null;
+    return <TrainingTrendChart data={trainingTrend} isLoading={trendLoading} />;
+  };
+
+  const renderTopClientsSection = () => {
+    if (!dashboardLayout.showTopClients) return null;
+    return <TopClientsTable clients={topClients} isLoading={topClientsLoading} />;
+  };
+
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
+    trainingStats: renderTrainingStatsSection,
+    trainingTrend: renderTrainingTrendSection,
+    topClients: renderTopClientsSection,
     statsAndCredits: renderStatsAndCreditsSection,
     aiWidget: renderAIWidgetSection,
     mainContent: renderMainContentSection,

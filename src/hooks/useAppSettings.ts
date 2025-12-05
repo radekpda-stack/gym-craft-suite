@@ -58,6 +58,9 @@ export interface DashboardLayout {
   showProductBreakdown: boolean;
   showTaxCalculator: boolean;
   showQuickActions: boolean;
+  showTrainingTrend: boolean;
+  showTrainingStats: boolean;
+  showTopClients: boolean;
 }
 
 export function useDashboardLayout() {
@@ -70,6 +73,9 @@ export function useDashboardLayout() {
     showProductBreakdown: true,
     showTaxCalculator: true,
     showQuickActions: true,
+    showTrainingTrend: true,
+    showTrainingStats: true,
+    showTopClients: true,
   };
   
   return settings?.dashboard_layout || defaultLayout;
