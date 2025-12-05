@@ -53,6 +53,7 @@ import { Link } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useDashboardStats, useTodaySessions } from '@/hooks/useDashboardStats';
 import { useFinancialStats, useClientCredits } from '@/hooks/useFinancialStats';
+import { useIncomeByPeriod } from '@/hooks/useIncomeByPeriod';
 import { useTrainingTrend } from '@/hooks/useTrainingTrend';
 import { useTopClients } from '@/hooks/useTopClients';
 import { useDashboardLayout } from '@/hooks/useAppSettings';
@@ -67,6 +68,7 @@ import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnostic
 import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
 import { TrainingTrendChart } from '@/components/dashboard/TrainingTrendChart';
 import { TopClientsTable } from '@/components/dashboard/TopClientsTable';
+import { IncomeChart, IncomePeriod } from '@/components/dashboard/IncomeChart';
 import { AIWidget } from '@/components/ai/AIWidget';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
@@ -74,8 +76,6 @@ import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
 import { cn } from '@/lib/utils';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
 import {
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
@@ -146,6 +146,9 @@ export default function Dashboard() {
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [isDiagnosticSheetOpen, setIsDiagnosticSheetOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [incomePeriod, setIncomePeriod] = useState<IncomePeriod>('30days');
+  
+  const { data: incomeData = [], isLoading: incomeLoading } = useIncomeByPeriod(incomePeriod);
 
   const createTraining = useCreateTrainingSession();
   const createMeasurement = useCreateMeasurement();
@@ -325,43 +328,12 @@ export default function Dashboard() {
     (dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart) && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {dashboardLayout.showIncomeChart && (
-          <div className="glass rounded-2xl p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
-              Příjmy za 30 dní
-            </h3>
-            <div className="h-48 md:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={financialStats?.incomeByDay || []}>
-                  <defs>
-                    <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tickMargin={8} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} width={40} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Platby']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="payments"
-                    stroke="hsl(var(--success))"
-                    strokeWidth={2}
-                    fill="url(#incomeGradient)"
-                    name="Platby"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <IncomeChart
+            data={incomeData}
+            isLoading={incomeLoading}
+            period={incomePeriod}
+            onPeriodChange={setIncomePeriod}
+          />
         )}
         {dashboardLayout.showMonthlyChart && (
           <div className="glass rounded-2xl p-4 md:p-6">
