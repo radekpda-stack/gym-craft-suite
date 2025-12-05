@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Package, ShoppingCart, Plus, Minus, X } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Minus, X, Loader2, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -130,26 +131,40 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
         <div className="space-y-4 mt-4">
           <div>
             <Label>Klient</Label>
-            <Select value={selectedClient} onValueChange={setSelectedClient}>
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Vyberte klienta" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>{client.name}</span>
-                      <span className={cn(
-                        "text-xs",
-                        (client.credit_balance || 0) < 0 ? "text-destructive" : "text-muted-foreground"
-                      )}>
-                        {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {clientsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : clients.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <AlertCircle className="w-8 h-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Žádní klienti nejsou k dispozici</p>
+                <Button variant="outline" size="sm" asChild onClick={() => setIsOpen(false)}>
+                  <Link to="/clients">Přidat klienta</Link>
+                </Button>
+              </div>
+            ) : (
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Vyberte klienta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      <div className="flex items-center justify-between gap-4">
+                        <span>{client.name}</span>
+                        <span className={cn(
+                          "text-xs",
+                          (client.credit_balance || 0) < 0 ? "text-destructive" : "text-muted-foreground"
+                        )}>
+                          {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {selectedClientData && (
@@ -168,27 +183,41 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
           {/* Add product */}
           <div>
             <Label>Přidat produkt</Label>
-            <div className="flex gap-2 mt-2">
-              <Select value={selectedProductToAdd} onValueChange={setSelectedProductToAdd}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Vyberte produkt" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {product.price.toLocaleString('cs-CZ')} Kč
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={addToCart} 
-                disabled={!selectedProductToAdd}
-                size="icon"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <AlertCircle className="w-8 h-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Žádné produkty nejsou dostupné</p>
+                <Button variant="outline" size="sm" asChild onClick={() => setIsOpen(false)}>
+                  <Link to="/settings">Přidat produkty v nastavení</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2 mt-2">
+                <Select value={selectedProductToAdd} onValueChange={setSelectedProductToAdd}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Vyberte produkt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProducts.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - {product.price.toLocaleString('cs-CZ')} Kč
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={addToCart} 
+                  disabled={!selectedProductToAdd}
+                  size="icon"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Cart */}
