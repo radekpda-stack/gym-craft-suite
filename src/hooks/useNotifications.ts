@@ -7,7 +7,8 @@ export type NotificationType =
   | 'birthday' 
   | 'milestone_100' 
   | 'milestone_500' 
-  | 'milestone_1000';
+  | 'milestone_1000'
+  | 'incomplete_training';
 
 export interface Notification {
   id: string;
@@ -18,6 +19,7 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
   user_id: string | null;
+  reference_id?: string | null;
 }
 
 export function useNotifications() {
