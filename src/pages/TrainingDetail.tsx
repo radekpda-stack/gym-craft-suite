@@ -25,8 +25,10 @@ import {
 } from '@/hooks/useTrainingSessions';
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
-import { useClient } from '@/hooks/useClients';
+import { useClient, useClients } from '@/hooks/useClients';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
+import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
+import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,12 +60,16 @@ export default function TrainingDetail() {
   const navigate = useNavigate();
   const { data: training, isLoading: trainingLoading } = useTrainingSession(id);
   const { data: client } = useClient(training?.client_id);
+  const { data: clients = [] } = useClients();
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
+  const { data: existingParticipants = [] } = useTrainingParticipants(id);
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const completeTraining = useCompleteTrainingSession();
   const cancelTraining = useCancelTrainingSession();
   const updateTrainingTags = useUpdateTrainingSessionTags();
+  const saveParticipants = useSaveTrainingParticipants();
+  const deductParticipantsCredit = useDeductParticipantsCredit();
   const trainingPrices = useTrainingPrices();
 
   // Dialog states
@@ -75,6 +81,8 @@ export default function TrainingDetail() {
   const [completeParticipants, setCompleteParticipants] = useState(1);
   const [completeRating, setCompleteRating] = useState<number | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
+  const [participantShares, setParticipantShares] = useState<ParticipantShare[]>([]);
+  const [usePriceSplit, setUsePriceSplit] = useState(false);
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -131,26 +139,87 @@ export default function TrainingDetail() {
   };
 
   const openCompleteDialog = () => {
-    setCompleteParticipants(training.participant_count || 1);
+    const participantCount = training.participant_count || 1;
+    setCompleteParticipants(participantCount);
     setCompleteRating(training.subjective_rating);
     setCompleteNotes(training.notes || '');
+    setUsePriceSplit(existingParticipants.length > 0 || participantCount > 1);
+    
+    // Initialize participant shares
+    const totalPrice = getTrainingPrice(participantCount, trainingPrices);
+    if (existingParticipants.length > 0) {
+      // Use existing participants
+      setParticipantShares(existingParticipants.map(p => {
+        const clientData = clients.find(c => c.id === p.client_id);
+        return {
+          client_id: p.client_id,
+          client_name: clientData?.name || 'Neznámý',
+          price_share: p.price_share,
+          percentage: totalPrice > 0 ? (p.price_share / totalPrice) * 100 : 0,
+        };
+      }));
+    } else {
+      // Initialize with primary client
+      setParticipantShares([{
+        client_id: training.client_id,
+        client_name: client?.name || 'Klient',
+        price_share: totalPrice,
+        percentage: 100,
+      }]);
+    }
     setShowCompleteDialog(true);
   };
 
   const handleComplete = async () => {
-    await completeTraining.mutateAsync({
-      id: training.id,
-      client_id: training.client_id,
-      participant_count: completeParticipants,
-      subjective_rating: completeRating || undefined,
-      notes: completeNotes || undefined,
-      trainingPrices,
-    });
+    const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
+    
+    if (usePriceSplit && participantShares.length > 1) {
+      // Save participants and deduct credit from each
+      await saveParticipants.mutateAsync({
+        training_session_id: training.id,
+        participants: participantShares.map(p => ({
+          client_id: p.client_id,
+          price_share: p.price_share,
+        })),
+      });
+      
+      // Update training status to completed (without auto credit deduction)
+      await updateTraining.mutateAsync({
+        id: training.id,
+        input: {
+          status: 'completed',
+          participant_count: participantCount,
+          subjective_rating: completeRating || undefined,
+          notes: completeNotes || undefined,
+        },
+      });
+      
+      // Deduct credit from each participant
+      await deductParticipantsCredit.mutateAsync({
+        training_session_id: training.id,
+        participants: participantShares.map(p => ({
+          client_id: p.client_id,
+          price_share: p.price_share,
+        })),
+        description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+      });
+    } else {
+      // Standard single client completion
+      await completeTraining.mutateAsync({
+        id: training.id,
+        client_id: training.client_id,
+        participant_count: completeParticipants,
+        subjective_rating: completeRating || undefined,
+        notes: completeNotes || undefined,
+        trainingPrices,
+      });
+    }
     setShowCompleteDialog(false);
   };
 
   const getExpectedPrice = () => {
-    return getTrainingPrice(completeParticipants, trainingPrices);
+    const count = usePriceSplit ? participantShares.length : completeParticipants;
+    return getTrainingPrice(count, trainingPrices);
   };
 
   const openCancelDialog = () => {
@@ -268,7 +337,7 @@ export default function TrainingDetail() {
 
       {/* Complete Training Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Dokončit trénink</DialogTitle>
             <DialogDescription>
@@ -276,31 +345,73 @@ export default function TrainingDetail() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Počet účastníků</Label>
-              <Select 
-                value={completeParticipants.toString()} 
-                onValueChange={(v) => setCompleteParticipants(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Price split toggle */}
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+              <div>
+                <Label htmlFor="price-split" className="font-medium">Rozdělit cenu mezi více klientů</Label>
+                <p className="text-sm text-muted-foreground">
+                  {usePriceSplit 
+                    ? "Můžete přidat více účastníků a rozdělit cenu"
+                    : "Celá cena bude odečtena hlavnímu klientovi"
+                  }
+                </p>
+              </div>
+              <Switch
+                id="price-split"
+                checked={usePriceSplit}
+                onCheckedChange={(checked) => {
+                  setUsePriceSplit(checked);
+                  if (!checked) {
+                    // Reset to single participant
+                    const totalPrice = getTrainingPrice(completeParticipants, trainingPrices);
+                    setParticipantShares([{
+                      client_id: training.client_id,
+                      client_name: client?.name || 'Klient',
+                      price_share: totalPrice,
+                      percentage: 100,
+                    }]);
+                  }
+                }}
+              />
             </div>
 
-            <div className="p-4 rounded-lg bg-secondary/50 border">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Cena za trénink:</span>
-                <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+            {!usePriceSplit && (
+              <div className="space-y-2">
+                <Label>Počet účastníků</Label>
+                <Select 
+                  value={completeParticipants.toString()} 
+                  onValueChange={(v) => setCompleteParticipants(parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
+            )}
+
+            {usePriceSplit ? (
+              <PriceSplitManager
+                clients={clients}
+                totalPrice={getExpectedPrice()}
+                primaryClientId={training.client_id}
+                onChange={setParticipantShares}
+                initialParticipants={participantShares}
+              />
+            ) : (
+              <div className="p-4 rounded-lg bg-secondary/50 border">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Cena za trénink:</span>
+                  <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Hodnocení (volitelné)</Label>
@@ -325,8 +436,11 @@ export default function TrainingDetail() {
             <Button variant="outline" onClick={() => setShowCompleteDialog(false)}>
               Zrušit
             </Button>
-            <Button onClick={handleComplete} disabled={completeTraining.isPending}>
-              {completeTraining.isPending ? (
+            <Button 
+              onClick={handleComplete} 
+              disabled={completeTraining.isPending || saveParticipants.isPending || deductParticipantsCredit.isPending}
+            >
+              {(completeTraining.isPending || saveParticipants.isPending || deductParticipantsCredit.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Ukládám...
