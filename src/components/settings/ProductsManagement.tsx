@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, Product } from '@/hooks/useProducts';
+import { StockReceiveDialog } from './StockReceiveDialog';
 import { cn } from '@/lib/utils';
 
 export function ProductsManagement() {
@@ -113,13 +114,15 @@ export function ProductsManagement() {
 
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-foreground">Produkty a služby</h3>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="w-4 h-4" />
-              Přidat produkt
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <StockReceiveDialog />
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Přidat produkt
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nový produkt</DialogTitle>
@@ -212,6 +215,7 @@ export function ProductsManagement() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="space-y-2">
