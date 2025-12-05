@@ -9,6 +9,8 @@ export interface Product {
   purchase_price: number;
   category: string;
   is_active: boolean;
+  stock_quantity: number;
+  low_stock_threshold: number;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -20,6 +22,8 @@ export interface CreateProductInput {
   purchase_price?: number;
   category?: string;
   is_active?: boolean;
+  stock_quantity?: number;
+  low_stock_threshold?: number;
 }
 
 export function useProducts(activeOnly = false) {
@@ -58,6 +62,8 @@ export function useCreateProduct() {
           purchase_price: input.purchase_price || 0,
           category: input.category || "supplement",
           is_active: input.is_active ?? true,
+          stock_quantity: input.stock_quantity ?? 0,
+          low_stock_threshold: input.low_stock_threshold ?? 5,
           user_id: user.id,
         })
         .select()
