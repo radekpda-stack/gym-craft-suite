@@ -128,90 +128,90 @@ export function TrainingDetailView({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with icon, client name, and edit controls */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header with icon, client name, and edit controls - Mobile optimized */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {client ? (
-            <ClientAvatar name={client.name} size="xl" />
+            <ClientAvatar name={client.name} size="lg" className="sm:w-16 sm:h-16" />
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Dumbbell className="w-8 h-8 text-primary" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Dumbbell className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             </div>
           )}
-          <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
               {client?.name || 'Trénink'}
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {format(new Date(training.date), "EEEE d. MMMM yyyy 'v' HH:mm", { locale: cs })}
+            <p className="text-sm text-muted-foreground mt-0.5 sm:mt-1">
+              {format(new Date(training.date), "d. MMMM 'v' HH:mm", { locale: cs })}
             </p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span
                 className={cn(
-                  'px-3 py-1 rounded-full text-sm font-medium border',
+                  'px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium border',
                   statusColors[training.status as keyof typeof statusColors]
                 )}
               >
                 {statusLabels[training.status as keyof typeof statusLabels]}
               </span>
               {(training.recurrence_type || training.parent_session_id) && (
-                <span className="flex items-center gap-1 text-primary text-sm">
-                  <Repeat className="w-4 h-4" />
-                  Opakující se
+                <span className="flex items-center gap-1 text-primary text-xs sm:text-sm">
+                  <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">Opakující se</span>
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Edit/Save/Cancel buttons */}
-        <div className="flex gap-2">
+        {/* Edit/Save/Cancel buttons - Full width on mobile */}
+        <div className="flex gap-2 sm:flex-shrink-0">
           {isEditMode ? (
             <>
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial h-11 sm:h-10"
               >
                 <X className="w-4 h-4" />
-                Zrušit
+                <span>Zrušit</span>
               </Button>
               <Button
                 onClick={form.handleSubmit(handleSubmit)}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial h-11 sm:h-10"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Uložit
+                <span>Uložit</span>
               </Button>
             </>
           ) : (
             <Button
               variant="outline"
-              className="gap-2"
+              className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
               onClick={() => setIsEditMode(true)}
             >
               <Edit2 className="w-4 h-4" />
-              Upravit
+              <span>Upravit</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* Quick Info Cards */}
+      {/* Quick Info Cards - 2 columns on mobile */}
       <Form {...form}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {/* Date & Time */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <Calendar className="w-4 h-4" />
-              <span className="text-sm">Datum a čas</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-2">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">Datum</span>
             </div>
             {isEditMode ? (
               <FormField
