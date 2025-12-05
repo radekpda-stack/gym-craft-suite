@@ -19,8 +19,8 @@ interface CartItem {
 }
 
 export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
-  const { data: products = [] } = useProducts(true);
-  const { data: clients = [] } = useClients();
+  const { data: products = [], isLoading: productsLoading } = useProducts(true);
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTransaction = useCreateTransaction();
 
   const [isOpen, setIsOpen] = useState(false);
