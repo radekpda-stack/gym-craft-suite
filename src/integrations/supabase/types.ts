@@ -504,9 +504,11 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          low_stock_threshold: number | null
           name: string
           price: number
           purchase_price: number | null
+          stock_quantity: number | null
           updated_at: string
           user_id: string | null
         }
@@ -515,9 +517,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          low_stock_threshold?: number | null
           name: string
           price?: number
           purchase_price?: number | null
+          stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
         }
@@ -526,9 +530,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          low_stock_threshold?: number | null
           name?: string
           price?: number
           purchase_price?: number | null
+          stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
         }

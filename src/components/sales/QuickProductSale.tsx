@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useProducts, Product } from '@/hooks/useProducts';
+import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
   const { data: products = [], isLoading: productsLoading } = useProducts(true);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTransaction = useCreateTransaction();
+  const updateProduct = useUpdateProduct();
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
@@ -74,7 +75,7 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
     setIsProcessing(true);
     try {
-      // Create a transaction for each product in cart
+      // Create a transaction for each product in cart and deduct stock
       for (const item of cart) {
         const itemTotal = item.product.price * item.quantity;
         await createTransaction.mutateAsync({
@@ -84,6 +85,15 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
           description: `${item.product.name}${item.quantity > 1 ? ` (${item.quantity}x)` : ''}`,
           product_id: item.product.id,
         });
+
+        // Deduct stock for non-service products
+        if (item.product.category !== 'service') {
+          const newStock = Math.max(0, (item.product.stock_quantity || 0) - item.quantity);
+          await updateProduct.mutateAsync({
+            id: item.product.id,
+            stock_quantity: newStock,
+          });
+        }
       }
 
       resetForm();
@@ -201,10 +211,22 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Vyberte produkt" />
                   </SelectTrigger>
-                  <SelectContent>
+                <SelectContent>
                     {availableProducts.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
-                        {product.name} - {product.price.toLocaleString('cs-CZ')} Kč
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{product.name} - {product.price.toLocaleString('cs-CZ')} Kč</span>
+                          {product.category !== 'service' && (
+                            <span className={cn(
+                              "text-xs",
+                              (product.stock_quantity || 0) <= (product.low_stock_threshold || 5) 
+                                ? "text-warning" 
+                                : "text-muted-foreground"
+                            )}>
+                              ({product.stock_quantity || 0} ks)
+                            </span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
