@@ -1,4 +1,4 @@
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +20,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 const notificationIcons: Record<NotificationType, typeof Bell> = {
   low_credit: CreditCard,
@@ -28,6 +29,7 @@ const notificationIcons: Record<NotificationType, typeof Bell> = {
   milestone_100: Trophy,
   milestone_500: Trophy,
   milestone_1000: Trophy,
+  incomplete_training: Dumbbell,
 };
 
 const notificationColors: Record<NotificationType, string> = {
@@ -37,7 +39,14 @@ const notificationColors: Record<NotificationType, string> = {
   milestone_100: "text-success",
   milestone_500: "text-success",
   milestone_1000: "text-success",
+  incomplete_training: "text-warning",
 };
+
+// Extract training ID from notification message
+function extractTrainingId(message: string): string | null {
+  const match = message.match(/ID: ([a-f0-9-]+)/);
+  return match ? match[1] : null;
+}
 
 export function NotificationCenter() {
   const { data: notifications = [], isLoading } = useNotifications();
@@ -91,8 +100,85 @@ export function NotificationCenter() {
               {notifications.map((notification) => {
                 const Icon = notificationIcons[notification.type] || Bell;
                 const colorClass = notificationColors[notification.type] || "text-foreground";
+                const trainingId = notification.type === 'incomplete_training' 
+                  ? extractTrainingId(notification.message) 
+                  : null;
 
-                return (
+                // Clean message (remove ID part for display)
+                const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
+
+                const NotificationContent = (
+                  <div className="flex items-start gap-3">
+                    <div className={cn("mt-0.5", colorClass)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm">{notification.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {displayMessage}
+                      </p>
+                      {trainingId && (
+                        <p className="text-xs text-primary mt-1 hover:underline">
+                          Otevřít detail tréninku →
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                          locale: cs,
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {!notification.is_read && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            markRead.mutate(notification.id);
+                          }}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          deleteNotification.mutate(notification.id);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+
+                return trainingId ? (
+                  <Link
+                    key={notification.id}
+                    to={`/trainings/${trainingId}`}
+                    className={cn(
+                      "block p-4 rounded-xl border transition-colors hover:border-primary/40",
+                      notification.is_read 
+                        ? "bg-background border-border" 
+                        : "bg-secondary border-primary/20"
+                    )}
+                    onClick={() => {
+                      if (!notification.is_read) {
+                        markRead.mutate(notification.id);
+                      }
+                    }}
+                  >
+                    {NotificationContent}
+                  </Link>
+                ) : (
                   <div
                     key={notification.id}
                     className={cn(
@@ -102,43 +188,7 @@ export function NotificationCenter() {
                         : "bg-secondary border-primary/20"
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={cn("mt-0.5", colorClass)}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm">{notification.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {formatDistanceToNow(new Date(notification.created_at), {
-                            addSuffix: true,
-                            locale: cs,
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        {!notification.is_read && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => markRead.mutate(notification.id)}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => deleteNotification.mutate(notification.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    {NotificationContent}
                   </div>
                 );
               })}
