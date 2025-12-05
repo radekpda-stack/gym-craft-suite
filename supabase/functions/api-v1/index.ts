@@ -58,12 +58,10 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // API key validation for write operations and sensitive reads
-  const writeOperations = ["POST", "PATCH", "DELETE", "PUT"];
-  if (writeOperations.includes(method) || resource === "credits") {
-    if (!validateApiKey(req)) {
-      return errorResponse("UNAUTHORIZED", "Invalid or missing API key", 401);
-    }
+  // API key validation for ALL requests (except health check)
+  // This ensures the API is not publicly accessible and protects sensitive data
+  if (resource !== "health" && !validateApiKey(req)) {
+    return errorResponse("UNAUTHORIZED", "Invalid or missing API key", 401);
   }
 
   try {
