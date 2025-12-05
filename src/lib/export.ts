@@ -176,6 +176,232 @@ export function exportFinancialSummaryToPDF(data: FinancialSummaryData, filename
   doc.save(`${filename}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }
 
+// ============ MEASUREMENTS EXPORT ============
+
+export interface MeasurementExportData {
+  id: string;
+  date: string;
+  weight: number | null;
+  body_fat_percentage: number | null;
+  muscle_mass: number | null;
+  basal_metabolism: number | null;
+  chest: number | null;
+  waist: number | null;
+  hips: number | null;
+  bicep_left: number | null;
+  bicep_right: number | null;
+  thigh_left: number | null;
+  thigh_right: number | null;
+  calf_left: number | null;
+  calf_right: number | null;
+  mental_state: number | null;
+  notes: string | null;
+}
+
+export interface MeasurementsExportOptions {
+  clientName: string;
+  measurements: MeasurementExportData[];
+}
+
+export function exportMeasurementsToPDF(options: MeasurementsExportOptions) {
+  const { clientName, measurements } = options;
+  const doc = new jsPDF();
+  
+  if (measurements.length === 0) {
+    doc.setFontSize(14);
+    doc.text('Žádná měření k exportu', 14, 20);
+    doc.save(`mereni_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    return;
+  }
+
+  const latest = measurements[0];
+  const oldest = measurements[measurements.length - 1];
+  
+  // Title & Header
+  doc.setFontSize(20);
+  doc.text(`Měření - ${clientName}`, 14, 20);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Vygenerováno: ${format(new Date(), 'd. MMMM yyyy', { locale: cs })}`, 14, 28);
+  doc.text(`Období: ${format(new Date(oldest.date), 'd.M.yyyy', { locale: cs })} - ${format(new Date(latest.date), 'd.M.yyyy', { locale: cs })}`, 14, 34);
+  doc.text(`Počet měření: ${measurements.length}`, 14, 40);
+  
+  // Current Stats Summary
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text('Aktuální hodnoty', 14, 52);
+  
+  const formatValue = (val: number | null, unit: string) => val !== null ? `${val} ${unit}` : '-';
+  
+  const currentStats = [
+    ['Váha', formatValue(latest.weight, 'kg')],
+    ['Tělesný tuk', formatValue(latest.body_fat_percentage, '%')],
+    ['Svalová hmota', formatValue(latest.muscle_mass, 'kg')],
+    ['Bazální metabolismus', formatValue(latest.basal_metabolism, 'kcal')],
+  ];
+
+  autoTable(doc, {
+    body: currentStats,
+    startY: 58,
+    styles: { fontSize: 10 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 50 },
+      1: { halign: 'right' }
+    },
+    theme: 'plain',
+  });
+
+  // Progress comparison (if we have more than 1 measurement)
+  if (measurements.length > 1) {
+    const finalY1 = (doc as any).lastAutoTable.finalY || 90;
+    doc.setFontSize(14);
+    doc.text('Změny od prvního měření', 14, finalY1 + 12);
+    
+    const calcChange = (current: number | null, original: number | null) => {
+      if (current === null || original === null || original === 0) return '-';
+      const diff = current - original;
+      const pct = ((diff / original) * 100).toFixed(1);
+      const sign = diff > 0 ? '+' : '';
+      return `${sign}${diff.toFixed(1)} (${sign}${pct}%)`;
+    };
+    
+    const progressData = [
+      ['Váha', formatValue(oldest.weight, 'kg'), formatValue(latest.weight, 'kg'), calcChange(latest.weight, oldest.weight)],
+      ['Tělesný tuk', formatValue(oldest.body_fat_percentage, '%'), formatValue(latest.body_fat_percentage, '%'), calcChange(latest.body_fat_percentage, oldest.body_fat_percentage)],
+      ['Svalová hmota', formatValue(oldest.muscle_mass, 'kg'), formatValue(latest.muscle_mass, 'kg'), calcChange(latest.muscle_mass, oldest.muscle_mass)],
+      ['Bazální metabolismus', formatValue(oldest.basal_metabolism, 'kcal'), formatValue(latest.basal_metabolism, 'kcal'), calcChange(latest.basal_metabolism, oldest.basal_metabolism)],
+    ];
+
+    autoTable(doc, {
+      head: [['Metrika', 'První měření', 'Poslední měření', 'Změna']],
+      body: progressData,
+      startY: finalY1 + 18,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [99, 102, 241] },
+    });
+  }
+
+  // Body measurements table
+  const finalY2 = (doc as any).lastAutoTable.finalY || 120;
+  doc.setFontSize(14);
+  doc.text('Obvodové míry (poslední měření)', 14, finalY2 + 12);
+  
+  const bodyMeasurements = [
+    ['Hrudník', formatValue(latest.chest, 'cm')],
+    ['Pas', formatValue(latest.waist, 'cm')],
+    ['Boky', formatValue(latest.hips, 'cm')],
+    ['Biceps L / P', `${latest.bicep_left ?? '-'} / ${latest.bicep_right ?? '-'} cm`],
+    ['Stehno L / P', `${latest.thigh_left ?? '-'} / ${latest.thigh_right ?? '-'} cm`],
+    ['Lýtko L / P', `${latest.calf_left ?? '-'} / ${latest.calf_right ?? '-'} cm`],
+  ];
+
+  autoTable(doc, {
+    body: bodyMeasurements,
+    startY: finalY2 + 18,
+    styles: { fontSize: 10 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 50 },
+      1: { halign: 'right' }
+    },
+    theme: 'plain',
+  });
+
+  // Full history table - new page
+  doc.addPage();
+  doc.setFontSize(14);
+  doc.text('Historie měření', 14, 20);
+
+  const historyData = measurements.map(m => [
+    format(new Date(m.date), 'd.M.yyyy', { locale: cs }),
+    m.weight !== null ? `${m.weight}` : '-',
+    m.body_fat_percentage !== null ? `${m.body_fat_percentage}` : '-',
+    m.muscle_mass !== null ? `${m.muscle_mass}` : '-',
+    m.basal_metabolism !== null ? `${m.basal_metabolism}` : '-',
+    m.mental_state !== null ? `${m.mental_state}/10` : '-',
+  ]);
+
+  autoTable(doc, {
+    head: [['Datum', 'Váha (kg)', 'Tuk (%)', 'Svaly (kg)', 'Metab. (kcal)', 'Psychika']],
+    body: historyData,
+    startY: 26,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [99, 102, 241] },
+  });
+
+  // Body measurements history
+  const finalY3 = (doc as any).lastAutoTable.finalY || 100;
+  doc.setFontSize(14);
+  doc.text('Historie obvodových měr', 14, finalY3 + 12);
+
+  const circumferenceHistory = measurements.map(m => [
+    format(new Date(m.date), 'd.M.yyyy', { locale: cs }),
+    m.chest !== null ? `${m.chest}` : '-',
+    m.waist !== null ? `${m.waist}` : '-',
+    m.hips !== null ? `${m.hips}` : '-',
+    m.bicep_left !== null && m.bicep_right !== null ? `${m.bicep_left}/${m.bicep_right}` : '-',
+    m.thigh_left !== null && m.thigh_right !== null ? `${m.thigh_left}/${m.thigh_right}` : '-',
+  ]);
+
+  autoTable(doc, {
+    head: [['Datum', 'Hrudník', 'Pas', 'Boky', 'Biceps L/P', 'Stehno L/P']],
+    body: circumferenceHistory,
+    startY: finalY3 + 18,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [34, 197, 94] },
+  });
+
+  // Notes section if any measurement has notes
+  const measurementsWithNotes = measurements.filter(m => m.notes);
+  if (measurementsWithNotes.length > 0) {
+    const finalY4 = (doc as any).lastAutoTable.finalY || 180;
+    
+    // Check if we need a new page
+    if (finalY4 > 240) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Poznámky', 14, 20);
+      
+      const notesData = measurementsWithNotes.map(m => [
+        format(new Date(m.date), 'd.M.yyyy', { locale: cs }),
+        m.notes || ''
+      ]);
+
+      autoTable(doc, {
+        head: [['Datum', 'Poznámka']],
+        body: notesData,
+        startY: 26,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [245, 158, 11] },
+        columnStyles: {
+          1: { cellWidth: 140 }
+        },
+      });
+    } else {
+      doc.setFontSize(14);
+      doc.text('Poznámky', 14, finalY4 + 12);
+      
+      const notesData = measurementsWithNotes.map(m => [
+        format(new Date(m.date), 'd.M.yyyy', { locale: cs }),
+        m.notes || ''
+      ]);
+
+      autoTable(doc, {
+        head: [['Datum', 'Poznámka']],
+        body: notesData,
+        startY: finalY4 + 18,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [245, 158, 11] },
+        columnStyles: {
+          1: { cellWidth: 140 }
+        },
+      });
+    }
+  }
+
+  doc.save(`mereni_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+}
+
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     payment: 'Platba',
