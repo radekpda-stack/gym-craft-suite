@@ -85,6 +85,49 @@ export function useSaveTrainingParticipants() {
   });
 }
 
+// Helper function to sync budget group credit
+async function syncBudgetGroupCredit(clientId: string, newBalance: number) {
+  // Get the budget group for this client
+  const { data: membership, error: memberError } = await supabase
+    .from("client_budget_members")
+    .select("group_id")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (memberError) {
+    console.error("Error checking budget group:", memberError);
+    return;
+  }
+  
+  if (!membership) return; // Client not in a group
+
+  // Get all other members in the group
+  const { data: allMembers, error: membersError } = await supabase
+    .from("client_budget_members")
+    .select("client_id")
+    .eq("group_id", membership.group_id)
+    .neq("client_id", clientId);
+
+  if (membersError) {
+    console.error("Error getting group members:", membersError);
+    return;
+  }
+
+  // Update credit balance for all group members
+  if (allMembers && allMembers.length > 0) {
+    const memberIds = allMembers.map(m => m.client_id);
+    
+    const { error: updateError } = await supabase
+      .from("clients")
+      .update({ credit_balance: newBalance })
+      .in("id", memberIds);
+
+    if (updateError) {
+      console.error("Error syncing group credit:", updateError);
+    }
+  }
+}
+
 export function useDeductParticipantsCredit() {
   const queryClient = useQueryClient();
 
@@ -136,6 +179,9 @@ export function useDeductParticipantsCredit() {
           .eq("id", participant.client_id);
 
         if (updateError) throw updateError;
+
+        // Sync credit across budget group members
+        await syncBudgetGroupCredit(participant.client_id, newBalance);
       }
 
       return { success: true };
@@ -143,6 +189,8 @@ export function useDeductParticipantsCredit() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
     },
     onError: (error) => {
       console.error("Error deducting participant credits:", error);

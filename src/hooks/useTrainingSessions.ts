@@ -502,6 +502,29 @@ export function useCancelTrainingSession() {
           .eq("id", client_id);
 
         if (updateError) throw updateError;
+
+        // Sync credit across budget group members
+        const { data: membership } = await supabase
+          .from("client_budget_members")
+          .select("group_id")
+          .eq("client_id", client_id)
+          .maybeSingle();
+
+        if (membership) {
+          const { data: allMembers } = await supabase
+            .from("client_budget_members")
+            .select("client_id")
+            .eq("group_id", membership.group_id)
+            .neq("client_id", client_id);
+
+          if (allMembers && allMembers.length > 0) {
+            const memberIds = allMembers.map(m => m.client_id);
+            await supabase
+              .from("clients")
+              .update({ credit_balance: newBalance })
+              .in("id", memberIds);
+          }
+        }
       }
 
       return { data, price, newBalance, deductCredit };
@@ -510,6 +533,8 @@ export function useCancelTrainingSession() {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       
       if (result.deductCredit && result.price > 0) {
         toast({
@@ -532,6 +557,49 @@ export function useCancelTrainingSession() {
       });
     },
   });
+}
+
+// Helper function to sync budget group credit
+async function syncBudgetGroupCredit(clientId: string, newBalance: number) {
+  // Get the budget group for this client
+  const { data: membership, error: memberError } = await supabase
+    .from("client_budget_members")
+    .select("group_id")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (memberError) {
+    console.error("Error checking budget group:", memberError);
+    return;
+  }
+  
+  if (!membership) return; // Client not in a group
+
+  // Get all other members in the group
+  const { data: allMembers, error: membersError } = await supabase
+    .from("client_budget_members")
+    .select("client_id")
+    .eq("group_id", membership.group_id)
+    .neq("client_id", clientId);
+
+  if (membersError) {
+    console.error("Error getting group members:", membersError);
+    return;
+  }
+
+  // Update credit balance for all group members
+  if (allMembers && allMembers.length > 0) {
+    const memberIds = allMembers.map(m => m.client_id);
+    
+    const { error: updateError } = await supabase
+      .from("clients")
+      .update({ credit_balance: newBalance })
+      .in("id", memberIds);
+
+    if (updateError) {
+      console.error("Error syncing group credit:", updateError);
+    }
+  }
 }
 
 export interface CompleteTrainingInput {
@@ -620,6 +688,9 @@ export function useCompleteTrainingSession() {
 
       if (updateError) throw updateError;
 
+      // Sync credit across budget group members
+      await syncBudgetGroupCredit(client_id, newBalance);
+
       return { training, price, newBalance };
     },
     onSuccess: (result, variables) => {
@@ -629,6 +700,8 @@ export function useCompleteTrainingSession() {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["client", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       
       toast({
         title: "Trénink dokončen",
