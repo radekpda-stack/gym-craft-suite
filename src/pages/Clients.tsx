@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, Loader2, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,11 @@ import { useCreateTransaction, useCreditTransactions } from '@/hooks/useCreditTr
 import { useClientsWithTags } from '@/hooks/useClientTags';
 import { useTags } from '@/hooks/useTags';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
+import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
+import { SharedBudgetManager } from '@/components/clients/SharedBudgetManager';
 import { ClientFormValues } from '@/lib/validations/client';
 import {
   Dialog,
@@ -33,6 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -52,6 +59,8 @@ export default function Clients() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
+  const [showBudgetManager, setShowBudgetManager] = useState(false);
+
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
@@ -61,6 +70,7 @@ export default function Clients() {
   const { data: creditClientTransactions = [] } = useCreditTransactions(creditClient?.id);
   const { data: clientTagsMap = {} } = useClientsWithTags();
   const { data: allTags = [] } = useTags();
+  const { data: budgetGroups = [] } = useBudgetGroups();
 
   // Handle URL filter parameter
   useEffect(() => {
@@ -441,6 +451,33 @@ export default function Clients() {
         </div>
       )}
 
+      {/* Shared Budgets Section */}
+      <Collapsible open={showBudgetManager} onOpenChange={setShowBudgetManager}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <LinkIcon className="w-4 h-4" />
+              Sdílené budgety
+              {budgetGroups.length > 0 && (
+                <Badge variant="secondary">{budgetGroups.length}</Badge>
+              )}
+            </div>
+            <ChevronRight className={cn(
+              "w-4 h-4 transition-transform",
+              showBudgetManager && "rotate-90"
+            )} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          <div className="glass rounded-xl p-4">
+            <SharedBudgetManager
+              clients={clients}
+              selectedClientIds={Array.from(selectedIds)}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Clients Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -537,12 +574,21 @@ export default function Clients() {
                     </h3>
                     
                     {/* Credit Balance */}
-                    <div className={cn(
-                      "flex items-center gap-1.5 mt-1 font-semibold",
-                      getCreditColor(client.credit_balance || 0)
-                    )}>
-                      <CreditCard className="w-4 h-4" />
-                      <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className={cn(
+                        "flex items-center gap-1.5 font-semibold",
+                        getCreditColor(client.credit_balance || 0)
+                      )}>
+                        <CreditCard className="w-4 h-4" />
+                        <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
+                      </div>
+                      {/* Shared Budget Badge */}
+                      {budgetGroups.some(g => g.members.some(m => m.client_id === client.id)) && (
+                        <Badge variant="outline" className="gap-1 text-xs px-1.5 py-0.5">
+                          <LinkIcon className="w-3 h-3" />
+                          Sdílený
+                        </Badge>
+                      )}
                     </div>
                     
                     {/* Client Tags */}
