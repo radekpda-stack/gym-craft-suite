@@ -9,6 +9,7 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
@@ -29,6 +30,8 @@ import { useClient, useClients } from '@/hooks/useClients';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
 import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
+import { TrainingFeedbackForm } from '@/components/feedback/TrainingFeedbackForm';
+import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +66,7 @@ export default function TrainingDetail() {
   const { data: clients = [] } = useClients();
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
+  const { data: existingFeedback } = useTrainingFeedback(id);
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const completeTraining = useCompleteTrainingSession();
@@ -76,6 +80,7 @@ export default function TrainingDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   
   // Complete dialog state
   const [completeParticipants, setCompleteParticipants] = useState(1);
@@ -302,6 +307,21 @@ export default function TrainingDetail() {
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Akce</h3>
           <div className="flex flex-wrap gap-3">
+            {training.status === 'completed' && !existingFeedback && (
+              <Button
+                className="gap-2"
+                onClick={() => setShowFeedbackDialog(true)}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Přidat zpětnou vazbu
+              </Button>
+            )}
+            {training.status === 'completed' && existingFeedback && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                <span>Zpětná vazba vyplněna</span>
+              </div>
+            )}
             <Button
               variant="ghost"
               className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -525,6 +545,18 @@ export default function TrainingDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Feedback Dialog */}
+      {training && (
+        <TrainingFeedbackForm
+          trainingSessionId={training.id}
+          clientId={training.client_id}
+          trainingDate={training.date}
+          trainingType={trainingTags.length > 0 ? trainingTags.map(t => t.tag_id).join(', ') : null}
+          open={showFeedbackDialog}
+          onOpenChange={setShowFeedbackDialog}
+        />
+      )}
     </div>
   );
 }

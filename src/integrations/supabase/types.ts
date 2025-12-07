@@ -627,6 +627,87 @@ export type Database = {
         }
         Relationships: []
       }
+      training_feedback: {
+        Row: {
+          client_id: string
+          comment: string | null
+          created_at: string
+          energy_level: string
+          fatigue_level: number
+          goal_relevance: string
+          id: string
+          mood_rating: number
+          muscle_soreness: string[] | null
+          muscle_soreness_comment: string | null
+          rpe_rating: number
+          sleep_hours: number | null
+          sleep_quality: number | null
+          technique_rating: number
+          training_date: string
+          training_session_id: string
+          training_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          comment?: string | null
+          created_at?: string
+          energy_level: string
+          fatigue_level: number
+          goal_relevance: string
+          id?: string
+          mood_rating: number
+          muscle_soreness?: string[] | null
+          muscle_soreness_comment?: string | null
+          rpe_rating: number
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          technique_rating: number
+          training_date: string
+          training_session_id: string
+          training_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          comment?: string | null
+          created_at?: string
+          energy_level?: string
+          fatigue_level?: number
+          goal_relevance?: string
+          id?: string
+          mood_rating?: number
+          muscle_soreness?: string[] | null
+          muscle_soreness_comment?: string | null
+          rpe_rating?: number
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          technique_rating?: number
+          training_date?: string
+          training_session_id?: string
+          training_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_feedback_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_participants: {
         Row: {
           client_id: string
