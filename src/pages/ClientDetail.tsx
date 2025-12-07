@@ -11,6 +11,7 @@ import {
   XCircle,
   Clock,
   Tag,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +26,7 @@ import { ClientMediaTab } from '@/components/media/ClientMediaTab';
 import { TrainingHistory } from '@/components/trainings/TrainingHistory';
 import { TrainingStats } from '@/components/trainings/TrainingStats';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
+import { FeedbackStatistics } from '@/components/feedback/FeedbackStatistics';
 import { cn } from '@/lib/utils';
 
 export default function ClientDetail() {
@@ -146,6 +148,13 @@ export default function ClientDetail() {
           >
             <Camera className="w-4 h-4 mr-2" />
             Média
+          </TabsTrigger>
+          <TabsTrigger
+            value="feedback"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
+          >
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Feedback
           </TabsTrigger>
         </TabsList>
 
@@ -315,6 +324,10 @@ export default function ClientDetail() {
 
         <TabsContent value="media" className="space-y-6">
           <ClientMediaTab clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="feedback" className="space-y-6">
+          <FeedbackStatistics clientId={client.id} />
         </TabsContent>
       </Tabs>
     </div>
