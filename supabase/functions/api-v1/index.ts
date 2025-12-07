@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,12 +7,150 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
 };
 
+// ============ VALIDATION SCHEMAS ============
+
+// UUID validation helper
+const uuidSchema = z.string().uuid("Invalid UUID format");
+
+// Client schemas
+const clientCreateSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Invalid email format").max(255).optional().or(z.literal("")),
+  phone: z.string().trim().max(20, "Phone must be less than 20 characters").optional().nullable(),
+  notes: z.string().trim().max(2000, "Notes must be less than 2000 characters").optional().or(z.literal("")),
+  health_restrictions: z.string().trim().max(1000, "Health restrictions must be less than 1000 characters").optional().or(z.literal("")),
+  training_goals: z.array(z.string().max(100)).max(20).optional().default([]),
+  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD format").optional().nullable(),
+  credit_balance: z.number().min(-1000000).max(1000000).optional().default(0),
+  is_favorite: z.boolean().optional().default(false),
+});
+
+const clientUpdateSchema = clientCreateSchema.partial().extend({
+  is_archived: z.boolean().optional(),
+});
+
+// Workout/Training schemas
+const workoutCreateSchema = z.object({
+  client_id: uuidSchema,
+  date: z.string().min(1, "Date is required"),
+  duration: z.number().int().min(1).max(480).optional().default(60),
+  status: z.enum(["scheduled", "completed", "cancelled"]).optional().default("scheduled"),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  participant_count: z.number().int().min(1).max(20).optional().default(1),
+  subjective_rating: z.number().int().min(1).max(10).optional().nullable(),
+});
+
+const workoutUpdateSchema = workoutCreateSchema.partial();
+
+// Workout entry schema
+const workoutEntryCreateSchema = z.object({
+  training_session_id: uuidSchema,
+  exercise_id: uuidSchema.optional().nullable(),
+  exercise_name: z.string().trim().min(1, "Exercise name is required").max(200),
+  set_number: z.number().int().min(1).max(100).optional().default(1),
+  weight_kg: z.number().min(0).max(1000).optional().nullable(),
+  reps: z.number().int().min(0).max(1000).optional().nullable(),
+  rpe: z.number().int().min(1).max(10).optional().nullable(),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
+const workoutEntryUpdateSchema = workoutEntryCreateSchema.partial().omit({ training_session_id: true });
+
+// Measurement schema
+const measurementCreateSchema = z.object({
+  client_id: uuidSchema,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  weight: z.number().min(0).max(500).optional().nullable(),
+  body_fat_percentage: z.number().min(0).max(100).optional().nullable(),
+  body_fat_percent: z.number().min(0).max(100).optional().nullable(), // Alias
+  muscle_mass: z.number().min(0).max(300).optional().nullable(),
+  muscle_mass_kg: z.number().min(0).max(300).optional().nullable(), // Alias
+  basal_metabolism: z.number().int().min(0).max(10000).optional().nullable(),
+  bmr_kcal: z.number().int().min(0).max(10000).optional().nullable(), // Alias
+  chest: z.number().min(0).max(300).optional().nullable(),
+  waist: z.number().min(0).max(300).optional().nullable(),
+  hips: z.number().min(0).max(300).optional().nullable(),
+  bicep_left: z.number().min(0).max(100).optional().nullable(),
+  bicep_right: z.number().min(0).max(100).optional().nullable(),
+  thigh_left: z.number().min(0).max(150).optional().nullable(),
+  thigh_right: z.number().min(0).max(150).optional().nullable(),
+  calf_left: z.number().min(0).max(100).optional().nullable(),
+  calf_right: z.number().min(0).max(100).optional().nullable(),
+  mental_state: z.number().int().min(1).max(10).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+const measurementUpdateSchema = measurementCreateSchema.partial().omit({ client_id: true });
+
+// Diagnostic schema
+const diagnosticCreateSchema = z.object({
+  client_id: uuidSchema,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  area_type: z.string().trim().min(1, "Area type is required").max(50),
+  area_name: z.string().trim().min(1, "Area name is required").max(100),
+  findings: z.string().trim().min(1, "Findings are required").max(5000),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+const diagnosticUpdateSchema = diagnosticCreateSchema.partial().omit({ client_id: true });
+
+// Credit schemas
+const creditConsumeSchema = z.object({
+  client_id: uuidSchema,
+  session_type: z.enum(["1", "2", "3+", "first", "diagnostic"]).optional(),
+  price: z.number().min(0).max(100000).optional(),
+  training_session_id: uuidSchema.optional().nullable(),
+  note: z.string().trim().max(500).optional(),
+});
+
+const creditAddSchema = z.object({
+  client_id: uuidSchema,
+  amount: z.number().min(1, "Amount must be at least 1").max(1000000),
+  note: z.string().trim().max(500).optional(),
+});
+
+// Calendar event schema
+const calendarEventCreateSchema = z.object({
+  client_id: uuidSchema,
+  date: z.string().optional(),
+  start: z.string().optional(),
+  duration_minutes: z.number().int().min(1).max(480).optional(),
+  duration: z.number().int().min(1).max(480).optional(),
+  status: z.enum(["scheduled", "completed", "cancelled"]).optional().default("scheduled"),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  participant_count: z.number().int().min(1).max(20).optional().default(1),
+}).refine(data => data.date || data.start, {
+  message: "Either 'date' or 'start' is required",
+});
+
+const calendarEventUpdateSchema = z.object({
+  client_id: uuidSchema.optional(),
+  date: z.string().optional(),
+  start: z.string().optional(),
+  duration_minutes: z.number().int().min(1).max(480).optional(),
+  duration: z.number().int().min(1).max(480).optional(),
+  status: z.enum(["scheduled", "completed", "cancelled"]).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  participant_count: z.number().int().min(1).max(20).optional(),
+});
+
+// ============ HELPERS ============
+
 // Error response helper
 function errorResponse(code: string, message: string, status: number, details?: object) {
   return new Response(
     JSON.stringify({ error: { code, message, details } }),
     { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
+}
+
+// Validation error response
+function validationErrorResponse(error: z.ZodError) {
+  const issues = error.issues.map(issue => ({
+    path: issue.path.join('.'),
+    message: issue.message,
+  }));
+  return errorResponse("VALIDATION_ERROR", "Request validation failed", 400, { issues });
 }
 
 // Success response helper
@@ -32,14 +171,28 @@ function validateApiKey(req: Request): boolean {
 // Parse URL path segments
 function parsePath(url: URL): { resource: string; id?: string; action?: string } {
   const pathParts = url.pathname.replace("/api-v1", "").split("/").filter(Boolean);
-  // Expected: /api/v1/{resource}/{id?}/{action?}
-  // After edge function routing: /{resource}/{id?}/{action?}
   return {
     resource: pathParts[0] || "",
     id: pathParts[1],
     action: pathParts[2],
   };
 }
+
+// Safe JSON parse with validation
+async function parseAndValidate<T>(req: Request, schema: z.ZodSchema<T>): Promise<{ data?: T; error?: Response }> {
+  try {
+    const body = await req.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
+      return { error: validationErrorResponse(result.error) };
+    }
+    return { data: result.data };
+  } catch (e) {
+    return { error: errorResponse("PARSE_ERROR", "Invalid JSON body", 400) };
+  }
+}
+
+// ============ MAIN HANDLER ============
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -59,13 +212,11 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   // API key validation for ALL requests (except health check)
-  // This ensures the API is not publicly accessible and protects sensitive data
   if (resource !== "health" && !validateApiKey(req)) {
     return errorResponse("UNAUTHORIZED", "Invalid or missing API key", 401);
   }
 
   try {
-    // Route to appropriate handler
     switch (resource) {
       case "clients":
         return await handleClients(supabase, method, id, url, req);
@@ -98,7 +249,6 @@ async function handleClients(supabase: any, method: string, id: string | undefin
   const params = url.searchParams;
 
   if (method === "GET" && !id) {
-    // List clients with optional filtering
     let query = supabase.from("clients").select("*");
     
     const name = params.get("name");
@@ -121,7 +271,12 @@ async function handleClients(supabase: any, method: string, id: string | undefin
   }
 
   if (method === "GET" && id) {
-    // Get client detail with stats
+    // Validate UUID format
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
+    }
+
     const { data: client, error } = await supabase
       .from("clients")
       .select("*")
@@ -131,7 +286,6 @@ async function handleClients(supabase: any, method: string, id: string | undefin
     if (error) throw error;
     if (!client) return errorResponse("NOT_FOUND", "Client not found", 404);
 
-    // Get last training
     const { data: lastTraining } = await supabase
       .from("training_sessions")
       .select("id, date, status")
@@ -140,7 +294,6 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       .limit(1)
       .maybeSingle();
 
-    // Get last measurement
     const { data: lastMeasurement } = await supabase
       .from("measurements")
       .select("id, date, weight, body_fat_percentage")
@@ -149,7 +302,6 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       .limit(1)
       .maybeSingle();
 
-    // Get training count
     const { count: trainingCount } = await supabase
       .from("training_sessions")
       .select("*", { count: "exact", head: true })
@@ -170,19 +322,21 @@ async function handleClients(supabase: any, method: string, id: string | undefin
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, clientCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("clients")
       .insert({
-        name: body.name,
-        email: body.email || "",
-        phone: body.phone || null,
-        notes: body.notes || "",
-        health_restrictions: body.health_restrictions || "",
-        training_goals: body.training_goals || [],
-        birth_date: body.birth_date || null,
-        credit_balance: body.credit_balance || 0,
-        is_favorite: body.is_favorite || false,
+        name: body!.name,
+        email: body!.email || "",
+        phone: body!.phone || null,
+        notes: body!.notes || "",
+        health_restrictions: body!.health_restrictions || "",
+        training_goals: body!.training_goals || [],
+        birth_date: body!.birth_date || null,
+        credit_balance: body!.credit_balance || 0,
+        is_favorite: body!.is_favorite || false,
         is_archived: false,
       })
       .select()
@@ -193,7 +347,14 @@ async function handleClients(supabase: any, method: string, id: string | undefin
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, clientUpdateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("clients")
       .update({
@@ -209,7 +370,11 @@ async function handleClients(supabase: any, method: string, id: string | undefin
   }
 
   if (method === "DELETE" && id) {
-    // Soft delete - set is_archived flag
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
+    }
+
     const { data, error } = await supabase
       .from("clients")
       .update({ is_archived: true, updated_at: new Date().toISOString() })
@@ -236,6 +401,10 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
     
     const clientId = params.get("client_id");
     if (clientId) {
+      const idResult = uuidSchema.safeParse(clientId);
+      if (!idResult.success) {
+        return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
+      }
       query = query.eq("client_id", clientId);
     }
     
@@ -262,6 +431,11 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
   }
 
   if (method === "GET" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
+    }
+
     const { data: workout, error } = await supabase
       .from("training_sessions")
       .select(`
@@ -277,7 +451,6 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
     if (error) throw error;
     if (!workout) return errorResponse("NOT_FOUND", "Workout not found", 404);
 
-    // Format tags
     const tags = workout.training_session_tags?.map((t: any) => t.tags) || [];
 
     return jsonResponse({
@@ -290,17 +463,19 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, workoutCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .insert({
-        client_id: body.client_id,
-        date: body.date,
-        duration: body.duration || 60,
-        status: body.status || "scheduled",
-        notes: body.notes || "",
-        participant_count: body.participant_count || 1,
-        subjective_rating: body.subjective_rating || null,
+        client_id: body!.client_id,
+        date: body!.date,
+        duration: body!.duration || 60,
+        status: body!.status || "scheduled",
+        notes: body!.notes || "",
+        participant_count: body!.participant_count || 1,
+        subjective_rating: body!.subjective_rating || null,
       })
       .select()
       .single();
@@ -310,7 +485,14 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, workoutUpdateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .update({
@@ -326,6 +508,11 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
   }
 
   if (method === "DELETE" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
+    }
+
     const { data, error } = await supabase
       .from("training_sessions")
       .update({ 
@@ -346,10 +533,6 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
 
 // ============ WORKOUT ENTRIES (Exercise Sets) ============
 async function handleWorkoutEntries(supabase: any, method: string, id: string | undefined, req: Request) {
-  // Note: This requires a workout_entries table. If it doesn't exist, 
-  // return a message indicating the feature is not available
-  
-  // Check if table exists by trying to query it
   const { error: checkError } = await supabase
     .from("workout_entries")
     .select("id")
@@ -364,18 +547,20 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, workoutEntryCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("workout_entries")
       .insert({
-        training_session_id: body.training_session_id,
-        exercise_id: body.exercise_id,
-        exercise_name: body.exercise_name,
-        set_number: body.set_number || 1,
-        weight_kg: body.weight_kg,
-        reps: body.reps,
-        rpe: body.rpe,
-        notes: body.notes || "",
+        training_session_id: body!.training_session_id,
+        exercise_id: body!.exercise_id,
+        exercise_name: body!.exercise_name,
+        set_number: body!.set_number || 1,
+        weight_kg: body!.weight_kg,
+        reps: body!.reps,
+        rpe: body!.rpe,
+        notes: body!.notes || "",
       })
       .select()
       .single();
@@ -385,7 +570,14 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid entry ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, workoutEntryUpdateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("workout_entries")
       .update(body)
@@ -398,6 +590,11 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
   }
 
   if (method === "DELETE" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid entry ID format", 400);
+    }
+
     const { error } = await supabase
       .from("workout_entries")
       .delete()
@@ -422,6 +619,10 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
     
     const clientId = params.get("client_id");
     if (clientId) {
+      const idResult = uuidSchema.safeParse(clientId);
+      if (!idResult.success) {
+        return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
+      }
       query = query.eq("client_id", clientId);
     }
 
@@ -435,12 +636,11 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
       query = query.lte("date", dateTo);
     }
 
-    query = query.order("date", { ascending: true }); // Ascending for graph display
+    query = query.order("date", { ascending: true });
     
     const { data, error } = await query;
     if (error) throw error;
 
-    // Format for easy graph rendering
     return jsonResponse({
       measurements: data || [],
       chart_data: {
@@ -454,27 +654,29 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, measurementCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("measurements")
       .insert({
-        client_id: body.client_id,
-        date: body.date || new Date().toISOString().split("T")[0],
-        weight: body.weight,
-        body_fat_percentage: body.body_fat_percentage || body.body_fat_percent,
-        muscle_mass: body.muscle_mass || body.muscle_mass_kg,
-        basal_metabolism: body.basal_metabolism || body.bmr_kcal,
-        chest: body.chest,
-        waist: body.waist,
-        hips: body.hips,
-        bicep_left: body.bicep_left,
-        bicep_right: body.bicep_right,
-        thigh_left: body.thigh_left,
-        thigh_right: body.thigh_right,
-        calf_left: body.calf_left,
-        calf_right: body.calf_right,
-        mental_state: body.mental_state,
-        notes: body.notes || "",
+        client_id: body!.client_id,
+        date: body!.date || new Date().toISOString().split("T")[0],
+        weight: body!.weight,
+        body_fat_percentage: body!.body_fat_percentage || body!.body_fat_percent,
+        muscle_mass: body!.muscle_mass || body!.muscle_mass_kg,
+        basal_metabolism: body!.basal_metabolism || body!.bmr_kcal,
+        chest: body!.chest,
+        waist: body!.waist,
+        hips: body!.hips,
+        bicep_left: body!.bicep_left,
+        bicep_right: body!.bicep_right,
+        thigh_left: body!.thigh_left,
+        thigh_right: body!.thigh_right,
+        calf_left: body!.calf_left,
+        calf_right: body!.calf_right,
+        mental_state: body!.mental_state,
+        notes: body!.notes || "",
       })
       .select()
       .single();
@@ -484,7 +686,14 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid measurement ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, measurementUpdateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("measurements")
       .update(body)
@@ -497,6 +706,11 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
   }
 
   if (method === "DELETE" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid measurement ID format", 400);
+    }
+
     const { error } = await supabase
       .from("measurements")
       .delete()
@@ -521,6 +735,10 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
     
     const clientId = params.get("client_id");
     if (clientId) {
+      const idResult = uuidSchema.safeParse(clientId);
+      if (!idResult.success) {
+        return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
+      }
       query = query.eq("client_id", clientId);
     }
 
@@ -537,6 +755,11 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
   }
 
   if (method === "GET" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
+    }
+
     const { data, error } = await supabase
       .from("diagnostics")
       .select(`
@@ -553,16 +776,18 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, diagnosticCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("diagnostics")
       .insert({
-        client_id: body.client_id,
-        date: body.date || new Date().toISOString().split("T")[0],
-        area_type: body.area_type,
-        area_name: body.area_name,
-        findings: body.findings,
-        notes: body.notes || "",
+        client_id: body!.client_id,
+        date: body!.date || new Date().toISOString().split("T")[0],
+        area_type: body!.area_type,
+        area_name: body!.area_name,
+        findings: body!.findings,
+        notes: body!.notes || "",
       })
       .select()
       .single();
@@ -572,7 +797,14 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, diagnosticUpdateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("diagnostics")
       .update(body)
@@ -585,6 +817,11 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
   }
 
   if (method === "DELETE" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
+    }
+
     const { error } = await supabase
       .from("diagnostics")
       .delete()
@@ -608,7 +845,11 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "client_id is required", 400);
     }
 
-    // Get client with credit balance
+    const idResult = uuidSchema.safeParse(clientId);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
+    }
+
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, name, credit_balance")
@@ -618,7 +859,6 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     if (clientError) throw clientError;
     if (!client) return errorResponse("NOT_FOUND", "Client not found", 404);
 
-    // Get transaction history
     const { data: transactions, error: txError } = await supabase
       .from("credit_transactions")
       .select(`
@@ -641,55 +881,48 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
 
   // POST /credits/consume - Deduct credits after training
   if (method === "POST" && action === "consume") {
-    const body = await req.json();
-    
-    if (!body.client_id) {
-      return errorResponse("VALIDATION_ERROR", "client_id is required", 400);
-    }
+    const { data: body, error: validationError } = await parseAndValidate(req, creditConsumeSchema);
+    if (validationError) return validationError;
 
-    // Calculate price based on session type
     const priceMap: Record<string, number> = {
-      "1": 800,  // 1 client
-      "2": 1000, // 2 clients
-      "3+": 1200, // 3+ clients
-      "first": 1000, // First training
-      "diagnostic": 500, // Diagnostic
+      "1": 800,
+      "2": 1000,
+      "3+": 1200,
+      "first": 1000,
+      "diagnostic": 500,
     };
     
-    const sessionType = body.session_type || "1";
-    const price = body.price || priceMap[sessionType] || 800;
+    const sessionType = body!.session_type || "1";
+    const price = body!.price || priceMap[sessionType] || 800;
 
-    // Get current balance
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("credit_balance")
-      .eq("id", body.client_id)
+      .eq("id", body!.client_id)
       .single();
     
     if (clientError) throw clientError;
 
     const newBalance = (client.credit_balance || 0) - price;
 
-    // Create transaction
     const { data: transaction, error: txError } = await supabase
       .from("credit_transactions")
       .insert({
-        client_id: body.client_id,
+        client_id: body!.client_id,
         amount: -price,
         type: "training_deduction",
-        description: body.note || `Training session (${sessionType})`,
-        training_session_id: body.training_session_id || null,
+        description: body!.note || `Training session (${sessionType})`,
+        training_session_id: body!.training_session_id || null,
       })
       .select()
       .single();
     
     if (txError) throw txError;
 
-    // Update client balance
     const { error: updateError } = await supabase
       .from("clients")
       .update({ credit_balance: newBalance })
-      .eq("id", body.client_id);
+      .eq("id", body!.client_id);
     
     if (updateError) throw updateError;
 
@@ -702,44 +935,38 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
 
   // POST /credits/add - Add purchased credits
   if (method === "POST" && action === "add") {
-    const body = await req.json();
-    
-    if (!body.client_id || !body.amount) {
-      return errorResponse("VALIDATION_ERROR", "client_id and amount are required", 400);
-    }
+    const { data: body, error: validationError } = await parseAndValidate(req, creditAddSchema);
+    if (validationError) return validationError;
 
-    const amount = Math.abs(body.amount); // Ensure positive
+    const amount = Math.abs(body!.amount);
 
-    // Get current balance
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("credit_balance")
-      .eq("id", body.client_id)
+      .eq("id", body!.client_id)
       .single();
     
     if (clientError) throw clientError;
 
     const newBalance = (client.credit_balance || 0) + amount;
 
-    // Create transaction
     const { data: transaction, error: txError } = await supabase
       .from("credit_transactions")
       .insert({
-        client_id: body.client_id,
+        client_id: body!.client_id,
         amount: amount,
         type: "credit_purchase",
-        description: body.note || "Credit purchase",
+        description: body!.note || "Credit purchase",
       })
       .select()
       .single();
     
     if (txError) throw txError;
 
-    // Update client balance
     const { error: updateError } = await supabase
       .from("clients")
       .update({ credit_balance: newBalance })
-      .eq("id", body.client_id);
+      .eq("id", body!.client_id);
     
     if (updateError) throw updateError;
 
@@ -755,6 +982,11 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const clientId = params.get("client_id");
     if (!clientId) {
       return errorResponse("VALIDATION_ERROR", "client_id is required", 400);
+    }
+
+    const idResult = uuidSchema.safeParse(clientId);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
     }
 
     let query = supabase
@@ -777,14 +1009,12 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const { data: transactions, error } = await query;
     if (error) throw error;
 
-    // Get client info
     const { data: client } = await supabase
       .from("clients")
       .select("id, name, credit_balance")
       .eq("id", clientId)
       .single();
 
-    // Calculate totals
     const totalAdded = transactions
       ?.filter((t: any) => t.amount > 0)
       .reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
@@ -843,6 +1073,10 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
 
     const clientId = params.get("client_id");
     if (clientId) {
+      const idResult = uuidSchema.safeParse(clientId);
+      if (!idResult.success) {
+        return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
+      }
       query = query.eq("client_id", clientId);
     }
 
@@ -851,7 +1085,6 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
     const { data, error } = await query;
     if (error) throw error;
 
-    // Transform to calendar event format
     const events = (data || []).map((session: any) => ({
       id: session.id,
       title: session.clients?.name || "Training",
@@ -869,16 +1102,18 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
   }
 
   if (method === "POST") {
-    const body = await req.json();
+    const { data: body, error: validationError } = await parseAndValidate(req, calendarEventCreateSchema);
+    if (validationError) return validationError;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .insert({
-        client_id: body.client_id,
-        date: body.date || body.start,
-        duration: body.duration_minutes || body.duration || 60,
-        status: body.status || "scheduled",
-        notes: body.notes || "",
-        participant_count: body.participant_count || 1,
+        client_id: body!.client_id,
+        date: body!.date || body!.start,
+        duration: body!.duration_minutes || body!.duration || 60,
+        status: body!.status || "scheduled",
+        notes: body!.notes || "",
+        participant_count: body!.participant_count || 1,
       })
       .select(`
         *,
@@ -891,16 +1126,21 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
   }
 
   if (method === "PATCH" && id) {
-    const body = await req.json();
-    
-    // Map calendar event fields to training session fields
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid event ID format", 400);
+    }
+
+    const { data: body, error: validationError } = await parseAndValidate(req, calendarEventUpdateSchema);
+    if (validationError) return validationError;
+
     const updateData: any = {};
-    if (body.date || body.start) updateData.date = body.date || body.start;
-    if (body.duration_minutes || body.duration) updateData.duration = body.duration_minutes || body.duration;
-    if (body.status) updateData.status = body.status;
-    if (body.notes !== undefined) updateData.notes = body.notes;
-    if (body.client_id) updateData.client_id = body.client_id;
-    if (body.participant_count) updateData.participant_count = body.participant_count;
+    if (body!.date || body!.start) updateData.date = body!.date || body!.start;
+    if (body!.duration_minutes || body!.duration) updateData.duration = body!.duration_minutes || body!.duration;
+    if (body!.status) updateData.status = body!.status;
+    if (body!.notes !== undefined) updateData.notes = body!.notes;
+    if (body!.client_id) updateData.client_id = body!.client_id;
+    if (body!.participant_count) updateData.participant_count = body!.participant_count;
     
     updateData.updated_at = new Date().toISOString();
 
@@ -919,6 +1159,11 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
   }
 
   if (method === "DELETE" && id) {
+    const idResult = uuidSchema.safeParse(id);
+    if (!idResult.success) {
+      return errorResponse("VALIDATION_ERROR", "Invalid event ID format", 400);
+    }
+
     const { data, error } = await supabase
       .from("training_sessions")
       .update({ 
