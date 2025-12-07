@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
+import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCard';
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
@@ -346,6 +347,9 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
             )}
           </div>
         </div>
+
+        {/* Shared Budget Group */}
+        <ClientBudgetGroupCard clientId={client.id} clientName={client.name} />
 
         {/* Goals & Restrictions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
