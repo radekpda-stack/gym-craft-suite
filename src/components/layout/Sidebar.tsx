@@ -40,7 +40,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { QuickProductSale } from '@/components/sales/QuickProductSale';
+
 import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useAuth } from '@/hooks/useAuth';
@@ -241,7 +241,6 @@ export function Sidebar() {
         {/* Quick Actions */}
         <div className="pt-2 border-t border-sidebar-border/50 mt-2 space-y-1">
           <QuickCreditModal collapsed={collapsed} />
-          <QuickProductSale collapsed={collapsed} />
         </div>
       </nav>
 

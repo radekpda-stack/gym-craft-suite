@@ -13,7 +13,8 @@ import {
   Edit2,
   Check,
   X,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import {
 } from '@/hooks/useCreditTransactions';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
+import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 
 const PAYMENT_METHODS: { value: PaymentMethod | 'all'; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
   { value: 'all', label: 'Všechny platby' },
@@ -68,6 +70,7 @@ export default function Sales() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'all'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPaymentMethod, setEditPaymentMethod] = useState<PaymentMethod>('cash');
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
 
   const filteredSales = useMemo(() => {
     if (paymentFilter === 'all') return sales;
@@ -120,10 +123,17 @@ export default function Sales() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Prodeje</h1>
           <p className="text-muted-foreground mt-1">
-            Historie prodejů produktů
+            Přehled a správa prodejů produktů
           </p>
         </div>
+        <Button onClick={() => setNewSaleOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nový prodej
+        </Button>
       </div>
+
+      {/* New Sale Dialog */}
+      <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
