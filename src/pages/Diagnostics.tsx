@@ -8,8 +8,10 @@ import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { mockJoints, mockMuscleGroups } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function Diagnostics() {
+  usePageTracking('diagnostics');
   const { data: clients = [] } = useClients();
   const createDiagnostic = useCreateDiagnostic();
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, Dumbbell, Loader2, Filter } from 'lucide-react';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClients } from '@/hooks/useClients';
@@ -27,6 +28,7 @@ const statusLabelsLong = {
 };
 
 export default function Trainings() {
+  usePageTracking('trainings');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);

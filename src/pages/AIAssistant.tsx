@@ -1,6 +1,9 @@
 import { ChatInterface } from '@/components/ai/ChatInterface';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function AIAssistant() {
+  usePageTracking('ai');
+  
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
