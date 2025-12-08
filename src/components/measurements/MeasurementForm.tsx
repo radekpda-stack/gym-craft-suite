@@ -27,16 +27,23 @@ import { Client } from "@/hooks/useClients";
 const measurementFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
   date: z.string().min(1, "Zadejte datum"),
-  weight: z.number().optional(),
-  body_fat_percentage: z.number().optional(),
-  muscle_mass: z.number().optional(),
-  basal_metabolism: z.number().optional(),
-  waist: z.number().optional(),
-  chest: z.number().optional(),
-  hips: z.number().optional(),
+  weight: z.number().min(0.1, "Váha musí být kladná").optional(),
+  body_fat_percentage: z.number().min(0).max(100, "Max 100%").optional(),
+  muscle_mass: z.number().min(0.1, "Hodnota musí být kladná").optional(),
+  basal_metabolism: z.number().min(1, "Hodnota musí být kladná").optional(),
+  waist: z.number().min(0.1, "Hodnota musí být kladná").optional(),
+  chest: z.number().min(0.1, "Hodnota musí být kladná").optional(),
+  hips: z.number().min(0.1, "Hodnota musí být kladná").optional(),
   mental_state: z.number().min(1).max(10).optional().nullable(),
-  notes: z.string().optional(),
+  notes: z.string().max(500, "Max 500 znaků").optional(),
 });
+
+const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="flex items-center gap-1">
+    {children}
+    <span className="text-destructive">*</span>
+  </span>
+);
 
 export type MeasurementFormValues = z.infer<typeof measurementFormSchema>;
 
@@ -82,7 +89,7 @@ export function MeasurementForm({
           name="client_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Klient *</FormLabel>
+              <FormLabel><RequiredLabel>Klient</RequiredLabel></FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="bg-secondary border-border">
@@ -107,7 +114,7 @@ export function MeasurementForm({
           name="date"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Datum *</FormLabel>
+              <FormLabel><RequiredLabel>Datum</RequiredLabel></FormLabel>
               <FormControl>
                 <DatePicker
                   value={field.value}
