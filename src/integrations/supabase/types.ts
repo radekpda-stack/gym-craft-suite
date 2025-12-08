@@ -571,6 +571,111 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_requests: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          custom_message: string | null
+          expires_at: string
+          id: string
+          last_reminder_at: string | null
+          reminder_count: number | null
+          sent_at: string | null
+          status: string
+          token: string
+          trainer_signature: string | null
+          training_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          custom_message?: string | null
+          expires_at?: string
+          id?: string
+          last_reminder_at?: string | null
+          reminder_count?: number | null
+          sent_at?: string | null
+          status?: string
+          token?: string
+          trainer_signature?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          custom_message?: string | null
+          expires_at?: string
+          id?: string
+          last_reminder_at?: string | null
+          reminder_count?: number | null
+          sent_at?: string | null
+          status?: string
+          token?: string
+          trainer_signature?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_requests_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_settings: {
+        Row: {
+          auto_send_after_training: boolean | null
+          created_at: string
+          default_language: string | null
+          expiration_hours: number | null
+          id: string
+          reminder_intervals: number[] | null
+          trainer_signature: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_send_after_training?: boolean | null
+          created_at?: string
+          default_language?: string | null
+          expiration_hours?: number | null
+          id?: string
+          reminder_intervals?: number[] | null
+          trainer_signature?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_send_after_training?: boolean | null
+          created_at?: string
+          default_language?: string | null
+          expiration_hours?: number | null
+          id?: string
+          reminder_intervals?: number[] | null
+          trainer_signature?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       measurements: {
         Row: {
           basal_metabolism: number | null
@@ -762,14 +867,17 @@ export type Database = {
           created_at: string
           energy_level: string
           fatigue_level: number
+          feedback_request_id: string | null
           goal_relevance: string
           id: string
+          is_processed: boolean | null
           mood_rating: number
           muscle_soreness: string[] | null
           muscle_soreness_comment: string | null
           rpe_rating: number
           sleep_hours: number | null
           sleep_quality: number | null
+          source: string | null
           technique_rating: number
           training_date: string
           training_session_id: string
@@ -783,14 +891,17 @@ export type Database = {
           created_at?: string
           energy_level: string
           fatigue_level: number
+          feedback_request_id?: string | null
           goal_relevance: string
           id?: string
+          is_processed?: boolean | null
           mood_rating: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
           rpe_rating: number
           sleep_hours?: number | null
           sleep_quality?: number | null
+          source?: string | null
           technique_rating: number
           training_date: string
           training_session_id: string
@@ -804,14 +915,17 @@ export type Database = {
           created_at?: string
           energy_level?: string
           fatigue_level?: number
+          feedback_request_id?: string | null
           goal_relevance?: string
           id?: string
+          is_processed?: boolean | null
           mood_rating?: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
           rpe_rating?: number
           sleep_hours?: number | null
           sleep_quality?: number | null
+          source?: string | null
           technique_rating?: number
           training_date?: string
           training_session_id?: string
@@ -825,6 +939,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_feedback_feedback_request_id_fkey"
+            columns: ["feedback_request_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_requests"
             referencedColumns: ["id"]
           },
           {
