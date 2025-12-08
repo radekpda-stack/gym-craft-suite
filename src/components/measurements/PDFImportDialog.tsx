@@ -746,7 +746,7 @@ function FileImportCard({
                     Vyberte klienta, ke kterému chcete měření přiřadit
                   </p>
                 )}
-                <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -755,6 +755,11 @@ function FileImportCard({
                         !importFile.selectedClient && "border-warning/50 bg-warning/5"
                       )}
                       disabled={importFile.status === 'saved' || importFile.status === 'saving'}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setClientPopoverOpen(true);
+                      }}
                     >
                       {importFile.selectedClient ? (
                         <>
@@ -769,7 +774,19 @@ function FileImportCard({
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-2 w-[300px] z-[100] pointer-events-auto" align="start">
+                  <PopoverContent 
+                    className="p-2 w-[300px]" 
+                    align="start"
+                    sideOffset={5}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => {
+                      // Prevent closing when clicking inside the dialog
+                      const target = e.target as HTMLElement;
+                      if (target.closest('[role="dialog"]')) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
                     <div className="space-y-2">
                       <Input
                         placeholder="Hledat klienta..."
@@ -784,21 +801,35 @@ function FileImportCard({
                             <p className="text-sm text-muted-foreground text-center py-4">Klient nenalezen</p>
                           ) : (
                             filteredClients.map(client => (
-                              <button
+                              <div
                                 key={client.id}
-                                type="button"
+                                role="button"
+                                tabIndex={0}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
+                                  console.log('Client selected:', client.name);
                                   onClientSelect(client);
                                   setClientPopoverOpen(false);
                                   setClientSearch('');
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onClientSelect(client);
+                                    setClientPopoverOpen(false);
+                                    setClientSearch('');
+                                  }
                                 }}
                                 className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors text-left cursor-pointer"
                               >
                                 <ClientAvatar name={client.name} size="sm" />
                                 <span className="text-sm">{client.name}</span>
-                              </button>
+                              </div>
                             ))
                           )}
                         </div>
