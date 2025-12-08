@@ -351,6 +351,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          payment_method: string | null
           product_id: string | null
           reference_id: string | null
           training_session_id: string | null
@@ -364,6 +365,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
           training_session_id?: string | null
@@ -377,6 +379,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
           training_session_id?: string | null
