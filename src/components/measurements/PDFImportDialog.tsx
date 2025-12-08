@@ -4,7 +4,8 @@ import { cs } from 'date-fns/locale';
 import { 
   Upload, FileText, Check, X, AlertTriangle, User, 
   TrendingUp, TrendingDown, Minus, Loader2, ChevronDown,
-  Files, CheckCircle, XCircle
+  Files, CheckCircle, XCircle, Camera, Image as ImageIcon,
+  Edit2
 } from 'lucide-react';
 import {
   Dialog,
@@ -38,7 +39,18 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { parseMeasurementPDF, compareMeasurements, type ParsedMeasurementData, type MeasurementComparison } from '@/lib/pdfMeasurementParser';
+import { 
+  parseMeasurementPDF, 
+  compareMeasurements, 
+  type ParsedMeasurementData, 
+  type MeasurementComparison 
+} from '@/lib/pdfMeasurementParser';
+import { 
+  parseImageMeasurement, 
+  isImageFile, 
+  isPDFFile,
+  getSupportedFileTypes 
+} from '@/lib/imageMeasurementParser';
 import { extractTextFromPDF } from '@/lib/pdfExtractor';
 import { useClients, type Client } from '@/hooks/useClients';
 import { 
@@ -58,14 +70,18 @@ interface PDFImportDialogProps {
 interface ImportedFile {
   id: string;
   file: File;
+  fileType: 'pdf' | 'image';
+  previewUrl?: string;
   status: 'pending' | 'parsing' | 'parsed' | 'matched' | 'saving' | 'saved' | 'error';
   data?: ParsedMeasurementData;
+  editedData?: ParsedMeasurementData;
   error?: string;
   warnings?: string[];
   selectedClient?: Client;
   duplicateMeasurement?: Measurement | null;
   duplicateAction?: 'overwrite' | 'new' | 'merge';
   comparisons?: MeasurementComparison[];
+  isEditing?: boolean;
 }
 
 export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
@@ -79,6 +95,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
   } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const { data: clients = [] } = useClients();
   const createMeasurement = useCreateMeasurement();
@@ -87,10 +104,16 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
   const mergeMeasurement = useMergeMeasurement();
 
   const resetState = useCallback(() => {
+    // Revoke preview URLs
+    files.forEach(f => {
+      if (f.previewUrl) {
+        URL.revokeObjectURL(f.previewUrl);
+      }
+    });
     setFiles([]);
     setIsBatchMode(false);
     setImportSummary(null);
-  }, []);
+  }, [files]);
 
   const handleClose = useCallback(() => {
     resetState();
@@ -106,83 +129,103 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
     return result.text;
   };
 
+  const processFile = async (importFile: ImportedFile) => {
+    setFiles(prev => prev.map(f => 
+      f.id === importFile.id ? { ...f, status: 'parsing' } : f
+    ));
+
+    try {
+      let result;
+
+      if (importFile.fileType === 'image') {
+        // Use OCR for images via edge function
+        result = await parseImageMeasurement(importFile.file);
+      } else {
+        // Use PDF parser
+        const text = await extractText(importFile.file);
+        result = parseMeasurementPDF(text);
+      }
+
+      if (result.success && result.data) {
+        // Try to find matching client
+        let matchedClient: Client | undefined;
+        if (result.data.clientName) {
+          const searchName = result.data.clientName.toLowerCase();
+          matchedClient = clients.find(c => 
+            c.name.toLowerCase().includes(searchName) ||
+            searchName.includes(c.name.toLowerCase())
+          );
+        }
+
+        setFiles(prev => prev.map(f => 
+          f.id === importFile.id ? {
+            ...f,
+            status: matchedClient ? 'matched' : 'parsed',
+            data: result.data,
+            editedData: { ...result.data },
+            warnings: result.warnings,
+            selectedClient: matchedClient,
+          } : f
+        ));
+      } else {
+        setFiles(prev => prev.map(f => 
+          f.id === importFile.id ? {
+            ...f,
+            status: 'error',
+            error: result.error || 'Nepodařilo se zpracovat soubor',
+            warnings: result.warnings,
+          } : f
+        ));
+      }
+    } catch (error) {
+      setFiles(prev => prev.map(f => 
+        f.id === importFile.id ? {
+          ...f,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Neznámá chyba',
+        } : f
+      ));
+    }
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
 
-    const newFiles: ImportedFile[] = Array.from(selectedFiles).map(file => ({
-      id: `${file.name}-${Date.now()}-${Math.random()}`,
-      file,
-      status: 'pending' as const,
-    }));
+    const newFiles: ImportedFile[] = Array.from(selectedFiles).map(file => {
+      const fileType = isImageFile(file) ? 'image' : 'pdf';
+      return {
+        id: `${file.name}-${Date.now()}-${Math.random()}`,
+        file,
+        fileType,
+        previewUrl: fileType === 'image' ? URL.createObjectURL(file) : undefined,
+        status: 'pending' as const,
+      };
+    });
 
     setIsBatchMode(selectedFiles.length > 1);
     setFiles(newFiles);
 
     // Process files
-    for (let i = 0; i < newFiles.length; i++) {
-      const importFile = newFiles[i];
-      
-      setFiles(prev => prev.map(f => 
-        f.id === importFile.id ? { ...f, status: 'parsing' } : f
-      ));
-
-      try {
-        const text = await extractText(importFile.file);
-        const result = parseMeasurementPDF(text);
-
-        if (result.success && result.data) {
-          // Try to find matching client
-          let matchedClient: Client | undefined;
-          if (result.data.clientName) {
-            const searchName = result.data.clientName.toLowerCase();
-            matchedClient = clients.find(c => 
-              c.name.toLowerCase().includes(searchName) ||
-              searchName.includes(c.name.toLowerCase())
-            );
-          }
-
-          setFiles(prev => prev.map(f => 
-            f.id === importFile.id ? {
-              ...f,
-              status: matchedClient ? 'matched' : 'parsed',
-              data: result.data,
-              warnings: result.warnings,
-              selectedClient: matchedClient,
-            } : f
-          ));
-        } else {
-          setFiles(prev => prev.map(f => 
-            f.id === importFile.id ? {
-              ...f,
-              status: 'error',
-              error: result.error || 'Nepodařilo se zpracovat PDF',
-            } : f
-          ));
-        }
-      } catch (error) {
-        setFiles(prev => prev.map(f => 
-          f.id === importFile.id ? {
-            ...f,
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Neznámá chyba',
-          } : f
-        ));
-      }
+    for (const importFile of newFiles) {
+      await processFile(importFile);
     }
 
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
   };
 
   const handleClientSelect = async (fileId: string, client: Client) => {
     const file = files.find(f => f.id === fileId);
-    if (!file || !file.data) return;
+    if (!file || !file.editedData) return;
 
     // Check for duplicate
-    const date = file.data.date || new Date().toISOString().split('T')[0];
+    const date = file.editedData.date || new Date().toISOString().split('T')[0];
     const duplicate = await findDuplicate.mutateAsync({ clientId: client.id, date });
 
     // Get previous measurement for comparison
@@ -196,7 +239,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
     );
     
     const previous = measurements?.[0];
-    const comparisons = compareMeasurements(file.data, previous);
+    const comparisons = compareMeasurements(file.editedData, previous);
 
     setFiles(prev => prev.map(f => 
       f.id === fileId ? {
@@ -216,12 +259,43 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
     ));
   };
 
-  const saveMeasurement = async (importFile: ImportedFile) => {
-    if (!importFile.selectedClient || !importFile.data) return;
+  const handleEditValue = (fileId: string, field: keyof ParsedMeasurementData, value: string) => {
+    setFiles(prev => prev.map(f => {
+      if (f.id !== fileId || !f.editedData) return f;
+      
+      let parsedValue: number | string | undefined;
+      if (field === 'clientName' || field === 'date' || field === 'rawText') {
+        parsedValue = value || undefined;
+      } else {
+        parsedValue = value ? parseFloat(value.replace(',', '.')) : undefined;
+        if (parsedValue !== undefined && isNaN(parsedValue)) {
+          parsedValue = undefined;
+        }
+      }
 
-    const data = importFile.data;
+      return {
+        ...f,
+        editedData: {
+          ...f.editedData,
+          [field]: parsedValue,
+        },
+      };
+    }));
+  };
+
+  const toggleEditing = (fileId: string) => {
+    setFiles(prev => prev.map(f => 
+      f.id === fileId ? { ...f, isEditing: !f.isEditing } : f
+    ));
+  };
+
+  const saveMeasurement = async (importFile: ImportedFile) => {
+    if (!importFile.selectedClient || !importFile.editedData) return;
+
+    const data = importFile.editedData;
     const client = importFile.selectedClient;
     const date = data.date || new Date().toISOString().split('T')[0];
+    const fileTypeLabel = importFile.fileType === 'image' ? 'fotografie' : 'PDF';
 
     const measurementData = {
       client_id: client.id,
@@ -231,7 +305,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
       muscle_mass: data.muscleMass,
       basal_metabolism: data.basalMetabolism,
       visceral_fat: data.visceralFat,
-      notes: `Importováno z PDF: ${importFile.file.name}`,
+      notes: `Importováno z ${fileTypeLabel}: ${importFile.file.name}`,
     };
 
     if (importFile.duplicateMeasurement) {
@@ -256,7 +330,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
 
   const handleSaveAll = async () => {
     const filesToSave = files.filter(f => 
-      f.selectedClient && f.data && (f.duplicateAction || !f.duplicateMeasurement)
+      f.selectedClient && f.editedData && (f.duplicateAction || !f.duplicateMeasurement)
     );
 
     const successClients: string[] = [];
@@ -298,7 +372,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
   };
 
   const canSave = files.some(f => 
-    f.selectedClient && f.data && (f.duplicateAction || !f.duplicateMeasurement)
+    f.selectedClient && f.editedData && (f.duplicateAction || !f.duplicateMeasurement)
   );
 
   const getTrendIcon = (trend: 'better' | 'worse' | 'stagnation' | null) => {
@@ -320,10 +394,10 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Import měření z PDF
+            Import měření (PDF / Foto)
           </DialogTitle>
           <DialogDescription>
-            Nahrajte PDF report z měření tělesného složení
+            Nahrajte PDF report nebo fotografii výsledků měření tělesného složení
           </DialogDescription>
         </DialogHeader>
 
@@ -363,24 +437,58 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
 
           {/* File upload area */}
           {!importSummary && files.length === 0 && (
-            <div 
-              className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-medium">Přetáhněte PDF soubory sem</p>
-              <p className="text-muted-foreground mt-1">nebo klikněte pro výběr souborů</p>
-              <p className="text-sm text-muted-foreground mt-4">
-                Podporován dávkový import více souborů
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+            <div className="space-y-4">
+              {/* Main upload area */}
+              <div 
+                className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium">Přetáhněte soubory sem</p>
+                <p className="text-muted-foreground mt-1">nebo klikněte pro výběr</p>
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  <Badge variant="outline">PDF</Badge>
+                  <Badge variant="outline">JPG</Badge>
+                  <Badge variant="outline">PNG</Badge>
+                  <Badge variant="outline">HEIC</Badge>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={getSupportedFileTypes()}
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Quick actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex-col gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImageIcon className="w-6 h-6 text-primary" />
+                  <span>Vybrat z galerie</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex-col gap-2"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera className="w-6 h-6 text-primary" />
+                  <span>Vyfotit nyní</span>
+                </Button>
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
             </div>
           )}
 
@@ -395,6 +503,8 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
                     clients={clients}
                     onClientSelect={(client) => handleClientSelect(importFile.id, client)}
                     onDuplicateAction={(action) => handleDuplicateAction(importFile.id, action)}
+                    onEditValue={(field, value) => handleEditValue(importFile.id, field, value)}
+                    onToggleEditing={() => toggleEditing(importFile.id)}
                     getTrendIcon={getTrendIcon}
                   />
                 ))}
@@ -435,6 +545,8 @@ interface FileImportCardProps {
   clients: Client[];
   onClientSelect: (client: Client) => void;
   onDuplicateAction: (action: 'overwrite' | 'new' | 'merge') => void;
+  onEditValue: (field: keyof ParsedMeasurementData, value: string) => void;
+  onToggleEditing: () => void;
   getTrendIcon: (trend: 'better' | 'worse' | 'stagnation' | null) => React.ReactNode;
 }
 
@@ -443,6 +555,8 @@ function FileImportCard({
   clients, 
   onClientSelect, 
   onDuplicateAction,
+  onEditValue,
+  onToggleEditing,
   getTrendIcon 
 }: FileImportCardProps) {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -466,13 +580,19 @@ function FileImportCard({
     }
   };
 
+  const getFileIcon = () => {
+    return importFile.fileType === 'image' 
+      ? <ImageIcon className="w-5 h-5 text-muted-foreground" />
+      : <FileText className="w-5 h-5 text-muted-foreground" />;
+  };
+
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
       <div className="rounded-xl border border-border bg-card p-4">
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-muted-foreground" />
+              {getFileIcon()}
               <span className="font-medium truncate max-w-[200px]">{importFile.file.name}</span>
               {getStatusBadge()}
             </div>
@@ -484,6 +604,17 @@ function FileImportCard({
         </CollapsibleTrigger>
 
         <CollapsibleContent className="mt-4">
+          {/* Image preview */}
+          {importFile.fileType === 'image' && importFile.previewUrl && (
+            <div className="mb-4 rounded-lg overflow-hidden border border-border">
+              <img 
+                src={importFile.previewUrl} 
+                alt="Preview" 
+                className="w-full max-h-48 object-contain bg-secondary/50"
+              />
+            </div>
+          )}
+
           {importFile.status === 'error' && (
             <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
               {importFile.error}
@@ -504,25 +635,66 @@ function FileImportCard({
             </div>
           )}
 
-          {importFile.data && (
+          {importFile.editedData && (
             <>
-              {/* Parsed values */}
+              {/* Edit toggle */}
+              <div className="flex justify-end mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleEditing();
+                  }}
+                  className="gap-1"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  {importFile.isEditing ? 'Dokončit úpravy' : 'Upravit hodnoty'}
+                </Button>
+              </div>
+
+              {/* Parsed values - editable or display */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                {importFile.data.weight && (
-                  <ValueCard label="Váha" value={importFile.data.weight} unit="kg" />
-                )}
-                {importFile.data.bodyFatPercentage && (
-                  <ValueCard label="Tělesný tuk" value={importFile.data.bodyFatPercentage} unit="%" />
-                )}
-                {importFile.data.muscleMass && (
-                  <ValueCard label="Svalová hmota" value={importFile.data.muscleMass} unit="kg" />
-                )}
-                {importFile.data.basalMetabolism && (
-                  <ValueCard label="Bazální metabolismus" value={importFile.data.basalMetabolism} unit="kcal" />
-                )}
-                {importFile.data.visceralFat && (
-                  <ValueCard label="Viscerální tuk" value={importFile.data.visceralFat} unit="" />
-                )}
+                <EditableValueCard 
+                  label="Váha" 
+                  value={importFile.editedData.weight} 
+                  unit="kg"
+                  field="weight"
+                  isEditing={importFile.isEditing}
+                  onEdit={onEditValue}
+                />
+                <EditableValueCard 
+                  label="Tělesný tuk" 
+                  value={importFile.editedData.bodyFatPercentage} 
+                  unit="%"
+                  field="bodyFatPercentage"
+                  isEditing={importFile.isEditing}
+                  onEdit={onEditValue}
+                />
+                <EditableValueCard 
+                  label="Svalová hmota" 
+                  value={importFile.editedData.muscleMass} 
+                  unit="kg"
+                  field="muscleMass"
+                  isEditing={importFile.isEditing}
+                  onEdit={onEditValue}
+                />
+                <EditableValueCard 
+                  label="Bazální metabolismus" 
+                  value={importFile.editedData.basalMetabolism} 
+                  unit="kcal"
+                  field="basalMetabolism"
+                  isEditing={importFile.isEditing}
+                  onEdit={onEditValue}
+                />
+                <EditableValueCard 
+                  label="Viscerální tuk" 
+                  value={importFile.editedData.visceralFat} 
+                  unit=""
+                  field="visceralFat"
+                  isEditing={importFile.isEditing}
+                  onEdit={onEditValue}
+                />
               </div>
 
               {/* Client selector */}
@@ -653,12 +825,44 @@ function FileImportCard({
   );
 }
 
-function ValueCard({ label, value, unit }: { label: string; value: number; unit: string }) {
+interface EditableValueCardProps {
+  label: string;
+  value: number | undefined;
+  unit: string;
+  field: keyof ParsedMeasurementData;
+  isEditing?: boolean;
+  onEdit: (field: keyof ParsedMeasurementData, value: string) => void;
+}
+
+function EditableValueCard({ label, value, unit, field, isEditing, onEdit }: EditableValueCardProps) {
+  if (isEditing) {
+    return (
+      <div className="p-3 rounded-lg bg-secondary/50">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            step="0.1"
+            value={value ?? ''}
+            onChange={(e) => onEdit(field, e.target.value)}
+            className="h-8 text-sm bg-background"
+            placeholder="—"
+          />
+          {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 rounded-lg bg-secondary/50">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-semibold">
-        {value} <span className="text-muted-foreground font-normal">{unit}</span>
+        {value !== undefined ? (
+          <>{value} <span className="text-muted-foreground font-normal">{unit}</span></>
+        ) : (
+          <span className="text-muted-foreground font-normal italic">neuvedeno</span>
+        )}
       </p>
     </div>
   );
