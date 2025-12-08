@@ -105,76 +105,78 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-secondary/50 p-1 rounded-xl flex-wrap h-auto gap-1">
-          <TabsTrigger
-            value="overview"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            Přehled
-          </TabsTrigger>
-          <TabsTrigger
-            value="history"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <Tag className="w-4 h-4 mr-2" />
-            Historie
-          </TabsTrigger>
-          <TabsTrigger
-            value="stats"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Statistiky
-          </TabsTrigger>
-          <TabsTrigger
-            value="credit"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <Wallet className="w-4 h-4 mr-2" />
-            Kredit
-          </TabsTrigger>
-          <TabsTrigger
-            value="trainings"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            Tréninky ({clientSessions.filter(s => s.status !== 'canceled').length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="canceled"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Zrušené ({canceledSessions.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="media"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <Camera className="w-4 h-4 mr-2" />
-            Média
-          </TabsTrigger>
-          <TabsTrigger
-            value="progress"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Progres
-          </TabsTrigger>
-          <TabsTrigger
-            value="load"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <Flame className="w-4 h-4 mr-2" />
-            Zatížení
-          </TabsTrigger>
-          <TabsTrigger
-            value="feedback"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
-          >
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Feedback
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="bg-secondary/50 p-1 rounded-xl inline-flex gap-1 min-w-max">
+            <TabsTrigger
+              value="overview"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              Přehled
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <Tag className="w-4 h-4 mr-1 sm:mr-2" />
+              Historie
+            </TabsTrigger>
+            <TabsTrigger
+              value="stats"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <TrendingUp className="w-4 h-4 mr-1 sm:mr-2" />
+              Statistiky
+            </TabsTrigger>
+            <TabsTrigger
+              value="credit"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <Wallet className="w-4 h-4 mr-1 sm:mr-2" />
+              Kredit
+            </TabsTrigger>
+            <TabsTrigger
+              value="trainings"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              Tréninky ({clientSessions.filter(s => s.status !== 'canceled').length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="canceled"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <XCircle className="w-4 h-4 mr-1 sm:mr-2" />
+              Zrušené ({canceledSessions.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="media"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <Camera className="w-4 h-4 mr-1 sm:mr-2" />
+              Média
+            </TabsTrigger>
+            <TabsTrigger
+              value="progress"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <BarChart3 className="w-4 h-4 mr-1 sm:mr-2" />
+              Progres
+            </TabsTrigger>
+            <TabsTrigger
+              value="load"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <Flame className="w-4 h-4 mr-1 sm:mr-2" />
+              Zatížení
+            </TabsTrigger>
+            <TabsTrigger
+              value="feedback"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <MessageSquare className="w-4 h-4 mr-1 sm:mr-2" />
+              Feedback
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Stats */}

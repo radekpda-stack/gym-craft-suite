@@ -77,13 +77,18 @@ export function FeedbackHistoryList({ clientId, showFilters = true }: FeedbackHi
   }
 
   return (
-    <div className="space-y-4">
-      {showFilters && (
-        <div className="flex items-center justify-between gap-4">
+    <div className="glass rounded-2xl p-5 sm:p-6 space-y-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Mail className="w-5 h-5 text-primary" />
+          Feedback historie
+        </h3>
+        
+        {showFilters && (
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-36 h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -95,18 +100,16 @@ export function FeedbackHistoryList({ clientId, showFilters = true }: FeedbackHi
                 ))}
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="h-9">
+              <RefreshCw className="w-4 h-4" />
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Obnovit
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {filteredRequests.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p>Zatím žádné odeslané požadavky na feedback</p>
+        <div className="text-center py-6 text-muted-foreground">
+          <p className="text-sm">Zatím žádné odeslané požadavky na feedback</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -84,13 +84,7 @@ export function PublicFeedbackForm({ token }: PublicFeedbackFormProps) {
 
   const loadFormData = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-feedback-form', {
-        body: null,
-        method: 'GET',
-        headers: {},
-      });
-
-      // Use fetch directly since we need query params
+      // Use fetch directly with query params
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-feedback-form?token=${token}`,
         {
