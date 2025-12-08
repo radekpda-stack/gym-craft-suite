@@ -112,7 +112,7 @@ export default function Measurements() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -203,7 +203,7 @@ export default function Measurements() {
               key={range}
               variant={timeRange === range ? 'default' : 'outline'}
               onClick={() => setTimeRange(range)}
-              className="rounded-xl"
+              className="rounded-full h-9 px-4 touch-target flex-shrink-0"
             >
               {range === 'week' ? 'Týden' : range === 'month' ? 'Měsíc' : 'Rok'}
             </Button>
@@ -252,9 +252,9 @@ export default function Measurements() {
 
       {/* Charts */}
       {chartData.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Weight Chart */}
-          <div className="glass rounded-2xl p-6">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Vývoj hmotnosti
             </h3>
@@ -291,7 +291,7 @@ export default function Measurements() {
           </div>
 
           {/* Body Composition Chart */}
-          <div className="glass rounded-2xl p-6">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Tělesné složení
             </h3>
@@ -330,7 +330,7 @@ export default function Measurements() {
           </div>
         </div>
       ) : (
-        <div className="glass rounded-2xl p-12 text-center">
+        <div className="glass rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
           <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground">
             Zatím žádná měření
@@ -344,7 +344,7 @@ export default function Measurements() {
 
       {/* Measurements History */}
       {measurements.length > 0 && (
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">
             Historie měření
           </h3>
