@@ -1,18 +1,21 @@
 import { ReactNode, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
+import { PageTransition } from './PageTransition';
 import { CommandPalette, useCommandPalette } from '@/components/search/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 import { useAppShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -90,9 +93,11 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         {/* Content area - optimized padding for all devices */}
-        <div className="px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto">
-          {children}
-        </div>
+        <AnimatePresence mode="wait">
+          <PageTransition key={location.pathname}>
+            {children}
+          </PageTransition>
+        </AnimatePresence>
       </main>
 
       {/* Mobile Navigation - hidden on desktop */}
