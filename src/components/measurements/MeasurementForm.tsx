@@ -83,7 +83,7 @@ export function MeasurementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Klient *</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="bg-secondary border-border">
                     <SelectValue placeholder="Vyberte klienta" />
