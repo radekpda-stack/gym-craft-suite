@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Download, Activity, TrendingUp, TrendingDown, Scale, Percent, Flame, Brain } from 'lucide-react';
+import { Plus, Download, Activity, TrendingUp, TrendingDown, Scale, Percent, Flame, Brain, FileUp, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients } from '@/hooks/useClients';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
+import { PDFImportDialog } from '@/components/measurements/PDFImportDialog';
 import { cn } from '@/lib/utils';
 import { exportMeasurementsToPDF } from '@/lib/export';
+import { exportMeasurementsToCSV, exportMeasurementsToXLSX, exportMeasurementsWithTrendsToPDF } from '@/lib/measurementExport';
 import { toast } from '@/hooks/use-toast';
 import {
   LineChart,
@@ -28,6 +31,7 @@ export default function Measurements() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   
   const effectiveClientId = selectedClientId || clients[0]?.id || '';
   const { data: measurements = [] } = useMeasurements(effectiveClientId);
@@ -124,48 +128,61 @@ export default function Measurements() {
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 flex-wrap">
           <Button 
             variant="outline" 
             className="gap-2"
-            disabled={!selectedClient || measurements.length === 0}
-            onClick={() => {
-              if (selectedClient && measurements.length > 0) {
-                exportMeasurementsToPDF({
-                  clientName: selectedClient.name,
-                  measurements: measurements.map(m => ({
-                    id: m.id,
-                    date: m.date,
-                    weight: m.weight,
-                    body_fat_percentage: m.body_fat_percentage,
-                    muscle_mass: m.muscle_mass,
-                    basal_metabolism: m.basal_metabolism,
-                    chest: m.chest,
-                    waist: m.waist,
-                    hips: m.hips,
-                    bicep_left: m.bicep_left,
-                    bicep_right: m.bicep_right,
-                    thigh_left: m.thigh_left,
-                    thigh_right: m.thigh_right,
-                    calf_left: m.calf_left,
-                    calf_right: m.calf_right,
-                    mental_state: m.mental_state,
-                    notes: m.notes,
-                  })),
-                });
-                toast({
-                  title: "PDF exportováno",
-                  description: `Měření pro ${selectedClient.name} bylo úspěšně exportováno.`,
-                });
-              }
-            }}
+            onClick={() => setIsImportOpen(true)}
           >
-            <Download className="w-4 h-4" />
-            Export PDF
+            <FileUp className="w-4 h-4" />
+            <span className="hidden sm:inline">Import PDF</span>
           </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                disabled={!selectedClient || measurements.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                if (selectedClient) {
+                  exportMeasurementsWithTrendsToPDF(selectedClient.name, measurements);
+                  toast({ title: "PDF exportováno" });
+                }
+              }}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                if (selectedClient) {
+                  exportMeasurementsToCSV(selectedClient.name, measurements);
+                  toast({ title: "CSV exportováno" });
+                }
+              }}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                if (selectedClient) {
+                  exportMeasurementsToXLSX(selectedClient.name, measurements);
+                  toast({ title: "XLSX exportováno" });
+                }
+              }}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export XLSX
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
             <Plus className="w-4 h-4" />
-            Nové měření
+            <span className="hidden sm:inline">Nové měření</span>
           </Button>
         </div>
       </div>
@@ -177,6 +194,11 @@ export default function Measurements() {
         isLoading={createMeasurement.isPending}
         clients={clients}
         defaultClientId={effectiveClientId}
+      />
+
+      <PDFImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
       />
 
       {/* Client & Time Selection */}
