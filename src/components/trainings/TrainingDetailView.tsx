@@ -21,6 +21,7 @@ import {
   Loader2,
   Repeat,
   FileText,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
+import { SendFeedbackEmailDialog } from '@/components/feedback/SendFeedbackEmailDialog';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -165,7 +167,7 @@ export function TrainingDetailView({
           </div>
         </div>
 
-        {/* Edit/Save/Cancel buttons - Full width on mobile */}
+          {/* Edit/Save/Cancel buttons - Full width on mobile */}
         <div className="flex gap-2 sm:flex-shrink-0">
           {isEditMode ? (
             <>
@@ -192,14 +194,34 @@ export function TrainingDetailView({
               </Button>
             </>
           ) : (
-            <Button
-              variant="outline"
-              className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
-              onClick={() => setIsEditMode(true)}
-            >
-              <Edit2 className="w-4 h-4" />
-              <span>Upravit</span>
-            </Button>
+            <>
+              {training.status === 'completed' && client && (
+                <SendFeedbackEmailDialog
+                  clientId={client.id}
+                  clientName={client.name}
+                  clientEmail={client.email}
+                  trainingSessionId={training.id}
+                  trainingDate={training.date}
+                  trigger={
+                    <Button
+                      variant="outline"
+                      className="gap-2 h-11 sm:h-10"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span className="hidden sm:inline">Odeslat feedback</span>
+                    </Button>
+                  }
+                />
+              )}
+              <Button
+                variant="outline"
+                className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="w-4 h-4" />
+                <span>Upravit</span>
+              </Button>
+            </>
           )}
         </div>
       </div>
