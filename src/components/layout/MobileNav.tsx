@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Calendar,
   Menu,
+  TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 import { MobileMenu } from './MobileMenu';
@@ -14,6 +15,7 @@ const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+  { to: '/progress', icon: TrendingUp, label: 'Progres' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
 ];
 
@@ -24,7 +26,7 @@ export function MobileNav() {
   return (
     <>
       {/* Bottom Navigation Bar - Apple-like design */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
         {/* Blur background */}
         <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border/50" />
         

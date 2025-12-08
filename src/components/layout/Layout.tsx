@@ -61,8 +61,8 @@ export function Layout({ children }: LayoutProps) {
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
 
-      {/* Desktop Sidebar - hidden on mobile */}
-      <div className="hidden md:block">
+      {/* Desktop Sidebar - hidden on mobile and tablet */}
+      <div className="hidden lg:block">
         <Sidebar />
       </div>
       
@@ -70,13 +70,13 @@ export function Layout({ children }: LayoutProps) {
       <main
         className={cn(
           'min-h-screen transition-all duration-300 ease-in-out',
-          'md:ml-64', // Desktop: margin for sidebar
-          sidebarCollapsed && 'md:ml-20',
-          'pb-24 md:pb-0' // Mobile: increased padding for bottom nav
+          'lg:ml-64', // Desktop: margin for sidebar (lg and up)
+          sidebarCollapsed && 'lg:ml-20',
+          'pb-24 lg:pb-0' // Mobile/Tablet: padding for bottom nav
         )}
       >
         {/* Top bar with search trigger - Desktop only */}
-        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 md:px-8 py-3 hidden md:flex items-center justify-between">
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 lg:px-8 py-3 hidden lg:flex items-center justify-between">
           <Button
             variant="outline"
             className="w-64 justify-start gap-2 text-muted-foreground glass-subtle border-0"
@@ -90,7 +90,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         {/* Content area - optimized padding for mobile */}
-        <div className="px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
+        <div className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           {children}
         </div>
       </main>
