@@ -24,6 +24,7 @@ export interface Measurement {
   notes: string;
   created_at: string;
   user_id: string | null;
+  source_file_url: string | null;
 }
 
 export interface CreateMeasurementInput {
@@ -45,6 +46,7 @@ export interface CreateMeasurementInput {
   calf_right?: number;
   mental_state?: number;
   notes?: string;
+  source_file_url?: string | null;
 }
 
 export interface UpdateMeasurementInput extends CreateMeasurementInput {
@@ -101,6 +103,7 @@ export function useCreateMeasurement() {
           mental_state: input.mental_state || null,
           notes: input.notes || "",
           user_id: user.id,
+          source_file_url: input.source_file_url || null,
         })
         .select()
         .single();
@@ -152,6 +155,7 @@ export function useUpdateMeasurement() {
           calf_right: input.calf_right || null,
           mental_state: input.mental_state || null,
           notes: input.notes || "",
+          source_file_url: input.source_file_url,
         })
         .eq("id", input.id)
         .select()
@@ -259,6 +263,7 @@ export function useMergeMeasurement() {
         calf_right: newData.calf_right ?? existing.calf_right,
         mental_state: newData.mental_state ?? existing.mental_state,
         notes: newData.notes || existing.notes,
+        source_file_url: newData.source_file_url ?? existing.source_file_url,
       };
 
       const { data, error } = await supabase

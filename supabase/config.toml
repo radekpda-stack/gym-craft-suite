@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.get-feedback-form]
 verify_jwt = false
+
+[functions.ocr-measurement]
+verify_jwt = true

@@ -135,7 +135,7 @@ export default function Measurements() {
             onClick={() => setIsImportOpen(true)}
           >
             <FileUp className="w-4 h-4" />
-            <span className="hidden sm:inline">Import PDF</span>
+            <span className="hidden sm:inline">Import měření (PDF / Foto)</span>
           </Button>
           
           <DropdownMenu>
