@@ -3,6 +3,7 @@
  * 
  * Displays training session information in view mode (read-only) or edit mode.
  * Handles inline editing of training data without page navigation.
+ * Includes workout exercise management for tracking exercises and sets.
  */
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -29,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
+import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
@@ -434,6 +436,17 @@ export function TrainingDetailView({
               />
             )}
           </div>
+        </div>
+
+        {/* Workout Exercises Section */}
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <WorkoutExerciseManager
+            trainingSessionId={training.id}
+            clientId={training.client_id}
+            trainingDate={training.date}
+            isEditMode={isEditMode}
+            trainingStatus={training.status}
+          />
         </div>
 
         {/* Notes Section */}
