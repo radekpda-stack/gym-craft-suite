@@ -34,6 +34,7 @@ import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-time-picker';
 import {
   Form,
   FormControl,
@@ -328,10 +329,10 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input
-                        type="date"
-                        className="bg-secondary border-border"
-                        {...field}
+                      <DatePicker
+                        value={field.value || ''}
+                        onChange={(dateStr) => field.onChange(dateStr)}
+                        className="w-full"
                       />
                     </FormControl>
                     <FormMessage />
