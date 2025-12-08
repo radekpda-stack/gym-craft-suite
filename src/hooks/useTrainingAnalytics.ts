@@ -46,6 +46,33 @@ interface TrainingRecommendation {
   exercise?: string;
 }
 
+export interface StagnationData {
+  exerciseName: string;
+  stagnationType: 'weight' | 'reps' | 'volume';
+  weeksStagnant: number;
+  currentValue: number;
+  suggestions: StagnationSuggestion[];
+}
+
+export interface StagnationSuggestion {
+  type: 'variant' | 'volume' | 'technique' | 'deload';
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+// Common exercise variants for suggestions
+const EXERCISE_VARIANTS: Record<string, string[]> = {
+  'bench press': ['Incline bench press', 'Dumbbell bench press', 'Close-grip bench press', 'Paused bench press'],
+  'squat': ['Front squat', 'Pause squat', 'Box squat', 'Goblet squat'],
+  'back squat': ['Front squat', 'Pause squat', 'Box squat', 'High bar squat'],
+  'deadlift': ['Romanian deadlift', 'Deficit deadlift', 'Pause deadlift', 'Sumo deadlift'],
+  'overhead press': ['Push press', 'Seated press', 'Dumbbell press', 'Z-press'],
+  'row': ['Pendlay row', 'Dumbbell row', 'Cable row', 'Meadows row'],
+  'pull-up': ['Weighted pull-up', 'Chin-up', 'Neutral grip pull-up', 'Lat pulldown'],
+  'dip': ['Weighted dip', 'Ring dip', 'Close-grip bench press', 'Cable fly'],
+};
+
 interface ExerciseProgress {
   exerciseName: string;
   lastWeight: number | null;
@@ -53,6 +80,8 @@ interface ExerciseProgress {
   trendDirection: 'up' | 'down' | 'stagnant';
   entriesCount: number;
   lastDate: Date;
+  weeklyVolumes: { week: string; volume: number }[];
+  stagnationWeeks: number;
 }
 
 export function useTrainingAnalytics(clientId?: string, periodDays: number = 90) {
@@ -201,7 +230,7 @@ export function useTrainingAnalytics(clientId?: string, periodDays: number = 90)
     return recs;
   }, [muscleGroupStats]);
 
-  // Exercise progress tracking
+  // Exercise progress tracking with stagnation detection
   const exerciseProgress = useMemo((): ExerciseProgress[] => {
     const progressMap = new Map<string, ExerciseEntry[]>();
 
@@ -214,6 +243,53 @@ export function useTrainingAnalytics(clientId?: string, periodDays: number = 90)
     return Array.from(progressMap.entries()).map(([name, exerciseEntries]) => {
       const sorted = exerciseEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const weights = sorted.filter((e) => e.weight_kg).map((e) => e.weight_kg!);
+      
+      // Calculate weekly volumes for stagnation detection
+      const weeklyVolumes: { week: string; volume: number }[] = [];
+      const weekMap = new Map<string, number>();
+      
+      sorted.forEach((entry) => {
+        const weekKey = format(new Date(entry.date), 'yyyy-ww');
+        const volume = (entry.sets || 1) * (entry.reps || 1) * (entry.weight_kg || 1);
+        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + volume);
+      });
+      
+      weekMap.forEach((volume, week) => {
+        weeklyVolumes.push({ week, volume });
+      });
+      weeklyVolumes.sort((a, b) => b.week.localeCompare(a.week));
+      
+      // Detect stagnation (3+ weeks with same or lower max weight)
+      let stagnationWeeks = 0;
+      if (weights.length >= 6) {
+        const recentMax = Math.max(...weights.slice(0, 3));
+        const olderMax = Math.max(...weights.slice(3, 6));
+        if (recentMax <= olderMax) {
+          // Count consecutive weeks without improvement
+          const weeklyMaxes = new Map<string, number>();
+          sorted.forEach((entry) => {
+            if (entry.weight_kg) {
+              const weekKey = format(new Date(entry.date), 'yyyy-ww');
+              const current = weeklyMaxes.get(weekKey) || 0;
+              weeklyMaxes.set(weekKey, Math.max(current, entry.weight_kg));
+            }
+          });
+          
+          const sortedWeeks = Array.from(weeklyMaxes.entries())
+            .sort((a, b) => b[0].localeCompare(a[0]));
+          
+          if (sortedWeeks.length >= 2) {
+            const latestMax = sortedWeeks[0][1];
+            for (let i = 1; i < sortedWeeks.length; i++) {
+              if (sortedWeeks[i][1] >= latestMax) {
+                stagnationWeeks++;
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      }
       
       let trendDirection: 'up' | 'down' | 'stagnant' = 'stagnant';
       if (weights.length >= 3) {
@@ -230,9 +306,71 @@ export function useTrainingAnalytics(clientId?: string, periodDays: number = 90)
         trendDirection,
         entriesCount: exerciseEntries.length,
         lastDate: new Date(sorted[0].date),
+        weeklyVolumes,
+        stagnationWeeks,
       };
     });
   }, [entries]);
+
+  // Detect stagnation and generate suggestions
+  const stagnationData = useMemo((): StagnationData[] => {
+    return exerciseProgress
+      .filter((ep) => ep.stagnationWeeks >= 3)
+      .map((ep) => {
+        const suggestions: StagnationSuggestion[] = [];
+        const exerciseLower = ep.exerciseName.toLowerCase();
+        
+        // Find variant suggestions
+        const matchingVariants = Object.entries(EXERCISE_VARIANTS).find(([key]) => 
+          exerciseLower.includes(key)
+        );
+        
+        if (matchingVariants) {
+          suggestions.push({
+            type: 'variant',
+            title: 'Zkuste variantu cviku',
+            description: `Doporučené alternativy: ${matchingVariants[1].slice(0, 2).join(', ')}`,
+            priority: 'high',
+          });
+        }
+        
+        // Volume adjustment suggestions
+        if (ep.stagnationWeeks >= 4) {
+          suggestions.push({
+            type: 'volume',
+            title: 'Upravte tréninkový objem',
+            description: 'Zvyšte počet sérií o 1-2 nebo snižte váhu o 10% a přidejte opakování.',
+            priority: 'medium',
+          });
+        }
+        
+        // Technique focus
+        suggestions.push({
+          type: 'technique',
+          title: 'Zaměřte se na techniku',
+          description: 'Zkuste snížit váhu o 15-20% a pracovat na perfektní technice s pauzami.',
+          priority: 'medium',
+        });
+        
+        // Deload suggestion for long stagnation
+        if (ep.stagnationWeeks >= 5) {
+          suggestions.push({
+            type: 'deload',
+            title: 'Zvažte deload týden',
+            description: 'Po delší stagnaci může pomoci týden s 50% objemu pro regeneraci.',
+            priority: 'high',
+          });
+        }
+        
+        return {
+          exerciseName: ep.exerciseName,
+          stagnationType: 'weight' as const,
+          weeksStagnant: ep.stagnationWeeks,
+          currentValue: ep.lastWeight || 0,
+          suggestions,
+        };
+      });
+  }, [exerciseProgress]);
 
   // Recent exercises (for quick reference when planning)
   const recentExercises = useMemo(() => {
@@ -257,6 +395,7 @@ export function useTrainingAnalytics(clientId?: string, periodDays: number = 90)
     frequencyData,
     recommendations,
     exerciseProgress,
+    stagnationData,
     recentExercises,
     periodEntries,
     totalEntries: entries.length,

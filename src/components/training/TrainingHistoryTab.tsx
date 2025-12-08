@@ -35,6 +35,7 @@ import { MuscleHeatmap } from './MuscleHeatmap';
 import { PeriodizationTimeline } from './PeriodizationTimeline';
 import { TrainingRecommendations } from './TrainingRecommendations';
 import { FrequencyChart } from './FrequencyChart';
+import { StagnationAlerts } from './StagnationAlerts';
 
 type Period = 'week' | 'month' | '3months' | 'custom';
 
@@ -63,6 +64,7 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
     frequencyData,
     recommendations,
     exerciseProgress,
+    stagnationData,
     totalEntries,
   } = useTrainingAnalytics(clientId, periodDays);
 
@@ -223,6 +225,9 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
           ))}
         </div>
       )}
+
+      {/* Stagnation Alerts */}
+      {stagnationData.length > 0 && <StagnationAlerts data={stagnationData} />}
 
       {/* Heatmap and Frequency Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
