@@ -84,7 +84,13 @@ export function DateTimePicker({
       newDate = setMinutes(newDate, parseInt(selectedMinute));
       
       if (returnString) {
-        onChange(newDate.toISOString().slice(0, 16));
+        // Format as local datetime string without timezone conversion
+        const year = newDate.getFullYear();
+        const month = String(newDate.getMonth() + 1).padStart(2, '0');
+        const day = String(newDate.getDate()).padStart(2, '0');
+        const hours = String(newDate.getHours()).padStart(2, '0');
+        const mins = String(newDate.getMinutes()).padStart(2, '0');
+        onChange(`${year}-${month}-${day}T${hours}:${mins}`);
       } else {
         onChange(newDate);
       }
