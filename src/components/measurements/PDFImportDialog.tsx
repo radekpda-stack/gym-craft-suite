@@ -733,12 +733,27 @@ function FileImportCard({
 
               {/* Client selector */}
               <div className="mb-4">
-                <Label className="text-sm mb-2 block">Klient</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm">Klient</Label>
+                  {importFile.editedData?.clientName && !importFile.selectedClient && (
+                    <span className="text-xs text-muted-foreground">
+                      Ze souboru: <span className="font-medium">{importFile.editedData.clientName}</span>
+                    </span>
+                  )}
+                </div>
+                {!importFile.selectedClient && (
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Vyberte klienta, ke kterému chcete měření přiřadit
+                  </p>
+                )}
                 <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="w-full justify-start gap-2"
+                      className={cn(
+                        "w-full justify-start gap-2",
+                        !importFile.selectedClient && "border-warning/50 bg-warning/5"
+                      )}
                       disabled={importFile.status === 'saved' || importFile.status === 'saving'}
                     >
                       {importFile.selectedClient ? (
@@ -748,8 +763,8 @@ function FileImportCard({
                         </>
                       ) : (
                         <>
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Vyberte klienta...</span>
+                          <User className="w-4 h-4 text-warning" />
+                          <span className="text-warning">Vyberte klienta...</span>
                         </>
                       )}
                     </Button>
