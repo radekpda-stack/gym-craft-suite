@@ -38,7 +38,7 @@ import { ClientPurchaseHistory } from '@/components/clients/ClientPurchaseHistor
 import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
-import { PDFImportDialog } from '@/components/measurements/PDFImportDialog';
+import { ClientMeasurementImport } from '@/components/measurements/ClientMeasurementImport';
 import { GenderIcon } from '@/components/clients/GenderIcon';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
@@ -52,7 +52,6 @@ export default function ClientDetail() {
   const createMeasurement = useCreateMeasurement();
   
   const [isCreateMeasurementOpen, setIsCreateMeasurementOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Cast sessions to proper type
   const clientSessions = allSessions.map(s => ({
@@ -388,22 +387,23 @@ export default function ClientDetail() {
         </TabsContent>
 
         <TabsContent value="measurements" className="space-y-6">
-          {/* Actions */}
-          <div className="flex gap-3 flex-wrap">
-            <Button 
-              variant="outline" 
-              className="gap-2"
-              onClick={() => setIsImportOpen(true)}
-            >
-              <FileUp className="w-4 h-4" />
-              Import měření (PDF / Foto)
-            </Button>
+          {/* Import Component - inline */}
+          <div className="glass rounded-xl p-4">
+            <h3 className="text-base font-semibold mb-4">Import měření</h3>
+            <ClientMeasurementImport 
+              clientId={client.id} 
+              clientName={client.name}
+            />
+          </div>
+
+          {/* Manual entry button */}
+          <div className="flex gap-3">
             <Button 
               className="gap-2"
               onClick={() => setIsCreateMeasurementOpen(true)}
             >
               <Plus className="w-4 h-4" />
-              Nové měření
+              Ruční zadání měření
             </Button>
           </div>
 
@@ -467,18 +467,8 @@ export default function ClientDetail() {
                 Zatím žádná měření
               </h3>
               <p className="text-muted-foreground mt-1">
-                Přidejte první měření pro tohoto klienta
+                Nahrajte soubor výše nebo zadejte měření ručně
               </p>
-              <div className="flex gap-3 justify-center mt-4">
-                <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                  <FileUp className="w-4 h-4 mr-2" />
-                  Import
-                </Button>
-                <Button onClick={() => setIsCreateMeasurementOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nové měření
-                </Button>
-              </div>
             </div>
           )}
         </TabsContent>
@@ -498,11 +488,6 @@ export default function ClientDetail() {
         isLoading={createMeasurement.isPending}
         clients={client ? [client] : []}
         defaultClientId={client?.id}
-      />
-
-      <PDFImportDialog
-        open={isImportOpen}
-        onOpenChange={setIsImportOpen}
       />
     </div>
   );
