@@ -54,6 +54,7 @@ export const en: TranslationKeys = {
     dashboard: 'Dashboard',
     clients: 'Clients',
     trainings: 'Trainings',
+    progress: 'Progress',
     diagnostics: 'Diagnostics',
     measurements: 'Measurements',
     calendar: 'Calendar',
