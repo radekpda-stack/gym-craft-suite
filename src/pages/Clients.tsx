@@ -17,6 +17,9 @@ import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
 import { SharedBudgetManager } from '@/components/clients/SharedBudgetManager';
+import { GenderStatistics } from '@/components/clients/GenderStatistics';
+import { ClientExportDialog } from '@/components/clients/ClientExportDialog';
+import { GenderIcon } from '@/components/clients/GenderIcon';
 import { ClientFormValues } from '@/lib/validations/client';
 import {
   Dialog,
@@ -44,12 +47,15 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
+type GenderFilter = 'all' | 'male' | 'female';
+
 export default function Clients() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [lowCreditFilter, setLowCreditFilter] = useState(false);
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
@@ -58,6 +64,7 @@ export default function Clients() {
   const [creditDescription, setCreditDescription] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const [showBudgetManager, setShowBudgetManager] = useState(false);
 
@@ -89,6 +96,7 @@ export default function Clients() {
   const clearAllFilters = () => {
     setSelectedGoal(null);
     setSelectedTagId(null);
+    setGenderFilter('all');
     clearLowCreditFilter();
   };
 
@@ -106,8 +114,12 @@ export default function Clients() {
     
     const matchesTag = !selectedTagId || (clientTagsMap[client.id] || []).some(t => t.id === selectedTagId);
 
-    return matchesSearch && matchesGoal && matchesLowCredit && matchesTag;
+    const matchesGender = genderFilter === 'all' || client.gender === genderFilter;
+
+    return matchesSearch && matchesGoal && matchesLowCredit && matchesTag && matchesGender;
   });
+
+  const hasActiveFilters = selectedGoal || selectedTagId || lowCreditFilter || genderFilter !== 'all';
 
   const handleCreateClient = async (data: ClientFormValues) => {
     await createClient.mutateAsync(data);
@@ -346,33 +358,78 @@ export default function Clients() {
       </Dialog>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Hledat klienty..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 bg-secondary border-border rounded-xl"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Hledat klienty..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 bg-secondary border-border rounded-xl"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <ClientExportDialog clients={clients} genderFilter={genderFilter} />
+            <Button
+              variant="outline"
+              onClick={() => setShowStats(!showStats)}
+              className="gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Statistiky
+            </Button>
+          </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        {/* Gender Filter Pills */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-sm text-muted-foreground mr-1">Pohlaví:</span>
+          <Button
+            variant={genderFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setGenderFilter('all')}
+            className="rounded-full h-8 px-3 text-sm"
+            size="sm"
+          >
+            Všichni
+          </Button>
+          <Button
+            variant={genderFilter === 'male' ? 'default' : 'outline'}
+            onClick={() => setGenderFilter('male')}
+            className="rounded-full h-8 px-3 text-sm gap-1"
+            size="sm"
+          >
+            <span>♂</span> Muži
+          </Button>
+          <Button
+            variant={genderFilter === 'female' ? 'default' : 'outline'}
+            onClick={() => setGenderFilter('female')}
+            className="rounded-full h-8 px-3 text-sm gap-1"
+            size="sm"
+          >
+            <span>♀</span> Ženy
+          </Button>
+
+          <span className="text-muted-foreground text-sm mx-2">|</span>
+
           {lowCreditFilter && (
             <Button
               variant="destructive"
               onClick={clearLowCreditFilter}
-              className="rounded-xl gap-2"
+              className="rounded-full h-8 px-3 text-sm gap-2"
+              size="sm"
             >
               Nízký kredit
-              <X className="w-4 h-4" />
+              <X className="w-3 h-3" />
             </Button>
           )}
           {selectedTagId && (
             <Button
               variant="secondary"
               onClick={() => setSelectedTagId(null)}
-              className="rounded-xl gap-2"
+              className="rounded-full h-8 px-3 text-sm gap-2"
+              size="sm"
               style={{ 
                 backgroundColor: allTags.find(t => t.id === selectedTagId)?.color + '20',
                 color: allTags.find(t => t.id === selectedTagId)?.color,
@@ -381,43 +438,67 @@ export default function Clients() {
             >
               <Tag className="w-3 h-3" />
               {allTags.find(t => t.id === selectedTagId)?.name}
-              <X className="w-4 h-4" />
+              <X className="w-3 h-3" />
             </Button>
           )}
-          <Button
-            variant={selectedGoal === null && !lowCreditFilter && !selectedTagId ? 'default' : 'outline'}
-            onClick={clearAllFilters}
-            className="rounded-full h-9 px-4 touch-target flex-shrink-0"
-          >
-            Všichni
-          </Button>
-          {allGoals.slice(0, 3).map((goal) => (
-            <Button
-              key={goal}
-              variant={selectedGoal === goal ? 'default' : 'outline'}
-              onClick={() => setSelectedGoal(goal)}
-              className="rounded-full h-9 px-4 touch-target flex-shrink-0"
-            >
-              {goal}
-            </Button>
-          ))}
-          {allTags.length > 0 && !selectedTagId && (
-            <div className="flex gap-1 items-center">
-              <span className="text-muted-foreground text-sm mx-1">|</span>
-              {allTags.slice(0, 4).map((tag) => (
-                <Badge
-                  key={tag.id}
-                  style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
-                  className="border cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setSelectedTagId(tag.id)}
+          
+          {!hasActiveFilters && (
+            <>
+              {allGoals.slice(0, 3).map((goal) => (
+                <Button
+                  key={goal}
+                  variant={selectedGoal === goal ? 'default' : 'outline'}
+                  onClick={() => setSelectedGoal(goal)}
+                  className="rounded-full h-8 px-3 text-sm"
+                  size="sm"
                 >
-                  {tag.name}
-                </Badge>
+                  {goal}
+                </Button>
               ))}
-            </div>
+              {allTags.length > 0 && (
+                <>
+                  <span className="text-muted-foreground text-sm mx-1">|</span>
+                  {allTags.slice(0, 4).map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                      className="border cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setSelectedTagId(tag.id)}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+          
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              onClick={clearAllFilters}
+              className="rounded-full h-8 px-3 text-sm text-muted-foreground"
+              size="sm"
+            >
+              Zrušit filtry
+            </Button>
           )}
         </div>
+
+        {/* Active Filter Badge */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1">
+              <span className="text-xs">Zobrazeno {filteredClients.length} z {clients.length} klientů</span>
+            </Badge>
+          </div>
+        )}
       </div>
+
+      {/* Gender Statistics */}
+      {showStats && (
+        <GenderStatistics clients={clients} />
+      )}
 
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
@@ -569,9 +650,12 @@ export default function Clients() {
                   <ClientAvatar name={client.name} size="lg" />
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-16">
-                      {client.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-16">
+                        {client.name}
+                      </h3>
+                      <GenderIcon gender={client.gender} />
+                    </div>
                     
                     {/* Credit Balance */}
                     <div className="flex items-center gap-2 mt-1">

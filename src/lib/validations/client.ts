@@ -42,6 +42,9 @@ export const clientFormSchema = z.object({
     .string()
     .optional()
     .or(z.literal("")),
+  gender: z
+    .enum(["male", "female"])
+    .optional(),
 });
 
 export type ClientFormValues = z.infer<typeof clientFormSchema>;
