@@ -14,6 +14,7 @@ import {
   Wallet,
   Globe,
   BarChart3,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
+import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -100,6 +102,12 @@ export default function Settings() {
       description: t.settings.tagsDesc,
       icon: Tag,
       content: <TagsManagement />,
+    },
+    {
+      title: 'Nastavení feedbacku',
+      description: 'Automatické odesílání a konfigurace dotazníků',
+      icon: MessageSquare,
+      content: <FeedbackSettings />,
     },
     {
       title: t.settings.calendar,
