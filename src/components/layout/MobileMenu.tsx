@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Wallet,
   ChevronRight,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -35,6 +36,7 @@ const navItems = [
   { to: '/progress', icon: TrendingUp, label: 'Progres' },
   { to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
   { to: '/measurements', icon: Activity, label: 'Měření' },
+  { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
   { to: '/canceled', icon: XCircle, label: 'Zrušené tréninky' },
   { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },

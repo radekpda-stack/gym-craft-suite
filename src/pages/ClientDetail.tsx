@@ -18,6 +18,7 @@ import {
   Scale,
   FileUp,
   Plus,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,6 +35,7 @@ import { TrainingHistory } from '@/components/trainings/TrainingHistory';
 import { TrainingStats } from '@/components/trainings/TrainingStats';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { FeedbackStatistics } from '@/components/feedback/FeedbackStatistics';
+import { ClientPurchaseHistory } from '@/components/clients/ClientPurchaseHistory';
 import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
@@ -187,6 +189,13 @@ export default function ClientDetail() {
             >
               <MessageSquare className="w-4 h-4 mr-1 sm:mr-2" />
               Feedback
+            </TabsTrigger>
+            <TabsTrigger
+              value="purchases"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <ShoppingBag className="w-4 h-4 mr-1 sm:mr-2" />
+              Nákupy
             </TabsTrigger>
             <TabsTrigger
               value="measurements"
@@ -376,6 +385,10 @@ export default function ClientDetail() {
 
         <TabsContent value="feedback" className="space-y-6">
           <FeedbackStatistics clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="purchases" className="space-y-6">
+          <ClientPurchaseHistory clientId={client.id} />
         </TabsContent>
 
         <TabsContent value="measurements" className="space-y-6">

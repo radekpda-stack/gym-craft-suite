@@ -36,6 +36,7 @@ import {
   LogOut,
   Sparkles,
   TrendingUp,
+  ShoppingBag,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -60,6 +61,7 @@ const navItemsMap: Record<string, NavItem> = {
   progress: { id: 'progress', to: '/progress', icon: TrendingUp, labelKey: 'progress' },
   diagnostics: { id: 'diagnostics', to: '/diagnostics', icon: Stethoscope, labelKey: 'diagnostics' },
   measurements: { id: 'measurements', to: '/measurements', icon: Activity, labelKey: 'measurements' },
+  sales: { id: 'sales', to: '/sales', icon: ShoppingBag, labelKey: 'sales' },
   calendar: { id: 'calendar', to: '/calendar', icon: Calendar, labelKey: 'calendar' },
   canceled: { id: 'canceled', to: '/canceled', icon: XCircle, labelKey: 'canceled' },
   'ai-assistant': { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, labelKey: 'aiAssistant' },
