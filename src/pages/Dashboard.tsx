@@ -28,7 +28,6 @@ import {
   Plus,
   Calendar,
   ChevronRight,
-  Loader2,
   CreditCard,
   Wallet,
   Package,
@@ -79,6 +78,7 @@ import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
 import { cn } from '@/lib/utils';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
 import { useProfitByPeriod } from '@/hooks/useProfitByPeriod';
+import { DashboardStatsSkeleton, DashboardChartSkeleton, DashboardSessionsSkeleton, DashboardCreditsSkeleton } from '@/components/skeletons';
 import {
   BarChart,
   Bar,
@@ -386,8 +386,17 @@ export default function Dashboard() {
   const renderStatsAndCreditsSection = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 md:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="glass rounded-2xl p-4 md:p-5 space-y-3 animate-pulse">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-secondary" />
+                <div className="h-4 w-20 bg-secondary rounded" />
+              </div>
+              <div className="h-7 w-16 bg-secondary rounded" />
+              <div className="h-4 w-24 bg-secondary rounded" />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 md:gap-4">
@@ -561,8 +570,17 @@ export default function Dashboard() {
 
         <div className="space-y-2 md:space-y-3">
           {sessionsLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-secondary" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-24 bg-secondary rounded" />
+                    <div className="h-4 w-32 bg-secondary rounded" />
+                  </div>
+                  <div className="h-6 w-16 bg-secondary rounded-full" />
+                </div>
+              ))}
             </div>
           ) : todaySessions.length > 0 ? (
             todaySessions.map((session) => {
@@ -857,9 +875,7 @@ export default function Dashboard() {
 
       {/* Financial Stats Grid - Sortable */}
       {financialLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
+        <DashboardStatsSkeleton />
       ) : (
         <DndContext
           sensors={sensors}
