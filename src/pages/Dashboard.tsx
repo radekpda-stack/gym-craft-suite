@@ -79,15 +79,6 @@ import { cn } from '@/lib/utils';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
 import { useProfitByPeriod } from '@/hooks/useProfitByPeriod';
 import { DashboardStatsSkeleton, DashboardChartSkeleton, DashboardSessionsSkeleton, DashboardCreditsSkeleton } from '@/components/skeletons';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
 
@@ -331,9 +322,13 @@ export default function Dashboard() {
   };
 
   // Section components
+  // Financial charts section - all financial charts grouped together
   const renderChartsSection = () => (
-    (dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart || dashboardLayout.showProfitChart) && (
+    (dashboardLayout.showIncomeChart || dashboardLayout.showProfitChart || dashboardLayout.showSalesChart) && (
       <div className="space-y-4 md:space-y-6">
+        <h2 className="text-lg md:text-xl font-semibold text-foreground">
+          Finanční přehled
+        </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {dashboardLayout.showIncomeChart && (
             <IncomeChart
@@ -352,33 +347,7 @@ export default function Dashboard() {
             />
           )}
         </div>
-        {dashboardLayout.showMonthlyChart && (
-          <div className="glass rounded-2xl p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
-              Měsíční přehled
-            </h3>
-            <div className="h-48 md:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={financialStats?.incomeByMonth || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} tickMargin={8} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} width={40} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`]}
-                  />
-                  <Bar dataKey="payments" fill="hsl(var(--success))" name="Platby" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="products" fill="hsl(var(--warning))" name="Produkty" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
+        {dashboardLayout.showSalesChart && <SalesChart />}
       </div>
     )
   );
@@ -526,31 +495,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Product breakdown - hidden on mobile */}
-        {dashboardLayout.showProductBreakdown && financialStats?.productBreakdown && financialStats.productBreakdown.length > 0 && (
-          <div className="hidden md:block glass rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
-              Prodej produktů
-            </h3>
-            <div className="space-y-3">
-              {financialStats.productBreakdown.map((product, index) => (
-                <div key={product.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                    />
-                    <span className="text-sm text-foreground">{product.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">{product.amount.toLocaleString('cs-CZ')} Kč</p>
-                    <p className="text-xs text-success">zisk: {product.profit.toLocaleString('cs-CZ')} Kč</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Today's sessions */}
@@ -723,16 +667,10 @@ export default function Dashboard() {
     return <TopClientsTable clients={topClients} isLoading={topClientsLoading} />;
   };
 
-  const renderSalesChartSection = () => {
-    if (!dashboardLayout.showSalesChart) return null;
-    return <SalesChart />;
-  };
-
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
     trainingStats: renderTrainingStatsSection,
     trainingTrend: renderTrainingTrendSection,
-    salesChart: renderSalesChartSection,
     topClients: renderTopClientsSection,
     statsAndCredits: renderStatsAndCreditsSection,
     aiWidget: renderAIWidgetSection,

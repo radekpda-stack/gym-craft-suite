@@ -35,7 +35,6 @@ const DEFAULT_DASHBOARD_SECTIONS_ORDER = [
   'charts',
   'trainingStats',
   'trainingTrend',
-  'salesChart',
   'topClients',
   'statsAndCredits',
   'aiWidget',
@@ -66,7 +65,9 @@ function loadPreferences(): LayoutPreferences {
       // Merge new dashboard sections that might be missing
       let dashboardSectionsOrder = parsed.dashboardSectionsOrder || DEFAULT_DASHBOARD_SECTIONS_ORDER;
       // Remove deprecated items
-      dashboardSectionsOrder = dashboardSectionsOrder.filter((id: string) => id !== 'taxCalculator');
+      dashboardSectionsOrder = dashboardSectionsOrder.filter((id: string) => 
+        id !== 'taxCalculator' && id !== 'salesChart'
+      );
       // Add new items
       DEFAULT_DASHBOARD_SECTIONS_ORDER.forEach(item => {
         if (!dashboardSectionsOrder.includes(item)) {
