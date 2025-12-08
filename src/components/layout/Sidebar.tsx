@@ -135,7 +135,7 @@ export function Sidebar() {
   const [isEditMode, setIsEditMode] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { preferences, updateSidebarOrder } = useLayoutPreferences();
+  const { preferences, updateSidebarOrder, resetToDefaults } = useLayoutPreferences();
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
 
@@ -263,27 +263,40 @@ export function Sidebar() {
         </button>
 
         {!collapsed && (
-          <button
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl transition-all duration-200",
-              isEditMode
-                ? "bg-primary text-primary-foreground"
-                : "glass-subtle text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          <div className="space-y-1">
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl transition-all duration-200",
+                isEditMode
+                  ? "bg-primary text-primary-foreground"
+                  : "glass-subtle text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              )}
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t.common.done}</span>
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t.nav.editOrder}</span>
+                </>
+              )}
+            </button>
+            {isEditMode && (
+              <button
+                onClick={() => {
+                  resetToDefaults();
+                  setIsEditMode(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl glass-subtle text-sidebar-foreground/70 hover:text-sidebar-foreground transition-all duration-200"
+              >
+                <span className="text-sm font-medium">Obnovit výchozí</span>
+              </button>
             )}
-          >
-            {isEditMode ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span className="text-sm font-medium">{t.common.done}</span>
-              </>
-            ) : (
-              <>
-                <Pencil className="w-4 h-4" />
-                <span className="text-sm font-medium">{t.nav.editOrder}</span>
-              </>
-            )}
-          </button>
+          </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
