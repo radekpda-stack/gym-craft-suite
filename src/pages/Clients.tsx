@@ -160,7 +160,7 @@ export default function Clients() {
       // Then sort by selected option
       switch (sortBy) {
         case 'trainings':
-          return (trainingCounts[b.id] || 0) - (trainingCounts[a.id] || 0);
+          return (trainingCounts[b.id]?.count || 0) - (trainingCounts[a.id]?.count || 0);
         case 'credit':
           return (b.credit_balance || 0) - (a.credit_balance || 0);
         case 'recent':
@@ -777,18 +777,25 @@ export default function Clients() {
                   <ClientAvatar name={client.name} size="lg" />
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-16">
                         {client.name}
                       </h3>
                       <GenderIcon gender={client.gender} />
-                      {trainingCounts[client.id] > 0 && (
+                      {trainingCounts[client.id]?.count > 0 && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0.5 gap-1">
                           <Dumbbell className="w-3 h-3" />
-                          {trainingCounts[client.id]}
+                          {trainingCounts[client.id].count}
                         </Badge>
                       )}
                     </div>
+                    
+                    {/* Last Activity */}
+                    {trainingCounts[client.id]?.lastActivityDate && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Poslední aktivita: {format(new Date(trainingCounts[client.id].lastActivityDate!), 'd.M.yyyy', { locale: cs })}
+                      </p>
+                    )}
                     
                     {/* Credit Balance */}
                     {(() => {
