@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useArchiveClient, Client } from '@/hooks/useClients';
 import { useCreateTransaction, useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { useClientsWithTags } from '@/hooks/useClientTags';
 import { useTags } from '@/hooks/useTags';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
+import { useClientTrainingCounts } from '@/hooks/useClientTrainingCounts';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
@@ -46,11 +47,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 type GenderFilter = 'all' | 'male' | 'female';
+type SortOption = 'name' | 'trainings' | 'credit' | 'recent';
 
 export default function Clients() {
   usePageTracking('clients');
@@ -61,6 +70,8 @@ export default function Clients() {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [lowCreditFilter, setLowCreditFilter] = useState(false);
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [showArchived, setShowArchived] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
@@ -74,9 +85,11 @@ export default function Clients() {
   const [showBudgetManager, setShowBudgetManager] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
+  const { data: trainingCounts = {} } = useClientTrainingCounts();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const archiveClient = useArchiveClient();
   const createTransaction = useCreateTransaction();
   const toggleFavorite = useToggleFavorite();
   const { data: creditClientTransactions = [] } = useCreditTransactions(creditClient?.id);
@@ -105,24 +118,58 @@ export default function Clients() {
     clearLowCreditFilter();
   };
 
+  const handleArchiveClient = async (client: Client) => {
+    await archiveClient.mutateAsync({ 
+      id: client.id, 
+      is_archived: !client.is_archived 
+    });
+  };
+
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
 
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch =
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (client.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (client.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
+  // Count active (non-archived) clients
+  const activeClients = clients.filter(c => !c.is_archived);
+  const archivedClients = clients.filter(c => c.is_archived);
 
-    const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
-    
-    const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
-    
-    const matchesTag = !selectedTagId || (clientTagsMap[client.id] || []).some(t => t.id === selectedTagId);
+  const filteredClients = clients
+    .filter((client) => {
+      // Archive filter
+      const matchesArchive = showArchived ? client.is_archived : !client.is_archived;
+      
+      const matchesSearch =
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (client.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (client.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesGender = genderFilter === 'all' || client.gender === genderFilter;
+      const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
+      
+      const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
+      
+      const matchesTag = !selectedTagId || (clientTagsMap[client.id] || []).some(t => t.id === selectedTagId);
 
-    return matchesSearch && matchesGoal && matchesLowCredit && matchesTag && matchesGender;
-  });
+      const matchesGender = genderFilter === 'all' || client.gender === genderFilter;
+
+      return matchesArchive && matchesSearch && matchesGoal && matchesLowCredit && matchesTag && matchesGender;
+    })
+    .sort((a, b) => {
+      // Favorites always first
+      if (a.is_favorite !== b.is_favorite) {
+        return a.is_favorite ? -1 : 1;
+      }
+      
+      // Then sort by selected option
+      switch (sortBy) {
+        case 'trainings':
+          return (trainingCounts[b.id] || 0) - (trainingCounts[a.id] || 0);
+        case 'credit':
+          return (b.credit_balance || 0) - (a.credit_balance || 0);
+        case 'recent':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name, 'cs');
+      }
+    });
 
   const hasActiveFilters = selectedGoal || selectedTagId || lowCreditFilter || genderFilter !== 'all';
 
@@ -203,7 +250,13 @@ export default function Clients() {
             Klienti
           </h1>
           <p className="text-muted-foreground mt-1">
-            {clients.length} aktivních klientů
+            {showArchived 
+              ? `${archivedClients.length} archivovaných klientů`
+              : `${activeClients.length} aktivních klientů`
+            }
+            {archivedClients.length > 0 && !showArchived && (
+              <span className="text-xs ml-2">({archivedClients.length} v archivu)</span>
+            )}
           </p>
         </div>
 
@@ -376,6 +429,20 @@ export default function Clients() {
           </div>
 
           <div className="flex gap-2">
+            {/* Sort selector */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <SelectTrigger className="w-[160px] h-12">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Řazení" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Podle jména</SelectItem>
+                <SelectItem value="trainings">Podle tréninků</SelectItem>
+                <SelectItem value="credit">Podle kreditu</SelectItem>
+                <SelectItem value="recent">Nejnovější</SelectItem>
+              </SelectContent>
+            </Select>
+            
             <ClientExportDialog clients={clients} genderFilter={genderFilter} />
             <Button
               variant="outline"
@@ -388,8 +455,29 @@ export default function Clients() {
           </div>
         </div>
 
-        {/* Gender Filter Pills */}
+        {/* Archive Toggle & Gender Filter Pills */}
         <div className="flex gap-2 flex-wrap items-center">
+          {/* Archive toggle */}
+          <Button
+            variant={showArchived ? 'default' : 'outline'}
+            onClick={() => setShowArchived(!showArchived)}
+            className={cn(
+              "rounded-full h-8 px-3 text-sm gap-1",
+              showArchived && "bg-muted text-muted-foreground"
+            )}
+            size="sm"
+          >
+            {showArchived ? <ArchiveRestore className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
+            {showArchived ? 'Archiv' : 'Archiv'}
+            {archivedClients.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {archivedClients.length}
+              </Badge>
+            )}
+          </Button>
+          
+          <span className="text-muted-foreground text-sm mx-1">|</span>
+          
           <span className="text-sm text-muted-foreground mr-1">Pohlaví:</span>
           <Button
             variant={genderFilter === 'all' ? 'default' : 'outline'}
@@ -609,43 +697,79 @@ export default function Clients() {
 
               {/* Action buttons */}
               <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setCreditClient(client);
-                  }}
-                  title="Přidat kredit"
-                >
-                  <Wallet className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setEditingClient(client);
-                  }}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setDeletingClient(client);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setCreditClient(client);
+                      }}
+                    >
+                      <Wallet className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Přidat kredit</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setEditingClient(client);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Upravit</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8",
+                        client.is_archived 
+                          ? "text-primary hover:text-primary" 
+                          : "text-muted-foreground hover:text-muted-foreground"
+                      )}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleArchiveClient(client);
+                      }}
+                    >
+                      {client.is_archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{client.is_archived ? 'Obnovit z archivu' : 'Archivovat'}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeletingClient(client);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Smazat</TooltipContent>
+                </Tooltip>
               </div>
 
               <Link to={`/clients/${client.id}`} className="block">
@@ -658,6 +782,12 @@ export default function Clients() {
                         {client.name}
                       </h3>
                       <GenderIcon gender={client.gender} />
+                      {trainingCounts[client.id] > 0 && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0.5 gap-1">
+                          <Dumbbell className="w-3 h-3" />
+                          {trainingCounts[client.id]}
+                        </Badge>
+                      )}
                     </div>
                     
                     {/* Credit Balance */}

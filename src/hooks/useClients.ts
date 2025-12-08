@@ -15,6 +15,7 @@ export interface Client {
   credit_balance: number;
   birth_date: string | null;
   is_favorite: boolean;
+  is_archived: boolean;
   gender: 'male' | 'female' | null;
   created_at: string;
   updated_at: string;
@@ -172,6 +173,42 @@ export function useDeleteClient() {
       toast({
         title: "Chyba",
         description: "Nepodařilo se smazat klienta.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useArchiveClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, is_archived }: { id: string; is_archived: boolean }) => {
+      const { data, error } = await supabase
+        .from("clients")
+        .update({ is_archived })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      featureTracker.track(data.is_archived ? 'client_archive' : 'client_unarchive', 'clients');
+      toast({
+        title: data.is_archived ? "Klient archivován" : "Klient obnoven",
+        description: data.is_archived 
+          ? "Klient byl přesunut do archivu." 
+          : "Klient byl obnoven z archivu.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error archiving client:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se archivovat klienta.",
         variant: "destructive",
       });
     },
