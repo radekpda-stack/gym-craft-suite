@@ -28,6 +28,41 @@ interface ProgressListProps {
   showClient?: boolean;
 }
 
+/**
+ * Calculate true PRs - only the best (highest weight) for each exercise per client
+ */
+function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
+  const prIds = new Set<string>();
+  
+  // Group entries by client_id and exercise_name
+  const exerciseGroups = new Map<string, ExerciseEntryWithClient[]>();
+  
+  entries.forEach(entry => {
+    if (!entry.weight_kg) return; // Skip entries without weight
+    
+    const key = `${entry.client_id}-${entry.exercise_name}`;
+    if (!exerciseGroups.has(key)) {
+      exerciseGroups.set(key, []);
+    }
+    exerciseGroups.get(key)!.push(entry);
+  });
+  
+  // For each group, find the entry with highest weight
+  exerciseGroups.forEach(groupEntries => {
+    const maxWeight = Math.max(...groupEntries.map(e => e.weight_kg || 0));
+    // Find the FIRST entry with max weight (oldest PR counts)
+    const prEntry = groupEntries
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .find(e => e.weight_kg === maxWeight);
+    
+    if (prEntry) {
+      prIds.add(prEntry.id);
+    }
+  });
+  
+  return prIds;
+}
+
 export function ProgressList({ entries, showClient = true }: ProgressListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { deleteEntry } = useExerciseEntries();
@@ -58,6 +93,9 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
     return acc;
   }, {} as Record<string, ExerciseEntryWithClient[]>);
 
+  // Calculate true PRs based on best weight per exercise per client
+  const truePRs = calculateTruePRs(entries);
+
   return (
     <>
       <div className="space-y-6">
@@ -67,19 +105,23 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
               {format(new Date(date), 'EEEE d. MMMM yyyy', { locale: cs })}
             </h3>
             <div className="space-y-2">
-              {dayEntries.map((entry) => (
-                <Card key={entry.id} className="glass-subtle hover:bg-accent/5 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold">{entry.exercise_name}</span>
-                          {entry.is_pr && (
-                            <Badge className="gap-1 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                              <Trophy className="w-3 h-3" /> PR
-                            </Badge>
-                          )}
-                        </div>
+              {dayEntries.map((entry) => {
+                // Use calculated true PR status instead of database value
+                const isActualPR = truePRs.has(entry.id);
+                
+                return (
+                  <Card key={entry.id} className="glass-subtle hover:bg-accent/5 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold">{entry.exercise_name}</span>
+                            {isActualPR && (
+                              <Badge className="gap-1 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                <Trophy className="w-3 h-3" /> PR
+                              </Badge>
+                            )}
+                          </div>
                         
                         {showClient && entry.clients && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
@@ -136,7 +178,7 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
             </div>
           </div>
         ))}
