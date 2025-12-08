@@ -39,10 +39,11 @@ serve(async (req) => {
       trainingType,
       customMessage,
       trainerSignature,
-      feedbackUrl 
-    }: SendFeedbackRequest = await req.json();
+      feedbackUrl,
+      isTest = false,
+    }: SendFeedbackRequest & { isTest?: boolean } = await req.json();
 
-    console.log(`Sending feedback email to ${clientEmail} for request ${requestId}`);
+    console.log(`Sending ${isTest ? 'TEST ' : ''}feedback email to ${clientEmail} for request ${requestId}`);
 
     // Build email HTML
     const emailHtml = `
@@ -130,17 +131,19 @@ serve(async (req) => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    // Update request status to 'sent'
-    const { error: updateError } = await supabase
-      .from("feedback_requests")
-      .update({ 
-        status: "sent", 
-        sent_at: new Date().toISOString() 
-      })
-      .eq("id", requestId);
+    // Update request status to 'sent' (skip for test emails)
+    if (!isTest && requestId && !requestId.startsWith('test-')) {
+      const { error: updateError } = await supabase
+        .from("feedback_requests")
+        .update({ 
+          status: "sent", 
+          sent_at: new Date().toISOString() 
+        })
+        .eq("id", requestId);
 
-    if (updateError) {
-      console.error("Error updating request status:", updateError);
+      if (updateError) {
+        console.error("Error updating request status:", updateError);
+      }
     }
 
     return new Response(

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Send } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -17,6 +18,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useFeedbackSettings } from '@/hooks/useFeedbackRequests';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -29,6 +32,8 @@ export function FeedbackSettings() {
   const [defaultLanguage, setDefaultLanguage] = useState('cs');
   const [hasChanges, setHasChanges] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -52,6 +57,40 @@ export function FeedbackSettings() {
       default_language: defaultLanguage,
     });
     setHasChanges(false);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !testEmail.includes('@')) {
+      toast.error('Zadejte platnou e-mailovou adresu');
+      return;
+    }
+
+    setIsSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-feedback-email', {
+        body: {
+          requestId: 'test-' + Date.now(),
+          clientEmail: testEmail,
+          clientName: 'Testovací klient',
+          trainingDate: format(new Date(), 'd. MMMM yyyy', { locale: cs }),
+          trainingType: 'Testovací trénink',
+          customMessage: 'Toto je testovací e-mail z nastavení.',
+          trainerSignature: trainerSignature || undefined,
+          feedbackUrl: window.location.origin + '/feedback/test-token',
+          isTest: true,
+        },
+      });
+
+      if (error) throw error;
+      
+      toast.success('Testovací e-mail byl odeslán na ' + testEmail);
+      setTestEmail('');
+    } catch (error: any) {
+      console.error('Error sending test email:', error);
+      toast.error('Nepodařilo se odeslat testovací e-mail: ' + (error.message || 'Neznámá chyba'));
+    } finally {
+      setIsSendingTest(false);
+    }
   };
 
   // Sample data for preview
@@ -227,6 +266,35 @@ export function FeedbackSettings() {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Test Email */}
+      <div className="space-y-3 p-4 rounded-xl glass-subtle">
+        <Label className="text-foreground">Odeslat testovací e-mail</Label>
+        <p className="text-sm text-muted-foreground">
+          Vyzkoušejte, jak bude e-mail vypadat ve schránce
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            placeholder="vas@email.cz"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            className="glass-input flex-1"
+          />
+          <Button 
+            onClick={handleSendTestEmail}
+            disabled={isSendingTest || !testEmail}
+            className="gap-2"
+          >
+            {isSendingTest ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            Odeslat
+          </Button>
+        </div>
+      </div>
 
       {/* Save button */}
       {hasChanges && (
