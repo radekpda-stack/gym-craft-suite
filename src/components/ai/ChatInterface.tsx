@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useClients } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -36,6 +37,7 @@ export function ChatInterface() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    featureTracker.track('ai_chat_message', 'ai');
 
     let assistantContent = '';
 

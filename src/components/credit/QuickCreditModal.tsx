@@ -13,6 +13,7 @@ import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 interface QuickCreditModalProps {
   collapsed?: boolean;
@@ -112,6 +113,7 @@ export function QuickCreditModal({
         description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${Math.abs(finalAmount).toLocaleString('cs-CZ')} Kč pro ${selectedClient?.name}`,
       });
 
+      featureTracker.track('quick_credit', 'finance', { operationType });
 
       resetForm();
       setOpen(false);
