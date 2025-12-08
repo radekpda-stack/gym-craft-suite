@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { X, Plus, Loader2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Form,
@@ -50,6 +51,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
       healthRestrictions: defaultValues?.health_restrictions || "",
       creditBalance: defaultValues?.credit_balance || 0,
       birthDate: defaultValues?.birth_date || "",
+      gender: defaultValues?.gender || undefined,
     },
   });
 
@@ -64,6 +66,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
         healthRestrictions: defaultValues.health_restrictions || "",
         creditBalance: defaultValues.credit_balance || 0,
         birthDate: defaultValues.birth_date || "",
+        gender: defaultValues.gender || undefined,
       });
     }
   }, [defaultValues, form]);
@@ -170,33 +173,68 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
 
           <FormField
             control={form.control}
-            name="creditBalance"
+            name="gender"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Kredit (CZK)</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  Pohlaví
+                  {defaultValues && !defaultValues.gender && (
+                    <span className="inline-flex items-center gap-1 text-warning text-xs">
+                      <AlertCircle className="w-3 h-3" />
+                      Nevyplněno
+                    </span>
+                  )}
+                </FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0"
-                    className="bg-secondary border-border"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      field.onChange(val === '' ? 0 : parseFloat(val));
-                    }}
-                    onBlur={(e) => {
-                      if (e.target.value === '') {
-                        field.onChange(0);
-                      }
-                    }}
-                  />
+                  <RadioGroup
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="male" id="gender-male" />
+                      <Label htmlFor="gender-male" className="cursor-pointer">Muž</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="female" id="gender-female" />
+                      <Label htmlFor="gender-female" className="cursor-pointer">Žena</Label>
+                    </div>
+                  </RadioGroup>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="creditBalance"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Kredit (CZK)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  className="bg-secondary border-border"
+                  value={field.value === 0 ? '' : field.value}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    field.onChange(val === '' ? 0 : parseFloat(val));
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      field.onChange(0);
+                    }
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="space-y-3">
           <Label>Tréninkové cíle</Label>

@@ -38,6 +38,7 @@ import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { PDFImportDialog } from '@/components/measurements/PDFImportDialog';
+import { GenderIcon } from '@/components/clients/GenderIcon';
 import { cn } from '@/lib/utils';
 
 export default function ClientDetail() {

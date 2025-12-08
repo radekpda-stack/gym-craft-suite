@@ -14,6 +14,7 @@ export interface Client {
   credit_balance: number;
   birth_date: string | null;
   is_favorite: boolean;
+  gender: 'male' | 'female' | null;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -72,6 +73,7 @@ export function useCreateClient() {
           health_restrictions: values.healthRestrictions || "",
           credit_balance: values.creditBalance || 0,
           birth_date: values.birthDate || null,
+          gender: values.gender || null,
           user_id: user.id,
         })
         .select()
@@ -114,6 +116,7 @@ export function useUpdateClient() {
           health_restrictions: values.healthRestrictions || "",
           credit_balance: values.creditBalance || 0,
           birth_date: values.birthDate || null,
+          gender: values.gender || null,
         })
         .eq("id", id)
         .select()

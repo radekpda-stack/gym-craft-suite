@@ -295,6 +295,7 @@ export type Database = {
           created_at: string
           credit_balance: number | null
           email: string | null
+          gender: string | null
           health_restrictions: string | null
           id: string
           is_archived: boolean
@@ -311,6 +312,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           email?: string | null
+          gender?: string | null
           health_restrictions?: string | null
           id?: string
           is_archived?: boolean
@@ -327,6 +329,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           email?: string | null
+          gender?: string | null
           health_restrictions?: string | null
           id?: string
           is_archived?: boolean
