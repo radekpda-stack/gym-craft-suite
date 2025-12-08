@@ -245,6 +245,50 @@ export type Database = {
           },
         ]
       }
+      client_training_phases: {
+        Row: {
+          client_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          notes: string | null
+          phase_name: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          phase_name: string
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          phase_name?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_training_phases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           birth_date: string | null
@@ -419,6 +463,8 @@ export type Database = {
           sets: number
           tempo: string | null
           time_seconds: number | null
+          training_phase: string | null
+          training_type: string | null
           updated_at: string
           user_id: string
           weight_kg: number | null
@@ -437,6 +483,8 @@ export type Database = {
           sets?: number
           tempo?: string | null
           time_seconds?: number | null
+          training_phase?: string | null
+          training_type?: string | null
           updated_at?: string
           user_id: string
           weight_kg?: number | null
@@ -455,6 +503,8 @@ export type Database = {
           sets?: number
           tempo?: string | null
           time_seconds?: number | null
+          training_phase?: string | null
+          training_type?: string | null
           updated_at?: string
           user_id?: string
           weight_kg?: number | null
@@ -485,7 +535,9 @@ export type Database = {
           id: string
           muscle_groups: string[] | null
           name: string
+          secondary_muscle_groups: string[] | null
           subcategory: string | null
+          training_type: string[] | null
           updated_at: string
           user_id: string | null
         }
@@ -497,7 +549,9 @@ export type Database = {
           id?: string
           muscle_groups?: string[] | null
           name: string
+          secondary_muscle_groups?: string[] | null
           subcategory?: string | null
+          training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -509,7 +563,9 @@ export type Database = {
           id?: string
           muscle_groups?: string[] | null
           name?: string
+          secondary_muscle_groups?: string[] | null
           subcategory?: string | null
+          training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
         }
