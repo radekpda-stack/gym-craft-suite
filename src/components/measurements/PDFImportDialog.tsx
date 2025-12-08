@@ -754,7 +754,7 @@ function FileImportCard({
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-2 w-[300px]" align="start">
+                  <PopoverContent className="p-2 w-[300px] z-[100] pointer-events-auto" align="start">
                     <div className="space-y-2">
                       <Input
                         placeholder="Hledat klienta..."
@@ -763,7 +763,7 @@ function FileImportCard({
                         className="h-9"
                         autoFocus
                       />
-                      <ScrollArea className="max-h-[200px]">
+                      <div className="max-h-[200px] overflow-y-auto">
                         <div className="space-y-1">
                           {filteredClients.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-4">Klient nenalezen</p>
@@ -772,12 +772,14 @@ function FileImportCard({
                               <button
                                 key={client.id}
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
                                   onClientSelect(client);
                                   setClientPopoverOpen(false);
                                   setClientSearch('');
                                 }}
-                                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors text-left"
+                                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors text-left cursor-pointer"
                               >
                                 <ClientAvatar name={client.name} size="sm" />
                                 <span className="text-sm">{client.name}</span>
@@ -785,7 +787,7 @@ function FileImportCard({
                             ))
                           )}
                         </div>
-                      </ScrollArea>
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
