@@ -21,14 +21,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -598,6 +590,11 @@ function FileImportCard({
 }: FileImportCardProps) {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [clientSearch, setClientSearch] = useState('');
+
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())
+  );
 
   const getStatusBadge = () => {
     switch (importFile.status) {
@@ -757,28 +754,39 @@ function FileImportCard({
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[300px]" align="start">
-                    <Command>
-                      <CommandInput placeholder="Hledat klienta..." />
-                      <CommandList>
-                        <CommandEmpty>Klient nenalezen</CommandEmpty>
-                        <CommandGroup>
-                          {clients.map(client => (
-                            <CommandItem
-                              key={client.id}
-                              value={client.name}
-                              onSelect={() => {
-                                onClientSelect(client);
-                                setClientPopoverOpen(false);
-                              }}
-                            >
-                              <ClientAvatar name={client.name} size="sm" className="mr-2" />
-                              <span>{client.name}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
+                  <PopoverContent className="p-2 w-[300px]" align="start">
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Hledat klienta..."
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                        className="h-9"
+                        autoFocus
+                      />
+                      <ScrollArea className="max-h-[200px]">
+                        <div className="space-y-1">
+                          {filteredClients.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">Klient nenalezen</p>
+                          ) : (
+                            filteredClients.map(client => (
+                              <button
+                                key={client.id}
+                                type="button"
+                                onClick={() => {
+                                  onClientSelect(client);
+                                  setClientPopoverOpen(false);
+                                  setClientSearch('');
+                                }}
+                                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors text-left"
+                              >
+                                <ClientAvatar name={client.name} size="sm" />
+                                <span className="text-sm">{client.name}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
