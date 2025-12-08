@@ -52,6 +52,7 @@ export const cs = {
     dashboard: 'Dashboard',
     clients: 'Klienti',
     trainings: 'Tréninky',
+    progress: 'Progres',
     diagnostics: 'Diagnostika',
     measurements: 'Měření',
     calendar: 'Kalendář',

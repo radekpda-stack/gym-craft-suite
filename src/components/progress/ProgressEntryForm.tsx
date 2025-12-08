@@ -1,0 +1,489 @@
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { CalendarIcon, Plus, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { useClients } from '@/hooks/useClients';
+import { useExercises } from '@/hooks/useExercises';
+import { useExerciseEntries } from '@/hooks/useExerciseEntries';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+
+const formSchema = z.object({
+  client_id: z.string().min(1, 'Vyberte klienta'),
+  exercise_name: z.string().min(1, 'Zadejte název cviku'),
+  exercise_id: z.string().optional(),
+  date: z.date(),
+  sets: z.number().min(1, 'Minimálně 1 série'),
+  reps: z.number().nullable(),
+  weight_kg: z.number().nullable(),
+  is_bodyweight: z.boolean(),
+  time_seconds: z.number().nullable(),
+  tempo: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface ProgressEntryFormProps {
+  onSuccess?: () => void;
+}
+
+export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
+  const [open, setOpen] = useState(false);
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const [showExerciseList, setShowExerciseList] = useState(false);
+  const { data: clients = [] } = useClients();
+  const { exercises } = useExercises();
+  const { createEntry, getLastEntry } = useExerciseEntries();
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      client_id: '',
+      exercise_name: '',
+      exercise_id: undefined,
+      date: new Date(),
+      sets: 3,
+      reps: null,
+      weight_kg: null,
+      is_bodyweight: false,
+      time_seconds: null,
+      tempo: null,
+      notes: null,
+    },
+  });
+
+  const clientId = form.watch('client_id');
+  const exerciseName = form.watch('exercise_name');
+  const isBodyweight = form.watch('is_bodyweight');
+
+  // Filter exercises based on search
+  const filteredExercises = exercises.filter(e => 
+    e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+    e.category.toLowerCase().includes(exerciseSearch.toLowerCase())
+  );
+
+  // Pre-fill with last entry values
+  useEffect(() => {
+    if (clientId && exerciseName) {
+      getLastEntry(clientId, exerciseName).then(lastEntry => {
+        if (lastEntry) {
+          form.setValue('sets', lastEntry.sets);
+          form.setValue('reps', lastEntry.reps);
+          form.setValue('weight_kg', lastEntry.weight_kg);
+          form.setValue('is_bodyweight', lastEntry.is_bodyweight);
+          form.setValue('tempo', lastEntry.tempo);
+        }
+      });
+    }
+  }, [clientId, exerciseName]);
+
+  const handleSelectExercise = (exercise: { id: string; name: string }) => {
+    form.setValue('exercise_name', exercise.name);
+    form.setValue('exercise_id', exercise.id);
+    setExerciseSearch(exercise.name);
+    setShowExerciseList(false);
+  };
+
+  const handleQuickParse = (value: string) => {
+    // Parse format: "bench press | 3×5 | 80 kg"
+    const parts = value.split('|').map(p => p.trim());
+    if (parts.length >= 2) {
+      form.setValue('exercise_name', parts[0]);
+      setExerciseSearch(parts[0]);
+      
+      const setsReps = parts[1].match(/(\d+)[×x](\d+)/);
+      if (setsReps) {
+        form.setValue('sets', parseInt(setsReps[1]));
+        form.setValue('reps', parseInt(setsReps[2]));
+      }
+      
+      if (parts[2]) {
+        const weight = parts[2].match(/(\d+(?:\.\d+)?)/);
+        if (weight) {
+          form.setValue('weight_kg', parseFloat(weight[1]));
+        }
+      }
+    }
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    await createEntry.mutateAsync({
+      client_id: values.client_id,
+      exercise_id: values.exercise_id || null,
+      exercise_name: values.exercise_name,
+      date: format(values.date, 'yyyy-MM-dd'),
+      sets: values.sets,
+      reps: values.reps,
+      weight_kg: values.weight_kg,
+      is_bodyweight: values.is_bodyweight,
+      time_seconds: values.time_seconds,
+      tempo: values.tempo,
+      notes: values.notes,
+      is_pr: false,
+    });
+    
+    form.reset();
+    setExerciseSearch('');
+    setOpen(false);
+    onSuccess?.();
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nový záznam
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="sm:max-w-lg overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Nový tréninkový záznam
+          </SheetTitle>
+          <SheetDescription>
+            Rychle zadejte výkon ve formátu: „bench press | 3×5 | 80 kg"
+          </SheetDescription>
+        </SheetHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-6">
+            {/* Quick parse input */}
+            <div className="glass-subtle p-3 rounded-lg">
+              <Input
+                placeholder="bench press | 3×5 | 80 kg"
+                onChange={(e) => handleQuickParse(e.target.value)}
+                className="bg-background/50"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Rychlé zadání: název | série×opakování | váha kg
+              </p>
+            </div>
+
+            {/* Client selection */}
+            <FormField
+              control={form.control}
+              name="client_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Klient *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte klienta" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Exercise selection with autocomplete */}
+            <FormField
+              control={form.control}
+              name="exercise_name"
+              render={({ field }) => (
+                <FormItem className="relative">
+                  <FormLabel>Cvik *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        value={exerciseSearch}
+                        onChange={(e) => {
+                          setExerciseSearch(e.target.value);
+                          field.onChange(e.target.value);
+                          setShowExerciseList(true);
+                        }}
+                        onFocus={() => setShowExerciseList(true)}
+                        placeholder="Vyhledejte nebo zadejte cvik"
+                      />
+                      {showExerciseList && exerciseSearch && (
+                        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md bg-popover border shadow-lg">
+                          {filteredExercises.length > 0 ? (
+                            filteredExercises.slice(0, 10).map((exercise) => (
+                              <button
+                                key={exercise.id}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-accent text-sm"
+                                onClick={() => handleSelectExercise(exercise)}
+                              >
+                                <span className="font-medium">{exercise.name}</span>
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  {exercise.category}
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              Cvik nenalezen - bude vytvořen vlastní
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Date */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Datum</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, 'PPP', { locale: cs })
+                          ) : (
+                            <span>Vyberte datum</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Sets and Reps */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="sets"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Série *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="reps"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Opakování</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="—"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Bodyweight toggle and weight */}
+            <div className="flex items-center gap-4">
+              <FormField
+                control={form.control}
+                name="is_bodyweight"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Vlastní váha</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {!isBodyweight && (
+              <FormField
+                control={form.control}
+                name="weight_kg"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Váha (kg)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        min={0}
+                        placeholder="—"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Optional fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="time_seconds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Čas (sekundy)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="—"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tempo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tempo</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="3-1-2-0"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Poznámka</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Volitelná poznámka..."
+                      className="resize-none"
+                      value={field.value ?? ''}
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                className="flex-1"
+              >
+                Zrušit
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={createEntry.isPending}
+              >
+                {createEntry.isPending ? 'Ukládám...' : 'Uložit'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </SheetContent>
+    </Sheet>
+  );
+}

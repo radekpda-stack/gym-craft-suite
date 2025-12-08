@@ -404,6 +404,78 @@ export type Database = {
           },
         ]
       }
+      exercise_entries: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          is_bodyweight: boolean | null
+          is_pr: boolean | null
+          notes: string | null
+          reps: number | null
+          sets: number
+          tempo: string | null
+          time_seconds: number | null
+          updated_at: string
+          user_id: string
+          weight_kg: number | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date?: string
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          is_bodyweight?: boolean | null
+          is_pr?: boolean | null
+          notes?: string | null
+          reps?: number | null
+          sets?: number
+          tempo?: string | null
+          time_seconds?: number | null
+          updated_at?: string
+          user_id: string
+          weight_kg?: number | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          is_bodyweight?: boolean | null
+          is_pr?: boolean | null
+          notes?: string | null
+          reps?: number | null
+          sets?: number
+          tempo?: string | null
+          time_seconds?: number | null
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_entries_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           category: string

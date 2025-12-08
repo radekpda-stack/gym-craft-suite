@@ -18,6 +18,7 @@ import CalendarPage from "./pages/CalendarPage";
 import CanceledTrainings from "./pages/CanceledTrainings";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
+import Progress from "./pages/Progress";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
                       <Route path="/trainings/:id" element={<TrainingDetail />} />
                       <Route path="/diagnostics" element={<Diagnostics />} />
                       <Route path="/measurements" element={<Measurements />} />
+                      <Route path="/progress" element={<Progress />} />
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/canceled" element={<CanceledTrainings />} />
                       <Route path="/settings" element={<Settings />} />

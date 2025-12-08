@@ -14,6 +14,7 @@ import {
   X,
   Zap,
   Sparkles,
+  TrendingUp,
   Wallet,
   ChevronRight,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+  { to: '/progress', icon: TrendingUp, label: 'Progres' },
   { to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
   { to: '/measurements', icon: Activity, label: 'Měření' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
