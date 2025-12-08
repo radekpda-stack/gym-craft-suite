@@ -9,10 +9,12 @@ import { useClients } from '@/hooks/useClients';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type ViewMode = 'day' | 'week' | 'month';
 
 export default function CalendarPage() {
+  usePageTracking('calendar');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [isCreateOpen, setIsCreateOpen] = useState(false);

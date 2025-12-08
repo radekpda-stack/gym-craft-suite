@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, Filter, Users, Dumbbell, Trophy } from 'lucide-react';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import { useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { useClients } from '@/hooks/useClients';
 
 export default function Progress() {
+  usePageTracking('progress');
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedExercise, setSelectedExercise] = useState<string>('');
   

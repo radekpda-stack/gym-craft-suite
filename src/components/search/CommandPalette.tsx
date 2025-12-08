@@ -24,6 +24,7 @@ import {
 import { useClients } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { ClientAvatar } from '@/components/ui/client-avatar';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
 
   const runCommand = useCallback((command: () => void) => {
+    featureTracker.track('search_open', 'search');
     onOpenChange(false);
     command();
   }, [onOpenChange]);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cs } from 'date-fns/locale';
 import { Plus, Download, Activity, TrendingUp, TrendingDown, Scale, Percent, Flame, Brain, FileUp, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import {
 } from 'recharts';
 
 export default function Measurements() {
+  usePageTracking('measurements');
   const { data: clients = [] } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');

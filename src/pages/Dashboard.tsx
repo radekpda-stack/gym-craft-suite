@@ -1,6 +1,7 @@
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import {
   DndContext,
   closestCenter,
@@ -134,6 +135,7 @@ function SortableItem({ id, children, isEditMode, className, horizontal }: Sorta
 }
 
 export default function Dashboard() {
+  usePageTracking('dashboard');
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: todaySessions = [], isLoading: sessionsLoading } = useTodaySessions();
   const { data: clients = [], isLoading: clientsLoading } = useClients();

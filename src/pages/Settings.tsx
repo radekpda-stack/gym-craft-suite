@@ -13,6 +13,7 @@ import {
   Dumbbell,
   Wallet,
   Globe,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +24,13 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
+import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { useLanguage, Language } from '@/lib/i18n';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
+  usePageTracking('settings');
   const [googleConnected, setGoogleConnected] = useState(false);
   const [appleConnected, setAppleConnected] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -262,6 +266,12 @@ export default function Settings() {
           </div>
         </div>
       ),
+    },
+    {
+      title: 'Statistiky využívání',
+      description: 'Přehled využívaných a nevyužívaných funkcí aplikace',
+      icon: BarChart3,
+      content: <FeatureUsageStats />,
     },
   ];
 
