@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
 
@@ -238,6 +239,7 @@ export function useCreateTrainingSession() {
       queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      featureTracker.track('training_create', 'trainings', { recurring: result.createdCount > 1 });
       
       const message = result.createdCount > 1
         ? `Vytvořeno ${result.createdCount} opakujících se tréninků.`
@@ -367,6 +369,8 @@ export function useUpdateTrainingSession() {
         queryClient.invalidateQueries({ queryKey: ["client", result.clientId] });
       }
       
+      featureTracker.track(result.creditDeducted ? 'training_complete' : 'training_update', 'trainings');
+      
       if (result.creditDeducted) {
         toast({
           title: "Trénink dokončen",
@@ -404,6 +408,7 @@ export function useDeleteTrainingSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      featureTracker.track('training_delete', 'trainings');
       toast({
         title: "Trénink smazán",
         description: "Trénink byl úspěšně odstraněn.",
@@ -535,6 +540,7 @@ export function useCancelTrainingSession() {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      featureTracker.track('training_cancel', 'trainings');
       
       if (result.deductCredit && result.price > 0) {
         toast({

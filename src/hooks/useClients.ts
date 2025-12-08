@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ClientFormValues } from "@/lib/validations/client";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export interface Client {
   id: string;
@@ -84,6 +85,7 @@ export function useCreateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      featureTracker.track('client_create', 'clients');
       toast({
         title: "Klient vytvořen",
         description: "Nový klient byl úspěšně přidán.",
@@ -128,6 +130,7 @@ export function useUpdateClient() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["clients", variables.id] });
+      featureTracker.track('client_update', 'clients');
       toast({
         title: "Klient aktualizován",
         description: "Údaje klienta byly úspěšně uloženy.",
@@ -158,6 +161,7 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      featureTracker.track('client_delete', 'clients');
       toast({
         title: "Klient smazán",
         description: "Klient byl úspěšně odstraněn.",
