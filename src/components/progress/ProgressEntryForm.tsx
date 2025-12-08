@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Plus, Trophy } from 'lucide-react';
+import { CalendarIcon, Plus, Trophy, TrendingUp, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,6 +75,10 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
   const [open, setOpen] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [showExerciseList, setShowExerciseList] = useState(false);
+  const [lastEntryData, setLastEntryData] = useState<{
+    weight_kg: number | null;
+    suggestedWeight: number | null;
+  } | null>(null);
   const { data: clients = [] } = useClients();
   const { exercises } = useExercises();
   const { createEntry, getLastEntry } = useExerciseEntries();
@@ -99,6 +103,7 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
   const clientId = form.watch('client_id');
   const exerciseName = form.watch('exercise_name');
   const isBodyweight = form.watch('is_bodyweight');
+  const currentWeight = form.watch('weight_kg');
 
   // Filter exercises based on search
   const filteredExercises = exercises.filter(e => 
@@ -106,20 +111,50 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
     e.category.toLowerCase().includes(exerciseSearch.toLowerCase())
   );
 
-  // Pre-fill with last entry values
+  // Pre-fill with last entry values and calculate suggested weight
   useEffect(() => {
     if (clientId && exerciseName) {
       getLastEntry(clientId, exerciseName).then(lastEntry => {
         if (lastEntry) {
           form.setValue('sets', lastEntry.sets);
           form.setValue('reps', lastEntry.reps);
-          form.setValue('weight_kg', lastEntry.weight_kg);
-          form.setValue('is_bodyweight', lastEntry.is_bodyweight);
+          form.setValue('is_bodyweight', lastEntry.is_bodyweight ?? false);
           form.setValue('tempo', lastEntry.tempo);
+          
+          // Set last weight and calculate progressive suggestion (+2.5kg)
+          const lastWeight = lastEntry.weight_kg;
+          const suggested = lastWeight ? lastWeight + 2.5 : null;
+          setLastEntryData({
+            weight_kg: lastWeight,
+            suggestedWeight: suggested,
+          });
+          
+          // Pre-fill with suggested progressive weight
+          if (suggested && !lastEntry.is_bodyweight) {
+            form.setValue('weight_kg', suggested);
+          } else if (lastWeight) {
+            form.setValue('weight_kg', lastWeight);
+          }
+        } else {
+          setLastEntryData(null);
         }
       });
+    } else {
+      setLastEntryData(null);
     }
   }, [clientId, exerciseName]);
+
+  const applySuggestedWeight = () => {
+    if (lastEntryData?.suggestedWeight) {
+      form.setValue('weight_kg', lastEntryData.suggestedWeight);
+    }
+  };
+
+  const applyLastWeight = () => {
+    if (lastEntryData?.weight_kg) {
+      form.setValue('weight_kg', lastEntryData.weight_kg);
+    }
+  };
 
   const handleSelectExercise = (exercise: { id: string; name: string }) => {
     form.setValue('exercise_name', exercise.name);
@@ -442,6 +477,37 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
                         onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
                       />
                     </FormControl>
+                    {/* Progressive weight suggestion */}
+                    {lastEntryData && lastEntryData.weight_kg && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={applySuggestedWeight}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                            currentWeight === lastEntryData.suggestedWeight
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20"
+                          )}
+                        >
+                          <TrendingUp className="w-3 h-3" />
+                          +2,5 kg → {lastEntryData.suggestedWeight} kg
+                        </button>
+                        <button
+                          type="button"
+                          onClick={applyLastWeight}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                            currentWeight === lastEntryData.weight_kg
+                              ? "bg-muted text-foreground border border-border"
+                              : "bg-muted/50 text-muted-foreground hover:bg-muted border border-border/50"
+                          )}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Poslední: {lastEntryData.weight_kg} kg
+                        </button>
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
