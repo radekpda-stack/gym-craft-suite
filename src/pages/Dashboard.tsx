@@ -71,6 +71,7 @@ import { TrainingTrendChart } from '@/components/dashboard/TrainingTrendChart';
 import { TopClientsTable } from '@/components/dashboard/TopClientsTable';
 import { IncomeChart, IncomePeriod } from '@/components/dashboard/IncomeChart';
 import { ProfitChart, ProfitPeriod } from '@/components/dashboard/ProfitChart';
+import { SalesChart } from '@/components/dashboard/SalesChart';
 import { AIWidget } from '@/components/ai/AIWidget';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
@@ -704,10 +705,16 @@ export default function Dashboard() {
     return <TopClientsTable clients={topClients} isLoading={topClientsLoading} />;
   };
 
+  const renderSalesChartSection = () => {
+    if (!dashboardLayout.showSalesChart) return null;
+    return <SalesChart />;
+  };
+
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
     trainingStats: renderTrainingStatsSection,
     trainingTrend: renderTrainingTrendSection,
+    salesChart: renderSalesChartSection,
     topClients: renderTopClientsSection,
     statsAndCredits: renderStatsAndCreditsSection,
     aiWidget: renderAIWidgetSection,

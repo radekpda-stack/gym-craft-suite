@@ -62,6 +62,7 @@ export interface DashboardLayout {
   showTrainingStats: boolean;
   showTopClients: boolean;
   showProfitChart: boolean;
+  showSalesChart: boolean;
 }
 
 export function useDashboardLayout() {
@@ -78,6 +79,7 @@ export function useDashboardLayout() {
     showTrainingStats: true,
     showTopClients: true,
     showProfitChart: true,
+    showSalesChart: true,
   };
   
   return settings?.dashboard_layout || defaultLayout;
