@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 export interface LayoutPreferences {
   sidebarOrder: string[];
+  hiddenSidebarItems: string[];
   dashboardStatsOrder: string[];
   dashboardSectionsOrder: string[];
 }
@@ -19,6 +20,8 @@ const DEFAULT_SIDEBAR_ORDER = [
   'ai-assistant',
   'settings',
 ];
+
+const DEFAULT_HIDDEN_SIDEBAR_ITEMS: string[] = [];
 
 const DEFAULT_DASHBOARD_STATS_ORDER = [
   'income',
@@ -78,6 +81,7 @@ function loadPreferences(): LayoutPreferences {
       
       return {
         sidebarOrder,
+        hiddenSidebarItems: parsed.hiddenSidebarItems || DEFAULT_HIDDEN_SIDEBAR_ITEMS,
         dashboardStatsOrder: parsed.dashboardStatsOrder || DEFAULT_DASHBOARD_STATS_ORDER,
         dashboardSectionsOrder,
       };
@@ -87,6 +91,7 @@ function loadPreferences(): LayoutPreferences {
   }
   return {
     sidebarOrder: DEFAULT_SIDEBAR_ORDER,
+    hiddenSidebarItems: DEFAULT_HIDDEN_SIDEBAR_ITEMS,
     dashboardStatsOrder: DEFAULT_DASHBOARD_STATS_ORDER,
     dashboardSectionsOrder: DEFAULT_DASHBOARD_SECTIONS_ORDER,
   };
@@ -130,6 +135,7 @@ export function useLayoutPreferences() {
   const resetToDefaults = useCallback(() => {
     const defaults: LayoutPreferences = {
       sidebarOrder: DEFAULT_SIDEBAR_ORDER,
+      hiddenSidebarItems: DEFAULT_HIDDEN_SIDEBAR_ITEMS,
       dashboardStatsOrder: DEFAULT_DASHBOARD_STATS_ORDER,
       dashboardSectionsOrder: DEFAULT_DASHBOARD_SECTIONS_ORDER,
     };
@@ -137,11 +143,24 @@ export function useLayoutPreferences() {
     savePreferences(defaults);
   }, []);
 
+  const toggleSidebarItemVisibility = useCallback((itemId: string) => {
+    setPreferences(prev => {
+      const isHidden = prev.hiddenSidebarItems.includes(itemId);
+      const newHiddenItems = isHidden
+        ? prev.hiddenSidebarItems.filter(id => id !== itemId)
+        : [...prev.hiddenSidebarItems, itemId];
+      const updated = { ...prev, hiddenSidebarItems: newHiddenItems };
+      savePreferences(updated);
+      return updated;
+    });
+  }, []);
+
   return {
     preferences,
     updateSidebarOrder,
     updateDashboardStatsOrder,
     updateDashboardSectionsOrder,
+    toggleSidebarItemVisibility,
     resetToDefaults,
   };
 }
