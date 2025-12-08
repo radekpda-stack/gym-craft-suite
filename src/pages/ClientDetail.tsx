@@ -13,6 +13,7 @@ import {
   Tag,
   MessageSquare,
   BarChart3,
+  Flame,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +30,7 @@ import { TrainingStats } from '@/components/trainings/TrainingStats';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { FeedbackStatistics } from '@/components/feedback/FeedbackStatistics';
 import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
+import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
 import { cn } from '@/lib/utils';
 
 export default function ClientDetail() {
@@ -157,6 +159,13 @@ export default function ClientDetail() {
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Progres
+          </TabsTrigger>
+          <TabsTrigger
+            value="load"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4"
+          >
+            <Flame className="w-4 h-4 mr-2" />
+            Zatížení
           </TabsTrigger>
           <TabsTrigger
             value="feedback"
@@ -337,6 +346,10 @@ export default function ClientDetail() {
 
         <TabsContent value="progress" className="space-y-6">
           <ClientProgressTab clientId={client.id} clientName={client.name} />
+        </TabsContent>
+
+        <TabsContent value="load" className="space-y-6">
+          <TrainingHistoryTab clientId={client.id} clientName={client.name} />
         </TabsContent>
 
         <TabsContent value="feedback" className="space-y-6">
