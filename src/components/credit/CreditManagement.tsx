@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText } from 'lucide-react';
+import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, CreditTransaction } from '@/hooks/useCreditTransactions';
+import { useSharedBudgetBalance, useSharedBudgetTransactions } from '@/hooks/useSharedBudgetBalance';
 import { useProducts } from '@/hooks/useProducts';
 import { useTrainingPrices, calculateRemainingTrainings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
+
 interface CreditManagementProps {
   clientId: string;
   clientName: string;
@@ -20,11 +25,15 @@ interface CreditManagementProps {
 }
 
 export function CreditManagement({ clientId, clientName, currentBalance }: CreditManagementProps) {
-  const { data: transactions = [] } = useCreditTransactions(clientId);
+  const { data: individualTransactions = [] } = useCreditTransactions(clientId);
   const { data: products = [] } = useProducts(true);
   const trainingPrices = useTrainingPrices();
   const createTransaction = useCreateTransaction();
   const deleteTransaction = useDeleteTransaction();
+
+  // Shared budget info
+  const { data: sharedBudgetInfo, isLoading: sharedLoading } = useSharedBudgetBalance(clientId);
+  const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
 
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
@@ -37,7 +46,16 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
   const [manualDescription, setManualDescription] = useState('');
   const [manualIsDeduction, setManualIsDeduction] = useState(false);
 
-  const remainingTrainings = calculateRemainingTrainings(currentBalance, trainingPrices);
+  // Use shared balance if in a group, otherwise individual balance
+  const isShared = sharedBudgetInfo?.isShared ?? false;
+  const displayBalance = isShared ? sharedBudgetInfo?.displayBalance ?? 0 : Math.max(0, currentBalance);
+  const actualBalance = isShared ? sharedBudgetInfo?.sharedBalance ?? 0 : currentBalance;
+  const isExhausted = isShared ? sharedBudgetInfo?.isExhausted ?? false : currentBalance <= 0;
+
+  // Use shared transactions if in a group
+  const transactions = isShared ? sharedTransactions : individualTransactions;
+
+  const remainingTrainings = calculateRemainingTrainings(actualBalance, trainingPrices);
 
   const handleAddPayment = async () => {
     const amount = parseFloat(paymentAmount);
@@ -117,19 +135,53 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
 
   return (
     <div className="space-y-6">
+      {/* Shared Budget Alert */}
+      {isShared && sharedBudgetInfo && (
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5 border-l-4 border-l-primary">
+          <div className="flex items-center gap-3 mb-3">
+            <Users className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-foreground">{sharedBudgetInfo.groupName}</span>
+            <Badge variant="secondary">Sdílený budget</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sharedBudgetInfo.members.map((member) => (
+              <div key={member.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-secondary/50">
+                <ClientAvatar name={member.name} size="sm" />
+                <span className="text-sm text-foreground">{member.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Credit Exhausted Warning */}
+      {isExhausted && (
+        <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Kredit je vyčerpaný. Doplňte kredit pro další tréninky.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Credit Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-3 text-muted-foreground mb-2">
-            <CreditCard className="w-4 h-4" />
-            <span className="text-sm">Aktuální kredit</span>
+            {isShared ? <Users className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+            <span className="text-sm">{isShared ? 'Sdílený kredit' : 'Aktuální kredit'}</span>
           </div>
           <p className={cn(
             "font-bold text-2xl",
-            currentBalance < 0 ? "text-destructive" : currentBalance < 500 ? "text-warning" : "text-success"
+            isExhausted ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
           )}>
-            {currentBalance.toLocaleString('cs-CZ')} Kč
+            {displayBalance.toLocaleString('cs-CZ')} Kč
           </p>
+          {isExhausted && actualBalance < 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              (skutečný stav: {actualBalance.toLocaleString('cs-CZ')} Kč)
+            </p>
+          )}
         </div>
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-3 text-muted-foreground mb-2">
@@ -137,7 +189,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             <span className="text-sm">Zbývající tréninky</span>
           </div>
           <p className="font-bold text-2xl text-foreground">
-            ~{remainingTrainings}
+            ~{Math.max(0, remainingTrainings)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             při ceně {trainingPrices["1"]} Kč/trénink
@@ -167,9 +219,19 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Přidat platbu</DialogTitle>
+              <DialogTitle>
+                Přidat platbu {isShared && `(${sharedBudgetInfo?.groupName})`}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
+              {isShared && (
+                <Alert>
+                  <Users className="h-4 w-4" />
+                  <AlertDescription>
+                    Platba bude přičtena ke sdílenému kreditu skupiny.
+                  </AlertDescription>
+                </Alert>
+              )}
               <div>
                 <Label>Částka (Kč)</Label>
                 <Input
@@ -317,7 +379,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
       <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <h3 className="text-lg font-semibold text-foreground">
-            Historie transakcí
+            Historie transakcí {isShared && '(sdílený účet)'}
           </h3>
           {transactions.length > 0 && (
             <DropdownMenu>
@@ -334,9 +396,10 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                     type: t.type,
                     description: t.description || '',
                     amount: t.amount,
-                    clientName: clientName,
+                    clientName: (t as any).clients?.name || clientName,
                   }));
-                  exportTransactionsToCSV(data, `transakce-${clientName.toLowerCase().replace(/\s+/g, '-')}`);
+                  const exportName = isShared ? sharedBudgetInfo?.groupName || 'sdileny-budget' : clientName;
+                  exportTransactionsToCSV(data, `transakce-${exportName.toLowerCase().replace(/\s+/g, '-')}`);
                 }}>
                   <FileText className="w-4 h-4 mr-2" />
                   Export do CSV
@@ -347,9 +410,10 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                     type: t.type,
                     description: t.description || '',
                     amount: t.amount,
-                    clientName: clientName,
+                    clientName: (t as any).clients?.name || clientName,
                   }));
-                  exportTransactionsToPDF(data, `Transakce - ${clientName}`, `transakce-${clientName.toLowerCase().replace(/\s+/g, '-')}`);
+                  const exportName = isShared ? sharedBudgetInfo?.groupName || 'Sdílený budget' : clientName;
+                  exportTransactionsToPDF(data, `Transakce - ${exportName}`, `transakce-${exportName.toLowerCase().replace(/\s+/g, '-')}`);
                 }}>
                   <FileText className="w-4 h-4 mr-2" />
                   Export do PDF
@@ -370,9 +434,16 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                     {getTransactionIcon(transaction.type)}
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">
-                      {transaction.description || transaction.type}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">
+                        {transaction.description || transaction.type}
+                      </p>
+                      {isShared && (transaction as any).clients?.name && (
+                        <Badge variant="outline" className="text-xs">
+                          {(transaction as any).clients.name}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(transaction.created_at), 'd. MMMM yyyy, HH:mm', { locale: cs })}
                     </p>

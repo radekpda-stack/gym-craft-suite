@@ -8,6 +8,7 @@ export interface BudgetGroup {
   user_id: string;
   created_at: string;
   updated_at: string;
+  shared_balance: number;
 }
 
 export interface BudgetGroupMember {
@@ -87,14 +88,29 @@ export function useCreateBudgetGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, clientIds }: { name: string; clientIds: string[] }) => {
+    mutationFn: async ({ name, clientIds, initialBalance = 0 }: { name: string; clientIds: string[]; initialBalance?: number }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Create the group
+      // If we have clients, calculate initial shared balance from their current balances
+      let sharedBalance = initialBalance;
+      if (clientIds.length > 0 && initialBalance === 0) {
+        const { data: clients, error: clientsError } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .in("id", clientIds);
+        
+        if (clientsError) throw clientsError;
+        
+        // Use the average of all member balances as initial shared balance
+        const totalBalance = clients.reduce((sum, c) => sum + (c.credit_balance || 0), 0);
+        sharedBalance = Math.round(totalBalance / clients.length);
+      }
+
+      // Create the group with initial shared balance
       const { data: group, error: groupError } = await supabase
         .from("client_budget_groups")
-        .insert({ name, user_id: user.id })
+        .insert({ name, user_id: user.id, shared_balance: sharedBalance })
         .select()
         .single();
 
@@ -120,6 +136,7 @@ export function useCreateBudgetGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({
         title: "Skupina vytvořena",

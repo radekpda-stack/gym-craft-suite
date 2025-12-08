@@ -18,6 +18,7 @@ export interface CreditTransaction {
   created_at: string;
   created_by: string | null;
   user_id: string | null;
+  group_id?: string | null;
 }
 
 export interface CreateTransactionInput {
@@ -51,6 +52,40 @@ export function useCreditTransactions(clientId?: string) {
   });
 }
 
+// Helper function to check if client is in a shared budget group
+async function getClientBudgetGroup(clientId: string) {
+  const { data: membership, error } = await supabase
+    .from("client_budget_members")
+    .select("group_id, client_budget_groups(id, name, shared_balance)")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return membership;
+}
+
+// Helper function to update shared budget balance
+async function updateSharedBudgetBalance(groupId: string, amount: number) {
+  const { data: group, error: getError } = await supabase
+    .from("client_budget_groups")
+    .select("shared_balance")
+    .eq("id", groupId)
+    .single();
+
+  if (getError) throw getError;
+
+  const newBalance = (group.shared_balance || 0) + amount;
+
+  const { error: updateError } = await supabase
+    .from("client_budget_groups")
+    .update({ shared_balance: newBalance })
+    .eq("id", groupId);
+
+  if (updateError) throw updateError;
+
+  return newBalance;
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
 
@@ -59,7 +94,12 @@ export function useCreateTransaction() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // First, create the transaction
+      // Check if client is in a shared budget group
+      const budgetGroup = await getClientBudgetGroup(input.client_id);
+      const isSharedBudget = !!budgetGroup?.group_id;
+      const groupId = budgetGroup?.group_id;
+
+      // Create the transaction with group_id if applicable
       const { data: transaction, error: transactionError } = await supabase
         .from("credit_transactions")
         .insert({
@@ -71,6 +111,7 @@ export function useCreateTransaction() {
           product_id: input.product_id || null,
           payment_method: input.payment_method || 'credit',
           user_id: user.id,
+          group_id: groupId || null,
         })
         .select()
         .single();
@@ -80,31 +121,41 @@ export function useCreateTransaction() {
       // Only update credit balance if not skipping (for cash payments)
       let newBalance: number | null = null;
       if (!input.skip_credit_update) {
-        const { data: client, error: clientError } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", input.client_id)
-          .single();
+        if (isSharedBudget && groupId) {
+          // Update shared budget balance
+          newBalance = await updateSharedBudgetBalance(groupId, input.amount);
+        } else {
+          // Update individual client balance
+          const { data: client, error: clientError } = await supabase
+            .from("clients")
+            .select("credit_balance")
+            .eq("id", input.client_id)
+            .single();
 
-        if (clientError) throw clientError;
+          if (clientError) throw clientError;
 
-        newBalance = (client.credit_balance || 0) + input.amount;
+          newBalance = (client.credit_balance || 0) + input.amount;
 
-        const { error: updateError } = await supabase
-          .from("clients")
-          .update({ credit_balance: newBalance })
-          .eq("id", input.client_id);
+          const { error: updateError } = await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", input.client_id);
 
-        if (updateError) throw updateError;
+          if (updateError) throw updateError;
+        }
       }
 
-      return { transaction, newBalance, skippedCredit: input.skip_credit_update };
+      return { transaction, newBalance, skippedCredit: input.skip_credit_update, isSharedBudget };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["client", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_transactions"] });
       
       if (result.skippedCredit) {
         toast({
@@ -113,11 +164,12 @@ export function useCreateTransaction() {
         });
       } else {
         const isPositive = variables.amount > 0;
+        const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
         toast({
           title: isPositive ? "Platba přidána" : "Kredit odečten",
           description: isPositive 
-            ? `Kredit navýšen o ${variables.amount} Kč`
-            : `Kredit snížen o ${Math.abs(variables.amount)} Kč`,
+            ? `${budgetType} navýšen o ${variables.amount} Kč`
+            : `${budgetType} snížen o ${Math.abs(variables.amount)} Kč`,
         });
       }
     },
@@ -137,6 +189,11 @@ export function useDeleteTransaction() {
 
   return useMutation({
     mutationFn: async ({ id, clientId, amount }: { id: string; clientId: string; amount: number }) => {
+      // Check if client is in a shared budget group
+      const budgetGroup = await getClientBudgetGroup(clientId);
+      const isSharedBudget = !!budgetGroup?.group_id;
+      const groupId = budgetGroup?.group_id;
+
       // Delete the transaction
       const { error: deleteError } = await supabase
         .from("credit_transactions")
@@ -146,29 +203,43 @@ export function useDeleteTransaction() {
       if (deleteError) throw deleteError;
 
       // Reverse the credit change
-      const { data: client, error: clientError } = await supabase
-        .from("clients")
-        .select("credit_balance")
-        .eq("id", clientId)
-        .single();
+      if (isSharedBudget && groupId) {
+        // Update shared budget balance (reverse the amount)
+        await updateSharedBudgetBalance(groupId, -amount);
+      } else {
+        // Update individual client balance
+        const { data: client, error: clientError } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", clientId)
+          .single();
 
-      if (clientError) throw clientError;
+        if (clientError) throw clientError;
 
-      const newBalance = (client.credit_balance || 0) - amount;
+        const newBalance = (client.credit_balance || 0) - amount;
 
-      const { error: updateError } = await supabase
-        .from("clients")
-        .update({ credit_balance: newBalance })
-        .eq("id", clientId);
+        const { error: updateError } = await supabase
+          .from("clients")
+          .update({ credit_balance: newBalance })
+          .eq("id", clientId);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
+
+      return { isSharedBudget };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_transactions"] });
+      
+      const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
       toast({
         title: "Transakce smazána",
-        description: "Transakce byla odstraněna a kredit byl upraven.",
+        description: `Transakce byla odstraněna a ${budgetType.toLowerCase()} byl upraven.`,
       });
     },
     onError: (error) => {

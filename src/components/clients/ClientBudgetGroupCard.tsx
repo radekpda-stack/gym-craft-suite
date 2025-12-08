@@ -2,12 +2,14 @@
  * ClientBudgetGroupCard Component
  * 
  * Displays shared budget group info for a client with quick add/remove functionality.
+ * Shows shared balance instead of individual balances.
  */
 import { useState } from 'react';
-import { Users, Plus, X, UserPlus, Loader2 } from 'lucide-react';
+import { Users, Plus, X, UserPlus, Loader2, AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ import {
   useClientBudgetGroup, 
   useCreateBudgetGroup 
 } from '@/hooks/useClientBudgetGroups';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { useClients } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
@@ -57,6 +60,7 @@ function useAddBudgetMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({ title: "Člen přidán", description: "Klient byl přidán do skupiny." });
     },
@@ -66,24 +70,37 @@ function useAddBudgetMember() {
   });
 }
 
-// Hook for removing member from group
+// Hook for removing member from group with individual balance reset
 function useRemoveBudgetMember() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (membershipId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ membershipId, clientId }: { membershipId: string; clientId: string }) => {
+      // First remove the member from the group
+      const { error: removeError } = await supabase
         .from("client_budget_members")
         .delete()
         .eq("id", membershipId);
       
-      if (error) throw error;
+      if (removeError) throw removeError;
+
+      // Reset client's individual credit balance to 0
+      const { error: updateError } = await supabase
+        .from("clients")
+        .update({ credit_balance: 0 })
+        .eq("id", clientId);
+      
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast({ title: "Člen odebrán", description: "Klient byl odebrán ze skupiny." });
+      toast({ 
+        title: "Člen odebrán", 
+        description: "Klient byl odebrán ze skupiny. Jeho individuální kredit byl nastaven na 0 Kč." 
+      });
     },
     onError: () => {
       toast({ title: "Chyba", description: "Nepodařilo se odebrat člena.", variant: "destructive" });
@@ -102,11 +119,12 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
   const { data: allClients = [] } = useClients();
   const { data: allGroups = [], isLoading: groupsLoading } = useBudgetGroups();
   const { data: clientGroupData, isLoading: clientGroupLoading } = useClientBudgetGroup(clientId);
+  const { data: sharedBudgetInfo, isLoading: sharedLoading } = useSharedBudgetBalance(clientId);
   const createGroup = useCreateBudgetGroup();
   const addMember = useAddBudgetMember();
   const removeMember = useRemoveBudgetMember();
 
-  const isLoading = groupsLoading || clientGroupLoading;
+  const isLoading = groupsLoading || clientGroupLoading || sharedLoading;
   const clientGroup = clientGroupData?.group;
   const groupMembers = clientGroupData?.members || [];
   
@@ -175,9 +193,9 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
     }
   };
 
-  const handleRemoveMember = async (membershipId: string) => {
+  const handleRemoveMember = async (membershipId: string, memberId: string) => {
     try {
-      await removeMember.mutateAsync(membershipId);
+      await removeMember.mutateAsync({ membershipId, clientId: memberId });
     } catch (error) {
       console.error('Failed to remove member:', error);
     }
@@ -188,7 +206,10 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
     if (!myMembership) return;
     
     try {
-      await removeMember.mutateAsync(myMembership.membershipId);
+      await removeMember.mutateAsync({ 
+        membershipId: myMembership.membershipId, 
+        clientId 
+      });
     } catch (error) {
       console.error('Failed to leave group:', error);
     }
@@ -313,7 +334,11 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
     );
   }
 
-  // Client is in a group - show members
+  // Client is in a group - show members and shared balance
+  const displayBalance = sharedBudgetInfo?.displayBalance ?? 0;
+  const actualBalance = sharedBudgetInfo?.sharedBalance ?? 0;
+  const isExhausted = sharedBudgetInfo?.isExhausted ?? false;
+
   return (
     <div className="glass rounded-2xl p-5 border-l-4 border-l-primary">
       <div className="flex items-center justify-between mb-3">
@@ -325,9 +350,42 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
           </Badge>
         </div>
       </div>
+
+      {/* Shared Balance Display */}
+      <div className={cn(
+        "p-4 rounded-xl mb-4",
+        isExhausted ? "bg-destructive/10 border border-destructive/30" : "bg-primary/10"
+      )}>
+        <div className="flex items-center gap-2 mb-1">
+          <CreditCard className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Sdílený kredit</span>
+        </div>
+        <p className={cn(
+          "text-2xl font-bold",
+          isExhausted ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
+        )}>
+          {displayBalance.toLocaleString('cs-CZ')} Kč
+        </p>
+        {isExhausted && actualBalance < 0 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            (skutečný stav: {actualBalance.toLocaleString('cs-CZ')} Kč)
+          </p>
+        )}
+      </div>
+
+      {/* Credit Exhausted Warning */}
+      {isExhausted && (
+        <Alert variant="destructive" className="mb-4 border-destructive/50 bg-destructive/10">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Kredit je vyčerpaný
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Group members */}
       <div className="space-y-2 mb-4">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Členové skupiny</p>
         {memberClients.map((member) => (
           <div
             key={member.id}
@@ -350,7 +408,7 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => handleRemoveMember(member.membershipId)}
+                onClick={() => handleRemoveMember(member.membershipId, member.id)}
                 disabled={removeMember.isPending}
               >
                 <X className="w-4 h-4" />

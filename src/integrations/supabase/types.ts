@@ -82,6 +82,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          shared_balance: number | null
           updated_at: string
           user_id: string
         }
@@ -89,6 +90,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          shared_balance?: number | null
           updated_at?: string
           user_id: string
         }
@@ -96,6 +98,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          shared_balance?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -350,6 +353,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          group_id: string | null
           id: string
           payment_method: string | null
           product_id: string | null
@@ -364,6 +368,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          group_id?: string | null
           id?: string
           payment_method?: string | null
           product_id?: string | null
@@ -378,6 +383,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          group_id?: string | null
           id?: string
           payment_method?: string | null
           product_id?: string | null
@@ -392,6 +398,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "client_budget_groups"
             referencedColumns: ["id"]
           },
           {
