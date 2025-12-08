@@ -136,12 +136,12 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header with avatar, name, and edit controls */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <ClientAvatar name={client.name} size="xl" />
-          <div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ClientAvatar name={client.name} size="lg" className="sm:w-16 sm:h-16" />
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {isEditMode ? (
                 <FormField
@@ -150,20 +150,20 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                   render={({ field }) => (
                     <Input
                       {...field}
-                      className="text-2xl font-bold h-10 bg-secondary border-border"
+                      className="text-xl sm:text-2xl font-bold h-10 bg-secondary border-border"
                       placeholder="Jméno klienta"
                     />
                   )}
                 />
               ) : (
-                <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
                   {client.name}
                 </h1>
               )}
               <button
                 onClick={() => toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite })}
                 className={cn(
-                  'p-1.5 rounded-lg transition-all',
+                  'p-1.5 rounded-lg transition-all flex-shrink-0',
                   client.is_favorite
                     ? 'text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20'
                     : 'text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10'
@@ -173,7 +173,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                 <Star className={cn('w-5 h-5', client.is_favorite && 'fill-current')} />
               </button>
             </div>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5 sm:mt-1">
               Klient od {format(new Date(client.created_at), 'MMMM yyyy', { locale: cs })}
             </p>
             <div className="mt-2">
@@ -183,39 +183,39 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
         </div>
 
         {/* Edit/Save/Cancel buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:flex-shrink-0">
           {isEditMode ? (
             <>
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial h-11 sm:h-10"
               >
                 <X className="w-4 h-4" />
-                Zrušit
+                <span>Zrušit</span>
               </Button>
               <Button
                 onClick={form.handleSubmit(handleSubmit)}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial h-11 sm:h-10"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Uložit
+                <span>Uložit</span>
               </Button>
             </>
           ) : (
             <Button
               variant="outline"
-              className="gap-2"
+              className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
               onClick={() => setIsEditMode(true)}
             >
               <Edit2 className="w-4 h-4" />
-              Upravit
+              <span>Upravit</span>
             </Button>
           )}
         </div>
@@ -223,9 +223,9 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
 
       {/* Quick Info Cards */}
       <Form {...form}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Email */}
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <Mail className="w-4 h-4" />
               <span className="text-sm">Email</span>
@@ -254,7 +254,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
           </div>
 
           {/* Phone */}
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <Phone className="w-4 h-4" />
               <span className="text-sm">Telefon</span>
@@ -282,7 +282,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
           </div>
 
           {/* Credit */}
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <CreditCard className="w-4 h-4" />
               <span className="text-sm">Kredit</span>
@@ -318,7 +318,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
           </div>
 
           {/* Birth Date */}
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-3 text-muted-foreground mb-2">
               <Cake className="w-4 h-4" />
               <span className="text-sm">Datum narození</span>
