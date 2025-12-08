@@ -129,23 +129,44 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
   };
 
   const handleQuickParse = (value: string) => {
-    // Parse format: "bench press | 3×5 | 80 kg"
-    const parts = value.split('|').map(p => p.trim());
-    if (parts.length >= 2) {
-      form.setValue('exercise_name', parts[0]);
-      setExerciseSearch(parts[0]);
-      
-      const setsReps = parts[1].match(/(\d+)[×x](\d+)/);
-      if (setsReps) {
-        form.setValue('sets', parseInt(setsReps[1]));
-        form.setValue('reps', parseInt(setsReps[2]));
-      }
-      
-      if (parts[2]) {
-        const weight = parts[2].match(/(\d+(?:\.\d+)?)/);
-        if (weight) {
-          form.setValue('weight_kg', parseFloat(weight[1]));
+    // Parse multiple formats:
+    // "Deadlift 5×3 110kg" or "bench press | 3×5 | 80 kg"
+    const trimmed = value.trim();
+    
+    // Try pipe-separated format first
+    if (trimmed.includes('|')) {
+      const parts = trimmed.split('|').map(p => p.trim());
+      if (parts.length >= 2) {
+        form.setValue('exercise_name', parts[0]);
+        setExerciseSearch(parts[0]);
+        
+        const setsReps = parts[1].match(/(\d+)[×x](\d+)/);
+        if (setsReps) {
+          form.setValue('sets', parseInt(setsReps[1]));
+          form.setValue('reps', parseInt(setsReps[2]));
         }
+        
+        if (parts[2]) {
+          const weight = parts[2].match(/(\d+(?:\.\d+)?)/);
+          if (weight) {
+            form.setValue('weight_kg', parseFloat(weight[1]));
+          }
+        }
+      }
+      return;
+    }
+    
+    // Try space-separated format: "Deadlift 5×3 110kg"
+    // Pattern: exercise name, then sets×reps, then optional weight
+    const match = trimmed.match(/^(.+?)\s+(\d+)[×x](\d+)\s*(\d+(?:\.\d+)?)?(?:\s*kg)?$/i);
+    if (match) {
+      const [, exerciseName, sets, reps, weight] = match;
+      form.setValue('exercise_name', exerciseName.trim());
+      setExerciseSearch(exerciseName.trim());
+      form.setValue('sets', parseInt(sets));
+      form.setValue('reps', parseInt(reps));
+      if (weight) {
+        form.setValue('weight_kg', parseFloat(weight));
       }
     }
   };
@@ -196,12 +217,19 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
             {/* Quick parse input */}
             <div className="glass-subtle p-3 rounded-lg">
               <Input
-                placeholder="bench press | 3×5 | 80 kg"
+                placeholder="Deadlift 5×3 110kg nebo bench press | 3×5 | 80 kg"
                 onChange={(e) => handleQuickParse(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = (e.target as HTMLInputElement).value;
+                    handleQuickParse(value);
+                  }
+                }}
                 className="bg-background/50"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Rychlé zadání: název | série×opakování | váha kg
+                Rychlé zadání: "Deadlift 5×3 110kg" nebo "název | série×opakování | váha"
               </p>
             </div>
 
@@ -249,6 +277,21 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
                           setShowExerciseList(true);
                         }}
                         onFocus={() => setShowExerciseList(true)}
+                        onBlur={() => {
+                          // Delay hiding to allow click on options
+                          setTimeout(() => setShowExerciseList(false), 200);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            field.onChange(exerciseSearch);
+                            setShowExerciseList(false);
+                          }
+                          if (e.key === 'Tab') {
+                            field.onChange(exerciseSearch);
+                            setShowExerciseList(false);
+                          }
+                        }}
                         placeholder="Vyhledejte nebo zadejte cvik"
                       />
                       {showExerciseList && exerciseSearch && (

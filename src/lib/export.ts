@@ -424,3 +424,137 @@ function downloadFile(content: string, filename: string, mimeType: string) {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+// ============ PROGRESS EXPORT ============
+
+export interface ProgressExportEntry {
+  id: string;
+  exercise_name: string;
+  date: string;
+  sets: number;
+  reps: number | null;
+  weight_kg: number | null;
+  is_bodyweight: boolean;
+  time_seconds: number | null;
+  tempo: string | null;
+  notes: string | null;
+  is_pr: boolean;
+}
+
+export interface ProgressExportOptions {
+  clientName: string;
+  entries: ProgressExportEntry[];
+}
+
+export function exportProgressToCSV(options: ProgressExportOptions) {
+  const { clientName, entries } = options;
+  
+  const headers = ['Datum', 'Cvik', 'Série', 'Opakování', 'Váha (kg)', 'Čas (s)', 'Tempo', 'PR', 'Poznámka'];
+  
+  const rows = entries.map(e => [
+    format(new Date(e.date), 'd.M.yyyy', { locale: cs }),
+    e.exercise_name,
+    e.sets.toString(),
+    e.reps?.toString() || '-',
+    e.is_bodyweight ? 'vlastní' : (e.weight_kg?.toString() || '-'),
+    e.time_seconds?.toString() || '-',
+    e.tempo || '-',
+    e.is_pr ? 'ANO' : '-',
+    e.notes || ''
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell}"`).join(','))
+    .join('\n');
+
+  downloadFile(csvContent, `progres_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`, 'text/csv;charset=utf-8;');
+}
+
+export function exportProgressToPDF(options: ProgressExportOptions) {
+  const { clientName, entries } = options;
+  const doc = new jsPDF();
+
+  if (entries.length === 0) {
+    doc.setFontSize(14);
+    doc.text('Žádné záznamy k exportu', 14, 20);
+    doc.save(`progres_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    return;
+  }
+
+  // Title & Header
+  doc.setFontSize(20);
+  doc.text(`Tréninkový progres - ${clientName}`, 14, 20);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Vygenerováno: ${format(new Date(), 'd. MMMM yyyy', { locale: cs })}`, 14, 28);
+  doc.text(`Celkem záznamů: ${entries.length}`, 14, 34);
+
+  // PRs count
+  const prsCount = entries.filter(e => e.is_pr).length;
+  doc.text(`Osobní rekordy: ${prsCount}`, 14, 40);
+
+  // Group by exercise
+  const byExercise = entries.reduce((acc, entry) => {
+    if (!acc[entry.exercise_name]) {
+      acc[entry.exercise_name] = [];
+    }
+    acc[entry.exercise_name].push(entry);
+    return acc;
+  }, {} as Record<string, ProgressExportEntry[]>);
+
+  // Summary table
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text('Souhrn cviků', 14, 52);
+
+  const summaryData = Object.entries(byExercise).map(([name, exEntries]) => {
+    const maxWeight = Math.max(...exEntries.filter(e => e.weight_kg).map(e => e.weight_kg!));
+    const hasPR = exEntries.some(e => e.is_pr);
+    return [
+      name,
+      exEntries.length.toString(),
+      maxWeight > 0 ? `${maxWeight} kg` : '-',
+      hasPR ? '🏆' : '-'
+    ];
+  });
+
+  autoTable(doc, {
+    head: [['Cvik', 'Záznamů', 'Max váha', 'PR']],
+    body: summaryData,
+    startY: 58,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [99, 102, 241] },
+  });
+
+  // Full history table
+  const finalY1 = (doc as any).lastAutoTable.finalY || 100;
+  
+  if (finalY1 > 200) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text('Historie výkonů', 14, 20);
+  } else {
+    doc.setFontSize(14);
+    doc.text('Historie výkonů', 14, finalY1 + 15);
+  }
+
+  const historyData = entries.slice(0, 50).map(e => [
+    format(new Date(e.date), 'd.M.yyyy', { locale: cs }),
+    e.exercise_name,
+    `${e.sets}×${e.reps || '-'}`,
+    e.is_bodyweight ? 'vlastní' : (e.weight_kg ? `${e.weight_kg} kg` : '-'),
+    e.is_pr ? '🏆' : '',
+    e.notes ? e.notes.substring(0, 30) : ''
+  ]);
+
+  autoTable(doc, {
+    head: [['Datum', 'Cvik', 'Série×Rep', 'Váha', 'PR', 'Poznámka']],
+    body: historyData,
+    startY: finalY1 > 200 ? 26 : finalY1 + 21,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [34, 197, 94] },
+  });
+
+  doc.save(`progres_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+}

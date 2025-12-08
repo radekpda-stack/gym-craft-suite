@@ -28,13 +28,14 @@ interface ProgressChartProps {
   clientId: string;
   exerciseName: string;
   clientName: string;
+  period?: Period;
 }
 
 type Period = 'week' | 'month' | '3months' | 'year';
 type Metric = 'weight' | 'reps' | 'volume' | 'time';
 
-export function ProgressChart({ clientId, exerciseName, clientName }: ProgressChartProps) {
-  const [period, setPeriod] = useState<Period>('month');
+export function ProgressChart({ clientId, exerciseName, clientName, period: initialPeriod = 'month' }: ProgressChartProps) {
+  const [period, setPeriod] = useState<Period>(initialPeriod);
   const [metric, setMetric] = useState<Metric>('weight');
 
   const { data: entries = [], isLoading } = useExerciseProgress(clientId, exerciseName, period);
