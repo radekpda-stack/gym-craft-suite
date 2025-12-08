@@ -37,6 +37,8 @@ import {
   Sparkles,
   TrendingUp,
   ShoppingBag,
+  Eye,
+  EyeOff,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -74,9 +76,11 @@ interface SortableNavItemProps {
   isActive: boolean;
   collapsed: boolean;
   isEditMode: boolean;
+  isHidden: boolean;
+  onToggleVisibility: () => void;
 }
 
-function SortableNavItem({ item, label, isActive, collapsed, isEditMode }: SortableNavItemProps) {
+function SortableNavItem({ item, label, isActive, collapsed, isEditMode, isHidden, onToggleVisibility }: SortableNavItemProps) {
   const {
     attributes,
     listeners,
@@ -90,7 +94,7 @@ function SortableNavItem({ item, label, isActive, collapsed, isEditMode }: Sorta
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.8 : 1,
+    opacity: isDragging ? 0.8 : isHidden ? 0.4 : 1,
   };
 
   const Icon = item.icon;
@@ -98,23 +102,36 @@ function SortableNavItem({ item, label, isActive, collapsed, isEditMode }: Sorta
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {isEditMode && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground z-10"
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
+        <>
+          <div
+            {...attributes}
+            {...listeners}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground z-10"
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleVisibility();
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10 rounded-md hover:bg-sidebar-accent"
+          >
+            {isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </>
       )}
       <NavLink
         to={item.to}
         className={cn(
           'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group',
-          isEditMode && 'ml-5',
+          isEditMode && 'ml-5 mr-8',
           isActive
             ? 'bg-primary text-primary-foreground shadow-lg glow'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
-          isDragging && 'ring-2 ring-primary'
+          isDragging && 'ring-2 ring-primary',
+          isHidden && 'line-through'
         )}
         onClick={(e) => isEditMode && e.preventDefault()}
       >
@@ -135,7 +152,7 @@ export function Sidebar() {
   const [isEditMode, setIsEditMode] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { preferences, updateSidebarOrder, resetToDefaults } = useLayoutPreferences();
+  const { preferences, updateSidebarOrder, toggleSidebarItemVisibility, resetToDefaults } = useLayoutPreferences();
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
 
@@ -153,10 +170,16 @@ export function Sidebar() {
   const orderedItems = useMemo(() => {
     // Filter out exercises from the order and map to nav items
     const filteredOrder = preferences.sidebarOrder.filter(id => id !== 'exercises');
-    return filteredOrder
+    const items = filteredOrder
       .map(id => navItemsMap[id])
       .filter(Boolean);
-  }, [preferences.sidebarOrder]);
+    
+    // In edit mode, show all items; otherwise filter out hidden items
+    if (isEditMode) {
+      return items;
+    }
+    return items.filter(item => !preferences.hiddenSidebarItems.includes(item.id));
+  }, [preferences.sidebarOrder, preferences.hiddenSidebarItems, isEditMode]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -223,6 +246,7 @@ export function Sidebar() {
             {orderedItems.map((item) => {
               const isActive = location.pathname === item.to || 
                 (item.to !== '/' && location.pathname.startsWith(item.to));
+              const isHidden = preferences.hiddenSidebarItems.includes(item.id);
 
               return (
                 <SortableNavItem
@@ -232,6 +256,8 @@ export function Sidebar() {
                   isActive={isActive}
                   collapsed={collapsed}
                   isEditMode={isEditMode}
+                  isHidden={isHidden}
+                  onToggleVisibility={() => toggleSidebarItemVisibility(item.id)}
                 />
               );
             })}
