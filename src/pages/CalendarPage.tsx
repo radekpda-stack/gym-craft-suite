@@ -10,6 +10,7 @@ import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet'
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { CalendarWeekSkeleton, CalendarMonthSkeleton } from '@/components/skeletons';
 
 type ViewMode = 'day' | 'week' | 'month';
 
@@ -19,8 +20,8 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: sessions = [] } = useTrainingSessions();
-  const { data: clients = [] } = useClients();
+  const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTraining = useCreateTrainingSession();
   const { data: settings } = useAppSettings();
   const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
@@ -137,8 +138,13 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Day View */}
-      {viewMode === 'day' && (
+      {/* Loading State */}
+      {(sessionsLoading || clientsLoading) ? (
+        viewMode === 'month' ? <CalendarMonthSkeleton /> : <CalendarWeekSkeleton />
+      ) : (
+        <>
+          {/* Day View */}
+          {viewMode === 'day' && (
         <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <p className="text-lg font-semibold text-foreground">
@@ -293,6 +299,8 @@ export default function CalendarPage() {
             })}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Legend */}

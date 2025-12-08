@@ -11,6 +11,7 @@ import {
   Users,
   MessageSquare,
 } from 'lucide-react';
+import { TrainingDetailSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { RatingInput } from '@/components/ui/rating-input';
@@ -93,11 +94,7 @@ export default function TrainingDetail() {
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
 
   if (trainingLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <TrainingDetailSkeleton />;
   }
 
   if (!training) {
