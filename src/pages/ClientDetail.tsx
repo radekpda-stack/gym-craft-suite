@@ -6,7 +6,6 @@ import {
   Dumbbell,
   Activity,
   TrendingUp,
-  Loader2,
   Wallet,
   Camera,
   XCircle,
@@ -41,6 +40,7 @@ import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { PDFImportDialog } from '@/components/measurements/PDFImportDialog';
 import { GenderIcon } from '@/components/clients/GenderIcon';
+import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 
 export default function ClientDetail() {
@@ -61,11 +61,7 @@ export default function ClientDetail() {
   }));
 
   if (clientLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ClientDetailSkeleton />;
   }
 
   if (!client) {
