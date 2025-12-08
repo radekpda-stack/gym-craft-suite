@@ -1,66 +1,138 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs`;
-
 export interface PDFTextExtractResult {
   success: boolean;
   text?: string;
   error?: string;
-  pageCount?: number;
 }
 
 /**
- * Extract text content from a PDF file using pdf.js
+ * Extract text content from a PDF file using basic parsing
+ * This is a simple extraction that works for text-based PDFs
  */
 export async function extractTextFromPDF(file: File): Promise<PDFTextExtractResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
     
-    const loadingTask = pdfjsLib.getDocument({
-      data: arrayBuffer,
-      useSystemFonts: true,
-    });
+    // Decode as text
+    const decoder = new TextDecoder('latin1');
+    const rawText = decoder.decode(uint8Array);
     
-    const pdf = await loadingTask.promise;
-    const numPages = pdf.numPages;
+    // Extract text from PDF text objects
     const textParts: string[] = [];
     
-    // Extract text from each page
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      
-      // Combine text items, preserving some structure
-      let lastY: number | null = null;
-      const pageText: string[] = [];
-      
-      for (const item of textContent.items) {
-        if ('str' in item && item.str) {
-          // Check if this is a new line (different Y position)
-          const currentY = 'transform' in item ? item.transform[5] : null;
-          
-          if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 5) {
-            pageText.push('\n');
+    // Pattern 1: Text in parentheses (most common)
+    const textInParens = rawText.match(/\(([^\\)]{2,})\)/g);
+    if (textInParens) {
+      for (const match of textInParens) {
+        const text = match.slice(1, -1)
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/\\t/g, ' ')
+          .replace(/\\\\/g, '\\')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')');
+        
+        // Filter out binary/control characters
+        if (/^[\x20-\x7E\xA0-\xFF\s]+$/.test(text) && text.trim().length > 1) {
+          textParts.push(text);
+        }
+      }
+    }
+    
+    // Pattern 2: Text in angle brackets (hex encoded)
+    const hexText = rawText.match(/<([0-9A-Fa-f]+)>/g);
+    if (hexText) {
+      for (const match of hexText) {
+        const hex = match.slice(1, -1);
+        if (hex.length >= 4 && hex.length % 2 === 0) {
+          let decoded = '';
+          for (let i = 0; i < hex.length; i += 2) {
+            const charCode = parseInt(hex.substr(i, 2), 16);
+            if (charCode >= 32 && charCode <= 126) {
+              decoded += String.fromCharCode(charCode);
+            }
           }
-          
-          pageText.push(item.str);
-          
-          if (currentY !== null) {
-            lastY = currentY;
+          if (decoded.trim().length > 1) {
+            textParts.push(decoded);
           }
         }
       }
-      
-      textParts.push(pageText.join(' '));
     }
     
-    const fullText = textParts.join('\n\n');
+    // Pattern 3: BT...ET text blocks with Tj/TJ operators
+    const textBlocks = rawText.match(/BT[\s\S]*?ET/g);
+    if (textBlocks) {
+      for (const block of textBlocks) {
+        // Extract Tj strings
+        const tjMatches = block.match(/\(([^)]+)\)\s*Tj/g);
+        if (tjMatches) {
+          for (const tj of tjMatches) {
+            const content = tj.match(/\(([^)]+)\)/)?.[1];
+            if (content && content.trim().length > 1) {
+              textParts.push(content);
+            }
+          }
+        }
+        
+        // Extract TJ arrays
+        const tjArrays = block.match(/\[(.*?)\]\s*TJ/g);
+        if (tjArrays) {
+          for (const arr of tjArrays) {
+            const strings = arr.match(/\(([^)]+)\)/g);
+            if (strings) {
+              for (const s of strings) {
+                const content = s.slice(1, -1);
+                if (content.trim()) {
+                  textParts.push(content);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Combine and clean up
+    let fullText = textParts.join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // If we couldn't extract much, try a simpler approach
+    if (fullText.length < 50) {
+      // Look for common patterns in measurement PDFs
+      const patterns = [
+        /(\d+[.,]\d+)\s*kg/gi,
+        /(\d+[.,]\d+)\s*%/gi,
+        /(\d+)\s*kcal/gi,
+        /váha|weight|hmotnost/gi,
+        /tuk|fat/gi,
+        /sval|muscle/gi,
+        /metabol/gi,
+      ];
+      
+      const matches: string[] = [];
+      for (const pattern of patterns) {
+        const found = rawText.match(pattern);
+        if (found) {
+          matches.push(...found);
+        }
+      }
+      
+      if (matches.length > 0) {
+        fullText = matches.join(' ') + ' ' + fullText;
+      }
+    }
+    
+    if (!fullText || fullText.length < 10) {
+      return {
+        success: false,
+        error: 'Nepodařilo se extrahovat text z PDF. Zkontrolujte, že PDF obsahuje text a není pouze naskenovaný obrázek.',
+      };
+    }
     
     return {
       success: true,
       text: fullText,
-      pageCount: numPages,
     };
   } catch (error) {
     console.error('PDF extraction error:', error);
@@ -69,22 +141,4 @@ export async function extractTextFromPDF(file: File): Promise<PDFTextExtractResu
       error: error instanceof Error ? error.message : 'Nepodařilo se přečíst PDF soubor',
     };
   }
-}
-
-/**
- * Extract text from multiple PDF files
- */
-export async function extractTextFromMultiplePDFs(
-  files: File[]
-): Promise<Map<string, PDFTextExtractResult>> {
-  const results = new Map<string, PDFTextExtractResult>();
-  
-  await Promise.all(
-    files.map(async (file) => {
-      const result = await extractTextFromPDF(file);
-      results.set(file.name, result);
-    })
-  );
-  
-  return results;
 }
