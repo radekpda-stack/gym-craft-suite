@@ -27,9 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-time-picker';
 import {
   Collapsible,
   CollapsibleContent,
@@ -303,22 +303,18 @@ export function PeriodizationTimeline({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Začátek</Label>
-                <Input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, start_date: e.target.value })
-                  }
+                <DatePicker
+                  value={formData.start_date || ''}
+                  onChange={(dateStr) => setFormData({ ...formData, start_date: dateStr })}
+                  className="w-full"
                 />
               </div>
               <div>
                 <Label>Konec (volitelné)</Label>
-                <Input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, end_date: e.target.value })
-                  }
+                <DatePicker
+                  value={formData.end_date || ''}
+                  onChange={(dateStr) => setFormData({ ...formData, end_date: dateStr })}
+                  className="w-full"
                 />
               </div>
             </div>

@@ -15,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { DatePicker } from "@/components/ui/date-time-picker";
 import { clientFormSchema, ClientFormValues } from "@/lib/validations/client";
 import { Client } from "@/hooks/useClients";
 
@@ -156,10 +157,10 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
               <FormItem>
                 <FormLabel>Datum narození</FormLabel>
                 <FormControl>
-                  <Input
-                    type="date"
-                    className="bg-secondary border-border"
-                    {...field}
+                  <DatePicker
+                    value={field.value || ''}
+                    onChange={(dateStr) => field.onChange(dateStr)}
+                    className="w-full"
                   />
                 </FormControl>
                 <FormMessage />
