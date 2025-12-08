@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { parseMeasurementPDF, compareMeasurements, type ParsedMeasurementData, type MeasurementComparison } from '@/lib/pdfMeasurementParser';
+import { extractTextFromPDF } from '@/lib/pdfExtractor';
 import { useClients, type Client } from '@/hooks/useClients';
 import { 
   useMeasurements, 
@@ -96,52 +97,13 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
     onOpenChange(false);
   }, [resetState, onOpenChange]);
 
-  // Parse PDF text using browser-based extraction
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          
-          // Convert to text - this is a simple extraction
-          // For better results, we'd need pdf.js or similar
-          const uint8Array = new Uint8Array(arrayBuffer);
-          let text = '';
-          
-          // Try to find text streams in PDF
-          const decoder = new TextDecoder('utf-8', { fatal: false });
-          const rawText = decoder.decode(uint8Array);
-          
-          // Extract readable text from PDF structure
-          const textMatches = rawText.match(/\(([^)]+)\)/g);
-          if (textMatches) {
-            text = textMatches
-              .map(m => m.slice(1, -1))
-              .filter(t => t.length > 1 && !/^[\\\/]/.test(t))
-              .join(' ');
-          }
-          
-          // Also try to extract from stream objects
-          const streamMatches = rawText.match(/stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g);
-          if (streamMatches) {
-            for (const stream of streamMatches) {
-              const content = stream.replace(/stream[\r\n]+/, '').replace(/[\r\n]+endstream/, '');
-              // Try to decode if it looks like text
-              if (/[a-zA-Z]{3,}/.test(content)) {
-                text += ' ' + content;
-              }
-            }
-          }
-          
-          resolve(text.trim() || rawText);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('Nepodařilo se přečíst soubor'));
-      reader.readAsArrayBuffer(file);
-    });
+  // Parse PDF text using pdf.js library
+  const extractText = async (file: File): Promise<string> => {
+    const result = await extractTextFromPDF(file);
+    if (!result.success || !result.text) {
+      throw new Error(result.error || 'Nepodařilo se přečíst PDF');
+    }
+    return result.text;
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +128,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
       ));
 
       try {
-        const text = await extractTextFromPDF(importFile.file);
+        const text = await extractText(importFile.file);
         const result = parseMeasurementPDF(text);
 
         if (result.success && result.data) {
