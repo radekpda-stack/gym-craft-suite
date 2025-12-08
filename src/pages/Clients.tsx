@@ -660,22 +660,47 @@ export default function Clients() {
                     </div>
                     
                     {/* Credit Balance */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className={cn(
-                        "flex items-center gap-1.5 font-semibold",
-                        getCreditColor(client.credit_balance || 0)
-                      )}>
-                        <CreditCard className="w-4 h-4" />
-                        <span>{(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč</span>
-                      </div>
-                      {/* Shared Budget Badge */}
-                      {budgetGroups.some(g => g.members.some(m => m.client_id === client.id)) && (
-                        <Badge variant="outline" className="gap-1 text-xs px-1.5 py-0.5">
-                          <LinkIcon className="w-3 h-3" />
-                          Sdílený
-                        </Badge>
-                      )}
-                    </div>
+                    {(() => {
+                      const clientBudgetGroup = budgetGroups.find(g => g.members.some(m => m.client_id === client.id));
+                      const isShared = !!clientBudgetGroup;
+                      const displayBalance = isShared 
+                        ? Math.max(0, clientBudgetGroup.shared_balance || 0) 
+                        : (client.credit_balance || 0);
+                      const actualBalance = isShared 
+                        ? (clientBudgetGroup.shared_balance || 0)
+                        : (client.credit_balance || 0);
+                      const isExhausted = actualBalance <= 0;
+                      
+                      return (
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <div className={cn(
+                            "flex items-center gap-1.5 font-semibold",
+                            isExhausted ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
+                          )}>
+                            {isShared ? <Users className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                            <span>{displayBalance.toLocaleString('cs-CZ')} Kč</span>
+                          </div>
+                          {/* Shared Budget Badge */}
+                          {isShared && (
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "gap-1 text-xs px-1.5 py-0.5 border-primary/50",
+                                isExhausted && "border-destructive/50 text-destructive"
+                              )}
+                            >
+                              <LinkIcon className="w-3 h-3" />
+                              {clientBudgetGroup.name}
+                            </Badge>
+                          )}
+                          {isExhausted && (
+                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                              Vyčerpáno
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })()}
                     
                     {/* Client Tags */}
                     {clientTags.length > 0 && (
