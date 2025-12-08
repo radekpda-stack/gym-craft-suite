@@ -19,6 +19,7 @@ import CanceledTrainings from "./pages/CanceledTrainings";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Progress from "./pages/Progress";
+import FeedbackPage from "./pages/FeedbackPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/feedback/:token" element={<FeedbackPage />} />
             <Route
               path="/*"
               element={
