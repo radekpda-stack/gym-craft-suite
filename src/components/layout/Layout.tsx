@@ -76,21 +76,21 @@ export function Layout({ children }: LayoutProps) {
         )}
       >
         {/* Top bar with search trigger - Desktop only */}
-        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 lg:px-8 py-3 hidden lg:flex items-center justify-between">
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/30 px-4 lg:px-8 py-3 hidden lg:flex items-center justify-between">
           <Button
             variant="outline"
-            className="w-64 justify-start gap-2 text-muted-foreground glass-subtle border-0"
+            className="w-64 justify-start gap-2 text-muted-foreground"
             onClick={() => setCommandOpen(true)}
           >
             <Search className="w-4 h-4" />
             <span>Hledat...</span>
-            <kbd className="ml-auto px-1.5 py-0.5 bg-secondary rounded text-[10px]">⌘K</kbd>
+            <kbd className="ml-auto px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">⌘K</kbd>
           </Button>
           <KeyboardShortcutsHelp />
         </div>
         
-        {/* Content area - optimized padding for mobile */}
-        <div className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        {/* Content area - optimized padding for all devices */}
+        <div className="px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto">
           {children}
         </div>
       </main>
