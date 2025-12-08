@@ -69,12 +69,14 @@ import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
 import { TrainingTrendChart } from '@/components/dashboard/TrainingTrendChart';
 import { TopClientsTable } from '@/components/dashboard/TopClientsTable';
 import { IncomeChart, IncomePeriod } from '@/components/dashboard/IncomeChart';
+import { ProfitChart, ProfitPeriod } from '@/components/dashboard/ProfitChart';
 import { AIWidget } from '@/components/ai/AIWidget';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 import { DiagnosticFormValues } from '@/components/diagnostics/DiagnosticForm';
 import { cn } from '@/lib/utils';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
+import { useProfitByPeriod } from '@/hooks/useProfitByPeriod';
 import {
   BarChart,
   Bar,
@@ -147,8 +149,10 @@ export default function Dashboard() {
   const [isDiagnosticSheetOpen, setIsDiagnosticSheetOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [incomePeriod, setIncomePeriod] = useState<IncomePeriod>('30days');
+  const [profitPeriod, setProfitPeriod] = useState<ProfitPeriod>('6months');
   
   const { data: incomeData = [], isLoading: incomeLoading } = useIncomeByPeriod(incomePeriod);
+  const { data: profitData = [], isLoading: profitLoading } = useProfitByPeriod(profitPeriod);
 
   const createTraining = useCreateTrainingSession();
   const createMeasurement = useCreateMeasurement();
@@ -325,16 +329,26 @@ export default function Dashboard() {
 
   // Section components
   const renderChartsSection = () => (
-    (dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart) && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {dashboardLayout.showIncomeChart && (
-          <IncomeChart
-            data={incomeData}
-            isLoading={incomeLoading}
-            period={incomePeriod}
-            onPeriodChange={setIncomePeriod}
-          />
-        )}
+    (dashboardLayout.showIncomeChart || dashboardLayout.showMonthlyChart || dashboardLayout.showProfitChart) && (
+      <div className="space-y-4 md:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {dashboardLayout.showIncomeChart && (
+            <IncomeChart
+              data={incomeData}
+              isLoading={incomeLoading}
+              period={incomePeriod}
+              onPeriodChange={setIncomePeriod}
+            />
+          )}
+          {dashboardLayout.showProfitChart && (
+            <ProfitChart
+              data={profitData}
+              isLoading={profitLoading}
+              period={profitPeriod}
+              onPeriodChange={setProfitPeriod}
+            />
+          )}
+        </div>
         {dashboardLayout.showMonthlyChart && (
           <div className="glass rounded-2xl p-4 md:p-6">
             <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
