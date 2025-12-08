@@ -693,6 +693,7 @@ export type Database = {
           mental_state: number | null
           muscle_mass: number | null
           notes: string | null
+          source_file_url: string | null
           thigh_left: number | null
           thigh_right: number | null
           user_id: string | null
@@ -716,6 +717,7 @@ export type Database = {
           mental_state?: number | null
           muscle_mass?: number | null
           notes?: string | null
+          source_file_url?: string | null
           thigh_left?: number | null
           thigh_right?: number | null
           user_id?: string | null
@@ -739,6 +741,7 @@ export type Database = {
           mental_state?: number | null
           muscle_mass?: number | null
           notes?: string | null
+          source_file_url?: string | null
           thigh_left?: number | null
           thigh_right?: number | null
           user_id?: string | null

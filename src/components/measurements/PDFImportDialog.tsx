@@ -289,13 +289,49 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
     ));
   };
 
+  const uploadSourceFile = async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('measurement-files')
+        .upload(fileName, file);
+      
+      if (error) {
+        console.error('File upload error:', error);
+        return null;
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from('measurement-files')
+        .getPublicUrl(data.path);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
   const saveMeasurement = async (importFile: ImportedFile) => {
     if (!importFile.selectedClient || !importFile.editedData) return;
+
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Uživatel není přihlášen');
+    }
 
     const data = importFile.editedData;
     const client = importFile.selectedClient;
     const date = data.date || new Date().toISOString().split('T')[0];
     const fileTypeLabel = importFile.fileType === 'image' ? 'fotografie' : 'PDF';
+
+    // Upload source file
+    const sourceFileUrl = await uploadSourceFile(importFile.file, user.id);
 
     const measurementData = {
       client_id: client.id,
@@ -306,6 +342,7 @@ export function PDFImportDialog({ open, onOpenChange }: PDFImportDialogProps) {
       basal_metabolism: data.basalMetabolism,
       visceral_fat: data.visceralFat,
       notes: `Importováno z ${fileTypeLabel}: ${importFile.file.name}`,
+      source_file_url: sourceFileUrl,
     };
 
     if (importFile.duplicateMeasurement) {
