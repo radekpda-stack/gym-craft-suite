@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Package, ShoppingCart, Plus, Minus, X, Loader2, AlertCircle } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Minus, X, Loader2, AlertCircle, Banknote, CreditCard, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
-import { useCreateTransaction } from '@/hooks/useCreditTransactions';
+import { useCreateTransaction, PaymentMethod } from '@/hooks/useCreditTransactions';
 import { cn } from '@/lib/utils';
 import { featureTracker } from '@/hooks/useFeatureTracking';
 
@@ -20,6 +21,12 @@ interface CartItem {
   quantity: number;
 }
 
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: 'cash', label: 'Hotově', icon: Banknote },
+  { value: 'credit', label: 'Z kreditu', icon: Wallet },
+  { value: 'card', label: 'Kartou', icon: CreditCard },
+];
+
 export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
   const { data: products = [], isLoading: productsLoading } = useProducts(true);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
@@ -30,6 +37,7 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
   const [selectedClient, setSelectedClient] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProductToAdd, setSelectedProductToAdd] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedClientData = clients.find(c => c.id === selectedClient);
@@ -76,6 +84,9 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
     setIsProcessing(true);
     try {
+      // Determine if we should skip credit update (for cash/card payments)
+      const skipCreditUpdate = paymentMethod !== 'credit';
+
       // Create a transaction for each product in cart and deduct stock
       for (const item of cart) {
         const itemTotal = item.product.price * item.quantity;
@@ -85,6 +96,8 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
           type: 'product',
           description: `${item.product.name}${item.quantity > 1 ? ` (${item.quantity}x)` : ''}`,
           product_id: item.product.id,
+          payment_method: paymentMethod,
+          skip_credit_update: skipCreditUpdate,
         });
 
         // Deduct stock for non-service products
@@ -97,7 +110,11 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
         }
       }
 
-      featureTracker.track('product_sale', 'finance', { itemCount: cart.length, totalAmount });
+      featureTracker.track('product_sale', 'finance', { 
+        itemCount: cart.length, 
+        totalAmount, 
+        paymentMethod 
+      });
       resetForm();
       setIsOpen(false);
     } finally {
@@ -109,6 +126,7 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
     setSelectedClient('');
     setCart([]);
     setSelectedProductToAdd('');
+    setPaymentMethod('cash');
   };
 
   const availableProducts = products.filter(
@@ -191,6 +209,52 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
               </span>
             </div>
           )}
+
+          {/* Payment Method Selection */}
+          <div className="space-y-2">
+            <Label>Způsob platby</Label>
+            <RadioGroup 
+              value={paymentMethod} 
+              onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+              className="flex gap-2"
+            >
+              {PAYMENT_METHODS.map((method) => (
+                <div key={method.value} className="flex-1">
+                  <RadioGroupItem
+                    value={method.value}
+                    id={`payment-${method.value}`}
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor={`payment-${method.value}`}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                      "hover:bg-secondary/50",
+                      paymentMethod === method.value 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border"
+                    )}
+                  >
+                    <method.icon className={cn(
+                      "w-5 h-5",
+                      paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    <span className={cn(
+                      "text-xs font-medium",
+                      paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {method.label}
+                    </span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+            {paymentMethod === 'cash' && (
+              <p className="text-xs text-muted-foreground">
+                Platba hotově se neodečte z kreditového účtu klienta
+              </p>
+            )}
+          </div>
 
           {/* Add product */}
           <div>
@@ -295,12 +359,30 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
           {/* Total */}
           {cart.length > 0 && (
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-              <p className="text-sm text-muted-foreground">Celkem k odečtení:</p>
+            <div className={cn(
+              "p-4 rounded-xl border",
+              paymentMethod === 'credit' 
+                ? "bg-primary/10 border-primary/20" 
+                : "bg-success/10 border-success/20"
+            )}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm text-muted-foreground">Celkem:</p>
+                <div className="flex items-center gap-2">
+                  {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.icon && (
+                    (() => {
+                      const Icon = PAYMENT_METHODS.find(m => m.value === paymentMethod)!.icon;
+                      return <Icon className="w-4 h-4 text-muted-foreground" />;
+                    })()
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label}
+                  </span>
+                </div>
+              </div>
               <p className="text-2xl font-bold text-foreground">
                 {totalAmount.toLocaleString('cs-CZ')} Kč
               </p>
-              {selectedClientData && (
+              {selectedClientData && paymentMethod === 'credit' && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Nový zůstatek: {' '}
                   <span className={cn(
@@ -309,6 +391,11 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
                   )}>
                     {((selectedClientData.credit_balance || 0) - totalAmount).toLocaleString('cs-CZ')} Kč
                   </span>
+                </p>
+              )}
+              {paymentMethod !== 'credit' && (
+                <p className="text-xs text-success mt-1">
+                  Kredit klienta nebude ovlivněn
                 </p>
               )}
             </div>
