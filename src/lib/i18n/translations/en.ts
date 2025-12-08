@@ -60,6 +60,7 @@ export const en: TranslationKeys = {
     calendar: 'Calendar',
     canceled: 'Canceled',
     aiAssistant: 'AI Assistant',
+    sales: 'Sales',
     settings: 'Settings',
     collapseMenu: 'Collapse menu',
     editOrder: 'Edit order',

@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Progress from "./pages/Progress";
 import FeedbackPage from "./pages/FeedbackPage";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
                       <Route path="/canceled" element={<CanceledTrainings />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/ai-assistant" element={<AIAssistant />} />
+                      <Route path="/sales" element={<Sales />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Layout>

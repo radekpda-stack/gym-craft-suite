@@ -58,6 +58,7 @@ export const cs = {
     calendar: 'Kalendář',
     canceled: 'Zrušené',
     aiAssistant: 'AI Asistent',
+    sales: 'Prodeje',
     settings: 'Nastavení',
     collapseMenu: 'Sbalit menu',
     editOrder: 'Upravit pořadí',
