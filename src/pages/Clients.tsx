@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
@@ -682,16 +683,33 @@ export default function Clients() {
                           </div>
                           {/* Shared Budget Badge */}
                           {isShared && (
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                "gap-1 text-xs px-1.5 py-0.5 border-primary/50",
-                                isExhausted && "border-destructive/50 text-destructive"
-                              )}
-                            >
-                              <LinkIcon className="w-3 h-3" />
-                              {clientBudgetGroup.name}
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "gap-1 text-xs px-1.5 py-0.5 border-primary/50 cursor-help",
+                                    isExhausted && "border-destructive/50 text-destructive"
+                                  )}
+                                >
+                                  <LinkIcon className="w-3 h-3" />
+                                  {clientBudgetGroup.name}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-medium mb-1">Členové skupiny:</p>
+                                <ul className="text-xs space-y-0.5">
+                                  {clientBudgetGroup.members.map(member => {
+                                    const memberClient = clients.find(c => c.id === member.client_id);
+                                    return (
+                                      <li key={member.client_id}>
+                                        {memberClient?.name || 'Neznámý klient'}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {isExhausted && (
                             <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
