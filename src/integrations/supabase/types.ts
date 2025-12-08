@@ -696,6 +696,7 @@ export type Database = {
           thigh_left: number | null
           thigh_right: number | null
           user_id: string | null
+          visceral_fat: number | null
           waist: number | null
           weight: number | null
         }
@@ -718,6 +719,7 @@ export type Database = {
           thigh_left?: number | null
           thigh_right?: number | null
           user_id?: string | null
+          visceral_fat?: number | null
           waist?: number | null
           weight?: number | null
         }
@@ -740,6 +742,7 @@ export type Database = {
           thigh_left?: number | null
           thigh_right?: number | null
           user_id?: string | null
+          visceral_fat?: number | null
           waist?: number | null
           weight?: number | null
         }
