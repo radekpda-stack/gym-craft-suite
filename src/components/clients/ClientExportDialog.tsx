@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { format as formatDate } from "date-fns";
 import { cs } from "date-fns/locale";
 import * as XLSX from "xlsx";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 interface ClientExportDialogProps {
   clients: Client[];
@@ -71,6 +72,7 @@ export function ClientExportDialog({ clients, genderFilter }: ClientExportDialog
     link.click();
     URL.revokeObjectURL(url);
 
+    featureTracker.track('client_export', 'export', { format: 'csv', count: data.length });
     toast({ title: "Export dokončen", description: `${data.length} klientů exportováno` });
     setOpen(false);
   };
@@ -87,6 +89,7 @@ export function ClientExportDialog({ clients, genderFilter }: ClientExportDialog
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Klienti');
     XLSX.writeFile(workbook, `klienti_${genderFilter}_${formatDate(new Date(), 'yyyy-MM-dd')}.xlsx`);
 
+    featureTracker.track('client_export', 'export', { format: 'xlsx', count: data.length });
     toast({ title: "Export dokončen", description: `${data.length} klientů exportováno` });
     setOpen(false);
   };

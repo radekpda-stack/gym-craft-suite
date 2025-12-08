@@ -9,6 +9,7 @@ import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { cn } from '@/lib/utils';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 interface QuickProductSaleProps {
   collapsed?: boolean;
@@ -96,6 +97,7 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
         }
       }
 
+      featureTracker.track('product_sale', 'finance', { itemCount: cart.length, totalAmount });
       resetForm();
       setIsOpen(false);
     } finally {
