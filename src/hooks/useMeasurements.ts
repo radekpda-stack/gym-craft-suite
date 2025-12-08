@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export interface Measurement {
   id: string;
@@ -114,6 +115,7 @@ export function useCreateMeasurement() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
       queryClient.invalidateQueries({ queryKey: ["measurements", variables.client_id] });
+      featureTracker.track('measurement_create', 'measurements');
       toast({
         title: "Měření uloženo",
         description: "Nové měření bylo úspěšně přidáno.",
@@ -167,6 +169,7 @@ export function useUpdateMeasurement() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
       queryClient.invalidateQueries({ queryKey: ["measurements", variables.client_id] });
+      featureTracker.track('measurement_update', 'measurements');
       toast({
         title: "Měření aktualizováno",
         description: "Měření bylo úspěšně upraveno.",
@@ -197,6 +200,7 @@ export function useDeleteMeasurement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      featureTracker.track('measurement_delete', 'measurements');
       toast({
         title: "Měření smazáno",
         description: "Měření bylo úspěšně odstraněno.",
