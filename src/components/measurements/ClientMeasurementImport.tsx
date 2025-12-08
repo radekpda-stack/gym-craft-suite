@@ -224,8 +224,9 @@ export function ClientMeasurementImport({
         weight: editedData.weight,
         body_fat_percentage: editedData.bodyFatPercentage,
         muscle_mass: editedData.muscleMass,
-        basal_metabolism: editedData.basalMetabolism,
-        visceral_fat: editedData.visceralFat,
+        // basal_metabolism and visceral_fat are integers in the database
+        basal_metabolism: editedData.basalMetabolism ? Math.round(editedData.basalMetabolism) : undefined,
+        visceral_fat: editedData.visceralFat ? Math.round(editedData.visceralFat) : undefined,
         notes: `Importováno z ${fileTypeLabel}: ${file.name}`,
         source_file_url: sourceFileUrl,
       };
