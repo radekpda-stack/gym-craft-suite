@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCard';
+import { FeedbackHistoryList } from '@/components/feedback/FeedbackHistoryList';
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
@@ -489,6 +490,9 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
             </p>
           )}
         </div>
+
+        {/* Feedback History Section */}
+        <FeedbackHistoryList clientId={client.id} />
       </Form>
     </div>
   );
