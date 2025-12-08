@@ -265,10 +265,10 @@ export function TrainingDetailView({
           </div>
 
           {/* Duration */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">Délka tréninku</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-2">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">Délka tréninku</span>
             </div>
             {isEditMode ? (
               <FormField
@@ -303,10 +303,10 @@ export function TrainingDetailView({
           </div>
 
           {/* Participants */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <Users className="w-4 h-4" />
-              <span className="text-sm">Počet účastníků</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-2">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">Počet účastníků</span>
             </div>
             {isEditMode ? (
               <FormField
@@ -343,10 +343,10 @@ export function TrainingDetailView({
           </div>
 
           {/* Rating */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <Dumbbell className="w-4 h-4" />
-              <span className="text-sm">Hodnocení</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-2">
+              <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">Hodnocení</span>
             </div>
             {isEditMode ? (
               <FormField
@@ -372,12 +372,12 @@ export function TrainingDetailView({
         </div>
 
         {/* Status & Tags */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {/* Status */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-3">
-              <Dumbbell className="w-4 h-4" />
-              <span className="text-sm font-medium">Stav tréninku</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-3">
+              <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Stav tréninku</span>
             </div>
             {isEditMode ? (
               <FormField
@@ -417,10 +417,10 @@ export function TrainingDetailView({
           </div>
 
           {/* Tags */}
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-3">
-              <FileText className="w-4 h-4" />
-              <span className="text-sm font-medium">Tagy</span>
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-3">
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Tagy</span>
             </div>
             {isEditMode ? (
               <TrainingTagsSelector
@@ -437,8 +437,8 @@ export function TrainingDetailView({
         </div>
 
         {/* Notes Section */}
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-3">Poznámky</h3>
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3">Poznámky</h3>
           {isEditMode ? (
             <FormField
               control={form.control}

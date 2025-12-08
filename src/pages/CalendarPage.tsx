@@ -90,7 +90,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -137,7 +137,7 @@ export default function CalendarPage() {
 
       {/* Day View */}
       {viewMode === 'day' && (
-        <div className="glass rounded-2xl overflow-hidden">
+        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <p className="text-lg font-semibold text-foreground">
               {format(currentDate, 'EEEE d. MMMM', { locale: cs })}
@@ -176,7 +176,7 @@ export default function CalendarPage() {
 
       {/* Week View */}
       {viewMode === 'week' && (
-        <div className="glass rounded-2xl overflow-hidden">
+        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
           <div className="grid grid-cols-8 border-b border-border/50">
             <div className="p-4 text-center text-sm text-muted-foreground">Čas</div>
             {weekDays.map((day) => (
@@ -243,7 +243,7 @@ export default function CalendarPage() {
 
       {/* Month View */}
       {viewMode === 'month' && (
-        <div className="glass rounded-2xl overflow-hidden">
+        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
           <div className="grid grid-cols-7 border-b border-border/50">
             {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((day) => (
               <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground">

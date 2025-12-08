@@ -118,8 +118,8 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
   return (
     <div className="space-y-6">
       {/* Credit Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass rounded-2xl p-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-3 text-muted-foreground mb-2">
             <CreditCard className="w-4 h-4" />
             <span className="text-sm">Aktuální kredit</span>
@@ -131,7 +131,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             {currentBalance.toLocaleString('cs-CZ')} Kč
           </p>
         </div>
-        <div className="glass rounded-2xl p-5">
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-3 text-muted-foreground mb-2">
             <Dumbbell className="w-4 h-4" />
             <span className="text-sm">Zbývající tréninky</span>
@@ -143,7 +143,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             při ceně {trainingPrices["1"]} Kč/trénink
           </p>
         </div>
-        <div className="glass rounded-2xl p-5">
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-3 text-muted-foreground mb-2">
             <Package className="w-4 h-4" />
             <span className="text-sm">Ceny tréninků</span>
@@ -314,8 +314,8 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
       </div>
 
       {/* Transaction History */}
-      <div className="glass rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <h3 className="text-lg font-semibold text-foreground">
             Historie transakcí
           </h3>

@@ -266,7 +266,7 @@ export default function Settings() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-4xl">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in max-w-4xl">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground tracking-tight">
@@ -278,9 +278,9 @@ export default function Settings() {
       </div>
 
       {/* Settings Sections */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {settingsSections.map((section) => (
-          <div key={section.title} className="glass rounded-2xl p-6">
+          <div key={section.title} className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <div className="flex items-start gap-4 mb-6">
               <div className="p-3 rounded-xl bg-primary/10 text-primary">
                 <section.icon className="w-6 h-6" />

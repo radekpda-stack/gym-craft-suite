@@ -178,7 +178,7 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -387,7 +387,7 @@ export default function Clients() {
           <Button
             variant={selectedGoal === null && !lowCreditFilter && !selectedTagId ? 'default' : 'outline'}
             onClick={clearAllFilters}
-            className="rounded-xl"
+            className="rounded-full h-9 px-4 touch-target flex-shrink-0"
           >
             Všichni
           </Button>
@@ -396,7 +396,7 @@ export default function Clients() {
               key={goal}
               variant={selectedGoal === goal ? 'default' : 'outline'}
               onClick={() => setSelectedGoal(goal)}
-              className="rounded-xl"
+              className="rounded-full h-9 px-4 touch-target flex-shrink-0"
             >
               {goal}
             </Button>
