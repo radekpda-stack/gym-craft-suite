@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -14,6 +15,9 @@ import {
   MessageSquare,
   BarChart3,
   Flame,
+  Scale,
+  FileUp,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +26,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
+import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
 import { ClientMediaTab } from '@/components/media/ClientMediaTab';
@@ -31,13 +36,20 @@ import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { FeedbackStatistics } from '@/components/feedback/FeedbackStatistics';
 import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { TrainingHistoryTab } from '@/components/training/TrainingHistoryTab';
+import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
+import { PDFImportDialog } from '@/components/measurements/PDFImportDialog';
 import { cn } from '@/lib/utils';
 
 export default function ClientDetail() {
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: allSessions = [] } = useTrainingSessions(id);
+  const { data: measurements = [] } = useMeasurements(id);
   const updateClient = useUpdateClient();
+  const createMeasurement = useCreateMeasurement();
+  
+  const [isCreateMeasurementOpen, setIsCreateMeasurementOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Cast sessions to proper type
   const clientSessions = allSessions.map(s => ({
@@ -174,6 +186,13 @@ export default function ClientDetail() {
             >
               <MessageSquare className="w-4 h-4 mr-1 sm:mr-2" />
               Feedback
+            </TabsTrigger>
+            <TabsTrigger
+              value="measurements"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 sm:px-4 text-sm whitespace-nowrap"
+            >
+              <Scale className="w-4 h-4 mr-1 sm:mr-2" />
+              Měření ({measurements.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -357,7 +376,124 @@ export default function ClientDetail() {
         <TabsContent value="feedback" className="space-y-6">
           <FeedbackStatistics clientId={client.id} />
         </TabsContent>
+
+        <TabsContent value="measurements" className="space-y-6">
+          {/* Actions */}
+          <div className="flex gap-3 flex-wrap">
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => setIsImportOpen(true)}
+            >
+              <FileUp className="w-4 h-4" />
+              Import měření (PDF / Foto)
+            </Button>
+            <Button 
+              className="gap-2"
+              onClick={() => setIsCreateMeasurementOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+              Nové měření
+            </Button>
+          </div>
+
+          {/* Measurements List */}
+          {measurements.length > 0 ? (
+            <div className="space-y-3">
+              {measurements.map((measurement) => (
+                <div
+                  key={measurement.id}
+                  className="glass rounded-xl p-4 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {format(new Date(measurement.date), 'd. MMMM yyyy', { locale: cs })}
+                      </p>
+                      {measurement.notes && (
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {measurement.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-6 text-sm">
+                      {measurement.weight && (
+                        <div className="text-right">
+                          <p className="text-muted-foreground">Váha</p>
+                          <p className="font-semibold text-foreground">{measurement.weight} kg</p>
+                        </div>
+                      )}
+                      {measurement.body_fat_percentage && (
+                        <div className="text-right">
+                          <p className="text-muted-foreground">Tuk</p>
+                          <p className="font-semibold text-foreground">{measurement.body_fat_percentage}%</p>
+                        </div>
+                      )}
+                      {measurement.muscle_mass && (
+                        <div className="text-right">
+                          <p className="text-muted-foreground">Svaly</p>
+                          <p className="font-semibold text-foreground">{measurement.muscle_mass} kg</p>
+                        </div>
+                      )}
+                      {measurement.source_file_url && (
+                        <a 
+                          href={measurement.source_file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          <FileUp className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass rounded-2xl p-12 text-center">
+              <Scale className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground">
+                Zatím žádná měření
+              </h3>
+              <p className="text-muted-foreground mt-1">
+                Přidejte první měření pro tohoto klienta
+              </p>
+              <div className="flex gap-3 justify-center mt-4">
+                <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Import
+                </Button>
+                <Button onClick={() => setIsCreateMeasurementOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nové měření
+                </Button>
+              </div>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Measurement Dialogs */}
+      <CreateMeasurementSheet
+        open={isCreateMeasurementOpen}
+        onOpenChange={setIsCreateMeasurementOpen}
+        onSubmit={async (data) => {
+          await createMeasurement.mutateAsync({
+            ...data,
+            client_id: data.client_id || client?.id || '',
+          });
+          setIsCreateMeasurementOpen(false);
+        }}
+        isLoading={createMeasurement.isPending}
+        clients={client ? [client] : []}
+        defaultClientId={client?.id}
+      />
+
+      <PDFImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+      />
     </div>
   );
 }
