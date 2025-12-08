@@ -97,10 +97,12 @@ export function ExercisesManagement() {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+      secondary_muscle_groups: [] as string[],
       equipment: formData.equipment
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+      training_type: [] as string[],
     };
 
     if (editingExercise) {

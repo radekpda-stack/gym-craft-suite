@@ -9,7 +9,9 @@ export interface Exercise {
   subcategory: string | null;
   description: string | null;
   muscle_groups: string[];
+  secondary_muscle_groups: string[];
   equipment: string[];
+  training_type: string[];
   user_id: string | null;
   created_at: string;
   updated_at: string;
