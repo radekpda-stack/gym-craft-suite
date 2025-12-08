@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Dumbbell, Loader2, Filter } from 'lucide-react';
+import { Search, Plus, Dumbbell } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { SessionCard } from '@/components/ui/session-card';
+import { TrainingListSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 
 const statusLabels = {
@@ -168,9 +169,7 @@ export default function Trainings() {
 
       {/* Sessions List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <TrainingListSkeleton />
       ) : (
         <div className="space-y-3">
           {filteredSessions.map((session, index) => {
