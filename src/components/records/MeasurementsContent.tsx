@@ -191,9 +191,9 @@ export default function MeasurementsContent() {
 
       {/* Client & Time Selection */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+        <Select value={effectiveClientId} onValueChange={setSelectedClientId}>
           <SelectTrigger className="w-full sm:w-64 h-12 bg-secondary border-border rounded-xl">
-            <SelectValue />
+            <SelectValue placeholder="Vyberte klienta" />
           </SelectTrigger>
           <SelectContent>
             {clients.map((client) => (
