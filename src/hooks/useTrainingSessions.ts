@@ -307,66 +307,70 @@ export function useUpdateTrainingSession() {
       let price = 0;
       let newBalance: number | null = null;
       let clientId: string | null = null;
+      let shouldSyncWorkout = false;
 
-      // If status is changing to "completed" from another status, deduct credit
-      if (
-        oldTraining && 
-        oldTraining.status !== "completed" && 
-        input.status === "completed" && 
-        trainingPrices
-      ) {
+      // If status is changing to "completed" from another status
+      if (oldTraining && oldTraining.status !== "completed" && input.status === "completed") {
         clientId = oldTraining.client_id;
-        const participantCount = input.participant_count || oldTraining.participant_count || 1;
+        shouldSyncWorkout = true;
         
-        if (participantCount >= 3) {
-          price = trainingPrices["3"];
-        } else if (participantCount === 2) {
-          price = trainingPrices["2"];
-        } else {
-          price = trainingPrices["1"];
-        }
-
-        // Create credit transaction
-        const { error: transactionError } = await supabase
-          .from("credit_transactions")
-          .insert({
-            client_id: oldTraining.client_id,
-            amount: -price,
-            type: "training",
-            description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
-            training_session_id: id,
-            user_id: user.id,
-          });
-
-        if (transactionError) {
-          console.error("Error creating credit transaction:", transactionError);
-          throw transactionError;
-        }
-
-        // Update client's credit balance
-        const { data: client } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", oldTraining.client_id)
-          .single();
-
-        if (client) {
-          newBalance = (client.credit_balance || 0) - price;
-          const { error: updateError } = await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", oldTraining.client_id);
-            
-          if (updateError) {
-            console.error("Error updating client balance:", updateError);
-            throw updateError;
-          }
+        // Only deduct credit if trainingPrices provided (credit payment)
+        if (trainingPrices) {
+          const participantCount = input.participant_count || oldTraining.participant_count || 1;
           
-          creditDeducted = true;
+          if (participantCount >= 3) {
+            price = trainingPrices["3"];
+          } else if (participantCount === 2) {
+            price = trainingPrices["2"];
+          } else {
+            price = trainingPrices["1"];
+          }
+
+          // Create credit transaction
+          const { error: transactionError } = await supabase
+            .from("credit_transactions")
+            .insert({
+              client_id: oldTraining.client_id,
+              amount: -price,
+              type: "training",
+              description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+              training_session_id: id,
+              user_id: user.id,
+            });
+
+          if (transactionError) {
+            console.error("Error creating credit transaction:", transactionError);
+            throw transactionError;
+          }
+
+          // Update client's credit balance
+          const { data: client } = await supabase
+            .from("clients")
+            .select("credit_balance")
+            .eq("id", oldTraining.client_id)
+            .single();
+
+          if (client) {
+            newBalance = (client.credit_balance || 0) - price;
+            const { error: updateError } = await supabase
+              .from("clients")
+              .update({ credit_balance: newBalance })
+              .eq("id", oldTraining.client_id);
+              
+            if (updateError) {
+              console.error("Error updating client balance:", updateError);
+              throw updateError;
+            }
+            
+            creditDeducted = true;
+          }
         }
+        
+        // Auto-sync workout entries to exercise_entries when training is completed
+        await syncWorkoutToExerciseEntries(id, oldTraining.client_id, data.date, user.id);
       }
 
-      return { data, creditDeducted, price, newBalance, clientId };
+      return { data, creditDeducted, price, newBalance, clientId, shouldSyncWorkout };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
@@ -377,6 +381,11 @@ export function useUpdateTrainingSession() {
         queryClient.invalidateQueries({ queryKey: ["training_sessions", result.clientId] });
         queryClient.invalidateQueries({ queryKey: ["credit_transactions", result.clientId] });
         queryClient.invalidateQueries({ queryKey: ["client", result.clientId] });
+      }
+
+      // Invalidate exercise entries if workout was synced
+      if (result.shouldSyncWorkout) {
+        queryClient.invalidateQueries({ queryKey: ["exercise-entries"] });
       }
       
       featureTracker.track(result.creditDeducted ? 'training_complete' : 'training_update', 'trainings');
@@ -651,10 +660,13 @@ export function useCompleteTrainingSession() {
         price = trainingPrices["1"];
       }
 
-      // Update training status to completed
+      // Update training status to completed with paid_credit payment status
       const updateData: Record<string, any> = {
         status: "completed",
         participant_count,
+        payment_status: "paid_credit", // Default to paid_credit when completing with credit deduction
+        final_price: price,
+        payment_method: "credit",
       };
       if (subjective_rating !== undefined) {
         updateData.subjective_rating = subjective_rating;
@@ -707,6 +719,9 @@ export function useCompleteTrainingSession() {
       // Sync credit across budget group members
       await syncBudgetGroupCredit(client_id, newBalance);
 
+      // Auto-sync workout entries to exercise_entries
+      await syncWorkoutToExerciseEntries(id, client_id, training.date, user.id);
+
       return { training, price, newBalance };
     },
     onSuccess: (result, variables) => {
@@ -718,6 +733,7 @@ export function useCompleteTrainingSession() {
       queryClient.invalidateQueries({ queryKey: ["client", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise-entries"] });
       
       toast({
         title: "Trénink dokončen",
@@ -733,4 +749,120 @@ export function useCompleteTrainingSession() {
       });
     },
   });
+}
+
+/**
+ * Auto-sync workout_entries to exercise_entries when training is completed
+ */
+async function syncWorkoutToExerciseEntries(
+  trainingSessionId: string,
+  clientId: string,
+  trainingDate: string,
+  userId: string
+) {
+  try {
+    // Get all workout entries for this training
+    const { data: workoutEntries, error: fetchError } = await supabase
+      .from('workout_entries')
+      .select('*')
+      .eq('training_session_id', trainingSessionId);
+
+    if (fetchError) {
+      console.error('Error fetching workout entries for sync:', fetchError);
+      return;
+    }
+    
+    if (!workoutEntries || workoutEntries.length === 0) return;
+
+    const exerciseDate = trainingDate.split('T')[0];
+
+    // Group by exercise
+    const exerciseGroups = workoutEntries.reduce((acc, entry) => {
+      const key = `${entry.exercise_name}|${entry.exercise_id || 'null'}`;
+      if (!acc[key]) {
+        acc[key] = {
+          exercise_id: entry.exercise_id,
+          exercise_name: entry.exercise_name,
+          entries: [],
+        };
+      }
+      acc[key].entries.push(entry);
+      return acc;
+    }, {} as Record<string, { exercise_id: string | null; exercise_name: string; entries: any[] }>);
+
+    // For each exercise, find the best set and upsert to exercise_entries
+    for (const group of Object.values(exerciseGroups)) {
+      // Find best set (highest weight × reps)
+      let bestSet = group.entries[0];
+      let bestVolume = (bestSet.weight_kg || 0) * (bestSet.reps || 0);
+
+      for (const entry of group.entries) {
+        const volume = (entry.weight_kg || 0) * (entry.reps || 0);
+        if (volume > bestVolume) {
+          bestSet = entry;
+          bestVolume = volume;
+        }
+      }
+
+      // Check if entry already exists for this exercise and date
+      const { data: existingEntry } = await supabase
+        .from('exercise_entries')
+        .select('id, weight_kg')
+        .eq('client_id', clientId)
+        .eq('exercise_name', group.exercise_name)
+        .eq('date', exerciseDate)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Check if this is a PR (compare against all previous records)
+      const { data: previousBest } = await supabase
+        .from('exercise_entries')
+        .select('weight_kg')
+        .eq('client_id', clientId)
+        .eq('exercise_name', group.exercise_name)
+        .eq('user_id', userId)
+        .neq('date', exerciseDate)
+        .order('weight_kg', { ascending: false, nullsFirst: false })
+        .limit(1);
+
+      const isPR = !previousBest || previousBest.length === 0 || 
+        (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
+
+      const entryData = {
+        client_id: clientId,
+        exercise_id: group.exercise_id,
+        exercise_name: group.exercise_name,
+        sets: group.entries.length,
+        reps: bestSet.reps,
+        weight_kg: bestSet.weight_kg,
+        is_pr: isPR,
+        date: exerciseDate,
+        user_id: userId,
+        notes: bestSet.notes || '',
+      };
+
+      if (existingEntry) {
+        // Update existing entry (merge)
+        const { error: updateError } = await supabase
+          .from('exercise_entries')
+          .update(entryData)
+          .eq('id', existingEntry.id);
+
+        if (updateError) {
+          console.error('Error updating exercise entry:', updateError);
+        }
+      } else {
+        // Insert new entry
+        const { error: insertError } = await supabase
+          .from('exercise_entries')
+          .insert(entryData);
+
+        if (insertError) {
+          console.error('Error inserting exercise entry:', insertError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing workout entries:', error);
+  }
 }
