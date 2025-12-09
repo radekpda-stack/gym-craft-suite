@@ -15,6 +15,7 @@ interface CreateTrainingSheetProps {
   isLoading?: boolean;
   clients: Client[];
   defaultClientId?: string;
+  defaultDate?: string;
 }
 
 export function CreateTrainingSheet({
@@ -24,7 +25,18 @@ export function CreateTrainingSheet({
   isLoading,
   clients,
   defaultClientId,
+  defaultDate,
 }: CreateTrainingSheetProps) {
+  const defaultValues: Partial<TrainingFormValues> = {};
+  
+  if (defaultClientId) {
+    defaultValues.client_id = defaultClientId;
+  }
+  
+  if (defaultDate) {
+    defaultValues.date = defaultDate;
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -36,10 +48,11 @@ export function CreateTrainingSheet({
         </SheetHeader>
         <div className="mt-6">
           <TrainingForm
+            key={defaultDate || 'new'}
             onSubmit={onSubmit}
             isLoading={isLoading}
             clients={clients}
-            defaultValues={defaultClientId ? { client_id: defaultClientId } : undefined}
+            defaultValues={Object.keys(defaultValues).length > 0 ? defaultValues : undefined}
             submitLabel="Vytvořit trénink"
           />
         </div>

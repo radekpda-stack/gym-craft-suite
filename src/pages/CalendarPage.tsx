@@ -19,6 +19,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState<string | null>(null);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
@@ -90,6 +91,34 @@ export default function CalendarPage() {
       trainingPrices,
     });
     setIsCreateOpen(false);
+    setSelectedDateTime(null);
+  };
+
+  const handleTimeSlotClick = (date: Date, hour: number) => {
+    const dateTime = new Date(date);
+    dateTime.setHours(hour, 0, 0, 0);
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+    setSelectedDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+    setIsCreateOpen(true);
+  };
+
+  const handleDayClick = (date: Date) => {
+    const dateTime = new Date(date);
+    dateTime.setHours(9, 0, 0, 0); // Default to 9:00 for month view
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    setSelectedDateTime(`${year}-${month}-${day}T09:00`);
+    setIsCreateOpen(true);
+  };
+
+  const handleOpenCreate = () => {
+    setSelectedDateTime(null);
+    setIsCreateOpen(true);
   };
 
   return (
@@ -131,7 +160,7 @@ export default function CalendarPage() {
             </Button>
           </div>
 
-          <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
+          <Button className="gap-2" onClick={handleOpenCreate}>
             <Plus className="w-4 h-4" />
             Nový trénink
           </Button>
@@ -145,161 +174,181 @@ export default function CalendarPage() {
         <>
           {/* Day View */}
           {viewMode === 'day' && (
-        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-border/50">
-            <p className="text-lg font-semibold text-foreground">
-              {format(currentDate, 'EEEE d. MMMM', { locale: cs })}
-            </p>
-          </div>
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
-            {hours.map((hour) => {
-              const dayEvents = getEventsForDay(currentDate).filter(
-                (event) => new Date(event.date).getHours() === hour
-              );
-              return (
-                <div key={hour} className="flex border-b border-border/30">
-                  <div className="w-20 p-3 text-sm text-muted-foreground border-r border-border/30 flex-shrink-0">
-                    {hour}:00
-                  </div>
-                  <div className="flex-1 min-h-[70px] p-2 relative">
-                    {dayEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className="glass-subtle rounded-xl p-3 mb-1 cursor-pointer hover:bg-secondary/60 transition-all"
-                        style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
-                      >
-                        <p className="font-medium text-foreground">{getClientName(event.client_id)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(event.date), 'HH:mm')} - {event.duration} min
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Week View */}
-      {viewMode === 'week' && (
-        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-8 border-b border-border/50">
-            <div className="p-4 text-center text-sm text-muted-foreground">Čas</div>
-            {weekDays.map((day) => (
-              <div
-                key={day.toISOString()}
-                className={cn(
-                  'p-4 text-center border-l border-border/30',
-                  isSameDay(day, new Date()) && 'bg-primary/5'
-                )}
-              >
-                <p className="text-sm text-muted-foreground">{format(day, 'EEE', { locale: cs })}</p>
-                <p
-                  className={cn(
-                    'text-2xl font-bold mt-1',
-                    isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
-                  )}
-                >
-                  {format(day, 'd')}
+            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-border/50">
+                <p className="text-lg font-semibold text-foreground">
+                  {format(currentDate, 'EEEE d. MMMM', { locale: cs })}
                 </p>
               </div>
-            ))}
-          </div>
-
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
-            {hours.map((hour) => (
-              <div key={hour} className="grid grid-cols-8 border-b border-border/30">
-                <div className="p-2 text-center text-sm text-muted-foreground border-r border-border/30">
-                  {hour}:00
-                </div>
-                {weekDays.map((day) => {
-                  const dayEvents = getEventsForDay(day).filter(
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+                {hours.map((hour) => {
+                  const dayEvents = getEventsForDay(currentDate).filter(
                     (event) => new Date(event.date).getHours() === hour
                   );
                   return (
-                    <div
-                      key={`${day.toISOString()}-${hour}`}
-                      className={cn(
-                        'min-h-[60px] p-1 border-l border-border/30 relative',
-                        isSameDay(day, new Date()) && 'bg-primary/5'
-                      )}
-                    >
-                      {dayEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className="absolute inset-x-1 glass-subtle rounded-lg p-2 text-xs cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:z-10"
-                          style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
-                        >
-                          <p className="font-medium truncate text-foreground">
-                            {getClientName(event.client_id)}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5">
-                            {format(new Date(event.date), 'HH:mm')} - {event.duration}min
-                          </p>
-                        </div>
-                      ))}
+                    <div key={hour} className="flex border-b border-border/30">
+                      <div className="w-20 p-3 text-sm text-muted-foreground border-r border-border/30 flex-shrink-0">
+                        {hour}:00
+                      </div>
+                      <div 
+                        className="flex-1 min-h-[70px] p-2 relative cursor-pointer hover:bg-primary/5 transition-colors"
+                        onClick={() => dayEvents.length === 0 && handleTimeSlotClick(currentDate, hour)}
+                      >
+                        {dayEvents.length === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <Plus className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        {dayEvents.map((event) => (
+                          <div
+                            key={event.id}
+                            className="glass-subtle rounded-xl p-3 mb-1 cursor-pointer hover:bg-secondary/60 transition-all"
+                            style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <p className="font-medium text-foreground">{getClientName(event.client_id)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(event.date), 'HH:mm')} - {event.duration} min
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Month View */}
-      {viewMode === 'month' && (
-        <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-border/50">
-            {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((day) => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7">
-            {paddedDays.map((day, index) => {
-              const dayEvents = getEventsForDay(day);
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              return (
-                <div
-                  key={index}
-                  className={cn(
-                    'min-h-[100px] p-2 border-b border-r border-border/30',
-                    !isCurrentMonth && 'opacity-40',
-                    isSameDay(day, new Date()) && 'bg-primary/5'
-                  )}
-                >
-                  <p
+          {/* Week View */}
+          {viewMode === 'week' && (
+            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-8 border-b border-border/50">
+                <div className="p-4 text-center text-sm text-muted-foreground">Čas</div>
+                {weekDays.map((day) => (
+                  <div
+                    key={day.toISOString()}
                     className={cn(
-                      'text-sm font-medium mb-1',
-                      isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
+                      'p-4 text-center border-l border-border/30',
+                      isSameDay(day, new Date()) && 'bg-primary/5'
                     )}
                   >
-                    {format(day, 'd')}
-                  </p>
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 3).map((event) => (
-                      <div
-                        key={event.id}
-                        className="text-xs p-1 rounded glass-subtle truncate cursor-pointer hover:bg-secondary/60"
-                        style={{ borderLeft: `2px solid ${getStatusColor(event.status)}` }}
-                      >
-                        {getClientName(event.client_id)}
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <p className="text-xs text-muted-foreground">+{dayEvents.length - 3} dalších</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">{format(day, 'EEE', { locale: cs })}</p>
+                    <p
+                      className={cn(
+                        'text-2xl font-bold mt-1',
+                        isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
+                      )}
+                    >
+                      {format(day, 'd')}
+                    </p>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                ))}
+              </div>
+
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+                {hours.map((hour) => (
+                  <div key={hour} className="grid grid-cols-8 border-b border-border/30">
+                    <div className="p-2 text-center text-sm text-muted-foreground border-r border-border/30">
+                      {hour}:00
+                    </div>
+                    {weekDays.map((day) => {
+                      const dayEvents = getEventsForDay(day).filter(
+                        (event) => new Date(event.date).getHours() === hour
+                      );
+                      return (
+                        <div
+                          key={`${day.toISOString()}-${hour}`}
+                          className={cn(
+                            'min-h-[60px] p-1 border-l border-border/30 relative cursor-pointer hover:bg-primary/5 transition-colors group',
+                            isSameDay(day, new Date()) && 'bg-primary/5'
+                          )}
+                          onClick={() => dayEvents.length === 0 && handleTimeSlotClick(day, hour)}
+                        >
+                          {dayEvents.length === 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Plus className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          {dayEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className="absolute inset-x-1 glass-subtle rounded-lg p-2 text-xs cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:z-10"
+                              style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <p className="font-medium truncate text-foreground">
+                                {getClientName(event.client_id)}
+                              </p>
+                              <p className="text-muted-foreground mt-0.5">
+                                {format(new Date(event.date), 'HH:mm')} - {event.duration}min
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Month View */}
+          {viewMode === 'month' && (
+            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-border/50">
+                {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((day) => (
+                  <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {paddedDays.map((day, index) => {
+                  const dayEvents = getEventsForDay(day);
+                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                  return (
+                    <div
+                      key={index}
+                      className={cn(
+                        'min-h-[100px] p-2 border-b border-r border-border/30 cursor-pointer hover:bg-primary/5 transition-colors group',
+                        !isCurrentMonth && 'opacity-40',
+                        isSameDay(day, new Date()) && 'bg-primary/5'
+                      )}
+                      onClick={() => handleDayClick(day)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p
+                          className={cn(
+                            'text-sm font-medium mb-1',
+                            isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
+                          )}
+                        >
+                          {format(day, 'd')}
+                        </p>
+                        <Plus className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                        {dayEvents.slice(0, 3).map((event) => (
+                          <div
+                            key={event.id}
+                            className="text-xs p-1 rounded glass-subtle truncate cursor-pointer hover:bg-secondary/60"
+                            style={{ borderLeft: `2px solid ${getStatusColor(event.status)}` }}
+                          >
+                            {getClientName(event.client_id)}
+                          </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <p className="text-xs text-muted-foreground">+{dayEvents.length - 3} dalších</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -321,10 +370,14 @@ export default function CalendarPage() {
 
       <CreateTrainingSheet
         open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) setSelectedDateTime(null);
+        }}
         onSubmit={handleCreateTraining}
         isLoading={createTraining.isPending}
         clients={clients}
+        defaultDate={selectedDateTime || undefined}
       />
     </div>
   );
