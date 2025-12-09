@@ -42,11 +42,36 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, differenceInYears, parse, isValid } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 type GenderFilter = 'all' | 'male' | 'female';
 type SortOption = 'name' | 'trainings' | 'credit' | 'recent';
+
+// Helper to calculate age from birth date string
+const calculateAge = (birthDateStr: string | null): number | null => {
+  if (!birthDateStr) return null;
+  
+  // Try to parse different date formats
+  let date: Date | null = null;
+  
+  // Try ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}/.test(birthDateStr)) {
+    date = new Date(birthDateStr);
+  }
+  // Try Czech format (DD.MM.YYYY)
+  else if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(birthDateStr)) {
+    date = parse(birthDateStr, 'd.M.yyyy', new Date());
+  }
+  // Try short Czech format (DD.MM.YY)
+  else if (/^\d{1,2}\.\d{1,2}\.\d{2}$/.test(birthDateStr)) {
+    date = parse(birthDateStr, 'd.M.yy', new Date());
+  }
+  
+  if (!date || !isValid(date)) return null;
+  
+  return differenceInYears(new Date(), date);
+};
 
 export default function Clients() {
   usePageTracking('clients');
@@ -613,6 +638,11 @@ export default function Clients() {
                             {client.name}
                           </h3>
                           <GenderIcon gender={client.gender} />
+                          {calculateAge(client.birth_date) !== null && (
+                            <span className="text-xs text-muted-foreground">
+                              {calculateAge(client.birth_date)} let
+                            </span>
+                          )}
                           {trainingCounts[client.id]?.count > 0 && (
                             <Badge variant="secondary" className="text-xs px-1.5 py-0 gap-0.5 h-5">
                               <Dumbbell className="w-3 h-3" />
