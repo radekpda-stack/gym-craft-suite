@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -114,115 +115,190 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   };
 
-  if (!open) return null;
+  // Calculate global item index for staggered animation
+  let globalItemIndex = 0;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-50 bg-background/60 backdrop-blur-md lg:hidden"
-        onClick={onClose}
-      />
-      
-      {/* Menu Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[300px] bg-background/95 backdrop-blur-xl border-l border-border/30 shadow-2xl lg:hidden animate-slide-in-right">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
-            </div>
-            <span className="text-base font-bold tracking-tight">FitCoach</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <NotificationCenter />
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-secondary/80 transition-colors touch-target active:scale-95"
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div 
+            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-md lg:hidden"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+          
+          {/* Menu Panel */}
+          <motion.div 
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-[300px] bg-background/95 backdrop-blur-xl border-l border-border/30 shadow-2xl lg:hidden"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          >
+            {/* Header */}
+            <motion.div 
+              className="flex items-center justify-between px-4 py-3 border-b border-border/30"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
             >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-180px)]">
-          {/* Quick Credit Button */}
-          <button
-            onClick={() => setQuickCreditOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all text-left bg-primary/10 hover:bg-primary/15 active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-lg bg-primary/20">
-                <Wallet className="w-4 h-4 text-primary" strokeWidth={1.5} />
+              <div className="flex items-center gap-2.5">
+                <motion.div 
+                  className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+                </motion.div>
+                <span className="text-base font-bold tracking-tight">FitCoach</span>
               </div>
-              <span className="text-sm font-semibold text-primary">Rychlý kredit</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-primary/60" />
-          </button>
-
-          <Separator className="bg-border/30" />
-
-          {sections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-1">
-              <span className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-                {section.label}
-              </span>
-              <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.to);
-
-                  return (
-                    <button
-                      key={item.to}
-                      onClick={() => handleNavigation(item.to)}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left touch-target active:scale-[0.98] relative',
-                        active
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-foreground/70 hover:bg-secondary/80 hover:text-foreground'
-                      )}
-                    >
-                      {active && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-                      )}
-                      <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-1">
+                <NotificationCenter />
+                <motion.button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-secondary/80 transition-colors touch-target"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
               </div>
-              {sectionIndex < sections.length - 1 && (
-                <Separator className="mt-2 bg-border/30" />
+            </motion.div>
+
+            {/* Navigation */}
+            <nav className="p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-180px)]">
+              {/* Quick Credit Button */}
+              <motion.button
+                onClick={() => setQuickCreditOpen(true)}
+                className="w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors text-left bg-primary/10 hover:bg-primary/15"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-primary/20">
+                    <Wallet className="w-4 h-4 text-primary" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-sm font-semibold text-primary">Rychlý kredit</span>
+                </div>
+                <motion.div
+                  animate={{ x: [0, 3, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                >
+                  <ChevronRight className="w-4 h-4 text-primary/60" />
+                </motion.div>
+              </motion.button>
+
+              <Separator className="bg-border/30" />
+
+              {sections.map((section, sectionIndex) => (
+                <motion.div 
+                  key={sectionIndex} 
+                  className="space-y-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 + sectionIndex * 0.05 }}
+                >
+                  <motion.span 
+                    className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 block"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 + sectionIndex * 0.05 }}
+                  >
+                    {section.label}
+                  </motion.span>
+                  <div className="space-y-0.5">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.to);
+                      const itemIndex = globalItemIndex++;
+
+                      return (
+                        <motion.button
+                          key={item.to}
+                          onClick={() => handleNavigation(item.to)}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left touch-target relative',
+                            active
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-foreground/70 hover:bg-secondary/80 hover:text-foreground'
+                          )}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ 
+                            delay: 0.2 + itemIndex * 0.03,
+                            duration: 0.2,
+                            ease: [0.25, 0.1, 0.25, 1]
+                          }}
+                          whileTap={{ scale: 0.98, x: 2 }}
+                        >
+                          <AnimatePresence>
+                            {active && (
+                              <motion.div 
+                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"
+                                initial={{ scaleY: 0 }}
+                                animate={{ scaleY: 1 }}
+                                exit={{ scaleY: 0 }}
+                                transition={{ duration: 0.2 }}
+                              />
+                            )}
+                          </AnimatePresence>
+                          <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
+                          <span className="text-sm font-medium">{item.label}</span>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  {sectionIndex < sections.length - 1 && (
+                    <Separator className="mt-2 bg-border/30" />
+                  )}
+                </motion.div>
+              ))}
+            </nav>
+
+            {/* Footer */}
+            <motion.div 
+              className="absolute bottom-0 left-0 right-0 p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl safe-area-bottom"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              {user && (
+                <motion.p 
+                  className="text-[11px] text-muted-foreground/50 mb-2 truncate px-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  {user.email}
+                </motion.p>
               )}
-            </div>
-          ))}
-        </nav>
+              <motion.button
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors touch-target"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                <span className="text-sm font-medium">Odhlásit se</span>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
-        {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl safe-area-bottom">
-          {user && (
-            <p className="text-[11px] text-muted-foreground/50 mb-2 truncate px-1">
-              {user.email}
-            </p>
-          )}
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all active:scale-[0.98] touch-target"
-          >
-            <LogOut className="w-4 h-4" strokeWidth={1.5} />
-            <span className="text-sm font-medium">Odhlásit se</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Quick Credit Modal */}
-      <QuickCreditModal 
-        open={quickCreditOpen} 
-        onOpenChange={setQuickCreditOpen}
-        showTrigger={false}
-      />
-    </>
+          {/* Quick Credit Modal */}
+          <QuickCreditModal 
+            open={quickCreditOpen} 
+            onOpenChange={setQuickCreditOpen}
+            showTrigger={false}
+          />
+        </>
+      )}
+    </AnimatePresence>
   );
 }
