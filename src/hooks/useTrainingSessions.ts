@@ -326,6 +326,16 @@ export function useUpdateTrainingSession() {
             price = trainingPrices["1"];
           }
 
+          // Update payment status to paid_credit when completing with credit
+          await supabase
+            .from("training_sessions")
+            .update({
+              payment_status: "paid_credit",
+              final_price: price,
+              payment_method: "credit",
+            })
+            .eq("id", id);
+
           // Create credit transaction
           const { error: transactionError } = await supabase
             .from("credit_transactions")
