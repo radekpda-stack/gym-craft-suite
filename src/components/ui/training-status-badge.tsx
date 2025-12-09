@@ -15,14 +15,33 @@ interface TrainingStatusBadgeProps {
  * - Completed + Paid → Green check
  * - Canceled → Red X
  */
+/**
+ * Get payment label based on payment_status
+ */
+function getPaymentLabel(paymentStatus: string | null | undefined): string {
+  switch (paymentStatus) {
+    case 'paid_credit':
+      return 'Zaplaceno (kredit)';
+    case 'paid_cash':
+      return 'Zaplaceno (hotově)';
+    case 'paid_card':
+      return 'Zaplaceno (kartou)';
+    case 'paid_bank':
+      return 'Zaplaceno (převodem)';
+    case 'pending':
+    default:
+      return 'Nezaplaceno';
+  }
+}
+
 export function TrainingStatusBadge({ 
   status, 
   paymentStatus, 
   className,
   showLabel = true,
 }: TrainingStatusBadgeProps) {
-  // Determine visual state
-  const isPaid = paymentStatus && ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank'].includes(paymentStatus);
+  // Determine visual state - isPaid is TRUE for any paid_* status
+  const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
   const isCompletedUnpaid = status === 'completed' && !isPaid;
   const isCompletedPaid = status === 'completed' && isPaid;
   const isScheduled = status === 'scheduled';
@@ -46,7 +65,7 @@ export function TrainingStatusBadge({
         bgColor: 'bg-success/10',
         textColor: 'text-success',
         iconColor: 'text-success',
-        label: 'Zaplaceno',
+        label: getPaymentLabel(paymentStatus),
       };
     }
     
@@ -96,7 +115,8 @@ export function TrainingStatusDot({
   paymentStatus, 
   className,
 }: Omit<TrainingStatusBadgeProps, 'showLabel'>) {
-  const isPaid = paymentStatus && ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank'].includes(paymentStatus);
+  // isPaid is TRUE for any paid_* status
+  const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
   const isCompletedUnpaid = status === 'completed' && !isPaid;
   const isCompletedPaid = status === 'completed' && isPaid;
   const isCanceled = status === 'canceled';
