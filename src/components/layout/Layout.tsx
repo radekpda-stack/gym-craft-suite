@@ -45,7 +45,7 @@ export function Layout({ children }: LayoutProps) {
     const checkSidebarWidth = () => {
       const sidebar = document.querySelector('aside');
       if (sidebar) {
-        setSidebarCollapsed(sidebar.classList.contains('w-20'));
+        setSidebarCollapsed(sidebar.classList.contains('w-16'));
       }
     };
 
@@ -73,8 +73,8 @@ export function Layout({ children }: LayoutProps) {
       <main
         className={cn(
           'min-h-screen transition-all duration-300 ease-in-out',
-          'lg:ml-64', // Desktop: margin for sidebar (lg and up)
-          sidebarCollapsed && 'lg:ml-20',
+          'lg:ml-56', // Desktop: margin for sidebar (lg and up)
+          sidebarCollapsed && 'lg:ml-16',
           'pb-24 lg:pb-0' // Mobile/Tablet: padding for bottom nav
         )}
       >
