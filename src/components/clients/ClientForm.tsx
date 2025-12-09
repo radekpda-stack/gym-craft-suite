@@ -153,23 +153,23 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="birthDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Datum narození</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value || ''}
-                    onChange={(dateStr) => field.onChange(dateStr)}
-                    className="w-full"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="birthDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Datum narození</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="např. 15.03.1990"
+                  className="bg-secondary border-border"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
           <FormField
             control={form.control}
