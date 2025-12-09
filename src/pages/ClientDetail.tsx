@@ -284,10 +284,6 @@ export default function ClientDetail() {
             clients={[client]}
             defaultClientId={client.id}
           />
-            isLoading={createMeasurement.isPending}
-            clients={[client]}
-            defaultClientId={client.id}
-          />
         </TabsContent>
 
         <TabsContent value="diagnostics" className="space-y-3">
