@@ -43,6 +43,7 @@ import {
   Check,
   CalendarDays,
   BarChart3,
+  Clock,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { SessionCard } from '@/components/ui/session-card';
@@ -59,6 +60,7 @@ import { useTopClients } from '@/hooks/useTopClients';
 import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useUnpaidTrainingsStats } from '@/hooks/useUnpaidTrainings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
@@ -135,6 +137,7 @@ export default function Dashboard() {
   const { data: clientCredits = [] } = useClientCredits();
   const { data: trainingTrend = [], isLoading: trendLoading } = useTrainingTrend();
   const { data: topClients = [], isLoading: topClientsLoading } = useTopClients(5);
+  const { data: unpaidStats } = useUnpaidTrainingsStats();
   const dashboardLayout = useDashboardLayout();
   const { preferences, updateDashboardStatsOrder, updateDashboardSectionsOrder } = useLayoutPreferences();
 
@@ -315,6 +318,24 @@ export default function Dashboard() {
           </p>
           <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
             Klientů pod 500 Kč →
+          </p>
+        </div>
+      </Link>
+    ),
+    unpaid: (
+      <Link to="/trainings?filter=unpaid" className="block">
+        <div className="glass rounded-2xl p-4 md:p-5 hover:ring-2 hover:ring-warning/50 transition-all cursor-pointer border border-warning/20">
+          <div className="flex items-center gap-2 md:gap-3 text-muted-foreground mb-2">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-warning/10">
+              <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-warning" />
+            </div>
+            <span className="text-xs md:text-sm">Nezaplaceno</span>
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-warning">
+            {unpaidStats?.count || 0}
+          </p>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
+            {(unpaidStats?.total || 0).toLocaleString('cs-CZ')} Kč celkem →
           </p>
         </div>
       </Link>
