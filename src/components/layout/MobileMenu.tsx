@@ -18,29 +18,67 @@ import {
   Wallet,
   ChevronRight,
   ShoppingBag,
+  LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
+import { Separator } from '@/components/ui/separator';
 
 interface MobileMenuProps {
   open: boolean;
   onClose: () => void;
 }
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients', icon: Users, label: 'Klienti' },
-  { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-  { to: '/progress', icon: TrendingUp, label: 'Progres' },
-  { to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
-  { to: '/measurements', icon: Activity, label: 'Měření' },
-  { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
-  { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-  { to: '/canceled', icon: XCircle, label: 'Zrušené tréninky' },
-  { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
-  { to: '/settings', icon: Settings, label: 'Nastavení' },
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const sections: NavSection[] = [
+  {
+    label: 'Hlavní',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/calendar', icon: Calendar, label: 'Kalendář' },
+      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+      { to: '/clients', icon: Users, label: 'Klienti' },
+    ],
+  },
+  {
+    label: 'Klientská data',
+    items: [
+      { to: '/measurements', icon: Activity, label: 'Měření' },
+      { to: '/progress', icon: TrendingUp, label: 'Progres' },
+      { to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
+    ],
+  },
+  {
+    label: 'Nástroje',
+    items: [
+      { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
+    ],
+  },
+  {
+    label: 'Systém',
+    items: [
+      { to: '/settings', icon: Settings, label: 'Nastavení' },
+      { to: '/canceled', icon: XCircle, label: 'Zrušené tréninky' },
+    ],
+  },
 ];
 
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
@@ -72,31 +110,35 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     onClose();
   };
 
+  const isActive = (to: string) => {
+    return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+  };
+
   if (!open) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 z-50 bg-background/60 backdrop-blur-md md:hidden"
+        className="fixed inset-0 z-50 bg-background/60 backdrop-blur-md lg:hidden"
         onClick={onClose}
       />
       
-      {/* Menu Panel - Apple-like slide panel */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] bg-background/95 backdrop-blur-xl border-l border-border/50 shadow-2xl md:hidden animate-slide-in-right">
+      {/* Menu Panel */}
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[300px] bg-background/95 backdrop-blur-xl border-l border-border/30 shadow-2xl lg:hidden animate-slide-in-right">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-              <Zap className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
             </div>
-            <span className="text-lg font-bold tracking-tight">FitCoach</span>
+            <span className="text-base font-bold tracking-tight">FitCoach</span>
           </div>
           <div className="flex items-center gap-1">
             <NotificationCenter />
             <button
               onClick={onClose}
-              className="p-2.5 rounded-xl hover:bg-secondary/80 transition-colors touch-target active:scale-95"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-colors touch-target active:scale-95"
             >
               <X className="w-5 h-5" />
             </button>
@@ -104,57 +146,73 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)]">
-          {/* Quick Credit Button - Prominent */}
+        <nav className="p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-180px)]">
+          {/* Quick Credit Button */}
           <button
             onClick={() => setQuickCreditOpen(true)}
-            className="w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all text-left bg-primary/10 hover:bg-primary/15 active:scale-[0.98] mb-3"
+            className="w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all text-left bg-primary/10 hover:bg-primary/15 active:scale-[0.98]"
           >
-            <div className="flex items-center gap-4">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <Wallet className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Wallet className="w-4 h-4 text-primary" strokeWidth={1.5} />
               </div>
-              <span className="font-semibold text-primary">Rychlý kredit</span>
+              <span className="text-sm font-semibold text-primary">Rychlý kredit</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-primary/60" />
+            <ChevronRight className="w-4 h-4 text-primary/60" />
           </button>
 
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.to || 
-              (item.to !== '/' && location.pathname.startsWith(item.to));
-            const Icon = item.icon;
+          <Separator className="bg-border/30" />
 
-            return (
-              <button
-                key={item.to}
-                onClick={() => handleNavigation(item.to)}
-                className={cn(
-                  'w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all text-left touch-target active:scale-[0.98]',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-lg'
-                    : 'text-foreground hover:bg-secondary/80'
-                )}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={isActive ? 2.5 : 2} />
-                <span className={cn('font-medium', isActive && 'font-semibold')}>{item.label}</span>
-              </button>
-            );
-          })}
+          {sections.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="space-y-1">
+              <span className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                {section.label}
+              </span>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.to);
+
+                  return (
+                    <button
+                      key={item.to}
+                      onClick={() => handleNavigation(item.to)}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left touch-target active:scale-[0.98] relative',
+                        active
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-foreground/70 hover:bg-secondary/80 hover:text-foreground'
+                      )}
+                    >
+                      {active && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+                      )}
+                      <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {sectionIndex < sections.length - 1 && (
+                <Separator className="mt-2 bg-border/30" />
+              )}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border/50 bg-background/95 backdrop-blur-xl safe-area-bottom">
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl safe-area-bottom">
           {user && (
-            <p className="text-xs text-muted-foreground mb-3 truncate px-2">
+            <p className="text-[11px] text-muted-foreground/50 mb-2 truncate px-1">
               {user.email}
             </p>
           )}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all active:scale-[0.98] touch-target"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all active:scale-[0.98] touch-target"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-semibold">Odhlásit se</span>
+            <LogOut className="w-4 h-4" strokeWidth={1.5} />
+            <span className="text-sm font-medium">Odhlásit se</span>
           </button>
         </div>
       </div>
