@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -17,7 +18,6 @@ import {
   Sparkles,
   TrendingUp,
   ShoppingBag,
-  Wallet,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -42,45 +42,84 @@ interface NavSection {
 function NavItemButton({ 
   item, 
   isActive, 
-  collapsed 
+  collapsed,
+  index,
 }: { 
   item: NavItem; 
   isActive: boolean; 
   collapsed: boolean;
+  index: number;
 }) {
   const Icon = item.icon;
 
   return (
-    <NavLink
-      to={item.to}
-      className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
-        isActive
-          ? 'bg-primary/10 text-primary'
-          : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-      )}
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ 
+        duration: 0.2, 
+        delay: index * 0.03,
+        ease: [0.25, 0.1, 0.25, 1]
+      }}
     >
-      {/* Orange active indicator */}
-      {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-      )}
-      <Icon className={cn(
-        'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
-        !isActive && 'group-hover:scale-105'
-      )} strokeWidth={1.5} />
-      {!collapsed && (
-        <span className="text-sm font-medium truncate">{item.label}</span>
-      )}
-    </NavLink>
+      <NavLink
+        to={item.to}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        )}
+      >
+        {/* Orange active indicator with animation */}
+        <AnimatePresence>
+          {isActive && (
+            <motion.div 
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"
+              initial={{ scaleY: 0, opacity: 0 }}
+              animate={{ scaleY: 1, opacity: 1 }}
+              exit={{ scaleY: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            />
+          )}
+        </AnimatePresence>
+        <Icon className={cn(
+          'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
+          !isActive && 'group-hover:scale-105'
+        )} strokeWidth={1.5} />
+        <AnimatePresence mode="wait">
+          {!collapsed && (
+            <motion.span 
+              className="text-sm font-medium truncate"
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {item.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </NavLink>
+    </motion.div>
   );
 }
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
-  if (collapsed) return null;
   return (
-    <span className="px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-      {label}
-    </span>
+    <AnimatePresence mode="wait">
+      {!collapsed && (
+        <motion.span 
+          className="px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40"
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.15 }}
+        >
+          {label}
+        </motion.span>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -152,92 +191,170 @@ export function Sidebar() {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   };
 
+  // Calculate global index for staggered animation
+  let globalIndex = 0;
+
   return (
-    <aside
+    <motion.aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen sidebar-glass transition-all duration-300 ease-in-out flex flex-col',
+        'fixed left-0 top-0 z-40 h-screen sidebar-glass flex flex-col',
         collapsed ? 'w-16' : 'w-56'
       )}
+      animate={{ width: collapsed ? 64 : 224 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {/* Logo & Notifications */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border/30">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+          <motion.div 
+            className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
-          </div>
-          {!collapsed && (
-            <span className="text-base font-bold text-sidebar-foreground tracking-tight">
-              FitCoach
-            </span>
-          )}
+          </motion.div>
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span 
+                className="text-base font-bold text-sidebar-foreground tracking-tight"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                FitCoach
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
-        {!collapsed && <NotificationCenter />}
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <NotificationCenter />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
         <div className="space-y-4">
           {sections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-1">
+            <motion.div 
+              key={sectionIndex} 
+              className="space-y-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: sectionIndex * 0.05 }}
+            >
               {section.label && (
                 <SectionLabel label={section.label} collapsed={collapsed} />
               )}
               <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <NavItemButton
-                    key={item.id}
-                    item={item}
-                    isActive={isActive(item.to)}
-                    collapsed={collapsed}
-                  />
-                ))}
+                {section.items.map((item) => {
+                  const itemIndex = globalIndex++;
+                  return (
+                    <NavItemButton
+                      key={item.id}
+                      item={item}
+                      isActive={isActive(item.to)}
+                      collapsed={collapsed}
+                      index={itemIndex}
+                    />
+                  );
+                })}
               </div>
               {sectionIndex < sections.length - 1 && (
                 <Separator className="my-3 bg-sidebar-border/30" />
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
         
         {/* Quick Credit */}
-        <div className="pt-3 mt-3 border-t border-sidebar-border/30">
+        <motion.div 
+          className="pt-3 mt-3 border-t border-sidebar-border/30"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
           <QuickCreditModal collapsed={collapsed} />
-        </div>
+        </motion.div>
       </nav>
 
       {/* User & Controls */}
       <div className="px-2 pb-3 space-y-1.5 border-t border-sidebar-border/30 pt-3">
         {/* User email display */}
-        {!collapsed && user && (
-          <div className="px-3 py-1.5 text-[11px] text-sidebar-foreground/40 truncate">
-            {user.email}
-          </div>
-        )}
+        <AnimatePresence>
+          {!collapsed && user && (
+            <motion.div 
+              className="px-3 py-1.5 text-[11px] text-sidebar-foreground/40 truncate"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {user.email}
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Logout button */}
-        <button
+        <motion.button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
+          whileHover={{ x: 2 }}
+          whileTap={{ scale: 0.98 }}
         >
           <LogOut className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          {!collapsed && <span className="text-sm font-medium">{t.nav.logout}</span>}
-        </button>
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span 
+                className="text-sm font-medium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {t.nav.logout}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
 
         {/* Collapse toggle */}
-        <button
+        <motion.button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors duration-200"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          {collapsed ? (
+          <motion.div
+            animate={{ rotate: collapsed ? 0 : 180 }}
+            transition={{ duration: 0.3 }}
+          >
             <ChevronRight className="w-4 h-4" />
-          ) : (
-            <>
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-xs">{t.nav.collapseMenu}</span>
-            </>
-          )}
-        </button>
+          </motion.div>
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span 
+                className="text-xs"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {t.nav.collapseMenu}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
