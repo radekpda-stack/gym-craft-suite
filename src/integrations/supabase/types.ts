@@ -1094,11 +1094,14 @@ export type Database = {
           created_at: string
           date: string
           duration: number
+          final_price: number | null
           id: string
           is_late_cancellation: boolean | null
           notes: string | null
           parent_session_id: string | null
           participant_count: number | null
+          payment_method: string | null
+          payment_status: string | null
           recurrence_end_date: string | null
           recurrence_type: string | null
           status: string
@@ -1112,11 +1115,14 @@ export type Database = {
           created_at?: string
           date: string
           duration?: number
+          final_price?: number | null
           id?: string
           is_late_cancellation?: boolean | null
           notes?: string | null
           parent_session_id?: string | null
           participant_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
@@ -1130,11 +1136,14 @@ export type Database = {
           created_at?: string
           date?: string
           duration?: number
+          final_price?: number | null
           id?: string
           is_late_cancellation?: boolean | null
           notes?: string | null
           parent_session_id?: string | null
           participant_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string

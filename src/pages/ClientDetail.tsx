@@ -31,6 +31,7 @@ import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { ClientMeasurementImport } from '@/components/measurements/ClientMeasurementImport';
 import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
+import { UnpaidTrainingsList } from '@/components/clients/UnpaidTrainingsList';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -193,6 +194,9 @@ export default function ClientDetail() {
         </div>
 
         <TabsContent value="overview" className="space-y-4">
+          {/* Unpaid Trainings */}
+          <UnpaidTrainingsList clientId={client.id} clientName={client.name} />
+
           {/* Compact Stats */}
           <div className="glass rounded-xl p-3">
             <div className="flex items-center gap-4 text-sm flex-wrap">
