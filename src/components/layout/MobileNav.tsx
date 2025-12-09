@@ -15,7 +15,7 @@ const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-  { to: '/progress', icon: TrendingUp, label: 'Progres' },
+  { to: '/records', icon: TrendingUp, label: 'Záznamy' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
 ];
 

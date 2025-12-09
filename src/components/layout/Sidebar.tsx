@@ -130,23 +130,21 @@ export function Sidebar() {
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
 
-  // Define sections with items
+  // Define sections with items - OPTIMIZED STRUCTURE
   const sections: NavSection[] = [
     {
       label: 'Hlavní',
       items: [
         { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
         { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
-        { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
+        { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
       ],
     },
     {
-      label: 'Klientská data',
+      label: 'Záznamy',
       items: [
-        { id: 'measurements', to: '/measurements', icon: Activity, label: t.nav.measurements },
-        { id: 'progress', to: '/progress', icon: TrendingUp, label: t.nav.progress },
-        { id: 'diagnostics', to: '/diagnostics', icon: Stethoscope, label: t.nav.diagnostics },
+        { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
       ],
     },
     {
