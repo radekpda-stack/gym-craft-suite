@@ -1,82 +1,74 @@
-import { useState } from 'react';
-import { format, addDays, startOfWeek, addWeeks, subWeeks, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, subDays } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, addDays, subDays, isSameDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useTrainingSessions, useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
 import { useClients } from '@/hooks/useClients';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { CalendarWeekSkeleton, CalendarMonthSkeleton } from '@/components/skeletons';
+import { AgendaItem } from '@/components/calendar/AgendaItem';
+import { WeekMiniGrid } from '@/components/calendar/WeekMiniGrid';
+import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
+import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
+import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-type ViewMode = 'day' | 'week' | 'month';
+
+type ViewMode = 'agenda' | 'week';
 
 export default function CalendarPage() {
   usePageTracking('calendar');
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [viewMode, setViewMode] = useState<ViewMode>('agenda');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState<string | null>(null);
+  
+  // Action dialogs
+  const [completeDialog, setCompleteDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTraining = useCreateTrainingSession();
+  const updateTraining = useUpdateTrainingSession();
+  const cancelTraining = useCancelTrainingSession();
   const { data: settings } = useAppSettings();
   const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: 14 }, (_, i) => i + 6);
+  // Get events for current day (agenda view)
+  const dayEvents = useMemo(() => {
+    return sessions
+      .filter((session) => isSameDay(new Date(session.date), currentDate))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [sessions, currentDate]);
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startPadding = (getDay(monthStart) + 6) % 7;
-  const paddedDays = [
-    ...Array.from({ length: startPadding }, (_, i) => subDays(monthStart, startPadding - i)),
-    ...monthDays,
-  ];
-
-  const getEventsForDay = (date: Date) => {
-    return sessions.filter((session) => isSameDay(new Date(session.date), date));
+  const getClient = (clientId: string) => {
+    return clients.find((c) => c.id === clientId);
   };
 
-  const getClientName = (clientId: string) => {
-    return clients.find((c) => c.id === clientId)?.name || 'Neznámý';
+  const navigate_date = (direction: 'prev' | 'next') => {
+    setCurrentDate((prev) => (direction === 'next' ? addDays(prev, 1) : subDays(prev, 1)));
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'hsl(var(--success))';
-      case 'canceled':
-        return 'hsl(var(--destructive))';
-      default:
-        return 'hsl(var(--primary))';
-    }
-  };
-
-  const navigate = (direction: 'prev' | 'next') => {
-    if (viewMode === 'week') {
-      setCurrentDate((prev) => (direction === 'next' ? addWeeks(prev, 1) : subWeeks(prev, 1)));
-    } else if (viewMode === 'month') {
-      setCurrentDate((prev) => (direction === 'next' ? addMonths(prev, 1) : subMonths(prev, 1)));
-    } else {
-      setCurrentDate((prev) => (direction === 'next' ? addDays(prev, 1) : subDays(prev, 1)));
-    }
-  };
-
-  const getDateRangeText = () => {
-    if (viewMode === 'week') {
-      return `${format(weekStart, 'd. MMMM', { locale: cs })} - ${format(addDays(weekStart, 6), 'd. MMMM yyyy', { locale: cs })}`;
-    } else if (viewMode === 'month') {
-      return format(currentDate, 'LLLL yyyy', { locale: cs });
-    } else {
-      return format(currentDate, 'd. MMMM yyyy', { locale: cs });
-    }
+  const goToToday = () => {
+    setCurrentDate(new Date());
   };
 
   const handleCreateTraining = async (data: TrainingFormValues) => {
@@ -94,280 +86,218 @@ export default function CalendarPage() {
     setSelectedDateTime(null);
   };
 
-  const handleTimeSlotClick = (date: Date, hour: number) => {
-    const dateTime = new Date(date);
-    dateTime.setHours(hour, 0, 0, 0);
-    const year = dateTime.getFullYear();
-    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
-    const day = String(dateTime.getDate()).padStart(2, '0');
-    const hours = String(dateTime.getHours()).padStart(2, '0');
-    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
-    setSelectedDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
-    setIsCreateOpen(true);
-  };
-
-  const handleDayClick = (date: Date) => {
-    const dateTime = new Date(date);
-    dateTime.setHours(9, 0, 0, 0); // Default to 9:00 for month view
-    const year = dateTime.getFullYear();
-    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
-    const day = String(dateTime.getDate()).padStart(2, '0');
-    setSelectedDateTime(`${year}-${month}-${day}T09:00`);
-    setIsCreateOpen(true);
-  };
-
   const handleOpenCreate = () => {
-    setSelectedDateTime(null);
+    // Pre-fill with current date and next available hour
+    const now = new Date();
+    const dateToUse = isSameDay(currentDate, now) ? now : currentDate;
+    const nextHour = new Date(dateToUse);
+    nextHour.setMinutes(0, 0, 0);
+    if (isSameDay(currentDate, now)) {
+      nextHour.setHours(nextHour.getHours() + 1);
+    } else {
+      nextHour.setHours(9, 0, 0, 0);
+    }
+    
+    const year = nextHour.getFullYear();
+    const month = String(nextHour.getMonth() + 1).padStart(2, '0');
+    const day = String(nextHour.getDate()).padStart(2, '0');
+    const hours = String(nextHour.getHours()).padStart(2, '0');
+    
+    setSelectedDateTime(`${year}-${month}-${day}T${hours}:00`);
     setIsCreateOpen(true);
   };
+
+  // Quick actions
+  const handleComplete = (session: any) => {
+    setCompleteDialog({ open: true, session });
+  };
+
+  const confirmComplete = async () => {
+    if (!completeDialog.session) return;
+    
+    await updateTraining.mutateAsync({
+      id: completeDialog.session.id,
+      input: { status: 'completed' },
+      trainingPrices,
+    });
+    setCompleteDialog({ open: false, session: null });
+  };
+
+  const handleCancel = (session: any) => {
+    setCancelDialog({ open: true, session });
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelDialog.session) return;
+    
+    const sessionDate = new Date(cancelDialog.session.date);
+    const hoursUntilSession = (sessionDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    const isLateCancellation = hoursUntilSession < 24;
+    
+    await cancelTraining.mutateAsync({
+      id: cancelDialog.session.id,
+      client_id: cancelDialog.session.client_id,
+      participant_count: cancelDialog.session.participant_count || 1,
+      isLateCancellation,
+      trainingPrices,
+      deductCredit: false,
+    });
+    setCancelDialog({ open: false, session: null });
+  };
+
+  const handlePayment = (session: any) => {
+    setPaymentDialog({ open: true, session });
+  };
+
+  const handleProgress = (session: any) => {
+    navigate(`/records?tab=progress&client=${session.client_id}`);
+  };
+
+  const handleNote = (session: any) => {
+    navigate(`/trainings/${session.id}`);
+  };
+
+  const isLoading = sessionsLoading || clientsLoading;
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">Kalendář</h1>
-          <p className="text-muted-foreground mt-1">{getDateRangeText()}</p>
+    <div className="flex flex-col h-full animate-fade-in">
+      {/* Compact Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3">
+        {/* Top row */}
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-foreground">Kalendář</h1>
+          <div className="flex items-center gap-2">
+            <CalendarDatePicker date={currentDate} onDateSelect={setCurrentDate} />
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 glass-subtle rounded-xl p-1">
-            {(['day', 'week', 'month'] as ViewMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-                  viewMode === mode
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                )}
-              >
-                {mode === 'day' ? 'Den' : mode === 'week' ? 'Týden' : 'Měsíc'}
-              </button>
-            ))}
-          </div>
-
+        {/* Tabs row */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goToToday}
+            className={cn(
+              'px-4 py-2 rounded-full text-sm font-medium transition-all touch-target',
+              isSameDay(currentDate, new Date())
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-muted-foreground'
+            )}
+          >
+            Dnes
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={cn(
+              'px-4 py-2 rounded-full text-sm font-medium transition-all touch-target',
+              viewMode === 'week'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-muted-foreground'
+            )}
+          >
+            Týden
+          </button>
+          
+          <div className="flex-1" />
+          
+          {/* Date navigation */}
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={() => navigate('prev')} className="rounded-xl glass-subtle border-0">
-              <ChevronLeft className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate_date('prev')}
+              className="h-9 w-9 rounded-full"
+            >
+              <ChevronLeft className="w-5 h-5" />
             </Button>
-            <Button variant="outline" onClick={() => setCurrentDate(new Date())} className="rounded-xl glass-subtle border-0">
-              Dnes
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => navigate('next')} className="rounded-xl glass-subtle border-0">
-              <ChevronRight className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate_date('next')}
+              className="h-9 w-9 rounded-full"
+            >
+              <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
-
-          <Button className="gap-2" onClick={handleOpenCreate}>
-            <Plus className="w-4 h-4" />
-            Nový trénink
-          </Button>
         </div>
       </div>
 
-      {/* Loading State */}
-      {(sessionsLoading || clientsLoading) ? (
-        viewMode === 'month' ? <CalendarMonthSkeleton /> : <CalendarWeekSkeleton />
-      ) : (
-        <>
-          {/* Day View */}
-          {viewMode === 'day' && (
-            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-              <div className="p-4 border-b border-border/50">
-                <p className="text-lg font-semibold text-foreground">
-                  {format(currentDate, 'EEEE d. MMMM', { locale: cs })}
-                </p>
-              </div>
-              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
-                {hours.map((hour) => {
-                  const dayEvents = getEventsForDay(currentDate).filter(
-                    (event) => new Date(event.date).getHours() === hour
-                  );
-                  return (
-                    <div key={hour} className="flex border-b border-border/30">
-                      <div className="w-20 p-3 text-sm text-muted-foreground border-r border-border/30 flex-shrink-0">
-                        {hour}:00
-                      </div>
-                      <div 
-                        className="flex-1 min-h-[70px] p-2 relative cursor-pointer hover:bg-primary/5 transition-colors"
-                        onClick={() => dayEvents.length === 0 && handleTimeSlotClick(currentDate, hour)}
-                      >
-                        {dayEvents.length === 0 && (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                            <Plus className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                        )}
-                        {dayEvents.map((event) => (
-                          <div
-                            key={event.id}
-                            className="glass-subtle rounded-xl p-3 mb-1 cursor-pointer hover:bg-secondary/60 transition-all"
-                            style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <p className="font-medium text-foreground">{getClientName(event.client_id)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(event.date), 'HH:mm')} - {event.duration} min
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Week View */}
-          {viewMode === 'week' && (
-            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-8 border-b border-border/50">
-                <div className="p-4 text-center text-sm text-muted-foreground">Čas</div>
-                {weekDays.map((day) => (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      'p-4 text-center border-l border-border/30',
-                      isSameDay(day, new Date()) && 'bg-primary/5'
-                    )}
-                  >
-                    <p className="text-sm text-muted-foreground">{format(day, 'EEE', { locale: cs })}</p>
-                    <p
-                      className={cn(
-                        'text-2xl font-bold mt-1',
-                        isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
-                      )}
-                    >
-                      {format(day, 'd')}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
-                {hours.map((hour) => (
-                  <div key={hour} className="grid grid-cols-8 border-b border-border/30">
-                    <div className="p-2 text-center text-sm text-muted-foreground border-r border-border/30">
-                      {hour}:00
-                    </div>
-                    {weekDays.map((day) => {
-                      const dayEvents = getEventsForDay(day).filter(
-                        (event) => new Date(event.date).getHours() === hour
-                      );
-                      return (
-                        <div
-                          key={`${day.toISOString()}-${hour}`}
-                          className={cn(
-                            'min-h-[60px] p-1 border-l border-border/30 relative cursor-pointer hover:bg-primary/5 transition-colors group',
-                            isSameDay(day, new Date()) && 'bg-primary/5'
-                          )}
-                          onClick={() => dayEvents.length === 0 && handleTimeSlotClick(day, hour)}
-                        >
-                          {dayEvents.length === 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Plus className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          )}
-                          {dayEvents.map((event) => (
-                            <div
-                              key={event.id}
-                              className="absolute inset-x-1 glass-subtle rounded-lg p-2 text-xs cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:z-10"
-                              style={{ borderLeft: `3px solid ${getStatusColor(event.status)}` }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <p className="font-medium truncate text-foreground">
-                                {getClientName(event.client_id)}
-                              </p>
-                              <p className="text-muted-foreground mt-0.5">
-                                {format(new Date(event.date), 'HH:mm')} - {event.duration}min
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Month View */}
-          {viewMode === 'month' && (
-            <div className="glass rounded-xl sm:rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-border/50">
-                {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((day) => (
-                  <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7">
-                {paddedDays.map((day, index) => {
-                  const dayEvents = getEventsForDay(day);
-                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        'min-h-[100px] p-2 border-b border-r border-border/30 cursor-pointer hover:bg-primary/5 transition-colors group',
-                        !isCurrentMonth && 'opacity-40',
-                        isSameDay(day, new Date()) && 'bg-primary/5'
-                      )}
-                      onClick={() => handleDayClick(day)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <p
-                          className={cn(
-                            'text-sm font-medium mb-1',
-                            isSameDay(day, new Date()) ? 'text-primary' : 'text-foreground'
-                          )}
-                        >
-                          {format(day, 'd')}
-                        </p>
-                        <Plus className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                        {dayEvents.slice(0, 3).map((event) => (
-                          <div
-                            key={event.id}
-                            className="text-xs p-1 rounded glass-subtle truncate cursor-pointer hover:bg-secondary/60"
-                            style={{ borderLeft: `2px solid ${getStatusColor(event.status)}` }}
-                          >
-                            {getClientName(event.client_id)}
-                          </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                          <p className="text-xs text-muted-foreground">+{dayEvents.length - 3} dalších</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
+      {/* Week Mini Grid (when week view selected) */}
+      {viewMode === 'week' && (
+        <div className="px-4 py-3 border-b border-border/30">
+          <WeekMiniGrid 
+            currentDate={currentDate} 
+            sessions={sessions} 
+            onDaySelect={(date) => {
+              setCurrentDate(date);
+              setViewMode('agenda');
+            }} 
+          />
+        </div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-primary" />
-          <span>Naplánováno</span>
+      {/* Date header for agenda view */}
+      {viewMode === 'agenda' && (
+        <div className="px-4 py-3 border-b border-border/30">
+          <p className="text-lg font-semibold text-foreground capitalize">
+            {format(currentDate, 'EEEE', { locale: cs })}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-success" />
-          <span>Dokončeno</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-destructive" />
-          <span>Zrušeno</span>
-        </div>
+      )}
+
+      {/* Agenda List */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        ) : dayEvents.length === 0 ? (
+          <EmptyAgendaState date={currentDate} onAddTraining={handleOpenCreate} />
+        ) : (
+          <div className="space-y-2">
+            {dayEvents.map((session) => (
+              <AgendaItem
+                key={session.id}
+                session={session}
+                client={getClient(session.client_id)}
+                onComplete={handleComplete}
+                onPayment={handlePayment}
+                onCancel={handleCancel}
+                onProgress={handleProgress}
+                onNote={handleNote}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Legend (mobile-friendly) */}
+        {dayEvents.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-border/30">
+            <p className="text-xs text-muted-foreground mb-2">Gesta:</p>
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+              <span>→ Dokončit</span>
+              <span>← Platba/Zrušit</span>
+              <span>Dlouhý stisk = Menu</span>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* FAB - Add Training */}
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50">
+        <Button
+          size="lg"
+          className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all"
+          onClick={handleOpenCreate}
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* Create Training Sheet */}
       <CreateTrainingSheet
         open={isCreateOpen}
         onOpenChange={(open) => {
@@ -379,6 +309,58 @@ export default function CalendarPage() {
         clients={clients}
         defaultDate={selectedDateTime || undefined}
       />
+
+      {/* Complete Dialog */}
+      <AlertDialog open={completeDialog.open} onOpenChange={(open) => setCompleteDialog({ open, session: open ? completeDialog.session : null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dokončit trénink?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {completeDialog.session && (
+                <>
+                  Trénink s {getClient(completeDialog.session.client_id)?.name || 'klientem'} bude označen jako dokončený.
+                  Kredit bude automaticky stržen.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmComplete} className="bg-success hover:bg-success/90">
+              Dokončit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Dialog */}
+      <AlertDialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, session: open ? cancelDialog.session : null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zrušit trénink?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Trénink bude označen jako zrušený. Tuto akci nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zpět</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel} className="bg-destructive hover:bg-destructive/90">
+              Zrušit trénink
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Payment Dialog */}
+      {paymentDialog.session && (
+        <QuickPaymentDialog
+          open={paymentDialog.open}
+          onOpenChange={(open) => setPaymentDialog({ open, session: open ? paymentDialog.session : null })}
+          trainingId={paymentDialog.session.id}
+          clientName={getClient(paymentDialog.session.client_id)?.name || 'klient'}
+          currentPaymentStatus={paymentDialog.session.payment_status}
+        />
+      )}
     </div>
   );
 }
