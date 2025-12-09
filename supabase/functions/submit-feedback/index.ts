@@ -1,25 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface FeedbackSubmission {
-  token: string;
-  rpe_rating: number;
-  fatigue_level: number;
-  muscle_soreness: string[];
-  muscle_soreness_comment?: string;
-  energy_level: string;
-  sleep_hours?: number;
-  sleep_quality?: number;
-  mood_rating: number;
-  technique_rating: number;
-  goal_relevance: string;
-  comment?: string;
-}
+// Zod schema for input validation
+const feedbackSchema = z.object({
+  token: z.string().uuid("Invalid token format"),
+  rpe_rating: z.number().int().min(1).max(10),
+  fatigue_level: z.number().int().min(1).max(5),
+  muscle_soreness: z.array(z.string().max(50)).max(20).default([]),
+  muscle_soreness_comment: z.string().max(500).optional(),
+  energy_level: z.enum(["stable", "better-at-end", "low", "only-beginning-good"]),
+  sleep_hours: z.number().min(0).max(24).optional(),
+  sleep_quality: z.number().int().min(1).max(5).optional(),
+  mood_rating: z.number().int().min(1).max(5),
+  technique_rating: z.number().int().min(1).max(5),
+  goal_relevance: z.enum(["yes", "partial", "no"]),
+  comment: z.string().max(200).optional(),
+});
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -32,8 +34,22 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const submission: FeedbackSubmission = await req.json();
-    const { token, ...feedbackData } = submission;
+    // Parse and validate input
+    const rawBody = await req.json();
+    const parseResult = feedbackSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      console.error("Validation error:", parseResult.error.flatten());
+      return new Response(
+        JSON.stringify({ 
+          error: "Neplatná data", 
+          details: parseResult.error.flatten().fieldErrors 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { token, ...feedbackData } = parseResult.data;
 
     console.log(`Processing feedback submission for token: ${token}`);
 
