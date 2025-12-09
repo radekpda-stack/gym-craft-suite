@@ -29,6 +29,7 @@ const DEFAULT_DASHBOARD_STATS_ORDER = [
   'credit',
   'costs',
   'lowCredit',
+  'unpaid',
 ];
 
 const DEFAULT_DASHBOARD_SECTIONS_ORDER = [
