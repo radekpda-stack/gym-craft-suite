@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Clock, Calendar, Users, Repeat, CheckCircle, XCircle, AlertCircle, ChevronRight } from 'lucide-react';
+import { Clock, Calendar, Users, Repeat, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
@@ -7,6 +7,7 @@ import { Client } from '@/hooks/useClients';
 import { RatingDisplay } from './rating-input';
 import { ClientAvatar } from './client-avatar';
 import { Link } from 'react-router-dom';
+import { TrainingStatusBadge, TrainingStatusDot } from './training-status-badge';
 
 interface SessionCardProps {
   session: TrainingSession;
@@ -16,37 +17,19 @@ interface SessionCardProps {
   onClick?: () => void;
 }
 
-const statusConfig = {
-  scheduled: {
-    label: 'Naplánováno',
-    shortLabel: 'Plán',
-    className: 'bg-muted/50 text-muted-foreground border-muted-foreground/30',
-    borderColor: 'border-l-muted-foreground',
-    icon: Clock,
-    dotColor: 'bg-muted-foreground',
-  },
-  completed: {
-    label: 'Dokončeno',
-    shortLabel: 'Hotovo',
-    className: 'bg-success/15 text-success border-success/30',
-    borderColor: 'border-l-success',
-    icon: CheckCircle,
-    dotColor: 'bg-success',
-  },
-  canceled: {
-    label: 'Zrušeno',
-    shortLabel: 'Zrušeno',
-    className: 'bg-destructive/15 text-destructive border-destructive/30',
-    borderColor: 'border-l-destructive',
-    icon: XCircle,
-    dotColor: 'bg-destructive',
-  },
+// Border color based on combined status
+const getBorderColor = (status: string, paymentStatus?: string | null) => {
+  if (status === 'canceled') return 'border-l-destructive';
+  if (status === 'completed') {
+    const isPaid = paymentStatus && ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank'].includes(paymentStatus);
+    return isPaid ? 'border-l-success' : 'border-l-warning';
+  }
+  return 'border-l-muted-foreground';
 };
 
 export function SessionCard({ session, client, compact, className, onClick }: SessionCardProps) {
   const sessionDate = new Date(session.date);
-  const status = statusConfig[session.status];
-  const StatusIcon = status.icon;
+  const borderColor = getBorderColor(session.status, session.payment_status);
 
   // Compact version for dashboard
   if (compact) {
@@ -56,7 +39,7 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
         onClick={onClick}
         className={cn(
           'flex items-center gap-3 px-4 py-3.5 rounded-xl bg-secondary/50 border-l-4 transition-all duration-200 hover:bg-secondary active:scale-[0.98] touch-target',
-          status.borderColor,
+          borderColor,
           className
         )}
       >
@@ -65,12 +48,12 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
             <p className="font-semibold text-foreground truncate text-sm">
               {client?.name || 'Klient'}
             </p>
-            <span className={cn(
-              'px-2 py-0.5 rounded-full text-[10px] font-semibold border flex-shrink-0',
-              status.className
-            )}>
-              {status.shortLabel}
-            </span>
+            <TrainingStatusBadge 
+              status={session.status as 'scheduled' | 'completed' | 'canceled'} 
+              paymentStatus={session.payment_status}
+              showLabel={false}
+              className="px-1.5 py-0.5"
+            />
           </div>
           {session.notes && (
             <p className="text-xs text-muted-foreground truncate mt-1">
@@ -97,7 +80,7 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
       onClick={onClick}
       className={cn(
         'glass rounded-2xl border-l-4 block transition-all duration-300 active:scale-[0.98] hover:glow',
-        status.borderColor,
+        borderColor,
         className
       )}
     >
@@ -119,13 +102,11 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
                   <span>{session.duration} min</span>
                 </div>
               </div>
-              <span className={cn(
-                'px-2.5 py-1 rounded-full text-[11px] font-bold border flex-shrink-0 flex items-center gap-1',
-                status.className
-              )}>
-                <StatusIcon className="w-3 h-3" />
-                <span className="hidden xs:inline">{status.shortLabel}</span>
-              </span>
+              <TrainingStatusBadge 
+                status={session.status as 'scheduled' | 'completed' | 'canceled'} 
+                paymentStatus={session.payment_status}
+                className="text-[11px]"
+              />
             </div>
 
             {/* Additional info row */}
@@ -166,13 +147,10 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
                 <h4 className="font-semibold text-foreground text-lg truncate">
                   {client?.name || 'Klient'}
                 </h4>
-                <span className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-medium border inline-flex items-center gap-1',
-                  status.className
-                )}>
-                  <StatusIcon className="w-3 h-3" />
-                  {status.label}
-                </span>
+                <TrainingStatusBadge 
+                  status={session.status as 'scheduled' | 'completed' | 'canceled'} 
+                  paymentStatus={session.payment_status}
+                />
               </div>
               
               <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
