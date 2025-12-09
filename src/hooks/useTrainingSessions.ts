@@ -876,3 +876,146 @@ async function syncWorkoutToExerciseEntries(
     console.error('Error syncing workout entries:', error);
   }
 }
+
+export type ChangePaymentMethodInput = {
+  trainingId: string;
+  clientId: string;
+  currentPaymentStatus: string | null;
+  newPaymentStatus: 'paid_credit' | 'paid_cash' | 'paid_card' | 'paid_bank' | 'pending';
+  price: number;
+};
+
+export function useChangePaymentMethod() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      trainingId,
+      clientId,
+      currentPaymentStatus,
+      newPaymentStatus,
+      price,
+    }: ChangePaymentMethodInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const wasCredit = currentPaymentStatus === 'paid_credit';
+      const willBeCredit = newPaymentStatus === 'paid_credit';
+
+      // Update training payment status
+      const { error: updateError } = await supabase
+        .from("training_sessions")
+        .update({
+          payment_status: newPaymentStatus,
+          payment_method: newPaymentStatus === 'paid_credit' ? 'credit' :
+                         newPaymentStatus === 'paid_cash' ? 'cash' :
+                         newPaymentStatus === 'paid_card' ? 'card' :
+                         newPaymentStatus === 'paid_bank' ? 'bank' : null,
+        })
+        .eq("id", trainingId);
+
+      if (updateError) throw updateError;
+
+      let newBalance: number | null = null;
+
+      // Handle credit balance changes
+      if (wasCredit && !willBeCredit) {
+        // Refund credit: was paid by credit, now changing to another method
+        // Delete the credit transaction
+        await supabase
+          .from("credit_transactions")
+          .delete()
+          .eq("training_session_id", trainingId)
+          .eq("type", "training");
+
+        // Add the amount back to client
+        const { data: client } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", clientId)
+          .single();
+
+        if (client) {
+          newBalance = (client.credit_balance || 0) + price;
+          await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", clientId);
+
+          // Sync budget group
+          await syncBudgetGroupCredit(clientId, newBalance);
+        }
+      } else if (!wasCredit && willBeCredit) {
+        // Deduct credit: wasn't paid by credit, now changing to credit
+        // Create credit transaction
+        await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id: clientId,
+            amount: -price,
+            type: "training",
+            description: "Trénink (změna platby na kredit)",
+            training_session_id: trainingId,
+            user_id: user.id,
+          });
+
+        // Deduct from client
+        const { data: client } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", clientId)
+          .single();
+
+        if (client) {
+          newBalance = (client.credit_balance || 0) - price;
+          await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", clientId);
+
+          // Sync budget group
+          await syncBudgetGroupCredit(clientId, newBalance);
+        }
+      }
+
+      return { newPaymentStatus, newBalance, wasCredit, willBeCredit, price };
+    },
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["training_session", variables.trainingId] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["client", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+
+      const paymentLabels: Record<string, string> = {
+        paid_credit: 'kredit',
+        paid_cash: 'hotovost',
+        paid_card: 'karta',
+        paid_bank: 'převod',
+        pending: 'nezaplaceno',
+      };
+
+      let description = `Platba změněna na: ${paymentLabels[result.newPaymentStatus]}`;
+      
+      if (result.wasCredit && !result.willBeCredit && result.newBalance !== null) {
+        description += `. Kredit vrácen (+${result.price} Kč). Nový zůstatek: ${result.newBalance} Kč`;
+      } else if (!result.wasCredit && result.willBeCredit && result.newBalance !== null) {
+        description += `. Kredit odečten (-${result.price} Kč). Nový zůstatek: ${result.newBalance} Kč`;
+      }
+
+      toast({
+        title: "Platba aktualizována",
+        description,
+      });
+    },
+    onError: (error) => {
+      console.error("Error changing payment method:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit způsob platby.",
+        variant: "destructive",
+      });
+    },
+  });
+}

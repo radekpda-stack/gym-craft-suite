@@ -23,6 +23,7 @@ import {
   Repeat,
   FileText,
   Mail,
+  CreditCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +32,11 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
-import { TrainingSession } from '@/hooks/useTrainingSessions';
+import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
+import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
+import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import {
   Form,
@@ -92,6 +96,28 @@ export function TrainingDetailView({
 }: TrainingDetailViewProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
+  
+  const changePaymentMethod = useChangePaymentMethod();
+  const { data: settings } = useAppSettings();
+  const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 800, "2": 1000, "3": 1200 };
+  
+  // Calculate price for this training
+  const participantCount = training.participant_count || 1;
+  const trainingPrice = training.final_price || (
+    participantCount >= 3 ? trainingPrices["3"] :
+    participantCount === 2 ? trainingPrices["2"] :
+    trainingPrices["1"]
+  );
+
+  const handleChangePaymentMethod = async (newMethod: PaymentMethod) => {
+    await changePaymentMethod.mutateAsync({
+      trainingId: training.id,
+      clientId: training.client_id,
+      currentPaymentStatus: training.payment_status,
+      newPaymentStatus: newMethod,
+      price: trainingPrice,
+    });
+  };
 
   const form = useForm<TrainingDetailFormValues>({
     resolver: zodResolver(trainingDetailSchema),
@@ -438,7 +464,36 @@ export function TrainingDetailView({
           </div>
         </div>
 
-        {/* Workout Exercises Section */}
+        {/* Payment Status - Only for completed trainings */}
+        {training.status === 'completed' && (
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-2">
+                  <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm font-medium">Platba</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <TrainingStatusBadge 
+                    status={training.status} 
+                    paymentStatus={training.payment_status} 
+                  />
+                  {training.final_price && (
+                    <span className="text-sm text-muted-foreground">
+                      {training.final_price} Kč
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChangePaymentMethodDialog
+                currentPaymentStatus={training.payment_status}
+                onChangePaymentMethod={handleChangePaymentMethod}
+                isLoading={changePaymentMethod.isPending}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <WorkoutExerciseManager
             trainingSessionId={training.id}
