@@ -19,7 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SessionCard } from '@/components/ui/session-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
-import { useTrainingSessions } from '@/hooks/useTrainingSessions';
+import { useTrainingSessions, useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useDiagnostics } from '@/hooks/useDiagnostics';
 import { ClientFormValues } from '@/lib/validations/client';
@@ -29,8 +30,10 @@ import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { ClientMeasurementImport } from '@/components/measurements/ClientMeasurementImport';
+import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -39,6 +42,8 @@ export default function ClientDetail() {
   const { data: measurements = [] } = useMeasurements(id);
   const { data: diagnostics = [] } = useDiagnostics(id);
   const updateClient = useUpdateClient();
+  const updateTraining = useUpdateTrainingSession();
+  const trainingPrices = useTrainingPrices();
   const createMeasurement = useCreateMeasurement();
   
   const [isCreateMeasurementOpen, setIsCreateMeasurementOpen] = useState(false);
@@ -48,6 +53,45 @@ export default function ClientDetail() {
     ...s,
     status: s.status as 'scheduled' | 'completed' | 'canceled'
   }));
+
+  const handleCompleteTraining = async (sessionId: string) => {
+    try {
+      await updateTraining.mutateAsync({
+        id: sessionId,
+        input: { status: 'completed' },
+        trainingPrices,
+      });
+      toast({ title: 'Trénink dokončen' });
+    } catch (error) {
+      toast({ title: 'Chyba při dokončování', variant: 'destructive' });
+    }
+  };
+
+  const handleCancelTraining = async (sessionId: string) => {
+    try {
+      const now = new Date();
+      const session = allSessions.find(s => s.id === sessionId);
+      const sessionDate = session ? new Date(session.date) : now;
+      const hoursUntilSession = (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const isLateCancellation = hoursUntilSession < 24;
+
+      await updateTraining.mutateAsync({
+        id: sessionId,
+        input: {
+          status: 'canceled',
+          canceled_at: now.toISOString(),
+          is_late_cancellation: isLateCancellation,
+        },
+        trainingPrices,
+      });
+      toast({ 
+        title: isLateCancellation ? 'Trénink zrušen (pozdě)' : 'Trénink zrušen',
+        variant: isLateCancellation ? 'destructive' : 'default',
+      });
+    } catch (error) {
+      toast({ title: 'Chyba při rušení', variant: 'destructive' });
+    }
+  };
 
   if (clientLoading) {
     return <ClientDetailSkeleton />;
@@ -197,7 +241,16 @@ export default function ClientDetail() {
         <TabsContent value="trainings" className="space-y-3">
           {clientSessions.length > 0 ? (
             clientSessions.map((session) => (
-              <SessionCard key={session.id} session={session} client={client} />
+              <TrainingQuickMenu
+                key={session.id}
+                session={session}
+                onComplete={() => handleCompleteTraining(session.id)}
+                onCancel={() => handleCancelTraining(session.id)}
+              >
+                <div>
+                  <SessionCard session={session} client={client} />
+                </div>
+              </TrainingQuickMenu>
             ))
           ) : (
             <div className="glass rounded-xl p-8 text-center">
