@@ -70,60 +70,16 @@ export default function Progress() {
         <ProgressEntryForm />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-subtle">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Dumbbell className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.totalEntries}</p>
-                <p className="text-xs text-muted-foreground">Záznamy</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-subtle">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Users className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.uniqueClients}</p>
-                <p className="text-xs text-muted-foreground">Klienti</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-subtle">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <TrendingUp className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.uniqueExercisesCount}</p>
-                <p className="text-xs text-muted-foreground">Cviky</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-subtle">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Trophy className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.prsCount}</p>
-                <p className="text-xs text-muted-foreground">Osobní rekordy</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Compact Stats Row */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+        <span><strong className="text-foreground">{stats.totalEntries}</strong> záznamů</span>
+        <span>•</span>
+        <span><strong className="text-foreground">{stats.uniqueExercisesCount}</strong> cviků</span>
+        <span>•</span>
+        <span className="flex items-center gap-1">
+          <Trophy className="w-3.5 h-3.5 text-amber-400" />
+          <strong className="text-foreground">{stats.prsCount}</strong> PR
+        </span>
       </div>
 
       {/* Filters */}

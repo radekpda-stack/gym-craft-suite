@@ -20,9 +20,10 @@ const statusConfig = {
   scheduled: {
     label: 'Naplánováno',
     shortLabel: 'Plán',
-    className: 'bg-primary/15 text-primary border-primary/30',
-    borderColor: 'border-l-primary',
-    icon: AlertCircle,
+    className: 'bg-muted/50 text-muted-foreground border-muted-foreground/30',
+    borderColor: 'border-l-muted-foreground',
+    icon: Clock,
+    dotColor: 'bg-muted-foreground',
   },
   completed: {
     label: 'Dokončeno',
@@ -30,6 +31,7 @@ const statusConfig = {
     className: 'bg-success/15 text-success border-success/30',
     borderColor: 'border-l-success',
     icon: CheckCircle,
+    dotColor: 'bg-success',
   },
   canceled: {
     label: 'Zrušeno',
@@ -37,6 +39,7 @@ const statusConfig = {
     className: 'bg-destructive/15 text-destructive border-destructive/30',
     borderColor: 'border-l-destructive',
     icon: XCircle,
+    dotColor: 'bg-destructive',
   },
 };
 

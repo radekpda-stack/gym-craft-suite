@@ -135,36 +135,11 @@ export default function Sales() {
       {/* New Sale Dialog */}
       <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <ShoppingCart className="w-4 h-4" />
-            <span className="text-sm">Celkem prodejů</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.totalSales}</p>
-        </div>
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Banknote className="w-4 h-4" />
-            <span className="text-sm">Hotově</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.cashSales}</p>
-        </div>
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Wallet className="w-4 h-4" />
-            <span className="text-sm">Z kreditu</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.creditSales}</p>
-        </div>
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Package className="w-4 h-4" />
-            <span className="text-sm">Celková tržba</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.totalAmount.toLocaleString('cs-CZ')} Kč</p>
-        </div>
+      {/* Compact Stats Row */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+        <span><strong className="text-foreground">{stats.totalSales}</strong> prodejů</span>
+        <span>•</span>
+        <span><strong className="text-foreground">{stats.totalAmount.toLocaleString('cs-CZ')} Kč</strong> celkem</span>
       </div>
 
       {/* Filter */}
