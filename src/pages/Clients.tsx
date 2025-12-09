@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,9 +19,8 @@ import { useClientTrainingCounts } from '@/hooks/useClientTrainingCounts';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
-import { SharedBudgetManager } from '@/components/clients/SharedBudgetManager';
-import { GenderStatistics } from '@/components/clients/GenderStatistics';
-import { ClientExportDialog } from '@/components/clients/ClientExportDialog';
+import { ClientFiltersDialog } from '@/components/clients/ClientFiltersDialog';
+import { ClientQuickMenu } from '@/components/clients/ClientQuickMenu';
 import { GenderIcon } from '@/components/clients/GenderIcon';
 import { ClientFormValues } from '@/lib/validations/client';
 import { ClientListSkeleton } from '@/components/skeletons';
@@ -42,18 +41,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -80,9 +67,6 @@ export default function Clients() {
   const [creditDescription, setCreditDescription] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-
-  const [showBudgetManager, setShowBudgetManager] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
   const { data: trainingCounts = {} } = useClientTrainingCounts();
@@ -115,7 +99,7 @@ export default function Clients() {
     setSelectedGoal(null);
     setSelectedTagId(null);
     setGenderFilter('all');
-    clearLowCreditFilter();
+    setLowCreditFilter(false);
   };
 
   const handleArchiveClient = async (client: Client) => {
@@ -225,14 +209,6 @@ export default function Clients() {
     });
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredClients.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredClients.map(c => c.id)));
-    }
-  };
-
   const handleBulkDelete = async () => {
     for (const id of selectedIds) {
       await deleteClient.mutateAsync(id);
@@ -242,27 +218,21 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
             Klienti
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {showArchived 
-              ? `${archivedClients.length} archivovaných klientů`
-              : `${activeClients.length} aktivních klientů`
-            }
-            {archivedClients.length > 0 && !showArchived && (
-              <span className="text-xs ml-2">({archivedClients.length} v archivu)</span>
-            )}
+          <p className="text-sm text-muted-foreground">
+            {filteredClients.length} z {showArchived ? archivedClients.length : activeClients.length}
           </p>
         </div>
 
         <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
           <Plus className="w-4 h-4" />
-          Nový klient
+          <span className="hidden sm:inline">Nový klient</span>
         </Button>
       </div>
 
@@ -416,8 +386,8 @@ export default function Clients() {
       </Dialog>
 
       {/* Search & Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
@@ -428,496 +398,300 @@ export default function Clients() {
             />
           </div>
 
-          <div className="flex gap-2">
-            {/* Sort selector */}
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-[160px] h-12">
-                <ArrowUpDown className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Řazení" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Podle jména</SelectItem>
-                <SelectItem value="trainings">Podle tréninků</SelectItem>
-                <SelectItem value="credit">Podle kreditu</SelectItem>
-                <SelectItem value="recent">Nejnovější</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <ClientExportDialog clients={clients} genderFilter={genderFilter} />
-            <Button
-              variant="outline"
-              onClick={() => setShowStats(!showStats)}
-              className="gap-2"
-            >
-              <Users className="w-4 h-4" />
-              Statistiky
-            </Button>
-          </div>
+          <ClientFiltersDialog
+            genderFilter={genderFilter}
+            setGenderFilter={setGenderFilter}
+            selectedGoal={selectedGoal}
+            setSelectedGoal={setSelectedGoal}
+            selectedTagId={selectedTagId}
+            setSelectedTagId={setSelectedTagId}
+            lowCreditFilter={lowCreditFilter}
+            setLowCreditFilter={setLowCreditFilter}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            allGoals={allGoals}
+            allTags={allTags}
+            hasActiveFilters={hasActiveFilters}
+            onClearAll={clearAllFilters}
+          />
         </div>
 
-        {/* Archive Toggle & Gender Filter Pills */}
-        <div className="flex gap-2 flex-wrap items-center">
-          {/* Archive toggle */}
+        {/* Active/Archive Toggle */}
+        <div className="flex gap-2">
           <Button
-            variant={showArchived ? 'default' : 'outline'}
-            onClick={() => setShowArchived(!showArchived)}
-            className={cn(
-              "rounded-full h-8 px-3 text-sm gap-1",
-              showArchived && "bg-muted text-muted-foreground"
-            )}
+            variant={!showArchived ? 'default' : 'outline'}
+            onClick={() => setShowArchived(false)}
+            className="flex-1 sm:flex-none"
             size="sm"
           >
-            {showArchived ? <ArchiveRestore className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
-            {showArchived ? 'Archiv' : 'Archiv'}
+            Aktivní
+            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+              {activeClients.length}
+            </Badge>
+          </Button>
+          <Button
+            variant={showArchived ? 'default' : 'outline'}
+            onClick={() => setShowArchived(true)}
+            className="flex-1 sm:flex-none"
+            size="sm"
+          >
+            <Archive className="w-4 h-4 mr-1" />
+            Archiv
             {archivedClients.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                 {archivedClients.length}
               </Badge>
             )}
           </Button>
-          
-          <span className="text-muted-foreground text-sm mx-1">|</span>
-          
-          <span className="text-sm text-muted-foreground mr-1">Pohlaví:</span>
-          <Button
-            variant={genderFilter === 'all' ? 'default' : 'outline'}
-            onClick={() => setGenderFilter('all')}
-            className="rounded-full h-8 px-3 text-sm"
-            size="sm"
-          >
-            Všichni
-          </Button>
-          <Button
-            variant={genderFilter === 'male' ? 'default' : 'outline'}
-            onClick={() => setGenderFilter('male')}
-            className="rounded-full h-8 px-3 text-sm gap-1"
-            size="sm"
-          >
-            <span>♂</span> Muži
-          </Button>
-          <Button
-            variant={genderFilter === 'female' ? 'default' : 'outline'}
-            onClick={() => setGenderFilter('female')}
-            className="rounded-full h-8 px-3 text-sm gap-1"
-            size="sm"
-          >
-            <span>♀</span> Ženy
-          </Button>
-
-          <span className="text-muted-foreground text-sm mx-2">|</span>
-
-          {lowCreditFilter && (
-            <Button
-              variant="destructive"
-              onClick={clearLowCreditFilter}
-              className="rounded-full h-8 px-3 text-sm gap-2"
-              size="sm"
-            >
-              Nízký kredit
-              <X className="w-3 h-3" />
-            </Button>
-          )}
-          {selectedTagId && (
-            <Button
-              variant="secondary"
-              onClick={() => setSelectedTagId(null)}
-              className="rounded-full h-8 px-3 text-sm gap-2"
-              size="sm"
-              style={{ 
-                backgroundColor: allTags.find(t => t.id === selectedTagId)?.color + '20',
-                color: allTags.find(t => t.id === selectedTagId)?.color,
-                borderColor: allTags.find(t => t.id === selectedTagId)?.color
-              }}
-            >
-              <Tag className="w-3 h-3" />
-              {allTags.find(t => t.id === selectedTagId)?.name}
-              <X className="w-3 h-3" />
-            </Button>
-          )}
-          
-          {!hasActiveFilters && (
-            <>
-              {allGoals.slice(0, 3).map((goal) => (
-                <Button
-                  key={goal}
-                  variant={selectedGoal === goal ? 'default' : 'outline'}
-                  onClick={() => setSelectedGoal(goal)}
-                  className="rounded-full h-8 px-3 text-sm"
-                  size="sm"
-                >
-                  {goal}
-                </Button>
-              ))}
-              {allTags.length > 0 && (
-                <>
-                  <span className="text-muted-foreground text-sm mx-1">|</span>
-                  {allTags.slice(0, 4).map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
-                      className="border cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => setSelectedTagId(tag.id)}
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))}
-                </>
-              )}
-            </>
-          )}
-          
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              onClick={clearAllFilters}
-              className="rounded-full h-8 px-3 text-sm text-muted-foreground"
-              size="sm"
-            >
-              Zrušit filtry
-            </Button>
-          )}
         </div>
-
-        {/* Active Filter Badge */}
-        {hasActiveFilters && (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <span className="text-xs">Zobrazeno {filteredClients.length} z {clients.length} klientů</span>
-            </Badge>
-          </div>
-        )}
       </div>
-
-      {/* Gender Statistics */}
-      {showStats && (
-        <GenderStatistics clients={clients} />
-      )}
 
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between p-4 glass rounded-xl animate-slide-up">
-          <div className="flex items-center gap-3">
-            <Checkbox
-              checked={selectedIds.size === filteredClients.length}
-              onCheckedChange={toggleSelectAll}
-            />
-            <span className="text-sm font-medium">
-              {selectedIds.size} vybráno
-            </span>
-          </div>
+        <div className="flex items-center justify-between p-3 glass rounded-xl animate-slide-up">
+          <span className="text-sm font-medium">
+            {selectedIds.size} vybráno
+          </span>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setSelectedIds(new Set())}
             >
-              Zrušit výběr
+              Zrušit
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => setShowBulkDeleteDialog(true)}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Smazat vybrané
+              <Trash2 className="w-4 h-4 mr-1" />
+              Smazat
             </Button>
           </div>
         </div>
       )}
 
-      {/* Shared Budgets Section */}
-      <Collapsible open={showBudgetManager} onOpenChange={setShowBudgetManager}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <LinkIcon className="w-4 h-4" />
-              Sdílené budgety
-              {budgetGroups.length > 0 && (
-                <Badge variant="secondary">{budgetGroups.length}</Badge>
-              )}
-            </div>
-            <ChevronRight className={cn(
-              "w-4 h-4 transition-transform",
-              showBudgetManager && "rotate-90"
-            )} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-4">
-          <div className="glass rounded-xl p-4">
-            <SharedBudgetManager
-              clients={clients}
-              selectedClientIds={Array.from(selectedIds)}
-            />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
       {/* Clients Grid */}
       {isLoading ? (
         <ClientListSkeleton />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredClients.map((client, index) => {
             const clientTags = clientTagsMap[client.id] || [];
             const isSelected = selectedIds.has(client.id);
+            const clientBudgetGroup = budgetGroups.find(g => g.members.some(m => m.client_id === client.id));
+            const isShared = !!clientBudgetGroup;
+            const displayBalance = isShared 
+              ? Math.max(0, clientBudgetGroup.shared_balance || 0) 
+              : (client.credit_balance || 0);
+            const actualBalance = isShared 
+              ? (clientBudgetGroup.shared_balance || 0)
+              : (client.credit_balance || 0);
+
             return (
-            <div
-              key={client.id}
-              className={cn(
-                "glass rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:glow group animate-slide-up relative",
-                isSelected && "ring-2 ring-primary"
-              )}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {/* Selection checkbox */}
-              <div className="absolute top-3 left-3">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggleSelectClient(client.id)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              {/* Favorite button */}
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite });
-                }}
-                className={cn(
-                  "absolute top-3 left-10 p-1 rounded transition-all",
-                  client.is_favorite 
-                    ? "text-yellow-500" 
-                    : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500"
-                )}
+              <ClientQuickMenu
+                key={client.id}
+                client={client}
+                onAddCredit={() => setCreditClient(client)}
+                onAddMeasurement={() => {}}
+                onAddProgress={() => {}}
+                onAddNote={() => {}}
               >
-                <Star className={cn("w-4 h-4", client.is_favorite && "fill-current")} />
-              </button>
+                <div
+                  className={cn(
+                    "glass rounded-xl p-4 transition-all duration-200 hover:bg-secondary/50 group relative",
+                    isSelected && "ring-2 ring-primary"
+                  )}
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  {/* Selection checkbox */}
+                  <div className="absolute top-2 left-2">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelectClient(client.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
 
-              {/* Action buttons */}
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setCreditClient(client);
-                      }}
-                    >
-                      <Wallet className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Přidat kredit</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setEditingClient(client);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Upravit</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "h-8 w-8",
-                        client.is_archived 
-                          ? "text-primary hover:text-primary" 
-                          : "text-muted-foreground hover:text-muted-foreground"
-                      )}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleArchiveClient(client);
-                      }}
-                    >
-                      {client.is_archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{client.is_archived ? 'Obnovit z archivu' : 'Archivovat'}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setDeletingClient(client);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Smazat</TooltipContent>
-                </Tooltip>
-              </div>
-
-              <Link to={`/clients/${client.id}`} className="block">
-                <div className="flex items-start gap-4">
-                  <ClientAvatar name={client.name} size="lg" />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate pr-16">
-                        {client.name}
-                      </h3>
-                      <GenderIcon gender={client.gender} />
-                      {trainingCounts[client.id]?.count > 0 && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0.5 gap-1">
-                          <Dumbbell className="w-3 h-3" />
-                          {trainingCounts[client.id].count}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {/* Last Activity */}
-                    {trainingCounts[client.id]?.lastActivityDate && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Poslední aktivita: {format(new Date(trainingCounts[client.id].lastActivityDate!), 'd.M.yyyy', { locale: cs })}
-                      </p>
+                  {/* Favorite button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite });
+                    }}
+                    className={cn(
+                      "absolute top-2 left-8 p-1 rounded transition-all",
+                      client.is_favorite 
+                        ? "text-yellow-500" 
+                        : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500"
                     )}
-                    
-                    {/* Credit Balance */}
-                    {(() => {
-                      const clientBudgetGroup = budgetGroups.find(g => g.members.some(m => m.client_id === client.id));
-                      const isShared = !!clientBudgetGroup;
-                      const displayBalance = isShared 
-                        ? Math.max(0, clientBudgetGroup.shared_balance || 0) 
-                        : (client.credit_balance || 0);
-                      const actualBalance = isShared 
-                        ? (clientBudgetGroup.shared_balance || 0)
-                        : (client.credit_balance || 0);
-                      const isExhausted = actualBalance <= 0;
+                  >
+                    <Star className={cn("w-4 h-4", client.is_favorite && "fill-current")} />
+                  </button>
+
+                  {/* Action buttons */}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCreditClient(client);
+                          }}
+                        >
+                          <Wallet className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Přidat kredit</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingClient(client);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upravit</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleArchiveClient(client);
+                          }}
+                        >
+                          {client.is_archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{client.is_archived ? 'Obnovit' : 'Archivovat'}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDeletingClient(client);
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Smazat</TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  <Link to={`/clients/${client.id}`} className="block">
+                    <div className="flex items-center gap-3">
+                      <ClientAvatar name={client.name} size="md" />
                       
-                      return (
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <div className={cn(
-                            "flex items-center gap-1.5 font-semibold",
-                            isExhausted ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
-                          )}>
-                            {isShared ? <Users className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
-                            <span>{displayBalance.toLocaleString('cs-CZ')} Kč</span>
-                          </div>
-                          {/* Shared Budget Badge */}
-                          {isShared && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn(
-                                    "gap-1 text-xs px-1.5 py-0.5 border-primary/50 cursor-help",
-                                    isExhausted && "border-destructive/50 text-destructive"
-                                  )}
-                                >
-                                  <LinkIcon className="w-3 h-3" />
-                                  {clientBudgetGroup.name}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="font-medium mb-1">Členové skupiny:</p>
-                                <ul className="text-xs space-y-0.5">
-                                  {clientBudgetGroup.members.map(member => {
-                                    const memberClient = clients.find(c => c.id === member.client_id);
-                                    return (
-                                      <li key={member.client_id}>
-                                        {memberClient?.name || 'Neznámý klient'}
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {isExhausted && (
-                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                              Vyčerpáno
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                            {client.name}
+                          </h3>
+                          <GenderIcon gender={client.gender} />
+                          {trainingCounts[client.id]?.count > 0 && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0 gap-0.5 h-5">
+                              <Dumbbell className="w-3 h-3" />
+                              {trainingCounts[client.id].count}
                             </Badge>
                           )}
                         </div>
-                      );
-                    })()}
-                    
-                    {/* Client Tags */}
-                    {clientTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {clientTags.slice(0, 3).map((tag) => (
-                          <Badge
-                            key={tag.id}
-                            style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
-                            className="border text-xs px-1.5 py-0.5"
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {clientTags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                            +{clientTags.length - 3}
-                          </Badge>
+                        
+                        <div className="flex items-center gap-2 mt-1 text-sm">
+                          <span className={cn(
+                            "font-medium",
+                            actualBalance <= 0 ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
+                          )}>
+                            {displayBalance.toLocaleString('cs-CZ')} Kč
+                          </span>
+                          {isShared && (
+                            <Badge variant="outline" className="text-xs px-1 py-0 h-4 gap-0.5">
+                              <LinkIcon className="w-2.5 h-2.5" />
+                              {clientBudgetGroup.name}
+                            </Badge>
+                          )}
+                          {trainingCounts[client.id]?.lastActivityDate && (
+                            <span className="text-xs text-muted-foreground">
+                              • {format(new Date(trainingCounts[client.id].lastActivityDate!), 'd.M.', { locale: cs })}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Client Tags */}
+                        {clientTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {clientTags.slice(0, 2).map((tag) => (
+                              <Badge
+                                key={tag.id}
+                                style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                                className="border text-xs px-1.5 py-0 h-4"
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {clientTags.length > 2 && (
+                              <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
+                                +{clientTags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
 
-                    <div className="mt-3 space-y-1">
-                      {client.email && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          <span className="truncate">{client.email}</span>
-                        </div>
-                      )}
-                      {client.phone && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="w-4 h-4" />
-                          <span>{client.phone}</span>
-                        </div>
-                      )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     </div>
-
-                    {client.health_restrictions && (
-                      <p className="mt-3 text-sm text-warning/80 line-clamp-1">
-                        ⚠️ {client.health_restrictions}
-                      </p>
-                    )}
-                  </div>
-
-                  <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-6" />
+                  </Link>
                 </div>
-              </Link>
-            </div>
-          )})}
+              </ClientQuickMenu>
+            );
+          })}
         </div>
       )}
 
       {!isLoading && filteredClients.length === 0 && (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <div className="glass rounded-xl p-8 text-center">
+          <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground">
-            {clients.length === 0 ? "Zatím nemáte žádné klienty" : "Žádní klienti nenalezeni"}
+            {clients.length === 0 ? "Zatím žádní klienti" : "Nic nenalezeno"}
           </h3>
-          <p className="text-muted-foreground mt-1">
-            {clients.length === 0 
-              ? "Přidejte svého prvního klienta kliknutím na tlačítko výše"
-              : "Zkuste upravit vyhledávání nebo filtry"}
+          <p className="text-sm text-muted-foreground mt-1">
+            {clients.length === 0
+              ? "Přidejte prvního klienta"
+              : "Upravte vyhledávání nebo filtry"}
           </p>
+          {clients.length === 0 && (
+            <Button 
+              className="mt-4 gap-2"
+              onClick={() => setIsCreateSheetOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+              Nový klient
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -235,42 +235,25 @@ export default function Measurements() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="stat-card">
-            <div className="flex items-start justify-between mb-4">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {stat.label}
-              </span>
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <stat.icon className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="flex items-end gap-3">
-              <span className="text-4xl font-bold text-foreground tracking-tight">
-                {stat.value || '—'}
-              </span>
-              <span className="text-xl text-muted-foreground mb-1">
-                {stat.unit}
-              </span>
-            </div>
+      {/* Compact Stats Row */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap glass rounded-xl p-3">
+        {stats.map((stat, i) => (
+          <span key={stat.label} className="flex items-center gap-1">
+            {i > 0 && <span className="mr-3">•</span>}
+            <span className="text-muted-foreground">{stat.label}:</span>
+            <strong className="text-foreground">{stat.value || '—'}</strong>
+            <span className="text-xs">{stat.unit}</span>
             {stat.change && (
-              <div className={cn(
-                'flex items-center gap-1 mt-2 text-sm font-medium',
+              <span className={cn(
+                'text-xs ml-1',
                 (stat.positive ? parseFloat(stat.change) > 0 : parseFloat(stat.change) < 0)
                   ? 'text-success'
                   : 'text-destructive'
               )}>
-                {parseFloat(stat.change) > 0 ? (
-                  <TrendingUp className="w-4 h-4" />
-                ) : (
-                  <TrendingDown className="w-4 h-4" />
-                )}
-                <span>{stat.change}%</span>
-              </div>
+                {parseFloat(stat.change) > 0 ? '+' : ''}{stat.change}%
+              </span>
             )}
-          </div>
+          </span>
         ))}
       </div>
 

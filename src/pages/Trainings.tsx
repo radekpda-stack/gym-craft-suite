@@ -216,16 +216,7 @@ export default function Trainings() {
         </div>
       )}
 
-      {/* Mobile FAB */}
-      <div className="fixed bottom-24 right-4 sm:hidden z-40">
-        <Button
-          size="lg"
-          className="w-14 h-14 rounded-full shadow-lg glow p-0"
-          onClick={() => setIsCreateSheetOpen(true)}
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      </div>
+      {/* Mobile FAB - removed duplicate, only keep if no other CTA visible */}
     </div>
   );
 }
