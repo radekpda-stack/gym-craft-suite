@@ -49,16 +49,14 @@ const sections: NavSection[] = [
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
       { to: '/clients', icon: Users, label: 'Klienti' },
+      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
     ],
   },
   {
-    label: 'Klientská data',
+    label: 'Záznamy',
     items: [
-      { to: '/measurements', icon: Activity, label: 'Měření' },
-      { to: '/progress', icon: TrendingUp, label: 'Progres' },
-      { to: '/diagnostics', icon: Stethoscope, label: 'Diagnostika' },
+      { to: '/records', icon: Activity, label: 'Záznamy klientů' },
     ],
   },
   {
