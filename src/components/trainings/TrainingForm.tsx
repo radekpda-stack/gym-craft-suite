@@ -65,11 +65,22 @@ export function TrainingForm({
 }: TrainingFormProps) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
   
+  // Helper to format date as local datetime string (without UTC conversion)
+  const getLocalDateTimeString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const form = useForm<TrainingFormValues>({
     resolver: zodResolver(trainingFormSchema),
     defaultValues: {
       client_id: defaultValues?.client_id || "",
-      date: defaultValues?.date || new Date().toISOString().slice(0, 16),
+      date: defaultValues?.date || getLocalDateTimeString(),
       duration: defaultValues?.duration || 60,
       participant_count: defaultValues?.participant_count || 1,
       notes: defaultValues?.notes || "",
