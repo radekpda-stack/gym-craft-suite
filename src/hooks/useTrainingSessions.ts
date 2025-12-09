@@ -7,6 +7,9 @@ export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
 
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
+export type PaymentStatus = 'pending' | 'unpaid' | 'paid_credit' | 'paid_cash' | 'paid_card' | 'paid_bank';
+export type PaymentMethod = 'credit' | 'cash' | 'card' | 'bank' | null;
+
 export interface TrainingSession {
   id: string;
   client_id: string;
@@ -24,6 +27,10 @@ export interface TrainingSession {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  // New payment fields
+  payment_status: PaymentStatus | string | null;
+  final_price: number | null;
+  payment_method: PaymentMethod | string | null;
 }
 
 export interface CreateTrainingInput {
@@ -47,6 +54,9 @@ export interface UpdateTrainingInput {
   canceled_at?: string;
   is_late_cancellation?: boolean;
   participant_count?: number;
+  payment_status?: PaymentStatus;
+  final_price?: number;
+  payment_method?: PaymentMethod;
 }
 
 export function useTrainingSessions(clientId?: string) {

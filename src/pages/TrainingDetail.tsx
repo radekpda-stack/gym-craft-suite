@@ -30,6 +30,7 @@ import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { useClient, useClients } from '@/hooks/useClients';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
+import { PaymentMethodSelector, PaymentOption, getPaymentStatusFromOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
 import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackForm } from '@/components/feedback/TrainingFeedbackForm';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
@@ -89,6 +90,7 @@ export default function TrainingDetail() {
   const [completeNotes, setCompleteNotes] = useState('');
   const [participantShares, setParticipantShares] = useState<ParticipantShare[]>([]);
   const [usePriceSplit, setUsePriceSplit] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -146,6 +148,7 @@ export default function TrainingDetail() {
     setCompleteRating(training.subjective_rating);
     setCompleteNotes(training.notes || '');
     setUsePriceSplit(existingParticipants.length > 0 || participantCount > 1);
+    setPaymentMethod('credit');
     
     // Initialize participant shares
     const totalPrice = getTrainingPrice(participantCount, trainingPrices);
@@ -174,6 +177,10 @@ export default function TrainingDetail() {
 
   const handleComplete = async () => {
     const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
+    const totalPrice = getExpectedPrice();
+    const shouldDeductCredit = paymentMethod === 'credit';
+    const paymentStatus = getPaymentStatusFromOption(paymentMethod);
+    const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
     
     if (usePriceSplit && participantShares.length > 1) {
       // Save participants and deduct credit from each
@@ -185,7 +192,7 @@ export default function TrainingDetail() {
         })),
       });
       
-      // Update training status to completed (without auto credit deduction)
+      // Update training status to completed with payment info
       await updateTraining.mutateAsync({
         id: training.id,
         input: {
@@ -193,28 +200,58 @@ export default function TrainingDetail() {
           participant_count: participantCount,
           subjective_rating: completeRating || undefined,
           notes: completeNotes || undefined,
+          payment_status: paymentStatus,
+          final_price: totalPrice,
+          payment_method: paymentMethodValue,
         },
       });
       
-      // Deduct credit from each participant
-      await deductParticipantsCredit.mutateAsync({
-        training_session_id: training.id,
-        participants: participantShares.map(p => ({
-          client_id: p.client_id,
-          price_share: p.price_share,
-        })),
-        description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
-      });
+      // Only deduct credit if paying from credit
+      if (shouldDeductCredit) {
+        await deductParticipantsCredit.mutateAsync({
+          training_session_id: training.id,
+          participants: participantShares.map(p => ({
+            client_id: p.client_id,
+            price_share: p.price_share,
+          })),
+          description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+        });
+      }
     } else {
       // Standard single client completion
-      await completeTraining.mutateAsync({
-        id: training.id,
-        client_id: training.client_id,
-        participant_count: completeParticipants,
-        subjective_rating: completeRating || undefined,
-        notes: completeNotes || undefined,
-        trainingPrices,
-      });
+      if (shouldDeductCredit) {
+        await completeTraining.mutateAsync({
+          id: training.id,
+          client_id: training.client_id,
+          participant_count: completeParticipants,
+          subjective_rating: completeRating || undefined,
+          notes: completeNotes || undefined,
+          trainingPrices,
+        });
+        // Update payment fields
+        await updateTraining.mutateAsync({
+          id: training.id,
+          input: {
+            payment_status: paymentStatus,
+            final_price: totalPrice,
+            payment_method: paymentMethodValue,
+          },
+        });
+      } else {
+        // Non-credit payment - just mark as completed without credit deduction
+        await updateTraining.mutateAsync({
+          id: training.id,
+          input: {
+            status: 'completed',
+            participant_count: completeParticipants,
+            subjective_rating: completeRating || undefined,
+            notes: completeNotes || undefined,
+            payment_status: paymentStatus,
+            final_price: totalPrice,
+            payment_method: paymentMethodValue,
+          },
+        });
+      }
     }
     setShowCompleteDialog(false);
   };
@@ -358,7 +395,7 @@ export default function TrainingDetail() {
           <DialogHeader>
             <DialogTitle>Dokončit trénink</DialogTitle>
             <DialogDescription>
-              Vyplňte údaje a potvrďte dokončení tréninku. Kredit bude automaticky odečten.
+              Vyplňte údaje a zvolte způsob platby.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -430,6 +467,16 @@ export default function TrainingDetail() {
               </div>
             )}
 
+            {/* Payment Method Selection */}
+            <div className="space-y-2">
+              <Label>Způsob platby</Label>
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                disabled={completeTraining.isPending || saveParticipants.isPending}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label>Hodnocení (volitelné)</Label>
               <RatingInput
@@ -465,7 +512,9 @@ export default function TrainingDetail() {
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Dokončit a odečíst kredit
+                  {paymentMethod === 'credit' ? 'Dokončit a odečíst kredit' : 
+                   paymentMethod === 'later' ? 'Dokončit (platba později)' :
+                   'Dokončit trénink'}
                 </>
               )}
             </Button>
