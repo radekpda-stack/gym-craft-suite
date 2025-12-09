@@ -219,7 +219,16 @@ export default function ClientDetail() {
               <h3 className="text-sm font-medium text-muted-foreground">Nadcházející tréninky</h3>
               <div className="space-y-2">
                 {scheduledSessions.slice(0, 3).map((session) => (
-                  <SessionCard key={session.id} session={session} client={client} compact />
+                  <TrainingQuickMenu
+                    key={session.id}
+                    session={session}
+                    onComplete={() => handleCompleteTraining(session.id)}
+                    onCancel={() => handleCancelTraining(session.id)}
+                  >
+                    <div>
+                      <SessionCard session={session} client={client} compact />
+                    </div>
+                  </TrainingQuickMenu>
                 ))}
               </div>
             </div>
@@ -231,7 +240,16 @@ export default function ClientDetail() {
               <h3 className="text-sm font-medium text-muted-foreground">Poslední tréninky</h3>
               <div className="space-y-2">
                 {completedSessions.slice(0, 3).map((session) => (
-                  <SessionCard key={session.id} session={session} client={client} compact />
+                  <TrainingQuickMenu
+                    key={session.id}
+                    session={session}
+                    onComplete={() => handleCompleteTraining(session.id)}
+                    onCancel={() => handleCancelTraining(session.id)}
+                  >
+                    <div>
+                      <SessionCard session={session} client={client} compact />
+                    </div>
+                  </TrainingQuickMenu>
                 ))}
               </div>
             </div>
