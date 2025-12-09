@@ -7,14 +7,17 @@ import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
   useCreateTrainingSession,
+  useUpdateTrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { SessionCard } from '@/components/ui/session-card';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const statusLabels = {
   scheduled: 'Plán',
@@ -37,8 +40,48 @@ export default function Trainings() {
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
   const createTraining = useCreateTrainingSession();
+  const updateTraining = useUpdateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
+
+  const handleCompleteTraining = async (sessionId: string) => {
+    try {
+      await updateTraining.mutateAsync({
+        id: sessionId,
+        input: { status: 'completed' },
+        trainingPrices,
+      });
+      toast({ title: 'Trénink dokončen' });
+    } catch (error) {
+      toast({ title: 'Chyba při dokončování', variant: 'destructive' });
+    }
+  };
+
+  const handleCancelTraining = async (sessionId: string) => {
+    try {
+      const now = new Date();
+      const session = sessions.find(s => s.id === sessionId);
+      const sessionDate = session ? new Date(session.date) : now;
+      const hoursUntilSession = (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const isLateCancellation = hoursUntilSession < 24;
+
+      await updateTraining.mutateAsync({
+        id: sessionId,
+        input: {
+          status: 'canceled',
+          canceled_at: now.toISOString(),
+          is_late_cancellation: isLateCancellation,
+        },
+        trainingPrices,
+      });
+      toast({ 
+        title: isLateCancellation ? 'Trénink zrušen (pozdě)' : 'Trénink zrušen',
+        variant: isLateCancellation ? 'destructive' : 'default',
+      });
+    } catch (error) {
+      toast({ title: 'Chyba při rušení', variant: 'destructive' });
+    }
+  };
 
   const filteredSessions = sessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
@@ -181,10 +224,18 @@ export default function Trainings() {
                 className="animate-slide-up"
                 style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
               >
-                <SessionCard
+                <TrainingQuickMenu
                   session={session}
-                  client={client}
-                />
+                  onComplete={() => handleCompleteTraining(session.id)}
+                  onCancel={() => handleCancelTraining(session.id)}
+                >
+                  <div>
+                    <SessionCard
+                      session={session}
+                      client={client}
+                    />
+                  </div>
+                </TrainingQuickMenu>
               </div>
             );
           })}
