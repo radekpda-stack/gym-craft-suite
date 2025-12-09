@@ -155,7 +155,7 @@ export default function Clients() {
       }
     });
 
-  const hasActiveFilters = selectedGoal || selectedTagId || lowCreditFilter || genderFilter !== 'all';
+  const hasActiveFilters = !!(selectedGoal || selectedTagId || lowCreditFilter || genderFilter !== 'all');
 
   const handleCreateClient = async (data: ClientFormValues) => {
     await createClient.mutateAsync(data);
