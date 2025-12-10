@@ -1,11 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Tag } from "lucide-react";
+import { Loader2, Repeat, Tag, Search, Check } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -22,11 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
 import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
+import { cn } from "@/lib/utils";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -36,7 +50,6 @@ const trainingFormSchema = z.object({
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "completed", "canceled"]),
-  // Recurrence fields
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),
@@ -54,6 +67,11 @@ interface TrainingFormProps {
   showRecurrence?: boolean;
 }
 
+// Helper to remove diacritics for search
+const removeDiacritics = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
 export function TrainingForm({
   onSubmit,
   isLoading,
@@ -64,8 +82,10 @@ export function TrainingForm({
   showRecurrence = true,
 }: TrainingFormProps) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   
-  // Helper to format date as local datetime string (without UTC conversion)
+  // Helper to format date as local datetime string
   const getLocalDateTimeString = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -96,6 +116,17 @@ export function TrainingForm({
     setSelectedTagIds(defaultTagIds);
   }, [defaultTagIds]);
 
+  // Filtered clients with diacritics-insensitive search
+  const filteredClients = useMemo(() => {
+    if (!clientSearch) return clients.filter(c => !c.is_archived);
+    const searchNorm = removeDiacritics(clientSearch);
+    return clients
+      .filter(c => !c.is_archived)
+      .filter(c => removeDiacritics(c.name).includes(searchNorm));
+  }, [clients, clientSearch]);
+
+  const selectedClient = clients.find(c => c.id === form.watch("client_id"));
+
   const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
@@ -109,22 +140,59 @@ export function TrainingForm({
           control={form.control}
           name="client_id"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Klient *</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-secondary border-border">
-                    <SelectValue placeholder="Vyberte klienta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-popover border-border">
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between bg-secondary border-border h-11",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {selectedClient?.name || "Vyberte klienta..."}
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Hledat klienta..." 
+                      value={clientSearch}
+                      onValueChange={setClientSearch}
+                      className="h-10"
+                    />
+                    <CommandList>
+                      <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
+                      <CommandGroup className="max-h-60 overflow-auto">
+                        {filteredClients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.id}
+                            onSelect={() => {
+                              field.onChange(client.id);
+                              setClientSearch("");
+                              setClientPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}

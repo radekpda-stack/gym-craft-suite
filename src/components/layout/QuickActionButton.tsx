@@ -14,13 +14,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
+import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 import { useClients, useCreateClient } from '@/hooks/useClients';
+import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
+import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
+import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 
 interface QuickAction {
   id: string;
@@ -45,19 +50,41 @@ export function QuickActionButton() {
   
   const { data: clients = [] } = useClients();
   const createClient = useCreateClient();
+  const createTraining = useCreateTrainingSession();
+  const addTrainingTags = useAddTrainingSessionTags();
+  const trainingPrices = useTrainingPrices();
   const createMeasurement = useCreateMeasurement();
   const createDiagnostic = useCreateDiagnostic();
 
   const handleAction = (actionId: string) => {
     setIsOpen(false);
-    
-    // For training, navigate to calendar with create mode
-    if (actionId === 'training') {
-      navigate('/calendar?create=true');
-      return;
-    }
-    
     setActiveSheet(actionId);
+  };
+
+  const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
+    try {
+      const result = await createTraining.mutateAsync({
+        client_id: data.client_id,
+        date: new Date(data.date).toISOString(),
+        duration: data.duration,
+        notes: data.notes,
+        subjective_rating: data.subjective_rating || undefined,
+        status: data.status,
+        participant_count: data.participant_count,
+        trainingPrices,
+      });
+      
+      if (tagIds.length > 0 && result?.session?.id) {
+        await addTrainingTags.mutateAsync({
+          trainingSessionId: result.session.id,
+          tagIds,
+        });
+      }
+      
+      setActiveSheet(null);
+    } catch (error) {
+      console.error('Error creating training:', error);
+    }
   };
 
   const handleCreateClient = async (data: any) => {
@@ -161,6 +188,14 @@ export function QuickActionButton() {
         onOpenChange={(open) => !open && setActiveSheet(null)}
         onSubmit={handleCreateClient}
         isLoading={createClient.isPending}
+      />
+
+      <CreateTrainingSheet
+        open={activeSheet === 'training'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+        onSubmit={handleCreateTraining}
+        isLoading={createTraining.isPending}
+        clients={clients}
       />
 
       <CreateMeasurementSheet

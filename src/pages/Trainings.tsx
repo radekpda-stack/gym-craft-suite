@@ -18,6 +18,7 @@ import { SessionCard } from '@/components/ui/session-card';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { addDays, format } from 'date-fns';
 
 const statusLabels = {
   scheduled: 'Plán',
@@ -36,6 +37,7 @@ export default function Trainings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
@@ -83,6 +85,32 @@ export default function Trainings() {
     }
   };
 
+  const handleDuplicateTraining = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    // Get next available time (tomorrow at same hour)
+    const originalDate = new Date(session.date);
+    const nextDate = addDays(new Date(), 1);
+    nextDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
+    
+    const year = nextDate.getFullYear();
+    const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+    const day = String(nextDate.getDate()).padStart(2, '0');
+    const hours = String(nextDate.getHours()).padStart(2, '0');
+    const minutes = String(nextDate.getMinutes()).padStart(2, '0');
+
+    setDuplicateDefaults({
+      client_id: session.client_id,
+      date: `${year}-${month}-${day}T${hours}:${minutes}`,
+      duration: session.duration,
+      participant_count: session.participant_count || 1,
+      notes: session.notes || '',
+      status: 'scheduled',
+    });
+    setIsCreateSheetOpen(true);
+  };
+
   const filteredSessions = sessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
     const matchesSearch =
@@ -95,53 +123,65 @@ export default function Trainings() {
   });
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
-    // Calculate recurrence end date if recurring
-    let recurrence_end_date: string | undefined;
-    let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
-    
-    if (data.is_recurring && data.recurrence_type && data.recurrence_count) {
-      const startDate = new Date(data.date);
-      const count = data.recurrence_count;
-      recurrence_type = data.recurrence_type;
+    try {
+      // Calculate recurrence end date if recurring
+      let recurrence_end_date: string | undefined;
+      let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
       
-      // Calculate end date based on recurrence type
-      const endDate = new Date(startDate);
-      switch (data.recurrence_type) {
-        case 'weekly':
-          endDate.setDate(endDate.getDate() + (count * 7));
-          break;
-        case 'biweekly':
-          endDate.setDate(endDate.getDate() + (count * 14));
-          break;
-        case 'monthly':
-          endDate.setMonth(endDate.getMonth() + count);
-          break;
+      if (data.is_recurring && data.recurrence_type && data.recurrence_count) {
+        const startDate = new Date(data.date);
+        const count = data.recurrence_count;
+        recurrence_type = data.recurrence_type;
+        
+        const endDate = new Date(startDate);
+        switch (data.recurrence_type) {
+          case 'weekly':
+            endDate.setDate(endDate.getDate() + (count * 7));
+            break;
+          case 'biweekly':
+            endDate.setDate(endDate.getDate() + (count * 14));
+            break;
+          case 'monthly':
+            endDate.setMonth(endDate.getMonth() + count);
+            break;
+        }
+        recurrence_end_date = endDate.toISOString();
       }
-      recurrence_end_date = endDate.toISOString();
-    }
-    
-    const result = await createTraining.mutateAsync({
-      client_id: data.client_id,
-      date: new Date(data.date).toISOString(),
-      duration: data.duration,
-      notes: data.notes,
-      subjective_rating: data.subjective_rating || undefined,
-      status: data.status,
-      participant_count: data.participant_count,
-      recurrence_type,
-      recurrence_end_date,
-      trainingPrices,
-    });
-    
-    // Add tags to the created training
-    if (tagIds.length > 0 && result?.session?.id) {
-      await addTrainingTags.mutateAsync({
-        trainingSessionId: result.session.id,
-        tagIds,
+      
+      const result = await createTraining.mutateAsync({
+        client_id: data.client_id,
+        date: new Date(data.date).toISOString(),
+        duration: data.duration,
+        notes: data.notes,
+        subjective_rating: data.subjective_rating || undefined,
+        status: data.status,
+        participant_count: data.participant_count,
+        recurrence_type,
+        recurrence_end_date,
+        trainingPrices,
       });
+      
+      // Add tags to the created training
+      if (tagIds.length > 0 && result?.session?.id) {
+        await addTrainingTags.mutateAsync({
+          trainingSessionId: result.session.id,
+          tagIds,
+        });
+      }
+      
+      setIsCreateSheetOpen(false);
+      setDuplicateDefaults(undefined);
+      toast({ title: 'Trénink vytvořen' });
+    } catch (error) {
+      toast({ title: 'Chyba při vytváření tréninku', variant: 'destructive' });
     }
-    
-    setIsCreateSheetOpen(false);
+  };
+
+  const handleSheetClose = (open: boolean) => {
+    setIsCreateSheetOpen(open);
+    if (!open) {
+      setDuplicateDefaults(undefined);
+    }
   };
 
   return (
@@ -165,11 +205,13 @@ export default function Trainings() {
       </div>
 
       <CreateTrainingSheet
+        key={duplicateDefaults ? 'duplicate' : 'new'}
         open={isCreateSheetOpen}
-        onOpenChange={setIsCreateSheetOpen}
+        onOpenChange={handleSheetClose}
         onSubmit={handleCreateTraining}
         isLoading={createTraining.isPending}
         clients={clients}
+        defaultValues={duplicateDefaults}
       />
 
       {/* Search and Filters - Mobile optimized */}
@@ -228,6 +270,7 @@ export default function Trainings() {
                   session={session}
                   onComplete={() => handleCompleteTraining(session.id)}
                   onCancel={() => handleCancelTraining(session.id)}
+                  onDuplicate={() => handleDuplicateTraining(session.id)}
                 >
                   <div>
                     <SessionCard

@@ -16,6 +16,7 @@ interface CreateTrainingSheetProps {
   clients: Client[];
   defaultClientId?: string;
   defaultDate?: string;
+  defaultValues?: Partial<TrainingFormValues>;
 }
 
 export function CreateTrainingSheet({
@@ -26,14 +27,15 @@ export function CreateTrainingSheet({
   clients,
   defaultClientId,
   defaultDate,
+  defaultValues: propDefaultValues,
 }: CreateTrainingSheetProps) {
-  const defaultValues: Partial<TrainingFormValues> = {};
+  const defaultValues: Partial<TrainingFormValues> = { ...propDefaultValues };
   
-  if (defaultClientId) {
+  if (defaultClientId && !defaultValues.client_id) {
     defaultValues.client_id = defaultClientId;
   }
   
-  if (defaultDate) {
+  if (defaultDate && !defaultValues.date) {
     defaultValues.date = defaultDate;
   }
 
