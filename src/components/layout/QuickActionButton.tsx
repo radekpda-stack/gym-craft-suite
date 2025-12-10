@@ -14,10 +14,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
-import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
+import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
+import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 import { useClients, useCreateClient } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
@@ -25,7 +25,7 @@ import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
-import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+import { EnhancedTrainingFormValues } from '@/components/trainings/EnhancedTrainingForm';
 
 interface QuickAction {
   id: string;
@@ -61,15 +61,14 @@ export function QuickActionButton() {
     setActiveSheet(actionId);
   };
 
-  const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
+  const handleCreateTraining = async (data: EnhancedTrainingFormValues, tagIds: string[]) => {
     try {
       const result = await createTraining.mutateAsync({
         client_id: data.client_id,
         date: new Date(data.date).toISOString(),
         duration: data.duration,
         notes: data.notes,
-        subjective_rating: data.subjective_rating || undefined,
-        status: data.status,
+        status: 'scheduled',
         participant_count: data.participant_count,
         trainingPrices,
       });
@@ -190,12 +189,13 @@ export function QuickActionButton() {
         isLoading={createClient.isPending}
       />
 
-      <CreateTrainingSheet
+      <CreateTrainingDialog
         open={activeSheet === 'training'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
         onSubmit={handleCreateTraining}
         isLoading={createTraining.isPending}
         clients={clients}
+        trainingPrices={trainingPrices}
       />
 
       <CreateMeasurementSheet
@@ -214,7 +214,7 @@ export function QuickActionButton() {
         clients={clients}
       />
 
-      <QuickCreditModal
+      <EnhancedCreditModal
         open={activeSheet === 'credit'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
         showTrigger={false}
