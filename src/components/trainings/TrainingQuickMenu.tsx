@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Pencil, Eye } from 'lucide-react';
+import { Check, X, Pencil, Eye, Copy } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -14,6 +14,7 @@ interface TrainingQuickMenuProps {
   children: React.ReactNode;
   onComplete?: () => void;
   onCancel?: () => void;
+  onDuplicate?: () => void;
 }
 
 export function TrainingQuickMenu({
@@ -21,6 +22,7 @@ export function TrainingQuickMenu({
   children,
   onComplete,
   onCancel,
+  onDuplicate,
 }: TrainingQuickMenuProps) {
   const navigate = useNavigate();
   const isScheduled = session.status === 'scheduled';
@@ -44,6 +46,10 @@ export function TrainingQuickMenu({
         >
           <Pencil className="w-4 h-4" />
           Upravit
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onDuplicate} className="gap-2">
+          <Copy className="w-4 h-4" />
+          Duplikovat
         </ContextMenuItem>
         {isScheduled && (
           <>
