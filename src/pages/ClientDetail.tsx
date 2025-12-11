@@ -19,10 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SessionCard } from '@/components/ui/session-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
-import { useTrainingSessions, useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useTrainingSessions, useUpdateTrainingSession, useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useDiagnostics } from '@/hooks/useDiagnostics';
+import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
+import { useClientBudgetGroup } from '@/hooks/useClientBudgetGroups';
+import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
 import { ClientMediaTab } from '@/components/media/ClientMediaTab';
@@ -31,7 +34,9 @@ import { ClientProgressTab } from '@/components/progress/ClientProgressTab';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { ClientMeasurementImport } from '@/components/measurements/ClientMeasurementImport';
 import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
-import { UnpaidTrainingsList } from '@/components/clients/UnpaidTrainingsList';
+import { ClientSummaryCard } from '@/components/clients/ClientSummaryCard';
+import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
+import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -42,12 +47,18 @@ export default function ClientDetail() {
   const { data: allSessions = [] } = useTrainingSessions(id);
   const { data: measurements = [] } = useMeasurements(id);
   const { data: diagnostics = [] } = useDiagnostics(id);
+  const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
+  const { data: clientBudgetGroup } = useClientBudgetGroup(id);
+  const { data: transactions = [] } = useCreditTransactions(id);
   const updateClient = useUpdateClient();
   const updateTraining = useUpdateTrainingSession();
+  const createTraining = useCreateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const createMeasurement = useCreateMeasurement();
   
   const [isCreateMeasurementOpen, setIsCreateMeasurementOpen] = useState(false);
+  const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
 
   // Cast sessions to proper type
   const clientSessions = allSessions.map(s => ({
@@ -115,6 +126,33 @@ export default function ClientDetail() {
 
   const completedSessions = clientSessions.filter(s => s.status === 'completed');
   const scheduledSessions = clientSessions.filter(s => s.status === 'scheduled');
+  
+  // Check if client is in a shared budget group
+  const isSharedBudget = !!clientBudgetGroup?.group;
+  
+  // Get unpaid stats for this client
+  const unpaidCount = unpaidTrainings.length;
+  const unpaidTotal = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
+  
+  // Get last payment info
+  const lastPaymentTransaction = transactions
+    .filter(t => t.type === 'payment' || t.type === 'manual')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  
+  const lastPaymentDate = lastPaymentTransaction 
+    ? format(new Date(lastPaymentTransaction.created_at), 'd.M.yyyy', { locale: cs })
+    : undefined;
+  const lastPaymentMethod = lastPaymentTransaction?.payment_method;
+  
+  // Get next scheduled training
+  const nextTraining = scheduledSessions
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  const nextTrainingDate = nextTraining 
+    ? format(new Date(nextTraining.date), 'd.M.yyyy', { locale: cs })
+    : undefined;
+  const nextTrainingTime = nextTraining
+    ? format(new Date(nextTraining.date), 'HH:mm')
+    : undefined;
 
   /** Handle client data save */
   const handleSaveClient = async (data: ClientFormValues) => {
@@ -131,11 +169,40 @@ export default function ClientDetail() {
         ]}
       />
 
+      {/* Client Summary Card - New UI */}
+      <ClientSummaryCard
+        client={client}
+        creditBalance={isSharedBudget ? (clientBudgetGroup?.group?.shared_balance || 0) : (client.credit_balance || 0)}
+        isSharedBudget={isSharedBudget}
+        unpaidCount={unpaidCount}
+        unpaidTotal={unpaidTotal}
+        lastPaymentDate={lastPaymentDate}
+        lastPaymentMethod={lastPaymentMethod}
+        nextTrainingDate={nextTrainingDate}
+        nextTrainingTime={nextTrainingTime}
+        onAddTraining={() => setIsTrainingDialogOpen(true)}
+        onAddCredit={() => setIsCreditModalOpen(true)}
+        onPayUnpaid={() => setIsCreditModalOpen(true)}
+      />
+
       {/* Client Detail View with inline editing */}
       <ClientDetailView
         client={client}
         onSave={handleSaveClient}
         isLoading={updateClient.isPending}
+      />
+      
+      {/* Dialogs */}
+      <CreateTrainingDialog
+        open={isTrainingDialogOpen}
+        onOpenChange={setIsTrainingDialogOpen}
+        defaultClientId={client.id}
+      />
+      
+      <EnhancedCreditModal
+        open={isCreditModalOpen}
+        onOpenChange={setIsCreditModalOpen}
+        defaultClientId={client.id}
       />
 
       {/* Tabs - Simplified structure */}
@@ -194,9 +261,6 @@ export default function ClientDetail() {
         </div>
 
         <TabsContent value="overview" className="space-y-4">
-          {/* Unpaid Trainings */}
-          <UnpaidTrainingsList clientId={client.id} clientName={client.name} />
-
           {/* Compact Stats */}
           <div className="glass rounded-xl p-3">
             <div className="flex items-center gap-4 text-sm flex-wrap">

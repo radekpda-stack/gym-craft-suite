@@ -192,10 +192,6 @@ export function QuickActionButton() {
       <CreateTrainingDialog
         open={activeSheet === 'training'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
-        onSubmit={handleCreateTraining}
-        isLoading={createTraining.isPending}
-        clients={clients}
-        trainingPrices={trainingPrices}
       />
 
       <CreateMeasurementSheet
