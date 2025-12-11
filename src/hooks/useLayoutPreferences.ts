@@ -33,6 +33,7 @@ const DEFAULT_DASHBOARD_STATS_ORDER = [
 ];
 
 const DEFAULT_DASHBOARD_SECTIONS_ORDER = [
+  'unpaid',
   'charts',
   'trainingStats',
   'trainingTrend',

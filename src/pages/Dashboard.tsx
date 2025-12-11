@@ -60,12 +60,13 @@ import { useTopClients } from '@/hooks/useTopClients';
 import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
-import { useUnpaidTrainingsStats } from '@/hooks/useUnpaidTrainings';
+import { useUnpaidTrainingsStats, useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { EnhancedUnpaidList } from '@/components/clients/EnhancedUnpaidList';
 
 import { DashboardSettings } from '@/components/dashboard/DashboardSettings';
 import { TrainingTrendChart } from '@/components/dashboard/TrainingTrendChart';
@@ -138,6 +139,7 @@ export default function Dashboard() {
   const { data: trainingTrend = [], isLoading: trendLoading } = useTrainingTrend();
   const { data: topClients = [], isLoading: topClientsLoading } = useTopClients(5);
   const { data: unpaidStats } = useUnpaidTrainingsStats();
+  const { data: unpaidTrainings = [] } = useUnpaidTrainings();
   const dashboardLayout = useDashboardLayout();
   const { preferences, updateDashboardStatsOrder, updateDashboardSectionsOrder } = useLayoutPreferences();
 
@@ -688,6 +690,57 @@ export default function Dashboard() {
     return <TopClientsTable clients={topClients} isLoading={topClientsLoading} />;
   };
 
+  // Unpaid trainings section - groups by client
+  const renderUnpaidSection = () => {
+    if (unpaidTrainings.length === 0) return null;
+    
+    // Group unpaid trainings by client
+    const groupedByClient = unpaidTrainings.reduce((acc, training) => {
+      const clientId = training.client_id;
+      if (!acc[clientId]) {
+        acc[clientId] = {
+          clientId,
+          clientName: training.client_name || 'Neznámý klient',
+          trainings: [],
+        };
+      }
+      acc[clientId].trainings.push(training);
+      return acc;
+    }, {} as Record<string, { clientId: string; clientName: string; trainings: typeof unpaidTrainings }>);
+
+    return (
+      <div className="glass rounded-2xl p-4 md:p-6 border-l-4 border-l-warning">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-warning" />
+            Neuhrazené tréninky
+          </h3>
+          <span className="text-sm font-bold text-warning">
+            {unpaidTrainings.length}× ({(unpaidStats?.total || 0).toLocaleString('cs-CZ')} Kč)
+          </span>
+        </div>
+        <div className="space-y-4 max-h-80 overflow-y-auto">
+          {Object.values(groupedByClient).map((group) => (
+            <div key={group.clientId}>
+              <Link 
+                to={`/clients/${group.clientId}`}
+                className="text-sm font-medium text-primary hover:underline mb-2 block"
+              >
+                {group.clientName}
+              </Link>
+              <EnhancedUnpaidList
+                clientId={group.clientId}
+                clientName={group.clientName}
+                unpaidTrainings={group.trainings}
+                compact
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const sectionRenderers: Record<string, () => ReactNode> = {
     charts: renderChartsSection,
     trainingStats: renderTrainingStatsSection,
@@ -696,6 +749,7 @@ export default function Dashboard() {
     statsAndCredits: renderStatsAndCreditsSection,
     aiWidget: renderAIWidgetSection,
     mainContent: renderMainContentSection,
+    unpaid: renderUnpaidSection,
   };
 
   return (
