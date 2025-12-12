@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
@@ -10,7 +9,6 @@ interface KPICardProps {
   icon: ReactNode;
   trend?: number;
   trendLabel?: string;
-  href?: string;
   variant?: 'default' | 'success' | 'warning' | 'destructive';
   onClick?: () => void;
 }
@@ -22,7 +20,6 @@ export function KPICard({
   icon,
   trend,
   trendLabel,
-  href,
   variant = 'default',
   onClick,
 }: KPICardProps) {
@@ -47,7 +44,7 @@ export function KPICard({
     destructive: 'text-destructive',
   };
 
-  const content = (
+  return (
     <div
       className={cn(
         'glass rounded-2xl p-4 sm:p-5 transition-all duration-300 cursor-pointer',
@@ -95,10 +92,4 @@ export function KPICard({
       </div>
     </div>
   );
-
-  if (href) {
-    return <Link to={href}>{content}</Link>;
-  }
-
-  return content;
 }

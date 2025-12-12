@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { KPICard } from '@/components/dashboard/KPICard';
+import { KPIDetailModal } from '@/components/dashboard/KPIDetailModal';
 import { NewRecordButton } from '@/components/dashboard/NewRecordButton';
 import { UnifiedFinancialChart, FinancialPeriod } from '@/components/dashboard/UnifiedFinancialChart';
 import { ProductSalesChart, SalesPeriod } from '@/components/dashboard/ProductSalesChart';
@@ -33,6 +34,8 @@ import { useTopClientsData } from '@/hooks/useTopClientsData';
 import { usePerformanceMetricsData } from '@/hooks/usePerformanceMetricsData';
 import { useFinancialStats } from '@/hooks/useFinancialStats';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
+
+type KPIModalType = 'income' | 'profit' | 'trainings' | 'clients' | 'cancellations' | 'unpaid' | null;
 
 const DEFAULT_LAYOUT: NewDashboardLayout = {
   showKPICards: true,
@@ -55,6 +58,9 @@ export default function Dashboard() {
       return DEFAULT_LAYOUT;
     }
   });
+
+  // Modal state
+  const [activeModal, setActiveModal] = useState<KPIModalType>(null);
 
   // Period states
   const [financialPeriod, setFinancialPeriod] = useState<FinancialPeriod>('30days');
@@ -165,7 +171,7 @@ export default function Dashboard() {
                 icon={<Wallet className="w-4 h-4" />}
                 trend={kpis?.incomeTrend}
                 trendLabel="vs minulý měsíc"
-                href="/sales"
+                onClick={() => setActiveModal('income')}
                 variant="success"
               />
               <KPICard
@@ -173,7 +179,7 @@ export default function Dashboard() {
                 value={`${(kpis?.netProfitThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
                 icon={<TrendingUp className="w-4 h-4" />}
                 trend={kpis?.profitTrend}
-                href="/sales"
+                onClick={() => setActiveModal('profit')}
                 variant="success"
               />
               <KPICard
@@ -182,21 +188,21 @@ export default function Dashboard() {
                 subtitle="tento měsíc"
                 icon={<Dumbbell className="w-4 h-4" />}
                 trend={kpis?.trainingsTrend}
-                href="/trainings"
+                onClick={() => setActiveModal('trainings')}
               />
               <KPICard
                 title="Aktivní klienti"
                 value={kpis?.activeClients || 0}
                 subtitle="posledních 30 dní"
                 icon={<Users className="w-4 h-4" />}
-                href="/clients"
+                onClick={() => setActiveModal('clients')}
               />
               <KPICard
                 title="Pozdní zrušení"
                 value={kpis?.lateCancellations || 0}
                 subtitle="tento měsíc"
                 icon={<XCircle className="w-4 h-4" />}
-                href="/canceled"
+                onClick={() => setActiveModal('cancellations')}
                 variant={kpis?.lateCancellations ? 'destructive' : 'default'}
               />
               <KPICard
@@ -204,7 +210,7 @@ export default function Dashboard() {
                 value={kpis?.unpaidCount || 0}
                 subtitle={`${(kpis?.unpaidAmount || 0).toLocaleString('cs-CZ')} Kč`}
                 icon={<Clock className="w-4 h-4" />}
-                href="/trainings?filter=unpaid"
+                onClick={() => setActiveModal('unpaid')}
                 variant={kpis?.unpaidCount ? 'warning' : 'default'}
               />
             </>
@@ -212,6 +218,96 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* KPI Detail Modals */}
+      <KPIDetailModal
+        open={activeModal === 'income'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Přehled příjmů"
+        icon={<Wallet className="w-4 h-4" />}
+        mainValue={`${(kpis?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
+        mainLabel="Příjem tento měsíc"
+        stats={[
+          { label: 'Minulý měsíc', value: `${(kpis?.incomeLastMonth || 0).toLocaleString('cs-CZ')} Kč`, trend: kpis?.incomeTrend },
+          { label: 'Průměr za měsíc', value: `${(kpis?.avgMonthlyIncome || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Tréninky', value: `${(kpis?.trainingIncome || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Produkty', value: `${(kpis?.productIncome || 0).toLocaleString('cs-CZ')} Kč` },
+        ]}
+      />
+
+      <KPIDetailModal
+        open={activeModal === 'profit'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Přehled zisku"
+        icon={<TrendingUp className="w-4 h-4" />}
+        mainValue={`${(kpis?.netProfitThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
+        mainLabel="Čistý zisk tento měsíc"
+        stats={[
+          { label: 'Příjmy celkem', value: `${(kpis?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Náklady', value: `${(kpis?.expensesThisMonth || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Marže', value: `${(kpis?.profitMargin || 0).toFixed(0)}%` },
+          { label: 'Trend', value: `${kpis?.profitTrend || 0 > 0 ? '+' : ''}${(kpis?.profitTrend || 0).toFixed(0)}%`, trend: kpis?.profitTrend },
+        ]}
+      />
+
+      <KPIDetailModal
+        open={activeModal === 'trainings'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Přehled tréninků"
+        icon={<Dumbbell className="w-4 h-4" />}
+        mainValue={kpis?.trainingsThisMonth || 0}
+        mainLabel="Tréninků tento měsíc"
+        stats={[
+          { label: 'Minulý měsíc', value: kpis?.trainingsLastMonth || 0, trend: kpis?.trainingsTrend },
+          { label: 'Průměr za týden', value: ((kpis?.trainingsThisMonth || 0) / 4).toFixed(1) },
+          { label: 'Celkem letos', value: kpis?.trainingsThisYear || 0 },
+          { label: 'Průměr účastníků', value: (kpis?.avgParticipants || 1).toFixed(1) },
+        ]}
+      />
+
+      <KPIDetailModal
+        open={activeModal === 'clients'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Přehled klientů"
+        icon={<Users className="w-4 h-4" />}
+        mainValue={kpis?.activeClients || 0}
+        mainLabel="Aktivních klientů (30 dní)"
+        stats={[
+          { label: 'Celkem klientů', value: kpis?.totalClients || 0 },
+          { label: 'Noví tento měsíc', value: kpis?.newClientsThisMonth || 0 },
+          { label: 'S nízkým kreditem', value: kpis?.lowCreditClients || 0 },
+          { label: 'Archivovaných', value: kpis?.archivedClients || 0 },
+        ]}
+      />
+
+      <KPIDetailModal
+        open={activeModal === 'cancellations'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Pozdní zrušení"
+        icon={<XCircle className="w-4 h-4" />}
+        mainValue={kpis?.lateCancellations || 0}
+        mainLabel="Pozdních zrušení tento měsíc"
+        stats={[
+          { label: 'Celkem zrušených', value: kpis?.totalCancellations || 0 },
+          { label: '% ze všech', value: `${(kpis?.cancellationRate || 0).toFixed(1)}%` },
+          { label: 'Minulý měsíc', value: kpis?.lateCancellationsLastMonth || 0 },
+          { label: 'Ztráta příjmu', value: `${(kpis?.cancellationLoss || 0).toLocaleString('cs-CZ')} Kč` },
+        ]}
+      />
+
+      <KPIDetailModal
+        open={activeModal === 'unpaid'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        title="Neuhrazené tréninky"
+        icon={<Clock className="w-4 h-4" />}
+        mainValue={kpis?.unpaidCount || 0}
+        mainLabel="Neuhrazených tréninků"
+        stats={[
+          { label: 'Celková částka', value: `${(kpis?.unpaidAmount || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Počet klientů', value: kpis?.unpaidClientsCount || 0 },
+          { label: 'Průměr na klienta', value: `${(kpis?.avgUnpaidPerClient || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Nejstarší', value: kpis?.oldestUnpaidDays ? `${kpis.oldestUnpaidDays} dní` : '-' },
+        ]}
+      />
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Financial Chart */}
