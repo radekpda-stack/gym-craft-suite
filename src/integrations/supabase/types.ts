@@ -297,15 +297,24 @@ export type Database = {
           birth_date: string | null
           created_at: string
           credit_balance: number | null
+          current_activities: string[] | null
+          dietary_restrictions: string[] | null
           email: string | null
           gender: string | null
+          handedness: string | null
           health_restrictions: string | null
           id: string
           is_archived: boolean
           is_favorite: boolean
           name: string
           notes: string | null
+          occupation: string | null
           phone: string | null
+          sitting_hours_daily: number | null
+          sleep_hours: number | null
+          sports_history: string | null
+          stress_level: number | null
+          supplements: string[] | null
           training_goals: string[] | null
           updated_at: string
           user_id: string | null
@@ -314,15 +323,24 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
+          current_activities?: string[] | null
+          dietary_restrictions?: string[] | null
           email?: string | null
           gender?: string | null
+          handedness?: string | null
           health_restrictions?: string | null
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
           name: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
+          sitting_hours_daily?: number | null
+          sleep_hours?: number | null
+          sports_history?: string | null
+          stress_level?: number | null
+          supplements?: string[] | null
           training_goals?: string[] | null
           updated_at?: string
           user_id?: string | null
@@ -331,15 +349,24 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
+          current_activities?: string[] | null
+          dietary_restrictions?: string[] | null
           email?: string | null
           gender?: string | null
+          handedness?: string | null
           health_restrictions?: string | null
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
           name?: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
+          sitting_hours_daily?: number | null
+          sleep_hours?: number | null
+          sports_history?: string | null
+          stress_level?: number | null
+          supplements?: string[] | null
           training_goals?: string[] | null
           updated_at?: string
           user_id?: string | null
@@ -419,6 +446,200 @@ export type Database = {
             columns: ["training_session_id"]
             isOneToOne: false
             referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_assessments: {
+        Row: {
+          ai_analysis: string | null
+          ai_avoid_exercises: string[] | null
+          ai_contraindications: string[] | null
+          ai_must_do_exercises: string[] | null
+          ai_priorities: string[] | null
+          ai_recommendations: string | null
+          ai_risk_factors: string[] | null
+          ai_strengths: string[] | null
+          allergies: string[] | null
+          core_stability: string | null
+          created_at: string
+          current_activities: string[] | null
+          diagnostic_id: string
+          dietary_restrictions: string[] | null
+          discipline_level: number | null
+          diseases: string[] | null
+          eating_regularity: string | null
+          family_health_history: string | null
+          food_allergies: string[] | null
+          handedness: string | null
+          hip_hinge_quality: string | null
+          id: string
+          injuries: string[] | null
+          is_draft: boolean | null
+          long_term_goals: string | null
+          lunge_quality: string | null
+          meditates: boolean | null
+          mobility_ankles: string | null
+          mobility_hips: string | null
+          mobility_shoulders: string | null
+          mobility_thoracic: string | null
+          motivation_level: number | null
+          occupation: string | null
+          pain_ankle: string | null
+          pain_areas: string[] | null
+          pain_hip: string | null
+          pain_knee: string | null
+          pain_lumbar: string | null
+          pain_neck: string | null
+          pain_shoulder: string | null
+          pain_si: string | null
+          pain_thoracic: string | null
+          preferred_training_style: string | null
+          pull_quality: string | null
+          push_quality: string | null
+          regeneration_methods: string[] | null
+          short_term_goals: string | null
+          sitting_hours_daily: number | null
+          sleep_hours: number | null
+          sleep_quality: number | null
+          sports_history: string | null
+          squat_quality: string | null
+          stress_level: number | null
+          stress_management: string | null
+          supplements: string[] | null
+          surgeries: string[] | null
+          training_priorities: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          ai_avoid_exercises?: string[] | null
+          ai_contraindications?: string[] | null
+          ai_must_do_exercises?: string[] | null
+          ai_priorities?: string[] | null
+          ai_recommendations?: string | null
+          ai_risk_factors?: string[] | null
+          ai_strengths?: string[] | null
+          allergies?: string[] | null
+          core_stability?: string | null
+          created_at?: string
+          current_activities?: string[] | null
+          diagnostic_id: string
+          dietary_restrictions?: string[] | null
+          discipline_level?: number | null
+          diseases?: string[] | null
+          eating_regularity?: string | null
+          family_health_history?: string | null
+          food_allergies?: string[] | null
+          handedness?: string | null
+          hip_hinge_quality?: string | null
+          id?: string
+          injuries?: string[] | null
+          is_draft?: boolean | null
+          long_term_goals?: string | null
+          lunge_quality?: string | null
+          meditates?: boolean | null
+          mobility_ankles?: string | null
+          mobility_hips?: string | null
+          mobility_shoulders?: string | null
+          mobility_thoracic?: string | null
+          motivation_level?: number | null
+          occupation?: string | null
+          pain_ankle?: string | null
+          pain_areas?: string[] | null
+          pain_hip?: string | null
+          pain_knee?: string | null
+          pain_lumbar?: string | null
+          pain_neck?: string | null
+          pain_shoulder?: string | null
+          pain_si?: string | null
+          pain_thoracic?: string | null
+          preferred_training_style?: string | null
+          pull_quality?: string | null
+          push_quality?: string | null
+          regeneration_methods?: string[] | null
+          short_term_goals?: string | null
+          sitting_hours_daily?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          sports_history?: string | null
+          squat_quality?: string | null
+          stress_level?: number | null
+          stress_management?: string | null
+          supplements?: string[] | null
+          surgeries?: string[] | null
+          training_priorities?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          ai_avoid_exercises?: string[] | null
+          ai_contraindications?: string[] | null
+          ai_must_do_exercises?: string[] | null
+          ai_priorities?: string[] | null
+          ai_recommendations?: string | null
+          ai_risk_factors?: string[] | null
+          ai_strengths?: string[] | null
+          allergies?: string[] | null
+          core_stability?: string | null
+          created_at?: string
+          current_activities?: string[] | null
+          diagnostic_id?: string
+          dietary_restrictions?: string[] | null
+          discipline_level?: number | null
+          diseases?: string[] | null
+          eating_regularity?: string | null
+          family_health_history?: string | null
+          food_allergies?: string[] | null
+          handedness?: string | null
+          hip_hinge_quality?: string | null
+          id?: string
+          injuries?: string[] | null
+          is_draft?: boolean | null
+          long_term_goals?: string | null
+          lunge_quality?: string | null
+          meditates?: boolean | null
+          mobility_ankles?: string | null
+          mobility_hips?: string | null
+          mobility_shoulders?: string | null
+          mobility_thoracic?: string | null
+          motivation_level?: number | null
+          occupation?: string | null
+          pain_ankle?: string | null
+          pain_areas?: string[] | null
+          pain_hip?: string | null
+          pain_knee?: string | null
+          pain_lumbar?: string | null
+          pain_neck?: string | null
+          pain_shoulder?: string | null
+          pain_si?: string | null
+          pain_thoracic?: string | null
+          preferred_training_style?: string | null
+          pull_quality?: string | null
+          push_quality?: string | null
+          regeneration_methods?: string[] | null
+          short_term_goals?: string | null
+          sitting_hours_daily?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          sports_history?: string | null
+          squat_quality?: string | null
+          stress_level?: number | null
+          stress_management?: string | null
+          supplements?: string[] | null
+          surgeries?: string[] | null
+          training_priorities?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_assessments_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostics"
             referencedColumns: ["id"]
           },
         ]
