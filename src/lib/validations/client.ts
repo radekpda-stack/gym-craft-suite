@@ -45,6 +45,16 @@ export const clientFormSchema = z.object({
   gender: z
     .enum(["male", "female"])
     .optional(),
+  // Extended fields from diagnostics
+  handedness: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  sitting_hours_daily: z.number().optional().nullable(),
+  sports_history: z.string().optional().nullable(),
+  current_activities: z.array(z.string()).optional().nullable(),
+  sleep_hours: z.number().optional().nullable(),
+  stress_level: z.number().optional().nullable(),
+  dietary_restrictions: z.array(z.string()).optional().nullable(),
+  supplements: z.array(z.string()).optional().nullable(),
 });
 
 export type ClientFormValues = z.infer<typeof clientFormSchema>;

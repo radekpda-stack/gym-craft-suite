@@ -24,7 +24,6 @@ import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
-import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { EnhancedTrainingFormValues } from '@/components/trainings/EnhancedTrainingForm';
 
 interface QuickAction {
@@ -54,7 +53,6 @@ export function QuickActionButton() {
   const addTrainingTags = useAddTrainingSessionTags();
   const trainingPrices = useTrainingPrices();
   const createMeasurement = useCreateMeasurement();
-  const createDiagnostic = useCreateDiagnostic();
 
   const handleAction = (actionId: string) => {
     setIsOpen(false);
@@ -97,11 +95,6 @@ export function QuickActionButton() {
     return result?.id;
   };
 
-  const handleCreateDiagnostic = async (data: any): Promise<string | void> => {
-    const result = await createDiagnostic.mutateAsync(data);
-    setActiveSheet(null);
-    return result?.id;
-  };
 
   return (
     <>
@@ -205,8 +198,6 @@ export function QuickActionButton() {
       <CreateDiagnosticSheet
         open={activeSheet === 'diagnostic'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
-        onSubmit={handleCreateDiagnostic}
-        isLoading={createDiagnostic.isPending}
         clients={clients}
       />
 

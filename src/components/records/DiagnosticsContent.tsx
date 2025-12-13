@@ -1,55 +1,37 @@
 import { useState } from 'react';
-import { Plus, Search, Stethoscope, ChevronRight } from 'lucide-react';
+import { Plus, Stethoscope, FileText, Calendar, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients } from '@/hooks/useClients';
-import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
+import { useDiagnostics } from '@/hooks/useDiagnostics';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { mockJoints, mockMuscleGroups } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 export default function DiagnosticsContent() {
   const { data: clients = [] } = useClients();
-  const createDiagnostic = useCreateDiagnostic();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [selectedBodyPart, setSelectedBodyPart] = useState<'lower' | 'upper' | 'spine' | null>(null);
+  const { data: diagnostics = [] } = useDiagnostics();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const filteredClients = clients.filter((client) =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleCreateDiagnostic = async (data: any): Promise<string | void> => {
-    const result = await createDiagnostic.mutateAsync({
-      client_id: data.client_id,
-      date: data.date,
-      area_type: data.area_type,
-      area_name: data.area_name,
-      findings: data.findings,
-      notes: data.notes,
-    });
-    setIsCreateOpen(false);
-    return result?.id;
-  };
-
-  const filteredJoints = mockJoints.filter(
-    (joint) => !selectedBodyPart || joint.bodyPart === selectedBodyPart
-  );
-
-  const groupedMuscles = mockMuscleGroups.reduce((acc, muscle) => {
-    if (!acc[muscle.category]) {
-      acc[muscle.category] = [];
-    }
-    acc[muscle.category].push(muscle);
-    return acc;
-  }, {} as Record<string, typeof mockMuscleGroups>);
+  // Get recent diagnostics with client info
+  const recentDiagnostics = diagnostics
+    .slice(0, 10)
+    .map(d => ({
+      ...d,
+      client: clients.find(c => c.id === d.client_id)
+    }));
 
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Diagnostika klientů</h2>
+          <p className="text-sm text-muted-foreground">
+            Komplexní anamnéza, posturální analýza a AI vyhodnocení
+          </p>
+        </div>
         <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
           <Plus className="w-4 h-4" />
           Nová diagnostika
@@ -59,124 +41,105 @@ export default function DiagnosticsContent() {
       <CreateDiagnosticSheet
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onSubmit={handleCreateDiagnostic}
-        isLoading={createDiagnostic.isPending}
         clients={clients}
-        defaultClientId={selectedClient || undefined}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Client Selection */}
+      {/* Recent Diagnostics */}
+      {recentDiagnostics.length > 0 ? (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Vybrat klienta</h2>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Hledat klienta..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-12 bg-secondary border-border rounded-xl"
-            />
-          </div>
-
-          <div className="space-y-2">
-            {filteredClients.map((client) => (
-              <button
-                key={client.id}
-                onClick={() => setSelectedClient(client.id)}
-                className={cn(
-                  'w-full flex items-center gap-3 p-4 rounded-xl transition-all duration-200',
-                  selectedClient === client.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'glass hover:bg-secondary'
-                )}
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Poslední diagnostiky
+          </h3>
+          <div className="grid gap-3">
+            {recentDiagnostics.map((diagnostic) => (
+              <div
+                key={diagnostic.id}
+                className="glass rounded-xl p-4 hover:bg-secondary/50 transition-colors"
               >
-                <ClientAvatar name={client.name} size="md" />
-                <div className="flex-1 text-left">
-                  <p className="font-medium">{client.name}</p>
-                  <p className={cn(
-                    'text-sm',
-                    selectedClient === client.id
-                      ? 'text-primary-foreground/70'
-                      : 'text-muted-foreground'
-                  )}>
-                    {client.training_goals?.[0] || 'Bez cíle'}
-                  </p>
+                <div className="flex items-start gap-4">
+                  <ClientAvatar 
+                    name={diagnostic.client?.name || 'Neznámý'} 
+                    size="md" 
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium text-foreground truncate">
+                        {diagnostic.client?.name || 'Neznámý klient'}
+                      </p>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs",
+                        "bg-primary/10 text-primary"
+                      )}>
+                        {diagnostic.area_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {format(new Date(diagnostic.date), 'd. MMMM yyyy', { locale: cs })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5" />
+                        {diagnostic.area_type}
+                      </span>
+                    </div>
+                    {diagnostic.findings && (
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {diagnostic.findings}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <ChevronRight className="w-4 h-4 opacity-50" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Joints */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Klouby</h2>
-          
-          <div className="flex gap-2">
-            {(['lower', 'upper', 'spine'] as const).map((part) => (
-              <Button
-                key={part}
-                variant={selectedBodyPart === part ? 'default' : 'outline'}
-                onClick={() => setSelectedBodyPart(selectedBodyPart === part ? null : part)}
-                className="rounded-xl flex-1"
-              >
-                {part === 'lower' ? 'Dolní' : part === 'upper' ? 'Horní' : 'Páteř'}
-              </Button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {filteredJoints.map((joint) => (
-              <button
-                key={joint.id}
-                className="glass p-4 rounded-xl text-left transition-all duration-200 hover:bg-secondary hover:glow group"
-              >
-                <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                  {joint.nameCs}
-                </p>
-                <p className="text-sm text-muted-foreground">{joint.name}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Muscle Groups */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Svalové skupiny</h2>
-
-          {Object.entries(groupedMuscles).map(([category, muscles]) => (
-            <div key={category}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                {category}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {muscles.map((muscle) => (
-                  <button
-                    key={muscle.id}
-                    className="glass p-3 rounded-xl text-left transition-all duration-200 hover:bg-secondary hover:glow group"
-                  >
-                    <p className="font-medium text-foreground text-sm group-hover:text-primary transition-colors">
-                      {muscle.nameCs}
-                    </p>
-                  </button>
-                ))}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Empty state when no client selected */}
-      {!selectedClient && (
+      ) : (
         <div className="glass rounded-2xl p-12 text-center">
           <Stethoscope className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground">
-            Vyberte klienta
+            Žádné diagnostiky
           </h3>
-          <p className="text-muted-foreground mt-1">
-            Pro zobrazení diagnostických záznamů nejprve vyberte klienta
+          <p className="text-muted-foreground mt-1 mb-4">
+            Vytvořte první diagnostiku pro nového nebo existujícího klienta
           </p>
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nová diagnostika
+          </Button>
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      {diagnostics.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{diagnostics.length}</p>
+            <p className="text-sm text-muted-foreground">Celkem diagnostik</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">
+              {new Set(diagnostics.map(d => d.client_id)).size}
+            </p>
+            <p className="text-sm text-muted-foreground">Klientů s diagnostikou</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">
+              {diagnostics.filter(d => {
+                const date = new Date(d.date);
+                const now = new Date();
+                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+              }).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Tento měsíc</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-foreground flex items-center justify-center gap-1">
+              <User className="w-5 h-5" />
+              {clients.length}
+            </p>
+            <p className="text-sm text-muted-foreground">Aktivních klientů</p>
+          </div>
         </div>
       )}
     </div>
