@@ -22,7 +22,6 @@ import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions, useUpdateTrainingSession, useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
-import { useDiagnostics } from '@/hooks/useDiagnostics';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useClientBudgetGroup } from '@/hooks/useClientBudgetGroups';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
@@ -37,6 +36,7 @@ import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { ClientSummaryCard } from '@/components/clients/ClientSummaryCard';
 import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
+import { ClientDiagnosticsTab } from '@/components/diagnostics/ClientDiagnosticsTab';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -46,7 +46,6 @@ export default function ClientDetail() {
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: allSessions = [] } = useTrainingSessions(id);
   const { data: measurements = [] } = useMeasurements(id);
-  const { data: diagnostics = [] } = useDiagnostics(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: clientBudgetGroup } = useClientBudgetGroup(id);
   const { data: transactions = [] } = useCreditTransactions(id);
@@ -426,35 +425,7 @@ export default function ClientDetail() {
         </TabsContent>
 
         <TabsContent value="diagnostics" className="space-y-3">
-          {diagnostics.length > 0 ? (
-            diagnostics.map((diag) => (
-              <div
-                key={diag.id}
-                className="glass rounded-xl p-3 hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{diag.area_name}</p>
-                    <p className="text-xs text-muted-foreground">{diag.area_type}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(diag.date), 'd.M.yyyy', { locale: cs })}
-                  </p>
-                </div>
-                {diag.findings && (
-                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{diag.findings}</p>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="glass rounded-xl p-8 text-center">
-              <Stethoscope className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-medium text-foreground">Zatím žádná diagnostika</h3>
-              <Link to="/diagnostics">
-                <Button className="mt-3" size="sm">Přidat diagnostiku</Button>
-              </Link>
-            </div>
-          )}
+          <ClientDiagnosticsTab clientId={client.id} clientName={client.name} />
         </TabsContent>
 
         <TabsContent value="credit" className="space-y-4">
