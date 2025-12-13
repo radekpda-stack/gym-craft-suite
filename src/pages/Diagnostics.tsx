@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients } from '@/hooks/useClients';
-import { useCreateDiagnostic } from '@/hooks/useDiagnostics';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { mockJoints, mockMuscleGroups } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,6 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 export default function Diagnostics() {
   usePageTracking('diagnostics');
   const { data: clients = [] } = useClients();
-  const createDiagnostic = useCreateDiagnostic();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedBodyPart, setSelectedBodyPart] = useState<'lower' | 'upper' | 'spine' | null>(null);
@@ -22,19 +20,6 @@ export default function Diagnostics() {
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleCreateDiagnostic = async (data: any): Promise<string | void> => {
-    const result = await createDiagnostic.mutateAsync({
-      client_id: data.client_id,
-      date: data.date,
-      area_type: data.area_type,
-      area_name: data.area_name,
-      findings: data.findings,
-      notes: data.notes,
-    });
-    setIsCreateOpen(false);
-    return result?.id;
-  };
 
   const filteredJoints = mockJoints.filter(
     (joint) => !selectedBodyPart || joint.bodyPart === selectedBodyPart
@@ -70,8 +55,6 @@ export default function Diagnostics() {
       <CreateDiagnosticSheet
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onSubmit={handleCreateDiagnostic}
-        isLoading={createDiagnostic.isPending}
         clients={clients}
         defaultClientId={selectedClient || undefined}
       />

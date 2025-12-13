@@ -76,6 +76,15 @@ export function useCreateClient() {
           credit_balance: values.creditBalance || 0,
           birth_date: values.birthDate || null,
           gender: values.gender || null,
+          handedness: values.handedness || null,
+          occupation: values.occupation || null,
+          sitting_hours_daily: values.sitting_hours_daily || null,
+          sports_history: values.sports_history || null,
+          current_activities: values.current_activities || null,
+          sleep_hours: values.sleep_hours || null,
+          stress_level: values.stress_level || null,
+          dietary_restrictions: values.dietary_restrictions || null,
+          supplements: values.supplements || null,
           user_id: user.id,
         })
         .select()

@@ -6,17 +6,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { DiagnosticForm, DiagnosticFormValues } from "./DiagnosticForm";
-import { InlineMediaUpload, PendingMedia } from "@/components/media/InlineMediaUpload";
+import { ExtendedDiagnosticForm } from "./ExtendedDiagnosticForm";
+import { Client, useCreateClient } from "@/hooks/useClients";
+import { useCreateDiagnostic } from "@/hooks/useDiagnostics";
+import { useCreateDiagnosticAssessment } from "@/hooks/useDiagnosticAssessment";
 import { useCreateMedia } from "@/hooks/useClientMedia";
-import { Client } from "@/hooks/useClients";
-import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreateDiagnosticSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: DiagnosticFormValues) => Promise<string | void>;
-  isLoading?: boolean;
   clients: Client[];
   defaultClientId?: string;
 }
@@ -24,89 +24,223 @@ interface CreateDiagnosticSheetProps {
 export function CreateDiagnosticSheet({
   open,
   onOpenChange,
-  onSubmit,
-  isLoading,
   clients,
   defaultClientId,
 }: CreateDiagnosticSheetProps) {
-  const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createClient = useCreateClient();
+  const createDiagnostic = useCreateDiagnostic();
+  const createAssessment = useCreateDiagnosticAssessment();
   const createMedia = useCreateMedia();
 
-  const handleAddMedia = (media: PendingMedia) => {
-    setPendingMedia(prev => [...prev, media]);
-  };
-
-  const handleRemoveMedia = (id: string) => {
-    setPendingMedia(prev => prev.filter(m => m.id !== id));
-  };
-
-  const handleSubmit = async (data: DiagnosticFormValues) => {
-    // First create the diagnostic and get the ID
-    const diagnosticId = await onSubmit(data);
+  // Find existing client by email or name + birthdate
+  const findExistingClient = (email?: string, name?: string, birthDate?: string): Client | undefined => {
+    if (email) {
+      const byEmail = clients.find(c => c.email?.toLowerCase() === email.toLowerCase());
+      if (byEmail) return byEmail;
+    }
     
-    // If we have pending media and a diagnostic ID, upload them
-    if (pendingMedia.length > 0 && diagnosticId) {
-      setIsUploadingMedia(true);
-      try {
-        for (const media of pendingMedia) {
+    if (name && birthDate) {
+      const byNameAndBirth = clients.find(c => 
+        c.name.toLowerCase() === name.toLowerCase() && 
+        c.birth_date === birthDate
+      );
+      if (byNameAndBirth) return byNameAndBirth;
+    }
+    
+    return undefined;
+  };
+
+  const handleSubmit = async (formData: any) => {
+    setIsSubmitting(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Pro vytvoření diagnostiky musíte být přihlášen");
+        return;
+      }
+
+      let clientId = formData.client_id;
+      let isNewClient = false;
+
+      // If no client selected, try to find or create one
+      if (!clientId && formData.clientName) {
+        const existingClient = findExistingClient(
+          formData.email,
+          formData.clientName,
+          formData.birthDate
+        );
+
+        if (existingClient) {
+          clientId = existingClient.id;
+          toast.info(`Diagnostika přiřazena existujícímu klientovi: ${existingClient.name}`);
+        } else {
+          // Create new client with extended fields
+          const newClient = await createClient.mutateAsync({
+            name: formData.clientName,
+            email: formData.email || undefined,
+            phone: formData.phone || undefined,
+            birthDate: formData.birthDate || undefined,
+            gender: formData.gender || undefined,
+            handedness: formData.handedness || null,
+            occupation: formData.occupation || null,
+            sitting_hours_daily: formData.sitting_hours_daily || null,
+            sports_history: formData.sports_history || null,
+            current_activities: formData.current_activities || null,
+            sleep_hours: formData.sleep_hours || null,
+            stress_level: formData.stress_level || null,
+            dietary_restrictions: formData.dietary_restrictions || null,
+            supplements: formData.supplements || null,
+            healthRestrictions: formData.health_restrictions || undefined,
+            trainingGoals: formData.training_goals || [],
+            notes: formData.trainer_notes || undefined,
+          });
+          
+          clientId = newClient.id;
+          isNewClient = true;
+          toast.success(`Vytvořen nový klient: ${formData.clientName}`);
+        }
+      }
+
+      if (!clientId) {
+        toast.error("Vyberte nebo zadejte klienta");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create the base diagnostic record
+      const diagnostic = await createDiagnostic.mutateAsync({
+        client_id: clientId,
+        date: formData.date || new Date().toISOString().split('T')[0],
+        area_type: 'joint',
+        area_name: 'Vstupní diagnostika',
+        findings: formData.trainer_notes || 'Kompletní vstupní diagnostika',
+        notes: formData.short_term_goals || null,
+      });
+
+      if (!diagnostic?.id) {
+        throw new Error("Nepodařilo se vytvořit diagnostiku");
+      }
+
+      // Create the extended assessment
+      await createAssessment.mutateAsync({
+        diagnostic_id: diagnostic.id,
+        user_id: user.id,
+        // Lifestyle
+        handedness: formData.handedness,
+        occupation: formData.occupation,
+        sitting_hours_daily: formData.sitting_hours_daily,
+        sports_history: formData.sports_history,
+        current_activities: formData.current_activities,
+        sleep_hours: formData.sleep_hours,
+        sleep_quality: formData.sleep_quality,
+        stress_level: formData.stress_level,
+        stress_management: formData.stress_management,
+        meditates: formData.meditates,
+        regeneration_methods: formData.regeneration_methods,
+        // Health
+        diseases: formData.diseases,
+        surgeries: formData.surgeries,
+        injuries: formData.injuries,
+        pain_areas: formData.pain_areas,
+        allergies: formData.allergies,
+        family_health_history: formData.family_health_history,
+        // Goals
+        short_term_goals: formData.short_term_goals,
+        long_term_goals: formData.long_term_goals,
+        training_priorities: formData.training_priorities,
+        // Mobility
+        mobility_ankles: formData.mobility_ankles,
+        mobility_hips: formData.mobility_hips,
+        mobility_thoracic: formData.mobility_thoracic,
+        mobility_shoulders: formData.mobility_shoulders,
+        core_stability: formData.core_stability,
+        // Movement quality
+        squat_quality: formData.squat_quality,
+        lunge_quality: formData.lunge_quality,
+        push_quality: formData.push_quality,
+        pull_quality: formData.pull_quality,
+        hip_hinge_quality: formData.hip_hinge_quality,
+        // Injury screening
+        pain_ankle: formData.pain_ankle,
+        pain_knee: formData.pain_knee,
+        pain_hip: formData.pain_hip,
+        pain_si: formData.pain_si,
+        pain_lumbar: formData.pain_lumbar,
+        pain_thoracic: formData.pain_thoracic,
+        pain_shoulder: formData.pain_shoulder,
+        pain_neck: formData.pain_neck,
+        // Psychological
+        motivation_level: formData.motivation_level,
+        discipline_level: formData.discipline_level,
+        preferred_training_style: formData.preferred_training_style,
+        // Nutrition
+        eating_regularity: formData.eating_regularity,
+        food_allergies: formData.food_allergies,
+        supplements: formData.supplements,
+        dietary_restrictions: formData.dietary_restrictions,
+        // AI analysis (will be filled by AI)
+        ai_analysis: formData.ai_analysis,
+        ai_risk_factors: formData.ai_risk_factors,
+        ai_strengths: formData.ai_strengths,
+        ai_priorities: formData.ai_priorities,
+        ai_recommendations: formData.ai_recommendations,
+        ai_contraindications: formData.ai_contraindications,
+        ai_must_do_exercises: formData.ai_must_do_exercises,
+        ai_avoid_exercises: formData.ai_avoid_exercises,
+        is_draft: false,
+      });
+
+      // Upload any pending media
+      if (formData.pendingMedia && formData.pendingMedia.length > 0) {
+        for (const media of formData.pendingMedia) {
           await createMedia.mutateAsync({
-            client_id: data.client_id,
+            client_id: clientId,
             type: media.type,
             file: media.file,
-            description: `Diagnostika - ${data.area_name}`,
+            description: `Diagnostika - ${media.description || 'Posturální analýza'}`,
             category: 'diagnostic',
-            diagnostic_id: diagnosticId,
-            date: data.date,
+            diagnostic_id: diagnostic.id,
+            date: formData.date || new Date().toISOString().split('T')[0],
+            body_area: media.bodyArea,
           });
         }
-      } catch (error) {
-        console.error('Error uploading media:', error);
       }
-      setIsUploadingMedia(false);
-    }
-    
-    // Reset form
-    setPendingMedia([]);
-  };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setPendingMedia([]);
+      toast.success(isNewClient 
+        ? "Diagnostika vytvořena a nový klient přidán" 
+        : "Diagnostika úspěšně uložena"
+      );
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating diagnostic:', error);
+      toast.error("Nepodařilo se vytvořit diagnostiku");
+    } finally {
+      setIsSubmitting(false);
     }
-    onOpenChange(newOpen);
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Nová diagnostika</SheetTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent 
+        className="w-full sm:max-w-4xl overflow-y-auto p-0"
+        side="right"
+      >
+        <SheetHeader className="p-6 pb-0">
+          <SheetTitle className="text-xl">Nová komplexní diagnostika</SheetTitle>
           <SheetDescription>
-            Zaznamenejte diagnostický nález klienta.
+            Rozšířená anamnéza s AI analýzou. Nový klient bude automaticky vytvořen.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6 space-y-6">
-          <DiagnosticForm
-            onSubmit={handleSubmit}
-            isLoading={isLoading || isUploadingMedia}
+        <div className="p-6 pt-4">
+          <ExtendedDiagnosticForm
             clients={clients}
             defaultClientId={defaultClientId}
+            onSubmit={handleSubmit}
+            isLoading={isSubmitting}
           />
-          
-          <Separator />
-          
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-3">
-              Fotografie a hlasové poznámky
-            </h4>
-            <InlineMediaUpload
-              pendingMedia={pendingMedia}
-              onAddMedia={handleAddMedia}
-              onRemoveMedia={handleRemoveMedia}
-              disabled={isLoading || isUploadingMedia}
-            />
-          </div>
         </div>
       </SheetContent>
     </Sheet>
