@@ -1,26 +1,47 @@
 import { useState } from 'react';
-import { Plus, Stethoscope, FileText, Calendar, User } from 'lucide-react';
+import { Plus, Stethoscope, FileText, Calendar, User, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useClients } from '@/hooks/useClients';
 import { useDiagnostics } from '@/hooks/useDiagnostics';
+import { useAllDiagnosticAssessments } from '@/hooks/useDiagnosticAssessments';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { DiagnosticDetailView } from '@/components/diagnostics/DiagnosticDetailView';
+import { DiagnosticWithAssessment } from '@/hooks/useDiagnosticAssessments';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
+interface DiagnosticWithClient extends DiagnosticWithAssessment {
+  client?: { id: string; name: string };
+}
+
 export default function DiagnosticsContent() {
   const { data: clients = [] } = useClients();
   const { data: diagnostics = [] } = useDiagnostics();
+  const { data: assessments = [] } = useAllDiagnosticAssessments();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticWithClient | null>(null);
 
-  // Get recent diagnostics with client info
-  const recentDiagnostics = diagnostics
-    .slice(0, 10)
+  // Get recent diagnostics with client info and assessment data
+  const recentDiagnostics: DiagnosticWithClient[] = diagnostics
+    .slice(0, 20)
     .map(d => ({
       ...d,
-      client: clients.find(c => c.id === d.client_id)
+      client: clients.find(c => c.id === d.client_id),
+      assessment: assessments.find(a => a.diagnostic_id === d.id)
     }));
+
+  if (selectedDiagnostic) {
+    return (
+      <div className="space-y-6">
+        <DiagnosticDetailView
+          diagnostic={selectedDiagnostic}
+          onBack={() => setSelectedDiagnostic(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,9 +73,10 @@ export default function DiagnosticsContent() {
           </h3>
           <div className="grid gap-3">
             {recentDiagnostics.map((diagnostic) => (
-              <div
+              <button
                 key={diagnostic.id}
-                className="glass rounded-xl p-4 hover:bg-secondary/50 transition-colors"
+                onClick={() => setSelectedDiagnostic(diagnostic)}
+                className="glass rounded-xl p-4 hover:bg-secondary/50 transition-colors text-left w-full"
               >
                 <div className="flex items-start gap-4">
                   <ClientAvatar 
@@ -62,7 +84,7 @@ export default function DiagnosticsContent() {
                     size="md" 
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="font-medium text-foreground truncate">
                         {diagnostic.client?.name || 'Neznámý klient'}
                       </p>
@@ -72,6 +94,11 @@ export default function DiagnosticsContent() {
                       )}>
                         {diagnostic.area_name}
                       </span>
+                      {diagnostic.assessment && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-success/10 text-success">
+                          AI analýza
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -89,8 +116,9 @@ export default function DiagnosticsContent() {
                       </p>
                     )}
                   </div>
+                  <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

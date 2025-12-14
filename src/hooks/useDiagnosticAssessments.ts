@@ -14,6 +14,7 @@ export interface DiagnosticWithAssessment {
   assessment?: DiagnosticAssessment;
 }
 
+// Hook for fetching diagnostics with assessments for a specific client
 export function useDiagnosticAssessments(clientId?: string) {
   return useQuery({
     queryKey: ["diagnostic-assessments", clientId],
@@ -49,5 +50,56 @@ export function useDiagnosticAssessments(clientId?: string) {
       return result;
     },
     enabled: !!clientId,
+  });
+}
+
+// Hook for fetching a single diagnostic with assessment by diagnostic ID
+export function useDiagnosticById(diagnosticId?: string) {
+  return useQuery({
+    queryKey: ["diagnostic-by-id", diagnosticId],
+    queryFn: async (): Promise<DiagnosticWithAssessment | null> => {
+      if (!diagnosticId) return null;
+
+      // Get the diagnostic
+      const { data: diagnostic, error: diagError } = await supabase
+        .from("diagnostics")
+        .select("*")
+        .eq("id", diagnosticId)
+        .single();
+
+      if (diagError) throw diagError;
+      if (!diagnostic) return null;
+
+      // Get the assessment
+      const { data: assessment, error: assessError } = await supabase
+        .from("diagnostic_assessments")
+        .select("*")
+        .eq("diagnostic_id", diagnosticId)
+        .maybeSingle();
+
+      if (assessError) throw assessError;
+
+      return {
+        ...diagnostic,
+        assessment: assessment as DiagnosticAssessment | undefined,
+      };
+    },
+    enabled: !!diagnosticId,
+  });
+}
+
+// Hook for fetching all assessments (used in Records page)
+export function useAllDiagnosticAssessments() {
+  return useQuery({
+    queryKey: ["all-diagnostic-assessments"],
+    queryFn: async () => {
+      const { data: assessments, error } = await supabase
+        .from("diagnostic_assessments")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return assessments as DiagnosticAssessment[];
+    },
   });
 }

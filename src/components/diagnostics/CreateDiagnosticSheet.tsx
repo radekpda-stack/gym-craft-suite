@@ -64,8 +64,11 @@ export function CreateDiagnosticSheet({
       let clientId = formData.client_id;
       let isNewClient = false;
 
-      // If no client selected, try to find or create one
-      if (!clientId && formData.clientName) {
+      // If client is already selected (from defaultClientId or form selection), use that
+      if (clientId) {
+        isNewClient = false;
+      } else if (formData.clientName) {
+        // Only search or create if a name was entered but no client selected
         const existingClient = findExistingClient(
           formData.email,
           formData.clientName,
@@ -127,7 +130,6 @@ export function CreateDiagnosticSheet({
       await createAssessment.mutateAsync({
         diagnostic_id: diagnostic.id,
         user_id: user.id,
-        // Lifestyle
         handedness: formData.handedness,
         occupation: formData.occupation,
         sitting_hours_daily: formData.sitting_hours_daily,
@@ -139,30 +141,25 @@ export function CreateDiagnosticSheet({
         stress_management: formData.stress_management,
         meditates: formData.meditates,
         regeneration_methods: formData.regeneration_methods,
-        // Health
         diseases: formData.diseases,
         surgeries: formData.surgeries,
         injuries: formData.injuries,
         pain_areas: formData.pain_areas,
         allergies: formData.allergies,
         family_health_history: formData.family_health_history,
-        // Goals
         short_term_goals: formData.short_term_goals,
         long_term_goals: formData.long_term_goals,
         training_priorities: formData.training_priorities,
-        // Mobility
         mobility_ankles: formData.mobility_ankles,
         mobility_hips: formData.mobility_hips,
         mobility_thoracic: formData.mobility_thoracic,
         mobility_shoulders: formData.mobility_shoulders,
         core_stability: formData.core_stability,
-        // Movement quality
         squat_quality: formData.squat_quality,
         lunge_quality: formData.lunge_quality,
         push_quality: formData.push_quality,
         pull_quality: formData.pull_quality,
         hip_hinge_quality: formData.hip_hinge_quality,
-        // Injury screening
         pain_ankle: formData.pain_ankle,
         pain_knee: formData.pain_knee,
         pain_hip: formData.pain_hip,
@@ -171,16 +168,13 @@ export function CreateDiagnosticSheet({
         pain_thoracic: formData.pain_thoracic,
         pain_shoulder: formData.pain_shoulder,
         pain_neck: formData.pain_neck,
-        // Psychological
         motivation_level: formData.motivation_level,
         discipline_level: formData.discipline_level,
         preferred_training_style: formData.preferred_training_style,
-        // Nutrition
         eating_regularity: formData.eating_regularity,
         food_allergies: formData.food_allergies,
         supplements: formData.supplements,
         dietary_restrictions: formData.dietary_restrictions,
-        // AI analysis (will be filled by AI)
         ai_analysis: formData.ai_analysis,
         ai_risk_factors: formData.ai_risk_factors,
         ai_strengths: formData.ai_strengths,
@@ -231,7 +225,7 @@ export function CreateDiagnosticSheet({
         <SheetHeader className="p-6 pb-0">
           <SheetTitle className="text-xl">Nová komplexní diagnostika</SheetTitle>
           <SheetDescription>
-            Rozšířená anamnéza s AI analýzou. Nový klient bude automaticky vytvořen.
+            Rozšířená anamnéza s AI analýzou. Nový klient bude vytvořen pouze pokud není vybrán existující.
           </SheetDescription>
         </SheetHeader>
         <div className="p-6 pt-4">
