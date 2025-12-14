@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -10,15 +11,27 @@ import {
   Plus,
   CreditCard,
   Dumbbell,
+  Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Client } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
+
+interface SharedBudgetMember {
+  id: string;
+  name: string;
+  membershipId: string;
+}
 
 interface ClientSummaryCardProps {
   client: Client;
   creditBalance: number;
   isSharedBudget?: boolean;
+  sharedBudgetName?: string;
+  sharedBudgetMembers?: SharedBudgetMember[];
   unpaidCount: number;
   unpaidTotal: number;
   lastPaymentDate?: string;
@@ -34,6 +47,8 @@ export function ClientSummaryCard({
   client,
   creditBalance,
   isSharedBudget,
+  sharedBudgetName,
+  sharedBudgetMembers = [],
   unpaidCount,
   unpaidTotal,
   lastPaymentDate,
@@ -44,6 +59,8 @@ export function ClientSummaryCard({
   onAddCredit,
   onPayUnpaid,
 }: ClientSummaryCardProps) {
+  const [showMembers, setShowMembers] = useState(false);
+
   // Determine credit status color
   const getCreditStatusColor = () => {
     if (unpaidCount > 0) return 'destructive';
@@ -52,6 +69,7 @@ export function ClientSummaryCard({
   };
   
   const statusColor = getCreditStatusColor();
+  const otherMembers = sharedBudgetMembers.filter(m => m.id !== client.id);
 
   return (
     <div className={cn(
@@ -62,12 +80,22 @@ export function ClientSummaryCard({
     )}>
       {/* Header Row */}
       <div className="flex items-start justify-between">
-        <div>
+        <div className="space-y-1">
           <h2 className="text-xl font-bold text-foreground">{client.name}</h2>
           {isSharedBudget && (
-            <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-              Sdílený účet
-            </span>
+            <button
+              onClick={() => setShowMembers(!showMembers)}
+              className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors"
+            >
+              <Users className="w-3 h-3" />
+              {sharedBudgetName || 'Sdílený účet'}
+              {otherMembers.length > 0 && (
+                <>
+                  <span className="text-primary/70">({otherMembers.length + 1})</span>
+                  {showMembers ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </>
+              )}
+            </button>
           )}
         </div>
         <div className={cn(
@@ -80,6 +108,25 @@ export function ClientSummaryCard({
           {creditBalance.toLocaleString('cs-CZ')} Kč
         </div>
       </div>
+
+      {/* Shared Budget Members List */}
+      {isSharedBudget && showMembers && otherMembers.length > 0 && (
+        <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
+          <p className="text-xs text-muted-foreground mb-2">Propojení klienti ve sdíleném účtu:</p>
+          <div className="flex flex-wrap gap-2">
+            {otherMembers.map(member => (
+              <Link
+                key={member.id}
+                to={`/clients/${member.id}`}
+                className="flex items-center gap-2 px-2 py-1 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
+              >
+                <ClientAvatar name={member.name} size="xs" />
+                <span className="text-sm">{member.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status Grid */}
       <div className="grid grid-cols-2 gap-3">

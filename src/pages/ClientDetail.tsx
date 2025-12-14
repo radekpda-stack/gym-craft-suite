@@ -23,7 +23,7 @@ import { useTrainingSessions, useUpdateTrainingSession, useCreateTrainingSession
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
-import { useClientBudgetGroup } from '@/hooks/useClientBudgetGroups';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { ClientFormValues } from '@/lib/validations/client';
 import { CreditManagement } from '@/components/credit/CreditManagement';
@@ -47,7 +47,7 @@ export default function ClientDetail() {
   const { data: allSessions = [] } = useTrainingSessions(id);
   const { data: measurements = [] } = useMeasurements(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
-  const { data: clientBudgetGroup } = useClientBudgetGroup(id);
+  const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
   const { data: transactions = [] } = useCreditTransactions(id);
   const updateClient = useUpdateClient();
   const updateTraining = useUpdateTrainingSession();
@@ -126,8 +126,11 @@ export default function ClientDetail() {
   const completedSessions = clientSessions.filter(s => s.status === 'completed');
   const scheduledSessions = clientSessions.filter(s => s.status === 'scheduled');
   
-  // Check if client is in a shared budget group
-  const isSharedBudget = !!clientBudgetGroup?.group;
+  // Check if client is in a shared budget group - use sharedBudgetInfo
+  const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
+  const sharedBalance = sharedBudgetInfo?.sharedBalance ?? 0;
+  const sharedBudgetName = sharedBudgetInfo?.groupName ?? undefined;
+  const sharedBudgetMembers = sharedBudgetInfo?.members ?? [];
   
   // Get unpaid stats for this client
   const unpaidCount = unpaidTrainings.length;
@@ -171,8 +174,10 @@ export default function ClientDetail() {
       {/* Client Summary Card - New UI */}
       <ClientSummaryCard
         client={client}
-        creditBalance={isSharedBudget ? (clientBudgetGroup?.group?.shared_balance || 0) : (client.credit_balance || 0)}
+        creditBalance={isSharedBudget ? sharedBalance : (client.credit_balance || 0)}
         isSharedBudget={isSharedBudget}
+        sharedBudgetName={sharedBudgetName}
+        sharedBudgetMembers={sharedBudgetMembers}
         unpaidCount={unpaidCount}
         unpaidTotal={unpaidTotal}
         lastPaymentDate={lastPaymentDate}
