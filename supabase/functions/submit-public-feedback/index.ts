@@ -119,46 +119,62 @@ serve(async (req) => {
     }
     const isRedFlag = redFlagReasons.length > 0;
 
+    // Check if training_session_id exists
+    if (!request.training_session_id) {
+      console.error("No training_session_id found in feedback request");
+      return new Response(
+        JSON.stringify({ error: "Chybí odkaz na trénink", code: "NO_TRAINING" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Create feedback entry with new schema
     const trainingDate = request.training_sessions?.date || new Date().toISOString();
     
+    const feedbackData = {
+      training_session_id: request.training_session_id,
+      client_id: request.client_id,
+      user_id: request.user_id,
+      training_date: trainingDate,
+      feedback_request_id: request.id,
+      source: "public_link",
+      is_processed: false,
+      // New 7-scale fields
+      soreness: scales.soreness,
+      body_feel: scales.body_feel,
+      energy_rating: scales.energy,
+      pain: scales.pain,
+      session_fit: scales.session_fit,
+      difficulty: scales.difficulty,
+      fun: scales.fun,
+      pain_area: pain_area || null,
+      pain_area_other: pain_area_other || null,
+      comment: note || null,
+      is_red_flag: isRedFlag,
+      red_flag_reasons: redFlagReasons.length > 0 ? redFlagReasons : null,
+      // Set some default values for old fields to maintain compatibility
+      rpe_rating: scales.difficulty, // Map difficulty to RPE
+      fatigue_level: Math.min(5, Math.max(1, Math.ceil(scales.soreness / 2))), // Map soreness to fatigue 1-5
+      mood_rating: Math.min(5, Math.max(1, Math.ceil(scales.fun / 2))), // Map fun to mood 1-5
+      technique_rating: Math.min(5, Math.max(1, Math.ceil(scales.session_fit / 2))), // Map session_fit to technique 1-5
+      energy_level: scales.energy >= 7 ? "stable" : scales.energy >= 4 ? "better-at-end" : "low",
+      goal_relevance: scales.session_fit >= 7 ? "yes" : scales.session_fit >= 4 ? "partially" : "no",
+    };
+
+    console.log("Inserting feedback data:", JSON.stringify(feedbackData, null, 2));
+
     const { data: feedback, error: feedbackError } = await supabase
       .from("training_feedback")
-      .insert({
-        training_session_id: request.training_session_id,
-        client_id: request.client_id,
-        user_id: request.user_id,
-        training_date: trainingDate,
-        feedback_request_id: request.id,
-        source: "public_link",
-        is_processed: false,
-        // New 7-scale fields
-        soreness: scales.soreness,
-        body_feel: scales.body_feel,
-        energy_rating: scales.energy,
-        pain: scales.pain,
-        session_fit: scales.session_fit,
-        difficulty: scales.difficulty,
-        fun: scales.fun,
-        pain_area: pain_area || null,
-        pain_area_other: pain_area_other || null,
-        comment: note || null,
-        is_red_flag: isRedFlag,
-        red_flag_reasons: redFlagReasons.length > 0 ? redFlagReasons : null,
-        // Set some default values for old fields to maintain compatibility
-        rpe_rating: scales.difficulty, // Map difficulty to RPE
-        fatigue_level: Math.ceil(scales.soreness / 2), // Map soreness to fatigue 1-5
-        mood_rating: Math.ceil(scales.fun / 2), // Map fun to mood 1-5
-        technique_rating: Math.ceil(scales.session_fit / 2), // Map session_fit to technique 1-5
-        energy_level: scales.energy >= 7 ? "stable" : scales.energy >= 4 ? "better-at-end" : "low",
-        goal_relevance: scales.session_fit >= 7 ? "yes" : scales.session_fit >= 4 ? "partially" : "no",
-      })
+      .insert(feedbackData)
       .select()
       .single();
 
     if (feedbackError) {
-      console.error("Error creating feedback:", feedbackError);
-      throw new Error("Chyba při ukládání zpětné vazby");
+      console.error("Error creating feedback - code:", feedbackError.code);
+      console.error("Error creating feedback - message:", feedbackError.message);
+      console.error("Error creating feedback - details:", feedbackError.details);
+      console.error("Error creating feedback - hint:", feedbackError.hint);
+      throw new Error(`Chyba při ukládání zpětné vazby: ${feedbackError.message}`);
     }
 
     // Update request status to completed
