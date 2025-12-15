@@ -51,6 +51,7 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
             <TrainingStatusBadge 
               status={session.status as 'scheduled' | 'completed' | 'canceled'} 
               paymentStatus={session.payment_status}
+              paymentMethod={session.payment_method}
               showLabel={false}
               className="px-1.5 py-0.5"
             />
@@ -105,6 +106,7 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
               <TrainingStatusBadge 
                 status={session.status as 'scheduled' | 'completed' | 'canceled'} 
                 paymentStatus={session.payment_status}
+                paymentMethod={session.payment_method}
                 className="text-[11px]"
               />
             </div>
@@ -150,6 +152,7 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
                 <TrainingStatusBadge 
                   status={session.status as 'scheduled' | 'completed' | 'canceled'} 
                   paymentStatus={session.payment_status}
+                  paymentMethod={session.payment_method}
                 />
               </div>
               

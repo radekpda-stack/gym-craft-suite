@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Plus, Dumbbell } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
@@ -24,12 +25,14 @@ const statusLabels = {
   scheduled: 'Plán',
   completed: 'Hotovo',
   canceled: 'Zrušeno',
+  awaiting_payment: 'Čeká',
 };
 
 const statusLabelsLong = {
   scheduled: 'Naplánováno',
   completed: 'Dokončeno',
   canceled: 'Zrušeno',
+  awaiting_payment: 'Čeká na platbu',
 };
 
 export default function Trainings() {
@@ -45,6 +48,13 @@ export default function Trainings() {
   const updateTraining = useUpdateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
+
+  // Count of trainings awaiting payment (completed but unpaid)
+  const awaitingPaymentCount = useMemo(() => {
+    return sessions.filter(
+      s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')
+    ).length;
+  }, [sessions]);
 
   const handleCompleteTraining = async (sessionId: string) => {
     try {
@@ -116,6 +126,13 @@ export default function Trainings() {
     const matchesSearch =
       client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Special filter for awaiting payment
+    if (statusFilter === 'awaiting_payment') {
+      return matchesSearch && 
+        session.status === 'completed' && 
+        (!session.payment_status || session.payment_status === 'pending');
+    }
 
     const matchesStatus = !statusFilter || session.status === statusFilter;
 
@@ -249,6 +266,29 @@ export default function Trainings() {
               <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
             </Button>
           ))}
+          {/* Awaiting payment filter with badge */}
+          <Button
+            variant={statusFilter === 'awaiting_payment' ? 'default' : 'outline'}
+            onClick={() => setStatusFilter('awaiting_payment')}
+            className="rounded-full h-9 px-4 flex-shrink-0 touch-target gap-2"
+            size="sm"
+          >
+            <span className="sm:hidden">{statusLabels.awaiting_payment}</span>
+            <span className="hidden sm:inline">{statusLabelsLong.awaiting_payment}</span>
+            {awaitingPaymentCount > 0 && (
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full",
+                  statusFilter === 'awaiting_payment' 
+                    ? "bg-background/20 text-foreground" 
+                    : "bg-warning/20 text-warning"
+                )}
+              >
+                {awaitingPaymentCount}
+              </Badge>
+            )}
+          </Button>
         </div>
       </div>
 
