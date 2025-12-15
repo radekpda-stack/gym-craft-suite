@@ -14,8 +14,11 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Client } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
@@ -41,6 +44,7 @@ interface ClientSummaryCardProps {
   onAddTraining?: () => void;
   onAddCredit?: () => void;
   onPayUnpaid?: () => void;
+  onFeedbackToggle?: (enabled: boolean) => void;
 }
 
 export function ClientSummaryCard({
@@ -58,6 +62,7 @@ export function ClientSummaryCard({
   onAddTraining,
   onAddCredit,
   onPayUnpaid,
+  onFeedbackToggle,
 }: ClientSummaryCardProps) {
   const [showMembers, setShowMembers] = useState(false);
 
@@ -177,6 +182,21 @@ export function ClientSummaryCard({
           </div>
         </div>
       )}
+
+      {/* Feedback Toggle */}
+      <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-muted-foreground" />
+          <Label htmlFor="feedback-toggle" className="text-sm cursor-pointer">
+            Posílat feedback dotazník
+          </Label>
+        </div>
+        <Switch
+          id="feedback-toggle"
+          checked={client.feedback_enabled !== false}
+          onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
+        />
+      </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2 flex-wrap">

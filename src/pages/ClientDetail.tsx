@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SessionCard } from '@/components/ui/session-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
-import { useClient, useUpdateClient } from '@/hooks/useClients';
+import { useClient, useUpdateClient, useUpdateClientFeedback } from '@/hooks/useClients';
 import { useTrainingSessions, useUpdateTrainingSession, useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
@@ -50,6 +50,7 @@ export default function ClientDetail() {
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
   const { data: transactions = [] } = useCreditTransactions(id);
   const updateClient = useUpdateClient();
+  const updateFeedback = useUpdateClientFeedback();
   const updateTraining = useUpdateTrainingSession();
   const createTraining = useCreateTrainingSession();
   const trainingPrices = useTrainingPrices();
@@ -187,6 +188,7 @@ export default function ClientDetail() {
         onAddTraining={() => setIsTrainingDialogOpen(true)}
         onAddCredit={() => setIsCreditModalOpen(true)}
         onPayUnpaid={() => setIsCreditModalOpen(true)}
+        onFeedbackToggle={(enabled) => updateFeedback.mutate({ id: client.id, feedback_enabled: enabled })}
       />
 
       {/* Client Detail View with inline editing */}

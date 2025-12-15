@@ -22,7 +22,6 @@ import {
   Loader2,
   Repeat,
   FileText,
-  Mail,
   CreditCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,9 @@ import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSess
 import { Client } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
 import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
+import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { cn } from '@/lib/utils';
 import {
   Form,
@@ -54,7 +55,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
-import { SendFeedbackEmailDialog } from '@/components/feedback/SendFeedbackEmailDialog';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -99,7 +99,13 @@ export function TrainingDetailView({
   
   const changePaymentMethod = useChangePaymentMethod();
   const { data: settings } = useAppSettings();
+  const { data: feedbackRequests = [] } = useFeedbackRequests();
   const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 800, "2": 1000, "3": 1200 };
+  
+  // Get feedback request for this training
+  const feedbackRequest = feedbackRequests.find(
+    fr => fr.training_session_id === training.id && fr.status !== 'cancelled'
+  );
   
   // Calculate price for this training
   const participantCount = training.participant_count || 1;
@@ -222,34 +228,14 @@ export function TrainingDetailView({
               </Button>
             </>
           ) : (
-            <>
-              {training.status === 'completed' && client && (
-                <SendFeedbackEmailDialog
-                  clientId={client.id}
-                  clientName={client.name}
-                  clientEmail={client.email}
-                  trainingSessionId={training.id}
-                  trainingDate={training.date}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      className="gap-2 h-11 sm:h-10"
-                    >
-                      <Mail className="w-4 h-4" />
-                      <span className="hidden sm:inline">Odeslat feedback</span>
-                    </Button>
-                  }
-                />
-              )}
-              <Button
-                variant="outline"
-                className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
-                onClick={() => setIsEditMode(true)}
-              >
-                <Edit2 className="w-4 h-4" />
-                <span>Upravit</span>
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              className="gap-2 h-11 sm:h-10 w-full sm:w-auto"
+              onClick={() => setIsEditMode(true)}
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Upravit</span>
+            </Button>
           )}
         </div>
       </div>
@@ -530,6 +516,27 @@ export function TrainingDetailView({
             </p>
           )}
         </div>
+
+        {/* Feedback Section - Only for completed trainings */}
+        {training.status === 'completed' && client && (
+          <TrainingFeedbackSection
+            trainingId={training.id}
+            trainingDate={training.date}
+            trainingStatus={training.status}
+            clientId={client.id}
+            clientName={client.name}
+            feedbackEnabled={client.feedback_enabled !== false}
+            existingFeedback={feedbackRequest?.status === 'completed'}
+            feedbackRequest={feedbackRequest ? {
+              id: feedbackRequest.id,
+              token: feedbackRequest.token,
+              status: feedbackRequest.status,
+              expires_at: feedbackRequest.expires_at,
+              sent_at: feedbackRequest.sent_at,
+              reminder_count: feedbackRequest.reminder_count || 0,
+            } : undefined}
+          />
+        )}
       </Form>
     </div>
   );
