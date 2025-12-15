@@ -157,7 +157,7 @@ serve(async (req) => {
       fatigue_level: Math.min(5, Math.max(1, Math.ceil(scales.soreness / 2))), // Map soreness to fatigue 1-5
       mood_rating: Math.min(5, Math.max(1, Math.ceil(scales.fun / 2))), // Map fun to mood 1-5
       technique_rating: Math.min(5, Math.max(1, Math.ceil(scales.session_fit / 2))), // Map session_fit to technique 1-5
-      energy_level: scales.energy >= 7 ? "stable" : scales.energy >= 4 ? "better-at-end" : "low",
+      energy_level: scales.energy >= 7 ? "stable" : scales.energy >= 4 ? "better_end" : "low_entire",
       goal_relevance: scales.session_fit >= 7 ? "yes" : scales.session_fit >= 4 ? "partially" : "no",
     };
 
