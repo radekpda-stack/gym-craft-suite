@@ -7,8 +7,9 @@ export interface SharedBudgetInfo {
   groupId: string | null;
   groupName: string | null;
   sharedBalance: number;
-  displayBalance: number; // Max 0, never negative display
+  displayBalance: number; // Actual balance, can be negative
   isExhausted: boolean;
+  isNegative: boolean;
   members: Array<{
     id: string;
     name: string;
@@ -28,6 +29,7 @@ export function useSharedBudgetBalance(clientId?: string) {
           sharedBalance: 0,
           displayBalance: 0,
           isExhausted: false,
+          isNegative: false,
           members: [],
         };
       }
@@ -57,8 +59,9 @@ export function useSharedBudgetBalance(clientId?: string) {
           groupId: null,
           groupName: null,
           sharedBalance: balance,
-          displayBalance: Math.max(0, balance),
+          displayBalance: balance,
           isExhausted: balance <= 0,
+          isNegative: balance < 0,
           members: [],
         };
       }
@@ -73,6 +76,7 @@ export function useSharedBudgetBalance(clientId?: string) {
           sharedBalance: 0,
           displayBalance: 0,
           isExhausted: true,
+          isNegative: false,
           members: [],
         };
       }
@@ -101,8 +105,9 @@ export function useSharedBudgetBalance(clientId?: string) {
         groupId: group.id,
         groupName: group.name,
         sharedBalance,
-        displayBalance: Math.max(0, sharedBalance),
+        displayBalance: sharedBalance,
         isExhausted: sharedBalance <= 0,
+        isNegative: sharedBalance < 0,
         members,
       };
     },
