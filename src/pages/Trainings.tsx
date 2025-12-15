@@ -52,7 +52,7 @@ export default function Trainings() {
   // Count of trainings awaiting payment (completed but unpaid)
   const awaitingPaymentCount = useMemo(() => {
     return sessions.filter(
-      s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')
+      s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending' || s.payment_status === 'unpaid')
     ).length;
   }, [sessions]);
 
@@ -131,7 +131,7 @@ export default function Trainings() {
     if (statusFilter === 'awaiting_payment') {
       return matchesSearch && 
         session.status === 'completed' && 
-        (!session.payment_status || session.payment_status === 'pending');
+        (!session.payment_status || session.payment_status === 'pending' || session.payment_status === 'unpaid');
     }
 
     const matchesStatus = !statusFilter || session.status === statusFilter;
