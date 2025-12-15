@@ -16,6 +16,7 @@ export interface Client {
   birth_date: string | null;
   is_favorite: boolean;
   is_archived: boolean;
+  feedback_enabled: boolean;
   gender: 'male' | 'female' | null;
   created_at: string;
   updated_at: string;
@@ -218,6 +219,42 @@ export function useArchiveClient() {
       toast({
         title: "Chyba",
         description: "Nepodařilo se archivovat klienta.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUpdateClientFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, feedback_enabled }: { id: string; feedback_enabled: boolean }) => {
+      const { data, error } = await supabase
+        .from("clients")
+        .update({ feedback_enabled })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.id] });
+      toast({
+        title: data.feedback_enabled ? "Feedback povolen" : "Feedback zakázán",
+        description: data.feedback_enabled 
+          ? "Klientovi bude možné posílat feedback dotazníky." 
+          : "Klientovi nebude zasílán feedback dotazník.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating client feedback:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se aktualizovat nastavení feedbacku.",
         variant: "destructive",
       });
     },
