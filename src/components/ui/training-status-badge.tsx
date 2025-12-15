@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
-import { Check, Clock, X, AlertTriangle } from 'lucide-react';
+import { Check, Clock, X, AlertTriangle, Wallet } from 'lucide-react';
 
 interface TrainingStatusBadgeProps {
   status: 'scheduled' | 'completed' | 'canceled';
   paymentStatus?: string | null;
+  paymentMethod?: string | null;
   className?: string;
   showLabel?: boolean;
 }
@@ -11,7 +12,7 @@ interface TrainingStatusBadgeProps {
 /**
  * Training Status Badge with new visual interpretation:
  * - Scheduled (pending) → Grey dot
- * - Completed + Unpaid → Orange exclamation
+ * - Completed + Unpaid → Orange exclamation with payment method
  * - Completed + Paid → Green check
  * - Canceled → Red X
  */
@@ -34,9 +35,26 @@ function getPaymentLabel(paymentStatus: string | null | undefined): string {
   }
 }
 
+/**
+ * Get awaiting payment label with intended payment method
+ */
+function getAwaitingPaymentLabel(paymentMethod: string | null | undefined): string {
+  switch (paymentMethod) {
+    case 'cash':
+      return 'Čeká na platbu (hotově)';
+    case 'card':
+      return 'Čeká na platbu (kartou)';
+    case 'bank':
+      return 'Čeká na platbu (převodem)';
+    default:
+      return 'Čeká na platbu';
+  }
+}
+
 export function TrainingStatusBadge({ 
   status, 
   paymentStatus, 
+  paymentMethod,
   className,
   showLabel = true,
 }: TrainingStatusBadgeProps) {
@@ -71,11 +89,11 @@ export function TrainingStatusBadge({
     
     if (isCompletedUnpaid) {
       return {
-        icon: AlertTriangle,
+        icon: Wallet,
         bgColor: 'bg-warning/10',
         textColor: 'text-warning',
         iconColor: 'text-warning',
-        label: 'Nezaplaceno',
+        label: getAwaitingPaymentLabel(paymentMethod),
       };
     }
     
@@ -114,7 +132,7 @@ export function TrainingStatusDot({
   status, 
   paymentStatus, 
   className,
-}: Omit<TrainingStatusBadgeProps, 'showLabel'>) {
+}: Omit<TrainingStatusBadgeProps, 'showLabel' | 'paymentMethod'>) {
   // isPaid is TRUE for any paid_* status
   const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
   const isCompletedUnpaid = status === 'completed' && !isPaid;
@@ -129,7 +147,7 @@ export function TrainingStatusDot({
       return { icon: Check, color: 'text-success' };
     }
     if (isCompletedUnpaid) {
-      return { icon: AlertTriangle, color: 'text-warning' };
+      return { icon: Wallet, color: 'text-warning' };
     }
     return { icon: Clock, color: 'text-muted-foreground' };
   };
