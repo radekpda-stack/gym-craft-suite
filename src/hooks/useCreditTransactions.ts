@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training';
+export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training' | 'transfer';
 export type PaymentMethod = 'cash' | 'credit' | 'card';
 
 export interface CreditTransaction {
@@ -30,6 +30,8 @@ export interface CreateTransactionInput {
   product_id?: string;
   payment_method?: PaymentMethod;
   skip_credit_update?: boolean;
+  // If true and client is in shared budget with personal debt, auto-transfer debt to shared budget
+  clearPersonalDebt?: boolean;
 }
 
 export function useCreditTransactions(clientId?: string) {
@@ -74,7 +76,10 @@ async function updateSharedBudgetBalance(groupId: string, amount: number) {
 
   if (getError) throw getError;
 
-  const newBalance = (group.shared_balance || 0) + amount;
+  // Use integer math to avoid floating point issues
+  const currentBalance = Math.round((group.shared_balance || 0) * 100);
+  const amountCents = Math.round(amount * 100);
+  const newBalance = (currentBalance + amountCents) / 100;
 
   const { error: updateError } = await supabase
     .from("client_budget_groups")
@@ -84,6 +89,56 @@ async function updateSharedBudgetBalance(groupId: string, amount: number) {
   if (updateError) throw updateError;
 
   return newBalance;
+}
+
+// Helper to clear personal debt and transfer to shared budget
+async function clearPersonalDebtToSharedBudget(
+  clientId: string,
+  groupId: string,
+  userId: string
+): Promise<number> {
+  // Get client's personal balance
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("credit_balance, name")
+    .eq("id", clientId)
+    .single();
+
+  if (clientError) throw clientError;
+
+  const personalBalance = client.credit_balance || 0;
+  
+  // Only process if there's a negative balance (debt)
+  if (personalBalance >= 0) return 0;
+
+  const debtAmount = Math.abs(personalBalance);
+
+  // 1. Create a TRANSFER transaction to record the debt transfer
+  const { error: transferError } = await supabase
+    .from("credit_transactions")
+    .insert({
+      client_id: clientId,
+      amount: debtAmount, // Positive amount to clear debt on personal side
+      type: 'transfer',
+      description: `Vyrovnání osobního dluhu do sdíleného budgetu`,
+      user_id: userId,
+      group_id: groupId,
+    });
+
+  if (transferError) throw transferError;
+
+  // 2. Set client's personal balance to 0
+  const { error: updateClientError } = await supabase
+    .from("clients")
+    .update({ credit_balance: 0 })
+    .eq("id", clientId);
+
+  if (updateClientError) throw updateClientError;
+
+  // 3. Deduct the debt from shared budget
+  await updateSharedBudgetBalance(groupId, -debtAmount);
+
+  return debtAmount;
 }
 
 export function useCreateTransaction() {
@@ -98,6 +153,13 @@ export function useCreateTransaction() {
       const budgetGroup = await getClientBudgetGroup(input.client_id);
       const isSharedBudget = !!budgetGroup?.group_id;
       const groupId = budgetGroup?.group_id;
+
+      let clearedDebt = 0;
+
+      // If clearing personal debt is requested and client is in shared budget
+      if (input.clearPersonalDebt && isSharedBudget && groupId) {
+        clearedDebt = await clearPersonalDebtToSharedBudget(input.client_id, groupId, user.id);
+      }
 
       // Create the transaction with group_id if applicable
       const { data: transaction, error: transactionError } = await supabase
@@ -134,7 +196,10 @@ export function useCreateTransaction() {
 
           if (clientError) throw clientError;
 
-          newBalance = (client.credit_balance || 0) + input.amount;
+          // Use integer math to avoid floating point issues
+          const currentBalance = Math.round((client.credit_balance || 0) * 100);
+          const amountCents = Math.round(input.amount * 100);
+          newBalance = (currentBalance + amountCents) / 100;
 
           const { error: updateError } = await supabase
             .from("clients")
@@ -145,7 +210,7 @@ export function useCreateTransaction() {
         }
       }
 
-      return { transaction, newBalance, skippedCredit: input.skip_credit_update, isSharedBudget };
+      return { transaction, newBalance, skippedCredit: input.skip_credit_update, isSharedBudget, clearedDebt };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
@@ -165,11 +230,17 @@ export function useCreateTransaction() {
       } else {
         const isPositive = variables.amount > 0;
         const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
+        let description = isPositive 
+          ? `${budgetType} navýšen o ${variables.amount} Kč`
+          : `${budgetType} snížen o ${Math.abs(variables.amount)} Kč`;
+        
+        if (result.clearedDebt > 0) {
+          description += ` (vyrovnán dluh ${result.clearedDebt} Kč)`;
+        }
+        
         toast({
           title: isPositive ? "Platba přidána" : "Kredit odečten",
-          description: isPositive 
-            ? `${budgetType} navýšen o ${variables.amount} Kč`
-            : `${budgetType} snížen o ${Math.abs(variables.amount)} Kč`,
+          description,
         });
       }
     },
@@ -270,6 +341,11 @@ export function useUpdateTransactionPaymentMethod() {
       oldPaymentMethod: PaymentMethod | null; 
       newPaymentMethod: PaymentMethod;
     }) => {
+      // Check if client is in shared budget
+      const budgetGroup = await getClientBudgetGroup(clientId);
+      const isSharedBudget = !!budgetGroup?.group_id;
+      const groupId = budgetGroup?.group_id;
+
       // Update the transaction payment method
       const { error: updateTransactionError } = await supabase
         .from("credit_transactions")
@@ -278,47 +354,58 @@ export function useUpdateTransactionPaymentMethod() {
 
       if (updateTransactionError) throw updateTransactionError;
 
-      // Get current client balance
-      const { data: client, error: clientError } = await supabase
-        .from("clients")
-        .select("credit_balance")
-        .eq("id", clientId)
-        .single();
-
-      if (clientError) throw clientError;
-
-      let newBalance = client.credit_balance || 0;
       const wasFromCredit = oldPaymentMethod === 'credit';
       const isNowFromCredit = newPaymentMethod === 'credit';
 
-      // If changing from credit to cash: restore the credit
-      if (wasFromCredit && !isNowFromCredit) {
-        newBalance = newBalance - amount; // amount is negative for sales, so subtracting adds back
-      }
-      // If changing from cash to credit: deduct the credit
-      else if (!wasFromCredit && isNowFromCredit) {
-        newBalance = newBalance + amount; // amount is negative for sales, so adding deducts
-      }
-
-      // Only update if there's a change
+      // Only update balance if there's a change in credit usage
       if (wasFromCredit !== isNowFromCredit) {
-        const { error: updateError } = await supabase
-          .from("clients")
-          .update({ credit_balance: newBalance })
-          .eq("id", clientId);
+        if (isSharedBudget && groupId) {
+          // Update shared budget
+          // If changing from credit to cash: add back (amount is negative for sales)
+          // If changing from cash to credit: deduct
+          const adjustment = wasFromCredit ? -amount : amount;
+          await updateSharedBudgetBalance(groupId, adjustment);
+        } else {
+          // Update individual client balance
+          const { data: client, error: clientError } = await supabase
+            .from("clients")
+            .select("credit_balance")
+            .eq("id", clientId)
+            .single();
 
-        if (updateError) throw updateError;
+          if (clientError) throw clientError;
+
+          let newBalance = client.credit_balance || 0;
+          // If changing from credit to cash: restore the credit
+          if (wasFromCredit && !isNowFromCredit) {
+            newBalance = newBalance - amount; // amount is negative for sales, so subtracting adds back
+          }
+          // If changing from cash to credit: deduct the credit
+          else if (!wasFromCredit && isNowFromCredit) {
+            newBalance = newBalance + amount; // amount is negative for sales, so adding deducts
+          }
+
+          const { error: updateError } = await supabase
+            .from("clients")
+            .update({ credit_balance: newBalance })
+            .eq("id", clientId);
+
+          if (updateError) throw updateError;
+        }
       }
 
-      return { newBalance, changed: wasFromCredit !== isNowFromCredit };
+      return { changed: wasFromCredit !== isNowFromCredit, isSharedBudget };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      
+      const budgetType = result.isSharedBudget ? "sdílený kredit" : "kredit";
       toast({
         title: "Způsob platby změněn",
         description: result.changed 
-          ? "Způsob platby a kredit klienta byly aktualizovány."
+          ? `Způsob platby a ${budgetType} byly aktualizovány.`
           : "Způsob platby byl aktualizován.",
       });
     },
