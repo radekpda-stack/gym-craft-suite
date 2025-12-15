@@ -73,17 +73,17 @@ export function useCreateProduct() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
       toast({
         title: "Produkt vytvořen",
         description: "Nový produkt byl úspěšně přidán.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating product:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se vytvořit produkt.",
+        description: error?.message || "Nepodařilo se vytvořit produkt.",
         variant: "destructive",
       });
     },
@@ -118,7 +118,7 @@ export function useUpdateProduct() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
       toast({
         title: "Produkt aktualizován",
         description: "Změny byly úspěšně uloženy.",
@@ -128,7 +128,7 @@ export function useUpdateProduct() {
       console.error("Error updating product:", error);
       toast({
         title: "Chyba",
-        description: error.message || "Nepodařilo se aktualizovat produkt.",
+        description: error?.message || "Nepodařilo se aktualizovat produkt.",
         variant: "destructive",
       });
     },
@@ -144,18 +144,27 @@ export function useDeleteProduct() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Uživatel není přihlášen");
 
-      const { error } = await supabase
+      // IMPORTANT: delete with select so we can detect RLS no-op deletes
+      const { data, error } = await supabase
         .from("products")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
 
       if (error) {
         console.error("Delete product error:", error);
         throw error;
       }
+
+      if (!data) {
+        throw new Error("Produkt nebyl smazán (nemáte oprávnění nebo už neexistuje)");
+      }
+
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
       toast({
         title: "Produkt smazán",
         description: "Produkt byl úspěšně odstraněn.",
@@ -165,7 +174,7 @@ export function useDeleteProduct() {
       console.error("Error deleting product:", error);
       toast({
         title: "Chyba",
-        description: error.message || "Nepodařilo se smazat produkt.",
+        description: error?.message || "Nepodařilo se smazat produkt.",
         variant: "destructive",
       });
     },
