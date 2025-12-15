@@ -95,14 +95,26 @@ export function useUpdateProduct() {
 
   return useMutation({
     mutationFn: async ({ id, ...input }: Partial<Product> & { id: string }) => {
+      // Get current user to verify auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Uživatel není přihlášen");
+
       const { data, error } = await supabase
         .from("products")
         .update(input)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Update product error:", error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error("Produkt nebyl nalezen nebo nemáte oprávnění k jeho úpravě");
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -112,11 +124,11 @@ export function useUpdateProduct() {
         description: "Změny byly úspěšně uloženy.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating product:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se aktualizovat produkt.",
+        description: error.message || "Nepodařilo se aktualizovat produkt.",
         variant: "destructive",
       });
     },
@@ -128,12 +140,19 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Get current user to verify auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Uživatel není přihlášen");
+
       const { error } = await supabase
         .from("products")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Delete product error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -142,11 +161,11 @@ export function useDeleteProduct() {
         description: "Produkt byl úspěšně odstraněn.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error deleting product:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se smazat produkt.",
+        description: error.message || "Nepodařilo se smazat produkt.",
         variant: "destructive",
       });
     },
