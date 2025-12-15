@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { CreditCard, Search, Check, Wallet, Banknote, Building2, Receipt, AlertCircle } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { CreditCard, Search, Check, Wallet, Banknote, Building2, Receipt, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -71,8 +72,28 @@ export function EnhancedCreditModal({
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   
+  // Get shared budget info for selected client
+  const { data: sharedBudgetInfo, isLoading: budgetLoading } = useSharedBudgetBalance(selectedClientId || undefined);
+  
   // Get unpaid trainings for selected client
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(selectedClientId || undefined);
+  
+  // Determine the effective credit balance to display
+  const effectiveCreditBalance = useMemo(() => {
+    if (!selectedClient) return 0;
+    if (sharedBudgetInfo?.isShared) {
+      return sharedBudgetInfo.sharedBalance;
+    }
+    return selectedClient.credit_balance || 0;
+  }, [selectedClient, sharedBudgetInfo]);
+  
+  // Personal debt that would need to be transferred (only for shared budget clients)
+  const personalDebt = useMemo(() => {
+    if (!selectedClient || !sharedBudgetInfo?.isShared) return 0;
+    const personalBalance = selectedClient.credit_balance || 0;
+    // Only consider negative balances as debt
+    return personalBalance < 0 ? Math.abs(personalBalance) : 0;
+  }, [selectedClient, sharedBudgetInfo]);
   
   const totalUnpaid = useMemo(() => {
     return unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
@@ -126,11 +147,14 @@ export function EnhancedCreditModal({
       let description = note || 'Dobití kreditu';
       description = `[${methodLabel}] ${description}`;
 
+      // Create the top-up transaction (this will go to shared budget if client is in one)
       await createTransaction.mutateAsync({
         client_id: selectedClientId,
         amount: numericAmount,
         type: 'payment',
         description,
+        // Flag to clear personal debt if exists
+        clearPersonalDebt: personalDebt > 0,
       });
 
       // Pay selected unpaid trainings from new credit
@@ -144,14 +168,23 @@ export function EnhancedCreditModal({
         }
       }
 
+      const budgetType = sharedBudgetInfo?.isShared ? 'Sdílený kredit' : 'Kredit';
+      let successMessage = `Přičteno ${numericAmount.toLocaleString('cs-CZ')} Kč`;
+      
+      if (personalDebt > 0) {
+        successMessage += ` (vyrovnán dluh ${personalDebt.toLocaleString('cs-CZ')} Kč)`;
+      }
+      
+      if (selectedUnpaidIds.length > 0) {
+        successMessage += ` a uhrazeno ${selectedUnpaidIds.length} tréninků`;
+      }
+
       toast({
-        title: 'Kredit přidán',
-        description: selectedUnpaidIds.length > 0 
-          ? `Přičteno ${numericAmount.toLocaleString('cs-CZ')} Kč a uhrazeno ${selectedUnpaidIds.length} tréninků`
-          : `Přičteno ${numericAmount.toLocaleString('cs-CZ')} Kč pro ${selectedClient?.name}`,
+        title: `${budgetType} přidán`,
+        description: successMessage,
       });
 
-      featureTracker.track('enhanced_credit', 'finance', { paymentMethod, paidTrainings: selectedUnpaidIds.length });
+      featureTracker.track('enhanced_credit', 'finance', { paymentMethod, paidTrainings: selectedUnpaidIds.length, isShared: sharedBudgetInfo?.isShared });
 
       resetForm();
       setOpen(false);
@@ -203,6 +236,24 @@ export function EnhancedCreditModal({
       .filter(t => selectedUnpaidIds.includes(t.id))
       .reduce((sum, t) => sum + (t.final_price || 0), 0);
   }, [unpaidTrainings, selectedUnpaidIds]);
+
+  // Calculate final balance after transaction
+  const calculatedNewBalance = useMemo(() => {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) return null;
+    
+    let newBalance = effectiveCreditBalance + numericAmount;
+    
+    // If there's personal debt in shared budget, it will be transferred (reducing the new balance)
+    if (personalDebt > 0) {
+      newBalance -= personalDebt;
+    }
+    
+    // Subtract unpaid trainings that will be paid
+    newBalance -= selectedUnpaidTotal;
+    
+    return newBalance;
+  }, [effectiveCreditBalance, amount, personalDebt, selectedUnpaidTotal]);
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -275,13 +326,6 @@ export function EnhancedCreditModal({
                               />
                               <span>{client.name}</span>
                             </div>
-                            <span className={cn(
-                              "text-sm font-medium",
-                              (client.credit_balance || 0) < 0 ? "text-destructive" : 
-                              (client.credit_balance || 0) < 500 ? "text-warning" : "text-success"
-                            )}>
-                              {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                            </span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -291,19 +335,45 @@ export function EnhancedCreditModal({
               </Popover>
             </div>
 
-            {/* Show client credit and unpaid info */}
-            {selectedClient && (
+            {/* Show client credit and budget info */}
+            {selectedClient && !budgetLoading && (
               <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
+                {/* Shared budget indicator */}
+                {sharedBudgetInfo?.isShared && (
+                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full w-fit">
+                    <Users className="w-3 h-3" />
+                    {sharedBudgetInfo.groupName || 'Sdílený účet'}
+                  </div>
+                )}
+                
+                {/* Current balance - single source of truth */}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Aktuální kredit:</span>
+                  <span className="text-muted-foreground">
+                    {sharedBudgetInfo?.isShared ? 'Sdílený kredit:' : 'Kredit:'}
+                  </span>
                   <span className={cn(
                     "font-semibold",
-                    (selectedClient.credit_balance || 0) < 0 ? "text-destructive" : 
-                    (selectedClient.credit_balance || 0) < 500 ? "text-warning" : "text-success"
+                    effectiveCreditBalance < 0 ? "text-destructive" : 
+                    effectiveCreditBalance < 500 ? "text-warning" : "text-success"
                   )}>
-                    {(selectedClient.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                    {effectiveCreditBalance.toLocaleString('cs-CZ')} Kč
                   </span>
                 </div>
+                
+                {/* Show personal debt warning if client is in shared budget but has personal negative balance */}
+                {personalDebt > 0 && (
+                  <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-warning/10 border border-warning/20">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 text-warning" />
+                      Osobní dluh k vyrovnání:
+                    </span>
+                    <span className="font-semibold text-warning">
+                      -{personalDebt.toLocaleString('cs-CZ')} Kč
+                    </span>
+                  </div>
+                )}
+                
+                {/* Unpaid trainings */}
                 {unpaidTrainings.length > 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
@@ -367,13 +437,39 @@ export function EnhancedCreditModal({
               />
             </div>
 
-            {/* Preview of new balance */}
-            {selectedClient && amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
-              <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-                <p className="text-sm text-muted-foreground">Nový zůstatek po transakci:</p>
-                <p className="text-2xl font-bold text-success">
-                  {((selectedClient.credit_balance || 0) + parseFloat(amount)).toLocaleString('cs-CZ')} Kč
+            {/* Preview of new balance - unified calculation */}
+            {selectedClient && calculatedNewBalance !== null && (
+              <div className="p-4 rounded-xl bg-success/10 border border-success/20 space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {sharedBudgetInfo?.isShared ? 'Nový sdílený zůstatek:' : 'Nový zůstatek:'} 
                 </p>
+                <p className="text-2xl font-bold text-success">
+                  {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
+                </p>
+                
+                {/* Breakdown */}
+                <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-success/20">
+                  <div className="flex justify-between">
+                    <span>Aktuální zůstatek:</span>
+                    <span>{effectiveCreditBalance.toLocaleString('cs-CZ')} Kč</span>
+                  </div>
+                  <div className="flex justify-between text-success">
+                    <span>+ Dobití:</span>
+                    <span>+{parseFloat(amount).toLocaleString('cs-CZ')} Kč</span>
+                  </div>
+                  {personalDebt > 0 && (
+                    <div className="flex justify-between text-warning">
+                      <span>- Vyrovnání osobního dluhu:</span>
+                      <span>-{personalDebt.toLocaleString('cs-CZ')} Kč</span>
+                    </div>
+                  )}
+                  {selectedUnpaidTotal > 0 && (
+                    <div className="flex justify-between text-warning">
+                      <span>- Úhrada tréninků:</span>
+                      <span>-{selectedUnpaidTotal.toLocaleString('cs-CZ')} Kč</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -432,16 +528,20 @@ export function EnhancedCreditModal({
               </div>
             </ScrollArea>
 
-            {selectedUnpaidIds.length > 0 && (
-              <div className="p-3 rounded-xl bg-secondary/50">
+            {/* Balance preview for Step 2 */}
+            {calculatedNewBalance !== null && (
+              <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">K uhrazení:</span>
                   <span className="font-semibold">{selectedUnpaidTotal.toLocaleString('cs-CZ')} Kč</span>
                 </div>
-                <div className="flex justify-between text-sm mt-1">
+                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Zbude na kreditu:</span>
-                  <span className="font-semibold text-success">
-                    {(parseFloat(amount) - selectedUnpaidTotal + (selectedClient?.credit_balance || 0)).toLocaleString('cs-CZ')} Kč
+                  <span className={cn(
+                    "font-semibold",
+                    calculatedNewBalance < 0 ? "text-destructive" : "text-success"
+                  )}>
+                    {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
                   </span>
                 </div>
               </div>
@@ -449,32 +549,38 @@ export function EnhancedCreditModal({
           </div>
         )}
 
-        <DialogFooter className="mt-6 gap-2">
+        <DialogFooter className="gap-2">
           {step === 2 && (
-            <Button variant="outline" onClick={() => setStep(1)}>
+            <Button
+              variant="ghost"
+              onClick={() => setStep(1)}
+              disabled={isProcessing}
+            >
               Zpět
             </Button>
           )}
           <Button
-            variant="outline"
+            variant={step === 2 ? "outline" : "default"}
             onClick={() => {
               if (step === 2) {
                 setSelectedUnpaidIds([]);
                 processTransaction();
               } else {
-                resetForm();
-                setOpen(false);
+                handleSubmit();
               }
             }}
+            disabled={isProcessing || !selectedClientId || !amount}
           >
-            {step === 2 ? 'Přeskočit' : 'Zrušit'}
+            {step === 2 ? 'Přeskočit' : 'Pokračovat'}
           </Button>
-          <Button
-            onClick={step === 2 ? processTransaction : handleSubmit}
-            disabled={!selectedClientId || !amount || parseFloat(amount) <= 0 || isProcessing}
-          >
-            {isProcessing ? 'Zpracovávám...' : step === 2 ? 'Uhradit vybrané' : 'Pokračovat'}
-          </Button>
+          {step === 2 && (
+            <Button
+              onClick={processTransaction}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Zpracovávám...' : `Uhradit (${selectedUnpaidIds.length}×)`}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
