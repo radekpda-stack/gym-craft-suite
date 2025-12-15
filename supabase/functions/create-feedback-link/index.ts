@@ -91,14 +91,13 @@ serve(async (req) => {
 
     if (existingLink) {
       // Return existing active link
-      const baseUrl = Deno.env.get("SUPABASE_URL")!.replace(".supabase.co", ".lovable.app")
-        || "https://zukmwqfqmfuyqpxfjqil.lovable.app";
+      const baseUrl = "https://zukmwqfqmfuyqpxfjqil.lovable.app";
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           token: existingLink.token,
-          url: `${baseUrl}/feedback?t=${existingLink.token}`,
+          url: `${baseUrl}/feedback/${existingLink.token}`,
           isExisting: true,
           expiresAt: existingLink.expires_at,
         }),
@@ -145,7 +144,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         token: newRequest.token,
-        url: `${baseUrl}/feedback?t=${newRequest.token}`,
+        url: `${baseUrl}/feedback/${newRequest.token}`,
         isExisting: false,
         expiresAt: newRequest.expires_at,
       }),

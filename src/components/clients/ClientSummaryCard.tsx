@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Client } from '@/hooks/useClients';
 import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatisticsCard';
+import { FeedbackTrendsChart } from '@/components/feedback/FeedbackTrendsChart';
 import { cn } from '@/lib/utils';
 
 interface SharedBudgetMember {
@@ -214,7 +215,10 @@ export function ClientSummaryCard({
         
         {/* Feedback Statistics (collapsible) */}
         {showFeedbackStats && (
-          <FeedbackStatisticsCard clientId={client.id} />
+          <div className="space-y-4">
+            <FeedbackStatisticsCard clientId={client.id} />
+            <FeedbackTrendsChart clientId={client.id} />
+          </div>
         )}
       </div>
 
