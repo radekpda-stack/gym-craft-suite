@@ -33,6 +33,7 @@ import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCar
 import { FeedbackHistoryList } from '@/components/feedback/FeedbackHistoryList';
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-time-picker';
@@ -75,6 +76,10 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
   const [isEditMode, setIsEditMode] = useState(false);
   const [newGoal, setNewGoal] = useState('');
   const toggleFavorite = useToggleFavorite();
+  const { data: sharedBudgetInfo } = useSharedBudgetBalance(client.id);
+  
+  // Check if client is in a shared budget
+  const isInSharedBudget = sharedBudgetInfo?.isShared ?? false;
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -281,41 +286,43 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
             )}
           </div>
 
-          {/* Credit */}
-          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center gap-3 text-muted-foreground mb-2">
-              <CreditCard className="w-4 h-4" />
-              <span className="text-sm">Kredit</span>
+          {/* Credit - only show if NOT in shared budget (shared budget shows in ClientBudgetGroupCard) */}
+          {!isInSharedBudget && (
+            <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+              <div className="flex items-center gap-3 text-muted-foreground mb-2">
+                <CreditCard className="w-4 h-4" />
+                <span className="text-sm">Kredit</span>
+              </div>
+              {isEditMode ? (
+                <FormField
+                  control={form.control}
+                  name="creditBalance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0"
+                          className="bg-secondary border-border"
+                          value={field.value === 0 ? '' : field.value}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === '' ? 0 : parseFloat(val));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <p className={cn('font-bold text-lg', getCreditColor(client.credit_balance || 0))}>
+                  {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                </p>
+              )}
             </div>
-            {isEditMode ? (
-              <FormField
-                control={form.control}
-                name="creditBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0"
-                        className="bg-secondary border-border"
-                        value={field.value === 0 ? '' : field.value}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          field.onChange(val === '' ? 0 : parseFloat(val));
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <p className={cn('font-bold text-lg', getCreditColor(client.credit_balance || 0))}>
-                {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Birth Date */}
           <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
