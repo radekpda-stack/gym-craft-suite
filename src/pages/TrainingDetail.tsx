@@ -33,7 +33,9 @@ import { PriceSplitManager, ParticipantShare } from '@/components/trainings/Pric
 import { PaymentMethodSelector, PaymentOption, getPaymentStatusFromOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
 import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackForm } from '@/components/feedback/TrainingFeedbackForm';
+import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
+import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +71,7 @@ export default function TrainingDetail() {
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
   const { data: existingFeedback } = useTrainingFeedback(id);
+  const { data: feedbackRequest } = useFeedbackRequest(id);
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const completeTraining = useCompleteTrainingSession();

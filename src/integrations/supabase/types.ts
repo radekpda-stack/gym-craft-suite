@@ -300,6 +300,7 @@ export type Database = {
           current_activities: string[] | null
           dietary_restrictions: string[] | null
           email: string | null
+          feedback_enabled: boolean | null
           gender: string | null
           handedness: string | null
           health_restrictions: string | null
@@ -326,6 +327,7 @@ export type Database = {
           current_activities?: string[] | null
           dietary_restrictions?: string[] | null
           email?: string | null
+          feedback_enabled?: boolean | null
           gender?: string | null
           handedness?: string | null
           health_restrictions?: string | null
@@ -352,6 +354,7 @@ export type Database = {
           current_activities?: string[] | null
           dietary_restrictions?: string[] | null
           email?: string | null
+          feedback_enabled?: boolean | null
           gender?: string | null
           handedness?: string | null
           health_restrictions?: string | null
@@ -846,8 +849,10 @@ export type Database = {
           custom_message: string | null
           expires_at: string
           id: string
+          is_link_generated: boolean | null
           last_reminder_at: string | null
           reminder_count: number | null
+          send_channel: string | null
           sent_at: string | null
           status: string
           token: string
@@ -863,8 +868,10 @@ export type Database = {
           custom_message?: string | null
           expires_at?: string
           id?: string
+          is_link_generated?: boolean | null
           last_reminder_at?: string | null
           reminder_count?: number | null
+          send_channel?: string | null
           sent_at?: string | null
           status?: string
           token?: string
@@ -880,8 +887,10 @@ export type Database = {
           custom_message?: string | null
           expires_at?: string
           id?: string
+          is_link_generated?: boolean | null
           last_reminder_at?: string | null
           reminder_count?: number | null
+          send_channel?: string | null
           sent_at?: string | null
           status?: string
           token?: string
@@ -1030,9 +1039,12 @@ export type Database = {
         Row: {
           client_id: string | null
           created_at: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
           is_read: boolean | null
           message: string
+          severity: string | null
           title: string
           type: string
           user_id: string | null
@@ -1040,9 +1052,12 @@ export type Database = {
         Insert: {
           client_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           is_read?: boolean | null
           message: string
+          severity?: string | null
           title: string
           type: string
           user_id?: string | null
@@ -1050,9 +1065,12 @@ export type Database = {
         Update: {
           client_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           is_read?: boolean | null
           message?: string
+          severity?: string | null
           title?: string
           type?: string
           user_id?: string | null
@@ -1135,21 +1153,32 @@ export type Database = {
       }
       training_feedback: {
         Row: {
+          body_feel: number | null
           client_id: string
           comment: string | null
           created_at: string
+          difficulty: number | null
           energy_level: string
+          energy_rating: number | null
           fatigue_level: number
           feedback_request_id: string | null
+          fun: number | null
           goal_relevance: string
           id: string
           is_processed: boolean | null
+          is_red_flag: boolean | null
           mood_rating: number
           muscle_soreness: string[] | null
           muscle_soreness_comment: string | null
+          pain: number | null
+          pain_area: string | null
+          pain_area_other: string | null
+          red_flag_reasons: string[] | null
           rpe_rating: number
+          session_fit: number | null
           sleep_hours: number | null
           sleep_quality: number | null
+          soreness: number | null
           source: string | null
           technique_rating: number
           training_date: string
@@ -1159,21 +1188,32 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          body_feel?: number | null
           client_id: string
           comment?: string | null
           created_at?: string
+          difficulty?: number | null
           energy_level: string
+          energy_rating?: number | null
           fatigue_level: number
           feedback_request_id?: string | null
+          fun?: number | null
           goal_relevance: string
           id?: string
           is_processed?: boolean | null
+          is_red_flag?: boolean | null
           mood_rating: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
+          pain?: number | null
+          pain_area?: string | null
+          pain_area_other?: string | null
+          red_flag_reasons?: string[] | null
           rpe_rating: number
+          session_fit?: number | null
           sleep_hours?: number | null
           sleep_quality?: number | null
+          soreness?: number | null
           source?: string | null
           technique_rating: number
           training_date: string
@@ -1183,21 +1223,32 @@ export type Database = {
           user_id: string
         }
         Update: {
+          body_feel?: number | null
           client_id?: string
           comment?: string | null
           created_at?: string
+          difficulty?: number | null
           energy_level?: string
+          energy_rating?: number | null
           fatigue_level?: number
           feedback_request_id?: string | null
+          fun?: number | null
           goal_relevance?: string
           id?: string
           is_processed?: boolean | null
+          is_red_flag?: boolean | null
           mood_rating?: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
+          pain?: number | null
+          pain_area?: string | null
+          pain_area_other?: string | null
+          red_flag_reasons?: string[] | null
           rpe_rating?: number
+          session_fit?: number | null
           sleep_hours?: number | null
           sleep_quality?: number | null
+          soreness?: number | null
           source?: string | null
           technique_rating?: number
           training_date?: string

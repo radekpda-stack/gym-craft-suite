@@ -23,3 +23,18 @@ verify_jwt = true
 
 [functions.diagnostic-ai]
 verify_jwt = true
+
+[functions.create-feedback-link]
+verify_jwt = true
+
+[functions.submit-public-feedback]
+verify_jwt = false
+
+[functions.get-public-feedback-form]
+verify_jwt = false
+
+[functions.mark-feedback-sent]
+verify_jwt = true
+
+[functions.mark-feedback-reminder]
+verify_jwt = true
