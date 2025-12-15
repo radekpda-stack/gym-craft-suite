@@ -22,7 +22,7 @@ import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
-const notificationIcons: Record<NotificationType, typeof Bell> = {
+const notificationIcons: Record<string, typeof Bell> = {
   low_credit: CreditCard,
   negative_credit: CreditCard,
   birthday: Cake,
@@ -30,9 +30,11 @@ const notificationIcons: Record<NotificationType, typeof Bell> = {
   milestone_500: Trophy,
   milestone_1000: Trophy,
   incomplete_training: Dumbbell,
+  feedback_received: Bell,
+  feedback_red_flag: Bell,
 };
 
-const notificationColors: Record<NotificationType, string> = {
+const notificationColors: Record<string, string> = {
   low_credit: "text-warning",
   negative_credit: "text-destructive",
   birthday: "text-primary",
@@ -40,6 +42,8 @@ const notificationColors: Record<NotificationType, string> = {
   milestone_500: "text-success",
   milestone_1000: "text-success",
   incomplete_training: "text-warning",
+  feedback_received: "text-green-500",
+  feedback_red_flag: "text-destructive",
 };
 
 // Extract training ID from notification message

@@ -1,16 +1,17 @@
-import { useParams } from 'react-router-dom';
-import { PublicFeedbackForm } from '@/components/feedback/PublicFeedbackForm';
+import { useSearchParams } from 'react-router-dom';
+import { PublicFeedbackFormNew } from '@/components/feedback/PublicFeedbackFormNew';
 
 export default function FeedbackPage() {
-  const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('t');
 
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Neplatný odkaz</p>
+        <p className="text-muted-foreground">Neplatný odkaz</p>
       </div>
     );
   }
 
-  return <PublicFeedbackForm token={token} />;
+  return <PublicFeedbackFormNew token={token} />;
 }
