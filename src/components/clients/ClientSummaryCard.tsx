@@ -15,12 +15,14 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Client } from '@/hooks/useClients';
+import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatisticsCard';
 import { cn } from '@/lib/utils';
 
 interface SharedBudgetMember {
@@ -65,6 +67,7 @@ export function ClientSummaryCard({
   onFeedbackToggle,
 }: ClientSummaryCardProps) {
   const [showMembers, setShowMembers] = useState(false);
+  const [showFeedbackStats, setShowFeedbackStats] = useState(false);
 
   // Determine credit status color
   const getCreditStatusColor = () => {
@@ -183,19 +186,36 @@ export function ClientSummaryCard({
         </div>
       )}
 
-      {/* Feedback Toggle */}
-      <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-muted-foreground" />
-          <Label htmlFor="feedback-toggle" className="text-sm cursor-pointer">
-            Posílat feedback dotazník
-          </Label>
+      {/* Feedback Section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="feedback-toggle" className="text-sm cursor-pointer">
+              Posílat feedback dotazník
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFeedbackStats(!showFeedbackStats)}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Statistiky</span>
+              {showFeedbackStats ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            <Switch
+              id="feedback-toggle"
+              checked={client.feedback_enabled !== false}
+              onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
+            />
+          </div>
         </div>
-        <Switch
-          id="feedback-toggle"
-          checked={client.feedback_enabled !== false}
-          onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
-        />
+        
+        {/* Feedback Statistics (collapsible) */}
+        {showFeedbackStats && (
+          <FeedbackStatisticsCard clientId={client.id} />
+        )}
       </div>
 
       {/* Action Buttons */}
