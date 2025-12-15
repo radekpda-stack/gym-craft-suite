@@ -13,13 +13,28 @@ export interface TrainingFeedback {
   fatigue_level: number;
   muscle_soreness: string[];
   muscle_soreness_comment: string | null;
-  energy_level: 'stable' | 'better_end' | 'low_entire' | 'good_start_only';
+  energy_level: string;
+  energy_rating: number | null;
   sleep_hours: number | null;
   sleep_quality: number | null;
   mood_rating: number;
   technique_rating: number;
-  goal_relevance: 'yes' | 'partially' | 'no';
+  goal_relevance: string;
   comment: string | null;
+  source: string | null;
+  // New D+1 fields
+  soreness: number | null;
+  body_feel: number | null;
+  pain: number | null;
+  session_fit: number | null;
+  difficulty: number | null;
+  fun: number | null;
+  pain_area: string | null;
+  pain_area_other: string | null;
+  is_red_flag: boolean;
+  red_flag_reasons: string[] | null;
+  feedback_request_id: string | null;
+  is_processed: boolean;
   created_at: string;
   updated_at: string;
 }
