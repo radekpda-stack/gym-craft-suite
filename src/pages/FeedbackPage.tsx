@@ -1,9 +1,13 @@
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { PublicFeedbackFormNew } from '@/components/feedback/PublicFeedbackFormNew';
 
 export default function FeedbackPage() {
+  const { token: pathToken } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('t');
+  const queryToken = searchParams.get('t');
+  
+  // Support both /feedback/:token and /feedback?t=token
+  const token = pathToken || queryToken;
 
   if (!token) {
     return (

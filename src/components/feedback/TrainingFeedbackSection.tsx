@@ -84,7 +84,7 @@ export function TrainingFeedbackSection({
   } | null>(
     feedbackRequest?.status === 'pending'
       ? {
-          url: `${window.location.origin}/feedback?t=${feedbackRequest.token}`,
+          url: `${window.location.origin}/feedback/${feedbackRequest.token}`,
           token: feedbackRequest.token,
           expiresAt: feedbackRequest.expires_at,
         }
