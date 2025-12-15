@@ -15,6 +15,7 @@ import {
   Globe,
   BarChart3,
   MessageSquare,
+  Calculator,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
+import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -280,6 +282,12 @@ export default function Settings() {
       description: 'Přehled využívaných a nevyužívaných funkcí aplikace',
       icon: BarChart3,
       content: <FeatureUsageStats />,
+    },
+    {
+      title: 'Přepočet kreditů',
+      description: 'Kontrola a oprava nesrovnalostí v kreditech z transakčního ledgeru',
+      icon: Calculator,
+      content: <CreditRecalculationTool />,
     },
   ];
 
