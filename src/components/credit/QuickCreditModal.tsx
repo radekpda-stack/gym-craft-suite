@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard, Search, Plus, Minus, Check, Wallet } from 'lucide-react';
+import { CreditCard, Search, Plus, Minus, Check, Wallet, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -61,6 +62,25 @@ export function QuickCreditModal({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
+  
+  // Get shared budget info for selected client
+  const { data: sharedBudgetInfo, isLoading: budgetLoading } = useSharedBudgetBalance(selectedClientId || undefined);
+  
+  // Determine the effective credit balance to display
+  const effectiveCreditBalance = useMemo(() => {
+    if (!selectedClient) return 0;
+    if (sharedBudgetInfo?.isShared) {
+      return sharedBudgetInfo.sharedBalance;
+    }
+    return selectedClient.credit_balance || 0;
+  }, [selectedClient, sharedBudgetInfo]);
+  
+  // Personal debt that would need to be transferred (only for shared budget clients)
+  const personalDebt = useMemo(() => {
+    if (!selectedClient || !sharedBudgetInfo?.isShared) return 0;
+    const personalBalance = selectedClient.credit_balance || 0;
+    return personalBalance < 0 ? Math.abs(personalBalance) : 0;
+  }, [selectedClient, sharedBudgetInfo]);
 
   // Filter clients based on search query
   const filteredClients = useMemo(() => {
@@ -106,14 +126,17 @@ export function QuickCreditModal({
         amount: finalAmount,
         type: operationType === 'add' ? 'payment' : 'manual',
         description,
+        // Clear personal debt when adding to shared budget
+        clearPersonalDebt: operationType === 'add' && personalDebt > 0,
       });
 
+      const budgetType = sharedBudgetInfo?.isShared ? 'Sdílený kredit' : 'Kredit';
       toast({
         title: 'Transakce provedena',
-        description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${Math.abs(finalAmount).toLocaleString('cs-CZ')} Kč pro ${selectedClient?.name}`,
+        description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${Math.abs(finalAmount).toLocaleString('cs-CZ')} Kč (${budgetType.toLowerCase()})`,
       });
 
-      featureTracker.track('quick_credit', 'finance', { operationType });
+      featureTracker.track('quick_credit', 'finance', { operationType, isShared: sharedBudgetInfo?.isShared });
 
       resetForm();
       setOpen(false);
@@ -146,6 +169,23 @@ export function QuickCreditModal({
     }
     setClientSearchOpen(false);
   };
+
+  // Calculate new balance after operation
+  const calculatedNewBalance = useMemo(() => {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount === 0) return null;
+    
+    let newBalance = effectiveCreditBalance;
+    const change = operationType === 'add' ? Math.abs(numericAmount) : -Math.abs(numericAmount);
+    newBalance += change;
+    
+    // If adding and there's personal debt, it will be cleared from the new balance
+    if (operationType === 'add' && personalDebt > 0) {
+      newBalance -= personalDebt;
+    }
+    
+    return newBalance;
+  }, [effectiveCreditBalance, amount, operationType, personalDebt]);
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -217,13 +257,6 @@ export function QuickCreditModal({
                             />
                             <span>{client.name}</span>
                           </div>
-                          <span className={cn(
-                            "text-xs",
-                            (client.credit_balance || 0) < 0 ? "text-destructive" : 
-                            (client.credit_balance || 0) < 500 ? "text-warning" : "text-muted-foreground"
-                          )}>
-                            {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                          </span>
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -233,17 +266,36 @@ export function QuickCreditModal({
             </Popover>
           </div>
 
-          {/* Show client credit if selected */}
-          {selectedClient && (
-            <div className="p-3 rounded-xl bg-secondary/50 text-sm">
-              <span className="text-muted-foreground">Aktuální kredit: </span>
-              <span className={cn(
-                "font-semibold",
-                (selectedClient.credit_balance || 0) < 0 ? "text-destructive" : 
-                (selectedClient.credit_balance || 0) < 500 ? "text-warning" : "text-success"
-              )}>
-                {(selectedClient.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-              </span>
+          {/* Show client credit if selected - unified display */}
+          {selectedClient && !budgetLoading && (
+            <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
+              {/* Shared budget indicator */}
+              {sharedBudgetInfo?.isShared && (
+                <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full w-fit">
+                  <Users className="w-3 h-3" />
+                  {sharedBudgetInfo.groupName || 'Sdílený účet'}
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {sharedBudgetInfo?.isShared ? 'Sdílený kredit:' : 'Aktuální kredit:'}
+                </span>
+                <span className={cn(
+                  "font-semibold",
+                  effectiveCreditBalance < 0 ? "text-destructive" : 
+                  effectiveCreditBalance < 500 ? "text-warning" : "text-success"
+                )}>
+                  {effectiveCreditBalance.toLocaleString('cs-CZ')} Kč
+                </span>
+              </div>
+              
+              {/* Personal debt warning */}
+              {personalDebt > 0 && operationType === 'add' && (
+                <div className="text-xs text-warning p-2 rounded bg-warning/10">
+                  Osobní dluh {personalDebt.toLocaleString('cs-CZ')} Kč bude automaticky vyrovnán
+                </div>
+              )}
             </div>
           )}
 
@@ -327,23 +379,22 @@ export function QuickCreditModal({
             />
           </div>
 
-          {/* Preview of new balance */}
-          {selectedClient && amount && !isNaN(parseFloat(amount)) && parseFloat(amount) !== 0 && (
+          {/* Preview of new balance - unified calculation */}
+          {selectedClient && calculatedNewBalance !== null && (
             <div className={cn(
               "p-4 rounded-xl border",
               operationType === 'add' 
                 ? "bg-success/10 border-success/20" 
                 : "bg-destructive/10 border-destructive/20"
             )}>
-              <p className="text-sm text-muted-foreground">Nový zůstatek po transakci:</p>
-              <p className="text-2xl font-bold">
-                {(() => {
-                  const currentBalance = selectedClient.credit_balance || 0;
-                  const change = operationType === 'add' 
-                    ? Math.abs(parseFloat(amount)) 
-                    : -Math.abs(parseFloat(amount));
-                  return (currentBalance + change).toLocaleString('cs-CZ');
-                })()} Kč
+              <p className="text-sm text-muted-foreground">
+                {sharedBudgetInfo?.isShared ? 'Nový sdílený zůstatek:' : 'Nový zůstatek:'}
+              </p>
+              <p className={cn(
+                "text-2xl font-bold",
+                calculatedNewBalance < 0 ? "text-destructive" : operationType === 'add' ? "text-success" : "text-foreground"
+              )}>
+                {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
               </p>
             </div>
           )}
