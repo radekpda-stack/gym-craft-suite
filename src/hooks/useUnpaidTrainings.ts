@@ -29,7 +29,7 @@ export function useUnpaidTrainings(clientId?: string) {
           clients!inner(name)
         `)
         .eq("status", "completed")
-        .in("payment_status", ["unpaid", "pending"])
+        .eq("payment_status", "pending")
         .order("date", { ascending: false });
 
       if (clientId) {
@@ -60,7 +60,7 @@ export function useUnpaidTrainingsStats() {
         .from("training_sessions")
         .select("id, final_price")
         .eq("status", "completed")
-        .in("payment_status", ["unpaid", "pending"]);
+        .eq("payment_status", "pending");
 
       if (error) throw error;
 
