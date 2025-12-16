@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell } from 'lucide-react';
+import { Search, Plus, Dumbbell, Wallet } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { SessionCard } from '@/components/ui/session-card';
 import { TrainingListSkeleton } from '@/components/skeletons';
+import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { addDays, format } from 'date-fns';
@@ -41,6 +42,7 @@ export default function Trainings() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; trainingId: string; clientName: string } | null>(null);
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
@@ -299,6 +301,8 @@ export default function Trainings() {
         <div className="space-y-3">
           {filteredSessions.map((session, index) => {
             const client = clients.find((c) => c.id === session.client_id);
+            const isAwaitingPayment = session.status === 'completed' && 
+              (!session.payment_status || session.payment_status === 'pending');
 
             return (
               <div
@@ -312,11 +316,30 @@ export default function Trainings() {
                   onCancel={() => handleCancelTraining(session.id)}
                   onDuplicate={() => handleDuplicateTraining(session.id)}
                 >
-                  <div>
+                  <div className="relative">
                     <SessionCard
                       session={session}
                       client={client}
                     />
+                    {/* Quick payment button for awaiting payment filter */}
+                    {statusFilter === 'awaiting_payment' && isAwaitingPayment && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 gap-1.5 h-8 px-3 rounded-lg shadow-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPaymentDialog({
+                            open: true,
+                            trainingId: session.id,
+                            clientName: client?.name || 'Neznámý klient',
+                          });
+                        }}
+                      >
+                        <Wallet className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Uhradit</span>
+                      </Button>
+                    )}
                   </div>
                 </TrainingQuickMenu>
               </div>
@@ -350,7 +373,16 @@ export default function Trainings() {
         </div>
       )}
 
-      {/* Mobile FAB - removed duplicate, only keep if no other CTA visible */}
+      {/* Quick Payment Dialog */}
+      {paymentDialog && (
+        <QuickPaymentDialog
+          open={paymentDialog.open}
+          onOpenChange={(open) => !open && setPaymentDialog(null)}
+          trainingId={paymentDialog.trainingId}
+          clientName={paymentDialog.clientName}
+          currentPaymentStatus="pending"
+        />
+      )}
     </div>
   );
 }
