@@ -115,7 +115,11 @@ export function TrainingFeedbackSection({
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-feedback-link', {
-        body: { client_id: clientId, training_id: trainingId },
+        body: {
+          client_id: clientId,
+          training_id: trainingId,
+          base_url: window.location.origin,
+        },
       });
 
       if (error) throw error;
