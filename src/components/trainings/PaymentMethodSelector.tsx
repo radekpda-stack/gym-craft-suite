@@ -70,7 +70,7 @@ export function getPaymentStatusFromOption(option: PaymentOption): PaymentStatus
     case 'cash': return 'paid_cash';
     case 'card': return 'paid_card';
     case 'bank': return 'paid_bank';
-    case 'later': return 'unpaid';
+    case 'later': return 'pending';
     default: return 'pending';
   }
 }
@@ -92,8 +92,7 @@ export function getPaymentStatusLabel(status: PaymentStatus | null): string {
     case 'paid_cash': return 'Hotově';
     case 'paid_card': return 'Kartou';
     case 'paid_bank': return 'Převodem';
-    case 'unpaid': return 'Nezaplaceno';
-    case 'pending': return 'Čeká na platbu';
+    case 'pending': return 'Nezaplaceno';
     default: return 'Neznámý';
   }
 }

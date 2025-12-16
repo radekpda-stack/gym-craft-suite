@@ -7,7 +7,7 @@ export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
 
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
-export type PaymentStatus = 'pending' | 'unpaid' | 'paid_credit' | 'paid_cash' | 'paid_card' | 'paid_bank';
+export type PaymentStatus = 'pending' | 'paid_credit' | 'paid_cash' | 'paid_card' | 'paid_bank';
 export type PaymentMethod = 'credit' | 'cash' | 'card' | 'bank' | null;
 
 export interface TrainingSession {
