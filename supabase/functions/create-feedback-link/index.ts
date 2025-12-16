@@ -11,6 +11,8 @@ const inputSchema = z.object({
   client_id: z.string().uuid(),
   training_id: z.string().uuid(),
   send_channel: z.enum(["sms", "whatsapp", "other"]).optional(),
+  // Frontend origin to build the public link (supports custom domains)
+  base_url: z.string().url().optional(),
 });
 
 serve(async (req) => {
@@ -53,9 +55,38 @@ serve(async (req) => {
       );
     }
 
-    const { client_id, training_id, send_channel } = parseResult.data;
+    const { client_id, training_id, send_channel, base_url } = parseResult.data;
 
-    console.log(`Creating feedback link for client ${client_id}, training ${training_id}`);
+    const getBaseUrl = () => {
+      // 1) explicit base_url from frontend (preferred)
+      if (base_url) return base_url.replace(/\/$/, "");
+
+      // 2) forwarded host/proto (common in production)
+      const xfProto = req.headers.get("x-forwarded-proto");
+      const xfHost = req.headers.get("x-forwarded-host");
+      if (xfProto && xfHost) return `${xfProto}://${xfHost}`;
+
+      // 3) origin / referer fallback
+      const origin = req.headers.get("origin");
+      if (origin) return origin.replace(/\/$/, "");
+
+      const referer = req.headers.get("referer");
+      if (referer) {
+        try {
+          const u = new URL(referer);
+          return `${u.protocol}//${u.host}`;
+        } catch {
+          // ignore
+        }
+      }
+
+      // last resort fallback
+      return "https://zukmwqfqmfuyqpxfjqil.lovable.app";
+    };
+
+    const resolvedBaseUrl = getBaseUrl();
+
+    console.log(`Creating feedback link for client ${client_id}, training ${training_id}, baseUrl=${resolvedBaseUrl}`);
 
     // Check if client has feedback enabled
     const { data: client, error: clientError } = await supabase
@@ -91,13 +122,11 @@ serve(async (req) => {
 
     if (existingLink) {
       // Return existing active link
-      const baseUrl = "https://zukmwqfqmfuyqpxfjqil.lovable.app";
-      
       return new Response(
         JSON.stringify({ 
           success: true, 
           token: existingLink.token,
-          url: `${baseUrl}/feedback/${existingLink.token}`,
+          url: `${resolvedBaseUrl}/feedback/${existingLink.token}`,
           isExisting: true,
           expiresAt: existingLink.expires_at,
         }),
@@ -136,15 +165,13 @@ serve(async (req) => {
       throw new Error("Chyba při vytváření odkazu");
     }
 
-    const baseUrl = "https://zukmwqfqmfuyqpxfjqil.lovable.app";
-
     console.log(`Feedback link created: ${newRequest.token}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         token: newRequest.token,
-        url: `${baseUrl}/feedback/${newRequest.token}`,
+        url: `${resolvedBaseUrl}/feedback/${newRequest.token}`,
         isExisting: false,
         expiresAt: newRequest.expires_at,
       }),
