@@ -113,9 +113,7 @@ export default function ProgressContent() {
       <Tabs defaultValue="list" className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="list">Seznam</TabsTrigger>
-          <TabsTrigger value="charts" disabled={!selectedExercise || selectedClient === 'all'}>
-            Grafy
-          </TabsTrigger>
+          <TabsTrigger value="charts">Grafy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list">
@@ -134,18 +132,21 @@ export default function ProgressContent() {
         </TabsContent>
 
         <TabsContent value="charts">
-          {selectedClient !== 'all' && selectedExercise && selectedClientData && (
+          {selectedClient !== 'all' && selectedExercise && selectedClientData ? (
             <ProgressChart
               clientId={selectedClient}
               exerciseName={selectedExercise}
               clientName={selectedClientData.name}
             />
-          )}
-          {(selectedClient === 'all' || !selectedExercise) && (
+          ) : (
             <Card className="glass">
               <CardContent className="p-6 text-center text-muted-foreground">
                 <Filter className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Vyberte klienta a cvik pro zobrazení grafu</p>
+                <p className="mb-2">Pro zobrazení grafu vyberte:</p>
+                <ul className="text-sm space-y-1">
+                  {selectedClient === 'all' && <li>• Konkrétního klienta (ne "Všichni klienti")</li>}
+                  {!selectedExercise && <li>• Cvik z výběru</li>}
+                </ul>
               </CardContent>
             </Card>
           )}
