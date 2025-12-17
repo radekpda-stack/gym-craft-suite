@@ -27,6 +27,7 @@ export interface CreditStatementData {
   companyId?: string;
   companyAddress?: string;
   companyContact?: string;
+  companyLogoUrl?: string;
 }
 
 export interface CreditStatementOptions {
@@ -178,11 +179,33 @@ export async function generateCreditStatementPdf(
 
   yPos = 20;
 
+  // Company logo (if available)
+  let logoEndX = margin;
+  if (data.companyLogoUrl) {
+    try {
+      // Load image as base64
+      const response = await fetch(data.companyLogoUrl);
+      const blob = await response.blob();
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      
+      // Add image to PDF (max height 15mm)
+      const logoHeight = 15;
+      doc.addImage(base64, 'AUTO', margin, yPos - 5, 0, logoHeight);
+      logoEndX = margin + 40; // Reserve space for logo
+    } catch (error) {
+      console.error("Failed to load company logo:", error);
+    }
+  }
+
   // Title
   doc.setFontSize(FONTS.title);
   doc.setTextColor(...COLORS.primaryDark);
   doc.setFont("Roboto", "bold");
-  doc.text(t.title, margin, yPos);
+  doc.text(t.title, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
   yPos += 10;
 
   // Company info (if available)
@@ -190,18 +213,18 @@ export async function generateCreditStatementPdf(
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.textMuted);
     doc.setFont("Roboto", "normal");
-    doc.text(data.companyName, margin, yPos);
+    doc.text(data.companyName, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
     yPos += 5;
     if (data.companyId) {
-      doc.text(`IČ: ${data.companyId}`, margin, yPos);
+      doc.text(`IČ: ${data.companyId}`, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
       yPos += 5;
     }
     if (data.companyAddress) {
-      doc.text(data.companyAddress, margin, yPos);
+      doc.text(data.companyAddress, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
       yPos += 5;
     }
     if (data.companyContact) {
-      doc.text(data.companyContact, margin, yPos);
+      doc.text(data.companyContact, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
       yPos += 5;
     }
     yPos += 3;
