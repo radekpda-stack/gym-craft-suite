@@ -113,35 +113,77 @@ export function usePayTraining() {
 
       if (updateError) throw updateError;
 
-      // If paying from credit, deduct from client balance
+      // If paying from credit, deduct from balance (individual or shared)
       if (deductCredit && paymentMethod === 'credit' && training.final_price) {
         const price = training.final_price;
 
+        // Detect shared budget group
+        const { data: membership, error: membershipError } = await supabase
+          .from('client_budget_members')
+          .select('group_id')
+          .eq('client_id', training.client_id)
+          .maybeSingle();
+
+        if (membershipError) throw membershipError;
+
+        const groupId = membership?.group_id ?? null;
+
         // Create credit transaction
-        await supabase
-          .from("credit_transactions")
+        const { error: txError } = await supabase
+          .from('credit_transactions')
           .insert({
             client_id: training.client_id,
             amount: -price,
-            type: "training",
-            description: `Trénink - zpětná platba`,
+            type: 'training',
+            description: 'Trénink - zpětná platba',
             training_session_id: trainingId,
             user_id: user.id,
+            group_id: groupId,
           });
 
-        // Update client balance
-        const { data: client } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", training.client_id)
-          .single();
+        if (txError) throw txError;
 
-        if (client) {
-          const newBalance = (client.credit_balance || 0) - price;
-          await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", training.client_id);
+        if (groupId) {
+          // Update shared balance
+          const { data: group, error: groupError } = await supabase
+            .from('client_budget_groups')
+            .select('shared_balance')
+            .eq('id', groupId)
+            .single();
+
+          if (groupError) throw groupError;
+
+          const current = Math.round((group.shared_balance || 0) * 100);
+          const next = (current - Math.round(price * 100)) / 100;
+
+          const { error: updError } = await supabase
+            .from('client_budget_groups')
+            .update({ shared_balance: next })
+            .eq('id', groupId);
+
+          if (updError) throw updError;
+
+          // Keep personal balance at 0 for shared-budget clients
+          await supabase.from('clients').update({ credit_balance: 0 }).eq('id', training.client_id);
+        } else {
+          // Update individual balance
+          const { data: client, error: clientError } = await supabase
+            .from('clients')
+            .select('credit_balance')
+            .eq('id', training.client_id)
+            .single();
+
+          if (clientError) throw clientError;
+
+          const current = Math.round((client.credit_balance || 0) * 100);
+          const next = (current - Math.round(price * 100)) / 100;
+
+          const { error: updError } = await supabase
+            .from('clients')
+            .update({ credit_balance: next })
+            .eq('id', training.client_id);
+
+          if (updError) throw updError;
         }
       }
 

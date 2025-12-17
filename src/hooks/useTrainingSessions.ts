@@ -506,6 +506,8 @@ export function useCancelTrainingSession() {
 
       // Only create credit transaction if deductCredit is true
       if (deductCredit && price > 0) {
+        const groupId = await getClientGroupId(client_id);
+
         const { error: transactionError } = await supabase
           .from("credit_transactions")
           .insert({
@@ -515,50 +517,13 @@ export function useCancelTrainingSession() {
             description: `Zrušený trénink${isLateCancellation ? ' (pozdě)' : ''} (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
             training_session_id: id,
             user_id: user.id,
+            group_id: groupId,
           });
 
         if (transactionError) throw transactionError;
 
-        // Update client's credit balance
-        const { data: client, error: clientError } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", client_id)
-          .single();
-
-        if (clientError) throw clientError;
-
-        newBalance = (client.credit_balance || 0) - price;
-
-        const { error: updateError } = await supabase
-          .from("clients")
-          .update({ credit_balance: newBalance })
-          .eq("id", client_id);
-
-        if (updateError) throw updateError;
-
-        // Sync credit across budget group members
-        const { data: membership } = await supabase
-          .from("client_budget_members")
-          .select("group_id")
-          .eq("client_id", client_id)
-          .maybeSingle();
-
-        if (membership) {
-          const { data: allMembers } = await supabase
-            .from("client_budget_members")
-            .select("client_id")
-            .eq("group_id", membership.group_id)
-            .neq("client_id", client_id);
-
-          if (allMembers && allMembers.length > 0) {
-            const memberIds = allMembers.map(m => m.client_id);
-            await supabase
-              .from("clients")
-              .update({ credit_balance: newBalance })
-              .in("id", memberIds);
-          }
-        }
+        const { balance } = await applyCreditDelta(client_id, -price);
+        newBalance = balance;
       }
 
       return { data, price, newBalance, deductCredit };
@@ -594,47 +559,72 @@ export function useCancelTrainingSession() {
   });
 }
 
-// Helper function to sync budget group credit
-async function syncBudgetGroupCredit(clientId: string, newBalance: number) {
-  // Get the budget group for this client
-  const { data: membership, error: memberError } = await supabase
-    .from("client_budget_members")
-    .select("group_id")
-    .eq("client_id", clientId)
+// Helpers for credit operations (individual vs shared budget)
+async function getClientGroupId(clientId: string): Promise<string | null> {
+  const { data: membership, error } = await supabase
+    .from('client_budget_members')
+    .select('group_id')
+    .eq('client_id', clientId)
     .maybeSingle();
 
-  if (memberError) {
-    console.error("Error checking budget group:", memberError);
-    return;
+  if (error) throw error;
+  return membership?.group_id ?? null;
+}
+
+async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
+  const { data: group, error: getError } = await supabase
+    .from('client_budget_groups')
+    .select('shared_balance')
+    .eq('id', groupId)
+    .single();
+
+  if (getError) throw getError;
+
+  const current = Math.round((group.shared_balance || 0) * 100);
+  const next = (current + Math.round(delta * 100)) / 100;
+
+  const { error: updateError } = await supabase
+    .from('client_budget_groups')
+    .update({ shared_balance: next })
+    .eq('id', groupId);
+
+  if (updateError) throw updateError;
+  return next;
+}
+
+async function updateClientBalance(clientId: string, delta: number): Promise<number> {
+  const { data: client, error: getError } = await supabase
+    .from('clients')
+    .select('credit_balance')
+    .eq('id', clientId)
+    .single();
+
+  if (getError) throw getError;
+
+  const current = Math.round((client.credit_balance || 0) * 100);
+  const next = (current + Math.round(delta * 100)) / 100;
+
+  const { error: updateError } = await supabase
+    .from('clients')
+    .update({ credit_balance: next })
+    .eq('id', clientId);
+
+  if (updateError) throw updateError;
+  return next;
+}
+
+async function applyCreditDelta(clientId: string, delta: number): Promise<{ balance: number; groupId: string | null }> {
+  const groupId = await getClientGroupId(clientId);
+
+  if (groupId) {
+    const balance = await updateSharedBalance(groupId, delta);
+    // Keep personal balance at 0 for shared-budget clients
+    await supabase.from('clients').update({ credit_balance: 0 }).eq('id', clientId);
+    return { balance, groupId };
   }
-  
-  if (!membership) return; // Client not in a group
 
-  // Get all other members in the group
-  const { data: allMembers, error: membersError } = await supabase
-    .from("client_budget_members")
-    .select("client_id")
-    .eq("group_id", membership.group_id)
-    .neq("client_id", clientId);
-
-  if (membersError) {
-    console.error("Error getting group members:", membersError);
-    return;
-  }
-
-  // Update credit balance for all group members
-  if (allMembers && allMembers.length > 0) {
-    const memberIds = allMembers.map(m => m.client_id);
-    
-    const { error: updateError } = await supabase
-      .from("clients")
-      .update({ credit_balance: newBalance })
-      .in("id", memberIds);
-
-    if (updateError) {
-      console.error("Error syncing group credit:", updateError);
-    }
-  }
+  const balance = await updateClientBalance(clientId, delta);
+  return { balance, groupId: null };
 }
 
 export interface CompleteTrainingInput {
@@ -694,6 +684,9 @@ export function useCompleteTrainingSession() {
 
       if (trainingError) throw trainingError;
 
+      // Detect shared budget
+      const groupId = await getClientGroupId(client_id);
+
       // Create credit transaction (negative amount for deduction)
       const { error: transactionError } = await supabase
         .from("credit_transactions")
@@ -704,30 +697,13 @@ export function useCompleteTrainingSession() {
           description: `Trénink (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
           training_session_id: id,
           user_id: user.id,
+          group_id: groupId,
         });
 
       if (transactionError) throw transactionError;
 
-      // Update client's credit balance
-      const { data: client, error: clientError } = await supabase
-        .from("clients")
-        .select("credit_balance")
-        .eq("id", client_id)
-        .single();
-
-      if (clientError) throw clientError;
-
-      const newBalance = (client.credit_balance || 0) - price;
-
-      const { error: updateError } = await supabase
-        .from("clients")
-        .update({ credit_balance: newBalance })
-        .eq("id", client_id);
-
-      if (updateError) throw updateError;
-
-      // Sync credit across budget group members
-      await syncBudgetGroupCredit(client_id, newBalance);
+      // Apply credit delta (shared budget or individual)
+      const { balance: newBalance } = await applyCreditDelta(client_id, -price);
 
       // Auto-sync workout entries to exercise_entries
       await syncWorkoutToExerciseEntries(id, client_id, training.date, user.id);
@@ -928,25 +904,12 @@ export function useChangePaymentMethod() {
           .eq("training_session_id", trainingId)
           .eq("type", "training");
 
-        // Add the amount back to client
-        const { data: client } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", clientId)
-          .single();
-
-        if (client) {
-          newBalance = (client.credit_balance || 0) + price;
-          await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", clientId);
-
-          // Sync budget group
-          await syncBudgetGroupCredit(clientId, newBalance);
-        }
+        const { balance } = await applyCreditDelta(clientId, +price);
+        newBalance = balance;
       } else if (!wasCredit && willBeCredit) {
         // Deduct credit: wasn't paid by credit, now changing to credit
+        const groupId = await getClientGroupId(clientId);
+
         // Create credit transaction
         await supabase
           .from("credit_transactions")
@@ -957,25 +920,11 @@ export function useChangePaymentMethod() {
             description: "Trénink (změna platby na kredit)",
             training_session_id: trainingId,
             user_id: user.id,
+            group_id: groupId,
           });
 
-        // Deduct from client
-        const { data: client } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", clientId)
-          .single();
-
-        if (client) {
-          newBalance = (client.credit_balance || 0) - price;
-          await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", clientId);
-
-          // Sync budget group
-          await syncBudgetGroupCredit(clientId, newBalance);
-        }
+        const { balance } = await applyCreditDelta(clientId, -price);
+        newBalance = balance;
       }
 
       return { newPaymentStatus, newBalance, wasCredit, willBeCredit, price };
