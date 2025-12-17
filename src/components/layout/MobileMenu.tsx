@@ -155,7 +155,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                 >
                   <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
                 </motion.div>
-                <span className="text-base font-bold tracking-tight">FitCoach</span>
+                <span className="text-base font-bold tracking-tight">Just Move</span>
               </div>
               <div className="flex items-center gap-1">
                 <NotificationCenter />

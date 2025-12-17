@@ -329,7 +329,7 @@ export default function Auth() {
             <Dumbbell className="w-10 h-10 text-primary" />
           </div>
           <h1 className="text-4xl xl:text-5xl font-bold text-foreground mb-4">
-            Trainer App
+            Just Move Asistent
           </h1>
           <p className="text-lg text-muted-foreground mb-12">
             Profesionální nástroj pro osobní trenéry
@@ -361,7 +361,7 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
             <Dumbbell className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Trainer App</h1>
+          <h1 className="text-2xl font-bold text-foreground">Just Move Asistent</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Profesionální nástroj pro osobní trenéry
           </p>
