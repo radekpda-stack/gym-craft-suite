@@ -77,6 +77,26 @@ export function useTrainingFeedback(trainingSessionId: string | undefined) {
   });
 }
 
+// Fetch feedback by feedback_request_id
+export function useFeedbackByRequestId(feedbackRequestId: string | undefined) {
+  return useQuery({
+    queryKey: ['feedback-by-request', feedbackRequestId],
+    queryFn: async () => {
+      if (!feedbackRequestId) return null;
+      
+      const { data, error } = await supabase
+        .from('training_feedback')
+        .select('*')
+        .eq('feedback_request_id', feedbackRequestId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as TrainingFeedback | null;
+    },
+    enabled: !!feedbackRequestId,
+  });
+}
+
 // Fetch all feedback for a specific client
 export function useClientFeedback(clientId: string | undefined) {
   return useQuery({
