@@ -9,7 +9,6 @@ import {
   Stethoscope,
   Activity,
   Calendar,
-  XCircle,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -165,7 +164,6 @@ export function Sidebar() {
       label: 'Systém',
       items: [
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
-        { id: 'canceled', to: '/canceled', icon: XCircle, label: t.nav.canceled },
       ],
     },
   ];
