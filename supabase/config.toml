@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.log-client-error]
 verify_jwt = false
+
+[functions.get-nutrition-log]
+verify_jwt = false
+
+[functions.submit-nutrition-entry]
+verify_jwt = false
