@@ -41,6 +41,7 @@ import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker
 import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -84,6 +85,7 @@ export function TrainingForm({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [tagsChanged, setTagsChanged] = useState(false);
   
   // Helper to format date as local datetime string
   const getLocalDateTimeString = () => {
@@ -112,9 +114,19 @@ export function TrainingForm({
     },
   });
 
+  // Track unsaved changes (form dirty state + tags changed)
+  const isDirty = form.formState.isDirty || tagsChanged;
+  useUnsavedChanges(isDirty);
+
   useEffect(() => {
     setSelectedTagIds(defaultTagIds);
   }, [defaultTagIds]);
+
+  // Track tag changes
+  const handleTagsChange = (newTagIds: string[]) => {
+    setSelectedTagIds(newTagIds);
+    setTagsChanged(true);
+  };
 
   // Filtered clients with diacritics-insensitive search
   const filteredClients = useMemo(() => {
@@ -131,6 +143,8 @@ export function TrainingForm({
 
   const handleSubmit = async (data: TrainingFormValues) => {
     await onSubmit(data, selectedTagIds);
+    form.reset(data); // Mark as clean after successful submit
+    setTagsChanged(false);
   };
 
   return (
@@ -392,7 +406,7 @@ export function TrainingForm({
           </label>
           <TrainingTagsSelector
             selectedTagIds={selectedTagIds}
-            onChange={setSelectedTagIds}
+            onChange={handleTagsChange}
           />
           <p className="text-xs text-muted-foreground">
             Přidejte štítky pro kategorizaci tréninku (např. horní část, síla, mobilita)

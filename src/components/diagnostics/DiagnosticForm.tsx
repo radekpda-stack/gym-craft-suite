@@ -22,6 +22,7 @@ import {
 import { DatePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 import { JOINT_OPTIONS, MUSCLE_OPTIONS } from "@/hooks/useDiagnostics";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 const diagnosticFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -59,11 +60,16 @@ export function DiagnosticForm({
     },
   });
 
+  // Track unsaved changes
+  const isDirty = form.formState.isDirty;
+  useUnsavedChanges(isDirty);
+
   const areaType = form.watch("area_type");
   const areaOptions = areaType === "joint" ? JOINT_OPTIONS : areaType === "muscle" ? MUSCLE_OPTIONS : [];
 
   const handleSubmit = async (data: DiagnosticFormValues) => {
     await onSubmit(data);
+    form.reset(data); // Mark as clean after successful submit
   };
 
   return (
