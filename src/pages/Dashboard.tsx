@@ -50,7 +50,8 @@ const DEFAULT_LAYOUT: NewDashboardLayout = {
   showFeedbackTrends: true,
 };
 
-export default function Dashboard() {
+// Content component that uses the filters context
+function DashboardContent() {
   usePageTracking('dashboard');
 
   // Layout state
@@ -73,7 +74,7 @@ export default function Dashboard() {
   const [clientsPeriod, setClientsPeriod] = useState<ClientsPeriod>('30days');
   const [performancePeriod, setPerformancePeriod] = useState<PerformancePeriod>('6months');
 
-  // Data hooks
+  // Data hooks - now safely inside the provider
   const { data: kpis, isLoading: kpisLoading } = useDashboardKPIs();
   const { data: financialData = [], isLoading: financialLoading } = useUnifiedFinancialData(financialPeriod);
   const { data: salesData, isLoading: salesLoading } = useProductSalesData(salesPeriod);
@@ -94,7 +95,6 @@ export default function Dashboard() {
   };
 
   return (
-    <DashboardFiltersProvider>
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       {/* Global Filters */}
       <DashboardGlobalFilters />
@@ -381,6 +381,14 @@ export default function Dashboard() {
         />
       )}
     </div>
+  );
+}
+
+// Wrapper component that provides the context
+export default function Dashboard() {
+  return (
+    <DashboardFiltersProvider>
+      <DashboardContent />
     </DashboardFiltersProvider>
   );
 }
