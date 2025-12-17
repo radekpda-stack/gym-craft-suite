@@ -13,7 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
   RefreshCw,
-  Play,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,6 +68,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { GeneratePlanSheet } from '@/components/plans/GeneratePlanSheet';
 
 export default function TrainingPlanDetail() {
   const { id } = useParams<{ id: string }>();
@@ -83,6 +84,7 @@ export default function TrainingPlanDetail() {
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [showAddWorkout, setShowAddWorkout] = useState<string | null>(null);
   const [showAddExercise, setShowAddExercise] = useState<string | null>(null);
+  const [showGenerateSheet, setShowGenerateSheet] = useState(false);
   const [newWorkout, setNewWorkout] = useState({ name: '', type: 'strength', duration: 60 });
   const [newExercise, setNewExercise] = useState({
     exercise_id: '',
@@ -212,9 +214,9 @@ export default function TrainingPlanDetail() {
           <h1 className="text-2xl font-bold text-foreground">{plan.name}</h1>
           <p className="text-muted-foreground text-sm">{client?.name}</p>
         </div>
-        <Button variant="outline" className="gap-2">
-          <Play className="w-4 h-4" />
-          Generovat tréninky
+        <Button variant="outline" className="gap-2" onClick={() => setShowGenerateSheet(true)}>
+          <Sparkles className="w-4 h-4" />
+          Generovat plán
         </Button>
       </div>
 
@@ -625,6 +627,18 @@ export default function TrainingPlanDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Generate Plan Sheet */}
+      <GeneratePlanSheet
+        open={showGenerateSheet}
+        onOpenChange={setShowGenerateSheet}
+        planId={plan.id}
+        hasExistingContent={weeks.length > 0}
+        currentWeeksCount={4}
+        currentDaysPerWeek={plan.days_per_week}
+        currentGoal={plan.primary_goal}
+        currentEquipment={plan.equipment || []}
+      />
     </div>
   );
 }
