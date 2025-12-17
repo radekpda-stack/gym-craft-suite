@@ -11,7 +11,9 @@ const corsHeaders = {
 const feedbackSchema = z.object({
   token: z.string().uuid("Invalid token format"),
   values: z.record(z.string(), z.number().int().min(1).max(10)),
-  pain_area: z.string().max(50).optional(),
+  pain_area: z.string().max(200).optional(),
+  pain_areas: z.array(z.string().max(50)).optional(),
+  pain_area_notes: z.record(z.string(), z.string().max(100)).optional(),
   pain_area_side: z.enum(['left', 'right', 'both']).optional(),
   pain_area_other: z.string().max(100).optional(),
   note: z.string().max(500).optional(),
@@ -22,6 +24,25 @@ const RED_FLAG_THRESHOLDS = {
   pain: 7,
   body_feel: 3,
 };
+
+// Helper to build comment with pain area notes
+function buildComment(note: string | undefined, painAreaNotes: Record<string, string> | undefined): string | null {
+  const parts: string[] = [];
+  
+  if (note) {
+    parts.push(note);
+  }
+  
+  if (painAreaNotes && Object.keys(painAreaNotes).length > 0) {
+    const noteEntries = Object.entries(painAreaNotes)
+      .map(([area, areaNote]) => `${area}: ${areaNote}`)
+      .join('; ');
+    parts.push(`[Bolest: ${noteEntries}]`);
+  }
+  
+  const combined = parts.join(' | ');
+  return combined ? combined.slice(0, 500) : null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,7 +69,7 @@ serve(async (req) => {
       );
     }
 
-    const { token, values, pain_area, pain_area_side, pain_area_other, note } = parseResult.data;
+    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_side, pain_area_other, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
     console.log(`Values received:`, values);
@@ -154,7 +175,8 @@ serve(async (req) => {
       fun,
       pain_area: pain_area || null,
       pain_area_other: pain_area_other || null,
-      comment: note ? note.slice(0, 200) : null,
+      // Include notes in comment if present
+      comment: buildComment(note, pain_area_notes),
       is_red_flag: isRedFlag,
       red_flag_reasons: redFlagReasons.length > 0 ? redFlagReasons : null,
       // Backward compatibility fields
