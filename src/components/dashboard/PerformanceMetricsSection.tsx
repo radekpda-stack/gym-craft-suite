@@ -1,24 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  LineChart,
-  Line,
-  ComposedChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
-import { Dumbbell, Trophy, TrendingUp, ChevronRight, Medal } from 'lucide-react';
+import { Dumbbell, ChevronRight } from 'lucide-react';
+import { PRTimelineCard } from './PRTimelineCard';
+import { StrengthDevelopmentCard } from './StrengthDevelopmentCard';
 
 export type PerformancePeriod = '30days' | '6months' | '12months' | 'all';
-type StrengthMetric = '1rm' | 'volume' | 'frequency';
 
 interface TopExercise {
   id: string;
@@ -30,33 +19,11 @@ interface TopExercise {
   topClients: string[];
 }
 
-interface PersonalRecord {
-  id: string;
-  exerciseName: string;
-  weight: number;
-  reps: number;
-  clientName: string;
-  date: string;
-}
-
-interface PRTimelinePoint {
-  label: string;
-  date: string;
-  prCount: number;
-  maxWeight: number;
-  exercises: string[];
-}
-
-interface StrengthDataPoint {
-  label: string;
-  [exerciseName: string]: number | string;
-}
-
 interface PerformanceMetricsSectionProps {
   topExercises: TopExercise[];
-  personalRecords: PersonalRecord[];
-  prTimeline: PRTimelinePoint[];
-  strengthData: StrengthDataPoint[];
+  personalRecords: any[];
+  prTimeline: any[];
+  strengthData: any[];
   top3Exercises: string[];
   isLoading: boolean;
   period: PerformancePeriod;
@@ -70,23 +37,12 @@ const PERIOD_OPTIONS: { value: PerformancePeriod; label: string }[] = [
   { value: 'all', label: 'Celkově' },
 ];
 
-const STRENGTH_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--success))',
-  'hsl(var(--warning))',
-];
-
 export function PerformanceMetricsSection({
   topExercises,
-  personalRecords,
-  prTimeline,
-  strengthData,
-  top3Exercises,
   isLoading,
   period,
   onPeriodChange,
 }: PerformanceMetricsSectionProps) {
-  const [strengthMetric, setStrengthMetric] = useState<StrengthMetric>('1rm');
 
   if (isLoading) {
     return (
@@ -178,192 +134,11 @@ export function PerformanceMetricsSection({
           </Link>
         </div>
 
-        {/* Personal Records Timeline Chart */}
-        <div className="glass rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Medal className="w-5 h-5 text-warning" />
-            <h4 className="font-semibold text-foreground">Vývoj PR v čase</h4>
-          </div>
-          
-          {prTimeline.length > 0 ? (
-            <>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={prTimeline} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '11px',
-                      }}
-                      formatter={(value: number, name: string) => [
-                        name === 'prCount' ? `${value} PR` : `${value} kg`,
-                        name === 'prCount' ? 'Počet PR' : 'Max váha'
-                      ]}
-                    />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="prCount"
-                      fill="hsl(var(--warning))"
-                      radius={[4, 4, 0, 0]}
-                      name="prCount"
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="maxWeight"
-                      stroke="hsl(var(--success))"
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: 'hsl(var(--success))' }}
-                      name="maxWeight"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-              
-              {/* Legend */}
-              <div className="flex justify-center gap-4 mt-2">
-                <div className="flex items-center gap-1.5 text-xs">
-                  <div className="w-3 h-3 rounded bg-warning" />
-                  <span className="text-muted-foreground">Počet PR</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs">
-                  <div className="w-3 h-3 rounded-full bg-success" />
-                  <span className="text-muted-foreground">Max váha</span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
-              Žádné PR v tomto období
-            </div>
-          )}
+        {/* New PR Timeline Card */}
+        <PRTimelineCard />
 
-          <Link
-            to="/progress"
-            className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-border/50 text-xs text-primary hover:text-primary/80"
-          >
-            Zobrazit vše <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {/* Strength Development Chart */}
-        <div className="glass rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-success" />
-              <h4 className="font-semibold text-foreground">Vývoj síly</h4>
-            </div>
-          </div>
-
-          {/* Metric toggle */}
-          <div className="flex gap-1 mb-3">
-            <Button
-              variant={strengthMetric === '1rm' ? 'default' : 'ghost'}
-              size="sm"
-              className="text-xs h-7 px-2"
-              onClick={() => setStrengthMetric('1rm')}
-            >
-              1RM
-            </Button>
-            <Button
-              variant={strengthMetric === 'volume' ? 'default' : 'ghost'}
-              size="sm"
-              className="text-xs h-7 px-2"
-              onClick={() => setStrengthMetric('volume')}
-            >
-              Objem
-            </Button>
-            <Button
-              variant={strengthMetric === 'frequency' ? 'default' : 'ghost'}
-              size="sm"
-              className="text-xs h-7 px-2"
-              onClick={() => setStrengthMetric('frequency')}
-            >
-              Frekvence
-            </Button>
-          </div>
-
-          {strengthData.length > 0 && top3Exercises.length > 0 ? (
-            <div className="h-36">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={strengthData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                    }}
-                  />
-                  {top3Exercises.map((exercise, index) => (
-                    <Line
-                      key={exercise}
-                      type="monotone"
-                      dataKey={exercise}
-                      stroke={STRENGTH_COLORS[index]}
-                      strokeWidth={2}
-                      dot={{ r: 2 }}
-                      name={exercise}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-36 flex items-center justify-center text-muted-foreground text-sm">
-              Nedostatek dat pro graf
-            </div>
-          )}
-
-          {/* Legend */}
-          {top3Exercises.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {top3Exercises.map((exercise, index) => (
-                <div key={exercise} className="flex items-center gap-1 text-xs">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: STRENGTH_COLORS[index] }}
-                  />
-                  <span className="text-muted-foreground truncate max-w-[80px]">{exercise}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* New Strength Development Card */}
+        <StrengthDevelopmentCard />
       </div>
     </div>
   );
