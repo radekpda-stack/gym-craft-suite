@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface KPICardProps {
   title: string;
@@ -72,21 +73,38 @@ export function KPICard({
 
       {/* Trend or Subtitle */}
       <div className="flex items-center justify-between mt-1.5 sm:mt-2">
-        {trend !== undefined ? (
-          <div
-            className={cn(
-              'flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium',
-              trend > 0 ? 'text-success' : trend < 0 ? 'text-destructive' : 'text-muted-foreground'
-            )}
-          >
-            {trend > 0 ? (
-              <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            ) : trend < 0 ? (
-              <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            ) : null}
-            <span>{formatPercent(Math.abs(trend))}</span>
-            {trendLabel && <span className="text-muted-foreground ml-0.5 sm:ml-1 hidden sm:inline">{trendLabel}</span>}
-          </div>
+        {trend !== undefined && trend !== null ? (
+          trend === 0 ? (
+            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium text-muted-foreground">
+              <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span>0%</span>
+              {trendLabel && <span className="ml-0.5 sm:ml-1 hidden sm:inline">{trendLabel}</span>}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                'flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium',
+                trend > 0 ? 'text-success' : 'text-destructive'
+              )}
+            >
+              {trend > 0 ? (
+                <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              ) : (
+                <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              )}
+              <span>{formatPercent(Math.abs(trend))}</span>
+              {trendLabel && <span className="text-muted-foreground ml-0.5 sm:ml-1 hidden sm:inline">{trendLabel}</span>}
+            </div>
+          )
+        ) : trend === null ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">—</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Srovnání není k dispozici</p>
+            </TooltipContent>
+          </Tooltip>
         ) : subtitle ? (
           <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{subtitle}</span>
         ) : null}

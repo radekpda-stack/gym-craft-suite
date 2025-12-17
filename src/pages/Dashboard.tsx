@@ -32,6 +32,7 @@ import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashb
 import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
 import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
 import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
+import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
 import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
@@ -258,14 +259,14 @@ function DashboardContent() {
       {/* KPI Cards */}
       {layout.showKPICards && (
         kpisLoading ? (
-          <KPIGridSkeleton count={6} />
+          <KPIGridSkeleton count={7} />
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6 lg:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-7 lg:gap-4">
             <KPICard
               title="Příjem"
               value={formatCurrency(kpis?.incomeThisMonth || 0)}
               icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.incomeTrend}
+              trend={kpis?.incomeTrend ?? null}
               trendLabel="vs minulý měsíc"
               onClick={() => setActiveModal('income')}
               variant="success"
@@ -274,7 +275,7 @@ function DashboardContent() {
               title="Čistý zisk"
               value={formatCurrency(kpis?.netProfitThisMonth || 0)}
               icon={<TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.profitTrend}
+              trend={kpis?.profitTrend ?? null}
               onClick={() => setActiveModal('profit')}
               variant="success"
             />
@@ -283,7 +284,7 @@ function DashboardContent() {
               value={kpis?.trainingsThisMonth || 0}
               subtitle="tento měsíc"
               icon={<Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.trainingsTrend}
+              trend={kpis?.trainingsTrend ?? null}
               onClick={() => setActiveModal('trainings')}
             />
             <KPICard
@@ -309,6 +310,7 @@ function DashboardContent() {
               onClick={() => setActiveModal('unpaid')}
               variant={kpis?.unpaidCount ? 'warning' : 'default'}
             />
+            <CapacityKPICard />
           </div>
         )
       )}

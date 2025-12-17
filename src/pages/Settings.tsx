@@ -17,6 +17,7 @@ import {
   Calculator,
   Building2,
   Utensils,
+  Gauge,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { NutritionSettings } from '@/components/settings/NutritionSettings';
+import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -115,10 +117,10 @@ export default function Settings() {
       content: <FeedbackSettings />,
     },
     {
-      title: 'Jídelní log',
-      description: 'Nastavení pro 7denní sledování stravy klientů',
-      icon: Utensils,
-      content: <NutritionSettings />,
+      title: language === 'cs' ? 'Kapacita' : 'Capacity',
+      description: language === 'cs' ? 'Pracovní dny, hodiny a délka slotů pro výpočet obsazenosti' : 'Working days, hours and slot duration for utilization calculation',
+      icon: Gauge,
+      content: <CapacitySettingsPanel />,
     },
     {
       title: t.settings.calendar,
