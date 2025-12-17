@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { PaymentMethod, PaymentStatus } from "./useTrainingSessions";
+import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
 
 export interface UnpaidTraining {
   id: string;
@@ -116,17 +117,7 @@ export function usePayTraining() {
       // If paying from credit, deduct from balance (individual or shared)
       if (deductCredit && paymentMethod === 'credit' && training.final_price) {
         const price = training.final_price;
-
-        // Detect shared budget group
-        const { data: membership, error: membershipError } = await supabase
-          .from('client_budget_members')
-          .select('group_id')
-          .eq('client_id', training.client_id)
-          .maybeSingle();
-
-        if (membershipError) throw membershipError;
-
-        const groupId = membership?.group_id ?? null;
+        const groupId = await getClientGroupId(training.client_id);
 
         // Create credit transaction
         const { error: txError } = await supabase
@@ -143,48 +134,8 @@ export function usePayTraining() {
 
         if (txError) throw txError;
 
-        if (groupId) {
-          // Update shared balance
-          const { data: group, error: groupError } = await supabase
-            .from('client_budget_groups')
-            .select('shared_balance')
-            .eq('id', groupId)
-            .single();
-
-          if (groupError) throw groupError;
-
-          const current = Math.round((group.shared_balance || 0) * 100);
-          const next = (current - Math.round(price * 100)) / 100;
-
-          const { error: updError } = await supabase
-            .from('client_budget_groups')
-            .update({ shared_balance: next })
-            .eq('id', groupId);
-
-          if (updError) throw updError;
-
-          // Keep personal balance at 0 for shared-budget clients
-          await supabase.from('clients').update({ credit_balance: 0 }).eq('id', training.client_id);
-        } else {
-          // Update individual balance
-          const { data: client, error: clientError } = await supabase
-            .from('clients')
-            .select('credit_balance')
-            .eq('id', training.client_id)
-            .single();
-
-          if (clientError) throw clientError;
-
-          const current = Math.round((client.credit_balance || 0) * 100);
-          const next = (current - Math.round(price * 100)) / 100;
-
-          const { error: updError } = await supabase
-            .from('clients')
-            .update({ credit_balance: next })
-            .eq('id', training.client_id);
-
-          if (updError) throw updError;
-        }
+        // Apply credit delta using centralized function
+        await applyCreditDelta(training.client_id, -price);
       }
 
       return { trainingId, paymentMethod };
