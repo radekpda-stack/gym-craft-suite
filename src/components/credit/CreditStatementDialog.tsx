@@ -97,6 +97,7 @@ export function CreditStatementDialog({
         id?: string;
         address?: string;
         contact?: string;
+        logoUrl?: string;
       } | null;
     },
     enabled: open,
@@ -212,6 +213,7 @@ export function CreditStatementDialog({
         companyId: companySettings?.id,
         companyAddress: companySettings?.address,
         companyContact: companySettings?.contact,
+        companyLogoUrl: companySettings?.logoUrl,
       };
 
       // Generate and download PDF (async - loads fonts)
