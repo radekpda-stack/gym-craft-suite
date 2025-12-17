@@ -103,12 +103,18 @@ const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
   noteMaxLength: 200,
 };
 
+// Pain areas that require side selection (bilateral)
+const BILATERAL_PAIN_AREAS = ['knee', 'shoulder', 'hip', 'ankle', 'wrist'];
+
+type PainSide = 'left' | 'right' | 'both' | null;
+
 export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [status, setStatus] = useState<FormStatus>('loading');
   const [formData, setFormData] = useState<FormData | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [values, setValues] = useState<Record<string, number>>({});
   const [painArea, setPainArea] = useState<string | null>(null);
+  const [painAreaSide, setPainAreaSide] = useState<PainSide>(null);
   const [painAreaOther, setPainAreaOther] = useState('');
   const [note, setNote] = useState('');
 
@@ -118,6 +124,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     .sort((a, b) => a.order - b.order);
   const enabledPainAreas = questionsConfig.painAreas.filter(a => a.enabled);
   const painQuestion = questionsConfig.questions.find(q => q.id === 'pain' && q.enabled);
+
+  // Check if selected pain area needs side selection
+  const needsSideSelection = painArea && BILATERAL_PAIN_AREAS.includes(painArea);
 
   useEffect(() => {
     loadFormData();
@@ -172,6 +181,17 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     }
   };
 
+  // Reset side selection when pain area changes
+  const handlePainAreaSelect = (areaId: string) => {
+    if (painArea === areaId) {
+      setPainArea(null);
+      setPainAreaSide(null);
+    } else {
+      setPainArea(areaId);
+      setPainAreaSide(null); // Reset side when changing area
+    }
+  };
+
   const handleSubmit = async () => {
     setStatus('submitting');
 
@@ -179,11 +199,19 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       const painThreshold = painQuestion?.painAreaThreshold ?? 4;
       const showPainArea = (values.pain ?? 1) >= painThreshold;
 
+      // Build pain area string with side if applicable
+      let painAreaValue = showPainArea ? painArea : undefined;
+      if (painAreaValue && needsSideSelection && painAreaSide) {
+        const sideLabel = painAreaSide === 'left' ? 'levá' : painAreaSide === 'right' ? 'pravá' : 'obě';
+        painAreaValue = `${painAreaValue}_${painAreaSide}`;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('submit-public-feedback', {
         body: {
           token,
           values,
-          pain_area: showPainArea ? painArea : undefined,
+          pain_area: painAreaValue,
+          pain_area_side: showPainArea && needsSideSelection ? painAreaSide : undefined,
           pain_area_other: showPainArea && painArea === 'other' ? painAreaOther : undefined,
           note: note || undefined,
         },
@@ -393,12 +421,41 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                               ? 'bg-primary text-primary-foreground' 
                               : 'hover:bg-secondary'
                           )}
-                          onClick={() => setPainArea(painArea === area.id ? null : area.id)}
+                          onClick={() => handlePainAreaSelect(area.id)}
                         >
                           {area.label}
                         </Badge>
                       ))}
                     </div>
+                    
+                    {/* Side selection for bilateral areas */}
+                    {needsSideSelection && (
+                      <div className="mt-4 p-3 rounded-lg bg-background/50 border">
+                        <Label className="mb-2 block text-sm font-medium">Která strana?</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { id: 'left', label: 'Levá' },
+                            { id: 'right', label: 'Pravá' },
+                            { id: 'both', label: 'Obě' },
+                          ].map((side) => (
+                            <Badge
+                              key={side.id}
+                              variant={painAreaSide === side.id ? 'default' : 'outline'}
+                              className={cn(
+                                'cursor-pointer text-sm py-2 px-4 transition-all flex-1 justify-center',
+                                painAreaSide === side.id 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'hover:bg-secondary'
+                              )}
+                              onClick={() => setPainAreaSide(side.id as PainSide)}
+                            >
+                              {side.label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     {painArea === 'other' && (
                       <Textarea
                         placeholder="Upřesni, kde to bolí..."

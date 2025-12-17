@@ -35,6 +35,11 @@ interface FeedbackQuestionnairePreviewProps {
   config: FeedbackQuestionsConfig;
 }
 
+// Pain areas that require side selection (bilateral)
+const BILATERAL_PAIN_AREAS = ['knee', 'shoulder', 'hip', 'ankle', 'wrist'];
+
+type PainSide = 'left' | 'right' | 'both' | null;
+
 export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePreviewProps) {
   const [values, setValues] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
@@ -46,6 +51,7 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
     return initial;
   });
   const [selectedPainArea, setSelectedPainArea] = useState<string>('');
+  const [painAreaSide, setPainAreaSide] = useState<PainSide>(null);
   const [note, setNote] = useState('');
 
   const enabledQuestions = config.questions
@@ -58,6 +64,13 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
   const showPainAreas = painQuestion?.enabled && 
     painQuestion?.showPainAreas !== false && 
     (values['pain'] || 0) >= (painQuestion?.painAreaThreshold || 4);
+  
+  const needsSideSelection = selectedPainArea && BILATERAL_PAIN_AREAS.includes(selectedPainArea);
+  
+  const handlePainAreaChange = (areaId: string) => {
+    setSelectedPainArea(areaId);
+    setPainAreaSide(null);
+  };
 
   return (
     <Dialog>
@@ -131,13 +144,12 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
                   </div>
                 </div>
 
-                {/* Pain areas - show only for pain question when threshold reached */}
                 {question.id === 'pain' && showPainAreas && enabledPainAreas.length > 0 && (
                   <div className="mt-4 p-4 rounded-xl bg-muted/50 space-y-3">
                     <Label className="text-sm font-medium">Kde cítíte bolest?</Label>
                     <RadioGroup
                       value={selectedPainArea}
-                      onValueChange={setSelectedPainArea}
+                      onValueChange={handlePainAreaChange}
                       className="grid grid-cols-2 gap-2"
                     >
                       {enabledPainAreas.map((area) => (
@@ -152,6 +164,34 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
                         </div>
                       ))}
                     </RadioGroup>
+                    
+                    {/* Side selection for bilateral areas */}
+                    {needsSideSelection && (
+                      <div className="mt-3 p-3 rounded-lg bg-background/50 border">
+                        <Label className="mb-2 block text-sm font-medium">Která strana?</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { id: 'left', label: 'Levá' },
+                            { id: 'right', label: 'Pravá' },
+                            { id: 'both', label: 'Obě' },
+                          ].map((side) => (
+                            <button
+                              key={side.id}
+                              type="button"
+                              className={cn(
+                                'flex-1 py-2 px-3 text-sm rounded-md border transition-colors',
+                                painAreaSide === side.id 
+                                  ? 'bg-primary text-primary-foreground border-primary' 
+                                  : 'bg-background hover:bg-secondary border-border'
+                              )}
+                              onClick={() => setPainAreaSide(side.id as PainSide)}
+                            >
+                              {side.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

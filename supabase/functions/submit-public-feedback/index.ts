@@ -12,6 +12,7 @@ const feedbackSchema = z.object({
   token: z.string().uuid("Invalid token format"),
   values: z.record(z.string(), z.number().int().min(1).max(10)),
   pain_area: z.string().max(50).optional(),
+  pain_area_side: z.enum(['left', 'right', 'both']).optional(),
   pain_area_other: z.string().max(100).optional(),
   note: z.string().max(500).optional(),
 });
@@ -47,7 +48,7 @@ serve(async (req) => {
       );
     }
 
-    const { token, values, pain_area, pain_area_other, note } = parseResult.data;
+    const { token, values, pain_area, pain_area_side, pain_area_other, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
     console.log(`Values received:`, values);
