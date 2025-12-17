@@ -98,11 +98,22 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        "body-pulse": {
+          "0%, 100%": { 
+            opacity: "1",
+            filter: "drop-shadow(0 0 0 hsl(var(--primary)))"
+          },
+          "50%": { 
+            opacity: "0.7",
+            filter: "drop-shadow(0 0 8px hsl(var(--primary)))"
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "body-pulse": "body-pulse 1.5s ease-in-out infinite",
       },
     },
   },
