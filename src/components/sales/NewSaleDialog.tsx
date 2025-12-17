@@ -22,10 +22,10 @@ interface CartItem {
   quantity: number;
 }
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: 'cash', label: 'Hotově', icon: Banknote },
-  { value: 'credit', label: 'Z kreditu', icon: Wallet },
-  { value: 'card', label: 'Kartou', icon: CreditCard },
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: 'cash', label: 'Hotově', shortLabel: 'Hot.', icon: Banknote },
+  { value: 'credit', label: 'Z kreditu', shortLabel: 'Kred.', icon: Wallet },
+  { value: 'card', label: 'Kartou', shortLabel: 'Kart.', icon: CreditCard },
 ];
 
 export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
@@ -137,16 +137,16 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5" />
             Nový prodej
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
+        <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
           <div>
-            <Label>Klient</Label>
+            <Label className="text-xs sm:text-sm">Klient</Label>
             {clientsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -154,14 +154,14 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
             ) : clients.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <AlertCircle className="w-8 h-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Žádní klienti nejsou k dispozici</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Žádní klienti nejsou k dispozici</p>
                 <Button variant="outline" size="sm" asChild onClick={() => onOpenChange(false)}>
                   <Link to="/clients">Přidat klienta</Link>
                 </Button>
               </div>
             ) : (
               <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger className="mt-2">
+                <SelectTrigger className="mt-1.5 sm:mt-2 h-10 sm:h-9">
                   <SelectValue placeholder="Vyberte klienta" />
                 </SelectTrigger>
                 <SelectContent>
@@ -184,7 +184,7 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
           </div>
 
           {selectedClientData && (
-            <div className="p-3 rounded-xl bg-secondary/50 text-sm">
+            <div className="p-2.5 sm:p-3 rounded-xl bg-secondary/50 text-xs sm:text-sm">
               <span className="text-muted-foreground">Kredit: </span>
               <span className={cn(
                 "font-semibold",
@@ -197,15 +197,15 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
           )}
 
           {/* Payment Method Selection */}
-          <div className="space-y-2">
-            <Label>Způsob platby</Label>
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label className="text-xs sm:text-sm">Způsob platby</Label>
             <RadioGroup 
               value={paymentMethod} 
               onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
-              className="flex gap-2"
+              className="grid grid-cols-3 gap-1.5 sm:gap-2"
             >
               {PAYMENT_METHODS.map((method) => (
-                <div key={method.value} className="flex-1">
+                <div key={method.value}>
                   <RadioGroupItem
                     value={method.value}
                     id={`payment-${method.value}`}
@@ -214,7 +214,7 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                   <Label
                     htmlFor={`payment-${method.value}`}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                      "flex flex-col items-center gap-1 sm:gap-1.5 p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 cursor-pointer transition-all",
                       "hover:bg-secondary/50",
                       paymentMethod === method.value 
                         ? "border-primary bg-primary/10" 
@@ -222,29 +222,30 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                     )}
                   >
                     <method.icon className={cn(
-                      "w-5 h-5",
+                      "w-4 h-4 sm:w-5 sm:h-5",
                       paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                     )} />
                     <span className={cn(
-                      "text-xs font-medium",
+                      "text-[10px] sm:text-xs font-medium text-center",
                       paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                     )}>
-                      {method.label}
+                      <span className="hidden xs:inline">{method.label}</span>
+                      <span className="xs:hidden">{method.shortLabel}</span>
                     </span>
                   </Label>
                 </div>
               ))}
             </RadioGroup>
             {paymentMethod === 'cash' && (
-              <p className="text-xs text-muted-foreground">
-                Platba hotově se neodečte z kreditového účtu klienta
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Platba hotově se neodečte z kreditového účtu
               </p>
             )}
           </div>
 
           {/* Add product */}
           <div>
-            <Label>Přidat produkt</Label>
+            <Label className="text-xs sm:text-sm">Přidat produkt</Label>
             {productsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -252,15 +253,15 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
             ) : products.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <AlertCircle className="w-8 h-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Žádné produkty nejsou dostupné</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Žádné produkty nejsou dostupné</p>
                 <Button variant="outline" size="sm" asChild onClick={() => onOpenChange(false)}>
                   <Link to="/settings">Přidat produkty v nastavení</Link>
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-1.5 sm:mt-2">
                 <Select value={selectedProductToAdd} onValueChange={setSelectedProductToAdd}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1 h-10 sm:h-9">
                     <SelectValue placeholder="Vyberte produkt" />
                   </SelectTrigger>
                   <SelectContent>
@@ -287,6 +288,7 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                   onClick={addToCart} 
                   disabled={!selectedProductToAdd}
                   size="icon"
+                  className="h-10 w-10 sm:h-9 sm:w-9"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -296,45 +298,45 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
 
           {/* Cart */}
           {cart.length > 0 && (
-            <div className="space-y-2">
-              <Label>Košík ({cart.length} položek)</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Košík ({cart.length})</Label>
               <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
                 {cart.map((item) => (
-                  <div key={item.product.id} className="flex items-center justify-between p-3 bg-secondary/30">
+                  <div key={item.product.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-secondary/30">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-xs sm:text-sm truncate">{item.product.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {item.product.price.toLocaleString('cs-CZ')} Kč × {item.quantity} = {' '}
                         <span className="font-medium text-foreground">
                           {(item.product.price * item.quantity).toLocaleString('cs-CZ')} Kč
                         </span>
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 ml-2">
+                    <div className="flex items-center gap-0.5 sm:gap-1 ml-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-9 w-9 sm:h-7 sm:w-7"
                         onClick={() => updateQuantity(item.product.id, -1)}
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                       </Button>
-                      <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                      <span className="w-6 sm:w-5 text-center text-xs sm:text-sm font-medium">{item.quantity}</span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-9 w-9 sm:h-7 sm:w-7"
                         onClick={() => updateQuantity(item.product.id, 1)}
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        className="h-9 w-9 sm:h-7 sm:w-7 text-destructive hover:text-destructive"
                         onClick={() => removeFromCart(item.product.id)}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                       </Button>
                     </div>
                   </div>
@@ -346,30 +348,30 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
           {/* Total */}
           {cart.length > 0 && (
             <div className={cn(
-              "p-4 rounded-xl border",
+              "p-3 sm:p-4 rounded-xl border",
               paymentMethod === 'credit' 
                 ? "bg-primary/10 border-primary/20" 
                 : "bg-success/10 border-success/20"
             )}>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm text-muted-foreground">Celkem:</p>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Celkem:</p>
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.icon && (
                     (() => {
                       const Icon = PAYMENT_METHODS.find(m => m.value === paymentMethod)!.icon;
-                      return <Icon className="w-4 h-4 text-muted-foreground" />;
+                      return <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />;
                     })()
                   )}
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">
                     {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label}
                   </span>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {totalAmount.toLocaleString('cs-CZ')} Kč
               </p>
               {selectedClientData && paymentMethod === 'credit' && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Nový zůstatek: {' '}
                   <span className={cn(
                     "font-medium",
@@ -380,7 +382,7 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                 </p>
               )}
               {paymentMethod !== 'credit' && (
-                <p className="text-xs text-success mt-1">
+                <p className="text-[10px] sm:text-xs text-success mt-1">
                   Kredit klienta nebude ovlivněn
                 </p>
               )}
@@ -390,10 +392,10 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
           <Button 
             onClick={handleSale} 
             disabled={!selectedClient || cart.length === 0 || isProcessing} 
-            className="w-full"
+            className="w-full h-11 sm:h-10"
           >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            {isProcessing ? 'Zpracovávám...' : `Prodat (${cart.length} položek)`}
+            {isProcessing ? 'Zpracovávám...' : `Prodat (${cart.length})`}
           </Button>
         </div>
       </DialogContent>
