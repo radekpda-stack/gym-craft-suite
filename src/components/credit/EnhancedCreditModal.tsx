@@ -18,6 +18,7 @@ import { toast } from '@/hooks/use-toast';
 import { featureTracker } from '@/hooks/useFeatureTracking';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { formatCurrency } from '@/lib/formatters';
 
 interface EnhancedCreditModalProps {
   collapsed?: boolean;
@@ -169,10 +170,10 @@ export function EnhancedCreditModal({
       }
 
       const budgetType = sharedBudgetInfo?.isShared ? 'Sdílený kredit' : 'Kredit';
-      let successMessage = `Přičteno ${numericAmount.toLocaleString('cs-CZ')} Kč`;
+      let successMessage = `Přičteno ${formatCurrency(numericAmount)}`;
       
       if (personalDebt > 0) {
-        successMessage += ` (vyrovnán dluh ${personalDebt.toLocaleString('cs-CZ')} Kč)`;
+        successMessage += ` (vyrovnán dluh ${formatCurrency(personalDebt)})`;
       }
       
       if (selectedUnpaidIds.length > 0) {
@@ -356,7 +357,7 @@ export function EnhancedCreditModal({
                     effectiveCreditBalance < 0 ? "text-destructive" : 
                     effectiveCreditBalance < 500 ? "text-warning" : "text-success"
                   )}>
-                    {effectiveCreditBalance.toLocaleString('cs-CZ')} Kč
+                    {formatCurrency(effectiveCreditBalance)}
                   </span>
                 </div>
                 
@@ -368,7 +369,7 @@ export function EnhancedCreditModal({
                       Osobní dluh k vyrovnání:
                     </span>
                     <span className="font-semibold text-warning">
-                      -{personalDebt.toLocaleString('cs-CZ')} Kč
+                      -{formatCurrency(personalDebt, false)}
                     </span>
                   </div>
                 )}
@@ -381,7 +382,7 @@ export function EnhancedCreditModal({
                       Neuhrazené tréninky:
                     </span>
                     <span className="font-semibold text-warning">
-                      {unpaidTrainings.length}× ({totalUnpaid.toLocaleString('cs-CZ')} Kč)
+                      {unpaidTrainings.length}× ({formatCurrency(totalUnpaid)})
                     </span>
                   </div>
                 )}
@@ -444,29 +445,29 @@ export function EnhancedCreditModal({
                   {sharedBudgetInfo?.isShared ? 'Nový sdílený zůstatek:' : 'Nový zůstatek:'} 
                 </p>
                 <p className="text-2xl font-bold text-success">
-                  {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
+                  {formatCurrency(calculatedNewBalance)}
                 </p>
                 
                 {/* Breakdown */}
                 <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-success/20">
                   <div className="flex justify-between">
                     <span>Aktuální zůstatek:</span>
-                    <span>{effectiveCreditBalance.toLocaleString('cs-CZ')} Kč</span>
+                    <span>{formatCurrency(effectiveCreditBalance)}</span>
                   </div>
                   <div className="flex justify-between text-success">
                     <span>+ Dobití:</span>
-                    <span>+{parseFloat(amount).toLocaleString('cs-CZ')} Kč</span>
+                    <span>+{formatCurrency(parseFloat(amount))}</span>
                   </div>
                   {personalDebt > 0 && (
                     <div className="flex justify-between text-warning">
                       <span>- Vyrovnání osobního dluhu:</span>
-                      <span>-{personalDebt.toLocaleString('cs-CZ')} Kč</span>
+                      <span>-{formatCurrency(personalDebt)}</span>
                     </div>
                   )}
                   {selectedUnpaidTotal > 0 && (
                     <div className="flex justify-between text-warning">
                       <span>- Úhrada tréninků:</span>
-                      <span>-{selectedUnpaidTotal.toLocaleString('cs-CZ')} Kč</span>
+                      <span>-{formatCurrency(selectedUnpaidTotal)}</span>
                     </div>
                   )}
                 </div>
@@ -481,12 +482,12 @@ export function EnhancedCreditModal({
                 Klient {selectedClient?.name} má {unpaidTrainings.length} neuhrazených tréninků
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Celkem: {totalUnpaid.toLocaleString('cs-CZ')} Kč
+                Celkem: {formatCurrency(totalUnpaid)}
               </p>
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Chcete je z nového kreditu ({parseFloat(amount).toLocaleString('cs-CZ')} Kč) uhradit?
+              Chcete je z nového kreditu ({formatCurrency(parseFloat(amount))}) uhradit?
             </p>
 
             <div className="flex gap-2">
@@ -521,7 +522,7 @@ export function EnhancedCreditModal({
                       </p>
                     </div>
                     <span className="text-sm font-semibold">
-                      {(training.final_price || 0).toLocaleString('cs-CZ')} Kč
+                      {formatCurrency(training.final_price || 0)}
                     </span>
                   </div>
                 ))}
@@ -533,7 +534,7 @@ export function EnhancedCreditModal({
               <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">K uhrazení:</span>
-                  <span className="font-semibold">{selectedUnpaidTotal.toLocaleString('cs-CZ')} Kč</span>
+                  <span className="font-semibold">{formatCurrency(selectedUnpaidTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Zbude na kreditu:</span>
@@ -541,7 +542,7 @@ export function EnhancedCreditModal({
                     "font-semibold",
                     calculatedNewBalance < 0 ? "text-destructive" : "text-success"
                   )}>
-                    {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
+                    {formatCurrency(calculatedNewBalance)}
                   </span>
                 </div>
               </div>
