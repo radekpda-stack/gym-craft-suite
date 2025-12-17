@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { useToast } from '@/hooks/use-toast';
 import {
   Wallet,
   TrendingUp,
@@ -60,6 +61,7 @@ const SAFE_MODE_KEY = 'dashboard-safe-mode';
 // Content component that uses the filters context
 function DashboardContent() {
   usePageTracking('dashboard');
+  const { toast } = useToast();
 
   // Safe mode - disables expensive charts when errors occur
   const [safeMode, setSafeMode] = useState(() => {
@@ -78,8 +80,15 @@ function DashboardContent() {
       try {
         localStorage.setItem(SAFE_MODE_KEY, 'true');
       } catch {}
+      
+      // Show toast notification
+      toast({
+        title: "Bezpečný režim aktivován",
+        description: "Grafy byly vypnuty kvůli opakovaným chybám. Klikněte na 'Zkusit znovu' v banneru pro obnovení.",
+        duration: 8000,
+      });
     }
-  }, [errorCount, safeMode]);
+  }, [errorCount, safeMode, toast]);
 
   const exitSafeMode = useCallback(() => {
     setSafeMode(false);
