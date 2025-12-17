@@ -3,7 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfYear, differenceInDays, subMonths } from 'date-fns';
 import { useDashboardFilters, AccountingMode, PaymentStatusFilter, DateRange } from '@/contexts/DashboardFiltersContext';
 
-interface DashboardKPIs {
+export interface UnpaidByAge {
+  days0to7: { count: number; amount: number };
+  days8to30: { count: number; amount: number };
+  days31plus: { count: number; amount: number };
+}
+
+export interface DashboardKPIs {
   // Income
   incomeThisMonth: number;
   incomeLastMonth: number;
@@ -11,6 +17,11 @@ interface DashboardKPIs {
   trainingIncome: number;
   productIncome: number;
   incomeTrend: number;
+  
+  // New KPIs
+  incomePerTraining: number;
+  productIncomeShare: number;
+  unpaidByAge: UnpaidByAge;
   
   // Profit
   netProfitThisMonth: number;
@@ -353,6 +364,36 @@ export function useDashboardKPIs() {
         ? differenceInDays(now, new Date(unpaidTrainings[0].date))
         : null;
 
+      // ===== NEW KPIs =====
+      // Income per training
+      const incomePerTraining = currentTrainings > 0 ? currentTrainingIncome / currentTrainings : 0;
+      
+      // Product income share (percentage)
+      const productIncomeShare = currentIncome > 0 ? (currentProductIncome / currentIncome) * 100 : 0;
+      
+      // Unpaid by age
+      const unpaidByAge: UnpaidByAge = {
+        days0to7: { count: 0, amount: 0 },
+        days8to30: { count: 0, amount: 0 },
+        days31plus: { count: 0, amount: 0 },
+      };
+      
+      unpaidTrainings?.forEach(t => {
+        const daysOld = differenceInDays(now, new Date(t.date));
+        const price = t.final_price || 0;
+        
+        if (daysOld <= 7) {
+          unpaidByAge.days0to7.count++;
+          unpaidByAge.days0to7.amount += price;
+        } else if (daysOld <= 30) {
+          unpaidByAge.days8to30.count++;
+          unpaidByAge.days8to30.amount += price;
+        } else {
+          unpaidByAge.days31plus.count++;
+          unpaidByAge.days31plus.amount += price;
+        }
+      });
+
       return {
         // Income
         incomeThisMonth: currentIncome,
@@ -361,6 +402,11 @@ export function useDashboardKPIs() {
         trainingIncome: currentTrainingIncome,
         productIncome: currentProductIncome,
         incomeTrend,
+        
+        // New KPIs
+        incomePerTraining,
+        productIncomeShare,
+        unpaidByAge,
         
         // Profit
         netProfitThisMonth: currentProfit,
