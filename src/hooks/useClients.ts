@@ -118,19 +118,26 @@ export function useUpdateClient() {
 
   return useMutation({
     mutationFn: async ({ id, values }: { id: string; values: ClientFormValues }) => {
+      const updateData: Record<string, unknown> = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone || null,
+        training_goals: values.trainingGoals,
+        notes: values.notes || "",
+        health_restrictions: values.healthRestrictions || "",
+        credit_balance: values.creditBalance || 0,
+        birth_date: values.birthDate || null,
+        gender: values.gender || null,
+      };
+
+      // Only update created_at if it's provided (for editing creation date)
+      if (values.createdAt) {
+        updateData.created_at = new Date(values.createdAt).toISOString();
+      }
+
       const { data, error } = await supabase
         .from("clients")
-        .update({
-          name: values.name,
-          email: values.email,
-          phone: values.phone || null,
-          training_goals: values.trainingGoals,
-          notes: values.notes || "",
-          health_restrictions: values.healthRestrictions || "",
-          credit_balance: values.creditBalance || 0,
-          birth_date: values.birthDate || null,
-          gender: values.gender || null,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();

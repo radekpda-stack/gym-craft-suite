@@ -53,6 +53,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
       creditBalance: defaultValues?.credit_balance || 0,
       birthDate: defaultValues?.birth_date || "",
       gender: defaultValues?.gender || undefined,
+      createdAt: defaultValues?.created_at ? defaultValues.created_at.split('T')[0] : "",
     },
   });
 
@@ -72,6 +73,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
         creditBalance: defaultValues.credit_balance || 0,
         birthDate: defaultValues.birth_date || "",
         gender: defaultValues.gender || undefined,
+        createdAt: defaultValues.created_at ? defaultValues.created_at.split('T')[0] : "",
       });
     }
   }, [defaultValues, form]);
@@ -177,6 +179,26 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
             </FormItem>
           )}
         />
+
+        {defaultValues && (
+          <FormField
+            control={form.control}
+            name="createdAt"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Datum založení karty</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
           <FormField
             control={form.control}

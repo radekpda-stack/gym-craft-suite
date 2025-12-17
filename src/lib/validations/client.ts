@@ -45,6 +45,10 @@ export const clientFormSchema = z.object({
   gender: z
     .enum(["male", "female"])
     .optional(),
+  createdAt: z
+    .string()
+    .optional()
+    .or(z.literal("")),
   // Extended fields from diagnostics
   handedness: z.string().optional().nullable(),
   occupation: z.string().optional().nullable(),

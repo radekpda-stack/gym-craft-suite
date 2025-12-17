@@ -671,6 +671,9 @@ export default function Clients() {
                               • {format(new Date(trainingCounts[client.id].lastActivityDate!), 'd.M.', { locale: cs })}
                             </span>
                           )}
+                          <span className="text-xs text-muted-foreground">
+                            • Od {format(new Date(client.created_at), 'd.M.yyyy', { locale: cs })}
+                          </span>
                         </div>
                         
                         {/* Client Tags */}
