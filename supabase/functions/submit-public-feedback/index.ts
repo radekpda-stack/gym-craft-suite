@@ -220,6 +220,66 @@ serve(async (req) => {
         });
     }
 
+    // Check for repeated negative patterns (last 3 feedbacks)
+    const { data: recentFeedbacks } = await supabase
+      .from("training_feedback")
+      .select("pain, body_feel, soreness, energy_rating, fun, training_date")
+      .eq("client_id", request.client_id)
+      .order("training_date", { ascending: false })
+      .limit(3);
+
+    if (recentFeedbacks && recentFeedbacks.length >= 3) {
+      const trendAlerts: string[] = [];
+
+      // Check for repeated high pain (>= 5 for 3 sessions)
+      const highPainCount = recentFeedbacks.filter(f => f.pain && f.pain >= 5).length;
+      if (highPainCount >= 3) {
+        trendAlerts.push(`Opakovaná vysoká bolest (${highPainCount}x za sebou)`);
+      }
+
+      // Check for repeated low body feel (<= 4 for 3 sessions)
+      const lowBodyFeelCount = recentFeedbacks.filter(f => f.body_feel && f.body_feel <= 4).length;
+      if (lowBodyFeelCount >= 3) {
+        trendAlerts.push(`Opakovaně nízký pocit v těle (${lowBodyFeelCount}x za sebou)`);
+      }
+
+      // Check for repeated high soreness (>= 6 for 3 sessions)
+      const highSorenessCount = recentFeedbacks.filter(f => f.soreness && f.soreness >= 6).length;
+      if (highSorenessCount >= 3) {
+        trendAlerts.push(`Opakovaně vysoká svalová únava (${highSorenessCount}x za sebou)`);
+      }
+
+      // Check for repeated low energy (<= 4 for 3 sessions)
+      const lowEnergyCount = recentFeedbacks.filter(f => f.energy_rating && f.energy_rating <= 4).length;
+      if (lowEnergyCount >= 3) {
+        trendAlerts.push(`Opakovaně nízká energie (${lowEnergyCount}x za sebou)`);
+      }
+
+      // Check for repeated low fun (<= 4 for 3 sessions)
+      const lowFunCount = recentFeedbacks.filter(f => f.fun && f.fun <= 4).length;
+      if (lowFunCount >= 3) {
+        trendAlerts.push(`Opakovaně nízká zábava (${lowFunCount}x za sebou)`);
+      }
+
+      // Create trend alert notification if patterns detected
+      if (trendAlerts.length > 0) {
+        console.log(`Trend alerts detected for client ${request.client_id}:`, trendAlerts);
+        
+        await supabase
+          .from("notifications")
+          .insert({
+            user_id: request.user_id,
+            client_id: request.client_id,
+            type: "feedback_trend_alert",
+            title: "📉 Negativní trend u klienta",
+            message: `${request.clients?.name || "Klient"}: ${trendAlerts.join("; ")}`,
+            entity_type: "client",
+            entity_id: request.client_id,
+            severity: "warning",
+          });
+      }
+    }
+
     console.log(`Public feedback submitted successfully: ${feedback.id}, isRedFlag: ${isRedFlag}`);
 
     return new Response(

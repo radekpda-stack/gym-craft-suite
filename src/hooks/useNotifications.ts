@@ -8,7 +8,10 @@ export type NotificationType =
   | 'milestone_100' 
   | 'milestone_500' 
   | 'milestone_1000'
-  | 'incomplete_training';
+  | 'incomplete_training'
+  | 'feedback_received'
+  | 'feedback_red_flag'
+  | 'feedback_trend_alert';
 
 export interface Notification {
   id: string;
@@ -20,6 +23,9 @@ export interface Notification {
   created_at: string;
   user_id: string | null;
   reference_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  severity?: string | null;
 }
 
 export function useNotifications() {
