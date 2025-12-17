@@ -1327,6 +1327,208 @@ export type Database = {
           },
         ]
       }
+      plan_days: {
+        Row: {
+          created_at: string | null
+          day_number: number
+          id: string
+          intended_focus: string | null
+          optional_flag: boolean | null
+          plan_week_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_number: number
+          id?: string
+          intended_focus?: string | null
+          optional_flag?: boolean | null
+          plan_week_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          day_number?: number
+          id?: string
+          intended_focus?: string | null
+          optional_flag?: boolean | null
+          plan_week_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_days_plan_week_id_fkey"
+            columns: ["plan_week_id"]
+            isOneToOne: false
+            referencedRelation: "plan_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_exercises: {
+        Row: {
+          alternative_exercise_id: string | null
+          created_at: string | null
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          notes: string | null
+          plan_workout_id: string
+          progression_type: string | null
+          rest_seconds: number | null
+          sort_order: number | null
+          target_reps_max: number | null
+          target_reps_min: number | null
+          target_rir: number | null
+          target_rpe: number | null
+          target_sets: number | null
+          tempo: string | null
+          user_id: string
+        }
+        Insert: {
+          alternative_exercise_id?: string | null
+          created_at?: string | null
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          notes?: string | null
+          plan_workout_id: string
+          progression_type?: string | null
+          rest_seconds?: number | null
+          sort_order?: number | null
+          target_reps_max?: number | null
+          target_reps_min?: number | null
+          target_rir?: number | null
+          target_rpe?: number | null
+          target_sets?: number | null
+          tempo?: string | null
+          user_id: string
+        }
+        Update: {
+          alternative_exercise_id?: string | null
+          created_at?: string | null
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          notes?: string | null
+          plan_workout_id?: string
+          progression_type?: string | null
+          rest_seconds?: number | null
+          sort_order?: number | null
+          target_reps_max?: number | null
+          target_reps_min?: number | null
+          target_rir?: number | null
+          target_rpe?: number | null
+          target_sets?: number | null
+          tempo?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_exercises_alternative_exercise_id_fkey"
+            columns: ["alternative_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_exercises_plan_workout_id_fkey"
+            columns: ["plan_workout_id"]
+            isOneToOne: false
+            referencedRelation: "plan_workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_weeks: {
+        Row: {
+          created_at: string | null
+          deload_flag: boolean | null
+          focus_note: string | null
+          id: string
+          training_plan_id: string
+          user_id: string
+          week_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          deload_flag?: boolean | null
+          focus_note?: string | null
+          id?: string
+          training_plan_id: string
+          user_id: string
+          week_number: number
+        }
+        Update: {
+          created_at?: string | null
+          deload_flag?: boolean | null
+          focus_note?: string | null
+          id?: string
+          training_plan_id?: string
+          user_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_weeks_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_workouts: {
+        Row: {
+          created_at: string | null
+          estimated_duration: number | null
+          id: string
+          notes: string | null
+          plan_day_id: string
+          sort_order: number | null
+          user_id: string
+          workout_name: string
+          workout_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          notes?: string | null
+          plan_day_id: string
+          sort_order?: number | null
+          user_id: string
+          workout_name: string
+          workout_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          notes?: string | null
+          plan_day_id?: string
+          sort_order?: number | null
+          user_id?: string
+          workout_name?: string
+          workout_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_workouts_plan_day_id_fkey"
+            columns: ["plan_day_id"]
+            isOneToOne: false
+            referencedRelation: "plan_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -1365,6 +1567,113 @@ export type Database = {
           purchase_price?: number | null
           stock_quantity?: number | null
           updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      progression_log: {
+        Row: {
+          created_at: string | null
+          exercise_id: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          plan_exercise_id: string | null
+          rule_id: string | null
+          training_session_id: string | null
+          user_id: string
+          was_manual_override: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          plan_exercise_id?: string | null
+          rule_id?: string | null
+          training_session_id?: string | null
+          user_id: string
+          was_manual_override?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          plan_exercise_id?: string | null
+          rule_id?: string | null
+          training_session_id?: string | null
+          user_id?: string
+          was_manual_override?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_log_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_log_plan_exercise_id_fkey"
+            columns: ["plan_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "plan_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "progression_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_log_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progression_rules: {
+        Row: {
+          action_type: string
+          action_value: number | null
+          condition_threshold: number | null
+          condition_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          action_value?: number | null
+          condition_threshold?: number | null
+          condition_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          action_value?: number | null
+          condition_threshold?: number | null
+          condition_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
           user_id?: string | null
         }
         Relationships: []
@@ -1604,6 +1913,68 @@ export type Database = {
           },
         ]
       }
+      training_plans: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          days_per_week: number | null
+          equipment: string[] | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          period_end: string | null
+          period_start: string
+          phase: string | null
+          primary_goal: string
+          secondary_goal: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          days_per_week?: number | null
+          equipment?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          period_end?: string | null
+          period_start: string
+          phase?: string | null
+          primary_goal: string
+          secondary_goal?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          days_per_week?: number | null
+          equipment?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string
+          phase?: string | null
+          primary_goal?: string
+          secondary_goal?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_session_tags: {
         Row: {
           created_at: string
@@ -1644,63 +2015,81 @@ export type Database = {
         Row: {
           canceled_at: string | null
           client_id: string
+          completion_quality: string | null
           created_at: string
           date: string
           duration: number
           final_price: number | null
           id: string
+          is_generated: boolean | null
           is_late_cancellation: boolean | null
           notes: string | null
           parent_session_id: string | null
           participant_count: number | null
           payment_method: string | null
           payment_status: string | null
+          plan_day_id: string | null
+          plan_week_id: string | null
+          plan_workout_id: string | null
           recurrence_end_date: string | null
           recurrence_type: string | null
           status: string
           subjective_rating: number | null
+          training_plan_id: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           canceled_at?: string | null
           client_id: string
+          completion_quality?: string | null
           created_at?: string
           date: string
           duration?: number
           final_price?: number | null
           id?: string
+          is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
           parent_session_id?: string | null
           participant_count?: number | null
           payment_method?: string | null
           payment_status?: string | null
+          plan_day_id?: string | null
+          plan_week_id?: string | null
+          plan_workout_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
           subjective_rating?: number | null
+          training_plan_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           canceled_at?: string | null
           client_id?: string
+          completion_quality?: string | null
           created_at?: string
           date?: string
           duration?: number
           final_price?: number | null
           id?: string
+          is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
           parent_session_id?: string | null
           participant_count?: number | null
           payment_method?: string | null
           payment_status?: string | null
+          plan_day_id?: string | null
+          plan_week_id?: string | null
+          plan_workout_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
           subjective_rating?: number | null
+          training_plan_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1717,6 +2106,34 @@ export type Database = {
             columns: ["parent_session_id"]
             isOneToOne: false
             referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_plan_day_id_fkey"
+            columns: ["plan_day_id"]
+            isOneToOne: false
+            referencedRelation: "plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_plan_week_id_fkey"
+            columns: ["plan_week_id"]
+            isOneToOne: false
+            referencedRelation: "plan_weeks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_plan_workout_id_fkey"
+            columns: ["plan_workout_id"]
+            isOneToOne: false
+            referencedRelation: "plan_workouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
             referencedColumns: ["id"]
           },
         ]
