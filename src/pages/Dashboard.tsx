@@ -33,6 +33,7 @@ import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard
 import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
 import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
 import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
+import { CapacityTrendChart } from '@/components/dashboard/CapacityTrendChart';
 import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
@@ -52,6 +53,7 @@ const DEFAULT_LAYOUT: NewDashboardLayout = {
   showFinancialChart: true,
   showProductSales: true,
   showTrainingActivity: true,
+  showCapacityTrend: true,
   showTopClients: true,
   showPerformanceMetrics: true,
   showFeedbackTrends: true,
@@ -461,6 +463,11 @@ function DashboardContent() {
           {/* Feedback Trends Card */}
           {layout.showFeedbackTrends && (
             <FeedbackTrendsCard />
+          )}
+
+          {/* Capacity Trend Chart */}
+          {layout.showCapacityTrend && (
+            <CapacityTrendChart />
           )}
         </div>
       )}
