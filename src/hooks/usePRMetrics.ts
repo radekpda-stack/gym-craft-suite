@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { subDays, subMonths, startOfWeek, startOfMonth, format, eachWeekOfInterval, eachMonthOfInterval, eachDayOfInterval } from 'date-fns';
+import { subDays, subMonths, startOfWeek, startOfMonth, format, eachWeekOfInterval, eachMonthOfInterval, differenceInWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export type PRPeriod = '30days' | '3months' | '6months' | '12months' | 'custom';
@@ -10,12 +10,14 @@ interface PREvent {
   id: string;
   exerciseId: string | null;
   exerciseName: string;
-  value: number; // weight for 1rm/maxWeight, reps for maxReps
+  value: number;
   reps: number;
   weight: number;
   estimated1RM: number;
   date: string;
+  clientId: string;
   clientName: string;
+  clientGender: string | null;
   prType: PRType;
 }
 
@@ -23,6 +25,8 @@ interface PRCountPoint {
   label: string;
   date: string;
   prCount: number;
+  maleCount: number;
+  femaleCount: number;
 }
 
 interface PRBestPoint {
@@ -39,6 +43,19 @@ interface ExerciseOption {
   prCount: number;
 }
 
+interface GenderStats {
+  male: { count: number; avgValue: number; topPR: PREvent | null };
+  female: { count: number; avgValue: number; topPR: PREvent | null };
+}
+
+interface ClientPRStats {
+  clientId: string;
+  clientName: string;
+  gender: string | null;
+  prCount: number;
+  topPR: PREvent | null;
+}
+
 export interface PRMetricsData {
   prCountTimeline: PRCountPoint[];
   prBestTimeline: PRBestPoint[];
@@ -47,6 +64,9 @@ export interface PRMetricsData {
   exerciseOptions: ExerciseOption[];
   totalPRCount: number;
   biggestPR: PREvent | null;
+  genderStats: GenderStats;
+  clientLeaderboard: ClientPRStats[];
+  prVelocity: number; // PRs per week
 }
 
 // Epley formula for 1RM estimation
@@ -87,21 +107,18 @@ function getTimeBuckets(start: Date, end: Date, period: PRPeriod): { date: Date;
   const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   
   if (daysDiff <= 30) {
-    // Weekly buckets for 30 days
     const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
     return weeks.map(w => ({
       date: w,
       label: format(w, 'd. MMM', { locale: cs })
     }));
   } else if (daysDiff <= 90) {
-    // Weekly buckets for 3 months
     const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
     return weeks.map(w => ({
       date: w,
       label: format(w, 'd. MMM', { locale: cs })
     }));
   } else {
-    // Monthly buckets for longer periods
     const months = eachMonthOfInterval({ start, end });
     return months.map(m => ({
       date: m,
@@ -121,7 +138,7 @@ function assignToBucket(date: Date, buckets: { date: Date; label: string }[]): s
 
 export function usePRMetrics(
   period: PRPeriod,
-  exerciseFilter: string | null = null, // null = all exercises
+  exerciseFilter: string | null = null,
   prType: PRType = '1rm',
   customStart?: Date,
   customEnd?: Date
@@ -131,11 +148,11 @@ export function usePRMetrics(
     queryFn: async (): Promise<PRMetricsData> => {
       const { start, end } = getDateRange(period, customStart, customEnd);
       const buckets = getTimeBuckets(start, end, period);
+      const weekCount = Math.max(1, differenceInWeeks(end, start));
 
-      // Fetch exercise entries with PR flag
       let query = supabase
         .from('exercise_entries')
-        .select('id, exercise_name, exercise_id, weight_kg, reps, sets, is_pr, date, client_id, clients(name)')
+        .select('id, exercise_name, exercise_id, weight_kg, reps, sets, is_pr, date, client_id, clients(name, gender)')
         .gte('date', start.toISOString().split('T')[0])
         .lte('date', end.toISOString().split('T')[0])
         .order('date', { ascending: true });
@@ -146,10 +163,10 @@ export function usePRMetrics(
 
       const { data: entries } = await query;
 
-      // Track best values per exercise for PR detection
       const bestByExercise = new Map<string, { maxWeight: number; max1RM: number; maxReps: Map<number, number> }>();
       const prEvents: PREvent[] = [];
       const exercisePRCounts = new Map<string, { id: string; name: string; count: number }>();
+      const clientPRMap = new Map<string, ClientPRStats>();
 
       entries?.forEach((e: any) => {
         const exerciseKey = e.exercise_id || e.exercise_name;
@@ -157,6 +174,9 @@ export function usePRMetrics(
         const weight = e.weight_kg || 0;
         const reps = e.reps || 1;
         const estimated1RM = estimate1RM(weight, reps);
+        const clientGender = e.clients?.gender || null;
+        const clientId = e.client_id;
+        const clientName = e.clients?.name || 'Neznámý';
 
         if (!bestByExercise.has(exerciseKey)) {
           bestByExercise.set(exerciseKey, { maxWeight: 0, max1RM: 0, maxReps: new Map() });
@@ -167,7 +187,6 @@ export function usePRMetrics(
         let detectedPRType: PRType = '1rm';
         let prValue = 0;
 
-        // Check for 1RM PR
         if (estimated1RM > best.max1RM && estimated1RM > 0) {
           best.max1RM = estimated1RM;
           isPR = true;
@@ -175,7 +194,6 @@ export function usePRMetrics(
           prValue = estimated1RM;
         }
 
-        // Check for max weight PR
         if (weight > best.maxWeight && weight > 0) {
           best.maxWeight = weight;
           if (!isPR || weight > prValue) {
@@ -185,7 +203,6 @@ export function usePRMetrics(
           }
         }
 
-        // Use is_pr flag from DB as fallback
         if (e.is_pr && !isPR && weight > 0) {
           isPR = true;
           detectedPRType = '1rm';
@@ -193,7 +210,7 @@ export function usePRMetrics(
         }
 
         if (isPR && prValue > 0) {
-          prEvents.push({
+          const prEvent: PREvent = {
             id: e.id,
             exerciseId: e.exercise_id,
             exerciseName,
@@ -202,36 +219,88 @@ export function usePRMetrics(
             weight,
             estimated1RM,
             date: e.date,
-            clientName: e.clients?.name || 'Neznámý',
+            clientId,
+            clientName,
+            clientGender,
             prType: detectedPRType,
-          });
+          };
+          prEvents.push(prEvent);
 
-          // Track exercise PR counts
           if (!exercisePRCounts.has(exerciseKey)) {
             exercisePRCounts.set(exerciseKey, { id: e.exercise_id || exerciseKey, name: exerciseName, count: 0 });
           }
           exercisePRCounts.get(exerciseKey)!.count += 1;
+
+          // Track client PR stats
+          if (!clientPRMap.has(clientId)) {
+            clientPRMap.set(clientId, {
+              clientId,
+              clientName,
+              gender: clientGender,
+              prCount: 0,
+              topPR: null,
+            });
+          }
+          const clientStats = clientPRMap.get(clientId)!;
+          clientStats.prCount += 1;
+          if (!clientStats.topPR || estimated1RM > clientStats.topPR.estimated1RM) {
+            clientStats.topPR = prEvent;
+          }
         }
       });
 
-      // Build PR count timeline
-      const prCountByBucket = new Map<string, number>();
-      buckets.forEach(b => prCountByBucket.set(b.label, 0));
+      // Gender stats
+      const malePRs = prEvents.filter(pr => pr.clientGender === 'male');
+      const femalePRs = prEvents.filter(pr => pr.clientGender === 'female');
+      
+      const genderStats: GenderStats = {
+        male: {
+          count: malePRs.length,
+          avgValue: malePRs.length > 0 
+            ? Math.round(malePRs.reduce((sum, pr) => sum + pr.estimated1RM, 0) / malePRs.length)
+            : 0,
+          topPR: malePRs.sort((a, b) => b.estimated1RM - a.estimated1RM)[0] || null,
+        },
+        female: {
+          count: femalePRs.length,
+          avgValue: femalePRs.length > 0 
+            ? Math.round(femalePRs.reduce((sum, pr) => sum + pr.estimated1RM, 0) / femalePRs.length)
+            : 0,
+          topPR: femalePRs.sort((a, b) => b.estimated1RM - a.estimated1RM)[0] || null,
+        },
+      };
+
+      // Client leaderboard
+      const clientLeaderboard = Array.from(clientPRMap.values())
+        .sort((a, b) => b.prCount - a.prCount)
+        .slice(0, 10);
+
+      // PR count timeline with gender breakdown
+      const prCountByBucket = new Map<string, { total: number; male: number; female: number }>();
+      buckets.forEach(b => prCountByBucket.set(b.label, { total: 0, male: 0, female: 0 }));
 
       prEvents.forEach(pr => {
         const bucket = assignToBucket(new Date(pr.date), buckets);
         if (bucket) {
-          prCountByBucket.set(bucket, (prCountByBucket.get(bucket) || 0) + 1);
+          const stats = prCountByBucket.get(bucket)!;
+          stats.total += 1;
+          if (pr.clientGender === 'male') stats.male += 1;
+          else if (pr.clientGender === 'female') stats.female += 1;
         }
       });
 
-      const prCountTimeline: PRCountPoint[] = buckets.map(b => ({
-        label: b.label,
-        date: b.date.toISOString(),
-        prCount: prCountByBucket.get(b.label) || 0,
-      }));
+      const prCountTimeline: PRCountPoint[] = buckets.map(b => {
+        const stats = prCountByBucket.get(b.label)!;
+        return {
+          label: b.label,
+          date: b.date.toISOString(),
+          prCount: stats.total,
+          maleCount: stats.male,
+          femaleCount: stats.female,
+        };
+      });
 
-      // Build PR best timeline (for selected exercise or top PR per bucket)
+      // PR best timeline
       const prBestByBucket = new Map<string, PREvent>();
       
       const filteredPRs = prType === '1rm' 
@@ -260,7 +329,6 @@ export function usePRMetrics(
         };
       }).filter(p => p.value > 0);
 
-      // Top PRs in period (sorted by value)
       const topPRsInPeriod = [...prEvents]
         .sort((a, b) => {
           const aVal = prType === '1rm' ? a.estimated1RM : a.value;
@@ -269,13 +337,12 @@ export function usePRMetrics(
         })
         .slice(0, 10);
 
-      // Exercise options
       const exerciseOptions: ExerciseOption[] = Array.from(exercisePRCounts.values())
         .sort((a, b) => b.count - a.count)
         .map(e => ({ id: e.id, name: e.name, prCount: e.count }));
 
-      // Biggest PR
       const biggestPR = topPRsInPeriod[0] || null;
+      const prVelocity = Math.round((prEvents.length / weekCount) * 10) / 10;
 
       return {
         prCountTimeline,
@@ -285,6 +352,9 @@ export function usePRMetrics(
         exerciseOptions,
         totalPRCount: prEvents.length,
         biggestPR,
+        genderStats,
+        clientLeaderboard,
+        prVelocity,
       };
     },
   });
