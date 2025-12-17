@@ -19,6 +19,7 @@ const feedbackSchema = z.object({
   fun: z.number().int().min(1).max(10),
   pain_area: z.enum(["knee", "back", "shoulder", "hip", "ankle", "wrist", "neck", "other"]).optional(),
   pain_area_other: z.string().max(100).optional(),
+  // DB constraint: training_feedback.comment <= 200
   note: z.string().max(500).optional(),
 });
 
@@ -137,7 +138,8 @@ serve(async (req) => {
       user_id: request.user_id,
       training_date: trainingDate,
       feedback_request_id: request.id,
-      source: "public_link",
+      // DB constraint: training_feedback.source in ('manual','email','link')
+      source: "link",
       is_processed: false,
       // New 7-scale fields
       soreness: scales.soreness,
@@ -149,7 +151,8 @@ serve(async (req) => {
       fun: scales.fun,
       pain_area: pain_area || null,
       pain_area_other: pain_area_other || null,
-      comment: note || null,
+      // DB constraint: training_feedback.comment <= 200
+      comment: note ? note.slice(0, 200) : null,
       is_red_flag: isRedFlag,
       red_flag_reasons: redFlagReasons.length > 0 ? redFlagReasons : null,
       // Set some default values for old fields to maintain compatibility
