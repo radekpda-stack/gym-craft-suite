@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/lib/i18n";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
@@ -24,47 +26,50 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <LanguageProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/feedback/:token" element={<FeedbackPage />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/clients" element={<Clients />} />
-                      <Route path="/clients/:id" element={<ClientDetail />} />
-                      <Route path="/trainings" element={<Trainings />} />
-                      <Route path="/trainings/:id" element={<TrainingDetail />} />
-                      <Route path="/records" element={<Records />} />
-                      {/* Redirects for old routes */}
-                      <Route path="/measurements" element={<Navigate to="/records?tab=measurements" replace />} />
-                      <Route path="/diagnostics" element={<Navigate to="/records?tab=diagnostics" replace />} />
-                      <Route path="/progress" element={<Navigate to="/records?tab=progress" replace />} />
-                      <Route path="/calendar" element={<CalendarPage />} />
-                      <Route path="/canceled" element={<CanceledTrainings />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/ai-assistant" element={<AIAssistant />} />
-                      <Route path="/sales" element={<Sales />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </LanguageProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <TooltipProvider>
+          <OfflineBanner />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/feedback/:token" element={<FeedbackPage />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/clients" element={<Clients />} />
+                        <Route path="/clients/:id" element={<ClientDetail />} />
+                        <Route path="/trainings" element={<Trainings />} />
+                        <Route path="/trainings/:id" element={<TrainingDetail />} />
+                        <Route path="/records" element={<Records />} />
+                        {/* Redirects for old routes */}
+                        <Route path="/measurements" element={<Navigate to="/records?tab=measurements" replace />} />
+                        <Route path="/diagnostics" element={<Navigate to="/records?tab=diagnostics" replace />} />
+                        <Route path="/progress" element={<Navigate to="/records?tab=progress" replace />} />
+                        <Route path="/calendar" element={<CalendarPage />} />
+                        <Route path="/canceled" element={<CanceledTrainings />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/ai-assistant" element={<AIAssistant />} />
+                        <Route path="/sales" element={<Sales />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </LanguageProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
