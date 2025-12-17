@@ -7,12 +7,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export type FinancialPeriod = '30days' | '3months' | '6months' | '12months';
 export type FinancialLayer = 'income' | 'costs' | 'profit' | 'all';
@@ -52,6 +59,7 @@ export function UnifiedFinancialChart({
   onPeriodChange,
 }: UnifiedFinancialChartProps) {
   const [activeLayer, setActiveLayer] = useState<FinancialLayer>('all');
+  const { filters } = useDashboardFilters();
 
   const summary = useMemo(() => {
     if (!data || data.length === 0) return null;
@@ -98,9 +106,30 @@ export function UnifiedFinancialChart({
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-lg sm:text-xl font-bold text-foreground">
-          Finanční přehled
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-bold text-foreground">
+            Finanční přehled
+          </h3>
+          <TooltipProvider>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant={filters.accountingMode === 'cash' ? 'default' : 'secondary'}
+                  className="text-xs cursor-help"
+                >
+                  {filters.accountingMode === 'cash' ? 'CASH' : 'ACCRUAL'}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-xs">
+                  {filters.accountingMode === 'cash' 
+                    ? 'CASH: Počítáno podle data přijetí platby' 
+                    : 'ACCRUAL: Počítáno podle data poskytnutí služby'}
+                </p>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
+        </div>
         
         {/* Period filters */}
         <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
