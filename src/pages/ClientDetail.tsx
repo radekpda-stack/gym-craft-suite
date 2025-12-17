@@ -13,6 +13,7 @@ import {
   Scale,
   Plus,
   Stethoscope,
+  Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,6 +38,7 @@ import { ClientSummaryCard } from '@/components/clients/ClientSummaryCard';
 import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { ClientDiagnosticsTab } from '@/components/diagnostics/ClientDiagnosticsTab';
+import { ClientNutritionTab } from '@/components/nutrition/ClientNutritionTab';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -264,6 +266,13 @@ export default function ClientDetail() {
               <Camera className="w-4 h-4 mr-1" />
               Média
             </TabsTrigger>
+            <TabsTrigger
+              value="nutrition"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 text-sm"
+            >
+              <Utensils className="w-4 h-4 mr-1" />
+              Strava
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -446,6 +455,10 @@ export default function ClientDetail() {
 
         <TabsContent value="media" className="space-y-4">
           <ClientMediaTab clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="nutrition" className="space-y-4">
+          <ClientNutritionTab clientId={client.id} clientName={client.name} />
         </TabsContent>
       </Tabs>
     </div>
