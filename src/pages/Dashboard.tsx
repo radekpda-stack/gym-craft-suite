@@ -373,6 +373,7 @@ function DashboardContent() {
         <PerformanceMetricsSection
           topExercises={performanceData?.topExercises || []}
           personalRecords={performanceData?.personalRecords || []}
+          prTimeline={performanceData?.prTimeline || []}
           strengthData={performanceData?.strengthData || []}
           top3Exercises={performanceData?.top3Exercises || []}
           isLoading={performanceLoading}

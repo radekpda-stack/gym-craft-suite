@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   LineChart,
   Line,
+  ComposedChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +38,14 @@ interface PersonalRecord {
   date: string;
 }
 
+interface PRTimelinePoint {
+  label: string;
+  date: string;
+  prCount: number;
+  maxWeight: number;
+  exercises: string[];
+}
+
 interface StrengthDataPoint {
   label: string;
   [exerciseName: string]: number | string;
@@ -45,6 +54,7 @@ interface StrengthDataPoint {
 interface PerformanceMetricsSectionProps {
   topExercises: TopExercise[];
   personalRecords: PersonalRecord[];
+  prTimeline: PRTimelinePoint[];
   strengthData: StrengthDataPoint[];
   top3Exercises: string[];
   isLoading: boolean;
@@ -68,6 +78,7 @@ const STRENGTH_COLORS = [
 export function PerformanceMetricsSection({
   topExercises,
   personalRecords,
+  prTimeline,
   strengthData,
   top3Exercises,
   isLoading,
@@ -166,53 +177,87 @@ export function PerformanceMetricsSection({
           </Link>
         </div>
 
-        {/* Personal Records Card */}
+        {/* Personal Records Timeline Chart */}
         <div className="glass rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <Medal className="w-5 h-5 text-warning" />
-            <h4 className="font-semibold text-foreground">Osobní rekordy</h4>
+            <h4 className="font-semibold text-foreground">Vývoj PR v čase</h4>
           </div>
           
-          <div className="space-y-3 max-h-48 overflow-y-auto">
-            {personalRecords.slice(0, 5).map((pr, index) => (
-              <div key={pr.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/30">
-                <div
-                  className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center',
-                    index === 0 && 'bg-warning/20',
-                    index === 1 && 'bg-muted',
-                    index === 2 && 'bg-orange-500/20',
-                    index > 2 && 'bg-secondary'
-                  )}
-                >
-                  <Trophy
-                    className={cn(
-                      'w-3.5 h-3.5',
-                      index === 0 && 'text-warning',
-                      index === 1 && 'text-muted-foreground',
-                      index === 2 && 'text-orange-500',
-                      index > 2 && 'text-muted-foreground'
-                    )}
-                  />
+          {prTimeline.length > 0 ? (
+            <>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={prTimeline} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                      }}
+                      formatter={(value: number, name: string) => [
+                        name === 'prCount' ? `${value} PR` : `${value} kg`,
+                        name === 'prCount' ? 'Počet PR' : 'Max váha'
+                      ]}
+                    />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="prCount"
+                      fill="hsl(var(--warning))"
+                      radius={[4, 4, 0, 0]}
+                      name="prCount"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="maxWeight"
+                      stroke="hsl(var(--success))"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: 'hsl(var(--success))' }}
+                      name="maxWeight"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Legend */}
+              <div className="flex justify-center gap-4 mt-2">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-3 h-3 rounded bg-warning" />
+                  <span className="text-muted-foreground">Počet PR</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {pr.exerciseName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{pr.clientName}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-success">{pr.weight}kg</p>
-                  <p className="text-xs text-muted-foreground">{pr.reps}×</p>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-3 h-3 rounded-full bg-success" />
+                  <span className="text-muted-foreground">Max váha</span>
                 </div>
               </div>
-            ))}
-            {personalRecords.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Žádné PR v tomto období
-              </p>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
+              Žádné PR v tomto období
+            </div>
+          )}
 
           <Link
             to="/progress"
