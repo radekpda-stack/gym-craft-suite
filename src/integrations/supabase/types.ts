@@ -1088,6 +1088,245 @@ export type Database = {
           },
         ]
       }
+      nutrition_coffee_entries: {
+        Row: {
+          client_id: string
+          coffee_type: string
+          count: number
+          created_at: string
+          entry_date: string
+          entry_time: string
+          id: string
+          milk: string | null
+          note: string | null
+          session_id: string
+          sugar: boolean | null
+          sugar_spoons: number | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id: string
+          coffee_type: string
+          count?: number
+          created_at?: string
+          entry_date: string
+          entry_time?: string
+          id?: string
+          milk?: string | null
+          note?: string | null
+          session_id: string
+          sugar?: boolean | null
+          sugar_spoons?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          coffee_type?: string
+          count?: number
+          created_at?: string
+          entry_date?: string
+          entry_time?: string
+          id?: string
+          milk?: string | null
+          note?: string | null
+          session_id?: string
+          sugar?: boolean | null
+          sugar_spoons?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_coffee_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_coffee_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_drink_entries: {
+        Row: {
+          amount_container_count: number | null
+          amount_container_type: string | null
+          amount_ml: number | null
+          client_id: string
+          created_at: string
+          drink_name: string | null
+          drink_type: string
+          entry_date: string
+          entry_time: string
+          id: string
+          note: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_container_count?: number | null
+          amount_container_type?: string | null
+          amount_ml?: number | null
+          client_id: string
+          created_at?: string
+          drink_name?: string | null
+          drink_type: string
+          entry_date: string
+          entry_time?: string
+          id?: string
+          note?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_container_count?: number | null
+          amount_container_type?: string | null
+          amount_ml?: number | null
+          client_id?: string
+          created_at?: string
+          drink_name?: string | null
+          drink_type?: string
+          entry_date?: string
+          entry_time?: string
+          id?: string
+          note?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_drink_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_drink_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_food_entries: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string
+          entry_date: string
+          entry_time: string
+          grams: number | null
+          id: string
+          note: string | null
+          photo_url: string | null
+          portion_mode: string
+          portion_size: string | null
+          session_id: string
+          units_count: number | null
+          units_label: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description: string
+          entry_date: string
+          entry_time?: string
+          grams?: number | null
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          portion_mode: string
+          portion_size?: string | null
+          session_id: string
+          units_count?: number | null
+          units_label?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string
+          entry_date?: string
+          entry_time?: string
+          grams?: number | null
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          portion_mode?: string
+          portion_size?: string | null
+          session_id?: string
+          units_count?: number | null
+          units_label?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_food_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_food_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_log_sessions: {
+        Row: {
+          client_id: string
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_log_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
