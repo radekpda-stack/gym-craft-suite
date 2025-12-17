@@ -34,32 +34,32 @@ export interface CreditStatementOptions {
 
 const translations = {
   cs: {
-    title: "Vypis cerpani kreditu",
+    title: "Výpis cerpání kreditu",
     client: "Klient",
-    period: "Obdobi",
-    issueDate: "Datum vystaveni",
+    period: "Období",
+    issueDate: "Datum vystavení",
     summary: "Souhrn",
-    totalItems: "Celkovy pocet polozek",
+    totalItems: "Celkový pocet položek",
     totalDeducted: "Celkem odecteno z kreditu",
-    creditAtStart: "Kredit na zacatku obdobi",
-    creditAtEnd: "Kredit na konci obdobi",
+    creditAtStart: "Kredit na zacátku období",
+    creditAtEnd: "Kredit na konci období",
     date: "Datum",
     type: "Typ",
     description: "Popis",
-    quantity: "Mnozstvi",
+    quantity: "Množství",
     unitPrice: "Jedn. cena",
     total: "Celkem",
-    note: "Poznamka",
-    training: "Trenink",
-    product: "Zbozi",
-    lateCancellation: "Pozdni zruseni",
-    subtotalTraining: "Mezisouc. treninky",
-    subtotalProducts: "Mezisouc. zbozi",
-    subtotalCancellations: "Mezisouc. zruseni",
+    note: "Poznámka",
+    training: "Trénink",
+    product: "Zboží",
+    lateCancellation: "Pozdní zrušení",
+    subtotalTraining: "Mezisouc. tréninky",
+    subtotalProducts: "Mezisouc. zboží",
+    subtotalCancellations: "Mezisouc. zrušení",
     grandTotal: "Celkem odecteno z kreditu",
     currency: "Kc",
-    noItems: "V obdobi nebyly nalezeny zadne polozky.",
-    footer: "Tento vypis slouzi pro kontrolu cerpani kreditu.",
+    noItems: "V období nebyly nalezeny žádné položky.",
+    footer: "Tento výpis slouží pro kontrolu cerpání kreditu.",
     page: "Strana",
     of: "z",
   },
@@ -95,18 +95,18 @@ const translations = {
   },
 };
 
-// App brand colors (HSL converted to RGB)
+// App brand colors - Orange primary (HSL 24 100% 50% converted to RGB)
 const COLORS = {
-  primary: [99, 102, 241] as [number, number, number], // Indigo-500 #6366f1
-  primaryDark: [79, 70, 229] as [number, number, number], // Indigo-600 #4f46e5
-  text: [15, 23, 42] as [number, number, number], // Slate-900
-  textMuted: [100, 116, 139] as [number, number, number], // Slate-500
-  textLight: [148, 163, 184] as [number, number, number], // Slate-400
-  background: [241, 245, 249] as [number, number, number], // Slate-100
+  primary: [255, 115, 0] as [number, number, number], // Orange primary hsl(24, 100%, 50%)
+  primaryDark: [230, 100, 0] as [number, number, number], // Darker orange
+  primaryLight: [255, 145, 51] as [number, number, number], // Lighter orange
+  text: [15, 23, 42] as [number, number, number], // Dark text
+  textMuted: [100, 116, 139] as [number, number, number], // Muted text
+  textLight: [148, 163, 184] as [number, number, number], // Light text
+  background: [250, 245, 240] as [number, number, number], // Warm light background
+  backgroundAlt: [255, 248, 240] as [number, number, number], // Warm alternate
   white: [255, 255, 255] as [number, number, number],
-  success: [34, 197, 94] as [number, number, number], // Green-500
-  warning: [245, 158, 11] as [number, number, number], // Amber-500
-  destructive: [239, 68, 68] as [number, number, number], // Red-500
+  border: [255, 200, 150] as [number, number, number], // Orange-tinted border
 };
 
 // Font sizes (unified)
@@ -119,16 +119,22 @@ const FONTS = {
   tiny: 8,
 };
 
-// Helper to remove Czech diacritics for PDF compatibility
-function removeDiacritics(text: string): string {
-  const diacriticsMap: Record<string, string> = {
+// Map Czech diacritics to closest ASCII equivalents for PDF compatibility
+// jsPDF default fonts don't support full Unicode, this is a necessary workaround
+function normalizeCzech(text: string): string {
+  const czechMap: Record<string, string> = {
+    // Lowercase
     'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i', 'ň': 'n',
     'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u', 'ů': 'u', 'ý': 'y', 'ž': 'z',
+    // Uppercase
     'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I', 'Ň': 'N',
     'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U', 'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z',
   };
-  return text.replace(/[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g, (char) => diacriticsMap[char] || char);
+  return text.split('').map(char => czechMap[char] || char).join('');
 }
+
+// Alias for backward compatibility
+const removeDiacritics = normalizeCzech;
 
 export function generateCreditStatementPdf(
   data: CreditStatementData,
@@ -333,7 +339,7 @@ export function generateCreditStatementPdf(
         cellPadding: 3,
       },
       alternateRowStyles: {
-        fillColor: [248, 250, 252], // Slate-50
+        fillColor: [255, 250, 245], // Warm orange-tinted background
       },
       columnStyles: {
         0: { cellWidth: 22 },
@@ -347,7 +353,7 @@ export function generateCreditStatementPdf(
       margin: { left: margin, right: margin },
       styles: {
         overflow: 'linebreak',
-        lineColor: [226, 232, 240], // Slate-200
+        lineColor: [255, 200, 150], // Orange-tinted border
         lineWidth: 0.1,
       },
     });
