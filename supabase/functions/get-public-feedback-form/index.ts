@@ -6,12 +6,64 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory rate limiter (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; firstRequest: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 30; // Max requests per window per IP
+
+function getClientIP(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+         req.headers.get("cf-connecting-ip") || 
+         "unknown";
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  
+  if (!entry) {
+    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    return false;
+  }
+  
+  // Reset window if expired
+  if (now - entry.firstRequest > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    return false;
+  }
+  
+  // Increment and check
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
+    console.warn(`Rate limit exceeded for IP: ${ip}, count: ${entry.count}`);
+    return true;
+  }
+  
+  return false;
+}
+
+// Validate UUID format
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Rate limiting check
+    const clientIP = getClientIP(req);
+    if (isRateLimited(clientIP)) {
+      console.warn(`Rate limit hit for IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: "Příliš mnoho požadavků. Zkuste to později.", code: "RATE_LIMITED" }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -33,6 +85,15 @@ serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ error: "Token je povinný", code: "MISSING_TOKEN" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate token format
+    if (!isValidUUID(token)) {
+      console.warn(`Invalid token format from IP ${clientIP}: ${token.substring(0, 20)}...`);
+      return new Response(
+        JSON.stringify({ error: "Neplatný formát tokenu", code: "INVALID_TOKEN" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
