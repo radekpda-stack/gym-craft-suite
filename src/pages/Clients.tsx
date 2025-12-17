@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -326,7 +327,7 @@ export default function Clients() {
                   "text-xl font-bold",
                   getCreditColor(creditClient?.credit_balance || 0)
                 )}>
-                  {(creditClient?.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                  {formatCurrency(creditClient?.credit_balance || 0)}
                 </span>
               </div>
             </div>
@@ -393,7 +394,7 @@ export default function Clients() {
                         "font-medium",
                         t.amount > 0 ? "text-success" : "text-destructive"
                       )}>
-                        {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString('cs-CZ')} Kč
+                        {t.amount > 0 ? '+' : ''}{formatCurrency(t.amount, false)}
                       </span>
                     </div>
                   ))}
@@ -656,7 +657,7 @@ export default function Clients() {
                             "font-medium",
                             actualBalance <= 0 ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
                           )}>
-                            {displayBalance.toLocaleString('cs-CZ')} Kč
+                            {formatCurrency(displayBalance)}
                           </span>
                           {isShared && (
                             <Badge variant="outline" className="text-xs px-1 py-0 h-4 gap-0.5">

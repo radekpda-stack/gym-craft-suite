@@ -15,6 +15,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { featureTracker } from '@/hooks/useFeatureTracking';
+import { formatCurrency } from '@/lib/formatters';
 
 interface QuickCreditModalProps {
   collapsed?: boolean;
@@ -133,7 +134,7 @@ export function QuickCreditModal({
       const budgetType = sharedBudgetInfo?.isShared ? 'Sdílený kredit' : 'Kredit';
       toast({
         title: 'Transakce provedena',
-        description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${Math.abs(finalAmount).toLocaleString('cs-CZ')} Kč (${budgetType.toLowerCase()})`,
+        description: `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${formatCurrency(Math.abs(finalAmount))} (${budgetType.toLowerCase()})`,
       });
 
       featureTracker.track('quick_credit', 'finance', { operationType, isShared: sharedBudgetInfo?.isShared });
@@ -286,14 +287,14 @@ export function QuickCreditModal({
                   effectiveCreditBalance < 0 ? "text-destructive" : 
                   effectiveCreditBalance < 500 ? "text-warning" : "text-success"
                 )}>
-                  {effectiveCreditBalance.toLocaleString('cs-CZ')} Kč
+                  {formatCurrency(effectiveCreditBalance)}
                 </span>
               </div>
               
               {/* Personal debt warning */}
               {personalDebt > 0 && operationType === 'add' && (
                 <div className="text-xs text-warning p-2 rounded bg-warning/10">
-                  Osobní dluh {personalDebt.toLocaleString('cs-CZ')} Kč bude automaticky vyrovnán
+                  Osobní dluh {formatCurrency(personalDebt)} bude automaticky vyrovnán
                 </div>
               )}
             </div>
@@ -394,7 +395,7 @@ export function QuickCreditModal({
                 "text-2xl font-bold",
                 calculatedNewBalance < 0 ? "text-destructive" : operationType === 'add' ? "text-success" : "text-foreground"
               )}>
-                {calculatedNewBalance.toLocaleString('cs-CZ')} Kč
+                {formatCurrency(calculatedNewBalance)}
               </p>
             </div>
           )}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle } from 'lucide-react';
+import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,8 @@ import { useProducts } from '@/hooks/useProducts';
 import { useTrainingPrices, calculateRemainingTrainings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
+import { formatCurrency } from '@/lib/formatters';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface CreditManagementProps {
   clientId: string;
@@ -175,11 +177,11 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             "font-bold text-2xl",
             isExhausted ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
           )}>
-            {displayBalance.toLocaleString('cs-CZ')} Kč
+            {formatCurrency(displayBalance)}
           </p>
           {isExhausted && actualBalance < 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-              (skutečný stav: {actualBalance.toLocaleString('cs-CZ')} Kč)
+              (skutečný stav: {formatCurrency(actualBalance)})
             </p>
           )}
         </div>
@@ -192,7 +194,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             ~{Math.max(0, remainingTrainings)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            při ceně {trainingPrices["1"]} Kč/trénink
+            při ceně {formatCurrency(trainingPrices["1"])}/trénink
           </p>
         </div>
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
@@ -201,9 +203,9 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             <span className="text-sm">Ceny tréninků</span>
           </div>
           <div className="text-sm text-foreground space-y-1">
-            <p>1 osoba: {trainingPrices["1"]} Kč</p>
-            <p>2 osoby: {trainingPrices["2"]} Kč</p>
-            <p>3+ osoby: {trainingPrices["3"]} Kč</p>
+            <p>1 osoba: {formatCurrency(trainingPrices["1"])}</p>
+            <p>2 osoby: {formatCurrency(trainingPrices["2"])}</p>
+            <p>3+ osoby: {formatCurrency(trainingPrices["3"])}</p>
           </div>
         </div>
       </div>
@@ -303,7 +305,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                 <div className="p-4 rounded-xl bg-secondary/50">
                   <p className="text-sm text-muted-foreground">Celkem k odečtení:</p>
                   <p className="text-xl font-bold text-foreground">
-                    {(selectedProductData.price * productQuantity).toLocaleString('cs-CZ')} Kč
+                    {formatCurrency(selectedProductData.price * productQuantity)}
                   </p>
                 </div>
               )}
@@ -454,7 +456,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                     "font-bold text-lg",
                     transaction.amount > 0 ? "text-success" : "text-destructive"
                   )}>
-                    {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString('cs-CZ')} Kč
+                    {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount, false)}
                   </p>
                   <Button
                     variant="ghost"
@@ -469,9 +471,12 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-8">
-            Zatím žádné transakce
-          </p>
+          <EmptyState
+            icon={History}
+            title="Zatím žádné transakce"
+            description="Historie transakcí se zobrazí po přidání platby nebo odečtu kreditu"
+            size="sm"
+          />
         )}
       </div>
     </div>
