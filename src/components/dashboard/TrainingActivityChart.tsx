@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import {
   AreaChart,
   Area,
@@ -11,7 +11,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ChartSkeleton } from '@/components/ui/chart-skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Dumbbell, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
@@ -118,12 +119,7 @@ export function TrainingActivityChart({
   }, [data]);
 
   if (isLoading) {
-    return (
-      <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-      </div>
-    );
+    return <ChartSkeleton headerWidth="w-48" />;
   }
 
   return (
@@ -278,9 +274,12 @@ export function TrainingActivityChart({
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="h-48 flex items-center justify-center text-muted-foreground">
-          Žádná data k zobrazení
-        </div>
+        <EmptyState
+          icon={Dumbbell}
+          title="Žádná data"
+          description="V tomto období nejsou žádné tréninky"
+          size="sm"
+        />
       )}
 
       {/* Summary */}

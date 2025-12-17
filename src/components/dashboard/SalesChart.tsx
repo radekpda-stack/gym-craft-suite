@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Loader2, ShoppingBag } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ChartSkeleton } from '@/components/ui/chart-skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   AreaChart,
   Area,
@@ -16,6 +18,7 @@ import {
 } from 'recharts';
 import { useSalesStats, useSalesTrend, SalesPeriod } from '@/hooks/useSalesStats';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 const PAYMENT_COLORS = {
   cash: 'hsl(var(--success))',
@@ -36,11 +39,14 @@ export function SalesChart() {
 
   const isLoading = statsLoading || trendLoading;
 
-  const pieData = stats ? [
-    { name: PAYMENT_LABELS.cash, value: stats.byPaymentMethod.cash, color: PAYMENT_COLORS.cash },
-    { name: PAYMENT_LABELS.credit, value: stats.byPaymentMethod.credit, color: PAYMENT_COLORS.credit },
-    { name: PAYMENT_LABELS.card, value: stats.byPaymentMethod.card, color: PAYMENT_COLORS.card },
-  ].filter(item => item.value > 0) : [];
+  const pieData = useMemo(() => {
+    if (!stats) return [];
+    return [
+      { name: PAYMENT_LABELS.cash, value: stats.byPaymentMethod.cash, color: PAYMENT_COLORS.cash },
+      { name: PAYMENT_LABELS.credit, value: stats.byPaymentMethod.credit, color: PAYMENT_COLORS.credit },
+      { name: PAYMENT_LABELS.card, value: stats.byPaymentMethod.card, color: PAYMENT_COLORS.card },
+    ].filter(item => item.value > 0);
+  }, [stats]);
 
   return (
     <div className="glass rounded-2xl p-4 md:p-6 space-y-4">
@@ -54,7 +60,7 @@ export function SalesChart() {
               Prodeje produktů
             </h3>
             <p className="text-sm text-muted-foreground">
-              Obrat: {(stats?.totalRevenue || 0).toLocaleString('cs-CZ')} Kč ({stats?.totalSales || 0} prodejů)
+              Obrat: {formatCurrency(stats?.totalRevenue || 0)} ({stats?.totalSales || 0} prodejů)
             </p>
           </div>
         </div>
@@ -74,9 +80,7 @@ export function SalesChart() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <ChartSkeleton showHeader={false} showSummary={false} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Trend Chart */}
@@ -101,7 +105,7 @@ export function SalesChart() {
                     stroke="hsl(var(--muted-foreground))"
                     fontSize={10}
                     width={50}
-                    tickFormatter={(value) => `${value.toLocaleString('cs-CZ')}`}
+                    tickFormatter={(value) => formatCurrency(value)}
                   />
                   <Tooltip
                     contentStyle={{
@@ -110,7 +114,7 @@ export function SalesChart() {
                       borderRadius: '12px',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Tržby']}
+                    formatter={(value: number) => [formatCurrency(value), 'Tržby']}
                     labelFormatter={(label) => `Období: ${label}`}
                   />
                   <Area
@@ -154,7 +158,7 @@ export function SalesChart() {
                       borderRadius: '12px',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`]}
+                    formatter={(value: number) => [formatCurrency(value)]}
                   />
                   <Legend
                     verticalAlign="bottom"
@@ -181,21 +185,21 @@ export function SalesChart() {
           <div className="text-center p-2 md:p-3 rounded-xl bg-success/10">
             <p className="text-xs text-muted-foreground">Hotově</p>
             <p className="text-sm md:text-lg font-bold text-success">
-              {stats.byPaymentMethod.cash.toLocaleString('cs-CZ')} Kč
+              {formatCurrency(stats.byPaymentMethod.cash)}
             </p>
             <p className="text-xs text-muted-foreground">{stats.countByPaymentMethod.cash}×</p>
           </div>
           <div className="text-center p-2 md:p-3 rounded-xl bg-primary/10">
             <p className="text-xs text-muted-foreground">Z kreditu</p>
             <p className="text-sm md:text-lg font-bold text-primary">
-              {stats.byPaymentMethod.credit.toLocaleString('cs-CZ')} Kč
+              {formatCurrency(stats.byPaymentMethod.credit)}
             </p>
             <p className="text-xs text-muted-foreground">{stats.countByPaymentMethod.credit}×</p>
           </div>
           <div className="text-center p-2 md:p-3 rounded-xl bg-warning/10">
             <p className="text-xs text-muted-foreground">Kartou</p>
             <p className="text-sm md:text-lg font-bold text-warning">
-              {stats.byPaymentMethod.card.toLocaleString('cs-CZ')} Kč
+              {formatCurrency(stats.byPaymentMethod.card)}
             </p>
             <p className="text-xs text-muted-foreground">{stats.countByPaymentMethod.card}×</p>
           </div>

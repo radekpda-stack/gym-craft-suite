@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Skeleton } from '@/components/ui/skeleton';
+import { KPIGridSkeleton } from '@/components/ui/chart-skeleton';
 
 import { KPICard } from '@/components/dashboard/KPICard';
 import { KPIDetailModal } from '@/components/dashboard/KPIDetailModal';
@@ -165,64 +165,60 @@ function DashboardContent() {
 
       {/* KPI Cards */}
       {layout.showKPICards && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-          {kpisLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-2xl" />
-            ))
-          ) : (
-            <>
-              <KPICard
-                title="Příjem"
-                value={`${(kpis?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
-                icon={<Wallet className="w-4 h-4" />}
-                trend={kpis?.incomeTrend}
-                trendLabel="vs minulý měsíc"
-                onClick={() => setActiveModal('income')}
-                variant="success"
-              />
-              <KPICard
-                title="Čistý zisk"
-                value={`${(kpis?.netProfitThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
-                icon={<TrendingUp className="w-4 h-4" />}
-                trend={kpis?.profitTrend}
-                onClick={() => setActiveModal('profit')}
-                variant="success"
-              />
-              <KPICard
-                title="Tréninky"
-                value={kpis?.trainingsThisMonth || 0}
-                subtitle="tento měsíc"
-                icon={<Dumbbell className="w-4 h-4" />}
-                trend={kpis?.trainingsTrend}
-                onClick={() => setActiveModal('trainings')}
-              />
-              <KPICard
-                title="Aktivní klienti"
-                value={kpis?.activeClients || 0}
-                subtitle="posledních 30 dní"
-                icon={<Users className="w-4 h-4" />}
-                onClick={() => setActiveModal('clients')}
-              />
-              <KPICard
-                title="Pozdní zrušení"
-                value={kpis?.lateCancellations || 0}
-                subtitle="tento měsíc"
-                icon={<XCircle className="w-4 h-4" />}
-                onClick={() => setActiveModal('cancellations')}
-                variant={kpis?.lateCancellations ? 'destructive' : 'default'}
-              />
-              <KPICard
-                title="Nezaplaceno"
-                value={kpis?.unpaidCount || 0}
-                subtitle={`${(kpis?.unpaidAmount || 0).toLocaleString('cs-CZ')} Kč`}
-                icon={<Clock className="w-4 h-4" />}
-                onClick={() => setActiveModal('unpaid')}
-                variant={kpis?.unpaidCount ? 'warning' : 'default'}
-              />
-            </>
-          )}
-        </div>
+        kpisLoading ? (
+          <KPIGridSkeleton count={6} />
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+            <KPICard
+              title="Příjem"
+              value={formatCurrency(kpis?.incomeThisMonth || 0)}
+              icon={<Wallet className="w-4 h-4" />}
+              trend={kpis?.incomeTrend}
+              trendLabel="vs minulý měsíc"
+              onClick={() => setActiveModal('income')}
+              variant="success"
+            />
+            <KPICard
+              title="Čistý zisk"
+              value={formatCurrency(kpis?.netProfitThisMonth || 0)}
+              icon={<TrendingUp className="w-4 h-4" />}
+              trend={kpis?.profitTrend}
+              onClick={() => setActiveModal('profit')}
+              variant="success"
+            />
+            <KPICard
+              title="Tréninky"
+              value={kpis?.trainingsThisMonth || 0}
+              subtitle="tento měsíc"
+              icon={<Dumbbell className="w-4 h-4" />}
+              trend={kpis?.trainingsTrend}
+              onClick={() => setActiveModal('trainings')}
+            />
+            <KPICard
+              title="Aktivní klienti"
+              value={kpis?.activeClients || 0}
+              subtitle="posledních 30 dní"
+              icon={<Users className="w-4 h-4" />}
+              onClick={() => setActiveModal('clients')}
+            />
+            <KPICard
+              title="Pozdní zrušení"
+              value={kpis?.lateCancellations || 0}
+              subtitle="tento měsíc"
+              icon={<XCircle className="w-4 h-4" />}
+              onClick={() => setActiveModal('cancellations')}
+              variant={kpis?.lateCancellations ? 'destructive' : 'default'}
+            />
+            <KPICard
+              title="Nezaplaceno"
+              value={kpis?.unpaidCount || 0}
+              subtitle={formatCurrency(kpis?.unpaidAmount || 0)}
+              icon={<Clock className="w-4 h-4" />}
+              onClick={() => setActiveModal('unpaid')}
+              variant={kpis?.unpaidCount ? 'warning' : 'default'}
+            />
+          </div>
+        )
       )}
 
       {/* KPI Detail Modals */}
@@ -297,9 +293,9 @@ function DashboardContent() {
         mainLabel="Pozdních zrušení tento měsíc"
         stats={[
           { label: 'Celkem zrušených', value: kpis?.totalCancellations || 0 },
-          { label: '% ze všech', value: `${(kpis?.cancellationRate || 0).toFixed(1)}%` },
+          { label: '% ze všech', value: formatPercent(kpis?.cancellationRate || 0, 1) },
           { label: 'Minulý měsíc', value: kpis?.lateCancellationsLastMonth || 0 },
-          { label: 'Ztráta příjmu', value: `${(kpis?.cancellationLoss || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Ztráta příjmu', value: formatCurrency(kpis?.cancellationLoss || 0) },
         ]}
       />
 
@@ -311,11 +307,11 @@ function DashboardContent() {
         mainValue={kpis?.unpaidCount || 0}
         mainLabel="Neuhrazených tréninků"
         stats={[
-          { label: 'Celková částka', value: `${(kpis?.unpaidAmount || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Celková částka', value: formatCurrency(kpis?.unpaidAmount || 0) },
           { label: 'Počet klientů', value: kpis?.unpaidClientsCount || 0 },
-          { label: '0-7 dní', value: `${kpis?.unpaidByAge?.days0to7.count || 0}× (${(kpis?.unpaidByAge?.days0to7.amount || 0).toLocaleString('cs-CZ')} Kč)` },
-          { label: '8-30 dní', value: `${kpis?.unpaidByAge?.days8to30.count || 0}× (${(kpis?.unpaidByAge?.days8to30.amount || 0).toLocaleString('cs-CZ')} Kč)` },
-          { label: '31+ dní', value: `${kpis?.unpaidByAge?.days31plus.count || 0}× (${(kpis?.unpaidByAge?.days31plus.amount || 0).toLocaleString('cs-CZ')} Kč)` },
+          { label: '0-7 dní', value: `${kpis?.unpaidByAge?.days0to7.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days0to7.amount || 0)})` },
+          { label: '8-30 dní', value: `${kpis?.unpaidByAge?.days8to30.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days8to30.amount || 0)})` },
+          { label: '31+ dní', value: `${kpis?.unpaidByAge?.days31plus.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days31plus.amount || 0)})` },
           { label: 'Nejstarší', value: kpis?.oldestUnpaidDays ? `${kpis.oldestUnpaidDays} dní` : '-' },
         ]}
       />
