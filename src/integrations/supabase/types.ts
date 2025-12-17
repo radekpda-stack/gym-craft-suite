@@ -975,48 +975,208 @@ export type Database = {
           },
         ]
       }
+      exercise_equipment: {
+        Row: {
+          created_at: string
+          equipment: string
+          exercise_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          equipment: string
+          exercise_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          equipment?: string
+          exercise_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_equipment_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_muscles: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          muscle: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          muscle: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          muscle?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscles_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_relations: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          note_cs: string | null
+          note_en: string | null
+          related_exercise_id: string
+          relation_type: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          note_cs?: string | null
+          note_en?: string | null
+          related_exercise_id: string
+          relation_type: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          note_cs?: string | null
+          note_en?: string | null
+          related_exercise_id?: string
+          relation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_relations_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_relations_related_exercise_id_fkey"
+            columns: ["related_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           category: string
           created_at: string
+          default_unit: string
           description: string | null
+          description_cs: string | null
+          description_en: string | null
+          difficulty: string | null
           equipment: string[] | null
           id: string
+          image_url: string | null
+          instructions_cs: string | null
+          instructions_en: string | null
+          is_archived: boolean
+          is_bodyweight: boolean
+          is_time_based: boolean
+          is_unilateral: boolean
+          movement_pattern: string | null
           muscle_groups: string[] | null
           name: string
+          name_cs: string | null
+          name_en: string | null
+          search_name: string | null
           secondary_muscle_groups: string[] | null
+          slug: string | null
+          source: string
           subcategory: string | null
           training_type: string[] | null
           updated_at: string
           user_id: string | null
+          video_url: string | null
         }
         Insert: {
           category: string
           created_at?: string
+          default_unit?: string
           description?: string | null
+          description_cs?: string | null
+          description_en?: string | null
+          difficulty?: string | null
           equipment?: string[] | null
           id?: string
+          image_url?: string | null
+          instructions_cs?: string | null
+          instructions_en?: string | null
+          is_archived?: boolean
+          is_bodyweight?: boolean
+          is_time_based?: boolean
+          is_unilateral?: boolean
+          movement_pattern?: string | null
           muscle_groups?: string[] | null
           name: string
+          name_cs?: string | null
+          name_en?: string | null
+          search_name?: string | null
           secondary_muscle_groups?: string[] | null
+          slug?: string | null
+          source?: string
           subcategory?: string | null
           training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
+          video_url?: string | null
         }
         Update: {
           category?: string
           created_at?: string
+          default_unit?: string
           description?: string | null
+          description_cs?: string | null
+          description_en?: string | null
+          difficulty?: string | null
           equipment?: string[] | null
           id?: string
+          image_url?: string | null
+          instructions_cs?: string | null
+          instructions_en?: string | null
+          is_archived?: boolean
+          is_bodyweight?: boolean
+          is_time_based?: boolean
+          is_unilateral?: boolean
+          movement_pattern?: string | null
           muscle_groups?: string[] | null
           name?: string
+          name_cs?: string | null
+          name_en?: string | null
+          search_name?: string | null
           secondary_muscle_groups?: string[] | null
+          slug?: string | null
+          source?: string
           subcategory?: string | null
           training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -2460,6 +2620,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_search_name: {
+        Args: { name_cs: string; name_en: string }
+        Returns: string
+      }
       get_current_user_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -2468,6 +2632,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalize_text: { Args: { input_text: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
