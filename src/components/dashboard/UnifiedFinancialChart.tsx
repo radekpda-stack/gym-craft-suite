@@ -107,30 +107,9 @@ export function UnifiedFinancialChart({
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg sm:text-xl font-bold text-foreground">
-            Finanční přehled
-          </h3>
-          <TooltipProvider>
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Badge 
-                  variant={filters.accountingMode === 'cash' ? 'default' : 'secondary'}
-                  className="text-xs cursor-help"
-                >
-                  {filters.accountingMode === 'cash' ? 'Hotovostní' : 'Akruální'}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p className="text-xs">
-                  {filters.accountingMode === 'cash' 
-                    ? 'Hotovostní: Počítáno podle data přijetí platby' 
-                    : 'Akruální: Počítáno podle data poskytnutí služby'}
-                </p>
-              </TooltipContent>
-            </UITooltip>
-          </TooltipProvider>
-        </div>
+        <h3 className="text-lg sm:text-xl font-bold text-foreground">
+          Finanční přehled
+        </h3>
         
         {/* Period filters - scrollable on mobile */}
         <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">

@@ -6,9 +6,6 @@ import {
   CalendarDays, 
   X, 
   ChevronDown,
-  Banknote,
-  Receipt,
-  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,15 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { 
   useDashboardFilters, 
   GlobalPeriod, 
-  AccountingMode, 
   PaymentStatusFilter,
   ItemTypeFilter 
 } from '@/contexts/DashboardFiltersContext';
@@ -45,11 +36,6 @@ const PERIOD_OPTIONS: { value: GlobalPeriod; label: string }[] = [
   { value: '6months', label: '6 měsíců' },
   { value: '12months', label: '12 měsíců' },
   { value: 'custom', label: 'Vlastní' },
-];
-
-const ACCOUNTING_OPTIONS: { value: AccountingMode; label: string; description: string }[] = [
-  { value: 'cash', label: 'CASH', description: 'Podle data platby' },
-  { value: 'accrual', label: 'ACCRUAL', description: 'Podle data služby' },
 ];
 
 const PAYMENT_STATUS_OPTIONS: { value: PaymentStatusFilter; label: string }[] = [
@@ -72,7 +58,6 @@ export function DashboardGlobalFilters() {
     filters,
     setGlobalPeriod,
     setCustomDateRange,
-    setAccountingMode,
     setPaymentStatus,
     setItemType,
     resetFilters,
@@ -151,37 +136,8 @@ export function DashboardGlobalFilters() {
           </Popover>
         </div>
 
-        {/* Second row on mobile: Accounting + Filters */}
+        {/* Filters row */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {/* Accounting mode toggle */}
-          <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
-            {ACCOUNTING_OPTIONS.map((opt) => (
-              <Tooltip key={opt.value}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={filters.accountingMode === opt.value ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn(
-                      'rounded-full text-xs px-2 sm:px-3 h-7 sm:h-8 gap-1 sm:gap-1.5',
-                      filters.accountingMode === opt.value && 'bg-primary text-primary-foreground'
-                    )}
-                    onClick={() => setAccountingMode(opt.value)}
-                  >
-                    {opt.value === 'cash' ? (
-                      <Banknote className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                    ) : (
-                      <Receipt className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                    )}
-                    <span className="hidden xs:inline">{opt.label}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{opt.description}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-
           {/* Advanced filters toggle */}
           <Button
             variant={showAdvanced || isFilterActive ? 'default' : 'outline'}
@@ -213,7 +169,7 @@ export function DashboardGlobalFilters() {
           )}
         </div>
 
-        {/* Date range indicator - separate row on mobile */}
+        {/* Date range indicator */}
         <div className="sm:ml-auto text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-0">
           <CalendarDays className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
           {format(filters.dateRange.from, 'd. MMM', { locale: cs })} – {format(filters.dateRange.to, 'd. MMM yyyy', { locale: cs })}
@@ -262,32 +218,6 @@ export function DashboardGlobalFilters() {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Mode explanation */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-help ml-auto">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>
-                  {filters.accountingMode === 'cash' 
-                    ? 'Počítáno podle data platby'
-                    : 'Počítáno podle data služby/výkonu'
-                  }
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p className="font-medium mb-1">
-                {filters.accountingMode === 'cash' ? 'CASH režim' : 'ACCRUAL režim'}
-              </p>
-              <p className="text-xs">
-                {filters.accountingMode === 'cash'
-                  ? 'Příjmy a výdaje se započítávají v okamžiku skutečného příjmu/výdaje peněz. Nezaplacené položky nejsou zahrnuty.'
-                  : 'Příjmy a výdaje se započítávají v okamžiku poskytnutí služby, bez ohledu na datum platby.'
-                }
-              </p>
-            </TooltipContent>
-          </Tooltip>
         </div>
       )}
     </div>
