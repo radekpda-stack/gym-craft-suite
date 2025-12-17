@@ -6,6 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const DEFAULT_CONTAINER_SIZES = {
+  default_glass_ml: 250,
+  default_mug_ml: 300,
+  default_bottle_ml: 500,
+  default_can_ml: 330,
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,18 +46,26 @@ serve(async (req) => {
       });
     }
 
-    // Get entries
-    const [foodRes, drinksRes, coffeeRes] = await Promise.all([
+    // Get entries and settings in parallel
+    const [foodRes, drinksRes, coffeeRes, settingsRes] = await Promise.all([
       supabase.from('nutrition_food_entries').select('*').eq('session_id', session.id).order('entry_date').order('entry_time'),
       supabase.from('nutrition_drink_entries').select('*').eq('session_id', session.id).order('entry_date').order('entry_time'),
       supabase.from('nutrition_coffee_entries').select('*').eq('session_id', session.id).order('entry_date').order('entry_time'),
+      supabase.from('app_settings').select('value').eq('user_id', session.user_id).eq('key', 'nutrition_settings').maybeSingle(),
     ]);
+
+    // Merge user settings with defaults
+    const containerSizes = {
+      ...DEFAULT_CONTAINER_SIZES,
+      ...(settingsRes.data?.value as Record<string, number> || {}),
+    };
 
     return new Response(JSON.stringify({
       session,
       food: foodRes.data || [],
       drinks: drinksRes.data || [],
       coffee: coffeeRes.data || [],
+      containerSizes,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
