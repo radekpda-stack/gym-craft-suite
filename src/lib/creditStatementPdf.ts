@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { cs, enUS } from "date-fns/locale";
+import { loadRobotoFonts, registerRobotoFont } from "./pdfFonts";
 
 export interface CreditStatementItem {
   date: Date;
@@ -34,14 +35,14 @@ export interface CreditStatementOptions {
 
 const translations = {
   cs: {
-    title: "Výpis cerpání kreditu",
+    title: "Výpis čerpání kreditu",
     client: "Klient",
     period: "Období",
     issueDate: "Datum vystavení",
     summary: "Souhrn",
-    totalItems: "Celkový pocet položek",
-    totalDeducted: "Celkem odecteno z kreditu",
-    creditAtStart: "Kredit na zacátku období",
+    totalItems: "Celkový počet položek",
+    totalDeducted: "Celkem odečteno z kreditu",
+    creditAtStart: "Kredit na začátku období",
     creditAtEnd: "Kredit na konci období",
     date: "Datum",
     type: "Typ",
@@ -53,13 +54,13 @@ const translations = {
     training: "Trénink",
     product: "Zboží",
     lateCancellation: "Pozdní zrušení",
-    subtotalTraining: "Mezisouc. tréninky",
-    subtotalProducts: "Mezisouc. zboží",
-    subtotalCancellations: "Mezisouc. zrušení",
-    grandTotal: "Celkem odecteno z kreditu",
-    currency: "Kc",
+    subtotalTraining: "Mezisoučet tréninky",
+    subtotalProducts: "Mezisoučet zboží",
+    subtotalCancellations: "Mezisoučet zrušení",
+    grandTotal: "Celkem odečteno z kreditu",
+    currency: "Kč",
     noItems: "V období nebyly nalezeny žádné položky.",
-    footer: "Tento výpis slouží pro kontrolu cerpání kreditu.",
+    footer: "Tento výpis slouží pro kontrolu čerpání kreditu.",
     page: "Strana",
     of: "z",
   },
@@ -97,16 +98,16 @@ const translations = {
 
 // App brand colors - Orange primary (HSL 24 100% 50% converted to RGB)
 const COLORS = {
-  primary: [255, 115, 0] as [number, number, number], // Orange primary hsl(24, 100%, 50%)
-  primaryDark: [230, 100, 0] as [number, number, number], // Darker orange
-  primaryLight: [255, 145, 51] as [number, number, number], // Lighter orange
-  text: [15, 23, 42] as [number, number, number], // Dark text
-  textMuted: [100, 116, 139] as [number, number, number], // Muted text
-  textLight: [148, 163, 184] as [number, number, number], // Light text
-  background: [250, 245, 240] as [number, number, number], // Warm light background
-  backgroundAlt: [255, 248, 240] as [number, number, number], // Warm alternate
+  primary: [255, 115, 0] as [number, number, number],
+  primaryDark: [230, 100, 0] as [number, number, number],
+  primaryLight: [255, 145, 51] as [number, number, number],
+  text: [15, 23, 42] as [number, number, number],
+  textMuted: [100, 116, 139] as [number, number, number],
+  textLight: [148, 163, 184] as [number, number, number],
+  background: [250, 245, 240] as [number, number, number],
+  backgroundAlt: [255, 248, 240] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  border: [255, 200, 150] as [number, number, number], // Orange-tinted border
+  border: [255, 200, 150] as [number, number, number],
 };
 
 // Font sizes (unified)
@@ -119,36 +120,36 @@ const FONTS = {
   tiny: 8,
 };
 
-// Map Czech diacritics to closest ASCII equivalents for PDF compatibility
-// jsPDF default fonts don't support full Unicode, this is a necessary workaround
-function normalizeCzech(text: string): string {
-  const czechMap: Record<string, string> = {
-    // Lowercase
+// Fallback for filename (remove diacritics for safe filenames)
+function sanitizeFilename(text: string): string {
+  const map: Record<string, string> = {
     'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i', 'ň': 'n',
     'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u', 'ů': 'u', 'ý': 'y', 'ž': 'z',
-    // Uppercase
     'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I', 'Ň': 'N',
     'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U', 'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z',
   };
-  return text.split('').map(char => czechMap[char] || char).join('');
+  return text.split('').map(char => map[char] || char).join('');
 }
 
-// Alias for backward compatibility
-const removeDiacritics = normalizeCzech;
-
-export function generateCreditStatementPdf(
+export async function generateCreditStatementPdf(
   data: CreditStatementData,
   options: CreditStatementOptions
-): jsPDF {
+): Promise<jsPDF> {
   const t = translations[options.language];
   const locale = options.language === "cs" ? cs : enUS;
   const dateFormat = options.language === "cs" ? "d. M. yyyy" : "MMM d, yyyy";
+
+  // Load fonts first
+  await loadRobotoFonts();
 
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
   });
+
+  // Register Roboto font for Czech diacritics support
+  registerRobotoFont(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -180,27 +181,27 @@ export function generateCreditStatementPdf(
   // Title
   doc.setFontSize(FONTS.title);
   doc.setTextColor(...COLORS.primaryDark);
-  doc.setFont("helvetica", "bold");
-  doc.text(removeDiacritics(t.title), margin, yPos);
+  doc.setFont("Roboto", "bold");
+  doc.text(t.title, margin, yPos);
   yPos += 10;
 
   // Company info (if available)
   if (data.companyName) {
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.textMuted);
-    doc.setFont("helvetica", "normal");
-    doc.text(removeDiacritics(data.companyName), margin, yPos);
+    doc.setFont("Roboto", "normal");
+    doc.text(data.companyName, margin, yPos);
     yPos += 5;
     if (data.companyId) {
-      doc.text(`IC: ${data.companyId}`, margin, yPos);
+      doc.text(`IČ: ${data.companyId}`, margin, yPos);
       yPos += 5;
     }
     if (data.companyAddress) {
-      doc.text(removeDiacritics(data.companyAddress), margin, yPos);
+      doc.text(data.companyAddress, margin, yPos);
       yPos += 5;
     }
     if (data.companyContact) {
-      doc.text(removeDiacritics(data.companyContact), margin, yPos);
+      doc.text(data.companyContact, margin, yPos);
       yPos += 5;
     }
     yPos += 3;
@@ -218,10 +219,10 @@ export function generateCreditStatementPdf(
   
   doc.setFontSize(FONTS.heading);
   doc.setTextColor(...COLORS.text);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Roboto", "bold");
   doc.text(`${t.client}:`, margin + 5, yPos + 5);
-  doc.setFont("helvetica", "normal");
-  doc.text(removeDiacritics(data.clientName), margin + 25, yPos + 5);
+  doc.setFont("Roboto", "normal");
+  doc.text(data.clientName, margin + 25, yPos + 5);
 
   if (data.clientEmail || data.clientPhone) {
     doc.setFontSize(FONTS.small);
@@ -238,7 +239,7 @@ export function generateCreditStatementPdf(
   const periodStr = `${format(data.periodStart, dateFormat, { locale })} - ${format(data.periodEnd, dateFormat, { locale })}`;
   doc.text(`${t.period}: ${periodStr}`, pageWidth - margin - 5, yPos + 5, { align: "right" });
   doc.text(
-    `${removeDiacritics(t.issueDate)}: ${format(new Date(), dateFormat, { locale })}`,
+    `${t.issueDate}: ${format(new Date(), dateFormat, { locale })}`,
     pageWidth - margin - 5,
     yPos + 11,
     { align: "right" }
@@ -264,16 +265,16 @@ export function generateCreditStatementPdf(
   
   doc.setFontSize(FONTS.heading);
   doc.setTextColor(...COLORS.white);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Roboto", "bold");
   doc.text(t.summary, margin + 5, yPos + 7);
 
   doc.setFontSize(FONTS.body);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${removeDiacritics(t.totalItems)}: ${data.items.length}`, margin + 5, yPos + 14);
+  doc.setFont("Roboto", "normal");
+  doc.text(`${t.totalItems}: ${data.items.length}`, margin + 5, yPos + 14);
   
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Roboto", "bold");
   doc.text(
-    `${removeDiacritics(t.totalDeducted)}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+    `${t.totalDeducted}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
     pageWidth - margin - 5,
     yPos + 14,
     { align: "right" }
@@ -285,17 +286,17 @@ export function generateCreditStatementPdf(
   if (data.items.length === 0) {
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.textMuted);
-    doc.setFont("helvetica", "italic");
-    doc.text(removeDiacritics(t.noItems), margin, yPos);
+    doc.setFont("Roboto", "normal");
+    doc.text(t.noItems, margin, yPos);
   } else {
     const getTypeName = (type: CreditStatementItem["type"]) => {
       switch (type) {
         case "training":
-          return removeDiacritics(t.training);
+          return t.training;
         case "product":
-          return removeDiacritics(t.product);
+          return t.product;
         case "late_cancellation":
-          return removeDiacritics(t.lateCancellation);
+          return t.lateCancellation;
       }
     };
 
@@ -304,11 +305,11 @@ export function generateCreditStatementPdf(
       .map((item) => [
         format(item.date, dateFormat, { locale }),
         getTypeName(item.type),
-        removeDiacritics(item.description),
+        item.description,
         item.quantity.toString(),
         `${Math.round(item.unitPrice).toLocaleString('cs-CZ')} ${t.currency}`,
         `${Math.round(item.totalPrice).toLocaleString('cs-CZ')} ${t.currency}`,
-        item.note ? removeDiacritics(item.note) : "",
+        item.note || "",
       ]);
 
     autoTable(doc, {
@@ -317,11 +318,11 @@ export function generateCreditStatementPdf(
         [
           t.date,
           t.type,
-          removeDiacritics(t.description),
-          removeDiacritics(t.quantity),
-          removeDiacritics(t.unitPrice),
+          t.description,
+          t.quantity,
+          t.unitPrice,
           t.total,
-          removeDiacritics(t.note),
+          t.note,
         ],
       ],
       body: tableData,
@@ -332,14 +333,16 @@ export function generateCreditStatementPdf(
         fontSize: FONTS.small,
         fontStyle: "bold",
         halign: "left",
+        font: "Roboto",
       },
       bodyStyles: {
         fontSize: FONTS.small,
         textColor: COLORS.text,
         cellPadding: 3,
+        font: "Roboto",
       },
       alternateRowStyles: {
-        fillColor: [255, 250, 245], // Warm orange-tinted background
+        fillColor: [255, 250, 245],
       },
       columnStyles: {
         0: { cellWidth: 22 },
@@ -353,8 +356,9 @@ export function generateCreditStatementPdf(
       margin: { left: margin, right: margin },
       styles: {
         overflow: 'linebreak',
-        lineColor: [255, 200, 150], // Orange-tinted border
+        lineColor: [255, 200, 150],
         lineWidth: 0.1,
+        font: "Roboto",
       },
     });
 
@@ -373,12 +377,12 @@ export function generateCreditStatementPdf(
 
     let subtotalY = finalY + 4;
     doc.setFontSize(FONTS.small);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Roboto", "normal");
 
     if (trainingTotal > 0) {
       doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${removeDiacritics(t.subtotalTraining)}:`,
+        `${t.subtotalTraining}:`,
         pageWidth - margin - 65,
         subtotalY
       );
@@ -395,7 +399,7 @@ export function generateCreditStatementPdf(
     if (productTotal > 0) {
       doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${removeDiacritics(t.subtotalProducts)}:`,
+        `${t.subtotalProducts}:`,
         pageWidth - margin - 65,
         subtotalY
       );
@@ -412,7 +416,7 @@ export function generateCreditStatementPdf(
     if (cancellationTotal > 0) {
       doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${removeDiacritics(t.subtotalCancellations)}:`,
+        `${t.subtotalCancellations}:`,
         pageWidth - margin - 65,
         subtotalY
       );
@@ -433,9 +437,9 @@ export function generateCreditStatementPdf(
     
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.white);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Roboto", "bold");
     doc.text(
-      `${removeDiacritics(t.grandTotal)}:`,
+      `${t.grandTotal}:`,
       pageWidth - margin - 65,
       subtotalY + 2
     );
@@ -450,8 +454,8 @@ export function generateCreditStatementPdf(
     const footerY = Math.min(subtotalY + 20, pageHeight - 25);
     doc.setFontSize(FONTS.tiny);
     doc.setTextColor(...COLORS.textLight);
-    doc.setFont("helvetica", "italic");
-    doc.text(removeDiacritics(t.footer), margin, footerY);
+    doc.setFont("Roboto", "normal");
+    doc.text(t.footer, margin, footerY);
   }
 
   // Add page numbers
@@ -468,12 +472,12 @@ export function generateCreditStatementPdf(
   return doc;
 }
 
-export function downloadCreditStatementPdf(
+export async function downloadCreditStatementPdf(
   data: CreditStatementData,
   options: CreditStatementOptions
-): void {
-  const doc = generateCreditStatementPdf(data, options);
-  const clientNameClean = removeDiacritics(data.clientName).replace(/\s+/g, "-").toLowerCase();
+): Promise<void> {
+  const doc = await generateCreditStatementPdf(data, options);
+  const clientNameClean = sanitizeFilename(data.clientName).replace(/\s+/g, "-").toLowerCase();
   const filename =
     options.language === "cs"
       ? `vypis-kreditu-${clientNameClean}-${format(new Date(), "yyyy-MM-dd")}.pdf`
