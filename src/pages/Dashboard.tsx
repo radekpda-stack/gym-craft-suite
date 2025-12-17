@@ -237,6 +237,8 @@ export default function Dashboard() {
           { label: 'Průměr za měsíc', value: `${(kpis?.avgMonthlyIncome || 0).toLocaleString('cs-CZ')} Kč` },
           { label: 'Tréninky', value: `${(kpis?.trainingIncome || 0).toLocaleString('cs-CZ')} Kč` },
           { label: 'Produkty', value: `${(kpis?.productIncome || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Příjem/trénink', value: `${Math.round(kpis?.incomePerTraining || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: 'Podíl produktů', value: `${(kpis?.productIncomeShare || 0).toFixed(1)}%` },
         ]}
       />
 
@@ -310,7 +312,9 @@ export default function Dashboard() {
         stats={[
           { label: 'Celková částka', value: `${(kpis?.unpaidAmount || 0).toLocaleString('cs-CZ')} Kč` },
           { label: 'Počet klientů', value: kpis?.unpaidClientsCount || 0 },
-          { label: 'Průměr na klienta', value: `${(kpis?.avgUnpaidPerClient || 0).toLocaleString('cs-CZ')} Kč` },
+          { label: '0-7 dní', value: `${kpis?.unpaidByAge?.days0to7.count || 0}× (${(kpis?.unpaidByAge?.days0to7.amount || 0).toLocaleString('cs-CZ')} Kč)` },
+          { label: '8-30 dní', value: `${kpis?.unpaidByAge?.days8to30.count || 0}× (${(kpis?.unpaidByAge?.days8to30.amount || 0).toLocaleString('cs-CZ')} Kč)` },
+          { label: '31+ dní', value: `${kpis?.unpaidByAge?.days31plus.count || 0}× (${(kpis?.unpaidByAge?.days31plus.amount || 0).toLocaleString('cs-CZ')} Kč)` },
           { label: 'Nejstarší', value: kpis?.oldestUnpaidDays ? `${kpis.oldestUnpaidDays} dní` : '-' },
         ]}
       />
