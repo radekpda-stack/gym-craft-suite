@@ -32,7 +32,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Compon
   { value: 'card', label: 'Kartou', icon: CreditCard },
 ];
 
-const getPaymentMethodIcon = (method: PaymentMethod | null) => {
+const getPaymentMethodIcon = (method: string | null) => {
   switch (method) {
     case 'cash':
       return Banknote;
@@ -45,7 +45,7 @@ const getPaymentMethodIcon = (method: PaymentMethod | null) => {
   }
 };
 
-const getPaymentMethodLabel = (method: PaymentMethod | null) => {
+const getPaymentMethodLabel = (method: string | null) => {
   switch (method) {
     case 'cash':
       return 'Hotově';
@@ -68,9 +68,9 @@ export function ClientPurchaseHistory({ clientId }: ClientPurchaseHistoryProps) 
   // Filter only product transactions
   const productTransactions = transactions.filter(t => t.type === 'product');
 
-  const handleEditStart = (transactionId: string, currentMethod: PaymentMethod | null) => {
+  const handleEditStart = (transactionId: string, currentMethod: string | null) => {
     setEditingId(transactionId);
-    setEditPaymentMethod(currentMethod || 'credit');
+    setEditPaymentMethod((currentMethod as PaymentMethod) || 'credit');
   };
 
   const handleEditSave = async (transaction: any) => {

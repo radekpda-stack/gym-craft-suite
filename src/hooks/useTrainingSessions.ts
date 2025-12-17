@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
+import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
 
 export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
 
@@ -559,73 +560,8 @@ export function useCancelTrainingSession() {
   });
 }
 
-// Helpers for credit operations (individual vs shared budget)
-async function getClientGroupId(clientId: string): Promise<string | null> {
-  const { data: membership, error } = await supabase
-    .from('client_budget_members')
-    .select('group_id')
-    .eq('client_id', clientId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return membership?.group_id ?? null;
-}
-
-async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
-  const { data: group, error: getError } = await supabase
-    .from('client_budget_groups')
-    .select('shared_balance')
-    .eq('id', groupId)
-    .single();
-
-  if (getError) throw getError;
-
-  const current = Math.round((group.shared_balance || 0) * 100);
-  const next = (current + Math.round(delta * 100)) / 100;
-
-  const { error: updateError } = await supabase
-    .from('client_budget_groups')
-    .update({ shared_balance: next })
-    .eq('id', groupId);
-
-  if (updateError) throw updateError;
-  return next;
-}
-
-async function updateClientBalance(clientId: string, delta: number): Promise<number> {
-  const { data: client, error: getError } = await supabase
-    .from('clients')
-    .select('credit_balance')
-    .eq('id', clientId)
-    .single();
-
-  if (getError) throw getError;
-
-  const current = Math.round((client.credit_balance || 0) * 100);
-  const next = (current + Math.round(delta * 100)) / 100;
-
-  const { error: updateError } = await supabase
-    .from('clients')
-    .update({ credit_balance: next })
-    .eq('id', clientId);
-
-  if (updateError) throw updateError;
-  return next;
-}
-
-async function applyCreditDelta(clientId: string, delta: number): Promise<{ balance: number; groupId: string | null }> {
-  const groupId = await getClientGroupId(clientId);
-
-  if (groupId) {
-    const balance = await updateSharedBalance(groupId, delta);
-    // Keep personal balance at 0 for shared-budget clients
-    await supabase.from('clients').update({ credit_balance: 0 }).eq('id', clientId);
-    return { balance, groupId };
-  }
-
-  const balance = await updateClientBalance(clientId, delta);
-  return { balance, groupId: null };
-}
+// Removed: local credit helper functions (getClientGroupId, updateSharedBalance, updateClientBalance, applyCreditDelta)
+// Now using centralized functions from useCreditOperations
 
 export interface CompleteTrainingInput {
   id: string;
