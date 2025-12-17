@@ -39,6 +39,7 @@ import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackS
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 import {
   Form,
   FormControl,
@@ -466,7 +467,7 @@ export function TrainingDetailView({
                   />
                   {training.final_price && (
                     <span className="text-sm text-muted-foreground">
-                      {training.final_price} Kč
+                      {formatCurrency(training.final_price)}
                     </span>
                   )}
                 </div>

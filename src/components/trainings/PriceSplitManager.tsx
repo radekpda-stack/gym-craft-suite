@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Client } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 export interface ParticipantShare {
   client_id: string;
@@ -286,16 +287,16 @@ export function PriceSplitManager({
       )}>
         <div className="flex justify-between items-center text-sm">
           <span className="text-muted-foreground">Celková cena:</span>
-          <span className="font-bold">{totalPrice} Kč</span>
+          <span className="font-bold">{formatCurrency(totalPrice)}</span>
         </div>
         <div className="flex justify-between items-center text-sm mt-1">
           <span className="text-muted-foreground">Přiřazeno:</span>
-          <span className="font-medium">{totalAssigned} Kč</span>
+          <span className="font-medium">{formatCurrency(totalAssigned)}</span>
         </div>
         {Math.abs(difference) > 1 && (
           <div className="flex justify-between items-center text-sm mt-1 text-warning">
             <span>Rozdíl:</span>
-            <span className="font-medium">{difference > 0 ? '+' : ''}{difference} Kč</span>
+            <span className="font-medium">{difference > 0 ? '+' : ''}{formatCurrency(difference, false)}</span>
           </div>
         )}
       </div>

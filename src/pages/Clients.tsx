@@ -25,6 +25,7 @@ import { ClientQuickMenu } from '@/components/clients/ClientQuickMenu';
 import { GenderIcon } from '@/components/clients/GenderIcon';
 import { ClientFormValues } from '@/lib/validations/client';
 import { ClientListSkeleton } from '@/components/skeletons';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Dialog,
   DialogContent,
@@ -704,25 +705,22 @@ export default function Clients() {
       )}
 
       {!isLoading && filteredClients.length === 0 && (
-        <div className="glass rounded-xl p-8 text-center">
-          <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground">
-            {clients.length === 0 ? "Zatím žádní klienti" : "Nic nenalezeno"}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {clients.length === 0
-              ? "Přidejte prvního klienta"
-              : "Upravte vyhledávání nebo filtry"}
-          </p>
-          {clients.length === 0 && (
-            <Button 
-              className="mt-4 gap-2"
-              onClick={() => setIsCreateSheetOpen(true)}
-            >
-              <Plus className="w-4 h-4" />
-              Nový klient
-            </Button>
-          )}
+        <div className="glass rounded-xl p-8">
+          <EmptyState
+            icon={Users}
+            title={clients.length === 0 ? "Zatím žádní klienti" : "Nic nenalezeno"}
+            description={clients.length === 0 ? "Přidejte prvního klienta" : "Upravte vyhledávání nebo filtry"}
+            size="lg"
+            action={clients.length === 0 ? (
+              <Button 
+                className="gap-2"
+                onClick={() => setIsCreateSheetOpen(true)}
+              >
+                <Plus className="w-4 h-4" />
+                Nový klient
+              </Button>
+            ) : undefined}
+          />
         </div>
       )}
     </div>
