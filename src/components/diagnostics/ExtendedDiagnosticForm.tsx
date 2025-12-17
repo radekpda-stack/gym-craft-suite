@@ -194,6 +194,47 @@ export function ExtendedDiagnosticForm({
   const [clientSearch, setClientSearch] = useState('');
   const [isNewClient, setIsNewClient] = useState(false);
   const [tempInput, setTempInput] = useState<Record<string, string>>({});
+  const [mediaFiles, setMediaFiles] = useState<Array<{
+    id: string;
+    file: File;
+    preview: string;
+    viewType?: string;
+  }>>([]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, viewType?: string) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaFiles(prev => {
+          // If viewType is specified, replace existing photo of same type
+          if (viewType) {
+            const filtered = prev.filter(m => m.viewType !== viewType);
+            return [...filtered, {
+              id: crypto.randomUUID(),
+              file,
+              preview: reader.result as string,
+              viewType
+            }];
+          }
+          return [...prev, {
+            id: crypto.randomUUID(),
+            file,
+            preview: reader.result as string
+          }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    e.target.value = '';
+  };
+
+  const removeMediaFile = (id: string) => {
+    setMediaFiles(prev => prev.filter(m => m.id !== id));
+  };
 
   const { 
     isAnalyzing, 
@@ -1023,15 +1064,113 @@ export function ExtendedDiagnosticForm({
             </p>
             
             <div className="grid grid-cols-3 gap-3">
-              {['Přední pohled', 'Boční pohled', 'Zadní pohled'].map((label, i) => (
-                <div 
-                  key={i}
-                  className="aspect-[3/4] rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
-                >
-                  <Camera className="w-6 h-6 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground text-center">{label}</span>
+              {[
+                { label: 'Přední pohled', key: 'front' },
+                { label: 'Boční pohled', key: 'side' },
+                { label: 'Zadní pohled', key: 'back' }
+              ].map(({ label, key }) => {
+                const existingPhoto = mediaFiles.find(m => m.viewType === key);
+                const inputId = `photo-${key}`;
+                
+                return (
+                  <div key={key} className="relative">
+                    <input
+                      type="file"
+                      id={inputId}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handlePhotoUpload(e, key)}
+                    />
+                    {existingPhoto ? (
+                      <div className="relative aspect-[3/4] rounded-lg overflow-hidden group">
+                        <img 
+                          src={existingPhoto.preview} 
+                          alt={label}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="secondary"
+                            className="h-8 w-8"
+                            onClick={() => document.getElementById(inputId)?.click()}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="destructive"
+                            className="h-8 w-8"
+                            onClick={() => removeMediaFile(existingPhoto.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <span className="absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded">
+                          {label}
+                        </span>
+                      </div>
+                    ) : (
+                      <label 
+                        htmlFor={inputId}
+                        className="aspect-[3/4] rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                      >
+                        <Camera className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground text-center">{label}</span>
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Additional photos */}
+            {mediaFiles.filter(m => !m.viewType).length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">Další fotografie</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  {mediaFiles.filter(m => !m.viewType).map((media) => (
+                    <div key={media.id} className="relative aspect-square group">
+                      <img
+                        src={media.preview}
+                        alt="Foto"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeMediaFile(media.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <input
+                type="file"
+                id="photo-additional"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handlePhotoUpload(e)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById('photo-additional')?.click()}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Přidat další fotku
+              </Button>
             </div>
 
             <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30">
