@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { SalesPeriod } from '@/components/dashboard/ProductSalesChart';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
 
 interface SalesTrendPoint {
   label: string;
@@ -23,8 +24,11 @@ interface PaymentMethodBreakdown {
 }
 
 export function useProductSalesData(period: SalesPeriod) {
+  const { filters } = useDashboardFilters();
+  const { accountingMode, clientIds, paymentStatus } = filters;
+
   return useQuery({
-    queryKey: ['product-sales-data', period],
+    queryKey: ['product-sales-data', period, accountingMode, clientIds, paymentStatus],
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;
@@ -53,12 +57,26 @@ export function useProductSalesData(period: SalesPeriod) {
       }
 
       // Fetch product transactions
-      const { data: transactions } = await supabase
+      // For both CASH and ACCRUAL, product sales use created_at as the date
+      // (products are typically sold and paid for at the same time)
+      let transactionsQuery = supabase
         .from('credit_transactions')
-        .select('amount, payment_method, created_at, product_id, products(name)')
+        .select('amount, payment_method, created_at, product_id, client_id, products(name)')
         .not('product_id', 'is', null)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
+
+      // Apply client filter
+      if (clientIds.length > 0) {
+        transactionsQuery = transactionsQuery.in('client_id', clientIds);
+      }
+
+      // Apply payment status filter
+      if (paymentStatus === 'paid') {
+        transactionsQuery = transactionsQuery.in('payment_method', ['cash', 'credit', 'card', 'bank', 'paid_cash', 'paid_credit', 'paid_card', 'paid_bank']);
+      }
+
+      const { data: transactions } = await transactionsQuery;
 
       // Group trend data
       const trendMap = new Map<string, { revenue: number; count: number }>();

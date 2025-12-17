@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, subDays, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
+import { format, subDays, subMonths, startOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { TrainingPeriod } from '@/components/dashboard/TrainingActivityChart';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
 
 interface TrainingDataPoint {
   label: string;
@@ -11,8 +12,11 @@ interface TrainingDataPoint {
 }
 
 export function useTrainingActivityData(period: TrainingPeriod) {
+  const { filters } = useDashboardFilters();
+  const { accountingMode, clientIds, paymentStatus } = filters;
+
   return useQuery({
-    queryKey: ['training-activity-data', period],
+    queryKey: ['training-activity-data', period, accountingMode, clientIds, paymentStatus],
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;
@@ -37,12 +41,26 @@ export function useTrainingActivityData(period: TrainingPeriod) {
       }
 
       // Fetch completed training sessions
-      const { data: sessions } = await supabase
+      let sessionsQuery = supabase
         .from('training_sessions')
-        .select('id, date, status')
+        .select('id, date, status, client_id, payment_status')
         .eq('status', 'completed')
         .gte('date', startDate.toISOString())
         .order('date', { ascending: true });
+
+      // Apply client filter
+      if (clientIds.length > 0) {
+        sessionsQuery = sessionsQuery.in('client_id', clientIds);
+      }
+
+      // Apply payment status filter
+      if (paymentStatus === 'paid') {
+        sessionsQuery = sessionsQuery.in('payment_status', ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank']);
+      } else if (paymentStatus === 'unpaid') {
+        sessionsQuery = sessionsQuery.eq('payment_status', 'pending');
+      }
+
+      const { data: sessions } = await sessionsQuery;
 
       // Group data
       const groupedData = new Map<string, number>();
