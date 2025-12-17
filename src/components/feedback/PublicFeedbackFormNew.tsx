@@ -22,56 +22,99 @@ interface PublicFeedbackFormNewProps {
   token: string;
 }
 
+interface FeedbackQuestion {
+  id: string;
+  type: 'slider';
+  label: string;
+  emoji: string;
+  minLabel: string;
+  maxLabel: string;
+  min: number;
+  max: number;
+  defaultValue: number;
+  enabled: boolean;
+  order: number;
+  showPainAreas?: boolean;
+  painAreaThreshold?: number;
+}
+
+interface PainArea {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
+interface FeedbackQuestionsConfig {
+  questions: FeedbackQuestion[];
+  painAreas: PainArea[];
+  noteEnabled: boolean;
+  noteMaxLength: number;
+}
+
 interface FormData {
   clientName: string;
   trainingDate: string | null;
   trainingNotes: string | null;
   expiresAt: string;
+  questionsConfig: FeedbackQuestionsConfig | null;
 }
 
 type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed';
 
-const PAIN_AREAS = [
-  { id: 'knee', label: 'Koleno' },
-  { id: 'back', label: 'Záda' },
-  { id: 'shoulder', label: 'Rameno' },
-  { id: 'hip', label: 'Kyčel' },
-  { id: 'ankle', label: 'Kotník' },
-  { id: 'wrist', label: 'Zápěstí' },
-  { id: 'neck', label: 'Krk' },
-  { id: 'other', label: 'Jiné' },
-];
-
-const SLIDER_LABELS: Record<string, { low: string; high: string }> = {
-  soreness: { low: 'Žádná', high: 'Extrémní' },
-  body_feel: { low: 'Špatně', high: 'Výborně' },
-  energy: { low: 'Vyčerpaný', high: 'Plný energie' },
-  pain: { low: 'Žádná', high: 'Silná' },
-  session_fit: { low: 'Vůbec', high: 'Perfektně' },
-  difficulty: { low: 'Lehký', high: 'Velmi těžký' },
-  fun: { low: 'Vůbec', high: 'Maximálně' },
+const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
+  questions: [
+    { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0 },
+    { id: 'body_feel', type: 'slider', label: 'Celkový pocit v těle', emoji: '🧘', minLabel: 'Špatně', maxLabel: 'Výborně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 1 },
+    { id: 'energy', type: 'slider', label: 'Energie', emoji: '⚡', minLabel: 'Vyčerpaný', maxLabel: 'Plný energie', min: 1, max: 10, defaultValue: 5, enabled: true, order: 2 },
+    { id: 'pain', type: 'slider', label: 'Bolest (ne jen svalovka)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4 },
+    { id: 'session_fit', type: 'slider', label: 'Jak sedl trénink', emoji: '🎯', minLabel: 'Vůbec', maxLabel: 'Perfektně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 4 },
+    { id: 'difficulty', type: 'slider', label: 'Jak těžký byl trénink', emoji: '🏋️', minLabel: 'Lehký', maxLabel: 'Velmi těžký', min: 1, max: 10, defaultValue: 5, enabled: true, order: 5 },
+    { id: 'fun', type: 'slider', label: 'Jak moc to bavilo', emoji: '😊', minLabel: 'Vůbec', maxLabel: 'Maximálně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 6 },
+  ],
+  painAreas: [
+    { id: 'knee', label: 'Koleno', enabled: true },
+    { id: 'back', label: 'Záda', enabled: true },
+    { id: 'shoulder', label: 'Rameno', enabled: true },
+    { id: 'hip', label: 'Kyčel', enabled: true },
+    { id: 'ankle', label: 'Kotník', enabled: true },
+    { id: 'wrist', label: 'Zápěstí', enabled: true },
+    { id: 'neck', label: 'Krk', enabled: true },
+    { id: 'other', label: 'Jiné', enabled: true },
+  ],
+  noteEnabled: true,
+  noteMaxLength: 200,
 };
 
 export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [status, setStatus] = useState<FormStatus>('loading');
   const [formData, setFormData] = useState<FormData | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Form fields - all 7 scales default to 5
-  const [soreness, setSoreness] = useState(5);
-  const [bodyFeel, setBodyFeel] = useState(5);
-  const [energy, setEnergy] = useState(5);
-  const [pain, setPain] = useState(1);
-  const [sessionFit, setSessionFit] = useState(5);
-  const [difficulty, setDifficulty] = useState(5);
-  const [fun, setFun] = useState(5);
+  const [values, setValues] = useState<Record<string, number>>({});
   const [painArea, setPainArea] = useState<string | null>(null);
   const [painAreaOther, setPainAreaOther] = useState('');
   const [note, setNote] = useState('');
 
+  const questionsConfig = formData?.questionsConfig ?? DEFAULT_QUESTIONS_CONFIG;
+  const enabledQuestions = questionsConfig.questions
+    .filter(q => q.enabled)
+    .sort((a, b) => a.order - b.order);
+  const enabledPainAreas = questionsConfig.painAreas.filter(a => a.enabled);
+  const painQuestion = questionsConfig.questions.find(q => q.id === 'pain' && q.enabled);
+
   useEffect(() => {
     loadFormData();
   }, [token]);
+
+  // Initialize values when config is loaded
+  useEffect(() => {
+    if (questionsConfig && Object.keys(values).length === 0) {
+      const initialValues: Record<string, number> = {};
+      questionsConfig.questions.forEach(q => {
+        initialValues[q.id] = q.defaultValue;
+      });
+      setValues(initialValues);
+    }
+  }, [questionsConfig]);
 
   const loadFormData = async () => {
     try {
@@ -115,18 +158,15 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     setStatus('submitting');
 
     try {
+      const painThreshold = painQuestion?.painAreaThreshold ?? 4;
+      const showPainArea = (values.pain ?? 1) >= painThreshold;
+
       const { data: result, error } = await supabase.functions.invoke('submit-public-feedback', {
         body: {
           token,
-          soreness,
-          body_feel: bodyFeel,
-          energy,
-          pain,
-          session_fit: sessionFit,
-          difficulty,
-          fun,
-          pain_area: pain >= 4 ? painArea : undefined,
-          pain_area_other: pain >= 4 && painArea === 'other' ? painAreaOther : undefined,
+          values,
+          pain_area: showPainArea ? painArea : undefined,
+          pain_area_other: showPainArea && painArea === 'other' ? painAreaOther : undefined,
           note: note || undefined,
         },
       });
@@ -147,35 +187,37 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     }
   };
 
-  const renderSlider = (
-    id: string,
-    label: string,
-    value: number,
-    onChange: (v: number) => void,
-    emoji?: string
-  ) => (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <Label className="text-base font-medium">
-          {emoji && <span className="mr-2">{emoji}</span>}
-          {label}
-        </Label>
-        <span className="text-2xl font-bold text-primary">{value}</span>
-      </div>
-      <Slider
-        value={[value]}
-        onValueChange={([v]) => onChange(v)}
-        min={1}
-        max={10}
-        step={1}
-        className="py-2"
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{SLIDER_LABELS[id]?.low}</span>
-        <span>{SLIDER_LABELS[id]?.high}</span>
-      </div>
-    </div>
-  );
+  const renderSlider = (question: FeedbackQuestion) => {
+    const value = values[question.id] ?? question.defaultValue;
+    
+    return (
+      <Card key={question.id}>
+        <CardContent className="pt-6">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <Label className="text-base font-medium">
+                {question.emoji && <span className="mr-2">{question.emoji}</span>}
+                {question.label}
+              </Label>
+              <span className="text-2xl font-bold text-primary">{value}</span>
+            </div>
+            <Slider
+              value={[value]}
+              onValueChange={([v]) => setValues(prev => ({ ...prev, [question.id]: v }))}
+              min={question.min}
+              max={question.max}
+              step={1}
+              className="py-2"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{question.minLabel}</span>
+              <span>{question.maxLabel}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Loading state
   if (status === 'loading') {
@@ -257,6 +299,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     );
   }
 
+  const painThreshold = painQuestion?.painAreaThreshold ?? 4;
+  const showPainAreas = painQuestion && (values.pain ?? 1) >= painThreshold;
+
   // Form state
   return (
     <div className="min-h-screen bg-background py-6 px-4">
@@ -284,103 +329,69 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           )}
         </Card>
 
-        {/* 7 Sliders */}
+        {/* Dynamic Questions */}
         <div className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('soreness', 'Svalovka', soreness, setSoreness, '💪')}
-            </CardContent>
-          </Card>
+          {enabledQuestions.map((question) => (
+            <div key={question.id}>
+              {renderSlider(question)}
+              
+              {/* Conditional pain area selection */}
+              {question.id === 'pain' && showPainAreas && (
+                <Card className="mt-4 border-warning/50 bg-warning/5">
+                  <CardContent className="pt-6">
+                    <Label className="mb-3 block text-base font-medium">Kde to bolí?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {enabledPainAreas.map((area) => (
+                        <Badge
+                          key={area.id}
+                          variant={painArea === area.id ? 'default' : 'outline'}
+                          className={cn(
+                            'cursor-pointer text-sm py-2 px-4 transition-all',
+                            painArea === area.id 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'hover:bg-secondary'
+                          )}
+                          onClick={() => setPainArea(painArea === area.id ? null : area.id)}
+                        >
+                          {area.label}
+                        </Badge>
+                      ))}
+                    </div>
+                    {painArea === 'other' && (
+                      <Textarea
+                        placeholder="Upřesni, kde to bolí..."
+                        value={painAreaOther}
+                        onChange={(e) => setPainAreaOther(e.target.value)}
+                        className="mt-3"
+                        maxLength={100}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ))}
 
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('body_feel', 'Celkový pocit v těle', bodyFeel, setBodyFeel, '🧘')}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('energy', 'Energie', energy, setEnergy, '⚡')}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('pain', 'Bolest (ne jen svalovka)', pain, setPain, '🩹')}
-            </CardContent>
-          </Card>
-
-          {/* Conditional pain area selection */}
-          {pain >= 4 && (
-            <Card className="border-warning/50 bg-warning/5">
+          {/* Optional note */}
+          {questionsConfig.noteEnabled && (
+            <Card>
               <CardContent className="pt-6">
-                <Label className="mb-3 block text-base font-medium">Kde to bolí?</Label>
-                <div className="flex flex-wrap gap-2">
-                  {PAIN_AREAS.map((area) => (
-                    <Badge
-                      key={area.id}
-                      variant={painArea === area.id ? 'default' : 'outline'}
-                      className={cn(
-                        'cursor-pointer text-sm py-2 px-4 transition-all',
-                        painArea === area.id 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'hover:bg-secondary'
-                      )}
-                      onClick={() => setPainArea(painArea === area.id ? null : area.id)}
-                    >
-                      {area.label}
-                    </Badge>
-                  ))}
-                </div>
-                {painArea === 'other' && (
-                  <Textarea
-                    placeholder="Upřesni, kde to bolí..."
-                    value={painAreaOther}
-                    onChange={(e) => setPainAreaOther(e.target.value)}
-                    className="mt-3"
-                    maxLength={100}
-                  />
-                )}
+                <Label className="mb-3 block text-base font-medium">
+                  📝 Poznámka (volitelné)
+                </Label>
+                <Textarea
+                  placeholder="Cokoliv dalšího..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={questionsConfig.noteMaxLength}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground mt-1 text-right">
+                  {note.length}/{questionsConfig.noteMaxLength}
+                </p>
               </CardContent>
             </Card>
           )}
-
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('session_fit', 'Jak sedl trénink', sessionFit, setSessionFit, '🎯')}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('difficulty', 'Jak těžký byl trénink', difficulty, setDifficulty, '🏋️')}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              {renderSlider('fun', 'Jak moc to bavilo', fun, setFun, '😊')}
-            </CardContent>
-          </Card>
-
-          {/* Optional note */}
-          <Card>
-            <CardContent className="pt-6">
-              <Label className="mb-3 block text-base font-medium">
-                📝 Poznámka (volitelné)
-              </Label>
-              <Textarea
-                placeholder="Cokoliv dalšího..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={200}
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground mt-1 text-right">
-                {note.length}/200
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Submit Button */}

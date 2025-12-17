@@ -84,6 +84,15 @@ serve(async (req) => {
       );
     }
 
+    // Get user's feedback settings for questions configuration
+    const { data: feedbackSettings } = await supabase
+      .from("feedback_settings")
+      .select("feedback_questions")
+      .eq("user_id", request.user_id)
+      .maybeSingle();
+
+    console.log(`Loaded feedback settings for user ${request.user_id}:`, feedbackSettings?.feedback_questions ? 'custom config' : 'default config');
+
     // Return form data
     return new Response(
       JSON.stringify({
@@ -93,6 +102,7 @@ serve(async (req) => {
           trainingDate: request.training_sessions?.date || null,
           trainingNotes: request.training_sessions?.notes || null,
           expiresAt: request.expires_at,
+          questionsConfig: feedbackSettings?.feedback_questions || null,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }

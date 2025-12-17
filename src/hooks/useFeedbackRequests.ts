@@ -23,6 +23,35 @@ export interface FeedbackRequest {
   training_sessions?: { date: string; notes: string | null };
 }
 
+export interface FeedbackQuestion {
+  id: string;
+  type: 'slider';
+  label: string;
+  emoji: string;
+  minLabel: string;
+  maxLabel: string;
+  min: number;
+  max: number;
+  defaultValue: number;
+  enabled: boolean;
+  order: number;
+  showPainAreas?: boolean;
+  painAreaThreshold?: number;
+}
+
+export interface PainArea {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
+export interface FeedbackQuestionsConfig {
+  questions: FeedbackQuestion[];
+  painAreas: PainArea[];
+  noteEnabled: boolean;
+  noteMaxLength: number;
+}
+
 export interface FeedbackSettings {
   id: string;
   user_id: string;
@@ -31,6 +60,7 @@ export interface FeedbackSettings {
   default_language: string;
   trainer_signature: string | null;
   auto_send_after_training: boolean;
+  feedback_questions: FeedbackQuestionsConfig | null;
 }
 
 export interface CreateFeedbackRequestInput {
@@ -81,7 +111,12 @@ export function useFeedbackSettings() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as FeedbackSettings | null;
+      if (!data) return null;
+      
+      return {
+        ...data,
+        feedback_questions: data.feedback_questions as unknown as FeedbackQuestionsConfig | null,
+      } as FeedbackSettings;
     },
     enabled: !!user,
   });
@@ -94,8 +129,12 @@ export function useFeedbackSettings() {
         .from('feedback_settings')
         .upsert({
           user_id: user.id,
-          ...settings,
-        })
+          auto_send_after_training: settings.auto_send_after_training,
+          expiration_hours: settings.expiration_hours,
+          trainer_signature: settings.trainer_signature,
+          default_language: settings.default_language,
+          feedback_questions: settings.feedback_questions as unknown as Record<string, unknown>,
+        } as any)
         .select()
         .single();
 
