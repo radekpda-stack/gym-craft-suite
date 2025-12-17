@@ -284,7 +284,7 @@ export function PRTimelineCard() {
 
       {/* Footer link */}
       <Link
-        to="/progress"
+        to="/pr-history"
         className="flex items-center justify-center gap-1 pt-3 border-t border-border/50 text-xs text-primary hover:text-primary/80"
       >
         Zobrazit vše <ChevronRight className="w-3.5 h-3.5" />
