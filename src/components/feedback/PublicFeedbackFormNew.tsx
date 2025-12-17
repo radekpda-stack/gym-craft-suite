@@ -373,11 +373,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                 placeholder="Cokoliv dalšího..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                maxLength={500}
+                maxLength={200}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground mt-1 text-right">
-                {note.length}/500
+                {note.length}/200
               </p>
             </CardContent>
           </Card>
