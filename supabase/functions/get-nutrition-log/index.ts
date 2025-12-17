@@ -19,7 +19,16 @@ serve(async (req) => {
   }
 
   try {
-    const { token } = await req.json();
+    // Support both GET (query params) and POST (JSON body)
+    let token: string | null = null;
+    
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      token = url.searchParams.get('token');
+    } else {
+      const body = await req.json();
+      token = body.token;
+    }
 
     if (!token) {
       return new Response(JSON.stringify({ error: 'Token required' }), {
