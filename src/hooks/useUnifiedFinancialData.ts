@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { FinancialPeriod } from '@/components/dashboard/UnifiedFinancialChart';
-import { useDashboardFilters, AccountingMode } from '@/contexts/DashboardFiltersContext';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
 
 interface FinancialDataPoint {
   label: string;
@@ -16,8 +17,11 @@ export function useUnifiedFinancialData(period: FinancialPeriod) {
   const { filters } = useDashboardFilters();
   const { accountingMode, clientIds } = filters;
 
+  // Stabilize queryKey
+  const clientIdsKey = useMemo(() => clientIds.join(','), [clientIds]);
+
   return useQuery({
-    queryKey: ['unified-financial-data', period, accountingMode, clientIds],
+    queryKey: ['unified-financial-data', period, accountingMode, clientIdsKey],
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;
