@@ -26,6 +26,20 @@ interface SessionData {
   status: string;
 }
 
+interface ContainerSizes {
+  default_glass_ml: number;
+  default_mug_ml: number;
+  default_bottle_ml: number;
+  default_can_ml: number;
+}
+
+const DEFAULT_CONTAINER_SIZES: ContainerSizes = {
+  default_glass_ml: 250,
+  default_mug_ml: 300,
+  default_bottle_ml: 500,
+  default_can_ml: 330,
+};
+
 const translations = {
   cs: {
     title: '7denní jídelní log',
@@ -169,7 +183,7 @@ export default function PublicNutritionLogPage() {
   const [foodEntries, setFoodEntries] = useState<any[]>([]);
   const [drinkEntries, setDrinkEntries] = useState<any[]>([]);
   const [coffeeEntries, setCoffeeEntries] = useState<any[]>([]);
-
+  const [containerSizes, setContainerSizes] = useState<ContainerSizes>(DEFAULT_CONTAINER_SIZES);
   const t = translations[language];
   const locale = language === 'cs' ? cs : enUS;
 
@@ -195,6 +209,7 @@ export default function PublicNutritionLogPage() {
       setFoodEntries(data.food || []);
       setDrinkEntries(data.drinks || []);
       setCoffeeEntries(data.coffee || []);
+      setContainerSizes(data.containerSizes || DEFAULT_CONTAINER_SIZES);
 
       // Set initial day to today if within range
       const start = parseISO(data.session.start_date);
@@ -380,7 +395,7 @@ export default function PublicNutritionLogPage() {
             </Button>
           </FoodDialog>
 
-          <DrinkDialog onSave={(data) => handleAddEntry('drink', data)} t={t}>
+          <DrinkDialog onSave={(data) => handleAddEntry('drink', data)} t={t} containerSizes={containerSizes}>
             <Button variant="outline" className="w-full h-16 flex-col gap-1">
               <Droplets className="h-5 w-5" />
               <span className="text-xs">{t.addDrink}</span>
@@ -406,13 +421,13 @@ export default function PublicNutritionLogPage() {
           ) : (
             <>
               {dayEntries.food.map((entry: any) => (
-                <EntryCard key={entry.id} type="food" entry={entry} t={t} />
+                <EntryCard key={entry.id} type="food" entry={entry} t={t} containerSizes={containerSizes} />
               ))}
               {dayEntries.drinks.map((entry: any) => (
-                <EntryCard key={entry.id} type="drink" entry={entry} t={t} />
+                <EntryCard key={entry.id} type="drink" entry={entry} t={t} containerSizes={containerSizes} />
               ))}
               {dayEntries.coffee.map((entry: any) => (
-                <EntryCard key={entry.id} type="coffee" entry={entry} t={t} />
+                <EntryCard key={entry.id} type="coffee" entry={entry} t={t} containerSizes={containerSizes} />
               ))}
             </>
           )}
@@ -422,10 +437,20 @@ export default function PublicNutritionLogPage() {
   );
 }
 
-function EntryCard({ type, entry, t }: { type: string; entry: any; t: typeof translations.cs }) {
+function EntryCard({ type, entry, t, containerSizes }: { type: string; entry: any; t: typeof translations.cs; containerSizes: ContainerSizes }) {
   const icons = { food: Utensils, drink: Droplets, coffee: Coffee };
   const Icon = icons[type as keyof typeof icons];
   const colors = { food: 'text-orange-500', drink: 'text-blue-500', coffee: 'text-amber-700' };
+
+  const getContainerMl = (containerType: string) => {
+    const sizes: Record<string, number> = {
+      glass: containerSizes.default_glass_ml,
+      mug: containerSizes.default_mug_ml,
+      bottle: containerSizes.default_bottle_ml,
+      can: containerSizes.default_can_ml,
+    };
+    return sizes[containerType] || 250;
+  };
 
   const getTitle = () => {
     if (type === 'food') return entry.description;
@@ -440,7 +465,10 @@ function EntryCard({ type, entry, t }: { type: string; entry: any; t: typeof tra
       if (entry.portion_mode === 'portion_size') return t[entry.portion_size as keyof typeof t];
       if (entry.portion_mode === 'units') return `${entry.units_count} ${entry.units_label || t.pieces}`;
     }
-    if (type === 'drink') return `${entry.amount_ml || (entry.amount_container_count * (entry.amount_container_type === 'glass' ? 250 : entry.amount_container_type === 'mug' ? 300 : 500))} ml`;
+    if (type === 'drink') {
+      const ml = entry.amount_ml || (entry.amount_container_count * getContainerMl(entry.amount_container_type));
+      return `${ml} ml`;
+    }
     if (type === 'coffee') {
       const parts = [];
       if (entry.sugar) parts.push(`${entry.sugar_spoons} ${t.sugarSpoons}`);
@@ -604,7 +632,7 @@ function FoodDialog({ children, onSave, t }: { children: React.ReactNode; onSave
   );
 }
 
-function DrinkDialog({ children, onSave, t }: { children: React.ReactNode; onSave: (data: any) => void; t: typeof translations.cs }) {
+function DrinkDialog({ children, onSave, t, containerSizes }: { children: React.ReactNode; onSave: (data: any) => void; t: typeof translations.cs; containerSizes: ContainerSizes }) {
   const [open, setOpen] = useState(false);
   const [drinkType, setDrinkType] = useState('water');
   const [drinkName, setDrinkName] = useState('');
@@ -615,14 +643,22 @@ function DrinkDialog({ children, onSave, t }: { children: React.ReactNode; onSav
   const [note, setNote] = useState('');
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
 
+  const getContainerMl = (type: string) => {
+    const sizes: Record<string, number> = {
+      glass: containerSizes.default_glass_ml,
+      mug: containerSizes.default_mug_ml,
+      bottle: containerSizes.default_bottle_ml,
+      can: containerSizes.default_can_ml,
+    };
+    return sizes[type] || 250;
+  };
+
   const handleSave = () => {
-    const containerMl: Record<string, number> = { glass: 250, mug: 300, bottle: 500, can: 330 };
-    
     onSave({
       entry_time: time,
       drink_type: drinkType,
       drink_name: drinkName || null,
-      amount_ml: amountMode === 'ml' ? parseInt(amountMl) || null : Math.round(parseFloat(containerCount) * containerMl[containerType]),
+      amount_ml: amountMode === 'ml' ? parseInt(amountMl) || null : Math.round(parseFloat(containerCount) * getContainerMl(containerType)),
       amount_container_type: amountMode === 'container' ? containerType : null,
       amount_container_count: amountMode === 'container' ? parseFloat(containerCount) || null : null,
       note: note || null,
