@@ -189,15 +189,24 @@ serve(async (req) => {
       })
       .eq("id", request.id);
 
-    // Create notification for trainer
+    // Create notification for trainer with feedback preview
+    const feedbackPreview = [
+      `💪 Svalovka: ${soreness}/10`,
+      `🧘 Pocit: ${body_feel}/10`,
+      `⚡ Energie: ${energy}/10`,
+      pain > 1 ? `🩹 Bolest: ${pain}/10` : null,
+      `🏋️ Náročnost: ${difficulty}/10`,
+      `😊 Zábava: ${fun}/10`,
+    ].filter(Boolean).join(" | ");
+
     await supabase
       .from("notifications")
       .insert({
         user_id: request.user_id,
         client_id: request.client_id,
         type: "feedback_received",
-        title: "Nová zpětná vazba",
-        message: `${request.clients?.name || "Klient"} vyplnil zpětnou vazbu po tréninku.`,
+        title: "📬 Nová zpětná vazba",
+        message: `${request.clients?.name || "Klient"}: ${feedbackPreview}`,
         entity_type: "training",
         entity_id: request.training_session_id,
         severity: "info",
