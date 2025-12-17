@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -11,10 +11,13 @@ import {
   Clock,
   Download,
   FileText,
+  ShieldAlert,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { KPIGridSkeleton } from '@/components/ui/chart-skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { KPICard } from '@/components/dashboard/KPICard';
 import { KPIDetailModal } from '@/components/dashboard/KPIDetailModal';
@@ -51,9 +54,44 @@ const DEFAULT_LAYOUT: NewDashboardLayout = {
   showFeedbackTrends: true,
 };
 
+// Safe mode storage key
+const SAFE_MODE_KEY = 'dashboard-safe-mode';
+
 // Content component that uses the filters context
 function DashboardContent() {
   usePageTracking('dashboard');
+
+  // Safe mode - disables expensive charts when errors occur
+  const [safeMode, setSafeMode] = useState(() => {
+    try {
+      return localStorage.getItem(SAFE_MODE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [errorCount, setErrorCount] = useState(0);
+
+  // Auto-enable safe mode after multiple errors
+  useEffect(() => {
+    if (errorCount >= 2 && !safeMode) {
+      setSafeMode(true);
+      try {
+        localStorage.setItem(SAFE_MODE_KEY, 'true');
+      } catch {}
+    }
+  }, [errorCount, safeMode]);
+
+  const exitSafeMode = useCallback(() => {
+    setSafeMode(false);
+    setErrorCount(0);
+    try {
+      localStorage.removeItem(SAFE_MODE_KEY);
+    } catch {}
+  }, []);
+
+  const handleChartError = useCallback(() => {
+    setErrorCount(prev => prev + 1);
+  }, []);
 
   // Layout state with error handling for malformed localStorage
   const [layout, setLayout] = useState<NewDashboardLayout>(() => {
@@ -87,13 +125,22 @@ function DashboardContent() {
   const [performancePeriod, setPerformancePeriod] = useState<PerformancePeriod>('6months');
 
   // Data hooks - now safely inside the provider
-  const { data: kpis, isLoading: kpisLoading } = useDashboardKPIs();
-  const { data: financialData = [], isLoading: financialLoading } = useUnifiedFinancialData(financialPeriod);
-  const { data: salesData, isLoading: salesLoading } = useProductSalesData(salesPeriod);
-  const { data: trainingData = [], isLoading: trainingLoading } = useTrainingActivityData(trainingPeriod);
-  const { data: topClients = [], isLoading: clientsLoading } = useTopClientsData(clientsPeriod, 10);
-  const { data: performanceData, isLoading: performanceLoading } = usePerformanceMetricsData(performancePeriod);
+  const { data: kpis, isLoading: kpisLoading, isError: kpisError } = useDashboardKPIs();
+  
+  // Only fetch chart data if not in safe mode
+  const { data: financialData = [], isLoading: financialLoading, isError: financialError } = useUnifiedFinancialData(financialPeriod);
+  const { data: salesData, isLoading: salesLoading, isError: salesError } = useProductSalesData(salesPeriod);
+  const { data: trainingData = [], isLoading: trainingLoading, isError: trainingError } = useTrainingActivityData(trainingPeriod);
+  const { data: topClients = [], isLoading: clientsLoading, isError: clientsError } = useTopClientsData(clientsPeriod, 10);
+  const { data: performanceData, isLoading: performanceLoading, isError: performanceError } = usePerformanceMetricsData(performancePeriod);
   const { data: financialStats } = useFinancialStats();
+
+  // Track errors from chart queries
+  useEffect(() => {
+    if (financialError || salesError || trainingError || clientsError || performanceError) {
+      handleChartError();
+    }
+  }, [financialError, salesError, trainingError, clientsError, performanceError, handleChartError]);
 
   // Memoize callbacks to prevent unnecessary re-renders
   const toggleSection = useCallback((key: keyof NewDashboardLayout) => {
@@ -124,14 +171,43 @@ function DashboardContent() {
     } as FinancialSummaryData;
   }, [financialStats]);
 
+  // Check if charts should be shown (not in safe mode)
+  const showCharts = !safeMode;
+
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
+      {/* Safe Mode Banner */}
+      {safeMode && (
+        <Alert className="border-orange-500/50 bg-orange-500/10">
+          <ShieldAlert className="h-4 w-4 text-orange-500" />
+          <AlertTitle className="text-orange-500">Bezpečný režim</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <span className="text-sm text-muted-foreground">
+              Grafy byly vypnuty kvůli chybám. Zobrazují se pouze KPI metriky.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exitSafeMode}
+              className="gap-2 w-fit"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Zkusit znovu
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Global Filters */}
-      <DashboardGlobalFilters />
+      {!safeMode && <DashboardGlobalFilters />}
+      
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             Dashboard
+            {safeMode && (
+              <span className="ml-2 text-sm font-normal text-orange-500">(bezpečný režim)</span>
+            )}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: cs })}
@@ -320,43 +396,44 @@ function DashboardContent() {
           { label: 'Nejstarší', value: kpis?.oldestUnpaidDays ? `${kpis.oldestUnpaidDays} dní` : '-' },
         ]}
       />
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        {/* Financial Chart */}
-        {layout.showFinancialChart && (
-          <UnifiedFinancialChart
-            data={financialData}
-            isLoading={financialLoading}
-            period={financialPeriod}
-            onPeriodChange={setFinancialPeriod}
-          />
-        )}
+      {/* Charts Grid - hidden in safe mode */}
+      {showCharts && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          {/* Financial Chart */}
+          {layout.showFinancialChart && (
+            <UnifiedFinancialChart
+              data={financialData}
+              isLoading={financialLoading}
+              period={financialPeriod}
+              onPeriodChange={setFinancialPeriod}
+            />
+          )}
 
-        {/* Product Sales Chart */}
-        {layout.showProductSales && (
-          <ProductSalesChart
-            trendData={salesData?.trendData || []}
-            topProducts={salesData?.topProducts || []}
-            allProducts={salesData?.allProducts || []}
-            paymentMethods={salesData?.paymentMethods || []}
-            totalMargin={salesData?.totalMargin}
-            totalRevenue={salesData?.totalRevenue}
-            marginPercent={salesData?.marginPercent}
-            isLoading={salesLoading}
-            period={salesPeriod}
-            onPeriodChange={setSalesPeriod}
-          />
-        )}
+          {/* Product Sales Chart */}
+          {layout.showProductSales && (
+            <ProductSalesChart
+              trendData={salesData?.trendData || []}
+              topProducts={salesData?.topProducts || []}
+              allProducts={salesData?.allProducts || []}
+              paymentMethods={salesData?.paymentMethods || []}
+              totalMargin={salesData?.totalMargin}
+              totalRevenue={salesData?.totalRevenue}
+              marginPercent={salesData?.marginPercent}
+              isLoading={salesLoading}
+              period={salesPeriod}
+              onPeriodChange={setSalesPeriod}
+            />
+          )}
 
-        {/* Training Activity Chart */}
-        {layout.showTrainingActivity && (
-          <TrainingActivityChart
-            data={trainingData}
-            isLoading={trainingLoading}
-            period={trainingPeriod}
-            onPeriodChange={setTrainingPeriod}
-          />
-        )}
+          {/* Training Activity Chart */}
+          {layout.showTrainingActivity && (
+            <TrainingActivityChart
+              data={trainingData}
+              isLoading={trainingLoading}
+              period={trainingPeriod}
+              onPeriodChange={setTrainingPeriod}
+            />
+          )}
 
         {/* Top Clients Ranking */}
         {layout.showTopClients && (
@@ -368,14 +445,15 @@ function DashboardContent() {
           />
         )}
 
-        {/* Feedback Trends Card */}
-        {layout.showFeedbackTrends && (
-          <FeedbackTrendsCard />
-        )}
-      </div>
+          {/* Feedback Trends Card */}
+          {layout.showFeedbackTrends && (
+            <FeedbackTrendsCard />
+          )}
+        </div>
+      )}
 
-      {/* Performance Metrics Section */}
-      {layout.showPerformanceMetrics && (
+      {/* Performance Metrics Section - hidden in safe mode */}
+      {showCharts && layout.showPerformanceMetrics && (
         <PerformanceMetricsSection
           topExercises={performanceData?.topExercises || []}
           personalRecords={performanceData?.personalRecords || []}
