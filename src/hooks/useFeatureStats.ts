@@ -22,36 +22,77 @@ interface TrendDataPoint {
 
 // Define all trackable features for comparison
 export const ALL_FEATURES = [
+  // Navigation
   { name: 'page_view_dashboard', category: 'navigation', label: 'Dashboard' },
   { name: 'page_view_clients', category: 'navigation', label: 'Klienti' },
   { name: 'page_view_trainings', category: 'navigation', label: 'Tréninky' },
   { name: 'page_view_calendar', category: 'navigation', label: 'Kalendář' },
-  { name: 'page_view_measurements', category: 'navigation', label: 'Měření' },
-  { name: 'page_view_diagnostics', category: 'navigation', label: 'Diagnostika' },
-  { name: 'page_view_progress', category: 'navigation', label: 'Progres' },
+  { name: 'page_view_records', category: 'navigation', label: 'Záznamy' },
+  { name: 'page_view_sales', category: 'navigation', label: 'Prodeje' },
   { name: 'page_view_ai', category: 'navigation', label: 'AI Asistent' },
   { name: 'page_view_settings', category: 'navigation', label: 'Nastavení' },
   { name: 'page_view_feedback', category: 'navigation', label: 'Zpětná vazba' },
+  { name: 'page_view_client_detail', category: 'navigation', label: 'Detail klienta' },
+  { name: 'page_view_training_detail', category: 'navigation', label: 'Detail tréninku' },
+  // Clients
   { name: 'client_create', category: 'clients', label: 'Vytvoření klienta' },
   { name: 'client_update', category: 'clients', label: 'Úprava klienta' },
   { name: 'client_delete', category: 'clients', label: 'Smazání klienta' },
-  { name: 'client_filter_gender', category: 'clients', label: 'Filtr pohlaví' },
+  { name: 'client_archive', category: 'clients', label: 'Archivace klienta' },
+  { name: 'client_favorite', category: 'clients', label: 'Oblíbený klient' },
+  { name: 'client_filter', category: 'clients', label: 'Filtrování klientů' },
   { name: 'client_export', category: 'export', label: 'Export klientů' },
+  // Trainings
   { name: 'training_create', category: 'trainings', label: 'Vytvoření tréninku' },
+  { name: 'training_update', category: 'trainings', label: 'Úprava tréninku' },
   { name: 'training_complete', category: 'trainings', label: 'Dokončení tréninku' },
   { name: 'training_cancel', category: 'trainings', label: 'Zrušení tréninku' },
+  { name: 'training_duplicate', category: 'trainings', label: 'Duplikace tréninku' },
+  { name: 'training_payment_change', category: 'trainings', label: 'Změna platby tréninku' },
+  // Measurements
   { name: 'measurement_create', category: 'measurements', label: 'Nové měření' },
-  { name: 'measurement_import', category: 'measurements', label: 'Import měření' },
+  { name: 'measurement_update', category: 'measurements', label: 'Úprava měření' },
+  { name: 'measurement_delete', category: 'measurements', label: 'Smazání měření' },
+  { name: 'measurement_import_pdf', category: 'measurements', label: 'Import měření (PDF)' },
+  { name: 'measurement_import_image', category: 'measurements', label: 'Import měření (foto)' },
   { name: 'measurement_export', category: 'export', label: 'Export měření' },
+  // Diagnostics
+  { name: 'diagnostic_create', category: 'diagnostics', label: 'Nová diagnostika' },
+  { name: 'diagnostic_update', category: 'diagnostics', label: 'Úprava diagnostiky' },
+  { name: 'diagnostic_ai_analysis', category: 'diagnostics', label: 'AI analýza diagnostiky' },
+  // Finance
   { name: 'credit_add', category: 'finance', label: 'Přidání kreditu' },
+  { name: 'credit_deduct', category: 'finance', label: 'Odečtení kreditu' },
   { name: 'product_sale', category: 'finance', label: 'Prodej produktu' },
   { name: 'quick_credit', category: 'finance', label: 'Rychlý kredit' },
-  { name: 'search_open', category: 'search', label: 'Vyhledávání' },
-  { name: 'ai_chat', category: 'ai', label: 'AI Chat' },
-  { name: 'feedback_submit', category: 'feedback', label: 'Odeslání feedbacku' },
+  { name: 'credit_statement_export', category: 'finance', label: 'Export výpisu kreditu' },
+  { name: 'unpaid_training_pay', category: 'finance', label: 'Uhrazení nezaplaceného tréninku' },
+  // Media
   { name: 'photo_upload', category: 'media', label: 'Nahrání fotky' },
+  { name: 'photo_compare', category: 'media', label: 'Porovnání fotek' },
   { name: 'voice_record', category: 'media', label: 'Hlasová poznámka' },
-  { name: 'diagnostic_create', category: 'diagnostics', label: 'Nová diagnostika' },
+  // Search & UI
+  { name: 'search_open', category: 'search', label: 'Vyhledávání' },
+  { name: 'quick_action_menu', category: 'search', label: 'Rychlé akce (FAB)' },
+  { name: 'context_menu_client', category: 'search', label: 'Kontextové menu klienta' },
+  { name: 'context_menu_training', category: 'search', label: 'Kontextové menu tréninku' },
+  // AI
+  { name: 'ai_chat', category: 'ai', label: 'AI Chat' },
+  { name: 'ai_operator', category: 'ai', label: 'AI Operátor' },
+  // Feedback
+  { name: 'feedback_send', category: 'feedback', label: 'Odeslání odkazu na feedback' },
+  { name: 'feedback_submit', category: 'feedback', label: 'Vyplnění feedbacku' },
+  { name: 'feedback_view', category: 'feedback', label: 'Zobrazení feedbacku' },
+  // Settings
+  { name: 'settings_prices', category: 'settings', label: 'Nastavení cen' },
+  { name: 'settings_products', category: 'settings', label: 'Správa produktů' },
+  { name: 'settings_exercises', category: 'settings', label: 'Správa cviků' },
+  { name: 'settings_tags', category: 'settings', label: 'Správa tagů' },
+  { name: 'settings_company', category: 'settings', label: 'Firemní profil' },
+  // Calendar
+  { name: 'calendar_day_view', category: 'navigation', label: 'Denní pohled kalendáře' },
+  { name: 'calendar_week_view', category: 'navigation', label: 'Týdenní pohled kalendáře' },
+  { name: 'calendar_quick_create', category: 'trainings', label: 'Rychlé vytvoření z kalendáře' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
