@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, subMonths } from 'date-fns';
@@ -40,9 +41,12 @@ interface ProductSalesResult {
 export function useProductSalesData(period: SalesPeriod) {
   const { filters } = useDashboardFilters();
   const { accountingMode, clientIds, paymentStatus } = filters;
+  
+  // Stabilize queryKey
+  const clientIdsKey = useMemo(() => clientIds.join(','), [clientIds]);
 
   return useQuery({
-    queryKey: ['product-sales-data', period, accountingMode, clientIds, paymentStatus],
+    queryKey: ['product-sales-data', period, accountingMode, clientIdsKey, paymentStatus],
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;

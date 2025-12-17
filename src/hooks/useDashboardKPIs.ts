@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfYear, differenceInDays, subMonths } from 'date-fns';
@@ -73,8 +74,13 @@ export function useDashboardKPIs() {
   const { filters } = useDashboardFilters();
   const { dateRange, accountingMode, paymentStatus, clientIds } = filters;
 
+  // Memoize date strings to prevent re-renders
+  const dateFromStr = useMemo(() => dateRange.from.toISOString(), [dateRange.from.getTime()]);
+  const dateToStr = useMemo(() => dateRange.to.toISOString(), [dateRange.to.getTime()]);
+  const clientIdsKey = useMemo(() => clientIds.join(','), [clientIds]);
+
   return useQuery({
-    queryKey: ['dashboard-kpis', dateRange.from.toISOString(), dateRange.to.toISOString(), accountingMode, paymentStatus, clientIds],
+    queryKey: ['dashboard-kpis', dateFromStr, dateToStr, accountingMode, paymentStatus, clientIdsKey],
     queryFn: async () => {
       const now = new Date();
       const periodStart = dateRange.from;

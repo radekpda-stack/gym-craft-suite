@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, subMonths, startOfWeek } from 'date-fns';
@@ -14,9 +15,12 @@ interface TrainingDataPoint {
 export function useTrainingActivityData(period: TrainingPeriod) {
   const { filters } = useDashboardFilters();
   const { accountingMode, clientIds, paymentStatus } = filters;
+  
+  // Stabilize queryKey
+  const clientIdsKey = useMemo(() => clientIds.join(','), [clientIds]);
 
   return useQuery({
-    queryKey: ['training-activity-data', period, accountingMode, clientIds, paymentStatus],
+    queryKey: ['training-activity-data', period, accountingMode, clientIdsKey, paymentStatus],
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;

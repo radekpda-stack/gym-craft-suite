@@ -53,11 +53,13 @@ const defaultFilters: Omit<DashboardFilters, 'dateRange'> = {
 };
 
 function calculateDateRange(period: GlobalPeriod, customRange: DateRange | null): DateRange {
-  const now = new Date();
-  
   if (period === 'custom' && customRange) {
     return customRange;
   }
+  
+  const now = new Date();
+  // Normalize to start of day to prevent constant recalculation
+  now.setHours(0, 0, 0, 0);
   
   switch (period) {
     case '30days':
@@ -141,7 +143,30 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
 export function useDashboardFilters() {
   const context = useContext(DashboardFiltersContext);
   if (!context) {
-    throw new Error('useDashboardFilters must be used within DashboardFiltersProvider');
+    // Return safe defaults when used outside provider (prevents crash during initial render)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return {
+      filters: {
+        globalPeriod: '30days' as GlobalPeriod,
+        customDateRange: null,
+        accountingMode: 'accrual' as AccountingMode,
+        paymentStatus: 'all' as PaymentStatusFilter,
+        itemType: 'all' as ItemTypeFilter,
+        clientIds: [],
+        productIds: [],
+        dateRange: { from: subDays(now, 30), to: now },
+      },
+      setGlobalPeriod: () => {},
+      setCustomDateRange: () => {},
+      setAccountingMode: () => {},
+      setPaymentStatus: () => {},
+      setItemType: () => {},
+      setClientIds: () => {},
+      setProductIds: () => {},
+      resetFilters: () => {},
+      isFilterActive: false,
+    };
   }
   return context;
 }
