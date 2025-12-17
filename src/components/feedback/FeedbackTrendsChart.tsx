@@ -23,12 +23,12 @@ interface FeedbackTrendsChartProps {
 type TimePeriod = 7 | 30 | 90;
 
 const METRICS = [
-  { key: 'rpe', label: 'RPE', color: 'hsl(var(--primary))' },
-  { key: 'mood', label: 'Nálada', color: '#22c55e' },
-  { key: 'fatigue', label: 'Únava', color: '#f97316' },
-  { key: 'bodyFeel', label: 'Pocit v těle', color: '#3b82f6' },
-  { key: 'technique', label: 'Technika', color: '#8b5cf6' },
-  { key: 'sleepQuality', label: 'Kvalita spánku', color: '#ec4899' },
+  { key: 'pain', label: 'Bolest', color: 'hsl(var(--destructive))' },
+  { key: 'energy', label: 'Energie', color: '#22c55e' },
+  { key: 'fun', label: 'Zábava', color: '#3b82f6' },
+  { key: 'bodyFeel', label: 'Pocit v těle', color: '#8b5cf6' },
+  { key: 'soreness', label: 'Svalová únava', color: '#f97316' },
+  { key: 'sessionFit', label: 'Fit tréninku', color: '#ec4899' },
 ] as const;
 
 type MetricKey = typeof METRICS[number]['key'];
@@ -37,7 +37,7 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
   const { data: feedbacks, isLoading } = useClientFeedback(clientId);
   const [period, setPeriod] = useState<TimePeriod>(30);
   const [activeMetrics, setActiveMetrics] = useState<Set<MetricKey>>(
-    new Set(['rpe', 'mood', 'fatigue'])
+    new Set(['pain', 'energy', 'fun'])
   );
 
   const chartData = useMemo(() => {
@@ -52,12 +52,12 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
     return recentFeedbacks.map(f => ({
       date: format(new Date(f.training_date), 'd.M', { locale: cs }),
       fullDate: format(new Date(f.training_date), 'd. MMMM', { locale: cs }),
-      rpe: f.rpe_rating,
-      mood: f.mood_rating,
-      fatigue: f.fatigue_level,
-      bodyFeel: f.body_feel || null,
-      technique: f.technique_rating || null,
-      sleepQuality: f.sleep_quality || null,
+      pain: f.pain,
+      energy: f.energy_rating,
+      fun: f.fun,
+      bodyFeel: f.body_feel,
+      soreness: f.soreness,
+      sessionFit: f.session_fit,
     }));
   }, [feedbacks, period]);
 
@@ -73,13 +73,13 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
     });
   };
 
-  const hasData = (metric: MetricKey) => chartData.some(d => d[metric] !== null);
+  const hasData = (metric: MetricKey) => chartData.some(d => d[metric] !== null && d[metric] !== undefined);
 
   if (isLoading) {
     return (
       <Card className="glass">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Trendy feedbacku (30 dní)</CardTitle>
+          <CardTitle className="text-base">Trendy feedbacku</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] w-full" />
@@ -88,15 +88,19 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
     );
   }
 
+  if (!feedbacks || feedbacks.length === 0) {
+    return null;
+  }
+
   if (chartData.length === 0) {
     return (
       <Card className="glass">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Trendy feedbacku (30 dní)</CardTitle>
+          <CardTitle className="text-base">Trendy feedbacku</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Žádné feedbacky za posledních 30 dní
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Žádné feedbacky za posledních {period} dní
           </p>
         </CardContent>
       </Card>
@@ -110,9 +114,9 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
         <div className="bg-popover border rounded-lg p-3 shadow-lg text-sm">
           <p className="font-medium mb-2">{data?.fullDate}</p>
           <div className="space-y-1">
-            {METRICS.filter(m => activeMetrics.has(m.key) && data?.[m.key] !== null).map(m => (
+            {METRICS.filter(m => activeMetrics.has(m.key) && data?.[m.key] != null).map(m => (
               <p key={m.key} style={{ color: m.color }}>
-                {m.label}: <span className="font-semibold">{data?.[m.key]}</span>
+                {m.label}: <span className="font-semibold">{data?.[m.key]}/7</span>
               </p>
             ))}
           </div>
@@ -184,11 +188,12 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
                 className="text-muted-foreground"
               />
               <YAxis 
-                domain={[1, 10]} 
+                domain={[1, 7]} 
                 tick={{ fontSize: 11 }} 
                 tickLine={false}
                 axisLine={false}
                 className="text-muted-foreground"
+                ticks={[1, 4, 7]}
               />
               <Tooltip content={<CustomTooltip />} />
               {METRICS.filter(m => activeMetrics.has(m.key)).map(m => (
