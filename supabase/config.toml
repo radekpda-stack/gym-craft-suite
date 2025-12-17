@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.mark-feedback-reminder]
 verify_jwt = true
+
+[functions.log-render-loop]
+verify_jwt = false
