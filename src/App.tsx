@@ -20,6 +20,7 @@ import CanceledTrainings from "./pages/CanceledTrainings";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import FeedbackPage from "./pages/FeedbackPage";
+import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
+              <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
               <Route
                 path="/*"
                 element={
