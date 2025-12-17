@@ -117,14 +117,14 @@ export function UnifiedFinancialChart({
                   variant={filters.accountingMode === 'cash' ? 'default' : 'secondary'}
                   className="text-xs cursor-help"
                 >
-                  {filters.accountingMode === 'cash' ? 'CASH' : 'ACCRUAL'}
+                  {filters.accountingMode === 'cash' ? 'Hotovostní' : 'Akruální'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p className="text-xs">
                   {filters.accountingMode === 'cash' 
-                    ? 'CASH: Počítáno podle data přijetí platby' 
-                    : 'ACCRUAL: Počítáno podle data poskytnutí služby'}
+                    ? 'Hotovostní: Počítáno podle data přijetí platby' 
+                    : 'Akruální: Počítáno podle data poskytnutí služby'}
                 </p>
               </TooltipContent>
             </UITooltip>
