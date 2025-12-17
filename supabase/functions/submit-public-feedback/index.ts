@@ -7,26 +7,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// New 7-scale feedback schema (all 1-10)
+// Dynamic feedback schema - accepts any numeric values
 const feedbackSchema = z.object({
   token: z.string().uuid("Invalid token format"),
-  soreness: z.number().int().min(1).max(10),
-  body_feel: z.number().int().min(1).max(10),
-  energy: z.number().int().min(1).max(10),
-  pain: z.number().int().min(1).max(10),
-  session_fit: z.number().int().min(1).max(10),
-  difficulty: z.number().int().min(1).max(10),
-  fun: z.number().int().min(1).max(10),
-  pain_area: z.enum(["knee", "back", "shoulder", "hip", "ankle", "wrist", "neck", "other"]).optional(),
+  values: z.record(z.string(), z.number().int().min(1).max(10)),
+  pain_area: z.string().max(50).optional(),
   pain_area_other: z.string().max(100).optional(),
-  // DB constraint: training_feedback.comment <= 200
   note: z.string().max(500).optional(),
 });
 
 // Red flag detection thresholds
 const RED_FLAG_THRESHOLDS = {
-  pain: 7, // pain >= 7 is red flag
-  body_feel: 3, // body_feel <= 3 is red flag
+  pain: 7,
+  body_feel: 3,
 };
 
 serve(async (req) => {
@@ -54,9 +47,10 @@ serve(async (req) => {
       );
     }
 
-    const { token, pain_area, pain_area_other, note, ...scales } = parseResult.data;
+    const { token, values, pain_area, pain_area_other, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
+    console.log(`Values received:`, values);
 
     // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
@@ -110,13 +104,22 @@ serve(async (req) => {
     const painThreshold = settings?.value?.red_flag_pain_threshold || RED_FLAG_THRESHOLDS.pain;
     const bodyFeelThreshold = settings?.value?.red_flag_body_feel_threshold || RED_FLAG_THRESHOLDS.body_feel;
 
+    // Extract standard values with fallbacks
+    const soreness = values.soreness ?? 5;
+    const body_feel = values.body_feel ?? 5;
+    const energy = values.energy ?? 5;
+    const pain = values.pain ?? 1;
+    const session_fit = values.session_fit ?? 5;
+    const difficulty = values.difficulty ?? 5;
+    const fun = values.fun ?? 5;
+
     // Detect red flags
     const redFlagReasons: string[] = [];
-    if (scales.pain >= painThreshold) {
-      redFlagReasons.push(`Vysoká bolest (${scales.pain}/10)`);
+    if (pain >= painThreshold) {
+      redFlagReasons.push(`Vysoká bolest (${pain}/10)`);
     }
-    if (scales.body_feel <= bodyFeelThreshold) {
-      redFlagReasons.push(`Nízký pocit v těle (${scales.body_feel}/10)`);
+    if (body_feel <= bodyFeelThreshold) {
+      redFlagReasons.push(`Nízký pocit v těle (${body_feel}/10)`);
     }
     const isRedFlag = redFlagReasons.length > 0;
 
@@ -129,7 +132,7 @@ serve(async (req) => {
       );
     }
 
-    // Create feedback entry with new schema
+    // Create feedback entry
     const trainingDate = request.training_sessions?.date || new Date().toISOString();
     
     const feedbackData = {
@@ -138,30 +141,28 @@ serve(async (req) => {
       user_id: request.user_id,
       training_date: trainingDate,
       feedback_request_id: request.id,
-      // DB constraint: training_feedback.source in ('manual','email','link')
       source: "link",
       is_processed: false,
-      // New 7-scale fields
-      soreness: scales.soreness,
-      body_feel: scales.body_feel,
-      energy_rating: scales.energy,
-      pain: scales.pain,
-      session_fit: scales.session_fit,
-      difficulty: scales.difficulty,
-      fun: scales.fun,
+      // Dynamic values
+      soreness,
+      body_feel,
+      energy_rating: energy,
+      pain,
+      session_fit,
+      difficulty,
+      fun,
       pain_area: pain_area || null,
       pain_area_other: pain_area_other || null,
-      // DB constraint: training_feedback.comment <= 200
       comment: note ? note.slice(0, 200) : null,
       is_red_flag: isRedFlag,
       red_flag_reasons: redFlagReasons.length > 0 ? redFlagReasons : null,
-      // Set some default values for old fields to maintain compatibility
-      rpe_rating: scales.difficulty, // Map difficulty to RPE
-      fatigue_level: Math.min(5, Math.max(1, Math.ceil(scales.soreness / 2))), // Map soreness to fatigue 1-5
-      mood_rating: Math.min(5, Math.max(1, Math.ceil(scales.fun / 2))), // Map fun to mood 1-5
-      technique_rating: Math.min(5, Math.max(1, Math.ceil(scales.session_fit / 2))), // Map session_fit to technique 1-5
-      energy_level: scales.energy >= 7 ? "stable" : scales.energy >= 4 ? "better_end" : "low_entire",
-      goal_relevance: scales.session_fit >= 7 ? "yes" : scales.session_fit >= 4 ? "partially" : "no",
+      // Backward compatibility fields
+      rpe_rating: difficulty,
+      fatigue_level: Math.min(5, Math.max(1, Math.ceil(soreness / 2))),
+      mood_rating: Math.min(5, Math.max(1, Math.ceil(fun / 2))),
+      technique_rating: Math.min(5, Math.max(1, Math.ceil(session_fit / 2))),
+      energy_level: energy >= 7 ? "stable" : energy >= 4 ? "better_end" : "low_entire",
+      goal_relevance: session_fit >= 7 ? "yes" : session_fit >= 4 ? "partially" : "no",
     };
 
     console.log("Inserting feedback data:", JSON.stringify(feedbackData, null, 2));
@@ -176,7 +177,6 @@ serve(async (req) => {
       console.error("Error creating feedback - code:", feedbackError.code);
       console.error("Error creating feedback - message:", feedbackError.message);
       console.error("Error creating feedback - details:", feedbackError.details);
-      console.error("Error creating feedback - hint:", feedbackError.hint);
       throw new Error(`Chyba při ukládání zpětné vazby: ${feedbackError.message}`);
     }
 
@@ -205,7 +205,7 @@ serve(async (req) => {
 
     // Create red flag notification if applicable
     if (isRedFlag) {
-      const severity = scales.pain >= 8 || scales.body_feel <= 2 ? "critical" : "warning";
+      const severity = pain >= 8 || body_feel <= 2 ? "critical" : "warning";
       await supabase
         .from("notifications")
         .insert({
@@ -231,37 +231,31 @@ serve(async (req) => {
     if (recentFeedbacks && recentFeedbacks.length >= 3) {
       const trendAlerts: string[] = [];
 
-      // Check for repeated high pain (>= 5 for 3 sessions)
       const highPainCount = recentFeedbacks.filter(f => f.pain && f.pain >= 5).length;
       if (highPainCount >= 3) {
         trendAlerts.push(`Opakovaná vysoká bolest (${highPainCount}x za sebou)`);
       }
 
-      // Check for repeated low body feel (<= 4 for 3 sessions)
       const lowBodyFeelCount = recentFeedbacks.filter(f => f.body_feel && f.body_feel <= 4).length;
       if (lowBodyFeelCount >= 3) {
         trendAlerts.push(`Opakovaně nízký pocit v těle (${lowBodyFeelCount}x za sebou)`);
       }
 
-      // Check for repeated high soreness (>= 6 for 3 sessions)
       const highSorenessCount = recentFeedbacks.filter(f => f.soreness && f.soreness >= 6).length;
       if (highSorenessCount >= 3) {
         trendAlerts.push(`Opakovaně vysoká svalová únava (${highSorenessCount}x za sebou)`);
       }
 
-      // Check for repeated low energy (<= 4 for 3 sessions)
       const lowEnergyCount = recentFeedbacks.filter(f => f.energy_rating && f.energy_rating <= 4).length;
       if (lowEnergyCount >= 3) {
         trendAlerts.push(`Opakovaně nízká energie (${lowEnergyCount}x za sebou)`);
       }
 
-      // Check for repeated low fun (<= 4 for 3 sessions)
       const lowFunCount = recentFeedbacks.filter(f => f.fun && f.fun <= 4).length;
       if (lowFunCount >= 3) {
         trendAlerts.push(`Opakovaně nízká zábava (${lowFunCount}x za sebou)`);
       }
 
-      // Create trend alert notification if patterns detected
       if (trendAlerts.length > 0) {
         console.log(`Trend alerts detected for client ${request.client_id}:`, trendAlerts);
         

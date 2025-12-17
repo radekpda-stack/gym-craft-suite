@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Eye, EyeOff, Send } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Send, Settings2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,11 +17,36 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { useFeedbackSettings } from '@/hooks/useFeedbackRequests';
+import { useFeedbackSettings, FeedbackQuestionsConfig } from '@/hooks/useFeedbackRequests';
+import { FeedbackQuestionsEditor } from './FeedbackQuestionsEditor';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+
+const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
+  questions: [
+    { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0 },
+    { id: 'body_feel', type: 'slider', label: 'Celkový pocit v těle', emoji: '🧘', minLabel: 'Špatně', maxLabel: 'Výborně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 1 },
+    { id: 'energy', type: 'slider', label: 'Energie', emoji: '⚡', minLabel: 'Vyčerpaný', maxLabel: 'Plný energie', min: 1, max: 10, defaultValue: 5, enabled: true, order: 2 },
+    { id: 'pain', type: 'slider', label: 'Bolest (ne jen svalovka)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4 },
+    { id: 'session_fit', type: 'slider', label: 'Jak sedl trénink', emoji: '🎯', minLabel: 'Vůbec', maxLabel: 'Perfektně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 4 },
+    { id: 'difficulty', type: 'slider', label: 'Jak těžký byl trénink', emoji: '🏋️', minLabel: 'Lehký', maxLabel: 'Velmi těžký', min: 1, max: 10, defaultValue: 5, enabled: true, order: 5 },
+    { id: 'fun', type: 'slider', label: 'Jak moc to bavilo', emoji: '😊', minLabel: 'Vůbec', maxLabel: 'Maximálně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 6 },
+  ],
+  painAreas: [
+    { id: 'knee', label: 'Koleno', enabled: true },
+    { id: 'back', label: 'Záda', enabled: true },
+    { id: 'shoulder', label: 'Rameno', enabled: true },
+    { id: 'hip', label: 'Kyčel', enabled: true },
+    { id: 'ankle', label: 'Kotník', enabled: true },
+    { id: 'wrist', label: 'Zápěstí', enabled: true },
+    { id: 'neck', label: 'Krk', enabled: true },
+    { id: 'other', label: 'Jiné', enabled: true },
+  ],
+  noteEnabled: true,
+  noteMaxLength: 200,
+};
 
 export function FeedbackSettings() {
   const { settings, isLoading, upsertSettings } = useFeedbackSettings();
@@ -30,8 +55,10 @@ export function FeedbackSettings() {
   const [expirationHours, setExpirationHours] = useState(72);
   const [trainerSignature, setTrainerSignature] = useState('');
   const [defaultLanguage, setDefaultLanguage] = useState('cs');
+  const [questionsConfig, setQuestionsConfig] = useState<FeedbackQuestionsConfig>(DEFAULT_QUESTIONS_CONFIG);
   const [hasChanges, setHasChanges] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
 
@@ -41,6 +68,7 @@ export function FeedbackSettings() {
       setExpirationHours(settings.expiration_hours ?? 72);
       setTrainerSignature(settings.trainer_signature ?? '');
       setDefaultLanguage(settings.default_language ?? 'cs');
+      setQuestionsConfig(settings.feedback_questions ?? DEFAULT_QUESTIONS_CONFIG);
       setHasChanges(false);
     }
   }, [settings]);
@@ -55,6 +83,7 @@ export function FeedbackSettings() {
       expiration_hours: expirationHours,
       trainer_signature: trainerSignature,
       default_language: defaultLanguage,
+      feedback_questions: questionsConfig,
     });
     setHasChanges(false);
   };
@@ -189,6 +218,25 @@ export function FeedbackSettings() {
           className="glass-input min-h-[100px]"
         />
       </div>
+
+      {/* Questionnaire Editor */}
+      <Collapsible open={showQuestionsEditor} onOpenChange={setShowQuestionsEditor}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full gap-2 glass-subtle border-0">
+            <Settings2 className="w-4 h-4" />
+            {showQuestionsEditor ? 'Skrýt editor dotazníku' : 'Upravit otázky dotazníku'}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-4">
+          <FeedbackQuestionsEditor
+            config={questionsConfig}
+            onChange={(config) => {
+              setQuestionsConfig(config);
+              handleChange();
+            }}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Email Preview */}
       <Collapsible open={showPreview} onOpenChange={setShowPreview}>

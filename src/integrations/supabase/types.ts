@@ -922,6 +922,7 @@ export type Database = {
           created_at: string
           default_language: string | null
           expiration_hours: number | null
+          feedback_questions: Json | null
           id: string
           reminder_intervals: number[] | null
           trainer_signature: string | null
@@ -933,6 +934,7 @@ export type Database = {
           created_at?: string
           default_language?: string | null
           expiration_hours?: number | null
+          feedback_questions?: Json | null
           id?: string
           reminder_intervals?: number[] | null
           trainer_signature?: string | null
@@ -944,6 +946,7 @@ export type Database = {
           created_at?: string
           default_language?: string | null
           expiration_hours?: number | null
+          feedback_questions?: Json | null
           id?: string
           reminder_intervals?: number[] | null
           trainer_signature?: string | null
