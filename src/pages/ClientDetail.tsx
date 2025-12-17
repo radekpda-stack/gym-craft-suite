@@ -179,6 +179,7 @@ export default function ClientDetail() {
         isSharedBudget={isSharedBudget}
         sharedBudgetName={sharedBudgetName}
         sharedBudgetMembers={sharedBudgetMembers}
+        budgetGroupId={sharedBudgetInfo?.groupId || undefined}
         unpaidCount={unpaidCount}
         unpaidTotal={unpaidTotal}
         lastPaymentDate={lastPaymentDate}
