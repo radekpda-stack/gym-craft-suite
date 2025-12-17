@@ -10,6 +10,7 @@ import {
   Zap,
   TrendingUp,
   BarChart3,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   LineChart,
@@ -62,6 +63,23 @@ const ENERGY_LABELS: Record<string, string> = {
   better_end: 'Lepší ke konci',
   low_entire: 'Nízká celou dobu',
   good_start_only: 'Jen začátek dobrý',
+};
+
+const PAIN_AREA_LABELS: Record<string, string> = {
+  neck: 'Krk',
+  shoulder: 'Rameno',
+  chest: 'Hrudník',
+  hip: 'Kyčel',
+  knee: 'Koleno',
+  ankle: 'Kotník',
+  wrist: 'Zápěstí',
+  elbow: 'Loket',
+  upper_back: 'Horní záda',
+  lower_back: 'Dolní záda',
+  glutes: 'Hýždě',
+  hamstring: 'Zadní stehno',
+  calf: 'Lýtko',
+  other: 'Jiné',
 };
 
 export function FeedbackStatistics({ clientId }: FeedbackStatisticsProps) {
@@ -347,6 +365,106 @@ export function FeedbackStatistics({ clientId }: FeedbackStatisticsProps) {
                   <Bar dataKey="count" fill={CHART_COLORS.primary} radius={[0, 4, 4, 0]} name="Počet" />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pain Area Intensity Statistics */}
+      {stats.painAreaStats.byArea.length > 0 && (
+        <Card className="glass border-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-orange-500" />
+              Intenzita bolesti podle oblastí
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Summary stats */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Průměrná bolest</p>
+                <p className="text-lg font-bold">
+                  {stats.painAreaStats.avgOverallPain.toFixed(1)}
+                  <span className="text-sm font-normal text-muted-foreground">/10</span>
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Hlášení bolesti</p>
+                <p className="text-lg font-bold">
+                  {stats.painAreaStats.totalPainReports}
+                  <span className="text-sm font-normal text-muted-foreground">x</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Pain by area chart */}
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={stats.painAreaStats.byArea.map(item => ({
+                    name: PAIN_AREA_LABELS[item.area] || item.area,
+                    avgIntensity: Number(item.avgIntensity.toFixed(1)),
+                    maxIntensity: item.maxIntensity,
+                    occurrences: item.occurrences,
+                  }))} 
+                  layout="vertical"
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" domain={[0, 10]} className="text-xs" />
+                  <YAxis type="category" dataKey="name" width={100} className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'avgIntensity') return [value, 'Ø intenzita'];
+                      if (name === 'maxIntensity') return [value, 'Max intenzita'];
+                      return [value, name];
+                    }}
+                  />
+                  <Bar dataKey="avgIntensity" fill="#f97316" radius={[0, 4, 4, 0]} name="avgIntensity" />
+                  <Bar dataKey="maxIntensity" fill="#ef4444" radius={[0, 4, 4, 0]} name="maxIntensity" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div className="flex justify-center gap-6 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-orange-500" />
+                Průměrná intenzita
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-red-500" />
+                Maximální intenzita
+              </span>
+            </div>
+
+            {/* Detail list */}
+            <div className="space-y-2 mt-4">
+              {stats.painAreaStats.byArea.slice(0, 5).map((item) => (
+                <div key={item.area} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <span className="text-sm font-medium">
+                    {PAIN_AREA_LABELS[item.area] || item.area}
+                  </span>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-muted-foreground">
+                      {item.occurrences}× hlášeno
+                    </span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full font-medium",
+                      item.avgIntensity >= 7 ? "bg-red-500/20 text-red-500" :
+                      item.avgIntensity >= 4 ? "bg-orange-500/20 text-orange-500" :
+                      "bg-yellow-500/20 text-yellow-500"
+                    )}>
+                      Ø {item.avgIntensity.toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

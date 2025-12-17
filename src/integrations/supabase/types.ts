@@ -1414,6 +1414,7 @@ export type Database = {
           muscle_soreness_comment: string | null
           pain: number | null
           pain_area: string | null
+          pain_area_intensities: Json | null
           pain_area_other: string | null
           red_flag_reasons: string[] | null
           rpe_rating: number
@@ -1449,6 +1450,7 @@ export type Database = {
           muscle_soreness_comment?: string | null
           pain?: number | null
           pain_area?: string | null
+          pain_area_intensities?: Json | null
           pain_area_other?: string | null
           red_flag_reasons?: string[] | null
           rpe_rating: number
@@ -1484,6 +1486,7 @@ export type Database = {
           muscle_soreness_comment?: string | null
           pain?: number | null
           pain_area?: string | null
+          pain_area_intensities?: Json | null
           pain_area_other?: string | null
           red_flag_reasons?: string[] | null
           rpe_rating?: number

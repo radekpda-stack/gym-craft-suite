@@ -14,6 +14,7 @@ const feedbackSchema = z.object({
   pain_area: z.string().max(200).optional(),
   pain_areas: z.array(z.string().max(50)).optional(),
   pain_area_notes: z.record(z.string(), z.string().max(100)).optional(),
+  pain_area_intensities: z.record(z.string(), z.number().int().min(1).max(10)).optional(),
   pain_area_side: z.enum(['left', 'right', 'both']).optional(),
   pain_area_other: z.string().max(100).optional(),
   note: z.string().max(500).optional(),
@@ -69,7 +70,7 @@ serve(async (req) => {
       );
     }
 
-    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_side, pain_area_other, note } = parseResult.data;
+    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
     console.log(`Values received:`, values);
@@ -175,6 +176,9 @@ serve(async (req) => {
       fun,
       pain_area: pain_area || null,
       pain_area_other: pain_area_other || null,
+      pain_area_intensities: pain_area_intensities && Object.keys(pain_area_intensities).length > 0 
+        ? pain_area_intensities 
+        : null,
       // Include notes in comment if present
       comment: buildComment(note, pain_area_notes),
       is_red_flag: isRedFlag,

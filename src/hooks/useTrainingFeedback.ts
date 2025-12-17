@@ -31,6 +31,7 @@ export interface TrainingFeedback {
   fun: number | null;
   pain_area: string | null;
   pain_area_other: string | null;
+  pain_area_intensities: Record<string, number> | null;
   is_red_flag: boolean;
   red_flag_reasons: string[] | null;
   feedback_request_id: string | null;
@@ -182,9 +183,46 @@ export function useClientFeedbackStats(clientId: string | undefined) {
         rpe: f.rpe_rating,
         date: f.training_date,
       })).reverse(),
+    // Pain area intensity statistics
+    painAreaStats: calculatePainAreaStats(feedback),
   };
 
   return { stats, feedback };
+}
+
+// Calculate pain area statistics from feedback
+function calculatePainAreaStats(feedback: TrainingFeedback[]) {
+  const areaData: Record<string, { totalIntensity: number; count: number; maxIntensity: number }> = {};
+  
+  feedback.forEach(f => {
+    if (f.pain_area_intensities) {
+      const intensities = f.pain_area_intensities as Record<string, number>;
+      Object.entries(intensities).forEach(([area, intensity]) => {
+        // Normalize area name (remove _left, _right, _both suffix for grouping)
+        const normalizedArea = area.replace(/_left$|_right$|_both$/, '');
+        
+        if (!areaData[normalizedArea]) {
+          areaData[normalizedArea] = { totalIntensity: 0, count: 0, maxIntensity: 0 };
+        }
+        areaData[normalizedArea].totalIntensity += intensity;
+        areaData[normalizedArea].count += 1;
+        areaData[normalizedArea].maxIntensity = Math.max(areaData[normalizedArea].maxIntensity, intensity);
+      });
+    }
+  });
+
+  return {
+    byArea: Object.entries(areaData).map(([area, data]) => ({
+      area,
+      avgIntensity: data.count > 0 ? data.totalIntensity / data.count : 0,
+      maxIntensity: data.maxIntensity,
+      occurrences: data.count,
+    })).sort((a, b) => b.avgIntensity - a.avgIntensity),
+    totalPainReports: feedback.filter(f => f.pain && f.pain >= 4).length,
+    avgOverallPain: feedback.filter(f => f.pain).length > 0
+      ? feedback.filter(f => f.pain).reduce((sum, f) => sum + (f.pain || 0), 0) / feedback.filter(f => f.pain).length
+      : 0,
+  };
 }
 
 // Create new feedback
