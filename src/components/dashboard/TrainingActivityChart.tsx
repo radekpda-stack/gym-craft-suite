@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Dumbbell, TrendingUp, Calendar } from 'lucide-react';
+import { Dumbbell, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
 
 export type TrainingPeriod = '30days' | '6months' | '12months';
 export type TrainingMetric = 'monthly' | 'weeklyAvg' | 'trend';
@@ -81,14 +81,23 @@ export function TrainingActivityChart({
     if (!data || data.length === 0) return null;
 
     const total = data.reduce((sum, d) => sum + d.count, 0);
-    const average = total / data.length;
+    const average = Math.round(total / data.length);
     const maxMonth = data.reduce((max, d) => (d.count > max.count ? d : max), data[0]);
+    
+    // Calculate trend direction
+    const firstHalf = data.slice(0, Math.floor(data.length / 2));
+    const secondHalf = data.slice(Math.floor(data.length / 2));
+    const firstAvg = firstHalf.reduce((sum, d) => sum + d.count, 0) / (firstHalf.length || 1);
+    const secondAvg = secondHalf.reduce((sum, d) => sum + d.count, 0) / (secondHalf.length || 1);
+    const trendPercent = firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0;
 
     return {
       total,
-      average: average.toFixed(1),
+      average,
       mostActive: maxMonth.label,
       mostActiveCount: maxMonth.count,
+      trendPercent: Math.round(trendPercent),
+      trendDirection: trendPercent > 5 ? 'up' : trendPercent < -5 ? 'down' : 'stable',
     };
   }, [data]);
 
@@ -250,7 +259,20 @@ export function TrainingActivityChart({
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground mb-1">Nejaktivnější</p>
-            <p className="text-sm sm:text-base font-bold text-primary">{summary.mostActive}</p>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-sm sm:text-base font-bold text-primary truncate max-w-[80px]">
+                {summary.mostActive}
+              </p>
+              {summary.trendDirection === 'up' && (
+                <TrendingUp className="w-3.5 h-3.5 text-success flex-shrink-0" />
+              )}
+              {summary.trendDirection === 'down' && (
+                <TrendingDown className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+              )}
+              {summary.trendDirection === 'stable' && (
+                <Minus className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
           </div>
         </div>
       )}

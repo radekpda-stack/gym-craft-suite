@@ -26,6 +26,8 @@ import { TopClientsRanking, ClientsPeriod } from '@/components/dashboard/TopClie
 import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashboard/PerformanceMetricsSection';
 import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
 import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
+import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
+import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
 import { useUnifiedFinancialData } from '@/hooks/useUnifiedFinancialData';
@@ -92,8 +94,10 @@ export default function Dashboard() {
   };
 
   return (
+    <DashboardFiltersProvider>
     <div className="space-y-6 md:space-y-8 animate-fade-in">
-      {/* Header */}
+      {/* Global Filters */}
+      <DashboardGlobalFilters />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
@@ -373,5 +377,6 @@ export default function Dashboard() {
         />
       )}
     </div>
+    </DashboardFiltersProvider>
   );
 }
