@@ -60,10 +60,10 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
     "cursor-pointer transition-all duration-200",
     isSelected(area) 
       ? "fill-primary stroke-primary opacity-100 animate-body-pulse" 
-      : "fill-muted-foreground/30 stroke-muted-foreground/50 hover:fill-primary/40 hover:stroke-primary/60"
+      : "fill-muted/50 stroke-muted-foreground hover:fill-primary/40 hover:stroke-primary"
   );
 
-  const nonSelectableStyle = "fill-muted-foreground/20 stroke-muted-foreground/40";
+  const nonSelectableStyle = "fill-muted/30 stroke-muted-foreground/70";
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -99,11 +99,11 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
       {view === 'front' ? (
         <svg
           viewBox="0 0 200 340"
-          className="w-full max-w-[200px] h-auto"
+          className="w-full max-w-[200px] h-auto bg-secondary/30 rounded-xl p-2"
           style={{ touchAction: 'manipulation' }}
         >
           {/* Head */}
-          <ellipse cx="100" cy="30" rx="22" ry="26" className={nonSelectableStyle} strokeWidth="1.5" />
+          <ellipse cx="100" cy="30" rx="22" ry="26" className={nonSelectableStyle} strokeWidth="2" />
 
           {/* Neck */}
           <rect x="90" y="54" width="20" height="16" rx="4" className={getAreaStyle('neck')} strokeWidth="2" onClick={() => toggleArea('neck')} />
@@ -203,11 +203,11 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
       ) : (
         <svg
           viewBox="0 0 200 340"
-          className="w-full max-w-[200px] h-auto"
+          className="w-full max-w-[200px] h-auto bg-secondary/30 rounded-xl p-2"
           style={{ touchAction: 'manipulation' }}
         >
           {/* Head (back view) */}
-          <ellipse cx="100" cy="30" rx="22" ry="26" className={nonSelectableStyle} strokeWidth="1.5" />
+          <ellipse cx="100" cy="30" rx="22" ry="26" className={nonSelectableStyle} strokeWidth="2" />
 
           {/* Neck (back) */}
           <rect x="90" y="54" width="20" height="16" rx="4" className={getAreaStyle('neck')} strokeWidth="2" onClick={() => toggleArea('neck')} />
