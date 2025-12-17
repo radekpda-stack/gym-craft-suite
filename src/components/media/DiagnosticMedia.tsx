@@ -13,6 +13,7 @@ import { cs } from "date-fns/locale";
 import { useState } from "react";
 import { useDeleteMedia } from "@/hooks/useClientMedia";
 import { Diagnostic } from "@/hooks/useDiagnostics";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 interface DiagnosticMediaProps {
   clientId: string;
@@ -120,7 +121,10 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
                 {compareMode && selectedForCompare.length === 2 && (
                   <Button 
                     size="sm" 
-                    onClick={() => setCompareDialogOpen(true)}
+                    onClick={() => {
+                      featureTracker.track('photo_compare_open', 'media');
+                      setCompareDialogOpen(true);
+                    }}
                   >
                     <ArrowLeftRight className="h-4 w-4 mr-2" />
                     Porovnat
@@ -130,6 +134,9 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
                   variant={compareMode ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
+                    if (!compareMode) {
+                      featureTracker.track('photo_compare_mode_enter', 'media');
+                    }
                     setCompareMode(!compareMode);
                     setSelectedForCompare([]);
                   }}

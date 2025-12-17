@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ClientMedia } from "@/hooks/useClientMedia";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { ZoomIn, ZoomOut, RotateCw, ArrowLeftRight } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 interface PhotoCompareProps {
   photos: ClientMedia[];
@@ -19,6 +20,15 @@ export function PhotoCompare({ photos, open, onOpenChange }: PhotoCompareProps) 
   const [rotation2, setRotation2] = useState(0);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [viewMode, setViewMode] = useState<'side-by-side' | 'slider'>('side-by-side');
+
+  useEffect(() => {
+    if (open && photos.length === 2) {
+      featureTracker.track('photo_compare_viewed', 'media', {
+        photo1_date: photos[0]?.date,
+        photo2_date: photos[1]?.date
+      });
+    }
+  }, [open, photos]);
 
   if (photos.length !== 2) return null;
 
@@ -34,14 +44,20 @@ export function PhotoCompare({ photos, open, onOpenChange }: PhotoCompareProps) 
               <Button
                 variant={viewMode === 'side-by-side' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setViewMode('side-by-side')}
+                onClick={() => {
+                  featureTracker.track('photo_compare_side_by_side', 'media');
+                  setViewMode('side-by-side');
+                }}
               >
                 Vedle sebe
               </Button>
               <Button
                 variant={viewMode === 'slider' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setViewMode('slider')}
+                onClick={() => {
+                  featureTracker.track('photo_compare_slider', 'media');
+                  setViewMode('slider');
+                }}
               >
                 <ArrowLeftRight className="h-4 w-4 mr-2" />
                 Posuvník
