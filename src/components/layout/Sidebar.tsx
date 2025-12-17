@@ -18,6 +18,7 @@ import {
   Sparkles,
   TrendingUp,
   ShoppingBag,
+  Bell,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -157,6 +158,7 @@ export function Sidebar() {
       label: 'Nástroje',
       items: [
         { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: t.nav.aiAssistant },
+        { id: 'reminders', to: '/reminders', icon: Bell, label: 'Připomínky' },
       ],
     },
     {

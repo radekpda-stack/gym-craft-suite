@@ -19,6 +19,7 @@ import {
   Wallet,
   ChevronRight,
   ShoppingBag,
+  Bell,
   LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,6 +70,7 @@ const sections: NavSection[] = [
     label: 'Nástroje',
     items: [
       { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
+      { to: '/reminders', icon: Bell, label: 'Připomínky' },
     ],
   },
   {

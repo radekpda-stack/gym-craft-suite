@@ -1,4 +1,4 @@
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell, TrendingDown, AlertTriangle } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell, TrendingDown, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -33,6 +33,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   feedback_received: Bell,
   feedback_red_flag: AlertTriangle,
   feedback_trend_alert: TrendingDown,
+  reminder: Clock,
 };
 
 const notificationColors: Record<string, string> = {
@@ -46,6 +47,7 @@ const notificationColors: Record<string, string> = {
   feedback_received: "text-green-500",
   feedback_red_flag: "text-destructive",
   feedback_trend_alert: "text-orange-500",
+  reminder: "text-cyan-500",
 };
 
 // Extract training ID from notification message
