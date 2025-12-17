@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SessionCard } from '@/components/ui/session-card';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
+import { PainHistoryCard } from '@/components/feedback/PainHistoryCard';
 import { useClient, useUpdateClient, useUpdateClientFeedback } from '@/hooks/useClients';
 import { useTrainingSessions, useUpdateTrainingSession, useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
@@ -296,6 +297,9 @@ export default function ClientDetail() {
               </span>
             </div>
           </div>
+
+          {/* Pain History */}
+          <PainHistoryCard clientId={client.id} />
 
           {/* Upcoming trainings */}
           {scheduledSessions.length > 0 && (
