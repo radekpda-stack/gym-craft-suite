@@ -3,6 +3,7 @@ import { Plus, Trash2, GripVertical, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FeedbackQuestionnairePreview } from './FeedbackQuestionnairePreview';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -311,10 +312,13 @@ export function FeedbackQuestionsEditor({ config, onChange }: FeedbackQuestionsE
               Přetáhněte pro změnu pořadí, klikněte pro úpravu
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={addQuestion} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Přidat otázku
-          </Button>
+          <div className="flex items-center gap-2">
+            <FeedbackQuestionnairePreview config={config} />
+            <Button variant="outline" size="sm" onClick={addQuestion} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Přidat otázku
+            </Button>
+          </div>
         </div>
 
         <Accordion type="multiple" className="space-y-2">
