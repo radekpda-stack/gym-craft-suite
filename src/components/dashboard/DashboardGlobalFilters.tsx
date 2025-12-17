@@ -90,18 +90,18 @@ export function DashboardGlobalFilters() {
   ].filter(Boolean).length;
 
   return (
-    <div className="glass rounded-2xl p-4 space-y-4">
-      {/* Main row */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Period selector */}
-        <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+    <div className="glass rounded-2xl p-3 sm:p-4 space-y-3 sm:space-y-4">
+      {/* Main row - stacked on mobile */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+        {/* Period selector - horizontal scroll on mobile */}
+        <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">
           {PERIOD_OPTIONS.slice(0, 4).map((opt) => (
             <Button
               key={opt.value}
               variant={filters.globalPeriod === opt.value ? 'default' : 'ghost'}
               size="sm"
               className={cn(
-                'rounded-full text-xs px-3 h-8',
+                'rounded-full text-xs px-2 sm:px-3 h-7 sm:h-8 whitespace-nowrap flex-shrink-0',
                 filters.globalPeriod === opt.value && 'bg-primary text-primary-foreground'
               )}
               onClick={() => setGlobalPeriod(opt.value)}
@@ -117,15 +117,17 @@ export function DashboardGlobalFilters() {
                 variant={filters.globalPeriod === 'custom' ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  'rounded-full text-xs px-3 h-8 gap-1.5',
+                  'rounded-full text-xs px-2 sm:px-3 h-7 sm:h-8 gap-1 sm:gap-1.5 whitespace-nowrap flex-shrink-0',
                   filters.globalPeriod === 'custom' && 'bg-primary text-primary-foreground'
                 )}
               >
-                <CalendarDays className="w-3.5 h-3.5" />
-                {filters.globalPeriod === 'custom' && filters.customDateRange 
-                  ? `${format(filters.customDateRange.from, 'd.M.')} - ${format(filters.customDateRange.to, 'd.M.')}`
-                  : 'Vlastní'
-                }
+                <CalendarDays className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <span className="hidden xs:inline">
+                  {filters.globalPeriod === 'custom' && filters.customDateRange 
+                    ? `${format(filters.customDateRange.from, 'd.M.')} - ${format(filters.customDateRange.to, 'd.M.')}`
+                    : 'Vlastní'
+                  }
+                </span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -143,74 +145,77 @@ export function DashboardGlobalFilters() {
                   }
                 }}
                 locale={cs}
-                numberOfMonths={2}
+                numberOfMonths={1}
               />
             </PopoverContent>
           </Popover>
         </div>
 
-        {/* Accounting mode toggle */}
-        <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
-          {ACCOUNTING_OPTIONS.map((opt) => (
-            <Tooltip key={opt.value}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={filters.accountingMode === opt.value ? 'default' : 'ghost'}
-                  size="sm"
-                  className={cn(
-                    'rounded-full text-xs px-3 h-8 gap-1.5',
-                    filters.accountingMode === opt.value && 'bg-primary text-primary-foreground'
-                  )}
-                  onClick={() => setAccountingMode(opt.value)}
-                >
-                  {opt.value === 'cash' ? (
-                    <Banknote className="w-3.5 h-3.5" />
-                  ) : (
-                    <Receipt className="w-3.5 h-3.5" />
-                  )}
-                  {opt.label}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{opt.description}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+        {/* Second row on mobile: Accounting + Filters */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Accounting mode toggle */}
+          <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+            {ACCOUNTING_OPTIONS.map((opt) => (
+              <Tooltip key={opt.value}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={filters.accountingMode === opt.value ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      'rounded-full text-xs px-2 sm:px-3 h-7 sm:h-8 gap-1 sm:gap-1.5',
+                      filters.accountingMode === opt.value && 'bg-primary text-primary-foreground'
+                    )}
+                    onClick={() => setAccountingMode(opt.value)}
+                  >
+                    {opt.value === 'cash' ? (
+                      <Banknote className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                    ) : (
+                      <Receipt className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                    )}
+                    <span className="hidden xs:inline">{opt.label}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{opt.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+
+          {/* Advanced filters toggle */}
+          <Button
+            variant={showAdvanced || isFilterActive ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 sm:h-8 gap-1 sm:gap-1.5 text-xs"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+            <span className="hidden xs:inline">Filtry</span>
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
+                {activeFiltersCount}
+              </Badge>
+            )}
+            <ChevronDown className={cn('w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform', showAdvanced && 'rotate-180')} />
+          </Button>
+
+          {/* Reset button */}
+          {isFilterActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 sm:h-8 gap-1 sm:gap-1.5 text-muted-foreground text-xs"
+              onClick={resetFilters}
+            >
+              <X className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+              <span className="hidden xs:inline">Reset</span>
+            </Button>
+          )}
         </div>
 
-        {/* Advanced filters toggle */}
-        <Button
-          variant={showAdvanced || isFilterActive ? 'default' : 'outline'}
-          size="sm"
-          className="h-8 gap-1.5"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-        >
-          <Filter className="w-3.5 h-3.5" />
-          Filtry
-          {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-              {activeFiltersCount}
-            </Badge>
-          )}
-          <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showAdvanced && 'rotate-180')} />
-        </Button>
-
-        {/* Reset button */}
-        {isFilterActive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-muted-foreground"
-            onClick={resetFilters}
-          >
-            <X className="w-3.5 h-3.5" />
-            Reset
-          </Button>
-        )}
-
-        {/* Date range indicator */}
-        <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5">
-          <CalendarDays className="w-3.5 h-3.5" />
+        {/* Date range indicator - separate row on mobile */}
+        <div className="sm:ml-auto text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-0">
+          <CalendarDays className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
           {format(filters.dateRange.from, 'd. MMM', { locale: cs })} – {format(filters.dateRange.to, 'd. MMM yyyy', { locale: cs })}
         </div>
       </div>
