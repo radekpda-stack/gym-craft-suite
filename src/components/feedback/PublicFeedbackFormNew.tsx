@@ -75,24 +75,30 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   const loadFormData = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-public-feedback-form?token=${token}`,
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const { data: result, error } = await supabase.functions.invoke('get-public-feedback-form', {
+        body: { token },
+      });
 
-      const result = await response.json();
+      if (error) {
+        console.error('Error loading form:', error);
+        setErrorMessage('Chyba při načítání formuláře');
+        setStatus('error');
+        return;
+      }
 
-      if (!response.ok) {
-        if (result.code === 'EXPIRED') {
-          setStatus('expired');
-        } else if (result.code === 'ALREADY_COMPLETED') {
-          setStatus('completed');
-        } else {
-          setErrorMessage(result.error || 'Neplatný odkaz');
-          setStatus('error');
-        }
+      if (result?.code === 'EXPIRED') {
+        setStatus('expired');
+        return;
+      }
+      
+      if (result?.code === 'ALREADY_COMPLETED') {
+        setStatus('completed');
+        return;
+      }
+      
+      if (result?.error) {
+        setErrorMessage(result.error || 'Neplatný odkaz');
+        setStatus('error');
         return;
       }
 
@@ -109,29 +115,27 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     setStatus('submitting');
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-public-feedback`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token,
-            soreness,
-            body_feel: bodyFeel,
-            energy,
-            pain,
-            session_fit: sessionFit,
-            difficulty,
-            fun,
-            pain_area: pain >= 4 ? painArea : undefined,
-            pain_area_other: pain >= 4 && painArea === 'other' ? painAreaOther : undefined,
-            note: note || undefined,
-          }),
-        }
-      );
+      const { data: result, error } = await supabase.functions.invoke('submit-public-feedback', {
+        body: {
+          token,
+          soreness,
+          body_feel: bodyFeel,
+          energy,
+          pain,
+          session_fit: sessionFit,
+          difficulty,
+          fun,
+          pain_area: pain >= 4 ? painArea : undefined,
+          pain_area_other: pain >= 4 && painArea === 'other' ? painAreaOther : undefined,
+          note: note || undefined,
+        },
+      });
 
-      if (!response.ok) {
-        const result = await response.json();
+      if (error) {
+        throw new Error(error.message || 'Chyba při odesílání');
+      }
+
+      if (result?.error) {
         throw new Error(result.error || 'Chyba při odesílání');
       }
 
