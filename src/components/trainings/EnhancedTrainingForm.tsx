@@ -1,11 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Tag, Search, Check, AlertTriangle, Wallet, CreditCard, Banknote, Clock } from "lucide-react";
+import { Loader2, Tag, Search, Check, AlertTriangle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -49,7 +49,6 @@ const trainingFormSchema = z.object({
   notes: z.string().optional(),
   training_type: z.string().optional(),
   price_override: z.number().optional(),
-  payment_method: z.enum(["credit", "cash", "card", "bank", "pending"]),
 });
 
 export type EnhancedTrainingFormValues = z.infer<typeof trainingFormSchema>;
@@ -106,7 +105,6 @@ export function EnhancedTrainingForm({
       participant_count: defaultValues?.participant_count || 1,
       notes: defaultValues?.notes || "",
       training_type: defaultValues?.training_type || "",
-      payment_method: defaultValues?.payment_method || "credit",
       price_override: undefined,
     },
   });
@@ -114,7 +112,6 @@ export function EnhancedTrainingForm({
   const selectedClientId = form.watch("client_id");
   const participantCount = form.watch("participant_count");
   const priceOverride = form.watch("price_override");
-  const paymentMethod = form.watch("payment_method");
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   
@@ -136,19 +133,6 @@ export function EnhancedTrainingForm({
     }
     return selectedClient?.credit_balance || 0;
   }, [selectedClient, sharedBudget]);
-  
-  // Auto-suggest payment method based on credit
-  useEffect(() => {
-    if (!selectedClientId) return;
-    
-    if (availableCredit >= finalPrice) {
-      form.setValue("payment_method", "credit");
-    } else if (availableCredit > 0) {
-      form.setValue("payment_method", "credit"); // Partial, but still suggest credit
-    } else {
-      form.setValue("payment_method", "pending");
-    }
-  }, [selectedClientId, availableCredit, finalPrice, form]);
 
   // Filtered clients with diacritics-insensitive search
   const filteredClients = useMemo(() => {
@@ -183,12 +167,6 @@ export function EnhancedTrainingForm({
 
   const creditStatus = getCreditStatus();
 
-  const paymentOptions = [
-    { value: "credit", label: "Odečíst z kreditu", icon: Wallet, disabled: availableCredit <= 0 },
-    { value: "cash", label: "Zaplaceno hotově", icon: Banknote, disabled: false },
-    { value: "card", label: "Zaplaceno kartou/převodem", icon: CreditCard, disabled: false },
-    { value: "pending", label: "Čeká na platbu", icon: Clock, disabled: false },
-  ];
 
   return (
     <Form {...form}>
@@ -391,49 +369,6 @@ export function EnhancedTrainingForm({
           )}
         </div>
 
-        {/* 6. Payment Method */}
-        <FormField
-          control={form.control}
-          name="payment_method"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Způsob platby</FormLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {paymentOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    disabled={option.disabled}
-                    onClick={() => field.onChange(option.value)}
-                    className={cn(
-                      "flex items-center gap-2 p-3 rounded-xl border transition-all",
-                      field.value === option.value
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border bg-secondary/50 text-muted-foreground hover:bg-secondary",
-                      option.disabled && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <option.icon className="w-4 h-4" />
-                    <span className="text-sm">{option.label}</span>
-                  </button>
-                ))}
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Warning for insufficient credit */}
-        {paymentMethod === "credit" && availableCredit < finalPrice && availableCredit > 0 && (
-          <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-            <p className="text-sm text-warning font-medium">
-              Kredit nestačí na celou platbu
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Bude odečteno {availableCredit.toLocaleString('cs-CZ')} Kč, zbývá doplatit {(finalPrice - availableCredit).toLocaleString('cs-CZ')} Kč
-            </p>
-          </div>
-        )}
 
         {/* Training Tags */}
         <div className="space-y-2">
