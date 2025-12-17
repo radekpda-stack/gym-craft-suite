@@ -23,6 +23,14 @@ interface PersonalRecord {
   date: string;
 }
 
+interface PRTimelinePoint {
+  label: string;
+  date: string;
+  prCount: number;
+  maxWeight: number;
+  exercises: string[];
+}
+
 interface StrengthDataPoint {
   label: string;
   [exerciseName: string]: number | string;
@@ -78,6 +86,7 @@ export function usePerformanceMetricsData(period: PerformancePeriod) {
 
       const personalRecords: PersonalRecord[] = [];
       const strengthByMonth = new Map<string, Map<string, number>>();
+      const prByPeriod = new Map<string, { prCount: number; maxWeight: number; exercises: Set<string>; date: string }>();
 
       entries?.forEach((e: any) => {
         const name = e.exercise_name;
@@ -121,6 +130,18 @@ export function usePerformanceMetricsData(period: PerformancePeriod) {
             clientName: e.clients?.name || 'Neznámý',
             date: e.date,
           });
+
+          // Track PR timeline by month
+          const prMonthKey = format(new Date(e.date), 'yyyy-MM');
+          if (!prByPeriod.has(prMonthKey)) {
+            prByPeriod.set(prMonthKey, { prCount: 0, maxWeight: 0, exercises: new Set(), date: e.date });
+          }
+          const prPeriodData = prByPeriod.get(prMonthKey)!;
+          prPeriodData.prCount += 1;
+          if (weight > prPeriodData.maxWeight) {
+            prPeriodData.maxWeight = weight;
+          }
+          prPeriodData.exercises.add(name);
         }
 
         // Track strength by month (for top exercises)
@@ -166,9 +187,24 @@ export function usePerformanceMetricsData(period: PerformancePeriod) {
         strengthData.push(point);
       });
 
+      // Build PR timeline data
+      const prTimeline: PRTimelinePoint[] = [];
+      const sortedPrKeys = Array.from(prByPeriod.keys()).sort();
+      sortedPrKeys.forEach((key) => {
+        const data = prByPeriod.get(key)!;
+        prTimeline.push({
+          label: format(new Date(key + '-01'), 'MMM yy', { locale: cs }),
+          date: key,
+          prCount: data.prCount,
+          maxWeight: data.maxWeight,
+          exercises: Array.from(data.exercises),
+        });
+      });
+
       return {
         topExercises: topExercises.slice(0, 10),
         personalRecords: personalRecords.slice(0, 10),
+        prTimeline,
         strengthData,
         top3Exercises,
       };
