@@ -16,9 +16,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get token from query params
+    // Get token from query params or body (supports both direct URL and supabase.functions.invoke)
     const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    let token = url.searchParams.get("token");
+
+    // If not in query params, try to get from body
+    if (!token && req.method === "POST") {
+      try {
+        const body = await req.json();
+        token = body.token;
+      } catch {
+        // ignore parse errors
+      }
+    }
 
     if (!token) {
       return new Response(
