@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatNumber, formatPercent } from '@/lib/formatters';
 
 interface KPIDetailModalProps {
   open: boolean;
@@ -50,7 +51,7 @@ export function KPIDetailModal({
           {/* Main Value */}
           <div className="text-center py-4">
             <p className="text-4xl font-bold text-foreground">
-              {typeof mainValue === 'number' ? mainValue.toLocaleString('cs-CZ') : mainValue}
+              {typeof mainValue === 'number' ? formatNumber(mainValue) : mainValue}
             </p>
             <p className="text-sm text-muted-foreground mt-1">{mainLabel}</p>
           </div>
@@ -63,7 +64,7 @@ export function KPIDetailModal({
                 className="glass rounded-xl p-3 text-center"
               >
                 <p className="text-lg font-semibold text-foreground">
-                  {typeof stat.value === 'number' ? stat.value.toLocaleString('cs-CZ') : stat.value}
+                  {typeof stat.value === 'number' ? formatNumber(stat.value) : stat.value}
                 </p>
                 <p className="text-xs text-muted-foreground">{stat.label}</p>
                 {stat.trend !== undefined && (
@@ -80,7 +81,7 @@ export function KPIDetailModal({
                     ) : (
                       <Minus className="w-3 h-3" />
                     )}
-                    <span>{Math.abs(stat.trend).toFixed(0)}%</span>
+                    <span>{formatPercent(Math.abs(stat.trend))}</span>
                     {stat.trendLabel && <span className="text-muted-foreground">{stat.trendLabel}</span>}
                   </div>
                 )}

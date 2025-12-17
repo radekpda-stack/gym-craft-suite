@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { formatNumber, formatPercent } from '@/lib/formatters';
 
 interface KPICardProps {
   title: string;
@@ -66,7 +67,7 @@ export function KPICard({
 
       {/* Value */}
       <p className={cn('text-2xl sm:text-3xl font-bold tracking-tight', valueStyles[variant])}>
-        {typeof value === 'number' ? value.toLocaleString('cs-CZ') : value}
+        {typeof value === 'number' ? formatNumber(value) : value}
       </p>
 
       {/* Trend or Subtitle */}
@@ -83,7 +84,7 @@ export function KPICard({
             ) : trend < 0 ? (
               <ArrowDownRight className="w-3.5 h-3.5" />
             ) : null}
-            <span>{Math.abs(trend).toFixed(0)}%</span>
+            <span>{formatPercent(Math.abs(trend))}</span>
             {trendLabel && <span className="text-muted-foreground ml-1 hidden sm:inline">{trendLabel}</span>}
           </div>
         ) : subtitle ? (

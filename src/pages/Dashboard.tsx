@@ -37,6 +37,7 @@ import { useTopClientsData } from '@/hooks/useTopClientsData';
 import { usePerformanceMetricsData } from '@/hooks/usePerformanceMetricsData';
 import { useFinancialStats } from '@/hooks/useFinancialStats';
 import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
+import { formatCurrency, formatPercent } from '@/lib/formatters';
 
 type KPIModalType = 'income' | 'profit' | 'trainings' | 'clients' | 'cancellations' | 'unpaid' | null;
 
@@ -230,15 +231,15 @@ function DashboardContent() {
         onOpenChange={(open) => !open && setActiveModal(null)}
         title="Přehled příjmů"
         icon={<Wallet className="w-4 h-4" />}
-        mainValue={`${(kpis?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
+        mainValue={formatCurrency(kpis?.incomeThisMonth || 0)}
         mainLabel="Příjem tento měsíc"
         stats={[
-          { label: 'Minulý měsíc', value: `${(kpis?.incomeLastMonth || 0).toLocaleString('cs-CZ')} Kč`, trend: kpis?.incomeTrend },
-          { label: 'Průměr za měsíc', value: `${(kpis?.avgMonthlyIncome || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Tréninky', value: `${(kpis?.trainingIncome || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Produkty', value: `${(kpis?.productIncome || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Příjem/trénink', value: `${Math.round(kpis?.incomePerTraining || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Podíl produktů', value: `${(kpis?.productIncomeShare || 0).toFixed(1)}%` },
+          { label: 'Minulý měsíc', value: formatCurrency(kpis?.incomeLastMonth || 0), trend: kpis?.incomeTrend },
+          { label: 'Průměr za měsíc', value: formatCurrency(kpis?.avgMonthlyIncome || 0) },
+          { label: 'Tréninky', value: formatCurrency(kpis?.trainingIncome || 0) },
+          { label: 'Produkty', value: formatCurrency(kpis?.productIncome || 0) },
+          { label: 'Příjem/trénink', value: formatCurrency(Math.round(kpis?.incomePerTraining || 0)) },
+          { label: 'Podíl produktů', value: formatPercent(kpis?.productIncomeShare || 0, 1) },
         ]}
       />
 
@@ -247,13 +248,13 @@ function DashboardContent() {
         onOpenChange={(open) => !open && setActiveModal(null)}
         title="Přehled zisku"
         icon={<TrendingUp className="w-4 h-4" />}
-        mainValue={`${(kpis?.netProfitThisMonth || 0).toLocaleString('cs-CZ')} Kč`}
+        mainValue={formatCurrency(kpis?.netProfitThisMonth || 0)}
         mainLabel="Čistý zisk tento měsíc"
         stats={[
-          { label: 'Příjmy celkem', value: `${(kpis?.incomeThisMonth || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Náklady', value: `${(kpis?.expensesThisMonth || 0).toLocaleString('cs-CZ')} Kč` },
-          { label: 'Marže', value: `${(kpis?.profitMargin || 0).toFixed(0)}%` },
-          { label: 'Trend', value: `${kpis?.profitTrend || 0 > 0 ? '+' : ''}${(kpis?.profitTrend || 0).toFixed(0)}%`, trend: kpis?.profitTrend },
+          { label: 'Příjmy celkem', value: formatCurrency(kpis?.incomeThisMonth || 0) },
+          { label: 'Náklady', value: formatCurrency(kpis?.expensesThisMonth || 0) },
+          { label: 'Marže', value: formatPercent(kpis?.profitMargin || 0) },
+          { label: 'Trend', value: `${kpis?.profitTrend || 0 > 0 ? '+' : ''}${formatPercent(kpis?.profitTrend || 0)}`, trend: kpis?.profitTrend },
         ]}
       />
 

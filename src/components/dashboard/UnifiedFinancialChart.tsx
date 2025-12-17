@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { formatCurrency, formatPercent } from '@/lib/formatters';
 
 export type FinancialPeriod = '30days' | '3months' | '6months' | '12months';
 export type FinancialLayer = 'income' | 'costs' | 'profit' | 'all';
@@ -179,12 +180,12 @@ export function UnifiedFinancialChart({
           <div>
             <p className="text-xs text-muted-foreground">Poslední období</p>
             <p className="text-xl font-bold text-foreground">
-              {lastValue.profit.toLocaleString('cs-CZ')} Kč
+              {formatCurrency(lastValue.profit)}
             </p>
           </div>
           <div className="text-xs text-muted-foreground">
-            <p>Příjem: {lastValue.income.toLocaleString('cs-CZ')} Kč</p>
-            <p>Náklady: {lastValue.costs.toLocaleString('cs-CZ')} Kč</p>
+            <p>Příjem: {formatCurrency(lastValue.income)}</p>
+            <p>Náklady: {formatCurrency(lastValue.costs)}</p>
           </div>
         </div>
       )}
@@ -230,7 +231,7 @@ export function UnifiedFinancialChart({
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                 formatter={(value: number, name: string) => [
-                  `${value.toLocaleString('cs-CZ')} Kč`,
+                  formatCurrency(value),
                   name === 'income' ? 'Příjem' : name === 'costs' ? 'Náklady' : 'Zisk',
                 ]}
               />
@@ -279,7 +280,7 @@ export function UnifiedFinancialChart({
           <div className="text-center">
             <p className="text-xs text-muted-foreground mb-1">Celkem za období</p>
             <p className="text-sm sm:text-base font-bold text-foreground">
-              {summary.totalProfit.toLocaleString('cs-CZ')} Kč
+              {formatCurrency(summary.totalProfit)}
             </p>
           </div>
           <div className="text-center">
@@ -301,7 +302,7 @@ export function UnifiedFinancialChart({
               ) : (
                 <Minus className="w-4 h-4" />
               )}
-              {Math.abs(summary.trend).toFixed(0)}%
+              {formatPercent(Math.abs(summary.trend))}
             </div>
           </div>
         </div>

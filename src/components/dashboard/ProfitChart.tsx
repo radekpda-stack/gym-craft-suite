@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { Loader2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/formatters';
 
 export type ProfitPeriod = '30days' | '6months' | '12months';
 
@@ -108,7 +109,7 @@ export function ProfitChart({ data, isLoading, period, onPeriodChange }: ProfitC
                     fontSize: '12px',
                   }}
                   formatter={(value: number, name: string) => [
-                    `${value.toLocaleString('cs-CZ')} Kč`,
+                    formatCurrency(value),
                     name === 'profit' ? 'Zisk' : name === 'revenue' ? 'Tržby' : 'Náklady',
                   ]}
                 />
@@ -135,19 +136,19 @@ export function ProfitChart({ data, isLoading, period, onPeriodChange }: ProfitC
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Tržby</p>
               <p className="text-sm md:text-base font-bold text-foreground">
-                {totalRevenue.toLocaleString('cs-CZ')} Kč
+                {formatCurrency(totalRevenue)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Náklady</p>
               <p className="text-sm md:text-base font-bold text-warning">
-                {totalCosts.toLocaleString('cs-CZ')} Kč
+                {formatCurrency(totalCosts)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Čistý zisk</p>
               <p className="text-sm md:text-base font-bold text-success">
-                {totalProfit.toLocaleString('cs-CZ')} Kč
+                {formatCurrency(totalProfit)}
               </p>
             </div>
           </div>

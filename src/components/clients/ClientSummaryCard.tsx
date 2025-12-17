@@ -25,6 +25,7 @@ import { Client } from '@/hooks/useClients';
 import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatisticsCard';
 import { FeedbackTrendsChart } from '@/components/feedback/FeedbackTrendsChart';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 interface SharedBudgetMember {
   id: string;
@@ -114,7 +115,7 @@ export function ClientSummaryCard({
           statusColor === 'destructive' && "bg-destructive/10 text-destructive"
         )}>
           <Wallet className="w-4 h-4" />
-          {creditBalance.toLocaleString('cs-CZ')} Kč
+          {formatCurrency(creditBalance)}
         </div>
       </div>
 
@@ -148,7 +149,7 @@ export function ClientSummaryCard({
           {unpaidCount > 0 ? (
             <p className="text-lg font-bold text-destructive flex items-center gap-1">
               <AlertTriangle className="w-4 h-4" />
-              {unpaidCount}× ({unpaidTotal.toLocaleString('cs-CZ')} Kč)
+              {unpaidCount}× ({formatCurrency(unpaidTotal)})
             </p>
           ) : (
             <p className="text-lg font-bold text-success flex items-center gap-1">
@@ -240,7 +241,7 @@ export function ClientSummaryCard({
             onClick={onPayUnpaid}
           >
             <CreditCard className="w-4 h-4" />
-            Uhradit neuhrazené ({unpaidTotal.toLocaleString('cs-CZ')} Kč)
+            Uhradit neuhrazené ({formatCurrency(unpaidTotal)})
           </Button>
         )}
       </div>

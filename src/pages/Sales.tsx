@@ -27,6 +27,7 @@ import {
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
+import { formatCurrency } from '@/lib/formatters';
 
 const PAYMENT_METHODS: { value: PaymentMethod | 'all'; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
   { value: 'all', label: 'Všechny platby' },
@@ -139,7 +140,7 @@ export default function Sales() {
       <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
         <span><strong className="text-foreground">{stats.totalSales}</strong> prodejů</span>
         <span>•</span>
-        <span><strong className="text-foreground">{stats.totalAmount.toLocaleString('cs-CZ')} Kč</strong> celkem</span>
+        <span><strong className="text-foreground">{formatCurrency(stats.totalAmount)}</strong> celkem</span>
       </div>
 
       {/* Filter */}
@@ -185,7 +186,7 @@ export default function Sales() {
                         {sale.products?.name || sale.description || 'Produkt'}
                       </span>
                       <span className="text-lg font-bold text-foreground">
-                        {Math.abs(sale.amount).toLocaleString('cs-CZ')} Kč
+                        {formatCurrency(Math.abs(sale.amount))}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">

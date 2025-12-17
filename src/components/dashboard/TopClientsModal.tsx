@@ -23,6 +23,7 @@ import {
   Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 interface TopClient {
   id: string;
@@ -239,12 +240,12 @@ export function TopClientsModal({
                     </span>
                     <span className="flex items-center gap-1">
                       <Wallet className="w-3 h-3" />
-                      {client.revenue.toLocaleString('cs-CZ')} Kč
+                      {formatCurrency(client.revenue)}
                     </span>
                     {(client.unpaidAmount || 0) > 0 && (
                       <Badge variant="destructive" className="text-xs px-1.5 py-0">
                         <Clock className="w-3 h-3 mr-1" />
-                        {client.unpaidAmount?.toLocaleString('cs-CZ')} Kč
+                        {formatCurrency(client.unpaidAmount)}
                       </Badge>
                     )}
                   </div>
@@ -268,7 +269,7 @@ export function TopClientsModal({
             {filteredAndSortedClients.length} klientů
           </span>
           <span className="text-muted-foreground">
-            Celkem: {filteredAndSortedClients.reduce((sum, c) => sum + c.revenue, 0).toLocaleString('cs-CZ')} Kč
+            Celkem: {formatCurrency(filteredAndSortedClients.reduce((sum, c) => sum + c.revenue, 0))}
           </span>
         </div>
       </DialogContent>
