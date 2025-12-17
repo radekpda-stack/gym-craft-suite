@@ -117,6 +117,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [painAreas, setPainAreas] = useState<string[]>([]);
   const [painAreaSides, setPainAreaSides] = useState<Record<string, PainSide>>({});
   const [painAreaNotes, setPainAreaNotes] = useState<Record<string, string>>({});
+  const [painAreaIntensities, setPainAreaIntensities] = useState<Record<string, number>>({});
   const [painAreaOther, setPainAreaOther] = useState('');
   const [note, setNote] = useState('');
 
@@ -186,9 +187,10 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Handle pain areas change from BodyMapSelector
   const handlePainAreasChange = (areas: string[]) => {
     setPainAreas(areas);
-    // Remove sides and notes for areas that are no longer selected
+    // Remove sides, notes, and intensities for areas that are no longer selected
     const newSides = { ...painAreaSides };
     const newNotes = { ...painAreaNotes };
+    const newIntensities = { ...painAreaIntensities };
     Object.keys(newSides).forEach(area => {
       if (!areas.includes(area)) {
         delete newSides[area];
@@ -199,8 +201,19 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         delete newNotes[area];
       }
     });
+    Object.keys(newIntensities).forEach(area => {
+      if (!areas.includes(area)) {
+        delete newIntensities[area];
+      }
+    });
     setPainAreaSides(newSides);
     setPainAreaNotes(newNotes);
+    setPainAreaIntensities(newIntensities);
+  };
+
+  // Handle intensity change for a specific area
+  const handleIntensityChange = (area: string, intensity: number) => {
+    setPainAreaIntensities(prev => ({ ...prev, [area]: intensity }));
   };
 
   // Handle side selection for a specific area
@@ -220,10 +233,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       const painThreshold = painQuestion?.painAreaThreshold ?? 4;
       const showPainArea = (values.pain ?? 1) >= painThreshold;
 
-      // Build pain areas array with sides and notes
+      // Build pain areas array with sides, notes, and intensities
       const painAreasData = showPainArea ? painAreas.map(area => {
         const side = painAreaSides[area];
         const areaNote = painAreaNotes[area];
+        const intensity = painAreaIntensities[area] ?? 5;
         let areaKey = area;
         if (BILATERAL_AREAS.includes(area) && side) {
           areaKey = `${area}_${side}`;
@@ -231,6 +245,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         return {
           area: areaKey,
           note: areaNote || undefined,
+          intensity,
         };
       }) : [];
 
@@ -244,6 +259,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           pain_area: painAreasWithSides.length > 0 ? painAreasWithSides.join(', ') : undefined, // Keep for backward compatibility
           pain_area_notes: painAreasData.filter(p => p.note).length > 0 
             ? Object.fromEntries(painAreasData.filter(p => p.note).map(p => [p.area, p.note]))
+            : undefined,
+          pain_area_intensities: painAreasData.length > 0
+            ? Object.fromEntries(painAreasData.map(p => [p.area, p.intensity]))
             : undefined,
           pain_area_other: showPainArea && painAreas.includes('other') ? painAreaOther : undefined,
           note: note || undefined,
@@ -449,6 +467,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                     <BodyMapSelector
                       selectedAreas={painAreas}
                       onAreasChange={handlePainAreasChange}
+                      intensities={painAreaIntensities}
+                      onIntensityChange={handleIntensityChange}
                       language="cs"
                     />
                     
