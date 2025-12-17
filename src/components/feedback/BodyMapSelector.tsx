@@ -48,7 +48,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
   const getAreaStyle = (area: string) => cn(
     "cursor-pointer transition-all duration-200",
     isSelected(area) 
-      ? "fill-primary stroke-primary opacity-100" 
+      ? "fill-primary stroke-primary opacity-100 animate-body-pulse" 
       : "fill-muted-foreground/30 stroke-muted-foreground/50 hover:fill-primary/40 hover:stroke-primary/60"
   );
 
