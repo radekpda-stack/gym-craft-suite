@@ -80,14 +80,14 @@ export function TopClientsRanking({
             </h3>
           </div>
           
-          <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+          <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">
             {PERIOD_OPTIONS.map((opt) => (
               <Button
                 key={opt.value}
                 variant={period === opt.value ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  'rounded-full text-xs px-3 h-8',
+                  'rounded-full text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 flex-shrink-0',
                   period === opt.value && 'bg-primary text-primary-foreground'
                 )}
                 onClick={() => onPeriodChange(opt.value)}
@@ -99,11 +99,11 @@ export function TopClientsRanking({
         </div>
 
         {/* Sort toggle */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
           <Button
             variant={sortBy === 'count' ? 'default' : 'outline'}
             size="sm"
-            className="text-xs h-8"
+            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 flex-shrink-0"
             onClick={() => setSortBy('count')}
           >
             Podle tréninků
@@ -111,7 +111,7 @@ export function TopClientsRanking({
           <Button
             variant={sortBy === 'revenue' ? 'default' : 'outline'}
             size="sm"
-            className="text-xs h-8"
+            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 flex-shrink-0"
             onClick={() => setSortBy('revenue')}
           >
             Podle příjmu
@@ -119,17 +119,17 @@ export function TopClientsRanking({
         </div>
 
         {/* Ranking list */}
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {sortedClients.slice(0, 5).map((client, index) => (
             <Link
               key={client.id}
               to={`/clients/${client.id}`}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all group"
+              className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl hover:bg-secondary/50 transition-all group"
             >
               {/* Rank badge */}
               <div
                 className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm',
+                  'w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0',
                   index === 0 && 'bg-warning/20 text-warning',
                   index === 1 && 'bg-muted text-muted-foreground',
                   index === 2 && 'bg-orange-500/20 text-orange-500',
@@ -140,16 +140,16 @@ export function TopClientsRanking({
               </div>
 
               {/* Client info */}
-              <ClientAvatar name={client.name} size="sm" />
+              <ClientAvatar name={client.name} size="sm" className="hidden xs:flex" />
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">{client.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {client.trainingsCount} tréninků • {formatCurrency(client.revenue)}
+                <p className="font-medium text-foreground truncate text-sm sm:text-base">{client.name}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {client.trainingsCount}× • {formatCurrency(client.revenue)}
                 </p>
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
             </Link>
           ))}
 

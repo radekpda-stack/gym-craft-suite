@@ -151,14 +151,14 @@ export function TrainingActivityChart({
           )}
         </div>
         
-        <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+        <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">
           {PERIOD_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
               variant={period === opt.value ? 'default' : 'ghost'}
               size="sm"
               className={cn(
-                'rounded-full text-xs px-3 h-8',
+                'rounded-full text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 flex-shrink-0',
                 period === opt.value && 'bg-primary text-primary-foreground'
               )}
               onClick={() => onPeriodChange(opt.value)}
@@ -169,8 +169,8 @@ export function TrainingActivityChart({
         </div>
       </div>
 
-      {/* Metric toggles */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Metric toggles - scrollable on mobile */}
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
         {METRIC_OPTIONS.map((opt) => {
           const Icon = opt.icon;
           return (
@@ -178,10 +178,10 @@ export function TrainingActivityChart({
               key={opt.value}
               variant={metric === opt.value ? 'default' : 'outline'}
               size="sm"
-              className="text-xs h-8 gap-1.5"
+              className="text-[10px] sm:text-xs h-7 sm:h-8 gap-1 sm:gap-1.5 px-2 sm:px-3 flex-shrink-0"
               onClick={() => setMetric(opt.value)}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               {opt.label}
             </Button>
           );
