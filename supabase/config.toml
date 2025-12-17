@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.ai-assistant]
 verify_jwt = true
 
+[functions.ai-operator]
+verify_jwt = true
+
 [functions.send-feedback-email]
 verify_jwt = true
 
