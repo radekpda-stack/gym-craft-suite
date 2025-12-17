@@ -1,6 +1,6 @@
 {
-  "name": "FitTrainer Pro",
-  "short_name": "FitTrainer",
+  "name": "Just Move Asistent",
+  "short_name": "Just Move",
   "description": "Aplikace pro osobní trenéry - správa klientů, tréninků a financí",
   "start_url": "/",
   "display": "standalone",
