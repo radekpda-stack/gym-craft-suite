@@ -10,9 +10,9 @@ export interface CapacitySettings {
 }
 
 const DEFAULT_SETTINGS: CapacitySettings = {
-  workingDays: [true, true, true, true, true, false, false], // Mon-Fri
-  workingHoursStart: '06:00',
-  workingHoursEnd: '20:00',
+  workingDays: [true, true, true, true, true, true, true], // All 7 days
+  workingHoursStart: '08:00',
+  workingHoursEnd: '16:00', // 8 hours
   slotDurationMinutes: 60,
   includeBlockedTime: true,
 };
