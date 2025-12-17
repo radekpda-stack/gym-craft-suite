@@ -3,7 +3,6 @@ import { Eye, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -19,6 +18,7 @@ import {
 } from '@/components/ui/popover';
 import { FeedbackQuestionsConfig } from './FeedbackQuestionsEditor';
 import { cn } from '@/lib/utils';
+import { BodyMapSelector } from '@/components/feedback/BodyMapSelector';
 
 // Default help texts for core questions (same as in PublicFeedbackFormNew)
 const DEFAULT_HELP_TEXTS: Record<string, string> = {
@@ -144,32 +144,21 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
                   </div>
                 </div>
 
-                {question.id === 'pain' && showPainAreas && enabledPainAreas.length > 0 && (
+                {question.id === 'pain' && showPainAreas && (
                   <div className="mt-4 p-4 rounded-xl bg-muted/50 space-y-3">
-                    <Label className="text-sm font-medium">Kde cítíte bolest?</Label>
-                    <RadioGroup
-                      value={selectedPainArea}
-                      onValueChange={handlePainAreaChange}
-                      className="grid grid-cols-2 gap-2"
-                    >
-                      {enabledPainAreas.map((area) => (
-                        <div key={area.id} className="flex items-center space-x-2">
-                          <RadioGroupItem value={area.id} id={`preview-${area.id}`} />
-                          <Label 
-                            htmlFor={`preview-${area.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {area.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                    <Label className="text-sm font-medium text-center block">Kde cítíte bolest? Klikněte na oblast</Label>
+                    
+                    <BodyMapSelector
+                      selectedArea={selectedPainArea || null}
+                      onAreaSelect={handlePainAreaChange}
+                      language="cs"
+                    />
                     
                     {/* Side selection for bilateral areas */}
                     {needsSideSelection && (
                       <div className="mt-3 p-3 rounded-lg bg-background/50 border">
-                        <Label className="mb-2 block text-sm font-medium">Která strana?</Label>
-                        <div className="flex gap-2">
+                        <Label className="mb-2 block text-sm font-medium text-center">Která strana?</Label>
+                        <div className="flex gap-2 justify-center">
                           {[
                             { id: 'left', label: 'Levá' },
                             { id: 'right', label: 'Pravá' },
@@ -179,7 +168,7 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
                               key={side.id}
                               type="button"
                               className={cn(
-                                'flex-1 py-2 px-3 text-sm rounded-md border transition-colors',
+                                'py-2 px-4 text-sm rounded-md border transition-colors',
                                 painAreaSide === side.id 
                                   ? 'bg-primary text-primary-foreground border-primary' 
                                   : 'bg-background hover:bg-secondary border-border'
