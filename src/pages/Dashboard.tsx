@@ -25,6 +25,7 @@ import { TrainingActivityChart, TrainingPeriod } from '@/components/dashboard/Tr
 import { TopClientsRanking, ClientsPeriod } from '@/components/dashboard/TopClientsRanking';
 import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashboard/PerformanceMetricsSection';
 import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
+import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
 import { useUnifiedFinancialData } from '@/hooks/useUnifiedFinancialData';
@@ -44,6 +45,7 @@ const DEFAULT_LAYOUT: NewDashboardLayout = {
   showTrainingActivity: true,
   showTopClients: true,
   showPerformanceMetrics: true,
+  showFeedbackTrends: true,
 };
 
 export default function Dashboard() {
@@ -350,6 +352,11 @@ export default function Dashboard() {
             period={clientsPeriod}
             onPeriodChange={setClientsPeriod}
           />
+        )}
+
+        {/* Feedback Trends Card */}
+        {layout.showFeedbackTrends && (
+          <FeedbackTrendsCard />
         )}
       </div>
 
