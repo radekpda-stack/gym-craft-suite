@@ -35,6 +35,7 @@ export interface FeedbackQuestion {
   defaultValue: number;
   enabled: boolean;
   order: number;
+  helpText?: string;
   showPainAreas?: boolean;
   painAreaThreshold?: number;
 }
