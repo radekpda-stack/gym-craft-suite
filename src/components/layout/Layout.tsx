@@ -8,6 +8,7 @@ import { QuickActionButton } from './QuickActionButton';
 import { CommandPalette, useCommandPalette } from '@/components/search/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 import { ReminderNotifier } from '@/components/reminders/ReminderNotifier';
+import { useClientAnniversaryNotifier } from '@/hooks/useClientAnniversaries';
 import { useAppShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
@@ -22,6 +23,9 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  // Anniversary notifier - checks for client anniversaries
+  useClientAnniversaryNotifier();
 
   // Keyboard shortcuts
   useAppShortcuts({

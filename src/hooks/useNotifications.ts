@@ -11,7 +11,8 @@ export type NotificationType =
   | 'incomplete_training'
   | 'feedback_received'
   | 'feedback_red_flag'
-  | 'feedback_trend_alert';
+  | 'feedback_trend_alert'
+  | 'client_anniversary';
 
 export interface Notification {
   id: string;
