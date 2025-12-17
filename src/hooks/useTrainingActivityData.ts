@@ -55,7 +55,10 @@ export function useTrainingActivityData(period: TrainingPeriod) {
           const weekStart = startOfWeek(date, { weekStartsOn: 1 });
           key = format(weekStart, 'd.M.');
         } else if (groupBy === 'month') {
-          key = format(date, 'MMM', { locale: cs });
+          // Use full month name for better display
+          key = format(date, 'LLLL', { locale: cs });
+          // Capitalize first letter
+          key = key.charAt(0).toUpperCase() + key.slice(1);
         } else {
           key = format(date, 'd.M.');
         }
