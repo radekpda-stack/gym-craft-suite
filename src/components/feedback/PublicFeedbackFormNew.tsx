@@ -10,6 +10,7 @@ import {
   CheckCircle,
   HelpCircle,
 } from 'lucide-react';
+import { BodyMapSelector } from './BodyMapSelector';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -405,34 +406,23 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
             <div key={question.id}>
               {renderSlider(question)}
               
-              {/* Conditional pain area selection */}
+              {/* Conditional pain area selection with body map */}
               {question.id === 'pain' && showPainAreas && (
                 <Card className="mt-4 border-warning/50 bg-warning/5">
                   <CardContent className="pt-6">
-                    <Label className="mb-3 block text-base font-medium">Kde to bolí?</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {enabledPainAreas.map((area) => (
-                        <Badge
-                          key={area.id}
-                          variant={painArea === area.id ? 'default' : 'outline'}
-                          className={cn(
-                            'cursor-pointer text-sm py-2 px-4 transition-all',
-                            painArea === area.id 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'hover:bg-secondary'
-                          )}
-                          onClick={() => handlePainAreaSelect(area.id)}
-                        >
-                          {area.label}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label className="mb-4 block text-base font-medium text-center">Kde to bolí? Klikni na oblast</Label>
+                    
+                    <BodyMapSelector
+                      selectedArea={painArea}
+                      onAreaSelect={handlePainAreaSelect}
+                      language="cs"
+                    />
                     
                     {/* Side selection for bilateral areas */}
                     {needsSideSelection && (
                       <div className="mt-4 p-3 rounded-lg bg-background/50 border">
-                        <Label className="mb-2 block text-sm font-medium">Která strana?</Label>
-                        <div className="flex gap-2">
+                        <Label className="mb-2 block text-sm font-medium text-center">Která strana?</Label>
+                        <div className="flex gap-2 justify-center">
                           {[
                             { id: 'left', label: 'Levá' },
                             { id: 'right', label: 'Pravá' },
@@ -442,7 +432,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                               key={side.id}
                               variant={painAreaSide === side.id ? 'default' : 'outline'}
                               className={cn(
-                                'cursor-pointer text-sm py-2 px-4 transition-all flex-1 justify-center',
+                                'cursor-pointer text-sm py-2 px-4 transition-all',
                                 painAreaSide === side.id 
                                   ? 'bg-primary text-primary-foreground' 
                                   : 'hover:bg-secondary'
