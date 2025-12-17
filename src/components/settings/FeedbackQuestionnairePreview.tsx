@@ -35,10 +35,10 @@ interface FeedbackQuestionnairePreviewProps {
   config: FeedbackQuestionsConfig;
 }
 
-// Pain areas that require side selection (bilateral)
-const BILATERAL_PAIN_AREAS = ['knee', 'shoulder', 'hip', 'ankle', 'wrist'];
+// Import bilateral areas from BodyMapSelector
+import { BILATERAL_AREAS } from '@/components/feedback/BodyMapSelector';
 
-type PainSide = 'left' | 'right' | 'both' | null;
+type PainSide = 'left' | 'right' | 'both';
 
 export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePreviewProps) {
   const [values, setValues] = useState<Record<string, number>>(() => {
@@ -50,8 +50,8 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
     });
     return initial;
   });
-  const [selectedPainArea, setSelectedPainArea] = useState<string>('');
-  const [painAreaSide, setPainAreaSide] = useState<PainSide>(null);
+  const [selectedPainAreas, setSelectedPainAreas] = useState<string[]>([]);
+  const [painAreaSides, setPainAreaSides] = useState<Record<string, PainSide>>({});
   const [note, setNote] = useState('');
 
   const enabledQuestions = config.questions
@@ -65,11 +65,19 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
     painQuestion?.showPainAreas !== false && 
     (values['pain'] || 0) >= (painQuestion?.painAreaThreshold || 4);
   
-  const needsSideSelection = selectedPainArea && BILATERAL_PAIN_AREAS.includes(selectedPainArea);
+  const bilateralAreasSelected = selectedPainAreas.filter(area => BILATERAL_AREAS.includes(area));
   
-  const handlePainAreaChange = (areaId: string) => {
-    setSelectedPainArea(areaId);
-    setPainAreaSide(null);
+  const handlePainAreasChange = (areas: string[]) => {
+    setSelectedPainAreas(areas);
+    const newSides = { ...painAreaSides };
+    Object.keys(newSides).forEach(area => {
+      if (!areas.includes(area)) delete newSides[area];
+    });
+    setPainAreaSides(newSides);
+  };
+
+  const handleSideSelect = (area: string, side: PainSide) => {
+    setPainAreaSides(prev => ({ ...prev, [area]: side }));
   };
 
   return (
@@ -146,39 +154,53 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
 
                 {question.id === 'pain' && showPainAreas && (
                   <div className="mt-4 p-4 rounded-xl bg-muted/50 space-y-3">
-                    <Label className="text-sm font-medium text-center block">Kde cítíte bolest? Klikněte na oblast</Label>
+                    <Label className="text-sm font-medium text-center block">
+                      Kde cítíte bolest? Klikněte na oblasti (můžete vybrat více)
+                    </Label>
                     
                     <BodyMapSelector
-                      selectedArea={selectedPainArea || null}
-                      onAreaSelect={handlePainAreaChange}
+                      selectedAreas={selectedPainAreas}
+                      onAreasChange={handlePainAreasChange}
                       language="cs"
                     />
                     
-                    {/* Side selection for bilateral areas */}
-                    {needsSideSelection && (
-                      <div className="mt-3 p-3 rounded-lg bg-background/50 border">
-                        <Label className="mb-2 block text-sm font-medium text-center">Která strana?</Label>
-                        <div className="flex gap-2 justify-center">
-                          {[
-                            { id: 'left', label: 'Levá' },
-                            { id: 'right', label: 'Pravá' },
-                            { id: 'both', label: 'Obě' },
-                          ].map((side) => (
-                            <button
-                              key={side.id}
-                              type="button"
-                              className={cn(
-                                'py-2 px-4 text-sm rounded-md border transition-colors',
-                                painAreaSide === side.id 
-                                  ? 'bg-primary text-primary-foreground border-primary' 
-                                  : 'bg-background hover:bg-secondary border-border'
-                              )}
-                              onClick={() => setPainAreaSide(side.id as PainSide)}
-                            >
-                              {side.label}
-                            </button>
-                          ))}
-                        </div>
+                    {/* Side selection for each bilateral area */}
+                    {bilateralAreasSelected.length > 0 && (
+                      <div className="space-y-2">
+                        {bilateralAreasSelected.map(area => {
+                          const areaLabels: Record<string, string> = {
+                            knee: 'Koleno', shoulder: 'Rameno', hip: 'Kyčel', 
+                            ankle: 'Kotník', wrist: 'Zápěstí', elbow: 'Loket'
+                          };
+                          return (
+                            <div key={area} className="p-3 rounded-lg bg-background/50 border">
+                              <Label className="mb-2 block text-sm font-medium text-center">
+                                {areaLabels[area]} - která strana?
+                              </Label>
+                              <div className="flex gap-2 justify-center">
+                                {[
+                                  { id: 'left', label: 'Levá' },
+                                  { id: 'right', label: 'Pravá' },
+                                  { id: 'both', label: 'Obě' },
+                                ].map((side) => (
+                                  <button
+                                    key={side.id}
+                                    type="button"
+                                    className={cn(
+                                      'py-2 px-4 text-sm rounded-md border transition-colors',
+                                      painAreaSides[area] === side.id 
+                                        ? 'bg-primary text-primary-foreground border-primary' 
+                                        : 'bg-background hover:bg-secondary border-border'
+                                    )}
+                                    onClick={() => handleSideSelect(area, side.id as PainSide)}
+                                  >
+                                    {side.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
