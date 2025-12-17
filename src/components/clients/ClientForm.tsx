@@ -19,6 +19,7 @@ import {
 import { DatePicker } from "@/components/ui/date-time-picker";
 import { clientFormSchema, ClientFormValues } from "@/lib/validations/client";
 import { Client } from "@/hooks/useClients";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 interface ClientFormProps {
   onSubmit: (data: ClientFormValues) => Promise<void>;
@@ -55,6 +56,10 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
     },
   });
 
+  // Track unsaved changes
+  const isDirty = form.formState.isDirty;
+  useUnsavedChanges(isDirty);
+
   useEffect(() => {
     if (defaultValues) {
       form.reset({
@@ -76,7 +81,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
   const addGoal = (goal: string) => {
     const trimmedGoal = goal.trim();
     if (trimmedGoal && !trainingGoals.includes(trimmedGoal)) {
-      form.setValue("trainingGoals", [...trainingGoals, trimmedGoal]);
+      form.setValue("trainingGoals", [...trainingGoals, trimmedGoal], { shouldDirty: true });
     }
     setNewGoal("");
   };
@@ -84,12 +89,14 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
   const removeGoal = (goalToRemove: string) => {
     form.setValue(
       "trainingGoals",
-      trainingGoals.filter((goal) => goal !== goalToRemove)
+      trainingGoals.filter((goal) => goal !== goalToRemove),
+      { shouldDirty: true }
     );
   };
 
   const handleSubmit = async (data: ClientFormValues) => {
     await onSubmit(data);
+    form.reset(data); // Mark as clean after successful submit
   };
 
   return (
