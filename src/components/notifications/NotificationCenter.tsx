@@ -1,4 +1,4 @@
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell, TrendingDown, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -31,7 +31,8 @@ const notificationIcons: Record<string, typeof Bell> = {
   milestone_1000: Trophy,
   incomplete_training: Dumbbell,
   feedback_received: Bell,
-  feedback_red_flag: Bell,
+  feedback_red_flag: AlertTriangle,
+  feedback_trend_alert: TrendingDown,
 };
 
 const notificationColors: Record<string, string> = {
@@ -44,6 +45,7 @@ const notificationColors: Record<string, string> = {
   incomplete_training: "text-warning",
   feedback_received: "text-green-500",
   feedback_red_flag: "text-destructive",
+  feedback_trend_alert: "text-orange-500",
 };
 
 // Extract training ID from notification message
@@ -106,7 +108,16 @@ export function NotificationCenter() {
                 const colorClass = notificationColors[notification.type] || "text-foreground";
                 const trainingId = notification.type === 'incomplete_training' 
                   ? extractTrainingId(notification.message) 
-                  : null;
+                  : notification.entity_type === 'training' ? notification.entity_id : null;
+                const clientId = notification.client_id || 
+                  (notification.entity_type === 'client' ? notification.entity_id : null);
+
+                // Determine link destination
+                const linkTo = trainingId 
+                  ? `/trainings/${trainingId}`
+                  : clientId 
+                    ? `/clients/${clientId}`
+                    : null;
 
                 // Clean message (remove ID part for display)
                 const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
@@ -121,9 +132,9 @@ export function NotificationCenter() {
                       <p className="text-sm text-muted-foreground mt-1">
                         {displayMessage}
                       </p>
-                      {trainingId && (
+                      {linkTo && (
                         <p className="text-xs text-primary mt-1 hover:underline">
-                          Otevřít detail tréninku →
+                          {trainingId ? "Otevřít detail tréninku →" : "Otevřít kartu klienta →"}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
@@ -164,10 +175,10 @@ export function NotificationCenter() {
                   </div>
                 );
 
-                return trainingId ? (
+                return linkTo ? (
                   <Link
                     key={notification.id}
-                    to={`/trainings/${trainingId}`}
+                    to={linkTo}
                     className={cn(
                       "block p-4 rounded-xl border transition-colors hover:border-primary/40",
                       notification.is_read 
