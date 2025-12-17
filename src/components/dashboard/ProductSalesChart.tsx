@@ -118,17 +118,7 @@ export function ProductSalesChart({
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showProductSelector, setShowProductSelector] = useState(false);
   
-  if (isLoading) {
-    return (
-      <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  // Memoize filtered products based on selection
+  // Memoize filtered products based on selection - MUST be before any early returns
   const displayProducts = useMemo(() => 
     selectedProducts.length > 0
       ? allProducts.filter(p => selectedProducts.includes(p.id))
@@ -136,7 +126,7 @@ export function ProductSalesChart({
     [selectedProducts, allProducts, topProducts]
   );
 
-  // Memoize computed totals
+  // Memoize computed totals - MUST be before any early returns
   const { filteredTotalRevenue, filteredTotalMargin, filteredMarginPercent, totalCount } = useMemo(() => {
     const revenue = displayProducts.reduce((sum, p) => sum + p.revenue, 0);
     const margin = displayProducts.reduce((sum, p) => sum + p.margin, 0);
@@ -154,6 +144,18 @@ export function ProductSalesChart({
   }, []);
 
   const clearSelection = useCallback(() => setSelectedProducts([]), []);
+
+  // Early return for loading - AFTER all hooks
+  if (isLoading) {
+    return (
+      <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    );
+  }
+
 
   return (
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
