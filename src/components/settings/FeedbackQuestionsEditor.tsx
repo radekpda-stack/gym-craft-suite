@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { FeedbackQuestionnairePreview } from './FeedbackQuestionnairePreview';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Accordion,
   AccordionContent,
@@ -43,6 +44,7 @@ export interface FeedbackQuestion {
   defaultValue: number;
   enabled: boolean;
   order: number;
+  helpText?: string;
   showPainAreas?: boolean;
   painAreaThreshold?: number;
 }
@@ -198,6 +200,21 @@ function SortableQuestionItem({
                 />
               </div>
             )}
+          </div>
+          
+          {/* Help text field */}
+          <div className="mt-4 space-y-2">
+            <Label>Nápověda pro klienta</Label>
+            <Textarea
+              value={question.helpText || ''}
+              onChange={(e) => onUpdate({ ...question, helpText: e.target.value })}
+              placeholder="Vysvětlete klientovi, co tato položka znamená a jak ji hodnotit..."
+              className="glass-input min-h-[80px] resize-none"
+              maxLength={200}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {(question.helpText || '').length}/200
+            </p>
           </div>
         </AccordionContent>
       </AccordionItem>

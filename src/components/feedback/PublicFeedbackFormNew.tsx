@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface PublicFeedbackFormNewProps {
   token: string;
@@ -34,6 +40,7 @@ interface FeedbackQuestion {
   defaultValue: number;
   enabled: boolean;
   order: number;
+  helpText?: string;
   showPainAreas?: boolean;
   painAreaThreshold?: number;
 }
@@ -61,15 +68,26 @@ interface FormData {
 
 type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed';
 
+// Default help texts for core questions
+const DEFAULT_HELP_TEXTS: Record<string, string> = {
+  soreness: 'Zpožděná svalová bolestivost (DOMS) - pocit ztuhlosti a citlivosti ve svalech, který se objevuje 24-72 hodin po tréninku. Je normální a ukazuje na zatížení svalů.',
+  body_feel: 'Jak se celkově cítíte fyzicky? Ztuhlost, lehkost, svěžest nebo naopak těžkost a únava v těle.',
+  energy: 'Vaše celková úroveň energie během dne - zda se cítíte unavený, ospalý nebo naopak plný síly a elánu.',
+  pain: 'Ostrá, bodavá nebo tupá bolest v kloubech, šlachách nebo svalech - NE běžná svalovka po tréninku. Pokud máte bolest, vyberte kde.',
+  session_fit: 'Hodnotí, jak dobře trénink odpovídal vaší aktuální kondici, náladě a očekávání. Byl přiměřený, nebo příliš lehký/těžký?',
+  difficulty: 'Subjektivní pocit náročnosti - jak moc vás trénink vyčerpal fyzicky. 1 = téměř bez námahy, 10 = úplné vyčerpání.',
+  fun: 'Jak moc vás trénink bavil? Cítili jste motivaci a radost z pohybu, nebo to bylo spíše utrpení?',
+};
+
 const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
   questions: [
-    { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0 },
-    { id: 'body_feel', type: 'slider', label: 'Celkový pocit v těle', emoji: '🧘', minLabel: 'Špatně', maxLabel: 'Výborně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 1 },
-    { id: 'energy', type: 'slider', label: 'Energie', emoji: '⚡', minLabel: 'Vyčerpaný', maxLabel: 'Plný energie', min: 1, max: 10, defaultValue: 5, enabled: true, order: 2 },
-    { id: 'pain', type: 'slider', label: 'Bolest (ne jen svalovka)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4 },
-    { id: 'session_fit', type: 'slider', label: 'Jak sedl trénink', emoji: '🎯', minLabel: 'Vůbec', maxLabel: 'Perfektně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 4 },
-    { id: 'difficulty', type: 'slider', label: 'Jak těžký byl trénink', emoji: '🏋️', minLabel: 'Lehký', maxLabel: 'Velmi těžký', min: 1, max: 10, defaultValue: 5, enabled: true, order: 5 },
-    { id: 'fun', type: 'slider', label: 'Jak moc to bavilo', emoji: '😊', minLabel: 'Vůbec', maxLabel: 'Maximálně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 6 },
+    { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0, helpText: DEFAULT_HELP_TEXTS.soreness },
+    { id: 'body_feel', type: 'slider', label: 'Celkový pocit v těle', emoji: '🧘', minLabel: 'Špatně', maxLabel: 'Výborně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 1, helpText: DEFAULT_HELP_TEXTS.body_feel },
+    { id: 'energy', type: 'slider', label: 'Energie', emoji: '⚡', minLabel: 'Vyčerpaný', maxLabel: 'Plný energie', min: 1, max: 10, defaultValue: 5, enabled: true, order: 2, helpText: DEFAULT_HELP_TEXTS.energy },
+    { id: 'pain', type: 'slider', label: 'Bolest (ne jen svalovka)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4, helpText: DEFAULT_HELP_TEXTS.pain },
+    { id: 'session_fit', type: 'slider', label: 'Jak sedl trénink', emoji: '🎯', minLabel: 'Vůbec', maxLabel: 'Perfektně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 4, helpText: DEFAULT_HELP_TEXTS.session_fit },
+    { id: 'difficulty', type: 'slider', label: 'Jak těžký byl trénink', emoji: '🏋️', minLabel: 'Lehký', maxLabel: 'Velmi těžký', min: 1, max: 10, defaultValue: 5, enabled: true, order: 5, helpText: DEFAULT_HELP_TEXTS.difficulty },
+    { id: 'fun', type: 'slider', label: 'Jak moc to bavilo', emoji: '😊', minLabel: 'Vůbec', maxLabel: 'Maximálně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 6, helpText: DEFAULT_HELP_TEXTS.fun },
   ],
   painAreas: [
     { id: 'knee', label: 'Koleno', enabled: true },
@@ -189,16 +207,40 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   const renderSlider = (question: FeedbackQuestion) => {
     const value = values[question.id] ?? question.defaultValue;
+    // Use custom helpText or fall back to default for core questions
+    const helpText = question.helpText || DEFAULT_HELP_TEXTS[question.id];
     
     return (
       <Card key={question.id}>
         <CardContent className="pt-6">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label className="text-base font-medium">
-                {question.emoji && <span className="mr-2">{question.emoji}</span>}
-                {question.label}
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-base font-medium">
+                  {question.emoji && <span className="mr-2">{question.emoji}</span>}
+                  {question.label}
+                </Label>
+                {helpText && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button 
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Nápověda"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      side="top" 
+                      className="max-w-[280px] text-sm"
+                      sideOffset={8}
+                    >
+                      {helpText}
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
               <span className="text-2xl font-bold text-primary">{value}</span>
             </div>
             <Slider
