@@ -37,8 +37,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { data: trainings = [] } = useTrainingSessions();
   const [search, setSearch] = useState('');
 
-  const runCommand = useCallback((command: () => void) => {
-    featureTracker.track('search_open', 'search');
+  const runCommand = useCallback((command: () => void, resultType?: string) => {
+    featureTracker.track('search_result_select', 'search', { result_type: resultType });
     onOpenChange(false);
     command();
   }, [onOpenChange]);
@@ -78,7 +78,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               <CommandItem
                 key={client.id}
                 value={client.name}
-                onSelect={() => runCommand(() => navigate(`/clients/${client.id}`))}
+                onSelect={() => runCommand(() => navigate(`/clients/${client.id}`), 'client')}
                 className="flex items-center gap-3"
               >
                 <ClientAvatar name={client.name} size="sm" />
@@ -103,7 +103,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <CommandItem
               key={page.path}
               value={page.name}
-              onSelect={() => runCommand(() => navigate(page.path))}
+              onSelect={() => runCommand(() => navigate(page.path), 'page')}
             >
               <page.icon className="mr-2 h-4 w-4" />
               <span>{page.name}</span>
@@ -121,7 +121,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   <CommandItem
                     key={training.id}
                     value={`${client?.name} ${new Date(training.date).toLocaleDateString('cs-CZ')}`}
-                    onSelect={() => runCommand(() => navigate('/calendar'))}
+                    onSelect={() => runCommand(() => navigate('/calendar'), 'training')}
                   >
                     <Dumbbell className="mr-2 h-4 w-4" />
                     <span className="flex-1">{client?.name}</span>
@@ -166,6 +166,7 @@ export function useCommandPalette() {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        featureTracker.track('search_open_keyboard', 'search');
         setOpen((open) => !open);
       }
     };
