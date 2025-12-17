@@ -25,10 +25,14 @@ export function useCapacitySettings() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ['app-settings', SETTINGS_KEY],
     queryFn: async (): Promise<CapacitySettings | null> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('app_settings')
         .select('value')
         .eq('key', SETTINGS_KEY)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
@@ -43,17 +47,22 @@ export function useCapacitySettings() {
 
   const mutation = useMutation({
     mutationFn: async (newSettings: CapacitySettings) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data: existing } = await supabase
         .from('app_settings')
         .select('id')
         .eq('key', SETTINGS_KEY)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (existing) {
         const { error } = await supabase
           .from('app_settings')
           .update({ value: newSettings as any })
-          .eq('key', SETTINGS_KEY);
+          .eq('key', SETTINGS_KEY)
+          .eq('user_id', user.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -62,6 +71,7 @@ export function useCapacitySettings() {
             key: SETTINGS_KEY,
             value: newSettings as any,
             description: 'Nastavení kapacity kalendáře',
+            user_id: user.id,
           });
         if (error) throw error;
       }
