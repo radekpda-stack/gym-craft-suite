@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Calculator,
   Building2,
+  Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
+import { NutritionSettings } from '@/components/settings/NutritionSettings';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -111,6 +113,12 @@ export default function Settings() {
       description: 'Automatické odesílání a konfigurace dotazníků',
       icon: MessageSquare,
       content: <FeedbackSettings />,
+    },
+    {
+      title: 'Jídelní log',
+      description: 'Nastavení pro 7denní sledování stravy klientů',
+      icon: Utensils,
+      content: <NutritionSettings />,
     },
     {
       title: t.settings.calendar,
