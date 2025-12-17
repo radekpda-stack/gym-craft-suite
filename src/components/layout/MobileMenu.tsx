@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ShoppingBag,
   Bell,
+  ClipboardList,
   LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,6 +52,12 @@ const sections: NavSection[] = [
       { to: '/calendar', icon: Calendar, label: 'Kalendář' },
       { to: '/clients', icon: Users, label: 'Klienti' },
       { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+    ],
+  },
+  {
+    label: 'Plánování',
+    items: [
+      { to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
     ],
   },
   {

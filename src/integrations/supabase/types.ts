@@ -453,6 +453,45 @@ export type Database = {
           },
         ]
       }
+      diagnostic_answers: {
+        Row: {
+          assessment_id: string
+          created_at: string | null
+          id: string
+          question_id: string
+          value: Json
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string | null
+          id?: string
+          question_id: string
+          value: Json
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string | null
+          id?: string
+          question_id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_answers_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_assessments: {
         Row: {
           ai_analysis: string | null
@@ -646,6 +685,173 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      diagnostic_assessments_v2: {
+        Row: {
+          ai_analysis: string | null
+          ai_avoid_exercises: string[] | null
+          ai_contraindications: string[] | null
+          ai_must_do_exercises: string[] | null
+          ai_priorities: string[] | null
+          ai_recommendations: string | null
+          ai_risk_factors: string[] | null
+          ai_strengths: string[] | null
+          assessment_type: string | null
+          client_id: string
+          created_at: string | null
+          diagnostic_id: string | null
+          id: string
+          is_draft: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          ai_avoid_exercises?: string[] | null
+          ai_contraindications?: string[] | null
+          ai_must_do_exercises?: string[] | null
+          ai_priorities?: string[] | null
+          ai_recommendations?: string | null
+          ai_risk_factors?: string[] | null
+          ai_strengths?: string[] | null
+          assessment_type?: string | null
+          client_id: string
+          created_at?: string | null
+          diagnostic_id?: string | null
+          id?: string
+          is_draft?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          ai_avoid_exercises?: string[] | null
+          ai_contraindications?: string[] | null
+          ai_must_do_exercises?: string[] | null
+          ai_priorities?: string[] | null
+          ai_recommendations?: string | null
+          ai_risk_factors?: string[] | null
+          ai_strengths?: string[] | null
+          assessment_type?: string | null
+          client_id?: string
+          created_at?: string | null
+          diagnostic_id?: string | null
+          id?: string
+          is_draft?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_assessments_v2_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_assessments_v2_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_questions: {
+        Row: {
+          created_at: string | null
+          help_text: string | null
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          max_value: number | null
+          min_value: number | null
+          options: Json | null
+          question_text: string
+          question_text_en: string | null
+          question_type: string
+          section_id: string
+          sort_order: number | null
+          unit: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          help_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          max_value?: number | null
+          min_value?: number | null
+          options?: Json | null
+          question_text: string
+          question_text_en?: string | null
+          question_type: string
+          section_id: string
+          sort_order?: number | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          help_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          max_value?: number | null
+          min_value?: number | null
+          options?: Json | null
+          question_text?: string
+          question_text_en?: string | null
+          question_type?: string
+          section_id?: string
+          sort_order?: number | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_sections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_en: string | null
+          sort_order: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_en?: string | null
+          sort_order?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_en?: string | null
+          sort_order?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       diagnostics: {
         Row: {
