@@ -31,6 +31,7 @@ import { TopClientsRanking, ClientsPeriod } from '@/components/dashboard/TopClie
 import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashboard/PerformanceMetricsSection';
 import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
 import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
+import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
 import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
 import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
 import { CapacityTrendChart } from '@/components/dashboard/CapacityTrendChart';
@@ -464,6 +465,9 @@ function DashboardContent() {
           {layout.showFeedbackTrends && (
             <FeedbackTrendsCard />
           )}
+
+          {/* Upcoming Anniversaries Card */}
+          <UpcomingAnniversariesCard />
 
           {/* Capacity Trend Chart */}
           {layout.showCapacityTrend && (
