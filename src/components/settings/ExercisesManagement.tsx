@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useExercises, Exercise } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
 
-const CATEGORIES = ['Nohy', 'Hrudník', 'Záda', 'Ramena', 'Paže', 'Core'];
+const CATEGORIES = ['Dolní tělo', 'Horní tělo', 'Core', 'Nohy', 'Hrudník', 'Záda', 'Ramena', 'Paže'];
 
 export function ExercisesManagement() {
   const { exercises, isLoading, createExercise, updateExercise, deleteExercise } = useExercises();
@@ -37,7 +37,7 @@ export function ExercisesManagement() {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Nohy',
+    category: 'Dolní tělo',
     subcategory: '',
     description: '',
     muscle_groups: '',
@@ -65,7 +65,7 @@ export function ExercisesManagement() {
     setEditingExercise(null);
     setFormData({
       name: '',
-      category: 'Nohy',
+      category: 'Dolní tělo',
       subcategory: '',
       description: '',
       muscle_groups: '',

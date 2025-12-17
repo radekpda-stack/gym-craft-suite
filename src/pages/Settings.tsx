@@ -11,7 +11,6 @@ import {
   Package,
   Tag,
   Dumbbell,
-  Wallet,
   Globe,
   BarChart3,
   MessageSquare,
@@ -26,7 +25,7 @@ import { ProductsManagement } from '@/components/settings/ProductsManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
-import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManagement';
+
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
@@ -88,12 +87,6 @@ export default function Settings() {
       description: t.settings.pricesDesc,
       icon: CreditCard,
       content: <TrainingPricesSettings />,
-    },
-    {
-      title: t.settings.paymentTags,
-      description: t.settings.paymentTagsDesc,
-      icon: Wallet,
-      content: <PaymentTagsManagement />,
     },
     {
       title: t.settings.products,
