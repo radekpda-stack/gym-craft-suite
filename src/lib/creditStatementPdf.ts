@@ -34,32 +34,32 @@ export interface CreditStatementOptions {
 
 const translations = {
   cs: {
-    title: "Výpis čerpání kreditu",
+    title: "Vypis cerpani kreditu",
     client: "Klient",
-    period: "Období",
-    issueDate: "Datum vystavení",
+    period: "Obdobi",
+    issueDate: "Datum vystaveni",
     summary: "Souhrn",
-    totalItems: "Celkový počet položek",
-    totalDeducted: "Celkem odečteno z kreditu",
-    creditAtStart: "Kredit na začátku období",
-    creditAtEnd: "Kredit na konci období",
+    totalItems: "Celkovy pocet polozek",
+    totalDeducted: "Celkem odecteno z kreditu",
+    creditAtStart: "Kredit na zacatku obdobi",
+    creditAtEnd: "Kredit na konci obdobi",
     date: "Datum",
     type: "Typ",
     description: "Popis",
-    quantity: "Množství",
+    quantity: "Mnozstvi",
     unitPrice: "Jedn. cena",
     total: "Celkem",
-    note: "Poznámka",
-    training: "Trénink",
-    product: "Zboží",
-    lateCancellation: "Pozdní zrušení",
-    subtotalTraining: "Mezisoučet tréninky",
-    subtotalProducts: "Mezisoučet zboží",
-    subtotalCancellations: "Mezisoučet zrušení",
-    grandTotal: "Celkem odečteno z kreditu",
-    currency: "Kč",
-    noItems: "V období nebyly nalezeny žádné položky.",
-    footer: "Tento výpis slouží pro kontrolu čerpání kreditu.",
+    note: "Poznamka",
+    training: "Trenink",
+    product: "Zbozi",
+    lateCancellation: "Pozdni zruseni",
+    subtotalTraining: "Mezisouc. treninky",
+    subtotalProducts: "Mezisouc. zbozi",
+    subtotalCancellations: "Mezisouc. zruseni",
+    grandTotal: "Celkem odecteno z kreditu",
+    currency: "Kc",
+    noItems: "V obdobi nebyly nalezeny zadne polozky.",
+    footer: "Tento vypis slouzi pro kontrolu cerpani kreditu.",
     page: "Strana",
     of: "z",
   },
@@ -95,6 +95,41 @@ const translations = {
   },
 };
 
+// App brand colors (HSL converted to RGB)
+const COLORS = {
+  primary: [99, 102, 241] as [number, number, number], // Indigo-500 #6366f1
+  primaryDark: [79, 70, 229] as [number, number, number], // Indigo-600 #4f46e5
+  text: [15, 23, 42] as [number, number, number], // Slate-900
+  textMuted: [100, 116, 139] as [number, number, number], // Slate-500
+  textLight: [148, 163, 184] as [number, number, number], // Slate-400
+  background: [241, 245, 249] as [number, number, number], // Slate-100
+  white: [255, 255, 255] as [number, number, number],
+  success: [34, 197, 94] as [number, number, number], // Green-500
+  warning: [245, 158, 11] as [number, number, number], // Amber-500
+  destructive: [239, 68, 68] as [number, number, number], // Red-500
+};
+
+// Font sizes (unified)
+const FONTS = {
+  title: 20,
+  subtitle: 14,
+  heading: 12,
+  body: 10,
+  small: 9,
+  tiny: 8,
+};
+
+// Helper to remove Czech diacritics for PDF compatibility
+function removeDiacritics(text: string): string {
+  const diacriticsMap: Record<string, string> = {
+    'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i', 'ň': 'n',
+    'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u', 'ů': 'u', 'ý': 'y', 'ž': 'z',
+    'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I', 'Ň': 'N',
+    'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U', 'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z',
+  };
+  return text.replace(/[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g, (char) => diacriticsMap[char] || char);
+}
+
 export function generateCreditStatementPdf(
   data: CreditStatementData,
   options: CreditStatementOptions
@@ -119,8 +154,8 @@ export function generateCreditStatementPdf(
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(128);
+      doc.setFontSize(FONTS.tiny);
+      doc.setTextColor(...COLORS.textLight);
       doc.text(
         `${t.page} ${i} ${t.of} ${pageCount}`,
         pageWidth - margin,
@@ -130,66 +165,80 @@ export function generateCreditStatementPdf(
     }
   };
 
+  // Header background stripe
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(0, 0, pageWidth, 8, 'F');
+
+  yPos = 20;
+
   // Title
-  doc.setFontSize(18);
-  doc.setTextColor(33, 33, 33);
-  doc.text(t.title, margin, yPos);
-  yPos += 12;
+  doc.setFontSize(FONTS.title);
+  doc.setTextColor(...COLORS.primaryDark);
+  doc.setFont("helvetica", "bold");
+  doc.text(removeDiacritics(t.title), margin, yPos);
+  yPos += 10;
 
   // Company info (if available)
   if (data.companyName) {
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(data.companyName, margin, yPos);
+    doc.setFontSize(FONTS.body);
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFont("helvetica", "normal");
+    doc.text(removeDiacritics(data.companyName), margin, yPos);
     yPos += 5;
     if (data.companyId) {
-      doc.text(`IČ: ${data.companyId}`, margin, yPos);
+      doc.text(`IC: ${data.companyId}`, margin, yPos);
       yPos += 5;
     }
     if (data.companyAddress) {
-      doc.text(data.companyAddress, margin, yPos);
+      doc.text(removeDiacritics(data.companyAddress), margin, yPos);
       yPos += 5;
     }
     if (data.companyContact) {
-      doc.text(data.companyContact, margin, yPos);
+      doc.text(removeDiacritics(data.companyContact), margin, yPos);
       yPos += 5;
     }
     yPos += 3;
   }
 
   // Separator line
-  doc.setDrawColor(200);
+  doc.setDrawColor(...COLORS.primary);
+  doc.setLineWidth(0.5);
   doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 8;
+  yPos += 10;
 
-  // Client info
-  doc.setFontSize(11);
-  doc.setTextColor(33);
-  doc.text(`${t.client}: ${data.clientName}`, margin, yPos);
-  yPos += 5;
+  // Client info box
+  doc.setFillColor(...COLORS.background);
+  doc.roundedRect(margin, yPos - 2, pageWidth - 2 * margin, 22, 3, 3, 'F');
+  
+  doc.setFontSize(FONTS.heading);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${t.client}:`, margin + 5, yPos + 5);
+  doc.setFont("helvetica", "normal");
+  doc.text(removeDiacritics(data.clientName), margin + 25, yPos + 5);
 
   if (data.clientEmail || data.clientPhone) {
-    doc.setFontSize(10);
-    doc.setTextColor(100);
+    doc.setFontSize(FONTS.small);
+    doc.setTextColor(...COLORS.textMuted);
     const contactInfo = [data.clientEmail, data.clientPhone]
       .filter(Boolean)
       .join(" | ");
-    doc.text(contactInfo, margin, yPos);
-    yPos += 5;
+    doc.text(contactInfo, margin + 5, yPos + 11);
   }
 
-  // Period and issue date
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  const periodStr = `${format(data.periodStart, dateFormat, { locale })} – ${format(data.periodEnd, dateFormat, { locale })}`;
-  doc.text(`${t.period}: ${periodStr}`, margin, yPos);
-  yPos += 5;
+  // Period and issue date on the right
+  doc.setFontSize(FONTS.small);
+  doc.setTextColor(...COLORS.textMuted);
+  const periodStr = `${format(data.periodStart, dateFormat, { locale })} - ${format(data.periodEnd, dateFormat, { locale })}`;
+  doc.text(`${t.period}: ${periodStr}`, pageWidth - margin - 5, yPos + 5, { align: "right" });
   doc.text(
-    `${t.issueDate}: ${format(new Date(), dateFormat, { locale })}`,
-    margin,
-    yPos
+    `${removeDiacritics(t.issueDate)}: ${format(new Date(), dateFormat, { locale })}`,
+    pageWidth - margin - 5,
+    yPos + 11,
+    { align: "right" }
   );
-  yPos += 10;
+  
+  yPos += 28;
 
   // Summary section
   const trainingTotal = data.items
@@ -203,57 +252,44 @@ export function generateCreditStatementPdf(
     .reduce((sum, i) => sum + i.totalPrice, 0);
   const grandTotal = trainingTotal + productTotal + cancellationTotal;
 
-  doc.setFillColor(245, 245, 245);
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 24, 2, 2, "F");
-  yPos += 6;
+  // Summary box with primary color accent
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 3, 3, 'F');
+  
+  doc.setFontSize(FONTS.heading);
+  doc.setTextColor(...COLORS.white);
+  doc.setFont("helvetica", "bold");
+  doc.text(t.summary, margin + 5, yPos + 7);
 
-  doc.setFontSize(11);
-  doc.setTextColor(33);
-  doc.text(t.summary, margin + 5, yPos);
-  yPos += 6;
-
-  doc.setFontSize(10);
-  doc.setTextColor(80);
-  doc.text(`${t.totalItems}: ${data.items.length}`, margin + 5, yPos);
+  doc.setFontSize(FONTS.body);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${removeDiacritics(t.totalItems)}: ${data.items.length}`, margin + 5, yPos + 14);
+  
+  doc.setFont("helvetica", "bold");
   doc.text(
-    `${t.totalDeducted}: ${Math.round(grandTotal)} ${t.currency}`,
-    pageWidth / 2,
-    yPos
+    `${removeDiacritics(t.totalDeducted)}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+    pageWidth - margin - 5,
+    yPos + 14,
+    { align: "right" }
   );
-  yPos += 6;
 
-  if (data.creditAtStart !== undefined || data.creditAtEnd !== undefined) {
-    if (data.creditAtStart !== undefined) {
-      doc.text(
-        `${t.creditAtStart}: ${Math.round(data.creditAtStart)} ${t.currency}`,
-        margin + 5,
-        yPos
-      );
-    }
-    if (data.creditAtEnd !== undefined) {
-      doc.text(
-        `${t.creditAtEnd}: ${Math.round(data.creditAtEnd)} ${t.currency}`,
-        pageWidth / 2,
-        yPos
-      );
-    }
-  }
-  yPos += 12;
+  yPos += 28;
 
   // Items table
   if (data.items.length === 0) {
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(t.noItems, margin, yPos);
+    doc.setFontSize(FONTS.body);
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFont("helvetica", "italic");
+    doc.text(removeDiacritics(t.noItems), margin, yPos);
   } else {
     const getTypeName = (type: CreditStatementItem["type"]) => {
       switch (type) {
         case "training":
-          return t.training;
+          return removeDiacritics(t.training);
         case "product":
-          return t.product;
+          return removeDiacritics(t.product);
         case "late_cancellation":
-          return t.lateCancellation;
+          return removeDiacritics(t.lateCancellation);
       }
     };
 
@@ -262,11 +298,11 @@ export function generateCreditStatementPdf(
       .map((item) => [
         format(item.date, dateFormat, { locale }),
         getTypeName(item.type),
-        item.description,
+        removeDiacritics(item.description),
         item.quantity.toString(),
-        `${Math.round(item.unitPrice)} ${t.currency}`,
-        `${Math.round(item.totalPrice)} ${t.currency}`,
-        item.note || "",
+        `${Math.round(item.unitPrice).toLocaleString('cs-CZ')} ${t.currency}`,
+        `${Math.round(item.totalPrice).toLocaleString('cs-CZ')} ${t.currency}`,
+        item.note ? removeDiacritics(item.note) : "",
       ]);
 
     autoTable(doc, {
@@ -275,101 +311,153 @@ export function generateCreditStatementPdf(
         [
           t.date,
           t.type,
-          t.description,
-          t.quantity,
-          t.unitPrice,
+          removeDiacritics(t.description),
+          removeDiacritics(t.quantity),
+          removeDiacritics(t.unitPrice),
           t.total,
-          t.note,
+          removeDiacritics(t.note),
         ],
       ],
       body: tableData,
       theme: "striped",
       headStyles: {
-        fillColor: [79, 70, 229],
-        textColor: 255,
-        fontSize: 9,
+        fillColor: COLORS.primaryDark,
+        textColor: COLORS.white,
+        fontSize: FONTS.small,
         fontStyle: "bold",
+        halign: "left",
       },
       bodyStyles: {
-        fontSize: 9,
-        textColor: [33, 33, 33],
+        fontSize: FONTS.small,
+        textColor: COLORS.text,
+        cellPadding: 3,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252], // Slate-50
       },
       columnStyles: {
         0: { cellWidth: 22 },
-        1: { cellWidth: 22 },
+        1: { cellWidth: 24 },
         2: { cellWidth: "auto" },
-        3: { cellWidth: 15, halign: "center" },
-        4: { cellWidth: 22, halign: "right" },
-        5: { cellWidth: 22, halign: "right" },
-        6: { cellWidth: 30 },
+        3: { cellWidth: 16, halign: "center" },
+        4: { cellWidth: 24, halign: "right" },
+        5: { cellWidth: 24, halign: "right" },
+        6: { cellWidth: 28 },
       },
       margin: { left: margin, right: margin },
-      didDrawPage: () => {
-        // Header repeat handled by autoTable
+      styles: {
+        overflow: 'linebreak',
+        lineColor: [226, 232, 240], // Slate-200
+        lineWidth: 0.1,
       },
     });
 
     // Get final Y position after table
-    const finalY = (doc as any).lastAutoTable.finalY + 8;
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
 
-    // Subtotals
-    doc.setFontSize(10);
-    doc.setTextColor(80);
+    // Subtotals box
+    const subtotalBoxHeight = 
+      (trainingTotal > 0 ? 6 : 0) + 
+      (productTotal > 0 ? 6 : 0) + 
+      (cancellationTotal > 0 ? 6 : 0) + 
+      10;
 
-    let subtotalY = finalY;
+    doc.setFillColor(...COLORS.background);
+    doc.roundedRect(pageWidth - margin - 70, finalY - 2, 70, subtotalBoxHeight, 2, 2, 'F');
+
+    let subtotalY = finalY + 4;
+    doc.setFontSize(FONTS.small);
+    doc.setFont("helvetica", "normal");
 
     if (trainingTotal > 0) {
+      doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${t.subtotalTraining}: ${Math.round(trainingTotal)} ${t.currency}`,
-        pageWidth - margin,
+        `${removeDiacritics(t.subtotalTraining)}:`,
+        pageWidth - margin - 65,
+        subtotalY
+      );
+      doc.setTextColor(...COLORS.text);
+      doc.text(
+        `${Math.round(trainingTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+        pageWidth - margin - 5,
         subtotalY,
         { align: "right" }
       );
-      subtotalY += 5;
+      subtotalY += 6;
     }
 
     if (productTotal > 0) {
+      doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${t.subtotalProducts}: ${Math.round(productTotal)} ${t.currency}`,
-        pageWidth - margin,
+        `${removeDiacritics(t.subtotalProducts)}:`,
+        pageWidth - margin - 65,
+        subtotalY
+      );
+      doc.setTextColor(...COLORS.text);
+      doc.text(
+        `${Math.round(productTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+        pageWidth - margin - 5,
         subtotalY,
         { align: "right" }
       );
-      subtotalY += 5;
+      subtotalY += 6;
     }
 
     if (cancellationTotal > 0) {
+      doc.setTextColor(...COLORS.textMuted);
       doc.text(
-        `${t.subtotalCancellations}: ${Math.round(cancellationTotal)} ${t.currency}`,
-        pageWidth - margin,
+        `${removeDiacritics(t.subtotalCancellations)}:`,
+        pageWidth - margin - 65,
+        subtotalY
+      );
+      doc.setTextColor(...COLORS.text);
+      doc.text(
+        `${Math.round(cancellationTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+        pageWidth - margin - 5,
         subtotalY,
         { align: "right" }
       );
-      subtotalY += 5;
+      subtotalY += 6;
     }
 
-    // Grand total
+    // Grand total with primary color
     subtotalY += 2;
-    doc.setFontSize(11);
-    doc.setTextColor(33);
-    doc.setFont(undefined, "bold");
+    doc.setFillColor(...COLORS.primary);
+    doc.roundedRect(pageWidth - margin - 70, subtotalY - 4, 70, 10, 2, 2, 'F');
+    
+    doc.setFontSize(FONTS.body);
+    doc.setTextColor(...COLORS.white);
+    doc.setFont("helvetica", "bold");
     doc.text(
-      `${t.grandTotal}: ${Math.round(grandTotal)} ${t.currency}`,
-      pageWidth - margin,
-      subtotalY,
+      `${removeDiacritics(t.grandTotal)}:`,
+      pageWidth - margin - 65,
+      subtotalY + 2
+    );
+    doc.text(
+      `${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+      pageWidth - margin - 5,
+      subtotalY + 2,
       { align: "right" }
     );
-    doc.setFont(undefined, "normal");
 
     // Footer text
-    const footerY = Math.min(subtotalY + 15, pageHeight - 25);
-    doc.setFontSize(9);
-    doc.setTextColor(128);
-    doc.text(t.footer, margin, footerY);
+    const footerY = Math.min(subtotalY + 20, pageHeight - 25);
+    doc.setFontSize(FONTS.tiny);
+    doc.setTextColor(...COLORS.textLight);
+    doc.setFont("helvetica", "italic");
+    doc.text(removeDiacritics(t.footer), margin, footerY);
   }
 
   // Add page numbers
   addPageNumber();
+
+  // Footer stripe
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFillColor(...COLORS.primary);
+    doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
+  }
 
   return doc;
 }
@@ -379,9 +467,10 @@ export function downloadCreditStatementPdf(
   options: CreditStatementOptions
 ): void {
   const doc = generateCreditStatementPdf(data, options);
+  const clientNameClean = removeDiacritics(data.clientName).replace(/\s+/g, "-").toLowerCase();
   const filename =
     options.language === "cs"
-      ? `vypis-kreditu-${data.clientName.replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`
-      : `credit-statement-${data.clientName.replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      ? `vypis-kreditu-${clientNameClean}-${format(new Date(), "yyyy-MM-dd")}.pdf`
+      : `credit-statement-${clientNameClean}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
   doc.save(filename);
 }
