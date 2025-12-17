@@ -132,15 +132,15 @@ export function UnifiedFinancialChart({
           </TooltipProvider>
         </div>
         
-        {/* Period filters */}
-        <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+        {/* Period filters - scrollable on mobile */}
+        <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">
           {PERIOD_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
               variant={period === opt.value ? 'default' : 'ghost'}
               size="sm"
               className={cn(
-                'rounded-full text-xs px-3 h-8',
+                'rounded-full text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 flex-shrink-0',
                 period === opt.value && 'bg-primary text-primary-foreground'
               )}
               onClick={() => onPeriodChange(opt.value)}
@@ -151,15 +151,15 @@ export function UnifiedFinancialChart({
         </div>
       </div>
 
-      {/* Layer toggles */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Layer toggles - scrollable on mobile */}
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
         {LAYER_OPTIONS.map((opt) => (
           <Button
             key={opt.value}
             variant={activeLayer === opt.value ? 'default' : 'outline'}
             size="sm"
             className={cn(
-              'text-xs h-8',
+              'text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 flex-shrink-0',
               activeLayer === opt.value && opt.value !== 'all' && 'text-white'
             )}
             style={
@@ -176,14 +176,14 @@ export function UnifiedFinancialChart({
 
       {/* Last value highlight */}
       {lastValue && (
-        <div className="flex items-center gap-4 p-3 rounded-xl bg-secondary/30">
+        <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-4 p-2.5 sm:p-3 rounded-xl bg-secondary/30">
           <div>
-            <p className="text-xs text-muted-foreground">Poslední období</p>
-            <p className="text-xl font-bold text-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Poslední období</p>
+            <p className="text-lg sm:text-xl font-bold text-foreground">
               {formatCurrency(lastValue.profit)}
             </p>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-[10px] sm:text-xs text-muted-foreground flex xs:flex-col gap-2 xs:gap-0">
             <p>Příjem: {formatCurrency(lastValue.income)}</p>
             <p>Náklady: {formatCurrency(lastValue.costs)}</p>
           </div>

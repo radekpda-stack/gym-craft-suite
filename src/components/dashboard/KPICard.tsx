@@ -48,7 +48,7 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'glass rounded-2xl p-4 sm:p-5 transition-all duration-300 cursor-pointer',
+        'glass rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 transition-all duration-300 cursor-pointer',
         'hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]',
         'border',
         variantStyles[variant]
@@ -56,39 +56,39 @@ export function KPICard({
       onClick={onClick}
     >
       {/* Icon + Title */}
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className={cn('p-2 rounded-xl', iconBgStyles[variant])}>
+      <div className="flex items-center gap-1.5 sm:gap-2.5 mb-2 sm:mb-3">
+        <div className={cn('p-1.5 sm:p-2 rounded-lg sm:rounded-xl', iconBgStyles[variant])}>
           {icon}
         </div>
-        <span className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">
           {title}
         </span>
       </div>
 
       {/* Value */}
-      <p className={cn('text-2xl sm:text-3xl font-bold tracking-tight', valueStyles[variant])}>
+      <p className={cn('text-lg sm:text-2xl md:text-3xl font-bold tracking-tight', valueStyles[variant])}>
         {typeof value === 'number' ? formatNumber(value) : value}
       </p>
 
       {/* Trend or Subtitle */}
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-1.5 sm:mt-2">
         {trend !== undefined ? (
           <div
             className={cn(
-              'flex items-center gap-1 text-xs sm:text-sm font-medium',
+              'flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium',
               trend > 0 ? 'text-success' : trend < 0 ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
             {trend > 0 ? (
-              <ArrowUpRight className="w-3.5 h-3.5" />
+              <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             ) : trend < 0 ? (
-              <ArrowDownRight className="w-3.5 h-3.5" />
+              <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             ) : null}
             <span>{formatPercent(Math.abs(trend))}</span>
-            {trendLabel && <span className="text-muted-foreground ml-1 hidden sm:inline">{trendLabel}</span>}
+            {trendLabel && <span className="text-muted-foreground ml-0.5 sm:ml-1 hidden sm:inline">{trendLabel}</span>}
           </div>
         ) : subtitle ? (
-          <span className="text-xs sm:text-sm text-muted-foreground">{subtitle}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{subtitle}</span>
         ) : null}
       </div>
     </div>

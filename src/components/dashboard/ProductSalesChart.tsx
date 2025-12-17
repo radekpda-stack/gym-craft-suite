@@ -179,14 +179,14 @@ export function ProductSalesChart({
           )}
         </div>
         
-        <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
+        <div className="flex gap-1 p-1 rounded-full bg-secondary/50 overflow-x-auto scrollbar-hide">
           {PERIOD_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
               variant={period === opt.value ? 'default' : 'ghost'}
               size="sm"
               className={cn(
-                'rounded-full text-xs px-3 h-8',
+                'rounded-full text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 flex-shrink-0',
                 period === opt.value && 'bg-primary text-primary-foreground'
               )}
               onClick={() => onPeriodChange(opt.value)}
@@ -198,29 +198,29 @@ export function ProductSalesChart({
       </div>
 
       {/* Summary stats with margin */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3 rounded-xl bg-secondary/30">
-          <p className="text-xs text-muted-foreground">Příjem</p>
-          <p className="text-lg font-bold text-foreground">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <div className="p-2 sm:p-3 rounded-xl bg-secondary/30">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Příjem</p>
+          <p className="text-base sm:text-lg font-bold text-foreground">
             {formatCurrency(filteredTotalRevenue)}
           </p>
         </div>
-        <div className="p-3 rounded-xl bg-secondary/30">
-          <p className="text-xs text-muted-foreground">Prodejů</p>
-          <p className="text-lg font-bold text-foreground">{totalCount}</p>
+        <div className="p-2 sm:p-3 rounded-xl bg-secondary/30">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Prodejů</p>
+          <p className="text-base sm:text-lg font-bold text-foreground">{totalCount}</p>
         </div>
-        <div className="p-3 rounded-xl bg-success/10 border border-success/20">
+        <div className="p-2 sm:p-3 rounded-xl bg-success/10 border border-success/20">
           <div className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3 text-success" />
-            <p className="text-xs text-success">Marže</p>
+            <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-success" />
+            <p className="text-[10px] sm:text-xs text-success">Marže</p>
           </div>
-          <p className="text-lg font-bold text-success">
+          <p className="text-base sm:text-lg font-bold text-success">
             {formatCurrency(filteredTotalMargin)}
           </p>
         </div>
-        <div className="p-3 rounded-xl bg-secondary/30">
-          <p className="text-xs text-muted-foreground">Marže %</p>
-          <p className="text-lg font-bold text-foreground">{formatPercent(filteredMarginPercent, 1)}</p>
+        <div className="p-2 sm:p-3 rounded-xl bg-secondary/30">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Marže %</p>
+          <p className="text-base sm:text-lg font-bold text-foreground">{formatPercent(filteredMarginPercent, 1)}</p>
         </div>
       </div>
 

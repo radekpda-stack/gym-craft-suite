@@ -162,11 +162,11 @@ function DashboardContent() {
         kpisLoading ? (
           <KPIGridSkeleton count={6} />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6 lg:gap-4">
             <KPICard
               title="Příjem"
               value={formatCurrency(kpis?.incomeThisMonth || 0)}
-              icon={<Wallet className="w-4 h-4" />}
+              icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               trend={kpis?.incomeTrend}
               trendLabel="vs minulý měsíc"
               onClick={() => setActiveModal('income')}
@@ -175,7 +175,7 @@ function DashboardContent() {
             <KPICard
               title="Čistý zisk"
               value={formatCurrency(kpis?.netProfitThisMonth || 0)}
-              icon={<TrendingUp className="w-4 h-4" />}
+              icon={<TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               trend={kpis?.profitTrend}
               onClick={() => setActiveModal('profit')}
               variant="success"
@@ -184,7 +184,7 @@ function DashboardContent() {
               title="Tréninky"
               value={kpis?.trainingsThisMonth || 0}
               subtitle="tento měsíc"
-              icon={<Dumbbell className="w-4 h-4" />}
+              icon={<Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               trend={kpis?.trainingsTrend}
               onClick={() => setActiveModal('trainings')}
             />
@@ -192,14 +192,14 @@ function DashboardContent() {
               title="Aktivní klienti"
               value={kpis?.activeClients || 0}
               subtitle="posledních 30 dní"
-              icon={<Users className="w-4 h-4" />}
+              icon={<Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               onClick={() => setActiveModal('clients')}
             />
             <KPICard
               title="Pozdní zrušení"
               value={kpis?.lateCancellations || 0}
               subtitle="tento měsíc"
-              icon={<XCircle className="w-4 h-4" />}
+              icon={<XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               onClick={() => setActiveModal('cancellations')}
               variant={kpis?.lateCancellations ? 'destructive' : 'default'}
             />
@@ -207,7 +207,7 @@ function DashboardContent() {
               title="Nezaplaceno"
               value={kpis?.unpaidCount || 0}
               subtitle={formatCurrency(kpis?.unpaidAmount || 0)}
-              icon={<Clock className="w-4 h-4" />}
+              icon={<Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               onClick={() => setActiveModal('unpaid')}
               variant={kpis?.unpaidCount ? 'warning' : 'default'}
             />
@@ -310,7 +310,7 @@ function DashboardContent() {
         ]}
       />
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         {/* Financial Chart */}
         {layout.showFinancialChart && (
           <UnifiedFinancialChart
