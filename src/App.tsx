@@ -23,6 +23,7 @@ import FeedbackPage from "./pages/FeedbackPage";
 import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import PRHistory from "./pages/PRHistory";
+import Reminders from "./pages/Reminders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
                         <Route path="/ai-assistant" element={<AIAssistant />} />
                         <Route path="/sales" element={<Sales />} />
                         <Route path="/pr-history" element={<PRHistory />} />
+                        <Route path="/reminders" element={<Reminders />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
