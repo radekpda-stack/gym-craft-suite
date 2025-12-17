@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useRenderTracker } from '@/hooks/useRenderTracker';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import {
   Wallet,
   TrendingUp,
@@ -63,7 +63,7 @@ const SAFE_MODE_KEY = 'dashboard-safe-mode';
 function DashboardContent() {
   usePageTracking('dashboard');
   useRenderTracker('DashboardContent');
-  const { toast } = useToast();
+
 
   // Safe mode - disables expensive charts when errors occur
   const [safeMode, setSafeMode] = useState(() => {
@@ -90,7 +90,7 @@ function DashboardContent() {
         duration: 8000,
       });
     }
-  }, [errorCount, safeMode, toast]);
+  }, [errorCount, safeMode]);
 
   const exitSafeMode = useCallback(() => {
     setSafeMode(false);
