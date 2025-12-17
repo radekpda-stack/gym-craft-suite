@@ -52,6 +52,7 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
   });
   const [selectedPainAreas, setSelectedPainAreas] = useState<string[]>([]);
   const [painAreaSides, setPainAreaSides] = useState<Record<string, PainSide>>({});
+  const [painAreaIntensities, setPainAreaIntensities] = useState<Record<string, number>>({});
   const [note, setNote] = useState('');
 
   const enabledQuestions = config.questions
@@ -70,10 +71,19 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
   const handlePainAreasChange = (areas: string[]) => {
     setSelectedPainAreas(areas);
     const newSides = { ...painAreaSides };
+    const newIntensities = { ...painAreaIntensities };
     Object.keys(newSides).forEach(area => {
       if (!areas.includes(area)) delete newSides[area];
     });
+    Object.keys(newIntensities).forEach(area => {
+      if (!areas.includes(area)) delete newIntensities[area];
+    });
     setPainAreaSides(newSides);
+    setPainAreaIntensities(newIntensities);
+  };
+
+  const handleIntensityChange = (area: string, intensity: number) => {
+    setPainAreaIntensities(prev => ({ ...prev, [area]: intensity }));
   };
 
   const handleSideSelect = (area: string, side: PainSide) => {
@@ -161,6 +171,8 @@ export function FeedbackQuestionnairePreview({ config }: FeedbackQuestionnairePr
                     <BodyMapSelector
                       selectedAreas={selectedPainAreas}
                       onAreasChange={handlePainAreasChange}
+                      intensities={painAreaIntensities}
+                      onIntensityChange={handleIntensityChange}
                       language="cs"
                     />
                     
