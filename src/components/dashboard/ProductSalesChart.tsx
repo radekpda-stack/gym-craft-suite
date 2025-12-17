@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -13,8 +12,16 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Package } from 'lucide-react';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export type SalesPeriod = '30days' | '3months' | '6months' | '12months';
 
@@ -78,6 +85,8 @@ export function ProductSalesChart({
   period,
   onPeriodChange,
 }: ProductSalesChartProps) {
+  const { filters } = useDashboardFilters();
+  
   if (isLoading) {
     return (
       <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
@@ -95,9 +104,25 @@ export function ProductSalesChart({
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-lg sm:text-xl font-bold text-foreground">
-          Prodeje produktů
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-bold text-foreground">
+            Prodeje produktů
+          </h3>
+          {filters.clientIds.length > 0 && (
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs">
+                    {filters.clientIds.length} klient{filters.clientIds.length > 1 ? 'ů' : ''}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Filtrováno podle vybraných klientů</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
+        </div>
         
         <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
           {PERIOD_OPTIONS.map((opt) => (

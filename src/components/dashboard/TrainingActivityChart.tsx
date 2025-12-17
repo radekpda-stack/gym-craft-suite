@@ -12,8 +12,16 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Dumbbell, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
+import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export type TrainingPeriod = '30days' | '6months' | '12months';
 export type TrainingMetric = 'monthly' | 'weeklyAvg' | 'trend';
@@ -43,6 +51,13 @@ const METRIC_OPTIONS: { value: TrainingMetric; label: string; icon: any }[] = [
   { value: 'trend', label: 'Trend', icon: TrendingUp },
 ];
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  all: 'Vše',
+  paid: 'Zaplaceno',
+  unpaid: 'Nezaplaceno',
+  overdue: 'Po splatnosti',
+};
+
 // Simple linear regression for trend line
 function calculateTrendLine(data: TrainingDataPoint[]): TrainingDataPoint[] {
   if (data.length < 2) return data;
@@ -69,6 +84,7 @@ export function TrainingActivityChart({
   onPeriodChange,
 }: TrainingActivityChartProps) {
   const [metric, setMetric] = useState<TrainingMetric>('monthly');
+  const { filters } = useDashboardFilters();
 
   const chartData = useMemo(() => {
     if (metric === 'trend') {
@@ -114,9 +130,30 @@ export function TrainingActivityChart({
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-lg sm:text-xl font-bold text-foreground">
-          Tréninková aktivita
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-bold text-foreground">
+            Tréninková aktivita
+          </h3>
+          {filters.clientIds.length > 0 && (
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs">
+                    {filters.clientIds.length} klient{filters.clientIds.length > 1 ? 'ů' : ''}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Filtrováno podle vybraných klientů</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
+          {filters.paymentStatus !== 'all' && (
+            <Badge variant="secondary" className="text-xs">
+              {PAYMENT_STATUS_LABELS[filters.paymentStatus]}
+            </Badge>
+          )}
+        </div>
         
         <div className="flex gap-1 p-1 rounded-full bg-secondary/50">
           {PERIOD_OPTIONS.map((opt) => (
