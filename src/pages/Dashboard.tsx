@@ -55,12 +55,23 @@ const DEFAULT_LAYOUT: NewDashboardLayout = {
 function DashboardContent() {
   usePageTracking('dashboard');
 
-  // Layout state
+  // Layout state with error handling for malformed localStorage
   const [layout, setLayout] = useState<NewDashboardLayout>(() => {
     try {
       const stored = localStorage.getItem('dashboard-layout-v2');
-      return stored ? JSON.parse(stored) : DEFAULT_LAYOUT;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Validate the parsed object has expected structure
+        if (typeof parsed === 'object' && parsed !== null && 'showKPICards' in parsed) {
+          return { ...DEFAULT_LAYOUT, ...parsed };
+        }
+      }
+      return DEFAULT_LAYOUT;
     } catch {
+      // Clear corrupted data
+      try {
+        localStorage.removeItem('dashboard-layout-v2');
+      } catch {}
       return DEFAULT_LAYOUT;
     }
   });
