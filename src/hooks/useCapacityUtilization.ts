@@ -46,7 +46,7 @@ export function useCapacityUtilization() {
   return useQuery({
     queryKey: ['capacity-utilization', dateRange.from.toISOString(), dateRange.to.toISOString(), settings],
     queryFn: async (): Promise<CapacityUtilizationData | null> => {
-      if (!isConfigured || settingsLoading) {
+      if (settingsLoading) {
         return null;
       }
 
@@ -122,6 +122,6 @@ export function useCapacityUtilization() {
         previousAvailable,
       };
     },
-    enabled: isConfigured && !settingsLoading,
+    enabled: !settingsLoading,
   });
 }
