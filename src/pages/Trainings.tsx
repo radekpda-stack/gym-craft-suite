@@ -18,6 +18,7 @@ import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { SessionCard } from '@/components/ui/session-card';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { addDays, format } from 'date-fns';
@@ -349,27 +350,22 @@ export default function Trainings() {
       )}
 
       {!isLoading && filteredSessions.length === 0 && (
-        <div className="glass rounded-2xl p-8 sm:p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Dumbbell className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">
-            {sessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-[280px] mx-auto">
-            {sessions.length === 0
-              ? "Vytvořte první trénink"
-              : "Upravte vyhledávání nebo filtry"}
-          </p>
-          {sessions.length === 0 && (
-            <Button 
-              className="mt-4 gap-2"
-              onClick={() => setIsCreateSheetOpen(true)}
-            >
-              <Plus className="w-4 h-4" />
-              Nový trénink
-            </Button>
-          )}
+        <div className="glass rounded-2xl p-8 sm:p-12">
+          <EmptyState
+            icon={Dumbbell}
+            title={sessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
+            description={sessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
+            size="lg"
+            action={sessions.length === 0 ? (
+              <Button 
+                className="gap-2"
+                onClick={() => setIsCreateSheetOpen(true)}
+              >
+                <Plus className="w-4 h-4" />
+                Nový trénink
+              </Button>
+            ) : undefined}
+          />
         </div>
       )}
 

@@ -15,6 +15,7 @@ import {
 import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
 import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 interface UnpaidTrainingsListProps {
   clientId: string;
@@ -74,7 +75,7 @@ export function UnpaidTrainingsList({ clientId, clientName }: UnpaidTrainingsLis
           <AlertCircle className="w-4 h-4 text-warning" />
           <h3 className="font-medium text-foreground">Nezaplacené tréninky</h3>
           <Badge variant="outline" className="ml-auto bg-warning/10 text-warning border-warning/30">
-            {unpaidTrainings.length} ({totalUnpaid.toLocaleString('cs-CZ')} Kč)
+            {unpaidTrainings.length} ({formatCurrency(totalUnpaid)})
           </Badge>
         </div>
 
@@ -94,7 +95,7 @@ export function UnpaidTrainingsList({ clientId, clientName }: UnpaidTrainingsLis
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-bold text-warning">
-                  {(training.final_price || 0).toLocaleString('cs-CZ')} Kč
+                  {formatCurrency(training.final_price || 0)}
                 </span>
                 <Button
                   size="sm"
@@ -127,7 +128,7 @@ export function UnpaidTrainingsList({ clientId, clientName }: UnpaidTrainingsLis
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Částka k úhradě:</span>
                 <span className="text-lg font-bold text-primary">
-                  {(selectedTraining?.final_price || 0).toLocaleString('cs-CZ')} Kč
+                  {formatCurrency(selectedTraining?.final_price || 0)}
                 </span>
               </div>
             </div>

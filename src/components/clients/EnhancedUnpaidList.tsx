@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/hooks/useTrainingSessions';
+import { formatCurrency } from '@/lib/formatters';
 
 interface UnpaidTrainingsListProps {
   clientId: string;
@@ -65,7 +66,7 @@ export function EnhancedUnpaidList({
             </span>
           </div>
           <span className="text-sm font-bold text-destructive">
-            {totalUnpaid.toLocaleString('cs-CZ')} Kč
+            {formatCurrency(totalUnpaid)}
           </span>
         </div>
       </div>
@@ -80,7 +81,7 @@ export function EnhancedUnpaidList({
           Neuhrazené tréninky ({unpaidTrainings.length})
         </h3>
         <span className="text-sm font-bold text-destructive">
-          Celkem: {totalUnpaid.toLocaleString('cs-CZ')} Kč
+          Celkem: {formatCurrency(totalUnpaid)}
         </span>
       </div>
 
@@ -100,7 +101,7 @@ export function EnhancedUnpaidList({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">
-                {(training.final_price || 0).toLocaleString('cs-CZ')} Kč
+                {formatCurrency(training.final_price || 0)}
               </span>
               <Select
                 value={paymentMethod}
