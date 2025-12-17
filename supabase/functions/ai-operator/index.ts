@@ -438,7 +438,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, executeAction } = await req.json();
+    const { messages, executeAction, undoAction } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -464,6 +464,15 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // If undoing an action
+    if (undoAction) {
+      console.log("Undoing action:", undoAction);
+      const result = await undoExecutedAction(supabase, user.id, undoAction);
+      return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -798,7 +807,17 @@ async function executeConfirmedAction(supabase: any, userId: string, action: any
           changed_by: "AI Operator",
         });
 
-        return { success: true, message: `✅ Trénink s klientem ${action.params.client_name} byl dokončen.` };
+        return { 
+          success: true, 
+          message: `✅ Trénink s klientem ${action.params.client_name} byl dokončen.`,
+          undoData: {
+            training_id: action.params.training_id,
+            client_id: action.params.client_id,
+            client_name: action.params.client_name,
+            previous_balance: action.params.current_balance,
+            deducted_amount: action.params.payment_method === "credit" ? action.params.final_price : 0,
+          }
+        };
       }
 
       default:
@@ -807,5 +826,197 @@ async function executeConfirmedAction(supabase: any, userId: string, action: any
   } catch (error) {
     console.error("Error executing action:", error);
     return { success: false, message: `Chyba při provádění akce: ${error instanceof Error ? error.message : "Neznámá chyba"}` };
+  }
+}
+
+// Undo executed actions
+async function undoExecutedAction(supabase: any, userId: string, action: any) {
+  console.log("Undoing action:", action);
+
+  try {
+    switch (action.type) {
+      case "create_training": {
+        // Find and delete the training created
+        const { data: trainings } = await supabase
+          .from("training_sessions")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("client_id", action.params.client_id)
+          .eq("date", action.params.date)
+          .eq("status", "scheduled")
+          .limit(1);
+
+        if (trainings && trainings.length > 0) {
+          const { error } = await supabase
+            .from("training_sessions")
+            .delete()
+            .eq("id", trainings[0].id);
+
+          if (error) throw error;
+
+          // Log to audit
+          await supabase.from("audit_log").insert({
+            user_id: userId,
+            action: "undo_create",
+            table_name: "training_sessions",
+            record_id: trainings[0].id,
+            old_data: action.params,
+            changed_by: "AI Operator (Undo)",
+          });
+
+          return { success: true, message: `↩️ Trénink s klientem ${action.params.client_name} byl zrušen (Undo).` };
+        }
+        return { success: false, message: "Trénink k vrácení nebyl nalezen." };
+      }
+
+      case "add_credit": {
+        // Reverse the credit addition
+        const { data: client } = await supabase
+          .from("clients")
+          .select("credit_balance")
+          .eq("id", action.params.client_id)
+          .single();
+
+        const revertedBalance = (client?.credit_balance || 0) - action.params.amount;
+
+        const { error: clientError } = await supabase
+          .from("clients")
+          .update({ credit_balance: revertedBalance })
+          .eq("id", action.params.client_id);
+
+        if (clientError) throw clientError;
+
+        // Create reverse transaction
+        await supabase.from("credit_transactions").insert({
+          user_id: userId,
+          client_id: action.params.client_id,
+          amount: -action.params.amount,
+          type: "credit_reversal",
+          description: `Vrácení: ${action.params.description}`,
+          created_by: "AI Operator (Undo)",
+        });
+
+        // Log to audit
+        await supabase.from("audit_log").insert({
+          user_id: userId,
+          action: "undo_credit",
+          table_name: "credit_transactions",
+          record_id: action.params.client_id,
+          old_data: action.params,
+          changed_by: "AI Operator (Undo)",
+        });
+
+        return { success: true, message: `↩️ Kredit ${action.params.amount.toLocaleString("cs-CZ")} Kč byl odebrán klientovi ${action.params.client_name} (Undo).` };
+      }
+
+      case "cancel_training": {
+        // Restore the training to scheduled
+        const { error } = await supabase
+          .from("training_sessions")
+          .update({
+            status: "scheduled",
+            canceled_at: null,
+            is_late_cancellation: false,
+          })
+          .eq("id", action.params.training_id);
+
+        if (error) throw error;
+
+        // Refund credit if it was deducted
+        if (action.params.deduct_credit) {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("credit_balance")
+            .eq("id", action.params.client_id)
+            .single();
+
+          const refundedBalance = (client?.credit_balance || 0) + action.params.final_price;
+
+          await supabase
+            .from("clients")
+            .update({ credit_balance: refundedBalance })
+            .eq("id", action.params.client_id);
+
+          await supabase.from("credit_transactions").insert({
+            user_id: userId,
+            client_id: action.params.client_id,
+            training_session_id: action.params.training_id,
+            amount: action.params.final_price,
+            type: "credit_refund",
+            description: "Vrácení za zrušený trénink (Undo)",
+            created_by: "AI Operator (Undo)",
+          });
+        }
+
+        // Log to audit
+        await supabase.from("audit_log").insert({
+          user_id: userId,
+          action: "undo_cancel",
+          table_name: "training_sessions",
+          record_id: action.params.training_id,
+          changed_by: "AI Operator (Undo)",
+        });
+
+        return { success: true, message: `↩️ Trénink s klientem ${action.params.client_name} byl obnoven (Undo).` };
+      }
+
+      case "complete_training": {
+        // Revert training to scheduled
+        const { error } = await supabase
+          .from("training_sessions")
+          .update({
+            status: "scheduled",
+            payment_status: "pending",
+            payment_method: null,
+            subjective_rating: null,
+          })
+          .eq("id", action.params.training_id);
+
+        if (error) throw error;
+
+        // Refund credit if it was deducted
+        if (action.params.payment_method === "credit") {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("credit_balance")
+            .eq("id", action.params.client_id)
+            .single();
+
+          const refundedBalance = (client?.credit_balance || 0) + action.params.final_price;
+
+          await supabase
+            .from("clients")
+            .update({ credit_balance: refundedBalance })
+            .eq("id", action.params.client_id);
+
+          await supabase.from("credit_transactions").insert({
+            user_id: userId,
+            client_id: action.params.client_id,
+            training_session_id: action.params.training_id,
+            amount: action.params.final_price,
+            type: "credit_refund",
+            description: "Vrácení za dokončený trénink (Undo)",
+            created_by: "AI Operator (Undo)",
+          });
+        }
+
+        // Log to audit
+        await supabase.from("audit_log").insert({
+          user_id: userId,
+          action: "undo_complete",
+          table_name: "training_sessions",
+          record_id: action.params.training_id,
+          changed_by: "AI Operator (Undo)",
+        });
+
+        return { success: true, message: `↩️ Dokončení tréninku s klientem ${action.params.client_name} bylo vráceno (Undo).` };
+      }
+
+      default:
+        return { success: false, message: `Nelze vrátit akci: ${action.type}` };
+    }
+  } catch (error) {
+    console.error("Error undoing action:", error);
+    return { success: false, message: `Chyba při vracení akce: ${error instanceof Error ? error.message : "Neznámá chyba"}` };
   }
 }

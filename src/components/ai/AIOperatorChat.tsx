@@ -27,6 +27,7 @@ export function AIOperatorChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastExecutedAction, setLastExecutedAction] = useState<{ action: PendingAction; messageIndex: number } | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,7 +151,64 @@ export function AIOperatorChat() {
         ? { ...m, actionStatus: 'rejected' as const, content: m.content + '\n\n❌ *Akce byla zrušena.*' }
         : m
     ));
-    featureTracker.track('ai_operator_action_rejected', 'ai');
+      featureTracker.track('ai_operator_action_rejected', 'ai');
+  };
+
+  const undoLastAction = async () => {
+    if (!lastExecutedAction || isUndoing) return;
+
+    setIsUndoing(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(AI_OPERATOR_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          messages: [],
+          undoAction: lastExecutedAction.action,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Chyba při vracení akce');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Add undo message to chat
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: result.message,
+        }]);
+
+        toast({
+          title: 'Akce vrácena',
+          description: result.message,
+        });
+
+        setLastExecutedAction(null);
+        featureTracker.track('ai_operator_action_undone', 'ai');
+      } else {
+        throw new Error(result.message);
+      }
+
+    } catch (error) {
+      console.error('Undo error:', error);
+      toast({
+        title: 'Chyba',
+        description: error instanceof Error ? error.message : 'Nepodařilo se vrátit akci',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUndoing(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -187,11 +245,14 @@ export function AIOperatorChat() {
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() => {
-              toast({ title: 'Funkce Undo zatím není implementována' });
-            }}
+            onClick={undoLastAction}
+            disabled={isUndoing}
           >
-            <Undo2 className="w-4 h-4" />
+            {isUndoing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Undo2 className="w-4 h-4" />
+            )}
             Zpět
           </Button>
         )}
