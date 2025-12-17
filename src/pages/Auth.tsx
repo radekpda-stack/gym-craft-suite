@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useRenderTracker } from '@/hooks/useRenderTracker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,7 @@ const passwordSchema = z.object({
 type AuthView = 'main' | 'forgot-password' | 'reset-password';
 
 export default function Auth() {
+  useRenderTracker('Auth');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn, signUp, resetPassword, updatePassword, isAuthenticated, loading: authLoading } = useAuth();
