@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, Wallet } from 'lucide-react';
+import { Search, Plus, Dumbbell, Wallet, XCircle } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
@@ -26,14 +27,12 @@ import { addDays, format } from 'date-fns';
 const statusLabels = {
   scheduled: 'Plán',
   completed: 'Hotovo',
-  canceled: 'Zrušeno',
   awaiting_payment: 'Čeká',
 };
 
 const statusLabelsLong = {
   scheduled: 'Naplánováno',
   completed: 'Dokončeno',
-  canceled: 'Zrušeno',
   awaiting_payment: 'Čeká na platbu',
 };
 
@@ -41,6 +40,7 @@ export default function Trainings() {
   usePageTracking('trainings');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('active');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; trainingId: string; clientName: string } | null>(null);
@@ -52,12 +52,16 @@ export default function Trainings() {
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
 
+  // Separate active and canceled sessions
+  const activeSessions = useMemo(() => sessions.filter(s => s.status !== 'canceled'), [sessions]);
+  const canceledSessions = useMemo(() => sessions.filter(s => s.status === 'canceled'), [sessions]);
+
   // Count of trainings awaiting payment (completed but unpaid)
   const awaitingPaymentCount = useMemo(() => {
-    return sessions.filter(
+    return activeSessions.filter(
       s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')
     ).length;
-  }, [sessions]);
+  }, [activeSessions]);
 
   const handleCompleteTraining = async (sessionId: string) => {
     try {
@@ -124,7 +128,7 @@ export default function Trainings() {
     setIsCreateSheetOpen(true);
   };
 
-  const filteredSessions = sessions.filter((session) => {
+  const filteredActiveSessions = activeSessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
     const matchesSearch =
       client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,6 +144,12 @@ export default function Trainings() {
     const matchesStatus = !statusFilter || session.status === statusFilter;
 
     return matchesSearch && matchesStatus;
+  });
+
+  const filteredCanceledSessions = canceledSessions.filter((session) => {
+    const client = clients.find((c) => c.id === session.client_id);
+    return client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
@@ -234,140 +244,221 @@ export default function Trainings() {
         defaultValues={duplicateDefaults}
       />
 
-      {/* Search and Filters - Mobile optimized */}
-      <div className="space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Hledat..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
-          />
-        </div>
-
-        {/* Filter pills - horizontally scrollable on mobile */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-          <Button
-            variant={statusFilter === null ? 'default' : 'outline'}
-            onClick={() => setStatusFilter(null)}
-            className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
-            size="sm"
-          >
-            Všechny
-          </Button>
-          {(['scheduled', 'completed', 'canceled'] as const).map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'default' : 'outline'}
-              onClick={() => setStatusFilter(status)}
-              className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
-              size="sm"
-            >
-              <span className="sm:hidden">{statusLabels[status]}</span>
-              <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
-            </Button>
-          ))}
-          {/* Awaiting payment filter with badge */}
-          <Button
-            variant={statusFilter === 'awaiting_payment' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('awaiting_payment')}
-            className="rounded-full h-9 px-4 flex-shrink-0 touch-target gap-2"
-            size="sm"
-          >
-            <span className="sm:hidden">{statusLabels.awaiting_payment}</span>
-            <span className="hidden sm:inline">{statusLabelsLong.awaiting_payment}</span>
-            {awaitingPaymentCount > 0 && (
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full",
-                  statusFilter === 'awaiting_payment' 
-                    ? "bg-background/20 text-foreground" 
-                    : "bg-warning/20 text-warning"
-                )}
-              >
-                {awaitingPaymentCount}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 h-11">
+          <TabsTrigger value="active" className="gap-2">
+            <Dumbbell className="w-4 h-4" />
+            Aktivní
+            {activeSessions.length > 0 && (
+              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full">
+                {activeSessions.length}
               </Badge>
             )}
-          </Button>
-        </div>
-      </div>
+          </TabsTrigger>
+          <TabsTrigger value="canceled" className="gap-2">
+            <XCircle className="w-4 h-4" />
+            Zrušené
+            {canceledSessions.length > 0 && (
+              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full">
+                {canceledSessions.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Sessions List */}
-      {isLoading ? (
-        <TrainingListSkeleton />
-      ) : (
-        <div className="space-y-3">
-          {filteredSessions.map((session, index) => {
-            const client = clients.find((c) => c.id === session.client_id);
-            const isAwaitingPayment = session.status === 'completed' && 
-              (!session.payment_status || session.payment_status === 'pending');
+        <TabsContent value="active" className="mt-4 space-y-4">
+          {/* Search and Filters for active trainings */}
+          <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="Hledat..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
+              />
+            </div>
 
-            return (
-              <div
-                key={session.id}
-                className="animate-slide-up"
-                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+            {/* Filter pills - horizontally scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+              <Button
+                variant={statusFilter === null ? 'default' : 'outline'}
+                onClick={() => setStatusFilter(null)}
+                className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
+                size="sm"
               >
-                <TrainingQuickMenu
-                  session={session}
-                  onComplete={() => handleCompleteTraining(session.id)}
-                  onCancel={() => handleCancelTraining(session.id)}
-                  onDuplicate={() => handleDuplicateTraining(session.id)}
-                >
-                  <div className="relative">
-                    <SessionCard
-                      session={session}
-                      client={client}
-                    />
-                    {/* Quick payment button for awaiting payment filter */}
-                    {statusFilter === 'awaiting_payment' && isAwaitingPayment && (
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 gap-1.5 h-8 px-3 rounded-lg shadow-md"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPaymentDialog({
-                            open: true,
-                            trainingId: session.id,
-                            clientName: client?.name || 'Neznámý klient',
-                          });
-                        }}
-                      >
-                        <Wallet className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Uhradit</span>
-                      </Button>
-                    )}
-                  </div>
-                </TrainingQuickMenu>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!isLoading && filteredSessions.length === 0 && (
-        <div className="glass rounded-2xl p-8 sm:p-12">
-          <EmptyState
-            icon={Dumbbell}
-            title={sessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
-            description={sessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
-            size="lg"
-            action={sessions.length === 0 ? (
-              <Button 
-                className="gap-2"
-                onClick={() => setIsCreateSheetOpen(true)}
-              >
-                <Plus className="w-4 h-4" />
-                Nový trénink
+                Všechny
               </Button>
-            ) : undefined}
-          />
-        </div>
-      )}
+              {(['scheduled', 'completed'] as const).map((status) => (
+                <Button
+                  key={status}
+                  variant={statusFilter === status ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter(status)}
+                  className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
+                  size="sm"
+                >
+                  <span className="sm:hidden">{statusLabels[status]}</span>
+                  <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
+                </Button>
+              ))}
+              {/* Awaiting payment filter with badge */}
+              <Button
+                variant={statusFilter === 'awaiting_payment' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('awaiting_payment')}
+                className="rounded-full h-9 px-4 flex-shrink-0 touch-target gap-2"
+                size="sm"
+              >
+                <span className="sm:hidden">{statusLabels.awaiting_payment}</span>
+                <span className="hidden sm:inline">{statusLabelsLong.awaiting_payment}</span>
+                {awaitingPaymentCount > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full",
+                      statusFilter === 'awaiting_payment' 
+                        ? "bg-background/20 text-foreground" 
+                        : "bg-warning/20 text-warning"
+                    )}
+                  >
+                    {awaitingPaymentCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Sessions List */}
+          {isLoading ? (
+            <TrainingListSkeleton />
+          ) : (
+            <div className="space-y-3">
+              {filteredActiveSessions.map((session, index) => {
+                const client = clients.find((c) => c.id === session.client_id);
+                const isAwaitingPayment = session.status === 'completed' && 
+                  (!session.payment_status || session.payment_status === 'pending');
+
+                return (
+                  <div
+                    key={session.id}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                  >
+                    <TrainingQuickMenu
+                      session={session}
+                      onComplete={() => handleCompleteTraining(session.id)}
+                      onCancel={() => handleCancelTraining(session.id)}
+                      onDuplicate={() => handleDuplicateTraining(session.id)}
+                    >
+                      <div className="relative">
+                        <SessionCard
+                          session={session}
+                          client={client}
+                        />
+                        {/* Quick payment button for awaiting payment filter */}
+                        {statusFilter === 'awaiting_payment' && isAwaitingPayment && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 gap-1.5 h-8 px-3 rounded-lg shadow-md"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPaymentDialog({
+                                open: true,
+                                trainingId: session.id,
+                                clientName: client?.name || 'Neznámý klient',
+                              });
+                            }}
+                          >
+                            <Wallet className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Uhradit</span>
+                          </Button>
+                        )}
+                      </div>
+                    </TrainingQuickMenu>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!isLoading && filteredActiveSessions.length === 0 && (
+            <div className="glass rounded-2xl p-8 sm:p-12">
+              <EmptyState
+                icon={Dumbbell}
+                title={activeSessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
+                description={activeSessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
+                size="lg"
+                action={activeSessions.length === 0 ? (
+                  <Button 
+                    className="gap-2"
+                    onClick={() => setIsCreateSheetOpen(true)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nový trénink
+                  </Button>
+                ) : undefined}
+              />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="canceled" className="mt-4 space-y-4">
+          {/* Search for canceled trainings */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Hledat..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
+            />
+          </div>
+
+          {/* Canceled Sessions List */}
+          {isLoading ? (
+            <TrainingListSkeleton />
+          ) : (
+            <div className="space-y-3">
+              {filteredCanceledSessions.map((session, index) => {
+                const client = clients.find((c) => c.id === session.client_id);
+
+                return (
+                  <div
+                    key={session.id}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                  >
+                    <TrainingQuickMenu
+                      session={session}
+                      onComplete={() => handleCompleteTraining(session.id)}
+                      onCancel={() => handleCancelTraining(session.id)}
+                      onDuplicate={() => handleDuplicateTraining(session.id)}
+                    >
+                      <SessionCard
+                        session={session}
+                        client={client}
+                      />
+                    </TrainingQuickMenu>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!isLoading && filteredCanceledSessions.length === 0 && (
+            <div className="glass rounded-2xl p-8 sm:p-12">
+              <EmptyState
+                icon={XCircle}
+                title="Žádné zrušené tréninky"
+                description="Zatím jste nezrušili žádný trénink"
+                size="lg"
+              />
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Quick Payment Dialog */}
       {paymentDialog && (

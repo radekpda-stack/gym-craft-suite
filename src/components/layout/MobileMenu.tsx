@@ -9,7 +9,6 @@ import {
   Stethoscope,
   Activity,
   Calendar,
-  XCircle,
   Settings,
   LogOut,
   X,
@@ -77,7 +76,6 @@ const sections: NavSection[] = [
     label: 'Systém',
     items: [
       { to: '/settings', icon: Settings, label: 'Nastavení' },
-      { to: '/canceled', icon: XCircle, label: 'Zrušené tréninky' },
     ],
   },
 ];
