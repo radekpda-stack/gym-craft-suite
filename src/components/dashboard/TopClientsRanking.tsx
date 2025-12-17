@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ListSkeleton } from '@/components/ui/chart-skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { cn } from '@/lib/utils';
 import { Trophy, ChevronRight, ExternalLink } from 'lucide-react';
@@ -48,20 +49,21 @@ export function TopClientsRanking({
   const [sortBy, setSortBy] = useState<SortBy>('count');
   const [showAllModal, setShowAllModal] = useState(false);
 
-  const sortedClients = [...clients].sort((a, b) => {
-    if (sortBy === 'count') return b.trainingsCount - a.trainingsCount;
-    return b.revenue - a.revenue;
-  });
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => {
+      if (sortBy === 'count') return b.trainingsCount - a.trainingsCount;
+      return b.revenue - a.revenue;
+    });
+  }, [clients, sortBy]);
 
   if (isLoading) {
     return (
       <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
-        <Skeleton className="h-6 w-40" />
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-xl" />
-          ))}
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy className="w-5 h-5 text-warning" />
+          <span className="text-lg font-bold">Nejčastější klienti</span>
         </div>
+        <ListSkeleton rows={5} />
       </div>
     );
   }
@@ -152,10 +154,12 @@ export function TopClientsRanking({
           ))}
 
           {clients.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Trophy className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Žádní klienti v tomto období</p>
-            </div>
+            <EmptyState
+              icon={Trophy}
+              title="Žádní klienti"
+              description="V tomto období nejsou žádná data"
+              size="sm"
+            />
           )}
         </div>
 
