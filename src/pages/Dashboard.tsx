@@ -335,7 +335,11 @@ function DashboardContent() {
           <ProductSalesChart
             trendData={salesData?.trendData || []}
             topProducts={salesData?.topProducts || []}
+            allProducts={salesData?.allProducts || []}
             paymentMethods={salesData?.paymentMethods || []}
+            totalMargin={salesData?.totalMargin}
+            totalRevenue={salesData?.totalRevenue}
+            marginPercent={salesData?.marginPercent}
             isLoading={salesLoading}
             period={salesPeriod}
             onPeriodChange={setSalesPeriod}
