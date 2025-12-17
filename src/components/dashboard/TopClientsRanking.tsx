@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { cn } from '@/lib/utils';
 import { Trophy, ChevronRight, ExternalLink } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
 import { TopClientsModal } from './TopClientsModal';
 
 export type ClientsPeriod = '30days' | '6months' | '12months';
@@ -141,7 +142,7 @@ export function TopClientsRanking({
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground truncate">{client.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {client.trainingsCount} tréninků • {client.revenue.toLocaleString('cs-CZ')} Kč
+                  {client.trainingsCount} tréninků • {formatCurrency(client.revenue)}
                 </p>
               </div>
 

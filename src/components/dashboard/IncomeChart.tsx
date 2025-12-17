@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 
 export type IncomePeriod = '30days' | '6months' | '12months' | 'lifetime';
 
@@ -107,7 +108,7 @@ export function IncomeChart({ data, isLoading, period, onPeriodChange }: IncomeC
                   borderRadius: '12px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Platby']}
+                formatter={(value: number) => [formatCurrency(value), 'Platby']}
               />
               <Area
                 type="monotone"
@@ -125,7 +126,7 @@ export function IncomeChart({ data, isLoading, period, onPeriodChange }: IncomeC
       {!isLoading && !isEmpty && (
         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           <span>
-            Celkem: <strong className="text-foreground">{totalIncome.toLocaleString('cs-CZ')} Kč</strong>
+            Celkem: <strong className="text-foreground">{formatCurrency(totalIncome)}</strong>
           </span>
         </div>
       )}

@@ -31,6 +31,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { formatCurrency, formatPercent } from '@/lib/formatters';
 
 export type SalesPeriod = '30days' | '3months' | '6months' | '12months';
 
@@ -194,7 +195,7 @@ export function ProductSalesChart({
         <div className="p-3 rounded-xl bg-secondary/30">
           <p className="text-xs text-muted-foreground">Příjem</p>
           <p className="text-lg font-bold text-foreground">
-            {filteredTotalRevenue.toLocaleString('cs-CZ')} Kč
+            {formatCurrency(filteredTotalRevenue)}
           </p>
         </div>
         <div className="p-3 rounded-xl bg-secondary/30">
@@ -207,12 +208,12 @@ export function ProductSalesChart({
             <p className="text-xs text-success">Marže</p>
           </div>
           <p className="text-lg font-bold text-success">
-            {filteredTotalMargin.toLocaleString('cs-CZ')} Kč
+            {formatCurrency(filteredTotalMargin)}
           </p>
         </div>
         <div className="p-3 rounded-xl bg-secondary/30">
           <p className="text-xs text-muted-foreground">Marže %</p>
-          <p className="text-lg font-bold text-foreground">{filteredMarginPercent.toFixed(1)}%</p>
+          <p className="text-lg font-bold text-foreground">{formatPercent(filteredMarginPercent, 1)}</p>
         </div>
       </div>
 
@@ -284,7 +285,7 @@ export function ProductSalesChart({
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '12px',
                 }}
-                formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Příjem']}
+                formatter={(value: number) => [formatCurrency(value), 'Příjem']}
               />
               <Area
                 type="monotone"
@@ -324,7 +325,7 @@ export function ProductSalesChart({
                     "text-xs font-medium",
                     product.margin >= 0 ? "text-success" : "text-destructive"
                   )}>
-                    {product.margin >= 0 ? '+' : ''}{product.margin.toLocaleString('cs-CZ')} Kč
+                    {product.margin >= 0 ? '+' : ''}{formatCurrency(product.margin)}
                   </span>
                 </div>
               </div>
