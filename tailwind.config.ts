@@ -101,11 +101,11 @@ export default {
         "body-pulse": {
           "0%, 100%": { 
             opacity: "1",
-            filter: "drop-shadow(0 0 0 hsl(var(--primary)))"
+            transform: "scale(1)"
           },
           "50%": { 
-            opacity: "0.7",
-            filter: "drop-shadow(0 0 8px hsl(var(--primary)))"
+            opacity: "0.6",
+            transform: "scale(1.05)"
           },
         },
       },
