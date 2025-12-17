@@ -17,6 +17,7 @@ export interface NewDashboardLayout {
   showFinancialChart: boolean;
   showProductSales: boolean;
   showTrainingActivity: boolean;
+  showCapacityTrend: boolean;
   showTopClients: boolean;
   showPerformanceMetrics: boolean;
   showFeedbackTrends: boolean;
@@ -33,6 +34,7 @@ const SECTIONS = [
   { key: 'showFinancialChart' as const, label: 'Finanční přehled', description: 'Graf příjmů, nákladů a zisku' },
   { key: 'showProductSales' as const, label: 'Prodeje produktů', description: 'Trend prodejů a top produkty' },
   { key: 'showTrainingActivity' as const, label: 'Tréninková aktivita', description: 'Graf tréninkové aktivity' },
+  { key: 'showCapacityTrend' as const, label: 'Trend obsazenosti', description: 'Vývoj obsazenosti kapacity v čase' },
   { key: 'showTopClients' as const, label: 'Nejčastější klienti', description: 'Žebříček top 5 klientů' },
   { key: 'showPerformanceMetrics' as const, label: 'Výkonnostní metriky', description: 'Cviky, PR, vývoj síly' },
   { key: 'showFeedbackTrends' as const, label: 'Negativní trendy', description: 'Klienti s opakovaně špatnými hodnotami' },
