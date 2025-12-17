@@ -18,6 +18,7 @@ import {
   TrendingUp,
   ShoppingBag,
   Bell,
+  ClipboardList,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -139,6 +140,12 @@ export function Sidebar() {
         { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
+      ],
+    },
+    {
+      label: 'Plánování',
+      items: [
+        { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
       ],
     },
     {

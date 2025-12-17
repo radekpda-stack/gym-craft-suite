@@ -24,6 +24,8 @@ import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import PRHistory from "./pages/PRHistory";
 import Reminders from "./pages/Reminders";
+import TrainingPlans from "./pages/TrainingPlans";
+import TrainingPlanDetail from "./pages/TrainingPlanDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +66,8 @@ const App = () => (
                         <Route path="/sales" element={<Sales />} />
                         <Route path="/pr-history" element={<PRHistory />} />
                         <Route path="/reminders" element={<Reminders />} />
+                        <Route path="/training-plans" element={<TrainingPlans />} />
+                        <Route path="/training-plans/:id" element={<TrainingPlanDetail />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
