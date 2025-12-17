@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -9,12 +10,15 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Package } from 'lucide-react';
+import { Package, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
 import {
   Tooltip as UITooltip,
@@ -22,6 +26,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 export type SalesPeriod = '30days' | '3months' | '6months' | '12months';
 
@@ -32,9 +41,12 @@ interface SalesTrendPoint {
 }
 
 interface TopProduct {
+  id: string;
   name: string;
   count: number;
   revenue: number;
+  cost: number;
+  margin: number;
 }
 
 interface PaymentMethodBreakdown {
@@ -46,7 +58,11 @@ interface PaymentMethodBreakdown {
 interface ProductSalesChartProps {
   trendData: SalesTrendPoint[];
   topProducts: TopProduct[];
+  allProducts?: TopProduct[];
   paymentMethods: PaymentMethodBreakdown[];
+  totalMargin?: number;
+  totalRevenue?: number;
+  marginPercent?: number;
   isLoading: boolean;
   period: SalesPeriod;
   onPeriodChange: (period: SalesPeriod) => void;
@@ -77,15 +93,29 @@ const PAYMENT_LABELS: Record<string, string> = {
   paid_bank: 'Převod',
 };
 
+const PRODUCT_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--success))',
+  'hsl(var(--warning))',
+  'hsl(var(--destructive))',
+  'hsl(var(--secondary-foreground))',
+];
+
 export function ProductSalesChart({
   trendData,
   topProducts,
+  allProducts = [],
   paymentMethods,
+  totalMargin = 0,
+  totalRevenue = 0,
+  marginPercent = 0,
   isLoading,
   period,
   onPeriodChange,
 }: ProductSalesChartProps) {
   const { filters } = useDashboardFilters();
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [showProductSelector, setShowProductSelector] = useState(false);
   
   if (isLoading) {
     return (
@@ -97,8 +127,25 @@ export function ProductSalesChart({
     );
   }
 
-  const totalRevenue = trendData.reduce((sum, d) => sum + d.revenue, 0);
-  const totalCount = trendData.reduce((sum, d) => sum + d.count, 0);
+  // Filter products based on selection
+  const displayProducts = selectedProducts.length > 0
+    ? allProducts.filter(p => selectedProducts.includes(p.id))
+    : topProducts;
+
+  const filteredTotalRevenue = displayProducts.reduce((sum, p) => sum + p.revenue, 0);
+  const filteredTotalMargin = displayProducts.reduce((sum, p) => sum + p.margin, 0);
+  const filteredMarginPercent = filteredTotalRevenue > 0 ? (filteredTotalMargin / filteredTotalRevenue) * 100 : 0;
+  const totalCount = displayProducts.reduce((sum, p) => sum + p.count, 0);
+
+  const toggleProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const clearSelection = () => setSelectedProducts([]);
 
   return (
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
@@ -142,19 +189,70 @@ export function ProductSalesChart({
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Summary stats with margin */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 rounded-xl bg-secondary/30">
-          <p className="text-xs text-muted-foreground">Celkový příjem</p>
+          <p className="text-xs text-muted-foreground">Příjem</p>
           <p className="text-lg font-bold text-foreground">
-            {totalRevenue.toLocaleString('cs-CZ')} Kč
+            {filteredTotalRevenue.toLocaleString('cs-CZ')} Kč
           </p>
         </div>
         <div className="p-3 rounded-xl bg-secondary/30">
-          <p className="text-xs text-muted-foreground">Počet prodejů</p>
+          <p className="text-xs text-muted-foreground">Prodejů</p>
           <p className="text-lg font-bold text-foreground">{totalCount}</p>
         </div>
+        <div className="p-3 rounded-xl bg-success/10 border border-success/20">
+          <div className="flex items-center gap-1">
+            <TrendingUp className="w-3 h-3 text-success" />
+            <p className="text-xs text-success">Marže</p>
+          </div>
+          <p className="text-lg font-bold text-success">
+            {filteredTotalMargin.toLocaleString('cs-CZ')} Kč
+          </p>
+        </div>
+        <div className="p-3 rounded-xl bg-secondary/30">
+          <p className="text-xs text-muted-foreground">Marže %</p>
+          <p className="text-lg font-bold text-foreground">{filteredMarginPercent.toFixed(1)}%</p>
+        </div>
       </div>
+
+      {/* Product selector */}
+      <Collapsible open={showProductSelector} onOpenChange={setShowProductSelector}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+            <span className="flex items-center gap-2">
+              <Package className="w-3.5 h-3.5" />
+              {selectedProducts.length > 0 
+                ? `Vybráno ${selectedProducts.length} produkt${selectedProducts.length > 1 ? 'ů' : ''}`
+                : 'Vybrat produkty'
+              }
+            </span>
+            {showProductSelector ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 rounded-lg bg-secondary/20">
+            {allProducts.map((product) => (
+              <label
+                key={product.id}
+                className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-secondary/50"
+              >
+                <Checkbox
+                  checked={selectedProducts.includes(product.id)}
+                  onCheckedChange={() => toggleProduct(product.id)}
+                />
+                <span className="truncate">{product.name}</span>
+                <span className="text-muted-foreground ml-auto">{product.count}×</span>
+              </label>
+            ))}
+          </div>
+          {selectedProducts.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearSelection} className="mt-2 text-xs">
+              Zrušit výběr
+            </Button>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Trend chart */}
       {trendData.length > 0 ? (
@@ -204,24 +302,34 @@ export function ProductSalesChart({
         </div>
       )}
 
-      {/* Bottom section: Top products + Payment methods pie */}
+      {/* Bottom section: Products with margin + Payment methods pie */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/50">
-        {/* Top 5 products */}
+        {/* Products with margin */}
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Top 5 produktů</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            {selectedProducts.length > 0 ? 'Vybrané produkty' : 'Top 5 produktů'} (s marží)
+          </p>
           <div className="space-y-2">
-            {topProducts.slice(0, 5).map((product, index) => (
-              <div key={product.name} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+            {displayProducts.slice(0, 5).map((product, index) => (
+              <div key={product.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium flex-shrink-0">
                     {index + 1}
                   </span>
-                  <span className="text-foreground truncate max-w-[120px]">{product.name}</span>
+                  <span className="text-foreground truncate">{product.name}</span>
                 </div>
-                <span className="text-muted-foreground">{product.count}×</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-muted-foreground text-xs">{product.count}×</span>
+                  <span className={cn(
+                    "text-xs font-medium",
+                    product.margin >= 0 ? "text-success" : "text-destructive"
+                  )}>
+                    {product.margin >= 0 ? '+' : ''}{product.margin.toLocaleString('cs-CZ')} Kč
+                  </span>
+                </div>
               </div>
             ))}
-            {topProducts.length === 0 && (
+            {displayProducts.length === 0 && (
               <p className="text-sm text-muted-foreground">Žádné produkty</p>
             )}
           </div>
