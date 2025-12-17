@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, endOfMonth, startOfYear, differenceInDays } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfYear, differenceInDays, subMonths } from 'date-fns';
+import { useDashboardFilters, AccountingMode, PaymentStatusFilter, DateRange } from '@/contexts/DashboardFiltersContext';
 
 interface DashboardKPIs {
   // Income
@@ -44,73 +45,175 @@ interface DashboardKPIs {
   unpaidClientsCount: number;
   avgUnpaidPerClient: number;
   oldestUnpaidDays: number | null;
+  
+  // Metadata
+  accountingMode: AccountingMode;
+  itemsWithoutPaymentDate: number;
+}
+
+// Helper to get the appropriate date field based on accounting mode
+function getDateFieldForMode(mode: AccountingMode): string {
+  // CASH = payment date (created_at for transactions)
+  // ACCRUAL = service date (date for trainings, created_at for transactions which is when sold)
+  return 'created_at'; // Both use created_at for transactions, difference is in how we handle trainings
 }
 
 export function useDashboardKPIs() {
+  const { filters } = useDashboardFilters();
+  const { dateRange, accountingMode, paymentStatus, clientIds } = filters;
+
   return useQuery({
-    queryKey: ['dashboard-kpis'],
+    queryKey: ['dashboard-kpis', dateRange.from.toISOString(), dateRange.to.toISOString(), accountingMode, paymentStatus, clientIds],
     queryFn: async () => {
       const now = new Date();
-      const currentMonthStart = startOfMonth(now);
-      const currentMonthEnd = endOfMonth(now);
+      const periodStart = dateRange.from;
+      const periodEnd = dateRange.to;
+      
+      // Calculate comparison period (same length, immediately before)
+      const periodLength = periodEnd.getTime() - periodStart.getTime();
+      const comparisonStart = new Date(periodStart.getTime() - periodLength);
+      const comparisonEnd = new Date(periodStart.getTime() - 1);
+      
       const yearStart = startOfYear(now);
       
-      const lastMonthStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-      const lastMonthEnd = endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      let itemsWithoutPaymentDate = 0;
 
-      // Fetch current month transactions
-      const { data: currentTransactions } = await supabase
+      // Build base filters for client selection
+      const clientFilter = clientIds.length > 0 ? clientIds : null;
+
+      // ===== FETCH TRANSACTIONS =====
+      // For CASH mode: only include transactions that represent actual payments
+      // For ACCRUAL mode: include all transactions when service was delivered
+      
+      let currentTransactionsQuery = supabase
         .from('credit_transactions')
-        .select('amount, type, product_id, products(purchase_price)')
-        .gte('created_at', currentMonthStart.toISOString())
-        .lte('created_at', currentMonthEnd.toISOString());
+        .select('amount, type, product_id, client_id, training_session_id, payment_method, created_at, products(purchase_price)')
+        .gte('created_at', periodStart.toISOString())
+        .lte('created_at', periodEnd.toISOString());
 
-      // Fetch last month transactions
-      const { data: lastTransactions } = await supabase
+      let comparisonTransactionsQuery = supabase
         .from('credit_transactions')
-        .select('amount, type, product_id, products(purchase_price)')
-        .gte('created_at', lastMonthStart.toISOString())
-        .lte('created_at', lastMonthEnd.toISOString());
+        .select('amount, type, product_id, client_id, training_session_id, payment_method, created_at, products(purchase_price)')
+        .gte('created_at', comparisonStart.toISOString())
+        .lte('created_at', comparisonEnd.toISOString());
 
-      // Fetch all transactions for average calculation
+      if (clientFilter) {
+        currentTransactionsQuery = currentTransactionsQuery.in('client_id', clientFilter);
+        comparisonTransactionsQuery = comparisonTransactionsQuery.in('client_id', clientFilter);
+      }
+
+      const [{ data: currentTransactions }, { data: comparisonTransactions }] = await Promise.all([
+        currentTransactionsQuery,
+        comparisonTransactionsQuery,
+      ]);
+
+      // ===== FETCH TRAININGS =====
+      // For ACCRUAL: use training date (when service delivered)
+      // For CASH: we need to cross-reference with transactions
+      
+      const trainingDateField = accountingMode === 'accrual' ? 'date' : 'date';
+      
+      let currentTrainingsQuery = supabase
+        .from('training_sessions')
+        .select('id, participant_count, final_price, client_id, date, payment_status, payment_method')
+        .eq('status', 'completed')
+        .gte('date', periodStart.toISOString())
+        .lte('date', periodEnd.toISOString());
+
+      let comparisonTrainingsQuery = supabase
+        .from('training_sessions')
+        .select('id, participant_count, final_price, client_id, date, payment_status')
+        .eq('status', 'completed')
+        .gte('date', comparisonStart.toISOString())
+        .lte('date', comparisonEnd.toISOString());
+
+      if (clientFilter) {
+        currentTrainingsQuery = currentTrainingsQuery.in('client_id', clientFilter);
+        comparisonTrainingsQuery = comparisonTrainingsQuery.in('client_id', clientFilter);
+      }
+
+      // Apply payment status filter
+      if (paymentStatus === 'paid') {
+        currentTrainingsQuery = currentTrainingsQuery.in('payment_status', ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank']);
+        comparisonTrainingsQuery = comparisonTrainingsQuery.in('payment_status', ['paid_credit', 'paid_cash', 'paid_card', 'paid_bank']);
+      } else if (paymentStatus === 'unpaid') {
+        currentTrainingsQuery = currentTrainingsQuery.eq('payment_status', 'pending');
+        comparisonTrainingsQuery = comparisonTrainingsQuery.eq('payment_status', 'pending');
+      }
+
+      const [{ data: currentTrainingData }, { data: comparisonTrainingData }] = await Promise.all([
+        currentTrainingsQuery,
+        comparisonTrainingsQuery,
+      ]);
+
+      // ===== CALCULATE INCOME AND PROFIT =====
+      let currentIncome = 0;
+      let currentCosts = 0;
+      let currentTrainingIncome = 0;
+      let currentProductIncome = 0;
+      let comparisonIncome = 0;
+      let comparisonCosts = 0;
+
+      // Process transactions based on accounting mode
+      const processTransaction = (t: any, forCash: boolean) => {
+        // For CASH mode, only count if it's an actual payment (not pending)
+        if (forCash && accountingMode === 'cash') {
+          // Cash mode: only count credit transactions that represent actual money received
+          if (t.type === 'payment' && t.amount > 0) {
+            return { income: t.amount, isProduct: !!t.product_id };
+          }
+          return { income: 0, isProduct: false };
+        }
+        
+        // For ACCRUAL mode: count all completed service transactions
+        if (t.type === 'payment' && t.amount > 0) {
+          return { income: t.amount, isProduct: !!t.product_id };
+        }
+        return { income: 0, isProduct: false };
+      };
+
+      currentTransactions?.forEach((t: any) => {
+        const { income, isProduct } = processTransaction(t, true);
+        currentIncome += income;
+        if (isProduct) {
+          currentProductIncome += income;
+          if (t.products?.purchase_price) {
+            currentCosts += t.products.purchase_price;
+          }
+        } else if (income > 0) {
+          currentTrainingIncome += income;
+        }
+      });
+
+      comparisonTransactions?.forEach((t: any) => {
+        const { income, isProduct } = processTransaction(t, true);
+        comparisonIncome += income;
+        if (isProduct && t.products?.purchase_price) {
+          comparisonCosts += t.products.purchase_price;
+        }
+      });
+
+      // For ACCRUAL mode with trainings - calculate income from training prices
+      if (accountingMode === 'accrual') {
+        // In accrual mode, we count training income when service is delivered (regardless of payment)
+        currentTrainingIncome = currentTrainingData?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
+        
+        // Adjust current income to use accrual-based training income
+        const transactionTrainingIncome = currentTransactions?.filter((t: any) => 
+          t.type === 'payment' && t.amount > 0 && !t.product_id
+        ).reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
+        
+        // Replace transaction-based training income with accrual-based
+        currentIncome = currentIncome - transactionTrainingIncome + currentTrainingIncome;
+      }
+
+      // Calculate average monthly income
       const { data: allTransactions } = await supabase
         .from('credit_transactions')
         .select('amount, type, created_at')
         .eq('type', 'payment')
         .gt('amount', 0);
 
-      // Calculate income and profit
-      let currentIncome = 0;
-      let currentCosts = 0;
-      let currentTrainingIncome = 0;
-      let currentProductIncome = 0;
-      let lastIncome = 0;
-      let lastCosts = 0;
-
-      currentTransactions?.forEach((t: any) => {
-        if (t.type === 'payment' && t.amount > 0) {
-          currentIncome += t.amount;
-          if (t.product_id) {
-            currentProductIncome += t.amount;
-          } else {
-            currentTrainingIncome += t.amount;
-          }
-        }
-        if (t.product_id && t.products?.purchase_price) {
-          currentCosts += t.products.purchase_price;
-        }
-      });
-
-      lastTransactions?.forEach((t: any) => {
-        if (t.type === 'payment' && t.amount > 0) {
-          lastIncome += t.amount;
-        }
-        if (t.product_id && t.products?.purchase_price) {
-          lastCosts += t.products.purchase_price;
-        }
-      });
-
-      // Calculate average monthly income
       const monthlyIncomes: Record<string, number> = {};
       allTransactions?.forEach((t: any) => {
         const month = t.created_at.substring(0, 7);
@@ -119,45 +222,37 @@ export function useDashboardKPIs() {
       const monthCount = Object.keys(monthlyIncomes).length || 1;
       const avgMonthlyIncome = Object.values(monthlyIncomes).reduce((a, b) => a + b, 0) / monthCount;
 
-      const incomeTrend = lastIncome > 0 ? ((currentIncome - lastIncome) / lastIncome) * 100 : 0;
+      // Calculate trends
+      const incomeTrend = comparisonIncome > 0 ? ((currentIncome - comparisonIncome) / comparisonIncome) * 100 : 0;
       const currentProfit = currentIncome - currentCosts;
-      const lastProfit = lastIncome - lastCosts;
-      const profitTrend = lastProfit > 0 ? ((currentProfit - lastProfit) / lastProfit) * 100 : 0;
+      const comparisonProfit = comparisonIncome - comparisonCosts;
+      const profitTrend = comparisonProfit > 0 ? ((currentProfit - comparisonProfit) / comparisonProfit) * 100 : 0;
       const profitMargin = currentIncome > 0 ? (currentProfit / currentIncome) * 100 : 0;
 
-      // Fetch current month trainings
-      const { data: currentTrainingData } = await supabase
-        .from('training_sessions')
-        .select('id, participant_count')
-        .eq('status', 'completed')
-        .gte('date', currentMonthStart.toISOString())
-        .lte('date', currentMonthEnd.toISOString());
-
+      // Training stats
       const currentTrainings = currentTrainingData?.length || 0;
+      const comparisonTrainings = comparisonTrainingData?.length || 0;
       const avgParticipants = currentTrainings > 0
         ? (currentTrainingData?.reduce((sum, t) => sum + (t.participant_count || 1), 0) || 0) / currentTrainings
         : 1;
+      const trainingsTrend = comparisonTrainings > 0 
+        ? ((currentTrainings - comparisonTrainings) / comparisonTrainings) * 100 
+        : 0;
 
-      // Fetch last month trainings
-      const { count: lastTrainings } = await supabase
-        .from('training_sessions')
-        .select('id', { count: 'exact' })
-        .eq('status', 'completed')
-        .gte('date', lastMonthStart.toISOString())
-        .lte('date', lastMonthEnd.toISOString());
-
-      // Fetch year trainings
-      const { count: yearTrainings } = await supabase
+      // Year trainings
+      let yearTrainingsQuery = supabase
         .from('training_sessions')
         .select('id', { count: 'exact' })
         .eq('status', 'completed')
         .gte('date', yearStart.toISOString());
+      
+      if (clientFilter) {
+        yearTrainingsQuery = yearTrainingsQuery.in('client_id', clientFilter);
+      }
+      
+      const { count: yearTrainings } = await yearTrainingsQuery;
 
-      const trainingsTrend = (lastTrainings || 0) > 0 
-        ? ((currentTrainings - (lastTrainings || 0)) / (lastTrainings || 1)) * 100 
-        : 0;
-
-      // Fetch active clients (had training in last 30 days)
+      // ===== CLIENTS =====
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const { data: recentSessions } = await supabase
         .from('training_sessions')
@@ -166,67 +261,88 @@ export function useDashboardKPIs() {
 
       const activeClientIds = new Set(recentSessions?.map((s) => s.client_id) || []);
 
-      // Fetch all clients for stats
       const { data: allClients } = await supabase
         .from('clients')
         .select('id, is_archived, credit_balance, created_at');
 
       const totalClients = allClients?.filter(c => !c.is_archived).length || 0;
       const archivedClients = allClients?.filter(c => c.is_archived).length || 0;
-      const newClientsThisMonth = allClients?.filter(c => 
-        new Date(c.created_at) >= currentMonthStart && new Date(c.created_at) <= currentMonthEnd
-      ).length || 0;
+      const newClientsThisMonth = allClients?.filter(c => {
+        const createdAt = new Date(c.created_at);
+        return createdAt >= periodStart && createdAt <= periodEnd;
+      }).length || 0;
       const lowCreditClients = allClients?.filter(c => 
         !c.is_archived && (c.credit_balance || 0) < 800 && (c.credit_balance || 0) > 0
       ).length || 0;
 
-      // Fetch late cancellations this month
-      const { count: lateCancellations } = await supabase
+      // ===== CANCELLATIONS =====
+      let lateCancellationsQuery = supabase
         .from('training_sessions')
         .select('id', { count: 'exact' })
         .eq('status', 'canceled')
         .eq('is_late_cancellation', true)
-        .gte('canceled_at', currentMonthStart.toISOString())
-        .lte('canceled_at', currentMonthEnd.toISOString());
+        .gte('canceled_at', periodStart.toISOString())
+        .lte('canceled_at', periodEnd.toISOString());
 
-      // Fetch late cancellations last month
-      const { count: lateCancellationsLastMonth } = await supabase
+      let lateCancellationsComparisonQuery = supabase
         .from('training_sessions')
         .select('id', { count: 'exact' })
         .eq('status', 'canceled')
         .eq('is_late_cancellation', true)
-        .gte('canceled_at', lastMonthStart.toISOString())
-        .lte('canceled_at', lastMonthEnd.toISOString());
+        .gte('canceled_at', comparisonStart.toISOString())
+        .lte('canceled_at', comparisonEnd.toISOString());
 
-      // Fetch total cancellations this month
-      const { data: cancelledTrainings } = await supabase
+      let cancelledTrainingsQuery = supabase
         .from('training_sessions')
         .select('id, final_price')
         .eq('status', 'canceled')
-        .gte('canceled_at', currentMonthStart.toISOString())
-        .lte('canceled_at', currentMonthEnd.toISOString());
+        .gte('canceled_at', periodStart.toISOString())
+        .lte('canceled_at', periodEnd.toISOString());
+
+      let allScheduledQuery = supabase
+        .from('training_sessions')
+        .select('id', { count: 'exact' })
+        .gte('date', periodStart.toISOString())
+        .lte('date', periodEnd.toISOString());
+
+      if (clientFilter) {
+        lateCancellationsQuery = lateCancellationsQuery.in('client_id', clientFilter);
+        lateCancellationsComparisonQuery = lateCancellationsComparisonQuery.in('client_id', clientFilter);
+        cancelledTrainingsQuery = cancelledTrainingsQuery.in('client_id', clientFilter);
+        allScheduledQuery = allScheduledQuery.in('client_id', clientFilter);
+      }
+
+      const [
+        { count: lateCancellations },
+        { count: lateCancellationsLastMonth },
+        { data: cancelledTrainings },
+        { count: allScheduledThisMonth }
+      ] = await Promise.all([
+        lateCancellationsQuery,
+        lateCancellationsComparisonQuery,
+        cancelledTrainingsQuery,
+        allScheduledQuery,
+      ]);
 
       const totalCancellations = cancelledTrainings?.length || 0;
       const cancellationLoss = cancelledTrainings?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
-
-      // Fetch all scheduled trainings this month for rate calculation
-      const { count: allScheduledThisMonth } = await supabase
-        .from('training_sessions')
-        .select('id', { count: 'exact' })
-        .gte('date', currentMonthStart.toISOString())
-        .lte('date', currentMonthEnd.toISOString());
-
       const cancellationRate = (allScheduledThisMonth || 0) > 0 
         ? (totalCancellations / (allScheduledThisMonth || 1)) * 100 
         : 0;
 
-      // Fetch unpaid trainings
-      const { data: unpaidTrainings } = await supabase
+      // ===== UNPAID =====
+      let unpaidQuery = supabase
         .from('training_sessions')
         .select('final_price, client_id, date')
         .eq('payment_status', 'pending')
         .eq('status', 'completed')
         .order('date', { ascending: true });
+
+      if (clientFilter) {
+        unpaidQuery = unpaidQuery.in('client_id', clientFilter);
+      }
+
+      const { data: unpaidTrainings } = await unpaidQuery;
 
       const unpaidCount = unpaidTrainings?.length || 0;
       const unpaidAmount = unpaidTrainings?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
@@ -240,7 +356,7 @@ export function useDashboardKPIs() {
       return {
         // Income
         incomeThisMonth: currentIncome,
-        incomeLastMonth: lastIncome,
+        incomeLastMonth: comparisonIncome,
         avgMonthlyIncome,
         trainingIncome: currentTrainingIncome,
         productIncome: currentProductIncome,
@@ -254,7 +370,7 @@ export function useDashboardKPIs() {
         
         // Trainings
         trainingsThisMonth: currentTrainings,
-        trainingsLastMonth: lastTrainings || 0,
+        trainingsLastMonth: comparisonTrainings,
         trainingsThisYear: yearTrainings || 0,
         avgParticipants,
         trainingsTrend,
@@ -279,6 +395,10 @@ export function useDashboardKPIs() {
         unpaidClientsCount,
         avgUnpaidPerClient,
         oldestUnpaidDays,
+        
+        // Metadata
+        accountingMode,
+        itemsWithoutPaymentDate,
       } as DashboardKPIs;
     },
   });
