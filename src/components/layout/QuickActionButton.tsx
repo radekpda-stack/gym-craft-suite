@@ -25,6 +25,7 @@ import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
 import { EnhancedTrainingFormValues } from '@/components/trainings/EnhancedTrainingForm';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 interface QuickAction {
   id: string;
@@ -55,8 +56,16 @@ export function QuickActionButton() {
   const createMeasurement = useCreateMeasurement();
 
   const handleAction = (actionId: string) => {
+    featureTracker.track(`fab_action_${actionId}`, 'navigation');
     setIsOpen(false);
     setActiveSheet(actionId);
+  };
+
+  const handleFabToggle = () => {
+    if (!isOpen) {
+      featureTracker.track('fab_open', 'navigation');
+    }
+    setIsOpen(!isOpen);
   };
 
   const handleCreateTraining = async (data: EnhancedTrainingFormValues, tagIds: string[]) => {
@@ -160,7 +169,7 @@ export function QuickActionButton() {
             'bg-primary hover:bg-primary/90 transition-colors',
             isOpen && 'bg-secondary hover:bg-secondary/90'
           )}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleFabToggle}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           animate={{ rotate: isOpen ? 45 : 0 }}

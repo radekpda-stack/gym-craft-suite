@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 export interface TransactionExportData {
   date: string;
@@ -23,6 +24,8 @@ export interface FinancialSummaryData {
 }
 
 export function exportTransactionsToCSV(transactions: TransactionExportData[], filename: string = 'transakce') {
+  featureTracker.track('export_transactions_csv', 'export', { count: transactions.length });
+  
   const headers = ['Datum', 'Typ', 'Popis', 'Částka (Kč)', 'Klient'];
   
   const rows = transactions.map(t => [
@@ -45,6 +48,8 @@ export function exportTransactionsToPDF(
   title: string = 'Historie transakcí',
   filename: string = 'transakce'
 ) {
+  featureTracker.track('export_transactions_pdf', 'export', { count: transactions.length });
+  
   const doc = new jsPDF();
   
   // Title
@@ -77,6 +82,8 @@ export function exportTransactionsToPDF(
 }
 
 export function exportFinancialSummaryToCSV(data: FinancialSummaryData, filename: string = 'financni-prehled') {
+  featureTracker.track('export_financial_summary_csv', 'export');
+  
   const lines = [
     ['Finanční přehled', format(new Date(), 'd. MMMM yyyy', { locale: cs })],
     [],
@@ -101,6 +108,8 @@ export function exportFinancialSummaryToCSV(data: FinancialSummaryData, filename
 }
 
 export function exportFinancialSummaryToPDF(data: FinancialSummaryData, filename: string = 'financni-prehled') {
+  featureTracker.track('export_financial_summary_pdf', 'export');
+  
   const doc = new jsPDF();
   
   // Title
@@ -204,6 +213,8 @@ export interface MeasurementsExportOptions {
 }
 
 export function exportMeasurementsToPDF(options: MeasurementsExportOptions) {
+  featureTracker.track('export_measurements_pdf', 'export', { count: options.measurements.length });
+  
   const { clientName, measurements } = options;
   const doc = new jsPDF();
   
@@ -447,6 +458,8 @@ export interface ProgressExportOptions {
 }
 
 export function exportProgressToCSV(options: ProgressExportOptions) {
+  featureTracker.track('export_progress_csv', 'export', { count: options.entries.length });
+  
   const { clientName, entries } = options;
   
   const headers = ['Datum', 'Cvik', 'Série', 'Opakování', 'Váha (kg)', 'Čas (s)', 'Tempo', 'PR', 'Poznámka'];
@@ -471,6 +484,8 @@ export function exportProgressToCSV(options: ProgressExportOptions) {
 }
 
 export function exportProgressToPDF(options: ProgressExportOptions) {
+  featureTracker.track('export_progress_pdf', 'export', { count: options.entries.length });
+  
   const { clientName, entries } = options;
   const doc = new jsPDF();
 
