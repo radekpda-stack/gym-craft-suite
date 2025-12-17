@@ -61,7 +61,8 @@ export function CreateDiagnosticSheet({
         return;
       }
 
-      let clientId = formData.client_id;
+      // Use clientId from form (camelCase from ExtendedDiagnosticForm)
+      let clientId = formData.clientId;
       let isNewClient = false;
 
       // If client is already selected (from defaultClientId or form selection), use that
@@ -70,9 +71,9 @@ export function CreateDiagnosticSheet({
       } else if (formData.clientName) {
         // Only search or create if a name was entered but no client selected
         const existingClient = findExistingClient(
-          formData.email,
+          formData.clientEmail,
           formData.clientName,
-          formData.birthDate
+          formData.clientBirthDate
         );
 
         if (existingClient) {
@@ -82,22 +83,22 @@ export function CreateDiagnosticSheet({
           // Create new client with extended fields
           const newClient = await createClient.mutateAsync({
             name: formData.clientName,
-            email: formData.email || undefined,
+            email: formData.clientEmail || undefined,
             phone: formData.phone || undefined,
-            birthDate: formData.birthDate || undefined,
-            gender: formData.gender || undefined,
+            birthDate: formData.clientBirthDate || undefined,
+            gender: formData.clientGender || undefined,
             handedness: formData.handedness || null,
             occupation: formData.occupation || null,
-            sitting_hours_daily: formData.sitting_hours_daily || null,
-            sports_history: formData.sports_history || null,
-            current_activities: formData.current_activities || null,
-            sleep_hours: formData.sleep_hours || null,
-            stress_level: formData.stress_level || null,
-            dietary_restrictions: formData.dietary_restrictions || null,
+            sitting_hours_daily: formData.sittingHoursDaily || null,
+            sports_history: formData.sportsHistory || null,
+            current_activities: formData.currentActivities || null,
+            sleep_hours: formData.sleepHours || null,
+            stress_level: formData.stressLevel || null,
+            dietary_restrictions: formData.dietaryRestrictions || null,
             supplements: formData.supplements || null,
             healthRestrictions: formData.health_restrictions || undefined,
-            trainingGoals: formData.training_goals || [],
-            notes: formData.trainer_notes || undefined,
+            trainingGoals: formData.trainingPriorities || [],
+            notes: formData.trainerNotes || undefined,
           });
           
           clientId = newClient.id;
@@ -118,71 +119,71 @@ export function CreateDiagnosticSheet({
         date: formData.date || new Date().toISOString().split('T')[0],
         area_type: 'joint',
         area_name: 'Vstupní diagnostika',
-        findings: formData.trainer_notes || 'Kompletní vstupní diagnostika',
-        notes: formData.short_term_goals || null,
+        findings: formData.trainerNotes || 'Kompletní vstupní diagnostika',
+        notes: formData.shortTermGoals || null,
       });
 
       if (!diagnostic?.id) {
         throw new Error("Nepodařilo se vytvořit diagnostiku");
       }
 
-      // Create the extended assessment
+      // Create the extended assessment - map camelCase form fields to snake_case DB fields
       await createAssessment.mutateAsync({
         diagnostic_id: diagnostic.id,
         user_id: user.id,
         handedness: formData.handedness,
         occupation: formData.occupation,
-        sitting_hours_daily: formData.sitting_hours_daily,
-        sports_history: formData.sports_history,
-        current_activities: formData.current_activities,
-        sleep_hours: formData.sleep_hours,
-        sleep_quality: formData.sleep_quality,
-        stress_level: formData.stress_level,
-        stress_management: formData.stress_management,
+        sitting_hours_daily: formData.sittingHoursDaily,
+        sports_history: formData.sportsHistory,
+        current_activities: formData.currentActivities,
+        sleep_hours: formData.sleepHours,
+        sleep_quality: formData.sleepQuality,
+        stress_level: formData.stressLevel,
+        stress_management: formData.stressManagement,
         meditates: formData.meditates,
-        regeneration_methods: formData.regeneration_methods,
+        regeneration_methods: formData.regenerationMethods,
         diseases: formData.diseases,
         surgeries: formData.surgeries,
         injuries: formData.injuries,
-        pain_areas: formData.pain_areas,
+        pain_areas: formData.painAreas,
         allergies: formData.allergies,
-        family_health_history: formData.family_health_history,
-        short_term_goals: formData.short_term_goals,
-        long_term_goals: formData.long_term_goals,
-        training_priorities: formData.training_priorities,
-        mobility_ankles: formData.mobility_ankles,
-        mobility_hips: formData.mobility_hips,
-        mobility_thoracic: formData.mobility_thoracic,
-        mobility_shoulders: formData.mobility_shoulders,
-        core_stability: formData.core_stability,
-        squat_quality: formData.squat_quality,
-        lunge_quality: formData.lunge_quality,
-        push_quality: formData.push_quality,
-        pull_quality: formData.pull_quality,
-        hip_hinge_quality: formData.hip_hinge_quality,
-        pain_ankle: formData.pain_ankle,
-        pain_knee: formData.pain_knee,
-        pain_hip: formData.pain_hip,
-        pain_si: formData.pain_si,
-        pain_lumbar: formData.pain_lumbar,
-        pain_thoracic: formData.pain_thoracic,
-        pain_shoulder: formData.pain_shoulder,
-        pain_neck: formData.pain_neck,
-        motivation_level: formData.motivation_level,
-        discipline_level: formData.discipline_level,
-        preferred_training_style: formData.preferred_training_style,
-        eating_regularity: formData.eating_regularity,
-        food_allergies: formData.food_allergies,
+        family_health_history: formData.familyHealthHistory,
+        short_term_goals: formData.shortTermGoals,
+        long_term_goals: formData.longTermGoals,
+        training_priorities: formData.trainingPriorities,
+        mobility_ankles: formData.mobilityAnkles,
+        mobility_hips: formData.mobilityHips,
+        mobility_thoracic: formData.mobilityThoracic,
+        mobility_shoulders: formData.mobilityShoulders,
+        core_stability: formData.coreStability,
+        squat_quality: formData.squatQuality,
+        lunge_quality: formData.lungeQuality,
+        push_quality: formData.pushQuality,
+        pull_quality: formData.pullQuality,
+        hip_hinge_quality: formData.hipHingeQuality,
+        pain_ankle: formData.painAnkle,
+        pain_knee: formData.painKnee,
+        pain_hip: formData.painHip,
+        pain_si: formData.painSi,
+        pain_lumbar: formData.painLumbar,
+        pain_thoracic: formData.painThoracic,
+        pain_shoulder: formData.painShoulder,
+        pain_neck: formData.painNeck,
+        motivation_level: formData.motivationLevel,
+        discipline_level: formData.disciplineLevel,
+        preferred_training_style: formData.preferredTrainingStyle,
+        eating_regularity: formData.eatingRegularity,
+        food_allergies: formData.foodAllergies,
         supplements: formData.supplements,
-        dietary_restrictions: formData.dietary_restrictions,
-        ai_analysis: formData.ai_analysis,
-        ai_risk_factors: formData.ai_risk_factors,
-        ai_strengths: formData.ai_strengths,
-        ai_priorities: formData.ai_priorities,
-        ai_recommendations: formData.ai_recommendations,
-        ai_contraindications: formData.ai_contraindications,
-        ai_must_do_exercises: formData.ai_must_do_exercises,
-        ai_avoid_exercises: formData.ai_avoid_exercises,
+        dietary_restrictions: formData.dietaryRestrictions,
+        ai_analysis: formData.aiAnalysis ? JSON.stringify(formData.aiAnalysis) : null,
+        ai_risk_factors: formData.aiAnalysis?.riskFactors,
+        ai_strengths: formData.aiAnalysis?.strengths,
+        ai_priorities: formData.aiAnalysis?.priorities,
+        ai_recommendations: formData.aiAnalysis?.recommendations,
+        ai_contraindications: formData.aiAnalysis?.contraindications,
+        ai_must_do_exercises: formData.aiAnalysis?.mustDoExercises,
+        ai_avoid_exercises: formData.aiAnalysis?.avoidExercises,
         is_draft: false,
       });
 
