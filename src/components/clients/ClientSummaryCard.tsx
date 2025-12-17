@@ -16,6 +16,7 @@ import {
   ChevronUp,
   MessageSquare,
   BarChart3,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +25,7 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Client } from '@/hooks/useClients';
 import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatisticsCard';
 import { FeedbackTrendsChart } from '@/components/feedback/FeedbackTrendsChart';
+import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -49,6 +51,7 @@ interface ClientSummaryCardProps {
   onAddCredit?: () => void;
   onPayUnpaid?: () => void;
   onFeedbackToggle?: (enabled: boolean) => void;
+  budgetGroupId?: string;
 }
 
 export function ClientSummaryCard({
@@ -67,6 +70,7 @@ export function ClientSummaryCard({
   onAddCredit,
   onPayUnpaid,
   onFeedbackToggle,
+  budgetGroupId,
 }: ClientSummaryCardProps) {
   const [showMembers, setShowMembers] = useState(false);
   const [showFeedbackStats, setShowFeedbackStats] = useState(false);
@@ -223,6 +227,35 @@ export function ClientSummaryCard({
         )}
       </div>
 
+      {/* Low Credit Recommendation */}
+      {creditBalance <= 500 && (
+        <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 flex items-center gap-3">
+          <FileText className="w-5 h-5 text-warning flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-warning">
+              {creditBalance <= 0 ? "Kredit je vyčerpán" : "Nízký kredit"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Doporučujeme vygenerovat výpis čerpání
+            </p>
+          </div>
+          <CreditStatementDialog
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email || undefined}
+            clientPhone={client.phone || undefined}
+            isSharedBudget={isSharedBudget}
+            budgetGroupId={budgetGroupId}
+            trigger={
+              <Button size="sm" variant="outline" className="gap-1.5 flex-shrink-0">
+                <FileText className="w-4 h-4" />
+                Výpis
+              </Button>
+            }
+          />
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2 flex-wrap">
         <Button size="sm" className="gap-1.5 flex-1" onClick={onAddTraining}>
@@ -244,6 +277,20 @@ export function ClientSummaryCard({
             Uhradit neuhrazené ({formatCurrency(unpaidTotal)})
           </Button>
         )}
+        <CreditStatementDialog
+          clientId={client.id}
+          clientName={client.name}
+          clientEmail={client.email || undefined}
+          clientPhone={client.phone || undefined}
+          isSharedBudget={isSharedBudget}
+          budgetGroupId={budgetGroupId}
+          trigger={
+            <Button size="sm" variant="ghost" className="gap-1.5 w-full">
+              <FileText className="w-4 h-4" />
+              Vygenerovat výpis (PDF)
+            </Button>
+          }
+        />
       </div>
     </div>
   );
