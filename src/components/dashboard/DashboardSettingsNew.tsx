@@ -19,6 +19,7 @@ export interface NewDashboardLayout {
   showTrainingActivity: boolean;
   showTopClients: boolean;
   showPerformanceMetrics: boolean;
+  showFeedbackTrends: boolean;
 }
 
 interface DashboardSettingsNewProps {
@@ -34,6 +35,7 @@ const SECTIONS = [
   { key: 'showTrainingActivity' as const, label: 'Tréninková aktivita', description: 'Graf tréninkové aktivity' },
   { key: 'showTopClients' as const, label: 'Nejčastější klienti', description: 'Žebříček top 5 klientů' },
   { key: 'showPerformanceMetrics' as const, label: 'Výkonnostní metriky', description: 'Cviky, PR, vývoj síly' },
+  { key: 'showFeedbackTrends' as const, label: 'Negativní trendy', description: 'Klienti s opakovaně špatnými hodnotami' },
 ];
 
 export function DashboardSettingsNew({ layout, onToggleSection, onResetDefaults }: DashboardSettingsNewProps) {
