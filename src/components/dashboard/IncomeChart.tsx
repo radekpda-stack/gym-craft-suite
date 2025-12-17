@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Wallet, Loader2 } from 'lucide-react';
 import {
   AreaChart,
@@ -36,8 +36,11 @@ const PERIOD_OPTIONS: { value: IncomePeriod; label: string }[] = [
 ];
 
 export function IncomeChart({ data, isLoading, period, onPeriodChange }: IncomeChartProps) {
-  const totalIncome = data.reduce((sum, d) => sum + d.payments, 0);
-  const isEmpty = data.length === 0 || totalIncome === 0;
+  // Memoize computed values
+  const { totalIncome, isEmpty } = useMemo(() => {
+    const total = data.reduce((sum, d) => sum + d.payments, 0);
+    return { totalIncome: total, isEmpty: data.length === 0 || total === 0 };
+  }, [data]);
 
   return (
     <div className="glass rounded-2xl p-4 md:p-6">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -84,16 +84,34 @@ function DashboardContent() {
   const { data: performanceData, isLoading: performanceLoading } = usePerformanceMetricsData(performancePeriod);
   const { data: financialStats } = useFinancialStats();
 
-  const toggleSection = (key: keyof NewDashboardLayout) => {
-    const newLayout = { ...layout, [key]: !layout[key] };
-    setLayout(newLayout);
-    localStorage.setItem('dashboard-layout-v2', JSON.stringify(newLayout));
-  };
+  // Memoize callbacks to prevent unnecessary re-renders
+  const toggleSection = useCallback((key: keyof NewDashboardLayout) => {
+    setLayout(prev => {
+      const newLayout = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('dashboard-layout-v2', JSON.stringify(newLayout));
+      return newLayout;
+    });
+  }, []);
 
-  const resetDefaults = () => {
+  const resetDefaults = useCallback(() => {
     setLayout(DEFAULT_LAYOUT);
     localStorage.setItem('dashboard-layout-v2', JSON.stringify(DEFAULT_LAYOUT));
-  };
+  }, []);
+
+  // Memoize export data to prevent recalculation on every render
+  const exportData = useMemo(() => {
+    if (!financialStats) return null;
+    return {
+      totalIncome: financialStats.totalIncome,
+      incomeThisMonth: financialStats.incomeThisMonth,
+      productIncome: financialStats.productIncome,
+      trainingIncome: financialStats.trainingIncome,
+      totalCredit: financialStats.totalCredit,
+      clientsWithLowCredit: financialStats.clientsWithLowCredit,
+      incomeByMonth: financialStats.incomeByMonth,
+      productBreakdown: financialStats.productBreakdown,
+    } as FinancialSummaryData;
+  }, [financialStats]);
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -110,7 +128,7 @@ function DashboardContent() {
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3">
-          {financialStats && (
+          {exportData && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -119,35 +137,11 @@ function DashboardContent() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  const data: FinancialSummaryData = {
-                    totalIncome: financialStats.totalIncome,
-                    incomeThisMonth: financialStats.incomeThisMonth,
-                    productIncome: financialStats.productIncome,
-                    trainingIncome: financialStats.trainingIncome,
-                    totalCredit: financialStats.totalCredit,
-                    clientsWithLowCredit: financialStats.clientsWithLowCredit,
-                    incomeByMonth: financialStats.incomeByMonth,
-                    productBreakdown: financialStats.productBreakdown,
-                  };
-                  exportFinancialSummaryToCSV(data);
-                }}>
+                <DropdownMenuItem onClick={() => exportFinancialSummaryToCSV(exportData)}>
                   <FileText className="w-4 h-4 mr-2" />
                   CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  const data: FinancialSummaryData = {
-                    totalIncome: financialStats.totalIncome,
-                    incomeThisMonth: financialStats.incomeThisMonth,
-                    productIncome: financialStats.productIncome,
-                    trainingIncome: financialStats.trainingIncome,
-                    totalCredit: financialStats.totalCredit,
-                    clientsWithLowCredit: financialStats.clientsWithLowCredit,
-                    incomeByMonth: financialStats.incomeByMonth,
-                    productBreakdown: financialStats.productBreakdown,
-                  };
-                  exportFinancialSummaryToPDF(data);
-                }}>
+                <DropdownMenuItem onClick={() => exportFinancialSummaryToPDF(exportData)}>
                   <FileText className="w-4 h-4 mr-2" />
                   PDF
                 </DropdownMenuItem>
