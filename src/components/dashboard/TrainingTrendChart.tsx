@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import {
   AreaChart,
@@ -18,6 +19,19 @@ interface TrainingTrendChartProps {
 }
 
 export function TrainingTrendChart({ data, isLoading }: TrainingTrendChartProps) {
+  // Memoize computed statistics
+  const { totalTrainings, averagePerMonth, trendChange } = useMemo(() => {
+    const total = data.reduce((sum, d) => sum + d.count, 0);
+    const average = data.length > 0 ? total / data.length : 0;
+    
+    const midPoint = Math.floor(data.length / 2);
+    const firstHalf = data.slice(0, midPoint).reduce((sum, d) => sum + d.count, 0);
+    const secondHalf = data.slice(midPoint).reduce((sum, d) => sum + d.count, 0);
+    const trend = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    
+    return { totalTrainings: total, averagePerMonth: average, trendChange: trend };
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="glass rounded-2xl p-4 md:p-6">
@@ -26,15 +40,6 @@ export function TrainingTrendChart({ data, isLoading }: TrainingTrendChartProps)
       </div>
     );
   }
-
-  const totalTrainings = data.reduce((sum, d) => sum + d.count, 0);
-  const averagePerMonth = data.length > 0 ? totalTrainings / data.length : 0;
-
-  // Compare first half vs second half
-  const midPoint = Math.floor(data.length / 2);
-  const firstHalf = data.slice(0, midPoint).reduce((sum, d) => sum + d.count, 0);
-  const secondHalf = data.slice(midPoint).reduce((sum, d) => sum + d.count, 0);
-  const trendChange = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
 
   return (
     <div className="glass rounded-2xl p-4 md:p-6">

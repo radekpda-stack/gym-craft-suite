@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -35,9 +35,12 @@ const PERIOD_OPTIONS: { value: ProfitPeriod; label: string }[] = [
 ];
 
 export function ProfitChart({ data, isLoading, period, onPeriodChange }: ProfitChartProps) {
-  const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-  const totalCosts = data.reduce((sum, d) => sum + d.costs, 0);
-  const totalProfit = data.reduce((sum, d) => sum + d.profit, 0);
+  // Memoize computed totals
+  const { totalRevenue, totalCosts, totalProfit } = useMemo(() => ({
+    totalRevenue: data.reduce((sum, d) => sum + d.revenue, 0),
+    totalCosts: data.reduce((sum, d) => sum + d.costs, 0),
+    totalProfit: data.reduce((sum, d) => sum + d.profit, 0),
+  }), [data]);
 
   return (
     <div className="glass rounded-2xl p-4 md:p-6">

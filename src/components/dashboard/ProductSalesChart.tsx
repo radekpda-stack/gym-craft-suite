@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -128,25 +128,32 @@ export function ProductSalesChart({
     );
   }
 
-  // Filter products based on selection
-  const displayProducts = selectedProducts.length > 0
-    ? allProducts.filter(p => selectedProducts.includes(p.id))
-    : topProducts;
+  // Memoize filtered products based on selection
+  const displayProducts = useMemo(() => 
+    selectedProducts.length > 0
+      ? allProducts.filter(p => selectedProducts.includes(p.id))
+      : topProducts,
+    [selectedProducts, allProducts, topProducts]
+  );
 
-  const filteredTotalRevenue = displayProducts.reduce((sum, p) => sum + p.revenue, 0);
-  const filteredTotalMargin = displayProducts.reduce((sum, p) => sum + p.margin, 0);
-  const filteredMarginPercent = filteredTotalRevenue > 0 ? (filteredTotalMargin / filteredTotalRevenue) * 100 : 0;
-  const totalCount = displayProducts.reduce((sum, p) => sum + p.count, 0);
+  // Memoize computed totals
+  const { filteredTotalRevenue, filteredTotalMargin, filteredMarginPercent, totalCount } = useMemo(() => {
+    const revenue = displayProducts.reduce((sum, p) => sum + p.revenue, 0);
+    const margin = displayProducts.reduce((sum, p) => sum + p.margin, 0);
+    const count = displayProducts.reduce((sum, p) => sum + p.count, 0);
+    const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
+    return { filteredTotalRevenue: revenue, filteredTotalMargin: margin, filteredMarginPercent: marginPercent, totalCount: count };
+  }, [displayProducts]);
 
-  const toggleProduct = (productId: string) => {
+  const toggleProduct = useCallback((productId: string) => {
     setSelectedProducts(prev => 
       prev.includes(productId) 
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
-  };
+  }, []);
 
-  const clearSelection = () => setSelectedProducts([]);
+  const clearSelection = useCallback(() => setSelectedProducts([]), []);
 
   return (
     <div className="glass rounded-2xl p-4 sm:p-6 space-y-4">
