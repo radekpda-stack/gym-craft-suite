@@ -214,8 +214,8 @@ export function CreditStatementDialog({
         companyContact: companySettings?.contact,
       };
 
-      // Generate and download PDF
-      downloadCreditStatementPdf(statementData, { language });
+      // Generate and download PDF (async - loads fonts)
+      await downloadCreditStatementPdf(statementData, { language });
 
       toast.success(
         language === "cs"
