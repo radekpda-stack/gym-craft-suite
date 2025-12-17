@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { useRenderTracker } from '@/hooks/useRenderTracker';
 import { useToast } from '@/hooks/use-toast';
 import {
   Wallet,
@@ -61,6 +62,7 @@ const SAFE_MODE_KEY = 'dashboard-safe-mode';
 // Content component that uses the filters context
 function DashboardContent() {
   usePageTracking('dashboard');
+  useRenderTracker('DashboardContent');
   const { toast } = useToast();
 
   // Safe mode - disables expensive charts when errors occur
