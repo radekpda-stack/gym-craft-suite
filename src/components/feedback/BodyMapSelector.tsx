@@ -1,9 +1,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface BodyMapSelectorProps {
-  selectedArea: string | null;
-  onAreaSelect: (area: string) => void;
+  selectedAreas: string[];
+  onAreasChange: (areas: string[]) => void;
   language?: 'cs' | 'en';
 }
 
@@ -20,14 +22,28 @@ const AREA_LABELS: Record<string, { cs: string; en: string }> = {
   other: { cs: 'Jiné', en: 'Other' },
 };
 
+export const BILATERAL_AREAS = ['knee', 'shoulder', 'hip', 'ankle', 'wrist', 'elbow'];
+
 export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
-  selectedArea,
-  onAreaSelect,
+  selectedAreas,
+  onAreasChange,
   language = 'cs',
 }) => {
   const getLabel = (area: string) => AREA_LABELS[area]?.[language] || area;
 
-  const isSelected = (area: string) => selectedArea === area;
+  const isSelected = (area: string) => selectedAreas.includes(area);
+
+  const toggleArea = (area: string) => {
+    if (isSelected(area)) {
+      onAreasChange(selectedAreas.filter(a => a !== area));
+    } else {
+      onAreasChange([...selectedAreas, area]);
+    }
+  };
+
+  const removeArea = (area: string) => {
+    onAreasChange(selectedAreas.filter(a => a !== area));
+  };
 
   const getAreaStyle = (area: string) => cn(
     "cursor-pointer transition-all duration-200",
@@ -62,7 +78,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           rx="4"
           className={getAreaStyle('neck')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('neck')}
+          onClick={() => toggleArea('neck')}
         />
         {isSelected('neck') && (
           <text x="100" y="65" textAnchor="middle" className="fill-primary-foreground text-[6px] font-bold pointer-events-none">
@@ -78,7 +94,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="12"
           className={getAreaStyle('shoulder')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('shoulder')}
+          onClick={() => toggleArea('shoulder')}
         />
 
         {/* Shoulders - Right */}
@@ -89,7 +105,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="12"
           className={getAreaStyle('shoulder')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('shoulder')}
+          onClick={() => toggleArea('shoulder')}
         />
         {isSelected('shoulder') && (
           <>
@@ -107,7 +123,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           rx="8"
           className={getAreaStyle('upper_back')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('upper_back')}
+          onClick={() => toggleArea('upper_back')}
         />
         {isSelected('upper_back') && (
           <text x="100" y="100" textAnchor="middle" className="fill-primary-foreground text-[10px] font-bold pointer-events-none">
@@ -124,7 +140,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           rx="6"
           className={getAreaStyle('lower_back')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('lower_back')}
+          onClick={() => toggleArea('lower_back')}
         />
         {isSelected('lower_back') && (
           <text x="100" y="145" textAnchor="middle" className="fill-primary-foreground text-[10px] font-bold pointer-events-none">
@@ -162,7 +178,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="8"
           className={getAreaStyle('elbow')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('elbow')}
+          onClick={() => toggleArea('elbow')}
         />
 
         {/* Elbows - Right */}
@@ -173,7 +189,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="8"
           className={getAreaStyle('elbow')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('elbow')}
+          onClick={() => toggleArea('elbow')}
         />
         {isSelected('elbow') && (
           <>
@@ -212,7 +228,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="7"
           className={getAreaStyle('wrist')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('wrist')}
+          onClick={() => toggleArea('wrist')}
         />
 
         {/* Wrists - Right */}
@@ -223,7 +239,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="7"
           className={getAreaStyle('wrist')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('wrist')}
+          onClick={() => toggleArea('wrist')}
         />
         {isSelected('wrist') && (
           <>
@@ -260,7 +276,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="12"
           className={getAreaStyle('hip')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('hip')}
+          onClick={() => toggleArea('hip')}
         />
 
         {/* Hips - Right */}
@@ -271,7 +287,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="12"
           className={getAreaStyle('hip')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('hip')}
+          onClick={() => toggleArea('hip')}
         />
         {isSelected('hip') && (
           <>
@@ -310,7 +326,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="10"
           className={getAreaStyle('knee')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('knee')}
+          onClick={() => toggleArea('knee')}
         />
 
         {/* Knees - Right */}
@@ -321,7 +337,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="10"
           className={getAreaStyle('knee')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('knee')}
+          onClick={() => toggleArea('knee')}
         />
         {isSelected('knee') && (
           <>
@@ -360,7 +376,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="8"
           className={getAreaStyle('ankle')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('ankle')}
+          onClick={() => toggleArea('ankle')}
         />
 
         {/* Ankles - Right */}
@@ -371,7 +387,7 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
           ry="8"
           className={getAreaStyle('ankle')}
           strokeWidth="2"
-          onClick={() => onAreaSelect('ankle')}
+          onClick={() => toggleArea('ankle')}
         />
         {isSelected('ankle') && (
           <>
@@ -401,19 +417,27 @@ export const BodyMapSelector: React.FC<BodyMapSelectorProps> = ({
         />
       </svg>
 
-      {/* Selected area label */}
-      {selectedArea && selectedArea !== 'other' && (
-        <div className="text-center">
-          <span className="text-sm font-medium text-primary">
-            {getLabel(selectedArea)}
-          </span>
+      {/* Selected areas as removable badges */}
+      {selectedAreas.length > 0 && (
+        <div className="flex flex-wrap gap-2 justify-center">
+          {selectedAreas.filter(a => a !== 'other').map((area) => (
+            <Badge
+              key={area}
+              variant="default"
+              className="gap-1 cursor-pointer hover:bg-primary/80"
+              onClick={() => removeArea(area)}
+            >
+              {getLabel(area)}
+              <X className="w-3 h-3" />
+            </Badge>
+          ))}
         </div>
       )}
 
       {/* "Other" option as button below the body map */}
       <button
         type="button"
-        onClick={() => onAreaSelect('other')}
+        onClick={() => toggleArea('other')}
         className={cn(
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
           isSelected('other')
