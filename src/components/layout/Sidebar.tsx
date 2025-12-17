@@ -222,7 +222,7 @@ export function Sidebar() {
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                FitCoach
+                Just Move
               </motion.span>
             )}
           </AnimatePresence>
