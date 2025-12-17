@@ -16,6 +16,7 @@ import {
   BarChart3,
   MessageSquare,
   Calculator,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ import { PaymentTagsManagement } from '@/components/settings/PaymentTagsManageme
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
+import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -74,6 +76,12 @@ export default function Settings() {
           </button>
         </div>
       ),
+    },
+    {
+      title: language === 'cs' ? 'Firemní profil' : 'Company Profile',
+      description: language === 'cs' ? 'Údaje pro hlavičku PDF výpisů' : 'Details for PDF statement headers',
+      icon: Building2,
+      content: <CompanyProfileSettings />,
     },
     {
       title: t.settings.prices,
