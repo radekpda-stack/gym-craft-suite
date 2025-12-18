@@ -255,6 +255,7 @@ export default function TrainingDetail() {
       }
     }
     setShowCompleteDialog(false);
+    navigate('/trainings');
   };
 
   const getExpectedPrice = () => {
