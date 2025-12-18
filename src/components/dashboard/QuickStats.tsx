@@ -334,22 +334,21 @@ export function QuickStats() {
         mainLabel="Příjem z produktů"
         stats={[
           { 
-            label: 'Podíl na příjmu', 
-            value: `${(kpis?.productIncomeShare || 0).toFixed(1)}%`,
+            label: 'Počet prodejů', 
+            value: kpis?.productSalesCount || 0,
           },
           { 
             label: 'Náklady', 
-            value: formatCurrency(kpis?.expensesThisMonth || 0),
+            value: formatCurrency(kpis?.productCost || 0),
           },
           { 
             label: 'Zisk z produktů', 
-            value: formatCurrency(kpis?.netProfitThisMonth || 0),
+            value: formatCurrency(kpis?.productProfit || 0),
             highlight: true,
           },
           { 
             label: 'Marže', 
-            value: `${(kpis?.profitMargin || 0).toFixed(1)}%`,
-            trend: kpis?.profitTrend,
+            value: `${(kpis?.productMargin || 0).toFixed(1)}%`,
           },
         ]}
       />
