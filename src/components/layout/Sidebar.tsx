@@ -17,7 +17,6 @@ import {
   Sparkles,
   TrendingUp,
   ShoppingBag,
-  Bell,
   ClipboardList,
   LucideIcon,
 } from 'lucide-react';
@@ -137,20 +136,20 @@ export function Sidebar() {
       label: 'Hlavní',
       items: [
         { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
-        { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
-        { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
-        { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
       ],
     },
     {
       label: 'Plánování',
       items: [
+        { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
+        { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
         { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
       ],
     },
     {
       label: 'Záznamy',
       items: [
+        { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
       ],
     },
@@ -164,7 +163,6 @@ export function Sidebar() {
       label: 'Nástroje',
       items: [
         { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: t.nav.aiAssistant },
-        { id: 'reminders', to: '/reminders', icon: Bell, label: 'Připomínky' },
       ],
     },
     {
