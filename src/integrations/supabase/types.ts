@@ -1723,6 +1723,8 @@ export type Database = {
       }
       nutrition_food_entries: {
         Row: {
+          calorie_estimate_high: number | null
+          calorie_estimate_low: number | null
           client_id: string
           created_at: string
           description: string
@@ -1742,6 +1744,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          calorie_estimate_high?: number | null
+          calorie_estimate_low?: number | null
           client_id: string
           created_at?: string
           description: string
@@ -1761,6 +1765,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          calorie_estimate_high?: number | null
+          calorie_estimate_low?: number | null
           client_id?: string
           created_at?: string
           description?: string
