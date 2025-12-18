@@ -151,6 +151,7 @@ export function Sidebar() {
       items: [
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+        { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
       ],
     },
     {

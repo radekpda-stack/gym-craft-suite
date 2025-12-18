@@ -343,11 +343,18 @@ export default function TrainingDetail() {
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Akce</h3>
           <div className="flex flex-wrap gap-3">
-            {training.status === 'completed' && existingFeedback && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MessageSquare className="w-4 h-4 text-primary" />
-                <span>Zpětná vazba vyplněna</span>
-              </div>
+            {training.status === 'completed' && (
+              <TrainingFeedbackSection
+                trainingId={training.id}
+                trainingDate={training.date}
+                trainingStatus={training.status}
+                clientId={training.client_id}
+                clientName={client?.name || ''}
+                feedbackEnabled={client?.feedback_enabled ?? true}
+                existingFeedback={!!existingFeedback}
+                feedbackData={existingFeedback || undefined}
+                feedbackRequest={feedbackRequest}
+              />
             )}
             <Button
               variant="ghost"

@@ -40,6 +40,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
+import { FeedbackSummaryCard } from './FeedbackSummaryCard';
+import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 
 interface TrainingFeedbackSectionProps {
   trainingId: string;
@@ -49,6 +51,7 @@ interface TrainingFeedbackSectionProps {
   clientName: string;
   feedbackEnabled?: boolean;
   existingFeedback?: boolean;
+  feedbackData?: TrainingFeedback | null;
   feedbackRequest?: {
     id: string;
     token: string;
@@ -80,6 +83,7 @@ export function TrainingFeedbackSection({
   clientName,
   feedbackEnabled = true,
   existingFeedback = false,
+  feedbackData,
   feedbackRequest,
 }: TrainingFeedbackSectionProps) {
   const { trackFeature } = useFeatureTracking();
@@ -106,7 +110,7 @@ export function TrainingFeedbackSection({
 
   // Determine feedback status
   const getFeedbackStatus = () => {
-    if (existingFeedback) return 'received';
+    if (existingFeedback || feedbackData) return 'received';
     if (feedbackRequest?.status === 'completed') return 'received';
     if (feedbackRequest?.status === 'pending') return 'waiting';
     return 'none';
@@ -222,6 +226,27 @@ export function TrainingFeedbackSection({
     );
   }
 
+  // Show feedback summary card when feedback is received
+  if (status === 'received' && feedbackData) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Zpětná vazba
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FeedbackSummaryCard
+            feedback={feedbackData}
+            clientName={clientName}
+            trainingDate={trainingDate}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <Card>
@@ -249,7 +274,7 @@ export function TrainingFeedbackSection({
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {status === 'received' && (
+          {status === 'received' && !feedbackData && (
             <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
               <Check className="w-8 h-8 mx-auto mb-2 text-green-500" />
               <p className="text-sm font-medium text-green-600">Zpětná vazba byla vyplněna</p>
