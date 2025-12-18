@@ -20,6 +20,7 @@ import CanceledTrainings from "./pages/CanceledTrainings";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import FeedbackPage from "./pages/FeedbackPage";
+import FeedbackOverview from "./pages/FeedbackOverview";
 import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import PRHistory from "./pages/PRHistory";
@@ -63,6 +64,7 @@ const App = () => (
                         <Route path="/canceled" element={<CanceledTrainings />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/ai-assistant" element={<AIAssistant />} />
+                        <Route path="/feedback-overview" element={<FeedbackOverview />} />
                         <Route path="/sales" element={<Sales />} />
                         <Route path="/pr-history" element={<PRHistory />} />
                         <Route path="/reminders" element={<Reminders />} />
