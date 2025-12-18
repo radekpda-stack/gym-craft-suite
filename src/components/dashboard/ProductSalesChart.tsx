@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Package, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, TrendingUp, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { useDashboardFilters } from '@/contexts/DashboardFiltersContext';
 import {
   Tooltip as UITooltip,
@@ -32,6 +32,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { formatCurrency, formatPercent } from '@/lib/formatters';
+import { ProductDetailModal } from './ProductDetailModal';
 
 export type SalesPeriod = '30days' | '3months' | '6months' | '12months';
 
@@ -117,6 +118,7 @@ export function ProductSalesChart({
   const { filters } = useDashboardFilters();
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<{ id: string; name: string } | null>(null);
   
   // Memoize filtered products based on selection - MUST be before any early returns
   const displayProducts = useMemo(() => 
@@ -144,6 +146,10 @@ export function ProductSalesChart({
   }, []);
 
   const clearSelection = useCallback(() => setSelectedProducts([]), []);
+
+  const openProductDetail = useCallback((product: { id: string; name: string }) => {
+    setDetailProduct(product);
+  }, []);
 
   // Early return for loading - AFTER all hooks
   if (isLoading) {
@@ -317,16 +323,21 @@ export function ProductSalesChart({
         {/* Products with margin */}
         <div>
           <p className="text-xs text-muted-foreground mb-2">
-            {selectedProducts.length > 0 ? 'Vybrané produkty' : 'Top 5 produktů'} (s marží)
+            {selectedProducts.length > 0 ? 'Vybrané produkty' : 'Top 5 produktů'} (klikni pro detail)
           </p>
           <div className="space-y-2">
             {displayProducts.slice(0, 5).map((product, index) => (
-              <div key={product.id} className="flex items-center justify-between text-sm">
+              <button
+                key={product.id}
+                onClick={() => openProductDetail({ id: product.id, name: product.name })}
+                className="flex items-center justify-between text-sm w-full p-1.5 -mx-1.5 rounded-lg hover:bg-secondary/50 transition-colors text-left group"
+              >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium flex-shrink-0">
                     {index + 1}
                   </span>
-                  <span className="text-foreground truncate">{product.name}</span>
+                  <span className="text-foreground truncate group-hover:text-primary transition-colors">{product.name}</span>
+                  <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-muted-foreground text-xs">{product.count}×</span>
@@ -337,7 +348,7 @@ export function ProductSalesChart({
                     {product.margin >= 0 ? '+' : ''}{formatCurrency(product.margin)}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
             {displayProducts.length === 0 && (
               <p className="text-sm text-muted-foreground">Žádné produkty</p>
@@ -391,6 +402,14 @@ export function ProductSalesChart({
           )}
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        productId={detailProduct?.id || null}
+        productName={detailProduct?.name}
+        open={!!detailProduct}
+        onOpenChange={(open) => !open && setDetailProduct(null)}
+      />
     </div>
   );
 }
