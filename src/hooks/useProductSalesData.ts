@@ -49,7 +49,7 @@ export function useProductSalesData(period: SalesPeriod) {
     queryKey: ['product-sales-data', period, accountingMode, clientIdsKey, paymentStatus],
     queryFn: async () => {
       const now = new Date();
-      let startDate: Date;
+      let startDate: Date | null = null;
       let groupBy: 'day' | 'month';
 
       switch (period) {
@@ -69,6 +69,10 @@ export function useProductSalesData(period: SalesPeriod) {
           startDate = subMonths(now, 12);
           groupBy = 'month';
           break;
+        case 'all':
+          startDate = null; // No date filter - fetch all
+          groupBy = 'month';
+          break;
         default:
           startDate = subDays(now, 30);
           groupBy = 'day';
@@ -79,8 +83,12 @@ export function useProductSalesData(period: SalesPeriod) {
         .from('credit_transactions')
         .select('amount, payment_method, created_at, product_id, client_id, products(id, name, purchase_price, price)')
         .not('product_id', 'is', null)
-        .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
+
+      // Apply date filter only if not 'all'
+      if (startDate) {
+        transactionsQuery = transactionsQuery.gte('created_at', startDate.toISOString());
+      }
 
       // Apply client filter
       if (clientIds.length > 0) {

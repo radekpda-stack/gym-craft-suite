@@ -34,7 +34,7 @@ import {
 import { formatCurrency, formatPercent } from '@/lib/formatters';
 import { ProductDetailModal } from './ProductDetailModal';
 
-export type SalesPeriod = '30days' | '3months' | '6months' | '12months';
+export type SalesPeriod = '30days' | '3months' | '6months' | '12months' | 'all';
 
 interface SalesTrendPoint {
   label: string;
@@ -75,6 +75,7 @@ const PERIOD_OPTIONS: { value: SalesPeriod; label: string }[] = [
   { value: '3months', label: '3 měs.' },
   { value: '6months', label: '6 měs.' },
   { value: '12months', label: '12 měs.' },
+  { value: 'all', label: 'Celkem' },
 ];
 
 const PAYMENT_COLORS = [
