@@ -88,6 +88,21 @@ const translations = {
     small: 'Malá (cca 150g)',
     medium: 'Střední (cca 250g)',
     large: 'Velká (cca 400g)',
+    // Meal types
+    mealType: 'Typ jídla',
+    breakfast: 'Snídaně',
+    snackAm: 'Dopolední svačina',
+    lunch: 'Oběd',
+    snackPm: 'Odpolední svačina',
+    dinner: 'Večeře',
+    snack: 'Svačina',
+    // Portion estimates
+    sizeEstimate: 'Odhad velikosti',
+    handEstimate: 'Podle ruky',
+    palm: '🖐️ Dlaň (porce masa)',
+    fist: '✊ Pěst (porce sacharidů)',
+    handful: '🤲 Hrst (porce zeleniny)',
+    thumb: '👍 Palec (porce tuků)',
     count: 'Počet',
     unit: 'Jednotka',
     note: 'Poznámka',
@@ -183,6 +198,21 @@ const translations = {
     small: 'Small (~150g)',
     medium: 'Medium (~250g)',
     large: 'Large (~400g)',
+    // Meal types
+    mealType: 'Meal type',
+    breakfast: 'Breakfast',
+    snackAm: 'Morning snack',
+    lunch: 'Lunch',
+    snackPm: 'Afternoon snack',
+    dinner: 'Dinner',
+    snack: 'Snack',
+    // Portion estimates
+    sizeEstimate: 'Size estimate',
+    handEstimate: 'By hand',
+    palm: '🖐️ Palm (protein portion)',
+    fist: '✊ Fist (carb portion)',
+    handful: '🤲 Handful (veggie portion)',
+    thumb: '👍 Thumb (fat portion)',
     count: 'Count',
     unit: 'Unit',
     note: 'Note',
@@ -947,65 +977,6 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
                   onClick={() => setPortionEstimate(est)}
                 >
                   <span className="text-sm">{t[est]}</span>
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {portionMode === 'units' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t.count}</Label>
-                <Input type="number" value={unitsCount} onChange={e => setUnitsCount(e.target.value)} />
-              </div>
-              <div>
-                <Label>{t.unit}</Label>
-                <Select value={unitsLabel} onValueChange={setUnitsLabel}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ks">{t.pieces}</SelectItem>
-                    <SelectItem value="plátky">{t.slices}</SelectItem>
-                    <SelectItem value="lžíce">{t.spoons}</SelectItem>
-                    <SelectItem value="naběračky">{t.scoops}</SelectItem>
-                    <SelectItem value="jiné">{t.other}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <Label>{t.note}</Label>
-            <Textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder={t.noteHelper} />
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>{t.cancel}</Button>
-            <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? t.saving : t.save}
-            </Button>
-          </div>
-        </div>
-
-          {portionMode === 'grams' && (
-            <div>
-              <Label>{t.grams}</Label>
-              <Input type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="150" />
-            </div>
-          )}
-
-          {portionMode === 'portion_size' && (
-            <div className="grid grid-cols-3 gap-2">
-              {(['small', 'medium', 'large'] as const).map((size) => (
-                <Button
-                  key={size}
-                  type="button"
-                  variant={portionSize === size ? 'default' : 'outline'}
-                  className="h-auto py-3 flex-col"
-                  onClick={() => setPortionSize(size)}
-                >
-                  <span className="text-lg">{size === 'small' ? '🍽️' : size === 'medium' ? '🍲' : '🥘'}</span>
-                  <span className="text-xs">{t[size]}</span>
                 </Button>
               ))}
             </div>
