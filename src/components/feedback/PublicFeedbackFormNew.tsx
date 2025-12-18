@@ -10,13 +10,12 @@ import {
   CheckCircle,
   HelpCircle,
 } from 'lucide-react';
-import { BodyMapSelector } from './BodyMapSelector';
+import { BodyPainSelector, PainSelection } from './BodyPainSelector';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import {
@@ -104,20 +103,15 @@ const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
   noteMaxLength: 200,
 };
 
-// Import bilateral areas from BodyMapSelector
-import { BILATERAL_AREAS } from './BodyMapSelector';
-
-type PainSide = 'left' | 'right' | 'both';
+// Bilateral areas that need side selection
+const BILATERAL_AREAS = ['knee', 'shoulder', 'hip', 'ankle', 'wrist', 'elbow'];
 
 export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [status, setStatus] = useState<FormStatus>('loading');
   const [formData, setFormData] = useState<FormData | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [values, setValues] = useState<Record<string, number>>({});
-  const [painAreas, setPainAreas] = useState<string[]>([]);
-  const [painAreaSides, setPainAreaSides] = useState<Record<string, PainSide>>({});
-  const [painAreaNotes, setPainAreaNotes] = useState<Record<string, string>>({});
-  const [painAreaIntensities, setPainAreaIntensities] = useState<Record<string, number>>({});
+  const [painSelections, setPainSelections] = useState<PainSelection[]>([]);
   const [painAreaOther, setPainAreaOther] = useState('');
   const [note, setNote] = useState('');
 
@@ -125,11 +119,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const enabledQuestions = questionsConfig.questions
     .filter(q => q.enabled)
     .sort((a, b) => a.order - b.order);
-  const enabledPainAreas = questionsConfig.painAreas.filter(a => a.enabled);
   const painQuestion = questionsConfig.questions.find(q => q.id === 'pain' && q.enabled);
-
-  // Get bilateral areas that need side selection
-  const bilateralAreasSelected = painAreas.filter(area => BILATERAL_AREAS.includes(area));
 
   useEffect(() => {
     loadFormData();
@@ -184,46 +174,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     }
   };
 
-  // Handle pain areas change from BodyMapSelector
-  const handlePainAreasChange = (areas: string[]) => {
-    setPainAreas(areas);
-    // Remove sides, notes, and intensities for areas that are no longer selected
-    const newSides = { ...painAreaSides };
-    const newNotes = { ...painAreaNotes };
-    const newIntensities = { ...painAreaIntensities };
-    Object.keys(newSides).forEach(area => {
-      if (!areas.includes(area)) {
-        delete newSides[area];
-      }
-    });
-    Object.keys(newNotes).forEach(area => {
-      if (!areas.includes(area)) {
-        delete newNotes[area];
-      }
-    });
-    Object.keys(newIntensities).forEach(area => {
-      if (!areas.includes(area)) {
-        delete newIntensities[area];
-      }
-    });
-    setPainAreaSides(newSides);
-    setPainAreaNotes(newNotes);
-    setPainAreaIntensities(newIntensities);
-  };
-
-  // Handle intensity change for a specific area
-  const handleIntensityChange = (area: string, intensity: number) => {
-    setPainAreaIntensities(prev => ({ ...prev, [area]: intensity }));
-  };
-
-  // Handle side selection for a specific area
-  const handleSideSelect = (area: string, side: PainSide) => {
-    setPainAreaSides(prev => ({ ...prev, [area]: side }));
-  };
-
-  // Handle note change for a specific area
-  const handleAreaNoteChange = (area: string, noteText: string) => {
-    setPainAreaNotes(prev => ({ ...prev, [area]: noteText }));
+  // Handle pain selections change from BodyPainSelector
+  const handlePainSelectionsChange = (selections: PainSelection[]) => {
+    setPainSelections(selections);
   };
 
   const handleSubmit = async () => {
@@ -233,19 +186,15 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       const painThreshold = painQuestion?.painAreaThreshold ?? 4;
       const showPainArea = (values.pain ?? 1) >= painThreshold;
 
-      // Build pain areas array with sides, notes, and intensities
-      const painAreasData = showPainArea ? painAreas.map(area => {
-        const side = painAreaSides[area];
-        const areaNote = painAreaNotes[area];
-        const intensity = painAreaIntensities[area] ?? 5;
-        let areaKey = area;
-        if (BILATERAL_AREAS.includes(area) && side) {
-          areaKey = `${area}_${side}`;
+      // Build pain areas array from new format
+      const painAreasData = showPainArea ? painSelections.map(sel => {
+        let areaKey = sel.area;
+        if (BILATERAL_AREAS.includes(sel.area) && sel.side) {
+          areaKey = `${sel.area}_${sel.side}`;
         }
         return {
           area: areaKey,
-          note: areaNote || undefined,
-          intensity,
+          intensity: sel.intensity,
         };
       }) : [];
 
@@ -256,14 +205,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           token,
           values,
           pain_areas: painAreasWithSides.length > 0 ? painAreasWithSides : undefined,
-          pain_area: painAreasWithSides.length > 0 ? painAreasWithSides.join(', ') : undefined, // Keep for backward compatibility
-          pain_area_notes: painAreasData.filter(p => p.note).length > 0 
-            ? Object.fromEntries(painAreasData.filter(p => p.note).map(p => [p.area, p.note]))
-            : undefined,
+          pain_area: painAreasWithSides.length > 0 ? painAreasWithSides.join(', ') : undefined,
           pain_area_intensities: painAreasData.length > 0
             ? Object.fromEntries(painAreasData.map(p => [p.area, p.intensity]))
             : undefined,
-          pain_area_other: showPainArea && painAreas.includes('other') ? painAreaOther : undefined,
+          pain_area_other: showPainArea && painSelections.some(s => s.area === 'other') ? painAreaOther : undefined,
           note: note || undefined,
         },
       });
@@ -456,95 +402,18 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
             <div key={question.id}>
               {renderSlider(question)}
               
-              {/* Conditional pain area selection with body map */}
+              {/* Conditional pain area selection with new card-based selector */}
               {question.id === 'pain' && showPainAreas && (
                 <Card className="mt-4 border-warning/50 bg-warning/5">
                   <CardContent className="pt-6">
-                    <Label className="mb-4 block text-base font-medium text-center">
-                      Kde to bolí? Klikni na oblasti (můžeš vybrat více)
-                    </Label>
-                    
-                    <BodyMapSelector
-                      selectedAreas={painAreas}
-                      onAreasChange={handlePainAreasChange}
-                      intensities={painAreaIntensities}
-                      onIntensityChange={handleIntensityChange}
+                    <BodyPainSelector
+                      selectedAreas={painSelections}
+                      onChange={handlePainSelectionsChange}
                       language="cs"
                     />
                     
-                    {/* Side selection for each bilateral area */}
-                    {bilateralAreasSelected.length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        {bilateralAreasSelected.map(area => {
-                          const areaLabels: Record<string, string> = {
-                            knee: 'Koleno', shoulder: 'Rameno', hip: 'Kyčel', 
-                            ankle: 'Kotník', wrist: 'Zápěstí', elbow: 'Loket'
-                          };
-                          return (
-                            <div key={area} className="p-3 rounded-lg bg-background/50 border">
-                              <Label className="mb-2 block text-sm font-medium text-center">
-                                {areaLabels[area]} - která strana?
-                              </Label>
-                              <div className="flex gap-2 justify-center">
-                                {[
-                                  { id: 'left', label: 'Levá' },
-                                  { id: 'right', label: 'Pravá' },
-                                  { id: 'both', label: 'Obě' },
-                                ].map((side) => (
-                                  <Badge
-                                    key={side.id}
-                                    variant={painAreaSides[area] === side.id ? 'default' : 'outline'}
-                                    className={cn(
-                                      'cursor-pointer text-sm py-2 px-4 transition-all',
-                                      painAreaSides[area] === side.id 
-                                        ? 'bg-primary text-primary-foreground' 
-                                        : 'hover:bg-secondary'
-                                    )}
-                                    onClick={() => handleSideSelect(area, side.id as PainSide)}
-                                  >
-                                    {side.label}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* Notes for each selected area */}
-                    {painAreas.filter(a => a !== 'other').length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        <Label className="block text-sm font-medium text-center text-muted-foreground">
-                          Poznámky k vybraným oblastem (volitelné)
-                        </Label>
-                        {painAreas.filter(a => a !== 'other').map(area => {
-                          const areaLabels: Record<string, string> = {
-                            knee: 'Koleno', shoulder: 'Rameno', hip: 'Kyčel', 
-                            ankle: 'Kotník', wrist: 'Zápěstí', elbow: 'Loket',
-                            neck: 'Krk', chest: 'Hrudník', upper_back: 'Horní záda',
-                            lower_back: 'Dolní záda', glutes: 'Hýždě', hamstring: 'Zadní stehno',
-                            calf: 'Lýtko'
-                          };
-                          const side = painAreaSides[area];
-                          const sideLabel = side === 'left' ? ' (levá)' : side === 'right' ? ' (pravá)' : side === 'both' ? ' (obě)' : '';
-                          return (
-                            <div key={`note-${area}`} className="relative">
-                              <Textarea
-                                placeholder={`${areaLabels[area] || area}${sideLabel} - popište bolest...`}
-                                value={painAreaNotes[area] || ''}
-                                onChange={(e) => handleAreaNoteChange(area, e.target.value)}
-                                className="text-sm"
-                                maxLength={100}
-                                rows={2}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {painAreas.includes('other') && (
+                    {/* Other pain area text input */}
+                    {painSelections.some(s => s.area === 'other') && (
                       <Textarea
                         placeholder="Upřesni, kde to bolí..."
                         value={painAreaOther}
