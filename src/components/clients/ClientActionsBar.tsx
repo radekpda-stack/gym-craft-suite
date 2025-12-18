@@ -21,6 +21,9 @@ import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { Client } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
+import { useCreateNutritionLogSession } from '@/hooks/useNutritionLog';
+import { cn } from '@/lib/utils';
+import { STATUS_CONFIG } from '@/lib/statusUtils';
 
 interface ClientActionsBarProps {
   client: Client;
@@ -29,6 +32,12 @@ interface ClientActionsBarProps {
   budgetGroupId?: string;
   onAddTraining: () => void;
   onAddNote?: (note: string) => void;
+}
+
+interface GeneratedLink {
+  type: 'feedback' | 'nutrition';
+  url: string;
+  label: string;
 }
 
 export function ClientActionsBar({
@@ -42,8 +51,10 @@ export function ClientActionsBar({
   const { trackFeature } = useFeatureTracking();
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [noteText, setNoteText] = useState('');
-  const [feedbackLink, setFeedbackLink] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<GeneratedLink | null>(null);
+  const [isGenerating, setIsGenerating] = useState<'feedback' | 'nutrition' | null>(null);
+  
+  const createNutritionSession = useCreateNutritionLogSession();
 
   const handleGenerateFeedbackLink = async () => {
     if (!lastCompletedTrainingId) {
@@ -51,9 +62,8 @@ export function ClientActionsBar({
       return;
     }
     
-    setIsGenerating(true);
+    setIsGenerating('feedback');
     try {
-      // Create feedback request
       const { data, error } = await supabase
         .from('feedback_requests')
         .insert({
@@ -67,23 +77,35 @@ export function ClientActionsBar({
       if (error) throw error;
       
       const link = `${window.location.origin}/feedback/${data.token}`;
-      setFeedbackLink(link);
+      setGeneratedLink({ type: 'feedback', url: link, label: 'Feedback odkaz' });
       await navigator.clipboard.writeText(link);
       toast({ title: 'Odkaz zkopírován do schránky' });
       trackFeature('feedback_link_generated', 'feedback');
     } catch (error) {
       toast({ title: 'Chyba při generování odkazu', variant: 'destructive' });
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(null);
     }
   };
 
-  const handleGenerateNutritionLink = () => {
-    // Navigate to nutrition tab
-    const nutritionTab = document.querySelector('[value="history"]') as HTMLButtonElement;
-    if (nutritionTab) nutritionTab.click();
-    trackFeature('nutrition_link_nav', 'nutrition');
-    toast({ title: 'Přejděte na záložku Historie > Strava pro vygenerování odkazu' });
+  const handleGenerateNutritionLink = async () => {
+    setIsGenerating('nutrition');
+    try {
+      const session = await createNutritionSession.mutateAsync({
+        clientId: client.id,
+        startDate: new Date(),
+      });
+      
+      const link = `${window.location.origin}/nutrition-log/${session.token}`;
+      setGeneratedLink({ type: 'nutrition', url: link, label: 'Strava odkaz (7 dní)' });
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Odkaz zkopírován do schránky' });
+      trackFeature('nutrition_link_generated', 'nutrition');
+    } catch (error) {
+      toast({ title: 'Chyba při generování odkazu', variant: 'destructive' });
+    } finally {
+      setIsGenerating(null);
+    }
   };
 
   const handleCopyLink = async (link: string) => {
@@ -100,13 +122,15 @@ export function ClientActionsBar({
     }
   };
 
+  const statusConfig = STATUS_CONFIG.ok;
+
   return (
     <>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
         {/* Add Training */}
         <Button 
           onClick={onAddTraining}
-          className="gap-2 col-span-2 sm:col-span-1"
+          className="gap-2 col-span-2 sm:col-span-1 touch-target"
         >
           <Plus className="w-4 h-4" />
           <span>Trénink</span>
@@ -116,30 +140,30 @@ export function ClientActionsBar({
         <Button 
           variant="outline"
           onClick={handleGenerateFeedbackLink}
-          disabled={isGenerating || !lastCompletedTrainingId}
-          className="gap-2"
+          disabled={isGenerating === 'feedback' || !lastCompletedTrainingId}
+          className="gap-2 touch-target"
         >
           <Link2 className="w-4 h-4" />
           <span className="hidden sm:inline">Feedback</span>
-          <span className="sm:hidden">FB link</span>
+          <span className="sm:hidden">FB</span>
         </Button>
         
         {/* Nutrition Link */}
         <Button 
           variant="outline"
           onClick={handleGenerateNutritionLink}
-          className="gap-2"
+          disabled={isGenerating === 'nutrition'}
+          className="gap-2 touch-target"
         >
           <Utensils className="w-4 h-4" />
-          <span className="hidden sm:inline">Strava</span>
-          <span className="sm:hidden">Strava</span>
+          <span>Strava</span>
         </Button>
         
         {/* Quick Note */}
         <Button 
           variant="outline"
           onClick={() => setShowNoteDialog(true)}
-          className="gap-2"
+          className="gap-2 touch-target"
         >
           <StickyNote className="w-4 h-4" />
           <span className="hidden sm:inline">Poznámka</span>
@@ -155,7 +179,7 @@ export function ClientActionsBar({
           isSharedBudget={isSharedBudget}
           budgetGroupId={budgetGroupId}
           trigger={
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 touch-target">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Vyúčtování</span>
               <span className="sm:hidden">PDF</span>
@@ -165,17 +189,21 @@ export function ClientActionsBar({
       </div>
       
       {/* Generated Link Display */}
-      {feedbackLink && (
-        <div className="mt-3 p-3 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center gap-3">
-          <Check className="w-5 h-5 text-green-500 shrink-0" />
+      {generatedLink && (
+        <div className={cn(
+          'mt-3 p-3 rounded-xl flex items-center gap-3 border',
+          statusConfig.bgClass, statusConfig.borderClass
+        )}>
+          <Check className={cn('w-5 h-5 shrink-0', statusConfig.textClass)} />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Feedback odkaz (zkopírován)</p>
-            <p className="text-sm font-mono truncate">{feedbackLink}</p>
+            <p className="text-xs text-muted-foreground">{generatedLink.label} (zkopírován)</p>
+            <p className="text-sm font-mono truncate">{generatedLink.url}</p>
           </div>
           <Button 
             size="sm" 
             variant="ghost" 
-            onClick={() => handleCopyLink(feedbackLink)}
+            onClick={() => handleCopyLink(generatedLink.url)}
+            className="touch-target"
           >
             <Copy className="w-4 h-4" />
           </Button>

@@ -36,6 +36,11 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 0%;
 
+    /* Unified Status Colors - use across all modules */
+    --status-ok: 142 76% 36%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 72% 51%;
+
     --border: 220 15% 16%;
     --input: 220 15% 14%;
     --ring: 24 100% 50%;
