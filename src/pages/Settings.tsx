@@ -18,6 +18,7 @@ import {
   Building2,
   Utensils,
   Gauge,
+  FileBarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ import { CreditRecalculationTool } from '@/components/settings/CreditRecalculati
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { NutritionSettings } from '@/components/settings/NutritionSettings';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
+import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -299,6 +301,12 @@ export default function Settings() {
       description: 'Kontrola a oprava nesrovnalostí v kreditech z transakčního ledgeru',
       icon: Calculator,
       content: <CreditRecalculationTool />,
+    },
+    {
+      title: language === 'cs' ? 'Roční statistiky' : 'Annual Statistics',
+      description: language === 'cs' ? 'Export PDF reportu se souhrnnými statistikami' : 'Export PDF report with summary statistics',
+      icon: FileBarChart2,
+      content: <AnnualStatsExport />,
     },
   ];
 
