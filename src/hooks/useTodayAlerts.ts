@@ -4,7 +4,7 @@ import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 export interface TodayAlert {
   id: string;
-  type: 'training' | 'feedback' | 'nutrition' | 'credit' | 'unpaid';
+  type: 'training' | 'feedback' | 'nutrition' | 'credit' | 'unpaid' | 'overload' | 'combined';
   severity: 'success' | 'warning' | 'error' | 'info';
   title: string;
   subtitle?: string;
@@ -74,6 +74,18 @@ export interface TodayAlertsData {
     }>;
   };
   
+  // Combined warnings (high RPE + bad feedback, etc.)
+  combinedWarnings: {
+    count: number;
+    items: Array<{
+      id: string;
+      clientId: string;
+      clientName: string;
+      type: 'overload' | 'nutrition_stagnation';
+      reason: string;
+    }>;
+  };
+  
   // All alerts combined and sorted by severity
   alerts: TodayAlert[];
 }
@@ -87,6 +99,8 @@ export function useTodayAlerts() {
       const todayEnd = endOfDay(now);
       const threeDaysAgo = subDays(now, 3);
       
+      const sevenDaysAgo = subDays(now, 7);
+      
       // Parallel fetch all data
       const [
         todayTrainingsResult,
@@ -95,6 +109,8 @@ export function useTodayAlerts() {
         nutritionSessionsResult,
         clientsResult,
         unpaidResult,
+        recentFeedbackResult,
+        recentTrainingsWithRpeResult,
       ] = await Promise.all([
         // Today's trainings with client names
         supabase
@@ -143,6 +159,21 @@ export function useTodayAlerts() {
           .select('id, date, final_price, client_id, clients(name)')
           .eq('status', 'completed')
           .eq('payment_status', 'pending'),
+        
+        // Recent feedback with pain/body_feel for combined warnings
+        supabase
+          .from('training_feedback')
+          .select('id, client_id, training_date, body_feel, pain, rpe_rating, is_red_flag')
+          .gte('training_date', sevenDaysAgo.toISOString())
+          .order('training_date', { ascending: false }),
+        
+        // Recent trainings with high RPE
+        supabase
+          .from('training_sessions')
+          .select('id, date, client_id, rpe, clients(name)')
+          .eq('status', 'completed')
+          .gte('date', sevenDaysAgo.toISOString())
+          .not('rpe', 'is', null),
       ]);
       
       // Process today's trainings
@@ -234,8 +265,90 @@ export function useTodayAlerts() {
         items: unpaidItems,
       };
       
+      // Process combined warnings (high RPE + bad feedback)
+      const combinedWarningItems: Array<{
+        id: string;
+        clientId: string;
+        clientName: string;
+        type: 'overload' | 'nutrition_stagnation';
+        reason: string;
+      }> = [];
+      
+      // Group feedback by client
+      const feedbackByClient = new Map<string, any[]>();
+      (recentFeedbackResult.data || []).forEach((f: any) => {
+        const existing = feedbackByClient.get(f.client_id) || [];
+        existing.push(f);
+        feedbackByClient.set(f.client_id, existing);
+      });
+      
+      // Group high RPE trainings by client
+      const highRpeByClient = new Map<string, any[]>();
+      (recentTrainingsWithRpeResult.data || []).forEach((t: any) => {
+        if (t.rpe && t.rpe >= 8) {
+          const existing = highRpeByClient.get(t.client_id) || [];
+          existing.push(t);
+          highRpeByClient.set(t.client_id, existing);
+        }
+      });
+      
+      // Check for overload: high RPE + bad feedback (pain >= 6 or body_feel <= 4)
+      highRpeByClient.forEach((trainings, clientId) => {
+        const clientFeedback = feedbackByClient.get(clientId) || [];
+        const badFeedback = clientFeedback.filter(f => 
+          (f.pain && f.pain >= 6) || (f.body_feel && f.body_feel <= 4) || f.is_red_flag
+        );
+        
+        if (badFeedback.length >= 2 || (trainings.length >= 2 && badFeedback.length >= 1)) {
+          const clientName = (trainings[0]?.clients as any)?.name || 
+            (clientsResult.data || []).find((c: any) => c.id === clientId)?.name || 'Neznámý';
+          
+          combinedWarningItems.push({
+            id: `overload-${clientId}`,
+            clientId,
+            clientName,
+            type: 'overload',
+            reason: 'Vysoké RPE + špatný feedback',
+          });
+        }
+      });
+      
+      // Check for clients with red flags
+      feedbackByClient.forEach((feedback, clientId) => {
+        const redFlags = feedback.filter(f => f.is_red_flag);
+        if (redFlags.length >= 2 && !combinedWarningItems.find(w => w.clientId === clientId)) {
+          const clientName = (clientsResult.data || []).find((c: any) => c.id === clientId)?.name || 'Neznámý';
+          combinedWarningItems.push({
+            id: `redflag-${clientId}`,
+            clientId,
+            clientName,
+            type: 'overload',
+            reason: 'Opakované červené signály',
+          });
+        }
+      });
+      
+      const combinedWarnings = {
+        count: combinedWarningItems.length,
+        items: combinedWarningItems,
+      };
+      
       // Build alerts array with priority
       const alerts: TodayAlert[] = [];
+      
+      // Critical: Combined overload warnings
+      combinedWarningItems.forEach(w => {
+        alerts.push({
+          id: w.id,
+          type: 'overload',
+          severity: 'error',
+          title: `Přetížení: ${w.clientName}`,
+          subtitle: w.reason,
+          clientId: w.clientId,
+          clientName: w.clientName,
+          actionUrl: `/clients/${w.clientId}`,
+        });
+      });
       
       // High priority: unpaid trainings over 7 days
       unpaidItems
@@ -309,6 +422,7 @@ export function useTodayAlerts() {
         activeNutrition,
         lowCreditClients,
         unpaidTrainings,
+        combinedWarnings,
         alerts,
       };
     },

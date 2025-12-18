@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { 
   TrendingUp,
   TrendingDown,
@@ -6,16 +5,18 @@ import {
   MessageSquare,
   Utensils,
   ChevronRight,
-  Smile,
-  Meh,
-  Frown,
+  AlertTriangle,
+  CheckCircle,
+  AlertCircle,
+  Zap,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useFeedbackEvaluation, type FeedbackStatus, type FeedbackTrend } from '@/hooks/useFeedbackEvaluation';
+import { useNutritionEvaluation, type NutritionStatus, type NutritionTrend } from '@/hooks/useNutritionEvaluation';
 
 interface ClientEvaluationBlockProps {
   clientId: string;
@@ -23,198 +24,238 @@ interface ClientEvaluationBlockProps {
   onViewNutrition?: () => void;
 }
 
-interface FeedbackSummary {
-  hasRecent: boolean;
-  lastDate?: string;
-  avgBodyFeel?: number;
-  avgEnergy?: number;
-  avgPain?: number;
-  trend: 'improving' | 'stable' | 'declining' | 'unknown';
-  summary: string;
-}
+const STATUS_CONFIG: Record<FeedbackStatus | NutritionStatus, { icon: React.ReactNode; color: string; bgColor: string }> = {
+  ok: { 
+    icon: <CheckCircle className="w-4 h-4" />, 
+    color: 'text-green-500', 
+    bgColor: 'bg-green-500/10 border-green-500/30' 
+  },
+  good: { 
+    icon: <CheckCircle className="w-4 h-4" />, 
+    color: 'text-green-500', 
+    bgColor: 'bg-green-500/10 border-green-500/30' 
+  },
+  fatigue: { 
+    icon: <AlertCircle className="w-4 h-4" />, 
+    color: 'text-orange-500', 
+    bgColor: 'bg-orange-500/10 border-orange-500/30' 
+  },
+  moderate: { 
+    icon: <AlertCircle className="w-4 h-4" />, 
+    color: 'text-orange-500', 
+    bgColor: 'bg-orange-500/10 border-orange-500/30' 
+  },
+  overload: { 
+    icon: <AlertTriangle className="w-4 h-4" />, 
+    color: 'text-destructive', 
+    bgColor: 'bg-destructive/10 border-destructive/30' 
+  },
+  poor: { 
+    icon: <AlertTriangle className="w-4 h-4" />, 
+    color: 'text-destructive', 
+    bgColor: 'bg-destructive/10 border-destructive/30' 
+  },
+  unknown: { 
+    icon: <Minus className="w-4 h-4" />, 
+    color: 'text-muted-foreground', 
+    bgColor: 'bg-secondary/50 border-border' 
+  },
+};
 
-interface NutritionSummary {
-  hasActive: boolean;
-  sessionEndDate?: string;
-  entriesCount?: number;
-  regularity: 'good' | 'moderate' | 'poor' | 'unknown';
-  summary: string;
-}
+const TrendIcon = ({ trend }: { trend: FeedbackTrend | NutritionTrend }) => {
+  switch (trend) {
+    case 'improving':
+      return <TrendingUp className="w-3.5 h-3.5 text-green-500" />;
+    case 'declining':
+      return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
+    default:
+      return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  }
+};
+
+const StatusLabel = ({ status }: { status: FeedbackStatus | NutritionStatus }) => {
+  const labels: Record<string, string> = {
+    ok: 'OK',
+    good: 'OK',
+    fatigue: 'Únava',
+    moderate: 'Kolísavé',
+    overload: 'Přetížení',
+    poor: 'Problém',
+    unknown: '–',
+  };
+  
+  const config = STATUS_CONFIG[status];
+  
+  return (
+    <span className={cn('text-xs font-medium', config.color)}>
+      {labels[status]}
+    </span>
+  );
+};
 
 export function ClientEvaluationBlock({ 
   clientId, 
   onViewFeedback, 
   onViewNutrition 
 }: ClientEvaluationBlockProps) {
-  // Fetch feedback summary
-  const { data: feedbackData, isLoading: feedbackLoading } = useQuery({
-    queryKey: ['client-feedback-summary', clientId],
-    queryFn: async (): Promise<FeedbackSummary> => {
-      const { data: requests } = await supabase
-        .from('feedback_requests')
-        .select('id, completed_at, training_session_id')
-        .eq('client_id', clientId)
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false })
-        .limit(5);
-      
-      if (!requests || requests.length === 0) {
-        return {
-          hasRecent: false,
-          trend: 'unknown',
-          summary: 'Zatím žádný feedback',
-        };
-      }
-      
-      // For now, simplified summary
-      const lastDate = requests[0].completed_at 
-        ? format(new Date(requests[0].completed_at), 'd.M.', { locale: cs })
-        : undefined;
-      
-      return {
-        hasRecent: true,
-        lastDate,
-        trend: 'stable',
-        summary: `Poslední feedback: ${lastDate}`,
-      };
-    },
-  });
-
-  // Fetch nutrition summary
-  const { data: nutritionData, isLoading: nutritionLoading } = useQuery({
-    queryKey: ['client-nutrition-summary', clientId],
-    queryFn: async (): Promise<NutritionSummary> => {
-      const { data: sessions } = await supabase
-        .from('nutrition_log_sessions')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          status
-        `)
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (!sessions || sessions.length === 0) {
-        return {
-          hasActive: false,
-          regularity: 'unknown',
-          summary: 'Zatím žádné záznamy stravy',
-        };
-      }
-      
-      const session = sessions[0];
-      const isActive = session.status === 'active';
-      
-      // Count entries for this session
-      const { count } = await supabase
-        .from('nutrition_food_entries')
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', session.id);
-      
-      const entriesCount = count || 0;
-      
-      return {
-        hasActive: isActive,
-        sessionEndDate: session.end_date 
-          ? format(new Date(session.end_date), 'd.M.', { locale: cs })
-          : undefined,
-        entriesCount,
-        regularity: entriesCount >= 14 ? 'good' : entriesCount >= 7 ? 'moderate' : 'poor',
-        summary: isActive 
-          ? `Aktivní sezení (${entriesCount} záznamů)`
-          : `Ukončeno ${session.end_date ? format(new Date(session.end_date), 'd.M.', { locale: cs }) : ''}`,
-      };
-    },
-  });
-
-  const TrendIcon = ({ trend }: { trend: string }) => {
-    switch (trend) {
-      case 'improving':
-        return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'declining':
-        return <TrendingDown className="w-4 h-4 text-destructive" />;
-      default:
-        return <Minus className="w-4 h-4 text-muted-foreground" />;
-    }
-  };
-
-  const RegularityIcon = ({ regularity }: { regularity: string }) => {
-    switch (regularity) {
-      case 'good':
-        return <Smile className="w-4 h-4 text-green-500" />;
-      case 'moderate':
-        return <Meh className="w-4 h-4 text-orange-500" />;
-      case 'poor':
-        return <Frown className="w-4 h-4 text-destructive" />;
-      default:
-        return <Meh className="w-4 h-4 text-muted-foreground" />;
-    }
-  };
+  const { evaluation: feedbackEval, isLoading: feedbackLoading } = useFeedbackEvaluation(clientId);
+  const { data: nutritionEval, isLoading: nutritionLoading } = useNutritionEvaluation(clientId);
 
   if (feedbackLoading || nutritionLoading) {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
       </div>
     );
   }
 
+  const feedbackConfig = STATUS_CONFIG[feedbackEval.status];
+  const nutritionConfig = STATUS_CONFIG[nutritionEval?.status || 'unknown'];
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {/* Feedback Summary */}
+      {/* Feedback Card */}
       <button
         onClick={onViewFeedback}
         className={cn(
-          'p-4 rounded-xl text-left transition-colors',
-          feedbackData?.hasRecent 
-            ? 'bg-secondary/50 hover:bg-secondary/70' 
-            : 'bg-orange-500/10 hover:bg-orange-500/15 border border-orange-500/30'
+          'p-4 rounded-xl text-left transition-all border hover:scale-[1.02]',
+          feedbackConfig.bgColor
         )}
       >
-        <div className="flex items-start justify-between mb-2">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MessageSquare className={cn(
-              'w-5 h-5',
-              feedbackData?.hasRecent ? 'text-primary' : 'text-orange-500'
-            )} />
-            <span className="font-medium text-sm">Feedback</span>
+            <MessageSquare className={cn('w-5 h-5', feedbackConfig.color)} />
+            <span className="font-semibold text-sm">Feedback</span>
           </div>
-          <div className="flex items-center gap-1">
-            <TrendIcon trend={feedbackData?.trend || 'unknown'} />
+          <div className="flex items-center gap-2">
+            <StatusLabel status={feedbackEval.status} />
+            <TrendIcon trend={feedbackEval.trend} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">{feedbackData?.summary}</p>
+
+        {/* Status indicator */}
+        <div className="flex items-center gap-2 mb-2">
+          <span className={feedbackConfig.color}>{feedbackConfig.icon}</span>
+          <span className="text-sm font-medium">{feedbackEval.summary}</span>
+        </div>
+
+        {/* Metrics row */}
+        {feedbackEval.hasRecent && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {feedbackEval.avgBodyFeel && (
+              <Badge variant="secondary" className="text-xs">
+                Pocit: {feedbackEval.avgBodyFeel.toFixed(1)}
+              </Badge>
+            )}
+            {feedbackEval.avgEnergy && (
+              <Badge variant="secondary" className="text-xs">
+                <Zap className="w-3 h-3 mr-1" />
+                {feedbackEval.avgEnergy.toFixed(1)}
+              </Badge>
+            )}
+            {feedbackEval.avgPain && feedbackEval.avgPain > 1 && (
+              <Badge variant="secondary" className={cn(
+                'text-xs',
+                feedbackEval.avgPain >= 6 && 'bg-destructive/20 text-destructive'
+              )}>
+                Bolest: {feedbackEval.avgPain.toFixed(1)}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Warning signals */}
+        {feedbackEval.warningSignals.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {feedbackEval.warningSignals.slice(0, 2).map((signal, i) => (
+              <span key={i} className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {signal}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Last feedback date */}
+        {feedbackEval.lastFeedbackDate && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Poslední: {format(new Date(feedbackEval.lastFeedbackDate), 'd.M.yyyy', { locale: cs })}
+          </p>
+        )}
       </button>
-      
-      {/* Nutrition Summary */}
+
+      {/* Nutrition Card */}
       <button
         onClick={onViewNutrition}
         className={cn(
-          'p-4 rounded-xl text-left transition-colors',
-          nutritionData?.hasActive || nutritionData?.regularity !== 'unknown'
-            ? 'bg-secondary/50 hover:bg-secondary/70' 
-            : 'bg-orange-500/10 hover:bg-orange-500/15 border border-orange-500/30'
+          'p-4 rounded-xl text-left transition-all border hover:scale-[1.02]',
+          nutritionConfig.bgColor
         )}
       >
-        <div className="flex items-start justify-between mb-2">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Utensils className={cn(
-              'w-5 h-5',
-              nutritionData?.hasActive ? 'text-primary' : 
-              nutritionData?.regularity !== 'unknown' ? 'text-muted-foreground' : 'text-orange-500'
-            )} />
-            <span className="font-medium text-sm">Strava</span>
+            <Utensils className={cn('w-5 h-5', nutritionConfig.color)} />
+            <span className="font-semibold text-sm">Strava</span>
           </div>
-          <div className="flex items-center gap-1">
-            <RegularityIcon regularity={nutritionData?.regularity || 'unknown'} />
+          <div className="flex items-center gap-2">
+            <StatusLabel status={nutritionEval?.status || 'unknown'} />
+            <TrendIcon trend={nutritionEval?.trend || 'unknown'} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">{nutritionData?.summary}</p>
+
+        {/* Status indicator */}
+        <div className="flex items-center gap-2 mb-2">
+          <span className={nutritionConfig.color}>{nutritionConfig.icon}</span>
+          <span className="text-sm font-medium">{nutritionEval?.summary || 'Zatím žádné záznamy'}</span>
+        </div>
+
+        {/* Metrics row */}
+        {nutritionEval && nutritionEval.entriesCount > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            <Badge variant="secondary" className="text-xs">
+              Pravidelnost: {nutritionEval.regularityScore}%
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              Kvalita: {nutritionEval.qualityScore}%
+            </Badge>
+            <Badge variant="secondary" className={cn(
+              'text-xs',
+              nutritionEval.hydrationScore < 50 && 'bg-orange-500/20 text-orange-600'
+            )}>
+              Hydratace: {nutritionEval.hydrationScore}%
+            </Badge>
+          </div>
+        )}
+
+        {/* Warning signals */}
+        {nutritionEval && nutritionEval.warningSignals.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {nutritionEval.warningSignals.slice(0, 2).map((signal, i) => (
+              <span key={i} className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {signal}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Active session indicator */}
+        {nutritionEval?.hasActive && (
+          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Aktivní sezení
+          </p>
+        )}
+        {nutritionEval?.sessionEndDate && !nutritionEval.hasActive && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Ukončeno: {format(new Date(nutritionEval.sessionEndDate), 'd.M.yyyy', { locale: cs })}
+          </p>
+        )}
       </button>
     </div>
   );
