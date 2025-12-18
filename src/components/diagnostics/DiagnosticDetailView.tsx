@@ -3,14 +3,19 @@ import { cs } from 'date-fns/locale';
 import { 
   ArrowLeft, Sparkles, AlertTriangle, CheckCircle, 
   Activity, Heart, Brain, Apple, Target, User,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Pencil, Save, X, Camera
 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { DiagnosticWithAssessment } from '@/hooks/useDiagnosticAssessments';
+import { useUpdateDiagnostic } from '@/hooks/useDiagnostics';
+import { DiagnosticMedia } from '@/components/media/DiagnosticMedia';
+import { useDiagnostics } from '@/hooks/useDiagnostics';
 
 interface DiagnosticDetailViewProps {
   diagnostic: DiagnosticWithAssessment;
@@ -94,22 +99,63 @@ function PainBadge({ value }: { value?: string }) {
 export function DiagnosticDetailView({ diagnostic, onBack, compareWith }: DiagnosticDetailViewProps) {
   const assessment = diagnostic.assessment;
   const compareAssessment = compareWith?.assessment;
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [findings, setFindings] = useState(diagnostic.findings);
+  const [notes, setNotes] = useState(diagnostic.notes || '');
+  
+  const updateDiagnostic = useUpdateDiagnostic();
+  const { data: allDiagnostics = [] } = useDiagnostics(diagnostic.client_id);
+
+  const handleSave = async () => {
+    await updateDiagnostic.mutateAsync({
+      id: diagnostic.id,
+      findings,
+      notes,
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setFindings(diagnostic.findings);
+    setNotes(diagnostic.notes || '');
+    setIsEditing(false);
+  };
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h2 className="text-lg font-semibold">
-            Diagnostika {format(new Date(diagnostic.date), 'd. MMMM yyyy', { locale: cs })}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {diagnostic.area_name} • {diagnostic.area_type === 'joint' ? 'Kloub' : 'Sval'}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">
+              Diagnostika {format(new Date(diagnostic.date), 'd. MMMM yyyy', { locale: cs })}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {diagnostic.area_name} • {diagnostic.area_type === 'joint' ? 'Kloub' : 'Sval'}
+            </p>
+          </div>
         </div>
+        {!isEditing ? (
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <Pencil className="w-4 h-4 mr-2" />
+            Upravit
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={handleCancel}>
+              <X className="w-4 h-4 mr-2" />
+              Zrušit
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={updateDiagnostic.isPending}>
+              <Save className="w-4 h-4 mr-2" />
+              {updateDiagnostic.isPending ? 'Ukládám...' : 'Uložit'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Compare banner */}
@@ -127,13 +173,41 @@ export function DiagnosticDetailView({ diagnostic, onBack, compareWith }: Diagno
       {/* Basic findings */}
       <Card className="glass p-4">
         <h3 className="font-medium mb-2">Nálezy</h3>
-        <p className="text-sm text-muted-foreground">{diagnostic.findings || 'Žádné nálezy'}</p>
-        {diagnostic.notes && (
-          <>
-            <h4 className="font-medium mt-3 mb-1 text-sm">Poznámky</h4>
-            <p className="text-sm text-muted-foreground">{diagnostic.notes}</p>
-          </>
+        {isEditing ? (
+          <Textarea
+            value={findings}
+            onChange={(e) => setFindings(e.target.value)}
+            rows={4}
+            placeholder="Zadejte nálezy..."
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">{diagnostic.findings || 'Žádné nálezy'}</p>
         )}
+        
+        <h4 className="font-medium mt-4 mb-2 text-sm">Poznámky</h4>
+        {isEditing ? (
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Zadejte poznámky..."
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">{diagnostic.notes || 'Žádné poznámky'}</p>
+        )}
+      </Card>
+
+      {/* Media Section - Photos & Voice Notes */}
+      <Card className="glass p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Camera className="w-4 h-4 text-primary" />
+          <h3 className="font-medium">Média</h3>
+        </div>
+        <DiagnosticMedia 
+          clientId={diagnostic.client_id} 
+          diagnosticId={diagnostic.id}
+          diagnostics={allDiagnostics}
+        />
       </Card>
 
       {/* AI Summary - if available */}

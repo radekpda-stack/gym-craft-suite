@@ -121,6 +121,49 @@ export function useCreateDiagnostic() {
   });
 }
 
+export interface UpdateDiagnosticInput {
+  id: string;
+  findings?: string;
+  notes?: string;
+  area_type?: AreaType;
+  area_name?: string;
+  date?: string;
+}
+
+export function useUpdateDiagnostic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateDiagnosticInput) => {
+      const { id, ...updates } = input;
+      const { data, error } = await supabase
+        .from("diagnostics")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnostics"] });
+      toast({
+        title: "Diagnostika aktualizována",
+        description: "Změny byly uloženy.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating diagnostic:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se uložit změny.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useDeleteDiagnostic() {
   const queryClient = useQueryClient();
 
