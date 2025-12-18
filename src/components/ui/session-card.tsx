@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Clock, Calendar, Users, Repeat, ChevronRight } from 'lucide-react';
+import { Clock, Calendar, Users, Repeat, ChevronRight, Gauge, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
@@ -7,7 +7,10 @@ import { Client } from '@/hooks/useClients';
 import { RatingDisplay } from './rating-input';
 import { ClientAvatar } from './client-avatar';
 import { Link } from 'react-router-dom';
-import { TrainingStatusBadge, TrainingStatusDot } from './training-status-badge';
+import { TrainingStatusBadge } from './training-status-badge';
+import { TrainingTypeBadge } from '@/components/trainings/TrainingTypeSelector';
+import { ProgressIndicator } from '@/components/trainings/ProgressIndicator';
+import { ProgressStatus } from '@/hooks/useTrainingProgress';
 
 interface SessionCardProps {
   session: TrainingSession;
@@ -15,6 +18,7 @@ interface SessionCardProps {
   compact?: boolean;
   className?: string;
   onClick?: () => void;
+  progressStatus?: ProgressStatus;
 }
 
 // Border color based on combined status
@@ -27,9 +31,10 @@ const getBorderColor = (status: string, paymentStatus?: string | null) => {
   return 'border-l-muted-foreground';
 };
 
-export function SessionCard({ session, client, compact, className, onClick }: SessionCardProps) {
+export function SessionCard({ session, client, compact, className, onClick, progressStatus }: SessionCardProps) {
   const sessionDate = new Date(session.date);
   const borderColor = getBorderColor(session.status, session.payment_status);
+  const hasLoadData = session.rpe || session.rir || session.total_volume;
 
   // Compact version for dashboard
   if (compact) {
@@ -55,6 +60,9 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
               showLabel={false}
               className="px-1.5 py-0.5"
             />
+            {progressStatus && session.status === 'completed' && (
+              <ProgressIndicator status={progressStatus} showLabel={false} size="sm" />
+            )}
           </div>
           {session.notes && (
             <p className="text-xs text-muted-foreground truncate mt-1">
@@ -112,7 +120,32 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
             </div>
 
             {/* Additional info row */}
-            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground flex-wrap">
+              {session.training_type && (
+                <TrainingTypeBadge type={session.training_type} />
+              )}
+              {progressStatus && session.status === 'completed' && (
+                <ProgressIndicator status={progressStatus} showLabel={false} />
+              )}
+              {hasLoadData && (
+                <div className="flex items-center gap-2">
+                  {session.rpe && (
+                    <span className={cn(
+                      "flex items-center gap-1",
+                      session.rpe >= 8 ? "text-warning" : ""
+                    )}>
+                      <Gauge className="w-3 h-3" />
+                      RPE {session.rpe}
+                    </span>
+                  )}
+                  {session.rir !== null && session.rir !== undefined && (
+                    <span className="flex items-center gap-1">
+                      <Target className="w-3 h-3" />
+                      RIR {session.rir}
+                    </span>
+                  )}
+                </div>
+              )}
               {(session.participant_count || 1) > 1 && (
                 <div className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
@@ -154,6 +187,12 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
                   paymentStatus={session.payment_status}
                   paymentMethod={session.payment_method}
                 />
+                {session.training_type && (
+                  <TrainingTypeBadge type={session.training_type} />
+                )}
+                {progressStatus && session.status === 'completed' && (
+                  <ProgressIndicator status={progressStatus} />
+                )}
               </div>
               
               <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
@@ -167,6 +206,19 @@ export function SessionCard({ session, client, compact, className, onClick }: Se
                 </div>
                 <span className="text-muted-foreground/50">•</span>
                 <span>{session.duration} min</span>
+                {hasLoadData && (
+                  <>
+                    <span className="text-muted-foreground/50">•</span>
+                    {session.rpe && (
+                      <span className={cn(session.rpe >= 8 ? "text-warning" : "")}>
+                        RPE {session.rpe}
+                      </span>
+                    )}
+                    {session.rir !== null && session.rir !== undefined && (
+                      <span>RIR {session.rir}</span>
+                    )}
+                  </>
+                )}
                 {(session.participant_count || 1) > 1 && (
                   <>
                     <span className="text-muted-foreground/50">•</span>

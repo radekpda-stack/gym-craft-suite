@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, Wallet, XCircle } from 'lucide-react';
+import { Search, Plus, Dumbbell, Wallet, XCircle, Filter } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
+import { useTrainingProgress, TRAINING_TYPES, TrainingType } from '@/hooks/useTrainingProgress';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
@@ -20,6 +21,7 @@ import { SessionCard } from '@/components/ui/session-card';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { WeeklySummaryCard } from '@/components/trainings/WeeklySummaryCard';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { addDays, format } from 'date-fns';
@@ -40,6 +42,8 @@ export default function Trainings() {
   usePageTracking('trainings');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<TrainingType | null>(null);
+  const [progressFilter, setProgressFilter] = useState<'improvement' | 'stagnation' | 'overload' | null>(null);
   const [activeTab, setActiveTab] = useState('active');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
@@ -51,6 +55,7 @@ export default function Trainings() {
   const updateTraining = useUpdateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
+  const progressEvaluations = useTrainingProgress();
 
   // Separate active and canceled sessions
   const activeSessions = useMemo(() => sessions.filter(s => s.status !== 'canceled'), [sessions]);
@@ -142,8 +147,10 @@ export default function Trainings() {
     }
 
     const matchesStatus = !statusFilter || session.status === statusFilter;
+    const matchesType = !typeFilter || session.training_type === typeFilter;
+    const matchesProgress = !progressFilter || progressEvaluations[session.id]?.status === progressFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType && matchesProgress;
   });
 
   const filteredCanceledSessions = canceledSessions.filter((session) => {
@@ -355,6 +362,7 @@ export default function Trainings() {
                         <SessionCard
                           session={session}
                           client={client}
+                          progressStatus={progressEvaluations[session.id]?.status}
                         />
                         {/* Quick payment button for awaiting payment filter */}
                         {statusFilter === 'awaiting_payment' && isAwaitingPayment && (
