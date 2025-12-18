@@ -644,6 +644,28 @@ export function useCompleteTrainingSession() {
       // Auto-sync workout entries to exercise_entries
       await syncWorkoutToExerciseEntries(id, client_id, training.date, user.id);
 
+      // Auto-generate feedback link for completed training
+      try {
+        const { data: client } = await supabase
+          .from("clients")
+          .select("feedback_enabled")
+          .eq("id", client_id)
+          .single();
+
+        if (client?.feedback_enabled !== false) {
+          await supabase.functions.invoke('create-feedback-link', {
+            body: {
+              client_id,
+              training_id: id,
+              base_url: typeof window !== 'undefined' ? window.location.origin : undefined,
+            },
+          });
+        }
+      } catch (feedbackError) {
+        // Non-critical - don't fail the training completion if feedback link fails
+        console.warn('Failed to auto-generate feedback link:', feedbackError);
+      }
+
       return { training, price, newBalance };
     },
     onSuccess: (result, variables) => {
