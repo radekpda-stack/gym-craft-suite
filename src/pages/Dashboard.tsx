@@ -1,496 +1,57 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { useRenderTracker } from '@/hooks/useRenderTracker';
-import { toast } from '@/hooks/use-toast';
-import {
-  Wallet,
-  TrendingUp,
-  Dumbbell,
-  Users,
-  XCircle,
-  Clock,
-  Download,
-  FileText,
-  ShieldAlert,
-  RefreshCw,
-  Settings,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { KPIGridSkeleton } from '@/components/ui/chart-skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { KPICard } from '@/components/dashboard/KPICard';
-import { KPIDetailModal } from '@/components/dashboard/KPIDetailModal';
-import { QuickActionsBar } from '@/components/dashboard/QuickActionsBar';
-import { TodayAlertsSection } from '@/components/dashboard/TodayAlertsSection';
-import { UnifiedFinancialChart, FinancialPeriod } from '@/components/dashboard/UnifiedFinancialChart';
-import { ProductSalesChart, SalesPeriod } from '@/components/dashboard/ProductSalesChart';
-import { TrainingActivityChart, TrainingPeriod } from '@/components/dashboard/TrainingActivityChart';
-import { TopClientsRanking, ClientsPeriod } from '@/components/dashboard/TopClientsRanking';
-import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashboard/PerformanceMetricsSection';
-import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
-import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
-import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
-import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
-import { CapacityTrendChart } from '@/components/dashboard/CapacityTrendChart';
-import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
-import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
+import { ActionBar } from '@/components/dashboard/ActionBar';
+import { TodayCards } from '@/components/dashboard/TodayCards';
+import { AttentionSection } from '@/components/dashboard/AttentionSection';
+import { ClientsSchedule } from '@/components/dashboard/ClientsSchedule';
+import { CreditSignalBox } from '@/components/dashboard/CreditSignalBox';
+import { QuickStats } from '@/components/dashboard/QuickStats';
 
-import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
 import { useTodayAlerts } from '@/hooks/useTodayAlerts';
-import { useUnifiedFinancialData } from '@/hooks/useUnifiedFinancialData';
-import { useProductSalesData } from '@/hooks/useProductSalesData';
-import { useTrainingActivityData } from '@/hooks/useTrainingActivityData';
-import { useTopClientsData } from '@/hooks/useTopClientsData';
-import { usePerformanceMetricsData } from '@/hooks/usePerformanceMetricsData';
-import { useFinancialStats } from '@/hooks/useFinancialStats';
-import { exportFinancialSummaryToCSV, exportFinancialSummaryToPDF, FinancialSummaryData } from '@/lib/export';
-import { formatCurrency, formatPercent } from '@/lib/formatters';
 
-type KPIModalType = 'income' | 'profit' | 'trainings' | 'clients' | 'cancellations' | 'unpaid' | null;
-
-const DEFAULT_LAYOUT: NewDashboardLayout = {
-  showKPICards: true,
-  showStatsOverview: true,
-  showFinancialChart: true,
-  showProductSales: true,
-  showTrainingActivity: true,
-  showCapacityTrend: true,
-  showTopClients: true,
-  showPerformanceMetrics: true,
-  showFeedbackTrends: true,
-};
-
-// Safe mode storage key
-const SAFE_MODE_KEY = 'dashboard-safe-mode';
-
-// Content component that uses the filters context
 function DashboardContent() {
   usePageTracking('dashboard');
-  useRenderTracker('DashboardContent');
-
-
-  // Safe mode - disables expensive charts when errors occur
-  const [safeMode, setSafeMode] = useState(() => {
-    try {
-      return localStorage.getItem(SAFE_MODE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [errorCount, setErrorCount] = useState(0);
-
-  // Auto-enable safe mode after multiple errors
-  useEffect(() => {
-    if (errorCount >= 2 && !safeMode) {
-      setSafeMode(true);
-      try {
-        localStorage.setItem(SAFE_MODE_KEY, 'true');
-      } catch {}
-      
-      // Show toast notification
-      toast({
-        title: "Bezpečný režim aktivován",
-        description: "Grafy byly vypnuty kvůli opakovaným chybám. Klikněte na 'Zkusit znovu' v banneru pro obnovení.",
-        duration: 8000,
-      });
-    }
-  }, [errorCount, safeMode]);
-
-  const exitSafeMode = useCallback(() => {
-    setSafeMode(false);
-    setErrorCount(0);
-    try {
-      localStorage.removeItem(SAFE_MODE_KEY);
-    } catch {}
-  }, []);
-
-  const handleChartError = useCallback(() => {
-    setErrorCount(prev => prev + 1);
-  }, []);
-
-  // Layout state with error handling for malformed localStorage
-  const [layout, setLayout] = useState<NewDashboardLayout>(() => {
-    try {
-      const stored = localStorage.getItem('dashboard-layout-v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Validate the parsed object has expected structure
-        if (typeof parsed === 'object' && parsed !== null && 'showKPICards' in parsed) {
-          return { ...DEFAULT_LAYOUT, ...parsed };
-        }
-      }
-      return DEFAULT_LAYOUT;
-    } catch {
-      // Clear corrupted data
-      try {
-        localStorage.removeItem('dashboard-layout-v2');
-      } catch {}
-      return DEFAULT_LAYOUT;
-    }
-  });
-
-  // Modal state
-  const [activeModal, setActiveModal] = useState<KPIModalType>(null);
-
-  // Period states
-  const [financialPeriod, setFinancialPeriod] = useState<FinancialPeriod>('30days');
-  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('30days');
-  const [trainingPeriod, setTrainingPeriod] = useState<TrainingPeriod>('6months');
-  const [clientsPeriod, setClientsPeriod] = useState<ClientsPeriod>('30days');
-  const [performancePeriod, setPerformancePeriod] = useState<PerformancePeriod>('6months');
-
-  // Data hooks - now safely inside the provider
-  const { data: kpis, isLoading: kpisLoading, isError: kpisError } = useDashboardKPIs();
-  const { data: todayAlerts, isLoading: alertsLoading } = useTodayAlerts();
   
-  // Only fetch chart data if not in safe mode
-  const { data: financialData = [], isLoading: financialLoading, isError: financialError } = useUnifiedFinancialData(financialPeriod);
-  const { data: salesData, isLoading: salesLoading, isError: salesError } = useProductSalesData(salesPeriod);
-  const { data: trainingData = [], isLoading: trainingLoading, isError: trainingError } = useTrainingActivityData(trainingPeriod);
-  const { data: topClients = [], isLoading: clientsLoading, isError: clientsError } = useTopClientsData(clientsPeriod, 10);
-  const { data: performanceData, isLoading: performanceLoading, isError: performanceError } = usePerformanceMetricsData(performancePeriod);
-  const { data: financialStats } = useFinancialStats();
-
-  // Track errors from chart queries
-  useEffect(() => {
-    if (financialError || salesError || trainingError || clientsError || performanceError) {
-      handleChartError();
-    }
-  }, [financialError, salesError, trainingError, clientsError, performanceError, handleChartError]);
-
-  // Memoize callbacks to prevent unnecessary re-renders
-  const toggleSection = useCallback((key: keyof NewDashboardLayout) => {
-    setLayout(prev => {
-      const newLayout = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('dashboard-layout-v2', JSON.stringify(newLayout));
-      return newLayout;
-    });
-  }, []);
-
-  const resetDefaults = useCallback(() => {
-    setLayout(DEFAULT_LAYOUT);
-    localStorage.setItem('dashboard-layout-v2', JSON.stringify(DEFAULT_LAYOUT));
-  }, []);
-
-  // Memoize export data to prevent recalculation on every render
-  const exportData = useMemo(() => {
-    if (!financialStats) return null;
-    return {
-      totalIncome: financialStats.totalIncome,
-      incomeThisMonth: financialStats.incomeThisMonth,
-      productIncome: financialStats.productIncome,
-      trainingIncome: financialStats.trainingIncome,
-      totalCredit: financialStats.totalCredit,
-      clientsWithLowCredit: financialStats.clientsWithLowCredit,
-      incomeByMonth: financialStats.incomeByMonth,
-      productBreakdown: financialStats.productBreakdown,
-    } as FinancialSummaryData;
-  }, [financialStats]);
-
-  // Check if charts should be shown (not in safe mode)
-  const showCharts = !safeMode;
+  const { data: todayAlerts, isLoading: alertsLoading } = useTodayAlerts();
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      {/* Sticky Quick Actions Bar */}
-      <QuickActionsBar />
+      {/* Sticky Action Bar - always visible */}
+      <ActionBar />
       
-      {/* Safe Mode Banner */}
-      {safeMode && (
-        <Alert className="border-orange-500/50 bg-orange-500/10">
-          <ShieldAlert className="h-4 w-4 text-orange-500" />
-          <AlertTitle className="text-orange-500">Bezpečný režim</AlertTitle>
-          <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <span className="text-sm text-muted-foreground">
-              Grafy byly vypnuty kvůli chybám. Zobrazují se pouze KPI metriky.
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exitSafeMode}
-              className="gap-2 w-fit"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Zkusit znovu
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Header with date and settings */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-            Řídicí panel
-            {safeMode && (
-              <span className="ml-2 text-sm font-normal text-orange-500">(bezpečný režim)</span>
-            )}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: cs })}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {exportData && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => exportFinancialSummaryToCSV(exportData)}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportFinancialSummaryToPDF(exportData)}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          <DashboardSettingsNew
-            layout={layout}
-            onToggleSection={toggleSection}
-            onResetDefaults={resetDefaults}
-          />
-        </div>
+      {/* Header with date */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+          Řídicí panel
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: cs })}
+        </p>
       </div>
 
-      {/* Today's Alerts Section - Priority at top */}
-      <TodayAlertsSection data={todayAlerts} isLoading={alertsLoading} />
+      {/* Section 1: DNES - Status cards (most important) */}
+      <TodayCards data={todayAlerts} isLoading={alertsLoading} />
 
-      {/* KPI Cards - Compact row */}
-      {layout.showKPICards && (
-        kpisLoading ? (
-          <KPIGridSkeleton count={5} />
-        ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 lg:gap-4">
-            <KPICard
-              title="Příjem"
-              value={formatCurrency(kpis?.trainingIncome || 0)}
-              icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.trainingIncomeTrend ?? null}
-              trendLabel="vs minulé období"
-              onClick={() => setActiveModal('income')}
-              variant="success"
-            />
-            <KPICard
-              title="Tréninky"
-              value={kpis?.trainingsThisMonth || 0}
-              subtitle="tento měsíc"
-              icon={<Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.trainingsTrend ?? null}
-              onClick={() => setActiveModal('trainings')}
-            />
-            <KPICard
-              title="Klienti"
-              value={kpis?.activeClients || 0}
-              subtitle="aktivních"
-              icon={<Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              onClick={() => setActiveModal('clients')}
-            />
-            <KPICard
-              title="Zrušení"
-              value={kpis?.lateCancellations || 0}
-              subtitle="pozdní"
-              icon={<XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              onClick={() => setActiveModal('cancellations')}
-              variant={kpis?.lateCancellations ? 'destructive' : 'default'}
-            />
-            <CapacityKPICard />
-          </div>
-        )
-      )}
+      {/* Section 2: Vyžaduje pozornost - To-do list */}
+      <AttentionSection data={todayAlerts} isLoading={alertsLoading} />
 
-      {/* KPI Detail Modals */}
-      <KPIDetailModal
-        open={activeModal === 'income'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled příjmů z tréninků"
-        icon={<Wallet className="w-4 h-4" />}
-        mainValue={formatCurrency(kpis?.trainingIncome || 0)}
-        mainLabel="Příjem z tréninků"
-        stats={[
-          { label: 'Minulé období', value: formatCurrency(kpis?.trainingIncomeLastMonth || 0), trend: kpis?.trainingIncomeTrend },
-          { label: 'Počet tréninků', value: kpis?.trainingsThisMonth || 0 },
-          { label: 'Příjem/trénink', value: formatCurrency(Math.round(kpis?.incomePerTraining || 0)) },
-          { label: 'Produkty', value: formatCurrency(kpis?.productIncome || 0) },
-        ]}
-      />
+      {/* Grid for schedule and credits */}
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        {/* Section 3: Clients schedule - Today/Week toggle */}
+        <ClientsSchedule />
+        
+        {/* Section 4: Credit signal box */}
+        <CreditSignalBox />
+      </div>
 
-      <KPIDetailModal
-        open={activeModal === 'profit'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled přijatých plateb"
-        icon={<TrendingUp className="w-4 h-4" />}
-        mainValue={formatCurrency(kpis?.creditReceived || 0)}
-        mainLabel="Přijaté platby (dobití kreditu)"
-        stats={[
-          { label: 'Minulé období', value: formatCurrency(kpis?.creditReceivedLastMonth || 0), trend: kpis?.creditReceivedTrend },
-          { label: 'Příjmy z tréninků', value: formatCurrency(kpis?.trainingIncome || 0) },
-          { label: 'Příjmy z produktů', value: formatCurrency(kpis?.productIncome || 0) },
-          { label: 'Náklady na produkty', value: formatCurrency(kpis?.expensesThisMonth || 0) },
-        ]}
-      />
-
-      <KPIDetailModal
-        open={activeModal === 'trainings'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled tréninků"
-        icon={<Dumbbell className="w-4 h-4" />}
-        mainValue={kpis?.trainingsThisMonth || 0}
-        mainLabel="Tréninků tento měsíc"
-        stats={[
-          { label: 'Minulý měsíc', value: kpis?.trainingsLastMonth || 0, trend: kpis?.trainingsTrend },
-          { label: 'Průměr za týden', value: ((kpis?.trainingsThisMonth || 0) / 4).toFixed(1) },
-          { label: 'Celkem letos', value: kpis?.trainingsThisYear || 0 },
-          { label: 'Průměr účastníků', value: (kpis?.avgParticipants || 1).toFixed(1) },
-        ]}
-      />
-
-      <KPIDetailModal
-        open={activeModal === 'clients'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled klientů"
-        icon={<Users className="w-4 h-4" />}
-        mainValue={kpis?.activeClients || 0}
-        mainLabel="Aktivních klientů (30 dní)"
-        stats={[
-          { label: 'Celkem klientů', value: kpis?.totalClients || 0 },
-          { label: 'Noví tento měsíc', value: kpis?.newClientsThisMonth || 0 },
-          { label: 'S nízkým kreditem', value: kpis?.lowCreditClients || 0 },
-          { label: 'Archivovaných', value: kpis?.archivedClients || 0 },
-        ]}
-      />
-
-      <KPIDetailModal
-        open={activeModal === 'cancellations'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Pozdní zrušení"
-        icon={<XCircle className="w-4 h-4" />}
-        mainValue={kpis?.lateCancellations || 0}
-        mainLabel="Pozdních zrušení tento měsíc"
-        stats={[
-          { label: 'Celkem zrušených', value: kpis?.totalCancellations || 0 },
-          { label: '% ze všech', value: formatPercent(kpis?.cancellationRate || 0, 1) },
-          { label: 'Minulý měsíc', value: kpis?.lateCancellationsLastMonth || 0 },
-          { label: 'Ztráta příjmu', value: formatCurrency(kpis?.cancellationLoss || 0) },
-        ]}
-      />
-
-      <KPIDetailModal
-        open={activeModal === 'unpaid'}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Neuhrazené tréninky"
-        icon={<Clock className="w-4 h-4" />}
-        mainValue={kpis?.unpaidCount || 0}
-        mainLabel="Neuhrazených tréninků"
-        stats={[
-          { label: 'Celková částka', value: formatCurrency(kpis?.unpaidAmount || 0) },
-          { label: 'Počet klientů', value: kpis?.unpaidClientsCount || 0 },
-          { label: '0-7 dní', value: `${kpis?.unpaidByAge?.days0to7.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days0to7.amount || 0)})` },
-          { label: '8-30 dní', value: `${kpis?.unpaidByAge?.days8to30.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days8to30.amount || 0)})` },
-          { label: '31+ dní', value: `${kpis?.unpaidByAge?.days31plus.count || 0}× (${formatCurrency(kpis?.unpaidByAge?.days31plus.amount || 0)})` },
-          { label: 'Nejstarší', value: kpis?.oldestUnpaidDays ? `${kpis.oldestUnpaidDays} dní` : '-' },
-        ]}
-      />
-      {/* Charts Grid - hidden in safe mode */}
-      {showCharts && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          {/* Stats Overview Card */}
-          {layout.showStatsOverview && <StatsOverviewCard />}
-
-          {/* Financial Chart */}
-          {layout.showFinancialChart && (
-            <UnifiedFinancialChart
-              data={financialData}
-              isLoading={financialLoading}
-              period={financialPeriod}
-              onPeriodChange={setFinancialPeriod}
-            />
-          )}
-
-          {/* Product Sales Chart */}
-          {layout.showProductSales && (
-            <ProductSalesChart
-              trendData={salesData?.trendData || []}
-              topProducts={salesData?.topProducts || []}
-              allProducts={salesData?.allProducts || []}
-              paymentMethods={salesData?.paymentMethods || []}
-              totalMargin={salesData?.totalMargin}
-              totalRevenue={salesData?.totalRevenue}
-              marginPercent={salesData?.marginPercent}
-              isLoading={salesLoading}
-              period={salesPeriod}
-              onPeriodChange={setSalesPeriod}
-            />
-          )}
-
-          {/* Training Activity Chart */}
-          {layout.showTrainingActivity && (
-            <TrainingActivityChart
-              data={trainingData}
-              isLoading={trainingLoading}
-              period={trainingPeriod}
-              onPeriodChange={setTrainingPeriod}
-            />
-          )}
-
-        {/* Top Clients Ranking */}
-        {layout.showTopClients && (
-          <TopClientsRanking
-            clients={topClients}
-            isLoading={clientsLoading}
-            period={clientsPeriod}
-            onPeriodChange={setClientsPeriod}
-          />
-        )}
-
-          {/* Feedback Trends Card */}
-          {layout.showFeedbackTrends && (
-            <FeedbackTrendsCard />
-          )}
-
-          {/* Upcoming Anniversaries Card */}
-          <UpcomingAnniversariesCard />
-
-          {/* Capacity Trend Chart */}
-          {layout.showCapacityTrend && (
-            <CapacityTrendChart />
-          )}
-        </div>
-      )}
-
-      {/* Performance Metrics Section - hidden in safe mode */}
-      {showCharts && layout.showPerformanceMetrics && (
-        <PerformanceMetricsSection
-          topExercises={performanceData?.topExercises || []}
-          personalRecords={performanceData?.personalRecords || []}
-          prTimeline={performanceData?.prTimeline || []}
-          strengthData={performanceData?.strengthData || []}
-          top3Exercises={performanceData?.top3Exercises || []}
-          isLoading={performanceLoading}
-          period={performancePeriod}
-          onPeriodChange={setPerformancePeriod}
-        />
-      )}
+      {/* Section 5: Statistics - Collapsible, secondary importance */}
+      <QuickStats />
     </div>
   );
 }
 
-// Wrapper component that provides the context
 export default function Dashboard() {
-  return (
-    <DashboardFiltersProvider>
-      <DashboardContent />
-    </DashboardFiltersProvider>
-  );
+  return <DashboardContent />;
 }
