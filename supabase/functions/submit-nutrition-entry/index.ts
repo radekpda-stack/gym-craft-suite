@@ -36,40 +36,56 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX_REQUESTS;
 }
 
-// Validation schemas for each entry type
+// Validation schemas for each entry type - FIXED to match frontend values
 const foodEntrySchema = z.object({
   description: z.string().min(1, "Description required").max(500, "Description too long"),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
-  portion_mode: z.enum(['grams', 'portion', 'units']),
+  portion_mode: z.enum(['grams', 'portion', 'portion_size', 'units']), // Added 'portion_size'
   portion_size: z.enum(['small', 'medium', 'large']).optional(),
-  grams: z.number().int().positive().max(10000).optional(),
-  units_count: z.number().positive().max(100).optional(),
-  units_label: z.string().max(50).optional(),
-  note: z.string().max(500).optional(),
-  photo_url: z.string().url().max(500).optional(),
+  grams: z.number().int().positive().max(10000).optional().nullable(),
+  units_count: z.number().positive().max(100).optional().nullable(),
+  units_label: z.string().max(50).optional().nullable(),
+  note: z.string().max(500).optional().nullable(),
+  photo_url: z.string().url().max(500).optional().nullable(),
+  food_item_id: z.string().uuid().optional().nullable(), // For shared food items
 });
 
 const drinkEntrySchema = z.object({
-  drink_type: z.enum(['water', 'tea', 'juice', 'soda', 'alcohol', 'other']),
-  drink_name: z.string().max(100).optional(),
+  // Extended drink types to match frontend
+  drink_type: z.enum([
+    'water', 'mineral', 'sparkling', 'tea', 'juice', 'cola', 'soda', 
+    'sports', 'alcohol', 'smoothie', 'milk', 'other'
+  ]),
+  drink_name: z.string().max(100).optional().nullable(),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
-  amount_ml: z.number().int().positive().max(10000).optional(),
-  amount_container_type: z.enum(['glass', 'mug', 'bottle', 'can']).optional(),
-  amount_container_count: z.number().positive().max(100).optional(),
-  note: z.string().max(500).optional(),
+  amount_ml: z.number().int().positive().max(10000).optional().nullable(),
+  amount_container_type: z.enum(['small_glass', 'large_glass', 'glass', 'mug', 'bottle', 'can']).optional().nullable(),
+  amount_container_count: z.number().positive().max(100).optional().nullable(),
+  note: z.string().max(500).optional().nullable(),
+  drink_item_id: z.string().uuid().optional().nullable(), // For shared drink items
 });
 
 const coffeeEntrySchema = z.object({
-  coffee_type: z.enum(['espresso', 'americano', 'latte', 'cappuccino', 'filter', 'instant', 'other']),
+  // Extended coffee types
+  coffee_type: z.enum([
+    'small_espresso', 'large_espresso', 'espresso', 'lungo', 'americano', 
+    'latte', 'cappuccino', 'flat_white', 'filter', 'instant', 'decaf', 'other'
+  ]),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
   count: z.number().int().positive().max(20).default(1),
   sugar: z.boolean().default(false),
   sugar_spoons: z.number().int().min(0).max(10).default(0),
-  milk: z.enum(['none', 'regular', 'skim', 'oat', 'almond', 'soy']).optional(),
-  note: z.string().max(500).optional(),
+  // Extended milk options - amount + type
+  milk: z.enum([
+    'none', 'little', 'normal', 'much', // Amount
+    'cow', 'oat', 'almond', 'soy', 'coconut', // Type (for specific milk)
+    'regular', 'skim' // Legacy support
+  ]).optional().nullable(),
+  milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
+  note: z.string().max(500).optional().nullable(),
 });
 
 const requestSchema = z.object({
@@ -96,6 +112,8 @@ serve(async (req) => {
 
     // Parse and validate base request
     const rawBody = await req.json();
+    console.log('Received request:', JSON.stringify(rawBody, null, 2));
+    
     const baseResult = requestSchema.safeParse(rawBody);
     
     if (!baseResult.success) {
@@ -195,10 +213,15 @@ serve(async (req) => {
         ? 'nutrition_drink_entries' 
         : 'nutrition_coffee_entries';
 
+    // Remove food_item_id and drink_item_id from the insert if they exist (not in DB yet)
+    const entryToInsert = { ...validatedEntry };
+    delete (entryToInsert as any).food_item_id;
+    delete (entryToInsert as any).drink_item_id;
+
     const { data, error } = await supabase
       .from(tableName)
       .insert({
-        ...validatedEntry,
+        ...entryToInsert,
         session_id: session.id,
         client_id: session.client_id,
       })
@@ -207,7 +230,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('Insert error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to save entry' }), {
+      return new Response(JSON.stringify({ error: 'Failed to save entry', details: error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
