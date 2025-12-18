@@ -38,6 +38,7 @@ export interface AnnualStatsData {
   avgTrainingsPerClient: number;
   topClientsByTrainings: Array<{ name: string; count: number }>;
   topClientsBySpent: Array<{ name: string; amount: number }>;
+  topClientByProducts: { name: string; count: number; spent: number } | null;
   
   // Exercises & PRs
   totalExerciseEntries: number;
@@ -124,7 +125,7 @@ export function useAnnualStats(
         // Trainings
         supabase
           .from('training_sessions')
-          .select('id, date, status, payment_status, final_price, canceled_at')
+          .select('id, date, status, payment_status, final_price, canceled_at, client_id')
           .eq('user_id', user.id)
           .gte('date', startStr)
           .lte('date', endStr),
@@ -278,14 +279,36 @@ export function useAnnualStats(
 
       const participants = participantsData || [];
       
-      // Top clients by trainings
+      // Top clients by trainings - combine training_sessions.client_id + training_participants
       const clientTrainingCounts: Record<string, number> = {};
       const clientSpent: Record<string, number> = {};
+      const processedTrainingIds = new Set<string>();
+      
+      // First: count trainings from training_sessions.client_id (single-client trainings)
+      completedTrainings.forEach((t: any) => {
+        if (t.client_id) {
+          clientTrainingCounts[t.client_id] = (clientTrainingCounts[t.client_id] || 0) + 1;
+          clientSpent[t.client_id] = (clientSpent[t.client_id] || 0) + (t.final_price || 0);
+          processedTrainingIds.add(t.id);
+        }
+      });
+      
+      // Second: add multi-client trainings from training_participants (avoid double counting)
       participants.forEach((p: any) => {
-        if (p.training_sessions?.status === 'completed') {
+        if (p.training_sessions?.status === 'completed' && !processedTrainingIds.has(p.training_sessions?.id)) {
           clientTrainingCounts[p.client_id] = (clientTrainingCounts[p.client_id] || 0) + 1;
           clientSpent[p.client_id] = (clientSpent[p.client_id] || 0) + (p.price_share || 0);
         }
+      });
+
+      // Top clients by product purchases
+      const productPurchasesByClient: Record<string, { count: number; spent: number }> = {};
+      creditTransactions.filter(t => t.type === 'product').forEach(t => {
+        if (!productPurchasesByClient[t.client_id]) {
+          productPurchasesByClient[t.client_id] = { count: 0, spent: 0 };
+        }
+        productPurchasesByClient[t.client_id].count += 1;
+        productPurchasesByClient[t.client_id].spent += Math.abs(t.amount);
       });
 
       const clientMap = new Map(clients.map(c => [c.id, c.name]));
@@ -299,6 +322,17 @@ export function useAnnualStats(
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .map(([id, amount]) => ({ name: clientMap.get(id) || 'Neznámý', amount }));
+
+      // Top client by products
+      const topProductClient = Object.entries(productPurchasesByClient)
+        .sort(([, a], [, b]) => b.count - a.count)[0];
+      const topClientByProducts = topProductClient 
+        ? { 
+            name: clientMap.get(topProductClient[0]) || 'Neznámý', 
+            count: topProductClient[1].count,
+            spent: topProductClient[1].spent 
+          }
+        : null;
 
       const avgTrainingsPerClient = clients.length > 0 
         ? completedTrainings.length / activeClients.length 
@@ -331,10 +365,10 @@ export function useAnnualStats(
       const deposits = creditTransactions.filter(t => t.type === 'deposit');
       const totalIncome = deposits.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
-      const productSales = creditTransactions.filter(t => t.type === 'product_sale');
+      const productSales = creditTransactions.filter(t => t.type === 'product');
       const productIncome = productSales.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
-      const trainingCharges = creditTransactions.filter(t => t.type === 'training_charge');
+      const trainingCharges = creditTransactions.filter(t => t.type === 'training');
       const trainingIncome = trainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
       const months = Math.max(1, totalDays / 30);
@@ -406,6 +440,7 @@ export function useAnnualStats(
         avgTrainingsPerClient: Math.round(avgTrainingsPerClient * 10) / 10,
         topClientsByTrainings,
         topClientsBySpent,
+        topClientByProducts,
         
         totalExerciseEntries: exerciseEntries.length,
         uniqueExercises: Object.keys(exerciseCounts).length,
