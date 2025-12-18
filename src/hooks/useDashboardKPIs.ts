@@ -31,7 +31,13 @@ export interface DashboardKPIs {
   productIncomeShare: number;
   unpaidByAge: UnpaidByAge;
   
-  // Profit
+  // Product specific
+  productCost: number;
+  productProfit: number;
+  productMargin: number;
+  productSalesCount: number;
+  
+  // Profit (total)
   netProfitThisMonth: number;
   expensesThisMonth: number;
   profitMargin: number;
@@ -174,6 +180,8 @@ export function useDashboardKPIs() {
       let currentIncome = 0;
       let currentCosts = 0;
       let currentProductIncome = 0;
+      let currentProductCost = 0;
+      let currentProductSalesCount = 0;
       let comparisonIncome = 0;
       let comparisonCosts = 0;
 
@@ -186,9 +194,10 @@ export function useDashboardKPIs() {
           currentIncome += t.amount;
           if (t.product_id) {
             currentProductIncome += t.amount;
-            if (t.products?.purchase_price) {
-              currentCosts += t.products.purchase_price;
-            }
+            currentProductSalesCount++;
+            const purchasePrice = t.products?.purchase_price || 0;
+            currentProductCost += purchasePrice;
+            currentCosts += purchasePrice;
           } else {
             // Credit top-up (not product sale)
             currentCreditReceived += t.amount;
@@ -241,6 +250,10 @@ export function useDashboardKPIs() {
       const comparisonProfit = comparisonIncome - comparisonCosts;
       const profitTrend = comparisonProfit > 0 ? ((currentProfit - comparisonProfit) / comparisonProfit) * 100 : 0;
       const profitMargin = currentIncome > 0 ? (currentProfit / currentIncome) * 100 : 0;
+      
+      // Product-specific profit and margin
+      const productProfit = currentProductIncome - currentProductCost;
+      const productMarginCalc = currentProductIncome > 0 ? (productProfit / currentProductIncome) * 100 : 0;
 
       // Training stats
       const currentTrainings = currentTrainingData?.length || 0;
@@ -417,7 +430,13 @@ export function useDashboardKPIs() {
         productIncomeShare,
         unpaidByAge,
         
-        // Profit
+        // Product specific
+        productCost: currentProductCost,
+        productProfit,
+        productMargin: productMarginCalc,
+        productSalesCount: currentProductSalesCount,
+        
+        // Profit (total)
         netProfitThisMonth: currentProfit,
         expensesThisMonth: currentCosts,
         profitMargin,
