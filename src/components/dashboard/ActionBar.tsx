@@ -5,6 +5,7 @@ import {
   Link2, 
   FileText, 
   Search,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
@@ -32,40 +33,41 @@ export function ActionBar() {
       console.error('Error creating training:', error);
     }
   };
-  
-  const handleGenerateLink = () => {
-    navigate('/trainings?filter=completed');
-    trackFeature('feedback_link_nav', 'feedback');
-  };
-  
-  const handleStatement = () => {
-    navigate('/clients');
-    trackFeature('statement_nav', 'finance');
-  };
 
   const actions = [
     {
       id: 'training',
       label: 'Nový trénink',
+      shortLabel: 'Trénink',
       icon: Plus,
       onClick: () => setShowTrainingSheet(true),
       primary: true,
     },
     {
-      id: 'link',
-      label: 'Odkaz',
+      id: 'clients',
+      label: 'Klienti',
+      shortLabel: 'Klienti',
+      icon: Users,
+      onClick: () => navigate('/clients'),
+    },
+    {
+      id: 'links',
+      label: 'Feedback',
+      shortLabel: 'FB',
       icon: Link2,
-      onClick: handleGenerateLink,
+      onClick: () => navigate('/trainings?filter=completed'),
     },
     {
       id: 'statement',
       label: 'Vyúčtování',
+      shortLabel: 'PDF',
       icon: FileText,
-      onClick: handleStatement,
+      onClick: () => navigate('/clients'),
     },
     {
       id: 'search',
       label: 'Hledat',
+      shortLabel: '🔍',
       icon: Search,
       onClick: () => setShowSearch(true),
     },
@@ -74,7 +76,7 @@ export function ActionBar() {
   return (
     <>
       <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
           {actions.map((action) => (
             <Button
               key={action.id}
@@ -82,13 +84,13 @@ export function ActionBar() {
               size="sm"
               onClick={action.onClick}
               className={cn(
-                'gap-2 flex-1 sm:flex-none',
+                'gap-2 shrink-0 touch-target',
                 action.primary && 'bg-primary text-primary-foreground shadow-sm'
               )}
             >
               <action.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{action.label}</span>
-              <span className="sm:hidden">{action.label.split(' ')[0]}</span>
+              <span className="sm:hidden">{action.shortLabel}</span>
             </Button>
           ))}
         </div>

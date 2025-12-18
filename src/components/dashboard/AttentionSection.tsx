@@ -2,9 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle,
-  MessageSquare, 
-  Wallet, 
-  Clock,
   X,
   ChevronRight,
   CheckCircle2,
@@ -14,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TodayAlertsData } from '@/hooks/useTodayAlerts';
+import { Status, AlertType, STATUS_CONFIG, ALERT_TYPE_CONFIG } from '@/lib/statusUtils';
 
 interface AttentionSectionProps {
   data: TodayAlertsData | undefined;
@@ -22,12 +20,12 @@ interface AttentionSectionProps {
 
 interface AttentionItem {
   id: string;
-  type: 'credit' | 'feedback' | 'unpaid' | 'overload';
+  type: AlertType;
   clientId: string;
   clientName: string;
   reason: string;
   detail: string;
-  severity: 'warning' | 'error';
+  severity: Status;
   actionUrl: string;
 }
 
@@ -40,30 +38,16 @@ function AttentionCard({
   onDismiss: () => void;
   onClick: () => void;
 }) {
-  const typeConfig = {
-    credit: { icon: Wallet, label: 'Kredit' },
-    feedback: { icon: MessageSquare, label: 'Feedback' },
-    unpaid: { icon: Clock, label: 'Platba' },
-    overload: { icon: AlertTriangle, label: 'Přetížení' },
-  };
-  
-  const { icon: Icon, label } = typeConfig[item.type];
-  
-  const severityStyles = {
-    warning: 'border-orange-500/30 hover:border-orange-500/50',
-    error: 'border-destructive/30 hover:border-destructive/50',
-  };
-  
-  const iconStyles = {
-    warning: 'text-orange-500 bg-orange-500/10',
-    error: 'text-destructive bg-destructive/10',
-  };
+  const typeConfig = ALERT_TYPE_CONFIG[item.type];
+  const statusConfig = STATUS_CONFIG[item.severity === 'ok' ? 'warning' : item.severity];
+  const Icon = typeConfig.icon;
 
   return (
     <div
       className={cn(
-        'relative p-4 rounded-xl border-2 transition-all group',
-        severityStyles[item.severity]
+        'relative p-4 rounded-xl border-2 transition-all group touch-target',
+        statusConfig.borderClass,
+        statusConfig.hoverBorderClass
       )}
     >
       {/* Dismiss button */}
@@ -83,14 +67,14 @@ function AttentionCard({
         className="w-full text-left"
       >
         <div className="flex items-start gap-3">
-          <div className={cn('p-2 rounded-lg shrink-0', iconStyles[item.severity])}>
-            <Icon className="w-4 h-4" />
+          <div className={cn('p-2 rounded-lg shrink-0', statusConfig.bgClass)}>
+            <Icon className={cn('w-4 h-4', statusConfig.textClass)} />
           </div>
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {label}
+                {typeConfig.label}
               </span>
             </div>
             <p className="font-semibold text-foreground truncate mt-0.5">
@@ -226,7 +210,7 @@ export function AttentionSection({ data, isLoading }: AttentionSectionProps) {
     <Card className="glass">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <AlertTriangle className="w-5 h-5 text-orange-500" />
+          <AlertTriangle className={cn('w-5 h-5', STATUS_CONFIG.warning.textClass)} />
           Vyžaduje pozornost
           {items.length > 0 && (
             <span className="ml-auto text-sm font-normal text-muted-foreground">
@@ -263,7 +247,7 @@ export function AttentionSection({ data, isLoading }: AttentionSectionProps) {
           </div>
         ) : (
           <div className="text-center py-8">
-            <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-green-500" />
+            <CheckCircle2 className={cn('w-10 h-10 mx-auto mb-3', STATUS_CONFIG.ok.textClass)} />
             <p className="text-sm font-medium text-foreground">Vše v pořádku!</p>
             <p className="text-xs text-muted-foreground mt-1">Žádné urgentní úkoly</p>
           </div>

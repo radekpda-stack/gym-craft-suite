@@ -1,17 +1,14 @@
-import { useNavigate } from 'react-router-dom';
 import { 
   Wallet, 
-  Calendar, 
-  MessageSquare,
-  Utensils,
+  Clock,
   Target,
   CheckCircle2,
   AlertCircle,
-  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { Client } from '@/hooks/useClients';
+import { Status, STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
 
 interface ClientStatusBarProps {
   client: Client;
@@ -34,41 +31,28 @@ export function ClientStatusBar({
   hasNutrition,
   unpaidCount,
 }: ClientStatusBarProps) {
-  // Determine overall status
-  const getCreditStatus = () => {
-    if (unpaidCount > 0 || creditBalance <= 0) return 'error';
-    if (creditBalance < 800) return 'warning';
-    return 'ok';
-  };
-  
-  const creditStatus = getCreditStatus();
-  
-  const statusStyles = {
-    ok: 'border-green-500/50 bg-green-500/5',
-    warning: 'border-orange-500/50 bg-orange-500/5',
-    error: 'border-destructive/50 bg-destructive/5',
-  };
-  
-  const creditStyles = {
-    ok: 'text-green-500 bg-green-500/10',
-    warning: 'text-orange-500 bg-orange-500/10',
-    error: 'text-destructive bg-destructive/10',
-  };
+  // Use unified credit status logic
+  const creditStatus = getCreditStatus(creditBalance, unpaidCount > 0);
+  const statusConfig = STATUS_CONFIG[creditStatus];
 
-  const StatusIndicator = ({ ok, label }: { ok: boolean; label: string }) => (
-    <div className={cn(
-      'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium',
-      ok ? 'bg-green-500/10 text-green-500' : 'bg-orange-500/10 text-orange-500'
-    )}>
-      {ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-      {label}
-    </div>
-  );
+  const StatusIndicator = ({ ok, label }: { ok: boolean; label: string }) => {
+    const config = STATUS_CONFIG[ok ? 'ok' : 'warning'];
+    return (
+      <div className={cn(
+        'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium',
+        config.bgClass, config.textClass
+      )}>
+        {ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+        {label}
+      </div>
+    );
+  };
 
   return (
     <div className={cn(
       'sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-b-2 backdrop-blur-lg',
-      statusStyles[creditStatus]
+      statusConfig.bgClass,
+      statusConfig.borderClass
     )}>
       <div className="flex items-center justify-between gap-3">
         {/* Left: Name + shared budget */}
@@ -90,7 +74,8 @@ export function ClientStatusBar({
         {/* Right: Credit */}
         <div className={cn(
           'flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-lg shrink-0',
-          creditStyles[creditStatus]
+          statusConfig.bgClass,
+          statusConfig.textClass
         )}>
           <Wallet className="w-5 h-5" />
           {formatCurrency(creditBalance)}
@@ -98,7 +83,7 @@ export function ClientStatusBar({
       </div>
       
       {/* Status indicators */}
-      <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
         <StatusIndicator ok={hasFeedback} label={hasFeedback ? 'Feedback OK' : 'Chybí feedback'} />
         <StatusIndicator ok={hasNutrition} label={hasNutrition ? 'Strava OK' : 'Chybí strava'} />
         {client.training_goals && client.training_goals.length > 0 && (

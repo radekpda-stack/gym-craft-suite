@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useFeedbackEvaluation, type FeedbackStatus, type FeedbackTrend } from '@/hooks/useFeedbackEvaluation';
 import { useNutritionEvaluation, type NutritionStatus, type NutritionTrend } from '@/hooks/useNutritionEvaluation';
+import { STATUS_CONFIG, TREND_CONFIG, type Status, type Trend } from '@/lib/statusUtils';
 
 interface ClientEvaluationBlockProps {
   clientId: string;
@@ -24,71 +25,44 @@ interface ClientEvaluationBlockProps {
   onViewNutrition?: () => void;
 }
 
-const STATUS_CONFIG: Record<FeedbackStatus | NutritionStatus, { icon: React.ReactNode; color: string; bgColor: string }> = {
-  ok: { 
-    icon: <CheckCircle className="w-4 h-4" />, 
-    color: 'text-green-500', 
-    bgColor: 'bg-green-500/10 border-green-500/30' 
-  },
-  good: { 
-    icon: <CheckCircle className="w-4 h-4" />, 
-    color: 'text-green-500', 
-    bgColor: 'bg-green-500/10 border-green-500/30' 
-  },
-  fatigue: { 
-    icon: <AlertCircle className="w-4 h-4" />, 
-    color: 'text-orange-500', 
-    bgColor: 'bg-orange-500/10 border-orange-500/30' 
-  },
-  moderate: { 
-    icon: <AlertCircle className="w-4 h-4" />, 
-    color: 'text-orange-500', 
-    bgColor: 'bg-orange-500/10 border-orange-500/30' 
-  },
-  overload: { 
-    icon: <AlertTriangle className="w-4 h-4" />, 
-    color: 'text-destructive', 
-    bgColor: 'bg-destructive/10 border-destructive/30' 
-  },
-  poor: { 
-    icon: <AlertTriangle className="w-4 h-4" />, 
-    color: 'text-destructive', 
-    bgColor: 'bg-destructive/10 border-destructive/30' 
-  },
-  unknown: { 
-    icon: <Minus className="w-4 h-4" />, 
-    color: 'text-muted-foreground', 
-    bgColor: 'bg-secondary/50 border-border' 
-  },
-};
-
-const TrendIcon = ({ trend }: { trend: FeedbackTrend | NutritionTrend }) => {
-  switch (trend) {
-    case 'improving':
-      return <TrendingUp className="w-3.5 h-3.5 text-green-500" />;
-    case 'declining':
-      return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
-    default:
-      return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+// Map evaluation status to unified status system
+function mapFeedbackStatus(status: FeedbackStatus): Status {
+  switch (status) {
+    case 'ok': return 'ok';
+    case 'fatigue': return 'warning';
+    case 'overload': return 'error';
+    default: return 'warning';
   }
+}
+
+function mapNutritionStatus(status: NutritionStatus | undefined): Status {
+  switch (status) {
+    case 'good': return 'ok';
+    case 'moderate': return 'warning';
+    case 'poor': return 'error';
+    default: return 'warning';
+  }
+}
+
+function mapTrend(trend: FeedbackTrend | NutritionTrend | undefined): Trend {
+  switch (trend) {
+    case 'improving': return 'improving';
+    case 'declining': return 'declining';
+    default: return 'stable';
+  }
+}
+
+const TrendIcon = ({ trend }: { trend: Trend }) => {
+  const config = TREND_CONFIG[trend];
+  const Icon = config.icon;
+  return <Icon className={cn('w-3.5 h-3.5', config.textClass)} />;
 };
 
-const StatusLabel = ({ status }: { status: FeedbackStatus | NutritionStatus }) => {
-  const labels: Record<string, string> = {
-    ok: 'OK',
-    good: 'OK',
-    fatigue: 'Únava',
-    moderate: 'Kolísavé',
-    overload: 'Přetížení',
-    poor: 'Problém',
-    unknown: '–',
-  };
-  
+const StatusLabel = ({ status, label }: { status: Status; label: string }) => {
   const config = STATUS_CONFIG[status];
-  
   return (
-    <span className={cn('text-xs font-medium', config.color)}>
-      {labels[status]}
+    <span className={cn('text-xs font-medium', config.textClass)}>
+      {label}
     </span>
   );
 };
@@ -110,8 +84,27 @@ export function ClientEvaluationBlock({
     );
   }
 
-  const feedbackConfig = STATUS_CONFIG[feedbackEval.status];
-  const nutritionConfig = STATUS_CONFIG[nutritionEval?.status || 'unknown'];
+  const feedbackStatus = mapFeedbackStatus(feedbackEval.status);
+  const feedbackTrend = mapTrend(feedbackEval.trend);
+  const nutritionStatus = mapNutritionStatus(nutritionEval?.status);
+  const nutritionTrend = mapTrend(nutritionEval?.trend);
+
+  const feedbackConfig = STATUS_CONFIG[feedbackStatus];
+  const nutritionConfig = STATUS_CONFIG[nutritionStatus];
+
+  const statusLabels: Record<FeedbackStatus, string> = {
+    ok: 'OK',
+    fatigue: 'Únava',
+    overload: 'Přetížení',
+    unknown: '–',
+  };
+
+  const nutritionLabels: Record<NutritionStatus, string> = {
+    good: 'OK',
+    moderate: 'Kolísavé',
+    poor: 'Problém',
+    unknown: '–',
+  };
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -119,26 +112,30 @@ export function ClientEvaluationBlock({
       <button
         onClick={onViewFeedback}
         className={cn(
-          'p-4 rounded-xl text-left transition-all border hover:scale-[1.02]',
-          feedbackConfig.bgColor
+          'p-4 rounded-xl text-left transition-all border-2 hover:scale-[1.02] active:scale-[0.98] touch-target',
+          feedbackConfig.bgClass,
+          feedbackConfig.borderClass,
+          feedbackConfig.hoverBorderClass
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MessageSquare className={cn('w-5 h-5', feedbackConfig.color)} />
+            <MessageSquare className={cn('w-5 h-5', feedbackConfig.textClass)} />
             <span className="font-semibold text-sm">Feedback</span>
           </div>
           <div className="flex items-center gap-2">
-            <StatusLabel status={feedbackEval.status} />
-            <TrendIcon trend={feedbackEval.trend} />
+            <StatusLabel status={feedbackStatus} label={statusLabels[feedbackEval.status]} />
+            <TrendIcon trend={feedbackTrend} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </div>
         </div>
 
         {/* Status indicator */}
         <div className="flex items-center gap-2 mb-2">
-          <span className={feedbackConfig.color}>{feedbackConfig.icon}</span>
+          {feedbackStatus === 'ok' && <CheckCircle className={cn('w-4 h-4', feedbackConfig.textClass)} />}
+          {feedbackStatus === 'warning' && <AlertCircle className={cn('w-4 h-4', feedbackConfig.textClass)} />}
+          {feedbackStatus === 'error' && <AlertTriangle className={cn('w-4 h-4', feedbackConfig.textClass)} />}
           <span className="text-sm font-medium">{feedbackEval.summary}</span>
         </div>
 
@@ -191,26 +188,30 @@ export function ClientEvaluationBlock({
       <button
         onClick={onViewNutrition}
         className={cn(
-          'p-4 rounded-xl text-left transition-all border hover:scale-[1.02]',
-          nutritionConfig.bgColor
+          'p-4 rounded-xl text-left transition-all border-2 hover:scale-[1.02] active:scale-[0.98] touch-target',
+          nutritionConfig.bgClass,
+          nutritionConfig.borderClass,
+          nutritionConfig.hoverBorderClass
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Utensils className={cn('w-5 h-5', nutritionConfig.color)} />
+            <Utensils className={cn('w-5 h-5', nutritionConfig.textClass)} />
             <span className="font-semibold text-sm">Strava</span>
           </div>
           <div className="flex items-center gap-2">
-            <StatusLabel status={nutritionEval?.status || 'unknown'} />
-            <TrendIcon trend={nutritionEval?.trend || 'unknown'} />
+            <StatusLabel status={nutritionStatus} label={nutritionLabels[nutritionEval?.status || 'unknown']} />
+            <TrendIcon trend={nutritionTrend} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </div>
         </div>
 
         {/* Status indicator */}
         <div className="flex items-center gap-2 mb-2">
-          <span className={nutritionConfig.color}>{nutritionConfig.icon}</span>
+          {nutritionStatus === 'ok' && <CheckCircle className={cn('w-4 h-4', nutritionConfig.textClass)} />}
+          {nutritionStatus === 'warning' && <AlertCircle className={cn('w-4 h-4', nutritionConfig.textClass)} />}
+          {nutritionStatus === 'error' && <AlertTriangle className={cn('w-4 h-4', nutritionConfig.textClass)} />}
           <span className="text-sm font-medium">{nutritionEval?.summary || 'Zatím žádné záznamy'}</span>
         </div>
 
@@ -225,7 +226,7 @@ export function ClientEvaluationBlock({
             </Badge>
             <Badge variant="secondary" className={cn(
               'text-xs',
-              nutritionEval.hydrationScore < 50 && 'bg-orange-500/20 text-orange-600'
+              nutritionEval.hydrationScore < 50 && 'bg-[hsl(38_92%_50%/0.2)] text-[hsl(38_92%_50%)]'
             )}>
               Hydratace: {nutritionEval.hydrationScore}%
             </Badge>
@@ -246,8 +247,8 @@ export function ClientEvaluationBlock({
 
         {/* Active session indicator */}
         {nutritionEval?.hasActive && (
-          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <p className={cn('text-xs mt-2 flex items-center gap-1', STATUS_CONFIG.ok.textClass)}>
+            <span className="w-2 h-2 rounded-full bg-[hsl(142_76%_36%)] animate-pulse" />
             Aktivní sezení
           </p>
         )}
