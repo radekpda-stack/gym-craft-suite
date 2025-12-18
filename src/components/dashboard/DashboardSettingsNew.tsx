@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 
 export interface NewDashboardLayout {
   showKPICards: boolean;
+  showStatsOverview: boolean;
   showFinancialChart: boolean;
   showProductSales: boolean;
   showTrainingActivity: boolean;
@@ -31,6 +32,7 @@ interface DashboardSettingsNewProps {
 
 const SECTIONS = [
   { key: 'showKPICards' as const, label: 'KPI karty', description: 'Hlavní metriky (příjem, zisk, tréninky...)' },
+  { key: 'showStatsOverview' as const, label: 'Souhrnné statistiky', description: 'Celkový přehled a trend za celou dobu' },
   { key: 'showFinancialChart' as const, label: 'Finanční přehled', description: 'Graf příjmů, nákladů a zisku' },
   { key: 'showProductSales' as const, label: 'Prodeje produktů', description: 'Trend prodejů a top produkty' },
   { key: 'showTrainingActivity' as const, label: 'Tréninková aktivita', description: 'Graf tréninkové aktivity' },

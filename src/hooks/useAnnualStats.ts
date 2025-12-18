@@ -4,6 +4,13 @@ import { startOfYear, endOfYear, subMonths, format, differenceInDays } from 'dat
 
 export type StatsPeriod = 'all' | 'year' | 'custom';
 
+export interface MonthlyTrendPoint {
+  month: string;
+  label: string;
+  trainings: number;
+  income: number;
+}
+
 export interface AnnualStatsData {
   // Period info
   periodStart: Date;
@@ -20,6 +27,9 @@ export interface AnnualStatsData {
   avgTrainingPrice: number;
   mostActiveMonth: string;
   mostActiveDay: string;
+  
+  // Monthly trend for chart
+  monthlyTrend: MonthlyTrendPoint[];
   
   // Clients
   totalClients: number;
@@ -225,12 +235,25 @@ export function useAnnualStats(
 
       // Most active month
       const monthCounts: Record<string, number> = {};
+      const monthIncome: Record<string, number> = {};
       completedTrainings.forEach(t => {
         const month = format(new Date(t.date), 'yyyy-MM');
         monthCounts[month] = (monthCounts[month] || 0) + 1;
+        monthIncome[month] = (monthIncome[month] || 0) + (t.final_price || 0);
       });
       const mostActiveMonth = Object.entries(monthCounts)
         .sort(([, a], [, b]) => b - a)[0]?.[0] || '-';
+
+      // Monthly trend for chart (last 12 months sorted)
+      const monthlyTrend = Object.entries(monthCounts)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-12)
+        .map(([month, trainings]) => ({
+          month,
+          label: format(new Date(month + '-01'), 'MMM yy'),
+          trainings,
+          income: monthIncome[month] || 0,
+        }));
 
       // Most active day of week
       const dayCounts: Record<string, number> = {};
@@ -375,6 +398,7 @@ export function useAnnualStats(
         avgTrainingPrice: Math.round(avgTrainingPrice),
         mostActiveMonth,
         mostActiveDay,
+        monthlyTrend,
         
         totalClients: clients.length,
         activeClients: activeClients.length,

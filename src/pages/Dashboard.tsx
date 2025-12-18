@@ -35,6 +35,7 @@ import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnnive
 import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
 import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
 import { CapacityTrendChart } from '@/components/dashboard/CapacityTrendChart';
+import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
 import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
@@ -51,6 +52,7 @@ type KPIModalType = 'income' | 'profit' | 'trainings' | 'clients' | 'cancellatio
 
 const DEFAULT_LAYOUT: NewDashboardLayout = {
   showKPICards: true,
+  showStatsOverview: true,
   showFinancialChart: true,
   showProductSales: true,
   showTrainingActivity: true,
@@ -414,6 +416,9 @@ function DashboardContent() {
       {/* Charts Grid - hidden in safe mode */}
       {showCharts && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          {/* Stats Overview Card */}
+          {layout.showStatsOverview && <StatsOverviewCard />}
+
           {/* Financial Chart */}
           {layout.showFinancialChart && (
             <UnifiedFinancialChart
