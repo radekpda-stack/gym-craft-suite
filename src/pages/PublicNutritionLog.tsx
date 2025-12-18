@@ -405,7 +405,7 @@ export default function PublicNutritionLogPage() {
     if (!session || !selectedDate) return;
 
     try {
-      const { data: result, error } = await supabase.functions.invoke('submit-nutrition-entry', {
+      const response = await supabase.functions.invoke('submit-nutrition-entry', {
         body: {
           token,
           type,
@@ -418,14 +418,22 @@ export default function PublicNutritionLogPage() {
         }
       });
 
-      if (error) throw error;
+      // Check for function invocation errors
+      if (response.error) {
+        throw new Error(response.error.message || 'Chyba při ukládání');
+      }
+
+      // Check for application-level errors in response
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
 
       // Reload entries
-      loadSession();
+      await loadSession();
       toast.success(language === 'cs' ? 'Uloženo' : 'Saved');
     } catch (err: any) {
       console.error('Error adding entry:', err);
-      toast.error(language === 'cs' ? 'Nepodařilo se uložit: ' + (err?.message || 'Neznámá chyba') : 'Failed to save: ' + (err?.message || 'Unknown error'));
+      toast.error(language === 'cs' ? 'Nepodařilo se uložit' : 'Failed to save');
     }
   };
 
@@ -1031,25 +1039,28 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>{t.time}</Label>
-              <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
-            </div>
-            <div>
-              <Label>{t.mealType}</Label>
-              <Select value={mealType} onValueChange={setMealType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="breakfast">🌅 {t.breakfast}</SelectItem>
-                  <SelectItem value="snack_am">🍎 {t.snackAm}</SelectItem>
-                  <SelectItem value="lunch">🍽️ {t.lunch}</SelectItem>
-                  <SelectItem value="snack_pm">🥪 {t.snackPm}</SelectItem>
-                  <SelectItem value="dinner">🌙 {t.dinner}</SelectItem>
-                  <SelectItem value="snack">🍿 {t.snack}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Meal Type - full width first */}
+          <div>
+            <Label>{t.mealType}</Label>
+            <Select value={mealType} onValueChange={setMealType}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="breakfast">🌅 {t.breakfast}</SelectItem>
+                <SelectItem value="snack_am">🍎 {t.snackAm}</SelectItem>
+                <SelectItem value="lunch">🍽️ {t.lunch}</SelectItem>
+                <SelectItem value="snack_pm">🥪 {t.snackPm}</SelectItem>
+                <SelectItem value="dinner">🌙 {t.dinner}</SelectItem>
+                <SelectItem value="snack">🍿 {t.snack}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Time - full width */}
+          <div>
+            <Label>{t.time}</Label>
+            <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full" />
           </div>
 
           <div>
@@ -1090,7 +1101,7 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
           {portionMode === 'grams' && (
             <div>
               <Label>{t.grams}</Label>
-              <Input type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="150" />
+              <Input type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="150" className="w-full" />
             </div>
           )}
 
@@ -1131,12 +1142,14 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{t.count}</Label>
-                <Input type="number" value={unitsCount} onChange={e => setUnitsCount(e.target.value)} />
+                <Input type="number" value={unitsCount} onChange={e => setUnitsCount(e.target.value)} className="w-full" />
               </div>
               <div>
                 <Label>{t.unit}</Label>
                 <Select value={unitsLabel} onValueChange={setUnitsLabel}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ks">{t.pieces}</SelectItem>
                     <SelectItem value="plátky">{t.slices}</SelectItem>
@@ -1222,15 +1235,13 @@ function DrinkDialog({ children, onSave, t, containerSizes, language }: { childr
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <Label>{t.time}</Label>
-            <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
-          </div>
-
+          {/* Drink Type - full width first */}
           <div>
             <Label>{t.drinkType}</Label>
             <Select value={drinkType} onValueChange={setDrinkType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="water">💧 {t.water}</SelectItem>
                 <SelectItem value="sparkling">🫧 {t.sparkling}</SelectItem>
@@ -1245,6 +1256,12 @@ function DrinkDialog({ children, onSave, t, containerSizes, language }: { childr
                 <SelectItem value="other">📝 {t.otherDrink}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Time - full width */}
+          <div>
+            <Label>{t.time}</Label>
+            <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full" />
           </div>
 
           {drinkType === 'other' && (
@@ -1278,7 +1295,9 @@ function DrinkDialog({ children, onSave, t, containerSizes, language }: { childr
               <div>
                 <Label>{t.container}</Label>
                 <Select value={containerType} onValueChange={setContainerType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="small_glass">{t.smallGlass}</SelectItem>
                     <SelectItem value="large_glass">{t.largeGlass}</SelectItem>
@@ -1290,7 +1309,7 @@ function DrinkDialog({ children, onSave, t, containerSizes, language }: { childr
               </div>
               <div>
                 <Label>{t.containerCount}</Label>
-                <Input type="number" step="0.5" value={containerCount} onChange={e => setContainerCount(e.target.value)} />
+                <Input type="number" step="0.5" value={containerCount} onChange={e => setContainerCount(e.target.value)} className="w-full" />
               </div>
             </div>
           )}
@@ -1359,21 +1378,13 @@ function CoffeeDialog({ children, onSave, t }: { children: React.ReactNode; onSa
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>{t.time}</Label>
-              <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
-            </div>
-            <div>
-              <Label>{t.count}</Label>
-              <Input type="number" value={count} onChange={e => setCount(e.target.value)} min="1" />
-            </div>
-          </div>
-
+          {/* Coffee Type - full width first */}
           <div>
             <Label>{t.coffeeType}</Label>
             <Select value={coffeeType} onValueChange={setCoffeeType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="small_espresso">☕ {t.smallEspresso}</SelectItem>
                 <SelectItem value="large_espresso">☕ {t.largeEspresso}</SelectItem>
@@ -1387,6 +1398,18 @@ function CoffeeDialog({ children, onSave, t }: { children: React.ReactNode; onSa
                 <SelectItem value="other">📝 {t.otherCoffee}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Time and Count */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{t.time}</Label>
+              <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full" />
+            </div>
+            <div>
+              <Label>{t.count}</Label>
+              <Input type="number" value={count} onChange={e => setCount(e.target.value)} min="1" className="w-full" />
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
@@ -1422,7 +1445,9 @@ function CoffeeDialog({ children, onSave, t }: { children: React.ReactNode; onSa
             <div>
               <Label>{t.milkType}</Label>
               <Select value={milkType} onValueChange={(v: any) => setMilkType(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cow">{t.cowMilk}</SelectItem>
                   <SelectItem value="oat">{t.oatMilk}</SelectItem>
