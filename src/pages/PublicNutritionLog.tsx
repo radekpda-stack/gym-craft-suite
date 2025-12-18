@@ -794,9 +794,11 @@ function FoodAutocomplete({
 function FoodDialog({ children, onSave, t, language }: { children: React.ReactNode; onSave: (data: any) => void; t: typeof translations.cs; language: Language }) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState('');
-  const [portionMode, setPortionMode] = useState<'grams' | 'portion_size' | 'units'>('portion_size');
+  const [mealType, setMealType] = useState<string>('lunch');
+  const [portionMode, setPortionMode] = useState<'grams' | 'portion_size' | 'units' | 'hand'>('portion_size');
   const [grams, setGrams] = useState('');
   const [portionSize, setPortionSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [portionEstimate, setPortionEstimate] = useState<'palm' | 'fist' | 'handful' | 'thumb'>('fist');
   const [unitsCount, setUnitsCount] = useState('1');
   const [unitsLabel, setUnitsLabel] = useState('ks');
   const [note, setNote] = useState('');
@@ -814,9 +816,11 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
       await onSave({
         entry_time: time,
         description,
-        portion_mode: portionMode,
+        meal_type: mealType,
+        portion_mode: portionMode === 'hand' ? 'portion_size' : portionMode,
         grams: portionMode === 'grams' ? parseInt(grams) || null : null,
         portion_size: portionMode === 'portion_size' ? portionSize : null,
+        portion_estimate: portionMode === 'hand' ? portionEstimate : null,
         units_count: portionMode === 'units' ? parseFloat(unitsCount) || null : null,
         units_label: portionMode === 'units' ? unitsLabel : null,
         note: note || null,
@@ -852,9 +856,25 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <Label>{t.time}</Label>
-            <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{t.time}</Label>
+              <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
+            </div>
+            <div>
+              <Label>{t.mealType}</Label>
+              <Select value={mealType} onValueChange={setMealType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="breakfast">🌅 {t.breakfast}</SelectItem>
+                  <SelectItem value="snack_am">🍎 {t.snackAm}</SelectItem>
+                  <SelectItem value="lunch">🍽️ {t.lunch}</SelectItem>
+                  <SelectItem value="snack_pm">🥪 {t.snackPm}</SelectItem>
+                  <SelectItem value="dinner">🌙 {t.dinner}</SelectItem>
+                  <SelectItem value="snack">🍿 {t.snack}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
@@ -872,10 +892,14 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
           <div>
             <Label>{t.portion}</Label>
             <p className="text-xs text-muted-foreground mb-2">{t.portionHelper}</p>
-            <RadioGroup value={portionMode} onValueChange={(v: any) => setPortionMode(v)} className="flex gap-4">
+            <RadioGroup value={portionMode} onValueChange={(v: any) => setPortionMode(v)} className="flex flex-wrap gap-3">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="portion_size" id="portion_size" />
-                <Label htmlFor="portion_size" className="font-normal">{t.portionSize}</Label>
+                <Label htmlFor="portion_size" className="font-normal">{t.sizeEstimate}</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="hand" id="hand" />
+                <Label htmlFor="hand" className="font-normal">{t.handEstimate}</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="grams" id="grams" />
@@ -887,6 +911,81 @@ function FoodDialog({ children, onSave, t, language }: { children: React.ReactNo
               </div>
             </RadioGroup>
           </div>
+
+          {portionMode === 'grams' && (
+            <div>
+              <Label>{t.grams}</Label>
+              <Input type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="150" />
+            </div>
+          )}
+
+          {portionMode === 'portion_size' && (
+            <div className="grid grid-cols-3 gap-2">
+              {(['small', 'medium', 'large'] as const).map((size) => (
+                <Button
+                  key={size}
+                  type="button"
+                  variant={portionSize === size ? 'default' : 'outline'}
+                  className="h-auto py-3 flex-col"
+                  onClick={() => setPortionSize(size)}
+                >
+                  <span className="text-lg">{size === 'small' ? '🍽️' : size === 'medium' ? '🍲' : '🥘'}</span>
+                  <span className="text-xs">{t[size]}</span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {portionMode === 'hand' && (
+            <div className="grid grid-cols-2 gap-2">
+              {(['palm', 'fist', 'handful', 'thumb'] as const).map((est) => (
+                <Button
+                  key={est}
+                  type="button"
+                  variant={portionEstimate === est ? 'default' : 'outline'}
+                  className="h-auto py-2 text-left justify-start"
+                  onClick={() => setPortionEstimate(est)}
+                >
+                  <span className="text-sm">{t[est]}</span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {portionMode === 'units' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>{t.count}</Label>
+                <Input type="number" value={unitsCount} onChange={e => setUnitsCount(e.target.value)} />
+              </div>
+              <div>
+                <Label>{t.unit}</Label>
+                <Select value={unitsLabel} onValueChange={setUnitsLabel}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ks">{t.pieces}</SelectItem>
+                    <SelectItem value="plátky">{t.slices}</SelectItem>
+                    <SelectItem value="lžíce">{t.spoons}</SelectItem>
+                    <SelectItem value="naběračky">{t.scoops}</SelectItem>
+                    <SelectItem value="jiné">{t.other}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Label>{t.note}</Label>
+            <Textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder={t.noteHelper} />
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>{t.cancel}</Button>
+            <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? t.saving : t.save}
+            </Button>
+          </div>
+        </div>
 
           {portionMode === 'grams' && (
             <div>
