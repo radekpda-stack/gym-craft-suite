@@ -116,7 +116,7 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
           <div className="space-y-1">
             {METRICS.filter(m => activeMetrics.has(m.key) && data?.[m.key] != null).map(m => (
               <p key={m.key} style={{ color: m.color }}>
-                {m.label}: <span className="font-semibold">{data?.[m.key]}/7</span>
+                {m.label}: <span className="font-semibold">{data?.[m.key]}/10</span>
               </p>
             ))}
           </div>
@@ -188,12 +188,12 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
                 className="text-muted-foreground"
               />
               <YAxis 
-                domain={[1, 7]} 
+                domain={[0, 10]} 
                 tick={{ fontSize: 11 }} 
                 tickLine={false}
                 axisLine={false}
                 className="text-muted-foreground"
-                ticks={[1, 4, 7]}
+                ticks={[0, 5, 10]}
               />
               <Tooltip content={<CustomTooltip />} />
               {METRICS.filter(m => activeMetrics.has(m.key)).map(m => (
