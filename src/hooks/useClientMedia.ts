@@ -86,7 +86,17 @@ export function useClientMedia(clientId?: string, type?: MediaType, diagnosticId
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as ClientMedia[];
+      
+      // Convert file paths to public URLs
+      return (data || []).map(item => {
+        const bucket = item.type === 'photo' ? 'client-photos' : 'client-audio';
+        // Check if file_url is already a full URL or just a path
+        const isFullUrl = item.file_url?.startsWith('http');
+        const publicUrl = isFullUrl 
+          ? item.file_url 
+          : supabase.storage.from(bucket).getPublicUrl(item.file_url).data.publicUrl;
+        return { ...item, file_url: publicUrl } as ClientMedia;
+      });
     },
     enabled: !!clientId,
   });
