@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useNutritionLogSessions, useCreateNutritionLogSession, NutritionLogSession } from '@/hooks/useNutritionLog';
 import { NutritionLogDetail } from './NutritionLogDetail';
 import { cn } from '@/lib/utils';
+import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 interface ClientNutritionTabProps {
   clientId: string;
@@ -19,6 +20,7 @@ interface ClientNutritionTabProps {
 }
 
 export function ClientNutritionTab({ clientId, clientName }: ClientNutritionTabProps) {
+  const { trackFeature } = useFeatureTracking();
   const { data: sessions = [], isLoading } = useNutritionLogSessions(clientId);
   const createSession = useCreateNutritionLogSession();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -29,6 +31,7 @@ export function ClientNutritionTab({ clientId, clientName }: ClientNutritionTabP
     try {
       await createSession.mutateAsync({ clientId, startDate: selectedDate });
       toast.success('7denní log vytvořen');
+      trackFeature('nutrition_session_create', 'nutrition');
       setCreateDialogOpen(false);
     } catch (error) {
       toast.error('Nepodařilo se vytvořit log');
@@ -39,6 +42,7 @@ export function ClientNutritionTab({ clientId, clientName }: ClientNutritionTabP
     const url = `${window.location.origin}/nutrition-log/${token}`;
     navigator.clipboard.writeText(url);
     toast.success('Odkaz zkopírován do schránky');
+    trackFeature('nutrition_link_copy', 'nutrition');
   };
 
   const getPublicUrl = (token: string) => `${window.location.origin}/nutrition-log/${token}`;
