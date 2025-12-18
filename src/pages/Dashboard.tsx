@@ -15,6 +15,7 @@ import {
   FileText,
   ShieldAlert,
   RefreshCw,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,7 +24,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { KPICard } from '@/components/dashboard/KPICard';
 import { KPIDetailModal } from '@/components/dashboard/KPIDetailModal';
-import { NewRecordButton } from '@/components/dashboard/NewRecordButton';
+import { QuickActionsBar } from '@/components/dashboard/QuickActionsBar';
+import { TodayAlertsSection } from '@/components/dashboard/TodayAlertsSection';
 import { UnifiedFinancialChart, FinancialPeriod } from '@/components/dashboard/UnifiedFinancialChart';
 import { ProductSalesChart, SalesPeriod } from '@/components/dashboard/ProductSalesChart';
 import { TrainingActivityChart, TrainingPeriod } from '@/components/dashboard/TrainingActivityChart';
@@ -32,13 +34,13 @@ import { PerformanceMetricsSection, PerformancePeriod } from '@/components/dashb
 import { DashboardSettingsNew, NewDashboardLayout } from '@/components/dashboard/DashboardSettingsNew';
 import { FeedbackTrendsCard } from '@/components/dashboard/FeedbackTrendsCard';
 import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
-import { DashboardGlobalFilters } from '@/components/dashboard/DashboardGlobalFilters';
 import { CapacityKPICard } from '@/components/dashboard/CapacityKPICard';
 import { CapacityTrendChart } from '@/components/dashboard/CapacityTrendChart';
 import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
 import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
 
 import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
+import { useTodayAlerts } from '@/hooks/useTodayAlerts';
 import { useUnifiedFinancialData } from '@/hooks/useUnifiedFinancialData';
 import { useProductSalesData } from '@/hooks/useProductSalesData';
 import { useTrainingActivityData } from '@/hooks/useTrainingActivityData';
@@ -143,6 +145,7 @@ function DashboardContent() {
 
   // Data hooks - now safely inside the provider
   const { data: kpis, isLoading: kpisLoading, isError: kpisError } = useDashboardKPIs();
+  const { data: todayAlerts, isLoading: alertsLoading } = useTodayAlerts();
   
   // Only fetch chart data if not in safe mode
   const { data: financialData = [], isLoading: financialLoading, isError: financialError } = useUnifiedFinancialData(financialPeriod);
@@ -192,7 +195,10 @@ function DashboardContent() {
   const showCharts = !safeMode;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {/* Sticky Quick Actions Bar */}
+      <QuickActionsBar />
+      
       {/* Safe Mode Banner */}
       {safeMode && (
         <Alert className="border-orange-500/50 bg-orange-500/10">
@@ -215,27 +221,25 @@ function DashboardContent() {
         </Alert>
       )}
 
-      {/* Global Filters */}
-      {!safeMode && <DashboardGlobalFilters />}
-      
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header with date and settings */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-            Dashboard
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+            Řídicí panel
             {safeMode && (
               <span className="ml-2 text-sm font-normal text-orange-500">(bezpečný režim)</span>
             )}
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: cs })}
           </p>
         </div>
         
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2">
           {exportData && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="ghost" size="sm" className="gap-2">
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">Export</span>
                 </Button>
@@ -257,16 +261,18 @@ function DashboardContent() {
             onToggleSection={toggleSection}
             onResetDefaults={resetDefaults}
           />
-          <NewRecordButton />
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* Today's Alerts Section - Priority at top */}
+      <TodayAlertsSection data={todayAlerts} isLoading={alertsLoading} />
+
+      {/* KPI Cards - Compact row */}
       {layout.showKPICards && (
         kpisLoading ? (
-          <KPIGridSkeleton count={7} />
+          <KPIGridSkeleton count={5} />
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-7 lg:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 lg:gap-4">
             <KPICard
               title="Příjem"
               value={formatCurrency(kpis?.trainingIncome || 0)}
@@ -274,15 +280,6 @@ function DashboardContent() {
               trend={kpis?.trainingIncomeTrend ?? null}
               trendLabel="vs minulé období"
               onClick={() => setActiveModal('income')}
-              variant="success"
-            />
-            <KPICard
-              title="Přijaté platby"
-              value={formatCurrency(kpis?.creditReceived || 0)}
-              icon={<TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.creditReceivedTrend ?? null}
-              trendLabel="vs minulé období"
-              onClick={() => setActiveModal('profit')}
               variant="success"
             />
             <KPICard
@@ -294,27 +291,19 @@ function DashboardContent() {
               onClick={() => setActiveModal('trainings')}
             />
             <KPICard
-              title="Aktivní klienti"
+              title="Klienti"
               value={kpis?.activeClients || 0}
-              subtitle="posledních 30 dní"
+              subtitle="aktivních"
               icon={<Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               onClick={() => setActiveModal('clients')}
             />
             <KPICard
-              title="Pozdní zrušení"
+              title="Zrušení"
               value={kpis?.lateCancellations || 0}
-              subtitle="tento měsíc"
+              subtitle="pozdní"
               icon={<XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               onClick={() => setActiveModal('cancellations')}
               variant={kpis?.lateCancellations ? 'destructive' : 'default'}
-            />
-            <KPICard
-              title="Nezaplaceno"
-              value={kpis?.unpaidCount || 0}
-              subtitle={formatCurrency(kpis?.unpaidAmount || 0)}
-              icon={<Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              onClick={() => setActiveModal('unpaid')}
-              variant={kpis?.unpaidCount ? 'warning' : 'default'}
             />
             <CapacityKPICard />
           </div>
