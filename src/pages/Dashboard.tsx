@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -8,6 +9,8 @@ import { AttentionSection } from '@/components/dashboard/AttentionSection';
 import { ClientsSchedule } from '@/components/dashboard/ClientsSchedule';
 import { CreditSignalBox } from '@/components/dashboard/CreditSignalBox';
 import { QuickStats } from '@/components/dashboard/QuickStats';
+import { ProductSalesChart, SalesPeriod } from '@/components/dashboard/ProductSalesChart';
+import { useProductSalesData } from '@/hooks/useProductSalesData';
 
 import { useTodayAlerts } from '@/hooks/useTodayAlerts';
 
@@ -15,6 +18,8 @@ function DashboardContent() {
   usePageTracking('dashboard');
   
   const { data: todayAlerts, isLoading: alertsLoading } = useTodayAlerts();
+  const [productPeriod, setProductPeriod] = useState<SalesPeriod>('30days');
+  const { data: productData, isLoading: productLoading } = useProductSalesData(productPeriod);
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
@@ -48,6 +53,20 @@ function DashboardContent() {
 
       {/* Section 5: Statistics - Collapsible, secondary importance */}
       <QuickStats />
+
+      {/* Section 6: Product Sales Chart */}
+      <ProductSalesChart
+        trendData={productData?.trendData || []}
+        topProducts={productData?.topProducts || []}
+        allProducts={productData?.allProducts || []}
+        paymentMethods={productData?.paymentMethods || []}
+        totalMargin={productData?.totalMargin}
+        totalRevenue={productData?.totalRevenue}
+        marginPercent={productData?.marginPercent}
+        isLoading={productLoading}
+        period={productPeriod}
+        onPeriodChange={setProductPeriod}
+      />
     </div>
   );
 }
