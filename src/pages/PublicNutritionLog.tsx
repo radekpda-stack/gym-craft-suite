@@ -52,7 +52,7 @@ const t = {
     portionMedium: 'Střední',
     portionLarge: 'Velká',
     portionHint: 'Stačí odhad, nejde o přesnost.',
-    quality: 'Jak bys toto jídlo zhodnotil/a?',
+    quality: 'Bylo to zdravé?',
     qualityGood: 'Spíš kvalitní',
     qualityNormal: 'Normál',
     qualityPoor: 'Spíš slabé',
@@ -122,7 +122,7 @@ const t = {
     portionMedium: 'Medium',
     portionLarge: 'Large',
     portionHint: 'Just an estimate is fine.',
-    quality: 'How would you rate this meal?',
+    quality: 'Was it healthy?',
     qualityGood: 'Mostly healthy',
     qualityNormal: 'Normal',
     qualityPoor: 'Not great',
@@ -417,10 +417,17 @@ export default function PublicNutritionLogPage() {
         {/* Entries List */}
         <div className="space-y-2">
           {totalEntries === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                <p>{tr.noEntries}</p>
-                <p className="text-sm">{tr.tapToAdd}</p>
+            <Card className="border-dashed border-2">
+              <CardContent className="py-10 text-center">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddDialog(true)}
+                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center mx-auto mb-4"
+                >
+                  <Plus className="h-8 w-8" />
+                </motion.button>
+                <p className="text-muted-foreground font-medium">{tr.noEntries}</p>
+                <p className="text-sm text-muted-foreground mt-1">{tr.tapToAdd}</p>
               </CardContent>
             </Card>
           ) : (
@@ -767,8 +774,8 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
 
       {/* Feeling after - optional icons */}
       <div>
-        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter} <span className="text-xs">(optional)</span></Label>
-        <div className="flex gap-2 justify-center">
+        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter} <span className="text-xs opacity-60">(nepovinné)</span></Label>
+        <div className="grid grid-cols-4 gap-2">
           {[
             { id: 'ok', icon: '😌', label: tr.feelingOk },
             { id: 'heavy', icon: '😴', label: tr.feelingHeavy },
@@ -779,24 +786,29 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
               key={f.id}
               onClick={() => setFeeling(feeling === f.id ? '' : f.id)}
               className={cn(
-                "flex flex-col items-center p-2 rounded-xl border-2 transition-all min-w-[60px]",
+                "flex flex-col items-center p-2.5 rounded-xl border-2 transition-all",
                 feeling === f.id 
                   ? "border-primary bg-primary/10" 
                   : "border-border hover:border-primary/50"
               )}
             >
-              <span className="text-xl">{f.icon}</span>
-              <span className="text-[10px] mt-1">{f.label}</span>
+              <span className="text-2xl">{f.icon}</span>
+              <span className="text-xs mt-1 leading-tight text-center">{f.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 pt-4 border-t">
         <Button variant="outline" className="flex-1" onClick={onBack}>{tr.cancel}</Button>
-        <Button className="flex-1" onClick={handleSave} disabled={isSaving || !description.trim() || !mealType}>
-          {isSaving ? '...' : tr.save}
+        <Button 
+          className="flex-1 text-base font-semibold" 
+          size="lg"
+          onClick={handleSave} 
+          disabled={isSaving || !description.trim() || !mealType}
+        >
+          {isSaving ? '...' : `✓ ${tr.save}`}
         </Button>
       </div>
     </motion.div>
