@@ -1580,6 +1580,45 @@ export type Database = {
           },
         ]
       }
+      nutrition_drink_items: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string | null
+          default_ml: number | null
+          drink_type: string
+          id: string
+          is_approved: boolean | null
+          is_carbonated: boolean | null
+          name: string
+          name_normalized: string
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          default_ml?: number | null
+          drink_type: string
+          id?: string
+          is_approved?: boolean | null
+          is_carbonated?: boolean | null
+          name: string
+          name_normalized: string
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          default_ml?: number | null
+          drink_type?: string
+          id?: string
+          is_approved?: boolean | null
+          is_carbonated?: boolean | null
+          name?: string
+          name_normalized?: string
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       nutrition_food_entries: {
         Row: {
           client_id: string
@@ -1648,6 +1687,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nutrition_food_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by_user_id: string | null
+          default_grams: number | null
+          default_portion_mode: string | null
+          id: string
+          is_approved: boolean | null
+          name: string
+          name_normalized: string
+          usage_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          default_grams?: number | null
+          default_portion_mode?: string | null
+          id?: string
+          is_approved?: boolean | null
+          name: string
+          name_normalized: string
+          usage_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          default_grams?: number | null
+          default_portion_mode?: string | null
+          id?: string
+          is_approved?: boolean | null
+          name?: string
+          name_normalized?: string
+          usage_count?: number | null
+        }
+        Relationships: []
       }
       nutrition_log_sessions: {
         Row: {
