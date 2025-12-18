@@ -91,6 +91,12 @@ export default function Settings() {
       content: <CompanyProfileSettings />,
     },
     {
+      title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
+      description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
+      icon: Zap,
+      content: <QuickActionSettings />,
+    },
+    {
       title: t.settings.prices,
       description: t.settings.pricesDesc,
       icon: CreditCard,
@@ -119,12 +125,6 @@ export default function Settings() {
       description: 'Automatické odesílání a konfigurace dotazníků',
       icon: MessageSquare,
       content: <FeedbackSettings />,
-    },
-    {
-      title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
-      description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
-      icon: Zap,
-      content: <QuickActionSettings />,
     },
     {
       title: language === 'cs' ? 'Kapacita' : 'Capacity',
