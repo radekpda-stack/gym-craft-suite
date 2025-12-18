@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Dumbbell, Users, Wallet, Activity, FileDown, ShoppingBag, Trophy, TrendingUp } from 'lucide-react';
+import { Dumbbell, Users, Wallet, Activity, FileDown, ShoppingBag, TrendingUp } from 'lucide-react';
+import { TrainingsDetailModal } from './TrainingsDetailModal';
+import { ClientsDetailModal } from './ClientsDetailModal';
+import { IncomeDetailModal } from './IncomeDetailModal';
+import { ExercisesDetailModal } from './ExercisesDetailModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,9 +18,12 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cs, enUS } from 'date-fns/locale';
 
+type ModalType = 'trainings' | 'clients' | 'income' | 'exercises' | null;
+
 export function StatsOverviewCard() {
   const [period, setPeriod] = useState<StatsPeriod>('all');
   const [isExporting, setIsExporting] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const { data: stats, isLoading } = useAnnualStats(period);
   const { data: settings } = useAppSettings();
   const { language, t } = useLanguage();
@@ -93,24 +100,28 @@ export function StatsOverviewCard() {
 
   const metrics = [
     {
+      id: 'trainings' as const,
       icon: <Dumbbell className="w-4 h-4" />,
       value: stats.completedTrainings,
       label: language === 'cs' ? 'tréninků' : 'trainings',
       color: 'text-primary',
     },
     {
+      id: 'clients' as const,
       icon: <Users className="w-4 h-4" />,
       value: stats.activeClients,
       label: language === 'cs' ? 'klientů' : 'clients',
       color: 'text-blue-500',
     },
     {
+      id: 'income' as const,
       icon: <Wallet className="w-4 h-4" />,
       value: formatCurrency(stats.totalIncome),
       label: language === 'cs' ? 'příjem' : 'income',
       color: 'text-green-500',
     },
     {
+      id: 'exercises' as const,
       icon: <Activity className="w-4 h-4" />,
       value: stats.totalExerciseEntries.toLocaleString(),
       label: language === 'cs' ? 'cviků' : 'exercises',
@@ -176,8 +187,12 @@ export function StatsOverviewCard() {
       <CardContent className="space-y-4">
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {metrics.map((metric, idx) => (
-            <div key={idx} className="p-3 rounded-xl bg-secondary/50 text-center">
+          {metrics.map((metric) => (
+            <div
+              key={metric.id}
+              onClick={() => setActiveModal(metric.id)}
+              className="p-3 rounded-xl bg-secondary/50 text-center cursor-pointer hover:bg-secondary/70 hover:scale-[1.02] transition-all duration-200"
+            >
               <div className={`flex items-center justify-center gap-1.5 ${metric.color}`}>
                 {metric.icon}
                 <span className="text-lg font-bold">{metric.value}</span>
@@ -238,6 +253,28 @@ export function StatsOverviewCard() {
           ))}
         </div>
       </CardContent>
+
+      {/* Detail Modals */}
+      <TrainingsDetailModal
+        open={activeModal === 'trainings'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <ClientsDetailModal
+        open={activeModal === 'clients'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <IncomeDetailModal
+        open={activeModal === 'income'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <ExercisesDetailModal
+        open={activeModal === 'exercises'}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
     </Card>
   );
 }
