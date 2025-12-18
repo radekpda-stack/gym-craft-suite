@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { RecurringScheduleManager } from '@/components/clients/RecurringScheduleManager';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCard';
@@ -394,6 +395,9 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
 
         {/* Shared Budget Group */}
         <ClientBudgetGroupCard clientId={client.id} clientName={client.name} />
+
+        {/* Recurring Training Schedule */}
+        <RecurringScheduleManager clientId={client.id} clientName={client.name} />
 
         {/* Goals & Restrictions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
