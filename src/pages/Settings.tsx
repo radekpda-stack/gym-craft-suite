@@ -19,6 +19,7 @@ import {
   Utensils,
   Gauge,
   FileBarChart2,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSett
 import { NutritionSettings } from '@/components/settings/NutritionSettings';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
+import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { useLanguage, Language } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
@@ -117,6 +119,12 @@ export default function Settings() {
       description: 'Automatické odesílání a konfigurace dotazníků',
       icon: MessageSquare,
       content: <FeedbackSettings />,
+    },
+    {
+      title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
+      description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
+      icon: Zap,
+      content: <QuickActionSettings />,
     },
     {
       title: language === 'cs' ? 'Kapacita' : 'Capacity',

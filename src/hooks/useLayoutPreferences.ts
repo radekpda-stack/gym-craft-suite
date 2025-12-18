@@ -5,6 +5,8 @@ export interface LayoutPreferences {
   hiddenSidebarItems: string[];
   dashboardStatsOrder: string[];
   dashboardSectionsOrder: string[];
+  quickActionOrder: string[];
+  hiddenQuickActions: string[];
 }
 
 const DEFAULT_SIDEBAR_ORDER = [
@@ -42,6 +44,17 @@ const DEFAULT_DASHBOARD_SECTIONS_ORDER = [
   'aiWidget',
   'mainContent',
 ];
+
+const DEFAULT_QUICK_ACTION_ORDER = [
+  'client',
+  'training',
+  'measurement',
+  'diagnostic',
+  'credit',
+  'sale',
+];
+
+const DEFAULT_HIDDEN_QUICK_ACTIONS: string[] = [];
 
 const STORAGE_KEY = 'layout-preferences';
 
@@ -81,12 +94,22 @@ function loadPreferences(): LayoutPreferences {
           }
         }
       });
+
+      // Merge new quick actions that might be missing
+      let quickActionOrder = parsed.quickActionOrder || DEFAULT_QUICK_ACTION_ORDER;
+      DEFAULT_QUICK_ACTION_ORDER.forEach(item => {
+        if (!quickActionOrder.includes(item)) {
+          quickActionOrder.push(item);
+        }
+      });
       
       return {
         sidebarOrder,
         hiddenSidebarItems: parsed.hiddenSidebarItems || DEFAULT_HIDDEN_SIDEBAR_ITEMS,
         dashboardStatsOrder: parsed.dashboardStatsOrder || DEFAULT_DASHBOARD_STATS_ORDER,
         dashboardSectionsOrder,
+        quickActionOrder,
+        hiddenQuickActions: parsed.hiddenQuickActions || DEFAULT_HIDDEN_QUICK_ACTIONS,
       };
     }
   } catch (e) {
@@ -97,6 +120,8 @@ function loadPreferences(): LayoutPreferences {
     hiddenSidebarItems: DEFAULT_HIDDEN_SIDEBAR_ITEMS,
     dashboardStatsOrder: DEFAULT_DASHBOARD_STATS_ORDER,
     dashboardSectionsOrder: DEFAULT_DASHBOARD_SECTIONS_ORDER,
+    quickActionOrder: DEFAULT_QUICK_ACTION_ORDER,
+    hiddenQuickActions: DEFAULT_HIDDEN_QUICK_ACTIONS,
   };
 }
 
@@ -141,6 +166,8 @@ export function useLayoutPreferences() {
       hiddenSidebarItems: DEFAULT_HIDDEN_SIDEBAR_ITEMS,
       dashboardStatsOrder: DEFAULT_DASHBOARD_STATS_ORDER,
       dashboardSectionsOrder: DEFAULT_DASHBOARD_SECTIONS_ORDER,
+      quickActionOrder: DEFAULT_QUICK_ACTION_ORDER,
+      hiddenQuickActions: DEFAULT_HIDDEN_QUICK_ACTIONS,
     };
     setPreferences(defaults);
     savePreferences(defaults);
@@ -158,12 +185,39 @@ export function useLayoutPreferences() {
     });
   }, []);
 
+  const updateQuickActionOrder = useCallback((newOrder: string[]) => {
+    setPreferences(prev => {
+      const updated = { ...prev, quickActionOrder: newOrder };
+      savePreferences(updated);
+      return updated;
+    });
+  }, []);
+
+  const toggleQuickActionVisibility = useCallback((actionId: string) => {
+    setPreferences(prev => {
+      const isHidden = prev.hiddenQuickActions.includes(actionId);
+      // Prevent hiding all actions - at least one must remain visible
+      const visibleCount = prev.quickActionOrder.filter(id => !prev.hiddenQuickActions.includes(id)).length;
+      if (!isHidden && visibleCount <= 1) {
+        return prev; // Don't hide if it's the last visible action
+      }
+      const newHiddenActions = isHidden
+        ? prev.hiddenQuickActions.filter(id => id !== actionId)
+        : [...prev.hiddenQuickActions, actionId];
+      const updated = { ...prev, hiddenQuickActions: newHiddenActions };
+      savePreferences(updated);
+      return updated;
+    });
+  }, []);
+
   return {
     preferences,
     updateSidebarOrder,
     updateDashboardStatsOrder,
     updateDashboardSectionsOrder,
     toggleSidebarItemVisibility,
+    updateQuickActionOrder,
+    toggleQuickActionVisibility,
     resetToDefaults,
   };
 }

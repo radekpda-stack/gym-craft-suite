@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,6 +24,7 @@ import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useCreateMeasurement } from '@/hooks/useMeasurements';
+import { useLayoutPreferences } from '@/hooks/useLayoutPreferences';
 import { EnhancedTrainingFormValues } from '@/components/trainings/EnhancedTrainingForm';
 import { featureTracker } from '@/hooks/useFeatureTracking';
 
@@ -34,7 +35,7 @@ interface QuickAction {
   color: string;
 }
 
-const quickActions: QuickAction[] = [
+const quickActionsConfig: QuickAction[] = [
   { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
   { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
   { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
@@ -54,6 +55,15 @@ export function QuickActionButton() {
   const addTrainingTags = useAddTrainingSessionTags();
   const trainingPrices = useTrainingPrices();
   const createMeasurement = useCreateMeasurement();
+  const { preferences } = useLayoutPreferences();
+
+  // Filter and order actions based on user preferences
+  const visibleActions = useMemo(() => {
+    return preferences.quickActionOrder
+      .filter(id => !preferences.hiddenQuickActions.includes(id))
+      .map(id => quickActionsConfig.find(a => a.id === id))
+      .filter((a): a is QuickAction => a !== undefined);
+  }, [preferences.quickActionOrder, preferences.hiddenQuickActions]);
 
   const handleAction = (actionId: string) => {
     featureTracker.track(`fab_action_${actionId}`, 'navigation');
@@ -129,7 +139,7 @@ export function QuickActionButton() {
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.2 }}
               >
-                {quickActions.map((action, index) => (
+              {visibleActions.map((action, index) => (
                   <motion.button
                     key={action.id}
                     className="flex items-center gap-3 group"
