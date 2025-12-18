@@ -28,10 +28,21 @@ export interface TrainingSession {
   created_at: string;
   updated_at: string;
   user_id: string | null;
-  // New payment fields
+  // Payment fields
   payment_status: PaymentStatus | string | null;
   final_price: number | null;
   payment_method: PaymentMethod | string | null;
+  // Enhanced training fields
+  training_type: string | null;
+  training_goal: string | null;
+  rpe: number | null;
+  rir: number | null;
+  total_volume: number | null;
+  intensity_notes: string | null;
+  subjective_difficulty: number | null;
+  trainer_went_well: string | null;
+  trainer_problems: string | null;
+  trainer_recommendations: string | null;
 }
 
 export interface CreateTrainingInput {
@@ -58,6 +69,17 @@ export interface UpdateTrainingInput {
   payment_status?: PaymentStatus;
   final_price?: number;
   payment_method?: PaymentMethod;
+  // Enhanced training fields
+  training_type?: string;
+  training_goal?: string;
+  rpe?: number | null;
+  rir?: number | null;
+  total_volume?: number | null;
+  intensity_notes?: string;
+  subjective_difficulty?: number | null;
+  trainer_went_well?: string;
+  trainer_problems?: string;
+  trainer_recommendations?: string;
 }
 
 export function useTrainingSessions(clientId?: string) {

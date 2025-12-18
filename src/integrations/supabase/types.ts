@@ -2701,6 +2701,7 @@ export type Database = {
           duration: number
           final_price: number | null
           id: string
+          intensity_notes: string | null
           is_generated: boolean | null
           is_late_cancellation: boolean | null
           notes: string | null
@@ -2713,9 +2714,18 @@ export type Database = {
           plan_workout_id: string | null
           recurrence_end_date: string | null
           recurrence_type: string | null
+          rir: number | null
+          rpe: number | null
           status: string
+          subjective_difficulty: number | null
           subjective_rating: number | null
+          total_volume: number | null
+          trainer_problems: string | null
+          trainer_recommendations: string | null
+          trainer_went_well: string | null
+          training_goal: string | null
           training_plan_id: string | null
+          training_type: string | null
           updated_at: string
           user_id: string | null
         }
@@ -2728,6 +2738,7 @@ export type Database = {
           duration?: number
           final_price?: number | null
           id?: string
+          intensity_notes?: string | null
           is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
@@ -2740,9 +2751,18 @@ export type Database = {
           plan_workout_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
+          rir?: number | null
+          rpe?: number | null
           status?: string
+          subjective_difficulty?: number | null
           subjective_rating?: number | null
+          total_volume?: number | null
+          trainer_problems?: string | null
+          trainer_recommendations?: string | null
+          trainer_went_well?: string | null
+          training_goal?: string | null
           training_plan_id?: string | null
+          training_type?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2755,6 +2775,7 @@ export type Database = {
           duration?: number
           final_price?: number | null
           id?: string
+          intensity_notes?: string | null
           is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
@@ -2767,9 +2788,18 @@ export type Database = {
           plan_workout_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
+          rir?: number | null
+          rpe?: number | null
           status?: string
+          subjective_difficulty?: number | null
           subjective_rating?: number | null
+          total_volume?: number | null
+          trainer_problems?: string | null
+          trainer_recommendations?: string | null
+          trainer_went_well?: string | null
+          training_goal?: string | null
           training_plan_id?: string | null
+          training_type?: string | null
           updated_at?: string
           user_id?: string | null
         }
