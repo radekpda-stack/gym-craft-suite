@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dumbbell, Users, Wallet, Activity, FileDown, Star, Trophy, TrendingUp, CalendarDays } from 'lucide-react';
+import { Dumbbell, Users, Wallet, Activity, FileDown, ShoppingBag, Trophy, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -120,22 +120,24 @@ export function StatsOverviewCard() {
 
   const highlights = [
     {
-      icon: <CalendarDays className="w-4 h-4 text-amber-500" />,
-      label: language === 'cs' ? 'Nejaktivnější měsíc' : 'Most active month',
-      value: formatMostActiveMonth(stats.mostActiveMonth),
-    },
-    {
-      icon: <Trophy className="w-4 h-4 text-yellow-500" />,
-      label: language === 'cs' ? 'Top klient' : 'Top client',
+      icon: <Dumbbell className="w-4 h-4 text-primary" />,
+      label: language === 'cs' ? 'Nejvíce tréninků' : 'Most trainings',
       value: stats.topClientsByTrainings[0] 
         ? `${stats.topClientsByTrainings[0].name} (${stats.topClientsByTrainings[0].count}×)`
         : '-',
     },
     {
-      icon: <Star className="w-4 h-4 text-orange-500" />,
-      label: language === 'cs' ? 'Top cvik' : 'Top exercise',
-      value: stats.topExercises[0]
-        ? `${stats.topExercises[0].name} (${stats.topExercises[0].count.toLocaleString()}×)`
+      icon: <Wallet className="w-4 h-4 text-green-500" />,
+      label: language === 'cs' ? 'Největší útrata' : 'Highest spent',
+      value: stats.topClientsBySpent[0]
+        ? `${stats.topClientsBySpent[0].name} (${formatCurrency(stats.topClientsBySpent[0].amount)})`
+        : '-',
+    },
+    {
+      icon: <ShoppingBag className="w-4 h-4 text-purple-500" />,
+      label: language === 'cs' ? 'Nejvíce produktů' : 'Most products',
+      value: stats.topClientByProducts
+        ? `${stats.topClientByProducts.name} (${stats.topClientByProducts.count}×)`
         : '-',
     },
   ];
