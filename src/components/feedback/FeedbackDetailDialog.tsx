@@ -106,9 +106,7 @@ export function FeedbackDetailDialog({
   clientName,
   trainingDate,
 }: FeedbackDetailDialogProps) {
-  if (!feedback) return null;
-
-  const isD1Feedback = feedback.soreness !== null || feedback.body_feel !== null;
+  const isD1Feedback = feedback?.soreness !== null || feedback?.body_feel !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +118,12 @@ export function FeedbackDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        {!feedback ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
           {/* Header Info */}
           <div className="flex flex-wrap gap-2">
             {clientName && (
@@ -309,6 +312,7 @@ export function FeedbackDetailDialog({
             </p>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
