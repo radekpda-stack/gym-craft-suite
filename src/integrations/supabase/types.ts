@@ -1517,6 +1517,108 @@ export type Database = {
           },
         ]
       }
+      nutrition_daily_analysis: {
+        Row: {
+          alcohol_sugar_score: number | null
+          analysis_date: string
+          analyzed_at: string | null
+          calorie_level: string | null
+          calorie_range_high: number | null
+          calorie_range_low: number | null
+          carb_quality_score: number | null
+          carb_sources: Json | null
+          client_id: string
+          created_at: string | null
+          fat_quality_score: number | null
+          fat_sources: Json | null
+          feedback_improve: string | null
+          feedback_positive: string | null
+          feedback_suggestions: Json | null
+          hydration_score: number | null
+          id: string
+          meal_regularity_score: number | null
+          protein_score: number | null
+          protein_sources: Json | null
+          session_id: string
+          ultra_processed: Json | null
+          ultra_processed_score: number | null
+          user_id: string | null
+          vegetable_fiber_score: number | null
+          vegetables_fruits: Json | null
+        }
+        Insert: {
+          alcohol_sugar_score?: number | null
+          analysis_date: string
+          analyzed_at?: string | null
+          calorie_level?: string | null
+          calorie_range_high?: number | null
+          calorie_range_low?: number | null
+          carb_quality_score?: number | null
+          carb_sources?: Json | null
+          client_id: string
+          created_at?: string | null
+          fat_quality_score?: number | null
+          fat_sources?: Json | null
+          feedback_improve?: string | null
+          feedback_positive?: string | null
+          feedback_suggestions?: Json | null
+          hydration_score?: number | null
+          id?: string
+          meal_regularity_score?: number | null
+          protein_score?: number | null
+          protein_sources?: Json | null
+          session_id: string
+          ultra_processed?: Json | null
+          ultra_processed_score?: number | null
+          user_id?: string | null
+          vegetable_fiber_score?: number | null
+          vegetables_fruits?: Json | null
+        }
+        Update: {
+          alcohol_sugar_score?: number | null
+          analysis_date?: string
+          analyzed_at?: string | null
+          calorie_level?: string | null
+          calorie_range_high?: number | null
+          calorie_range_low?: number | null
+          carb_quality_score?: number | null
+          carb_sources?: Json | null
+          client_id?: string
+          created_at?: string | null
+          fat_quality_score?: number | null
+          fat_sources?: Json | null
+          feedback_improve?: string | null
+          feedback_positive?: string | null
+          feedback_suggestions?: Json | null
+          hydration_score?: number | null
+          id?: string
+          meal_regularity_score?: number | null
+          protein_score?: number | null
+          protein_sources?: Json | null
+          session_id?: string
+          ultra_processed?: Json | null
+          ultra_processed_score?: number | null
+          user_id?: string | null
+          vegetable_fiber_score?: number | null
+          vegetables_fruits?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_daily_analysis_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_daily_analysis_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_drink_entries: {
         Row: {
           amount_container_count: number | null
@@ -1628,8 +1730,10 @@ export type Database = {
           entry_time: string
           grams: number | null
           id: string
+          meal_type: string | null
           note: string | null
           photo_url: string | null
+          portion_estimate: string | null
           portion_mode: string
           portion_size: string | null
           session_id: string
@@ -1645,8 +1749,10 @@ export type Database = {
           entry_time?: string
           grams?: number | null
           id?: string
+          meal_type?: string | null
           note?: string | null
           photo_url?: string | null
+          portion_estimate?: string | null
           portion_mode: string
           portion_size?: string | null
           session_id: string
@@ -1662,8 +1768,10 @@ export type Database = {
           entry_time?: string
           grams?: number | null
           id?: string
+          meal_type?: string | null
           note?: string | null
           photo_url?: string | null
+          portion_estimate?: string | null
           portion_mode?: string
           portion_size?: string | null
           session_id?: string
@@ -1767,6 +1875,81 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_weekly_summary: {
+        Row: {
+          analyzed_at: string | null
+          avg_calorie_range_high: number | null
+          avg_calorie_range_low: number | null
+          avg_quality_scores: Json | null
+          calorie_trend: string | null
+          client_id: string
+          client_recommendations: Json | null
+          client_strengths: Json | null
+          client_weaknesses: Json | null
+          created_at: string | null
+          id: string
+          quality_trend_summary: string | null
+          session_id: string
+          trainer_conclusion: string | null
+          trainer_observations: string | null
+          trainer_risks: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          avg_calorie_range_high?: number | null
+          avg_calorie_range_low?: number | null
+          avg_quality_scores?: Json | null
+          calorie_trend?: string | null
+          client_id: string
+          client_recommendations?: Json | null
+          client_strengths?: Json | null
+          client_weaknesses?: Json | null
+          created_at?: string | null
+          id?: string
+          quality_trend_summary?: string | null
+          session_id: string
+          trainer_conclusion?: string | null
+          trainer_observations?: string | null
+          trainer_risks?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          avg_calorie_range_high?: number | null
+          avg_calorie_range_low?: number | null
+          avg_quality_scores?: Json | null
+          calorie_trend?: string | null
+          client_id?: string
+          client_recommendations?: Json | null
+          client_strengths?: Json | null
+          client_weaknesses?: Json | null
+          created_at?: string | null
+          id?: string
+          quality_trend_summary?: string | null
+          session_id?: string
+          trainer_conclusion?: string | null
+          trainer_observations?: string | null
+          trainer_risks?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_weekly_summary_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_weekly_summary_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
             referencedColumns: ["id"]
           },
         ]

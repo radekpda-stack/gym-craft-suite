@@ -41,14 +41,16 @@ const foodEntrySchema = z.object({
   description: z.string().min(1, "Description required").max(500, "Description too long"),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
-  portion_mode: z.enum(['grams', 'portion', 'portion_size', 'units']), // Added 'portion_size'
-  portion_size: z.enum(['small', 'medium', 'large']).optional(),
+  meal_type: z.enum(['breakfast', 'snack_am', 'lunch', 'snack_pm', 'dinner', 'snack']).optional().nullable(),
+  portion_mode: z.enum(['grams', 'portion', 'portion_size', 'units']),
+  portion_size: z.enum(['small', 'medium', 'large']).optional().nullable(),
+  portion_estimate: z.enum(['palm', 'fist', 'handful', 'thumb']).optional().nullable(),
   grams: z.number().int().positive().max(10000).optional().nullable(),
   units_count: z.number().positive().max(100).optional().nullable(),
   units_label: z.string().max(50).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
   photo_url: z.string().url().max(500).optional().nullable(),
-  food_item_id: z.string().uuid().optional().nullable(), // For shared food items
+  food_item_id: z.string().uuid().optional().nullable(),
 });
 
 const drinkEntrySchema = z.object({
