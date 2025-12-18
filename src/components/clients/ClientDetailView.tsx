@@ -22,6 +22,7 @@ import {
   Plus,
   Loader2,
   Star,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,6 +93,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       healthRestrictions: client.health_restrictions || '',
       creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
+      createdAt: client.created_at ? client.created_at.split('T')[0] : '',
     },
   });
 
@@ -106,6 +108,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       healthRestrictions: client.health_restrictions || '',
       creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
+      createdAt: client.created_at ? client.created_at.split('T')[0] : '',
     });
   }, [client, form]);
 
@@ -351,6 +354,38 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
               <p className="font-medium text-foreground">
                 {client.birth_date
                   ? format(new Date(client.birth_date), 'd. MMMM yyyy', { locale: cs })
+                  : '—'}
+              </p>
+            )}
+          </div>
+
+          {/* Created At / Client Since */}
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-3 text-muted-foreground mb-2">
+              <CalendarDays className="w-4 h-4" />
+              <span className="text-sm">Klientem od</span>
+            </div>
+            {isEditMode ? (
+              <FormField
+                control={form.control}
+                name="createdAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        className="bg-secondary border-border"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <p className="font-medium text-foreground">
+                {client.created_at
+                  ? format(new Date(client.created_at), 'd. MMMM yyyy', { locale: cs })
                   : '—'}
               </p>
             )}
