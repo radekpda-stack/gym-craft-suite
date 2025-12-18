@@ -267,18 +267,19 @@ function DashboardContent() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-7 lg:gap-4">
             <KPICard
               title="Příjem"
-              value={formatCurrency(kpis?.incomeThisMonth || 0)}
+              value={formatCurrency(kpis?.trainingIncome || 0)}
               icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.incomeTrend ?? null}
-              trendLabel="vs minulý měsíc"
+              trend={kpis?.trainingIncomeTrend ?? null}
+              trendLabel="vs minulé období"
               onClick={() => setActiveModal('income')}
               variant="success"
             />
             <KPICard
-              title="Čistý zisk"
-              value={formatCurrency(kpis?.netProfitThisMonth || 0)}
+              title="Přijaté platby"
+              value={formatCurrency(kpis?.creditReceived || 0)}
               icon={<TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              trend={kpis?.profitTrend ?? null}
+              trend={kpis?.creditReceivedTrend ?? null}
+              trendLabel="vs minulé období"
               onClick={() => setActiveModal('profit')}
               variant="success"
             />
@@ -322,32 +323,30 @@ function DashboardContent() {
       <KPIDetailModal
         open={activeModal === 'income'}
         onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled příjmů"
+        title="Přehled příjmů z tréninků"
         icon={<Wallet className="w-4 h-4" />}
-        mainValue={formatCurrency(kpis?.incomeThisMonth || 0)}
-        mainLabel="Příjem tento měsíc"
+        mainValue={formatCurrency(kpis?.trainingIncome || 0)}
+        mainLabel="Příjem z tréninků"
         stats={[
-          { label: 'Minulý měsíc', value: formatCurrency(kpis?.incomeLastMonth || 0), trend: kpis?.incomeTrend },
-          { label: 'Průměr za měsíc', value: formatCurrency(kpis?.avgMonthlyIncome || 0) },
-          { label: 'Tréninky', value: formatCurrency(kpis?.trainingIncome || 0) },
-          { label: 'Produkty', value: formatCurrency(kpis?.productIncome || 0) },
+          { label: 'Minulé období', value: formatCurrency(kpis?.trainingIncomeLastMonth || 0), trend: kpis?.trainingIncomeTrend },
+          { label: 'Počet tréninků', value: kpis?.trainingsThisMonth || 0 },
           { label: 'Příjem/trénink', value: formatCurrency(Math.round(kpis?.incomePerTraining || 0)) },
-          { label: 'Podíl produktů', value: formatPercent(kpis?.productIncomeShare || 0, 1) },
+          { label: 'Produkty', value: formatCurrency(kpis?.productIncome || 0) },
         ]}
       />
 
       <KPIDetailModal
         open={activeModal === 'profit'}
         onOpenChange={(open) => !open && setActiveModal(null)}
-        title="Přehled zisku"
+        title="Přehled přijatých plateb"
         icon={<TrendingUp className="w-4 h-4" />}
-        mainValue={formatCurrency(kpis?.netProfitThisMonth || 0)}
-        mainLabel="Čistý zisk tento měsíc"
+        mainValue={formatCurrency(kpis?.creditReceived || 0)}
+        mainLabel="Přijaté platby (dobití kreditu)"
         stats={[
-          { label: 'Příjmy celkem', value: formatCurrency(kpis?.incomeThisMonth || 0) },
-          { label: 'Náklady', value: formatCurrency(kpis?.expensesThisMonth || 0) },
-          { label: 'Marže', value: formatPercent(kpis?.profitMargin || 0) },
-          { label: 'Trend', value: `${kpis?.profitTrend || 0 > 0 ? '+' : ''}${formatPercent(kpis?.profitTrend || 0)}`, trend: kpis?.profitTrend },
+          { label: 'Minulé období', value: formatCurrency(kpis?.creditReceivedLastMonth || 0), trend: kpis?.creditReceivedTrend },
+          { label: 'Příjmy z tréninků', value: formatCurrency(kpis?.trainingIncome || 0) },
+          { label: 'Příjmy z produktů', value: formatCurrency(kpis?.productIncome || 0) },
+          { label: 'Náklady na produkty', value: formatCurrency(kpis?.expensesThisMonth || 0) },
         ]}
       />
 
