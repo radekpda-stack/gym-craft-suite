@@ -17,6 +17,7 @@ import {
   MessageSquare,
   BarChart3,
   FileText,
+  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -26,6 +27,7 @@ import { Client } from '@/hooks/useClients';
 import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatisticsCard';
 import { FeedbackTrendsChart } from '@/components/feedback/FeedbackTrendsChart';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
+import { RecurringScheduleManager } from '@/components/clients/RecurringScheduleManager';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -74,6 +76,7 @@ export function ClientSummaryCard({
 }: ClientSummaryCardProps) {
   const [showMembers, setShowMembers] = useState(false);
   const [showFeedbackStats, setShowFeedbackStats] = useState(false);
+  const [showRecurring, setShowRecurring] = useState(false);
 
   // Determine credit status color
   const getCreditStatusColor = () => {
@@ -262,9 +265,18 @@ export function ClientSummaryCard({
           <Dumbbell className="w-4 h-4" />
           Nový trénink
         </Button>
+        <Button 
+          size="sm" 
+          variant={showRecurring ? "secondary" : "outline"}
+          className="gap-1.5 flex-1" 
+          onClick={() => setShowRecurring(!showRecurring)}
+        >
+          <CalendarClock className="w-4 h-4" />
+          Pravidelné
+        </Button>
         <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={onAddCredit}>
           <Plus className="w-4 h-4" />
-          Přidat kredit
+          Kredit
         </Button>
         {unpaidCount > 0 && (
           <Button 
@@ -292,6 +304,11 @@ export function ClientSummaryCard({
           }
         />
       </div>
+
+      {/* Recurring Schedule Section (collapsible) */}
+      {showRecurring && (
+        <RecurringScheduleManager clientId={client.id} clientName={client.name} />
+      )}
     </div>
   );
 }
