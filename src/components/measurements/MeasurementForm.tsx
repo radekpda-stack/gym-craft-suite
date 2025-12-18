@@ -13,15 +13,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DatePicker } from "@/components/ui/date-time-picker";
+import { ClientSearchSelect } from "@/components/ui/client-search-select";
 import { Client } from "@/hooks/useClients";
 
 const measurementFormSchema = z.object({
@@ -90,20 +84,15 @@ export function MeasurementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel><RequiredLabel>Klient</RequiredLabel></FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-secondary border-border">
-                    <SelectValue placeholder="Vyberte klienta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-popover border-border">
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <ClientSearchSelect
+                  clients={clients}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Vyhledat klienta..."
+                  filterArchived={false}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

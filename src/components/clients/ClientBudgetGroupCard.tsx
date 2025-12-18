@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { 
   useBudgetGroups, 
   useClientBudgetGroup, 
@@ -433,18 +434,13 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
                 <DialogTitle>Přidat člena do skupiny</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vybrat klienta..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClientSearchSelect
+                  clients={availableClients}
+                  value={selectedClientId}
+                  onValueChange={setSelectedClientId}
+                  placeholder="Vyhledat klienta..."
+                  filterArchived={false}
+                />
                 <Button
                   onClick={handleAddMember}
                   disabled={!selectedClientId || addMember.isPending}

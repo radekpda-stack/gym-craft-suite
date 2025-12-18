@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction, PaymentMethod } from '@/hooks/useCreditTransactions';
@@ -171,26 +172,16 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
                 </Button>
               </div>
             ) : (
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger className="mt-1.5 sm:mt-2 h-10 sm:h-9">
-                  <SelectValue placeholder="Vyberte klienta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      <div className="flex items-center justify-between gap-4">
-                        <span>{client.name}</span>
-                        <span className={cn(
-                          "text-xs",
-                          (client.credit_balance || 0) < 0 ? "text-destructive" : "text-muted-foreground"
-                        )}>
-                          {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-1.5 sm:mt-2">
+                <ClientSearchSelect
+                  clients={clients}
+                  value={selectedClient}
+                  onValueChange={setSelectedClient}
+                  placeholder="Vyhledat klienta..."
+                  showCreditBalance
+                  filterArchived={false}
+                />
+              </div>
             )}
           </div>
 
