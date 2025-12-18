@@ -22,7 +22,7 @@ interface AttentionSectionProps {
 
 interface AttentionItem {
   id: string;
-  type: 'credit' | 'feedback' | 'unpaid';
+  type: 'credit' | 'feedback' | 'unpaid' | 'overload';
   clientId: string;
   clientName: string;
   reason: string;
@@ -44,6 +44,7 @@ function AttentionCard({
     credit: { icon: Wallet, label: 'Kredit' },
     feedback: { icon: MessageSquare, label: 'Feedback' },
     unpaid: { icon: Clock, label: 'Platba' },
+    overload: { icon: AlertTriangle, label: 'Přetížení' },
   };
   
   const { icon: Icon, label } = typeConfig[item.type];
@@ -133,10 +134,27 @@ export function AttentionSection({ data, isLoading }: AttentionSectionProps) {
   
   if (!data) return null;
   
-  const { lowCreditClients, missingFeedback, unpaidTrainings } = data;
+  const { lowCreditClients, missingFeedback, unpaidTrainings, combinedWarnings } = data;
   
   // Build attention items list
   const items: AttentionItem[] = [];
+  
+  // Critical: Combined overload warnings (highest priority)
+  (combinedWarnings?.items || []).forEach(warning => {
+    const id = `overload-${warning.clientId}`;
+    if (!dismissedIds.has(id)) {
+      items.push({
+        id,
+        type: 'overload',
+        clientId: warning.clientId,
+        clientName: warning.clientName,
+        reason: warning.type === 'overload' ? 'Přetížení' : 'Červený signál',
+        detail: warning.reason,
+        severity: 'error',
+        actionUrl: `/clients/${warning.clientId}`,
+      });
+    }
+  });
   
   // Low/no credit clients
   lowCreditClients.items.forEach(client => {
