@@ -152,7 +152,7 @@ export function WorkoutExerciseManager({
               Sync statistiky
             </Button>
           )}
-          {isEditMode && !showAddForm && (
+          {(isEditMode || trainingStatus === 'scheduled') && !showAddForm && (
             <Button
               onClick={() => setShowAddForm(true)}
               size="sm"
