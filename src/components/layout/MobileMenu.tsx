@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   Dumbbell,
-  Stethoscope,
   Activity,
   Calendar,
   Settings,
@@ -14,11 +13,9 @@ import {
   X,
   Zap,
   Sparkles,
-  TrendingUp,
   Wallet,
   ChevronRight,
   ShoppingBag,
-  Bell,
   ClipboardList,
   LucideIcon,
 } from 'lucide-react';
@@ -44,26 +41,27 @@ interface NavSection {
   items: NavItem[];
 }
 
+// Synchronized with Sidebar.tsx structure
 const sections: NavSection[] = [
   {
     label: 'Hlavní',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-      { to: '/clients', icon: Users, label: 'Klienti' },
-      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
     ],
   },
   {
     label: 'Plánování',
     items: [
+      { to: '/calendar', icon: Calendar, label: 'Kalendář' },
+      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
       { to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
     ],
   },
   {
     label: 'Záznamy',
     items: [
-      { to: '/records', icon: Activity, label: 'Záznamy klientů' },
+      { to: '/clients', icon: Users, label: 'Klienti' },
+      { to: '/records', icon: Activity, label: 'Záznamy' },
     ],
   },
   {
@@ -76,7 +74,6 @@ const sections: NavSection[] = [
     label: 'Nástroje',
     items: [
       { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
-      { to: '/reminders', icon: Bell, label: 'Připomínky' },
     ],
   },
   {

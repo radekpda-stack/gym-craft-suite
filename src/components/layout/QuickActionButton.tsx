@@ -10,7 +10,6 @@ import {
   Stethoscope,
   Wallet,
   ShoppingBag,
-  Bell,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,7 +19,6 @@ import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurem
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
-import { CreateReminderDialog } from '@/components/reminders/CreateReminderDialog';
 import { useClients, useCreateClient } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
@@ -43,7 +41,6 @@ const quickActions: QuickAction[] = [
   { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
   { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
   { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-pink-500' },
-  { id: 'reminder', icon: Bell, label: 'Nová připomínka', color: 'bg-cyan-500' },
 ];
 
 export function QuickActionButton() {
@@ -221,11 +218,6 @@ export function QuickActionButton() {
 
       <NewSaleDialog
         open={activeSheet === 'sale'}
-        onOpenChange={(open) => !open && setActiveSheet(null)}
-      />
-
-      <CreateReminderDialog
-        open={activeSheet === 'reminder'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
       />
     </>
