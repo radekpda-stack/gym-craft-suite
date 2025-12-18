@@ -3,8 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type FeatureCategory = 
   | 'navigation'
+  | 'calendar'
   | 'clients'
   | 'trainings'
+  | 'plans'
   | 'measurements'
   | 'diagnostics'
   | 'finance'
@@ -12,6 +14,8 @@ export type FeatureCategory =
   | 'search'
   | 'ai'
   | 'feedback'
+  | 'nutrition'
+  | 'progress'
   | 'settings'
   | 'export';
 

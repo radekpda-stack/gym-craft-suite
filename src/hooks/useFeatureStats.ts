@@ -34,6 +34,15 @@ export const ALL_FEATURES = [
   { name: 'page_view_feedback', category: 'navigation', label: 'Zpětná vazba' },
   { name: 'page_view_client_detail', category: 'navigation', label: 'Detail klienta' },
   { name: 'page_view_training_detail', category: 'navigation', label: 'Detail tréninku' },
+  { name: 'page_view_training_plans', category: 'navigation', label: 'Tréninkové plány' },
+  { name: 'page_view_pr_history', category: 'navigation', label: 'Historie PR' },
+  { name: 'page_view_reminders', category: 'navigation', label: 'Připomínky' },
+  // Calendar
+  { name: 'calendar_day_view', category: 'calendar', label: 'Denní pohled kalendáře' },
+  { name: 'calendar_week_view', category: 'calendar', label: 'Týdenní pohled kalendáře' },
+  { name: 'calendar_month_view', category: 'calendar', label: 'Měsíční pohled kalendáře' },
+  { name: 'calendar_quick_create', category: 'calendar', label: 'Rychlé vytvoření z kalendáře' },
+  { name: 'calendar_quick_payment', category: 'calendar', label: 'Rychlá platba z kalendáře' },
   // Clients
   { name: 'client_create', category: 'clients', label: 'Vytvoření klienta' },
   { name: 'client_update', category: 'clients', label: 'Úprava klienta' },
@@ -42,6 +51,8 @@ export const ALL_FEATURES = [
   { name: 'client_favorite', category: 'clients', label: 'Oblíbený klient' },
   { name: 'client_filter', category: 'clients', label: 'Filtrování klientů' },
   { name: 'client_export', category: 'export', label: 'Export klientů' },
+  { name: 'client_shared_budget', category: 'clients', label: 'Sdílený rozpočet' },
+  { name: 'client_recurring_schedule', category: 'clients', label: 'Pravidelný rozvrh klienta' },
   // Trainings
   { name: 'training_create', category: 'trainings', label: 'Vytvoření tréninku' },
   { name: 'training_update', category: 'trainings', label: 'Úprava tréninku' },
@@ -49,6 +60,12 @@ export const ALL_FEATURES = [
   { name: 'training_cancel', category: 'trainings', label: 'Zrušení tréninku' },
   { name: 'training_duplicate', category: 'trainings', label: 'Duplikace tréninku' },
   { name: 'training_payment_change', category: 'trainings', label: 'Změna platby tréninku' },
+  { name: 'training_add_exercise', category: 'trainings', label: 'Přidání cviku do tréninku' },
+  // Training Plans
+  { name: 'plan_create', category: 'plans', label: 'Vytvoření plánu' },
+  { name: 'plan_generate', category: 'plans', label: 'Generování plánu' },
+  { name: 'plan_view', category: 'plans', label: 'Zobrazení plánu' },
+  { name: 'plan_delete', category: 'plans', label: 'Smazání plánu' },
   // Measurements
   { name: 'measurement_create', category: 'measurements', label: 'Nové měření' },
   { name: 'measurement_update', category: 'measurements', label: 'Úprava měření' },
@@ -60,6 +77,7 @@ export const ALL_FEATURES = [
   { name: 'diagnostic_create', category: 'diagnostics', label: 'Nová diagnostika' },
   { name: 'diagnostic_update', category: 'diagnostics', label: 'Úprava diagnostiky' },
   { name: 'diagnostic_ai_analysis', category: 'diagnostics', label: 'AI analýza diagnostiky' },
+  { name: 'diagnostic_view', category: 'diagnostics', label: 'Zobrazení diagnostiky' },
   // Finance
   { name: 'credit_add', category: 'finance', label: 'Přidání kreditu' },
   { name: 'credit_deduct', category: 'finance', label: 'Odečtení kreditu' },
@@ -67,6 +85,7 @@ export const ALL_FEATURES = [
   { name: 'quick_credit', category: 'finance', label: 'Rychlý kredit' },
   { name: 'credit_statement_export', category: 'finance', label: 'Export výpisu kreditu' },
   { name: 'unpaid_training_pay', category: 'finance', label: 'Uhrazení nezaplaceného tréninku' },
+  { name: 'product_stock_receive', category: 'finance', label: 'Příjem zboží na sklad' },
   // Media
   { name: 'photo_upload', category: 'media', label: 'Nahrání fotky' },
   { name: 'photo_compare', category: 'media', label: 'Porovnání fotek' },
@@ -79,26 +98,48 @@ export const ALL_FEATURES = [
   // AI
   { name: 'ai_chat', category: 'ai', label: 'AI Chat' },
   { name: 'ai_operator', category: 'ai', label: 'AI Operátor' },
+  { name: 'ai_nutrition_analysis', category: 'ai', label: 'AI analýza stravy' },
   // Feedback
-  { name: 'feedback_send', category: 'feedback', label: 'Odeslání odkazu na feedback' },
+  { name: 'feedback_link_copy', category: 'feedback', label: 'Kopírování odkazu na feedback' },
+  { name: 'feedback_link_generate', category: 'feedback', label: 'Generování odkazu na feedback' },
+  { name: 'feedback_message_create', category: 'feedback', label: 'Vytvoření zprávy pro feedback' },
   { name: 'feedback_submit', category: 'feedback', label: 'Vyplnění feedbacku' },
   { name: 'feedback_view', category: 'feedback', label: 'Zobrazení feedbacku' },
+  { name: 'feedback_test_email', category: 'feedback', label: 'Test email feedbacku' },
+  // Nutrition Logging
+  { name: 'nutrition_session_create', category: 'nutrition', label: 'Nová nutriční session' },
+  { name: 'nutrition_food_add', category: 'nutrition', label: 'Přidání jídla' },
+  { name: 'nutrition_drink_add', category: 'nutrition', label: 'Přidání pití' },
+  { name: 'nutrition_coffee_add', category: 'nutrition', label: 'Přidání kávy' },
+  { name: 'nutrition_link_copy', category: 'nutrition', label: 'Kopírování odkazu na stravu' },
+  { name: 'nutrition_qr_generate', category: 'nutrition', label: 'Generování QR kódu stravy' },
+  { name: 'nutrition_export', category: 'nutrition', label: 'Export stravy' },
+  { name: 'nutrition_analysis_view', category: 'nutrition', label: 'Zobrazení analýzy stravy' },
+  // Progress & PR
+  { name: 'progress_entry_create', category: 'progress', label: 'Nový záznam progrese' },
+  { name: 'pr_view', category: 'progress', label: 'Zobrazení PR' },
+  { name: 'pr_history_export', category: 'export', label: 'Export historie PR' },
   // Settings
   { name: 'settings_prices', category: 'settings', label: 'Nastavení cen' },
   { name: 'settings_products', category: 'settings', label: 'Správa produktů' },
   { name: 'settings_exercises', category: 'settings', label: 'Správa cviků' },
   { name: 'settings_tags', category: 'settings', label: 'Správa tagů' },
   { name: 'settings_company', category: 'settings', label: 'Firemní profil' },
-  // Calendar
-  { name: 'calendar_day_view', category: 'navigation', label: 'Denní pohled kalendáře' },
-  { name: 'calendar_week_view', category: 'navigation', label: 'Týdenní pohled kalendáře' },
-  { name: 'calendar_quick_create', category: 'trainings', label: 'Rychlé vytvoření z kalendáře' },
+  { name: 'settings_capacity', category: 'settings', label: 'Nastavení kapacity' },
+  { name: 'settings_feedback', category: 'settings', label: 'Nastavení feedbacku' },
+  { name: 'settings_quick_actions', category: 'settings', label: 'Nastavení rychlých akcí' },
+  { name: 'settings_nutrition', category: 'settings', label: 'Nastavení stravy' },
+  // Export
+  { name: 'annual_stats_export', category: 'export', label: 'Export ročních statistik' },
+  { name: 'dashboard_kpi_detail', category: 'navigation', label: 'Detail KPI na dashboardu' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
   navigation: 'Navigace',
+  calendar: 'Kalendář',
   clients: 'Klienti',
   trainings: 'Tréninky',
+  plans: 'Plány',
   measurements: 'Měření',
   diagnostics: 'Diagnostika',
   finance: 'Finance',
@@ -106,6 +147,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
   search: 'Vyhledávání',
   ai: 'AI',
   feedback: 'Zpětná vazba',
+  nutrition: 'Strava',
+  progress: 'Progrese',
   settings: 'Nastavení',
   export: 'Export',
 };

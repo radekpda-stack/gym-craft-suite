@@ -28,8 +28,10 @@ import { CreatePlanDialog } from '@/components/plans/CreatePlanDialog';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingPlans() {
+  usePageTracking('training_plans');
   const navigate = useNavigate();
   const { plans, isLoading, deletePlan } = useTrainingPlans();
   const { data: clients = [] } = useClients();

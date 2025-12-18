@@ -39,6 +39,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 interface TrainingFeedbackSectionProps {
   trainingId: string;
@@ -81,6 +82,7 @@ export function TrainingFeedbackSection({
   existingFeedback = false,
   feedbackRequest,
 }: TrainingFeedbackSectionProps) {
+  const { trackFeature } = useFeatureTracking();
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
@@ -160,6 +162,7 @@ export function TrainingFeedbackSection({
       await navigator.clipboard.writeText(linkData.url);
       setCopied(true);
       toast.success('Odkaz zkopírován');
+      trackFeature('feedback_link_copy', 'feedback');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Nepodařilo se zkopírovat odkaz');
@@ -175,6 +178,7 @@ export function TrainingFeedbackSection({
     try {
       await navigator.clipboard.writeText(message);
       toast.success('Zpráva zkopírována');
+      trackFeature('feedback_message_create', 'feedback', { metadata: { channel: messageChannel } });
       setShowMessageDialog(false);
 
       await supabase.functions.invoke('mark-feedback-sent', {

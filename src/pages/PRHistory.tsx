@@ -13,6 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { usePRMetrics, PRPeriod, PRType } from '@/hooks/usePRMetrics';
 import { useClients } from '@/hooks/useClients';
 import { useExercises } from '@/hooks/useExercises';
+import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
@@ -20,6 +21,7 @@ type SortField = 'date' | 'exerciseName' | 'value' | 'clientName';
 type SortDirection = 'asc' | 'desc';
 
 const PRHistory = () => {
+  usePageTracking('pr_history');
   const [period, setPeriod] = useState<PRPeriod>('3months');
   const [prType, setPrType] = useState<PRType>('1rm');
   const [exerciseFilter, setExerciseFilter] = useState<string | null>(null);
