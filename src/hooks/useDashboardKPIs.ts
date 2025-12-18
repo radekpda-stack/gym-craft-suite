@@ -11,13 +11,20 @@ export interface UnpaidByAge {
 }
 
 export interface DashboardKPIs {
-  // Income
+  // Income (from trainings only)
   incomeThisMonth: number;
   incomeLastMonth: number;
   avgMonthlyIncome: number;
   trainingIncome: number;
+  trainingIncomeLastMonth: number;
+  trainingIncomeTrend: number;
   productIncome: number;
   incomeTrend: number;
+  
+  // Credit received (dobití kreditu)
+  creditReceived: number;
+  creditReceivedLastMonth: number;
+  creditReceivedTrend: number;
   
   // New KPIs
   incomePerTraining: number;
@@ -166,70 +173,53 @@ export function useDashboardKPIs() {
       // ===== CALCULATE INCOME AND PROFIT =====
       let currentIncome = 0;
       let currentCosts = 0;
-      let currentTrainingIncome = 0;
       let currentProductIncome = 0;
       let comparisonIncome = 0;
       let comparisonCosts = 0;
 
-      // Process transactions based on accounting mode
-      const processTransaction = (t: any, forCash: boolean) => {
-        // For CASH mode, only count if it's an actual payment (not pending)
-        if (forCash && accountingMode === 'cash') {
-          // Cash mode: only count credit transactions that represent actual money received
-          if (t.type === 'payment' && t.amount > 0) {
-            return { income: t.amount, isProduct: !!t.product_id };
-          }
-          return { income: 0, isProduct: false };
-        }
-        
-        // For ACCRUAL mode: count all completed service transactions
-        if (t.type === 'payment' && t.amount > 0) {
-          return { income: t.amount, isProduct: !!t.product_id };
-        }
-        return { income: 0, isProduct: false };
-      };
+      // Calculate credit received (dobití kreditu) - positive payment transactions without product
+      let currentCreditReceived = 0;
+      let comparisonCreditReceived = 0;
 
       currentTransactions?.forEach((t: any) => {
-        const { income, isProduct } = processTransaction(t, true);
-        currentIncome += income;
-        if (isProduct) {
-          currentProductIncome += income;
-          if (t.products?.purchase_price) {
-            currentCosts += t.products.purchase_price;
+        if (t.type === 'payment' && t.amount > 0) {
+          currentIncome += t.amount;
+          if (t.product_id) {
+            currentProductIncome += t.amount;
+            if (t.products?.purchase_price) {
+              currentCosts += t.products.purchase_price;
+            }
+          } else {
+            // Credit top-up (not product sale)
+            currentCreditReceived += t.amount;
           }
-        } else if (income > 0) {
-          currentTrainingIncome += income;
         }
       });
 
       comparisonTransactions?.forEach((t: any) => {
-        const { income, isProduct } = processTransaction(t, true);
-        comparisonIncome += income;
-        if (isProduct && t.products?.purchase_price) {
-          comparisonCosts += t.products.purchase_price;
+        if (t.type === 'payment' && t.amount > 0) {
+          comparisonIncome += t.amount;
+          if (t.product_id) {
+            if (t.products?.purchase_price) {
+              comparisonCosts += t.products.purchase_price;
+            }
+          } else {
+            comparisonCreditReceived += t.amount;
+          }
         }
       });
 
-      // For ACCRUAL mode with trainings - calculate income from training prices
-      if (accountingMode === 'accrual') {
-        // In accrual mode, we count training income when service is delivered (regardless of payment)
-        currentTrainingIncome = currentTrainingData?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
-        
-        // Adjust current income to use accrual-based training income
-        const transactionTrainingIncome = currentTransactions?.filter((t: any) => 
-          t.type === 'payment' && t.amount > 0 && !t.product_id
-        ).reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
-        
-        // Replace transaction-based training income with accrual-based
-        currentIncome = currentIncome - transactionTrainingIncome + currentTrainingIncome;
-      }
+      // Calculate training income from completed trainings (value of delivered services)
+      const currentTrainingIncome = currentTrainingData?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
+      const comparisonTrainingIncome = comparisonTrainingData?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
 
-      // Calculate average monthly income
+      // Calculate average monthly income from credit top-ups
       const { data: allTransactions } = await supabase
         .from('credit_transactions')
-        .select('amount, type, created_at')
+        .select('amount, type, created_at, product_id')
         .eq('type', 'payment')
-        .gt('amount', 0);
+        .gt('amount', 0)
+        .is('product_id', null);
 
       const monthlyIncomes: Record<string, number> = {};
       allTransactions?.forEach((t: any) => {
@@ -240,6 +230,12 @@ export function useDashboardKPIs() {
       const avgMonthlyIncome = Object.values(monthlyIncomes).reduce((a, b) => a + b, 0) / monthCount;
 
       // Calculate trends
+      const trainingIncomeTrend = comparisonTrainingIncome > 0 
+        ? ((currentTrainingIncome - comparisonTrainingIncome) / comparisonTrainingIncome) * 100 
+        : 0;
+      const creditReceivedTrend = comparisonCreditReceived > 0 
+        ? ((currentCreditReceived - comparisonCreditReceived) / comparisonCreditReceived) * 100 
+        : 0;
       const incomeTrend = comparisonIncome > 0 ? ((currentIncome - comparisonIncome) / comparisonIncome) * 100 : 0;
       const currentProfit = currentIncome - currentCosts;
       const comparisonProfit = comparisonIncome - comparisonCosts;
@@ -401,13 +397,20 @@ export function useDashboardKPIs() {
       });
 
       return {
-        // Income
+        // Income (from trainings)
         incomeThisMonth: currentIncome,
         incomeLastMonth: comparisonIncome,
         avgMonthlyIncome,
         trainingIncome: currentTrainingIncome,
+        trainingIncomeLastMonth: comparisonTrainingIncome,
+        trainingIncomeTrend,
         productIncome: currentProductIncome,
         incomeTrend,
+        
+        // Credit received (dobití kreditu)
+        creditReceived: currentCreditReceived,
+        creditReceivedLastMonth: comparisonCreditReceived,
+        creditReceivedTrend,
         
         // New KPIs
         incomePerTraining,
