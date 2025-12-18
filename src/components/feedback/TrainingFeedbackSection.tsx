@@ -3,12 +3,10 @@ import { differenceInHours, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   MessageSquare,
-  Link2,
   Copy,
   Check,
   Clock,
   Send,
-  AlertCircle,
   Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,29 +74,22 @@ export function TrainingFeedbackSection({
   existingFeedback = false,
   feedbackRequest,
 }: TrainingFeedbackSectionProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [linkData, setLinkData] = useState<{
-    url: string;
-    token: string;
-    expiresAt: string;
-  } | null>(
-    feedbackRequest?.status === 'pending'
-      ? {
-          url: `${window.location.origin}/feedback/${feedbackRequest.token}`,
-          token: feedbackRequest.token,
-          expiresAt: feedbackRequest.expires_at,
-        }
-      : null
-  );
   const [copied, setCopied] = useState(false);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [messageChannel, setMessageChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
 
+  // Build link data from existing feedback request
+  const linkData = feedbackRequest?.token
+    ? {
+        url: `${window.location.origin}/feedback/${feedbackRequest.token}`,
+        token: feedbackRequest.token,
+        expiresAt: feedbackRequest.expires_at,
+      }
+    : null;
+
   // Time calculations
   const trainingDateObj = new Date(trainingDate);
   const hoursSinceTraining = differenceInHours(new Date(), trainingDateObj);
-  const isIdealTime = hoursSinceTraining >= 20 && hoursSinceTraining <= 30;
-  const isTooEarly = hoursSinceTraining < 20;
 
   // Determine feedback status
   const getFeedbackStatus = () => {
@@ -109,35 +100,6 @@ export function TrainingFeedbackSection({
   };
 
   const status = getFeedbackStatus();
-
-  // Generate feedback link
-  const handleGenerateLink = async () => {
-    setIsGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-feedback-link', {
-        body: {
-          client_id: clientId,
-          training_id: trainingId,
-          base_url: window.location.origin,
-        },
-      });
-
-      if (error) throw error;
-
-      setLinkData({
-        url: data.url,
-        token: data.token,
-        expiresAt: data.expiresAt,
-      });
-
-      toast.success('Odkaz vytvořen');
-    } catch (error: any) {
-      console.error('Error generating link:', error);
-      toast.error(error.message || 'Chyba při vytváření odkazu');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   // Copy link to clipboard
   const handleCopyLink = async () => {
@@ -213,7 +175,7 @@ export function TrainingFeedbackSection({
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
-              Zpětná vazba D+1
+              Zpětná vazba
             </CardTitle>
             <Badge
               variant={status === 'received' ? 'default' : status === 'waiting' ? 'secondary' : 'outline'}
@@ -227,28 +189,8 @@ export function TrainingFeedbackSection({
               {status === 'received' ? 'Doručena' : status === 'waiting' ? 'Čeká' : 'Neposlána'}
             </Badge>
           </div>
-          <CardDescription>
-            Pošlete klientovi odkaz pro vyplnění zpětné vazby
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Timing indicator */}
-          {status === 'none' && (
-            <div
-              className={cn(
-                'p-3 rounded-lg text-sm flex items-center gap-2',
-                isTooEarly && 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-600',
-                isIdealTime && 'bg-green-500/10 border border-green-500/20 text-green-600',
-                !isTooEarly && !isIdealTime && 'bg-muted'
-              )}
-            >
-              <Clock className="w-4 h-4" />
-              {isTooEarly && 'Doporučeno poslat zítra'}
-              {isIdealTime && '✨ Ideální čas odeslat!'}
-              {!isTooEarly && !isIdealTime && `${hoursSinceTraining} hodin od tréninku`}
-            </div>
-          )}
-
+        <CardContent className="space-y-3">
           {/* Status received */}
           {status === 'received' && (
             <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
@@ -259,73 +201,63 @@ export function TrainingFeedbackSection({
             </div>
           )}
 
-          {/* Generate or copy link */}
-          {status !== 'received' && (
+          {/* Simplified UI - just copy buttons when link exists */}
+          {status !== 'received' && linkData && (
             <div className="space-y-3">
-              {!linkData ? (
-                <Button
-                  onClick={handleGenerateLink}
-                  disabled={isGenerating}
-                  className="w-full"
+              {/* Quick action buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  variant={copied ? "default" : "outline"} 
+                  onClick={handleCopyLink}
+                  className={cn(copied && "bg-green-600 hover:bg-green-700")}
                 >
-                  {isGenerating ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Generuji...
-                    </>
+                  {copied ? (
+                    <Check className="w-4 h-4 mr-2" />
                   ) : (
-                    <>
-                      <Link2 className="w-4 h-4 mr-2" />
-                      Vygenerovat odkaz
-                    </>
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {copied ? 'Zkopírováno!' : 'Kopírovat odkaz'}
+                </Button>
+                <Button onClick={() => setShowMessageDialog(true)}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Vytvořit zprávu
+                </Button>
+              </div>
+
+              {/* Expiration info */}
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Platnost do: {format(new Date(linkData.expiresAt), 'd.M.yyyy HH:mm', { locale: cs })}
+              </p>
+
+              {/* Reminder button */}
+              {feedbackRequest?.sent_at && status === 'waiting' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={handleSendReminder}
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Poslat připomínku
+                  {feedbackRequest.reminder_count > 0 && (
+                    <span className="ml-1">({feedbackRequest.reminder_count}×)</span>
                   )}
                 </Button>
-              ) : (
-                <>
-                  {/* Link display */}
-                  <div className="p-3 rounded-lg bg-secondary border text-sm font-mono break-all">
-                    {linkData.url}
-                  </div>
-
-                  {/* Expiration */}
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Platnost do: {format(new Date(linkData.expiresAt), 'd.M.yyyy HH:mm', { locale: cs })}
-                  </p>
-
-                  {/* Action buttons */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" onClick={handleCopyLink}>
-                      {copied ? (
-                        <Check className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Copy className="w-4 h-4 mr-2" />
-                      )}
-                      {copied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
-                    </Button>
-                    <Button onClick={() => setShowMessageDialog(true)}>
-                      <Send className="w-4 h-4 mr-2" />
-                      Vytvořit zprávu
-                    </Button>
-                  </div>
-
-                  {/* Reminder button */}
-                  {feedbackRequest?.sent_at && status === 'waiting' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-muted-foreground"
-                      onClick={handleSendReminder}
-                    >
-                      <Bell className="w-4 h-4 mr-2" />
-                      Poslat připomínku
-                      {feedbackRequest.reminder_count > 0 && (
-                        <span className="ml-1">({feedbackRequest.reminder_count}×)</span>
-                      )}
-                    </Button>
-                  )}
-                </>
               )}
+            </div>
+          )}
+
+          {/* Fallback - no link generated yet (edge case for old trainings) */}
+          {status !== 'received' && !linkData && (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              <Clock className="w-6 h-6 mx-auto mb-2 opacity-50" />
+              <p>Odkaz nebyl vygenerován</p>
+              <p className="text-xs mt-1">
+                {hoursSinceTraining < 24 
+                  ? 'Odkaz bude dostupný brzy' 
+                  : 'Kontaktujte podporu pro pomoc'}
+              </p>
             </div>
           )}
         </CardContent>
@@ -375,7 +307,7 @@ export function TrainingFeedbackSection({
             </Button>
             <Button onClick={handleCopyMessage}>
               <Copy className="w-4 h-4 mr-2" />
-              Zkopírovat a označit odesláno
+              Zkopírovat zprávu
             </Button>
           </DialogFooter>
         </DialogContent>
