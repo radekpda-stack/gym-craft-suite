@@ -212,6 +212,53 @@ export type Database = {
           },
         ]
       }
+      client_recurring_schedules: {
+        Row: {
+          client_id: string
+          created_at: string
+          day_of_week: number
+          duration: number
+          id: string
+          is_active: boolean
+          notes: string | null
+          time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          day_of_week: number
+          duration?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          day_of_week?: number
+          duration?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_recurring_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tags: {
         Row: {
           client_id: string
