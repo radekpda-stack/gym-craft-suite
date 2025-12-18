@@ -139,12 +139,12 @@ export function PhotoUpload({ clientId, diagnosticId, diagnostics = [], onSucces
           {diagnostics.length > 0 && (
             <div className="space-y-2">
               <Label>Propojit s diagnostikou (volitelné)</Label>
-              <Select value={selectedDiagnosticId} onValueChange={setSelectedDiagnosticId}>
+              <Select value={selectedDiagnosticId || "__none__"} onValueChange={(val) => setSelectedDiagnosticId(val === "__none__" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vyberte diagnostiku" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Bez propojení</SelectItem>
+                  <SelectItem value="__none__">Bez propojení</SelectItem>
                   {diagnostics.map(diag => (
                     <SelectItem key={diag.id} value={diag.id}>
                       {format(new Date(diag.date), "d. M. yyyy")} - {diag.area_name}
