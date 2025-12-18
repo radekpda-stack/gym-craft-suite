@@ -46,11 +46,19 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, analyzeType } = await req.json();
+    const { sessionId, analyzeType, foodEntry } = await req.json();
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+
+    // Single food analysis - quick calorie estimate
+    if (analyzeType === 'single-food' && foodEntry) {
+      const estimate = await analyzeSingleFoodWithAI(foodEntry, lovableApiKey);
+      return new Response(JSON.stringify(estimate), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get session
@@ -226,6 +234,74 @@ async function analyzeWeekWithAI(days: DayData[], clientName: string, apiKey: st
   
   return getDefaultWeeklyAnalysis();
 }
+
+async function analyzeSingleFoodWithAI(foodEntry: { description: string; portion_size?: string; portion_estimate?: string; grams?: number; meal_type?: string }, apiKey: string) {
+  const portionLabels: Record<string, string> = {
+    small: 'malá porce (~150g)',
+    medium: 'střední porce (~250g)',
+    large: 'velká porce (~400g)',
+    palm: 'velikost dlaně',
+    fist: 'velikost pěsti',
+    handful: 'hrst',
+    thumb: 'velikost palce',
+  };
+
+  const portion = foodEntry.portion_size ? portionLabels[foodEntry.portion_size] : 
+                  foodEntry.portion_estimate ? portionLabels[foodEntry.portion_estimate] :
+                  foodEntry.grams ? `${foodEntry.grams}g` : 'střední porce';
+
+  const prompt = `Odhadni orientační kalorický rozsah pro toto jídlo:
+Jídlo: ${foodEntry.description}
+Porce: ${portion}
+
+Vrať pouze orientační rozsah kalorií. Nebuď příliš přesný - jde o hrubý odhad.`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: 'Jsi výživový asistent. Poskytni orientační odhad kalorií pro dané jídlo. Buď stručný.' },
+          { role: 'user', content: prompt }
+        ],
+        tools: [singleFoodTool],
+        tool_choice: { type: 'function', function: { name: 'food_calorie_estimate' } },
+      }),
+    });
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    
+    if (toolCall?.function?.arguments) {
+      return JSON.parse(toolCall.function.arguments);
+    }
+  } catch (error) {
+    console.error('Single food analysis error:', error);
+  }
+  
+  return { calorie_estimate_low: null, calorie_estimate_high: null };
+}
+
+const singleFoodTool = {
+  type: 'function',
+  function: {
+    name: 'food_calorie_estimate',
+    description: 'Orientační odhad kalorií pro jídlo',
+    parameters: {
+      type: 'object',
+      properties: {
+        calorie_estimate_low: { type: 'integer', description: 'Dolní odhad kalorií' },
+        calorie_estimate_high: { type: 'integer', description: 'Horní odhad kalorií' },
+      },
+      required: ['calorie_estimate_low', 'calorie_estimate_high'],
+    },
+  },
+};
 
 const DAILY_SYSTEM_PROMPT = `Jsi výživový asistent pro osobního trenéra. Analyzuješ denní jídelníček klienta a poskytneš orientační hodnocení.
 

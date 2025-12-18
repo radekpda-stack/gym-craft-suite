@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, parseISO, addDays, isSameDay } from 'date-fns';
 import { cs, enUS } from 'date-fns/locale';
-import { Plus, Utensils, Droplets, Coffee, Check, ChevronLeft, ChevronRight, Globe, Lightbulb, Search, X } from 'lucide-react';
+import { Plus, Utensils, Droplets, Coffee, Check, ChevronLeft, ChevronRight, Globe, Lightbulb, Search, X, Flame, RefreshCw, TrendingUp, ThumbsUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -174,6 +174,17 @@ const translations = {
     // Search
     searchPlaceholder: 'Hledejte nebo napište...',
     addNewItem: '+ Přidat novou položku',
+    // Calories and analysis
+    estimatedCalories: 'Odhad kalorií',
+    totalCalories: 'Celkem',
+    dailySummary: 'Dnešní souhrn',
+    updateAnalysis: 'Aktualizovat analýzu',
+    analyzing: 'Analyzuji...',
+    whatWasGood: 'Co bylo dobře',
+    whatToImprove: 'Co zlepšit',
+    suggestions: 'Tipy',
+    noAnalysisYet: 'Přidejte jídla pro zobrazení analýzy',
+    kcal: 'kcal',
     noResults: 'Nic nenalezeno',
     saving: 'Ukládám...',
   },
@@ -286,6 +297,17 @@ const translations = {
     addNewItem: '+ Add new item',
     noResults: 'Nothing found',
     saving: 'Saving...',
+    // Calories and analysis
+    estimatedCalories: 'Estimated calories',
+    totalCalories: 'Total',
+    dailySummary: 'Today\'s summary',
+    updateAnalysis: 'Update analysis',
+    analyzing: 'Analyzing...',
+    whatWasGood: 'What was good',
+    whatToImprove: 'What to improve',
+    suggestions: 'Tips',
+    noAnalysisYet: 'Add foods to see analysis',
+    kcal: 'kcal',
   }
 };
 
@@ -302,6 +324,8 @@ export default function PublicNutritionLogPage() {
   const [drinkEntries, setDrinkEntries] = useState<any[]>([]);
   const [coffeeEntries, setCoffeeEntries] = useState<any[]>([]);
   const [containerSizes, setContainerSizes] = useState<ContainerSizes>(DEFAULT_CONTAINER_SIZES);
+  const [dailyAnalysis, setDailyAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const t = translations[language];
   const locale = language === 'cs' ? cs : enUS;
 
@@ -365,6 +389,18 @@ export default function PublicNutritionLogPage() {
     };
   }, [foodEntries, drinkEntries, coffeeEntries, selectedDate]);
 
+  // Calculate total calories from food entries with estimates
+  const totalCalories = useMemo(() => {
+    const foodWithCalories = dayEntries.food.filter(
+      (e: any) => e.calorie_estimate_low && e.calorie_estimate_high
+    );
+    if (foodWithCalories.length === 0) return null;
+    
+    const low = foodWithCalories.reduce((sum: number, e: any) => sum + e.calorie_estimate_low, 0);
+    const high = foodWithCalories.reduce((sum: number, e: any) => sum + e.calorie_estimate_high, 0);
+    return { low, high, count: foodWithCalories.length, total: dayEntries.food.length };
+  }, [dayEntries.food]);
+
   const handleAddEntry = async (type: 'food' | 'drink' | 'coffee', data: any) => {
     if (!session || !selectedDate) return;
 
@@ -390,6 +426,31 @@ export default function PublicNutritionLogPage() {
     } catch (err: any) {
       console.error('Error adding entry:', err);
       toast.error(language === 'cs' ? 'Nepodařilo se uložit: ' + (err?.message || 'Neznámá chyba') : 'Failed to save: ' + (err?.message || 'Unknown error'));
+    }
+  };
+
+  const runDailyAnalysis = async () => {
+    if (!session) return;
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
+        body: {
+          sessionId: session.id,
+          analyzeType: 'daily'
+        }
+      });
+      if (error) throw error;
+      
+      // Find analysis for selected date
+      const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+      const todayAnalysis = data.analyses?.find((a: any) => a.analysis_date === dateStr);
+      setDailyAnalysis(todayAnalysis || null);
+      toast.success(language === 'cs' ? 'Analýza dokončena' : 'Analysis complete');
+    } catch (err) {
+      console.error('Analysis error:', err);
+      toast.error(language === 'cs' ? 'Nepodařilo se provést analýzu' : 'Analysis failed');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -538,6 +599,82 @@ export default function PublicNutritionLogPage() {
           </CoffeeDialog>
         </div>
 
+        {/* Daily Summary Card */}
+        {dayEntries.food.length > 0 && (
+          <Card className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border-orange-200 dark:border-orange-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Flame className="h-5 w-5 text-orange-500" />
+                {t.dailySummary}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Total Calories */}
+              {totalCalories && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">{t.totalCalories}:</span>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">
+                    ~{totalCalories.low}-{totalCalories.high} {t.kcal}
+                    {totalCalories.count < totalCalories.total && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({totalCalories.count}/{totalCalories.total})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Analysis Feedback */}
+              {dailyAnalysis && (
+                <div className="space-y-2 pt-2 border-t border-orange-200 dark:border-orange-800">
+                  {dailyAnalysis.feedback_positive && (
+                    <div className="flex items-start gap-2">
+                      <ThumbsUp className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-green-700 dark:text-green-400">{dailyAnalysis.feedback_positive}</p>
+                    </div>
+                  )}
+                  {dailyAnalysis.feedback_improve && (
+                    <div className="flex items-start gap-2">
+                      <TrendingUp className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-700 dark:text-amber-400">{dailyAnalysis.feedback_improve}</p>
+                    </div>
+                  )}
+                  {dailyAnalysis.feedback_suggestions?.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-700 dark:text-blue-400">
+                        {dailyAnalysis.feedback_suggestions.map((s: string, i: number) => (
+                          <p key={i}>• {s}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Update Analysis Button */}
+              {dayEntries.food.length >= 2 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={runDailyAnalysis}
+                  disabled={isAnalyzing}
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", isAnalyzing && "animate-spin")} />
+                  {isAnalyzing ? t.analyzing : t.updateAnalysis}
+                </Button>
+              )}
+
+              {!totalCalories && !dailyAnalysis && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  {t.noAnalysisYet}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Entries List */}
         <div className="space-y-3">
           {dayEntries.food.length === 0 && dayEntries.drinks.length === 0 && dayEntries.coffee.length === 0 ? (
@@ -670,7 +807,15 @@ function EntryCard({ type, entry, t, containerSizes }: { type: string; entry: an
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{getTitle()}</p>
-            <p className="text-sm text-muted-foreground">{getSubtitle()}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">{getSubtitle()}</p>
+              {type === 'food' && entry.calorie_estimate_low && entry.calorie_estimate_high && (
+                <span className="text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  ~{entry.calorie_estimate_low}-{entry.calorie_estimate_high} kcal
+                </span>
+              )}
+            </div>
           </div>
           <span className="text-sm text-muted-foreground">{entry.entry_time?.slice(0, 5)}</span>
         </div>
