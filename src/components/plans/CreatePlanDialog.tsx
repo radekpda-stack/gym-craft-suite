@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useTrainingPlans, GOAL_OPTIONS, PHASE_OPTIONS } from '@/hooks/useTrainingPlans';
 import { useClients } from '@/hooks/useClients';
 import { format } from 'date-fns';
@@ -82,21 +83,13 @@ export function CreatePlanDialog({ open, onOpenChange, preselectedClientId }: Cr
 
           <div>
             <Label>Klient *</Label>
-            <Select
+            <ClientSearchSelect
+              clients={activeClients}
               value={form.client_id}
               onValueChange={(v) => setForm((p) => ({ ...p, client_id: v }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte klienta" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeClients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Vyhledat klienta..."
+              filterArchived={false}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
