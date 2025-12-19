@@ -32,6 +32,12 @@ export interface CapacityInfo {
   percentUsed: number;
 }
 
+export interface ParticipantBreakdown {
+  count: number;
+  avgPrice: number;
+  totalPrice: number;
+}
+
 export interface FinanceMetrics {
   creditAtRisk: { count: number; amount: number };
   unpaidTotal: { count: number; amount: number };
@@ -41,6 +47,11 @@ export interface FinanceMetrics {
   lastMonthAvgPerTraining: number;
   trainingsWithPriceCount: number;
   incomeChange: number; // percent vs last period
+  trainingsByParticipants: {
+    solo: ParticipantBreakdown;   // 1 osoba
+    duo: ParticipantBreakdown;    // 2 osoby
+    group: ParticipantBreakdown;  // 3+ osob
+  };
 }
 
 export interface TrendData {
@@ -455,6 +466,20 @@ export function useDashboardViewModel() {
         ? Math.round(((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100) 
         : 0;
       
+      // Calculate trainings breakdown by participant count
+      const soloTrainings = trainingsWithPrice.filter((t: any) => !t.participant_count || t.participant_count === 1);
+      const duoTrainings = trainingsWithPrice.filter((t: any) => t.participant_count === 2);
+      const groupTrainings = trainingsWithPrice.filter((t: any) => t.participant_count >= 3);
+      
+      const calcBreakdown = (trainings: any[]): { count: number; avgPrice: number; totalPrice: number } => {
+        const total = trainings.reduce((sum: number, t: any) => sum + (t.final_price || 0), 0);
+        return {
+          count: trainings.length,
+          avgPrice: trainings.length > 0 ? Math.round(total / trainings.length) : 0,
+          totalPrice: total,
+        };
+      };
+      
       const finance: FinanceMetrics = {
         creditAtRisk: { count: creditAtRiskClients.length, amount: creditAtRiskAmount },
         unpaidTotal: { count: unpaidItems.length, amount: unpaidTotalAmount },
@@ -464,6 +489,11 @@ export function useDashboardViewModel() {
         lastMonthAvgPerTraining,
         trainingsWithPriceCount: trainingsWithPrice.length,
         incomeChange,
+        trainingsByParticipants: {
+          solo: calcBreakdown(soloTrainings),
+          duo: calcBreakdown(duoTrainings),
+          group: calcBreakdown(groupTrainings),
+        },
       };
       
       // ===== SCHEDULE =====
