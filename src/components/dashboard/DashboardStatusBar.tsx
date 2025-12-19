@@ -96,21 +96,23 @@ function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClic
       )}
     >
       <Icon className={cn(
-        'w-4 h-4',
+        'w-4 h-4 shrink-0',
         error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
       )} />
-      <div className="flex flex-col items-start">
-        <span className="font-medium text-foreground">{value}</span>
+      <div className="flex flex-col items-start min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium text-foreground">{value}</span>
+          {subValue && (
+            <span className={cn(
+              'text-xs',
+              error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
+            )}>
+              {subValue}
+            </span>
+          )}
+        </div>
         <span className="text-[10px] text-muted-foreground leading-none">{label}</span>
       </div>
-      {subValue && (
-        <span className={cn(
-          'text-xs',
-          error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
-        )}>
-          {subValue}
-        </span>
-      )}
     </button>
   );
 }
@@ -163,9 +165,9 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
           {/* Capacity */}
           <MetricChip
             icon={Users}
-            label="Dnes"
+            label="Dnes tréninků"
             value={`${capacity.completed}/${capacity.total}`}
-            subValue={uniqueClientsToday > 0 ? `${uniqueClientsToday} klientů` : undefined}
+            subValue={uniqueClientsToday > 1 ? `(${uniqueClientsToday} klientů)` : undefined}
           />
           
           {/* Estimated Income Today */}
