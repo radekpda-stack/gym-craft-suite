@@ -1,11 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
-import { Check, CreditCard, Pencil, MoreHorizontal, Users, X, TrendingUp, FileText } from 'lucide-react';
+import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
-import { TrainingStatusDot } from '@/components/ui/training-status-badge';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import {
@@ -54,17 +52,12 @@ export function AgendaItem({
   const handleDragEnd = (_: any, info: PanInfo) => {
     setIsDragging(false);
     
+    // Swipe doprava = Dokončit (pokud scheduled)
     if (info.offset.x > SWIPE_THRESHOLD && isScheduled && onComplete) {
-      // Swipe right = complete
       onComplete(session);
-    } else if (info.offset.x < -SWIPE_THRESHOLD) {
-      // Swipe left = payment (if needs payment) or cancel (if scheduled)
-      if (needsPayment && onPayment) {
-        onPayment(session);
-      } else if (isScheduled && onCancel) {
-        onCancel(session);
-      }
     }
+    // Swipe doleva = Menu (neprovedeme přímou akci)
+    // Platba a zrušení jsou pouze přes menu
   };
 
   const getStatusLabel = () => {
@@ -75,10 +68,10 @@ export function AgendaItem({
   };
 
   const getStatusColor = () => {
-    if (isCanceled) return 'text-destructive';
-    if (isCompleted && isPaid) return 'text-success';
-    if (isCompleted && !isPaid) return 'text-warning';
-    return 'text-muted-foreground';
+    if (isCanceled) return 'text-destructive bg-destructive/10';
+    if (isCompleted && isPaid) return 'text-success bg-success/10';
+    if (isCompleted && !isPaid) return 'text-warning bg-warning/10';
+    return 'text-muted-foreground bg-muted/30';
   };
 
   return (
@@ -91,14 +84,10 @@ export function AgendaItem({
         <Check className="w-6 h-6 text-white" />
       </motion.div>
       <motion.div 
-        className="absolute inset-y-0 right-0 w-24 bg-warning flex items-center justify-end pr-4 rounded-r-xl"
+        className="absolute inset-y-0 right-0 w-24 bg-muted flex items-center justify-end pr-4 rounded-r-xl"
         style={{ opacity: leftBgOpacity }}
       >
-        {needsPayment ? (
-          <CreditCard className="w-6 h-6 text-white" />
-        ) : (
-          <X className="w-6 h-6 text-white" />
-        )}
+        <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
       </motion.div>
 
       <ContextMenu>
@@ -142,72 +131,52 @@ export function AgendaItem({
                       {client?.name || 'Neznámý klient'}
                     </p>
                     {(session.participant_count || 1) > 1 && (
-                      <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-0.5 text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
                         <Users className="w-3 h-3" />
                         <span>{session.participant_count}×</span>
                       </div>
                     )}
                   </div>
-                  <p className={cn('text-xs mt-0.5', getStatusColor())}>
-                    {getStatusLabel()}
-                  </p>
+                  {/* Status badge - jediný indikátor stavu */}
+                  <div className="mt-1.5">
+                    <span className={cn(
+                      'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                      getStatusColor()
+                    )}>
+                      {getStatusLabel()}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Status indicator */}
-                <div className="flex-shrink-0">
-                  <TrainingStatusDot 
-                    status={session.status as 'scheduled' | 'completed' | 'canceled'} 
-                    paymentStatus={session.payment_status}
-                    className="w-5 h-5"
-                  />
+                {/* Primary action */}
+                <div className="flex-shrink-0 flex items-center">
+                  {isScheduled && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onComplete?.(session);
+                      }}
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
+                      title="Dokončit"
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                  )}
+                  {needsPayment && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onPayment?.(session);
+                      }}
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
+                      title="Uhradit"
+                    >
+                      <CreditCard className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
-              </div>
-
-              {/* Actions row - visible on larger screens */}
-              <div className="hidden sm:flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
-                {isScheduled && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onComplete?.(session);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-medium hover:bg-success/20 transition-colors"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    Dokončit
-                  </button>
-                )}
-                {needsPayment && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onPayment?.(session);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning/10 text-warning text-xs font-medium hover:bg-warning/20 transition-colors"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    Platba
-                  </button>
-                )}
-                <Link
-                  to={`/trainings/${session.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground text-xs font-medium hover:bg-secondary/80 transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </Link>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-secondary text-muted-foreground text-xs font-medium hover:bg-secondary/80 transition-colors ml-auto"
-                >
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                </button>
               </div>
             </Link>
           </motion.div>

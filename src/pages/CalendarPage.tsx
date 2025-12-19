@@ -6,15 +6,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
 import { useClients } from '@/hooks/useClients';
+import { useSharedTrainings } from '@/hooks/useSharedTrainings';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { AgendaItem } from '@/components/calendar/AgendaItem';
+import { SharedTrainingBlock } from '@/components/calendar/SharedTrainingBlock';
 import { WeekMiniGrid } from '@/components/calendar/WeekMiniGrid';
 import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
 import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { FreeSlotIndicator } from '@/components/calendar/FreeSlotIndicator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -31,6 +34,48 @@ import {
 
 type ViewMode = 'agenda' | 'week';
 
+// Pomocná funkce pro generování volných slotů mezi tréninky
+function generateFreeSlots(
+  ownEvents: TrainingSession[],
+  sharedEvents: { date: string; duration: number }[],
+  date: Date
+): { start: Date; end: Date }[] {
+  const dayStart = new Date(date);
+  dayStart.setHours(8, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(20, 0, 0, 0);
+
+  const allEvents = [
+    ...ownEvents.map(e => ({ start: new Date(e.date), end: new Date(new Date(e.date).getTime() + e.duration * 60000) })),
+    ...sharedEvents.map(e => ({ start: new Date(e.date), end: new Date(new Date(e.date).getTime() + e.duration * 60000) }))
+  ].sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  const freeSlots: { start: Date; end: Date }[] = [];
+  let currentTime = dayStart.getTime();
+
+  for (const event of allEvents) {
+    const eventStart = event.start.getTime();
+    // Pokud je mezera větší než 60 minut, přidej volný slot
+    if (eventStart - currentTime >= 60 * 60000) {
+      freeSlots.push({
+        start: new Date(currentTime),
+        end: new Date(eventStart)
+      });
+    }
+    currentTime = Math.max(currentTime, event.end.getTime());
+  }
+
+  // Mezera po posledním eventu
+  if (dayEnd.getTime() - currentTime >= 60 * 60000) {
+    freeSlots.push({
+      start: new Date(currentTime),
+      end: dayEnd
+    });
+  }
+
+  return freeSlots;
+}
+
 export default function CalendarPage() {
   usePageTracking('calendar');
   const navigate = useNavigate();
@@ -45,6 +90,7 @@ export default function CalendarPage() {
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
+  const { data: sharedTrainings = [] } = useSharedTrainings();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
@@ -58,6 +104,25 @@ export default function CalendarPage() {
       .filter((session) => isSameDay(new Date(session.date), currentDate))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [sessions, currentDate]);
+
+  // Sdílené tréninky pro aktuální den
+  const daySharedEvents = useMemo(() => {
+    return sharedTrainings
+      .filter((session) => isSameDay(new Date(session.date), currentDate))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [sharedTrainings, currentDate]);
+
+  // Všechny eventy sloučené a seřazené
+  const allDayEvents = useMemo(() => {
+    const own = dayEvents.map(e => ({ ...e, isShared: false as const }));
+    const shared = daySharedEvents.map(e => ({ ...e, isShared: true as const }));
+    return [...own, ...shared].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [dayEvents, daySharedEvents]);
+
+  // Volné sloty
+  const freeSlots = useMemo(() => {
+    return generateFreeSlots(dayEvents.filter(e => e.status !== 'canceled'), daySharedEvents, currentDate);
+  }, [dayEvents, daySharedEvents, currentDate]);
 
   const getClient = (clientId: string) => {
     return clients.find((c) => c.id === clientId);
@@ -86,25 +151,38 @@ export default function CalendarPage() {
     setSelectedDateTime(null);
   };
 
-  const handleOpenCreate = () => {
-    // Pre-fill with current date and next available hour
-    const now = new Date();
-    const dateToUse = isSameDay(currentDate, now) ? now : currentDate;
-    const nextHour = new Date(dateToUse);
-    nextHour.setMinutes(0, 0, 0);
-    if (isSameDay(currentDate, now)) {
-      nextHour.setHours(nextHour.getHours() + 1);
+  const handleOpenCreate = (dateTime?: string) => {
+    if (dateTime) {
+      setSelectedDateTime(dateTime);
     } else {
-      nextHour.setHours(9, 0, 0, 0);
+      // Pre-fill with current date and next available hour
+      const now = new Date();
+      const dateToUse = isSameDay(currentDate, now) ? now : currentDate;
+      const nextHour = new Date(dateToUse);
+      nextHour.setMinutes(0, 0, 0);
+      if (isSameDay(currentDate, now)) {
+        nextHour.setHours(nextHour.getHours() + 1);
+      } else {
+        nextHour.setHours(9, 0, 0, 0);
+      }
+      
+      const year = nextHour.getFullYear();
+      const month = String(nextHour.getMonth() + 1).padStart(2, '0');
+      const day = String(nextHour.getDate()).padStart(2, '0');
+      const hours = String(nextHour.getHours()).padStart(2, '0');
+      
+      setSelectedDateTime(`${year}-${month}-${day}T${hours}:00`);
     }
-    
-    const year = nextHour.getFullYear();
-    const month = String(nextHour.getMonth() + 1).padStart(2, '0');
-    const day = String(nextHour.getDate()).padStart(2, '0');
-    const hours = String(nextHour.getHours()).padStart(2, '0');
-    
-    setSelectedDateTime(`${year}-${month}-${day}T${hours}:00`);
     setIsCreateOpen(true);
+  };
+
+  const handleFreeSlotClick = (slot: { start: Date; end: Date }) => {
+    const year = slot.start.getFullYear();
+    const month = String(slot.start.getMonth() + 1).padStart(2, '0');
+    const day = String(slot.start.getDate()).padStart(2, '0');
+    const hours = String(slot.start.getHours()).padStart(2, '0');
+    const minutes = String(slot.start.getMinutes()).padStart(2, '0');
+    handleOpenCreate(`${year}-${month}-${day}T${hours}:${minutes}`);
   };
 
   // Quick actions
@@ -158,6 +236,7 @@ export default function CalendarPage() {
   };
 
   const isLoading = sessionsLoading || clientsLoading;
+  const hasAnyEvents = allDayEvents.length > 0;
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
@@ -226,6 +305,7 @@ export default function CalendarPage() {
           <WeekMiniGrid 
             currentDate={currentDate} 
             sessions={sessions} 
+            sharedSessions={sharedTrainings}
             onDaySelect={(date) => {
               setCurrentDate(date);
               setViewMode('agenda');
@@ -237,12 +317,25 @@ export default function CalendarPage() {
       {/* Date header for agenda view */}
       {viewMode === 'agenda' && (
         <div className="px-4 py-3 border-b border-border/30">
-          <p className="text-lg font-semibold text-foreground capitalize">
-            {format(currentDate, 'EEEE', { locale: cs })}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold text-foreground capitalize">
+                {format(currentDate, 'EEEE', { locale: cs })}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
+              </p>
+            </div>
+            {/* Denní souhrn */}
+            {hasAnyEvents && (
+              <div className="text-right text-sm">
+                <p className="text-foreground font-medium">{dayEvents.filter(e => e.status !== 'canceled').length} tréninků</p>
+                {daySharedEvents.length > 0 && (
+                  <p className="text-muted-foreground">+{daySharedEvents.length} obsazeno</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -254,32 +347,56 @@ export default function CalendarPage() {
               <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
-        ) : dayEvents.length === 0 ? (
-          <EmptyAgendaState date={currentDate} onAddTraining={handleOpenCreate} />
+        ) : !hasAnyEvents ? (
+          <EmptyAgendaState date={currentDate} onAddTraining={() => handleOpenCreate()} />
         ) : (
           <div className="space-y-2">
-            {dayEvents.map((session) => (
-              <AgendaItem
-                key={session.id}
-                session={session}
-                client={getClient(session.client_id)}
-                onComplete={handleComplete}
-                onPayment={handlePayment}
-                onCancel={handleCancel}
-                onProgress={handleProgress}
-                onNote={handleNote}
+            {/* Ranní volný slot */}
+            {freeSlots[0] && freeSlots[0].start.getHours() === 8 && (
+              <FreeSlotIndicator
+                startTime={freeSlots[0].start}
+                endTime={freeSlots[0].end}
+                onClick={() => handleFreeSlotClick(freeSlots[0])}
+              />
+            )}
+
+            {allDayEvents.map((event) => (
+              event.isShared ? (
+                <SharedTrainingBlock key={`shared-${event.id}`} training={event} />
+              ) : (
+                <AgendaItem
+                  key={event.id}
+                  session={event}
+                  client={getClient(event.client_id)}
+                  onComplete={handleComplete}
+                  onPayment={handlePayment}
+                  onCancel={handleCancel}
+                  onProgress={handleProgress}
+                  onNote={handleNote}
+                />
+              )
+            ))}
+
+            {/* Volné sloty mezi tréninky a po nich */}
+            {freeSlots.slice(freeSlots[0]?.start.getHours() === 8 ? 1 : 0).map((slot, i) => (
+              <FreeSlotIndicator
+                key={`slot-${i}`}
+                startTime={slot.start}
+                endTime={slot.end}
+                onClick={() => handleFreeSlotClick(slot)}
+                compact
               />
             ))}
           </div>
         )}
 
         {/* Legend (mobile-friendly) */}
-        {dayEvents.length > 0 && (
+        {hasAnyEvents && (
           <div className="mt-6 pt-4 border-t border-border/30">
             <p className="text-xs text-muted-foreground mb-2">Gesta:</p>
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
               <span>→ Dokončit</span>
-              <span>← Platba/Zrušit</span>
+              <span>← Menu</span>
               <span>Dlouhý stisk = Menu</span>
             </div>
           </div>
@@ -291,7 +408,7 @@ export default function CalendarPage() {
         <Button
           size="lg"
           className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all"
-          onClick={handleOpenCreate}
+          onClick={() => handleOpenCreate()}
         >
           <Plus className="w-6 h-6" />
         </Button>
