@@ -19,7 +19,9 @@ import {
   LineChart,
   Line,
   Area,
-  AreaChart
+  AreaChart,
+  ComposedChart,
+  Legend
 } from 'recharts';
 import { 
   TrendingUp, 
@@ -27,7 +29,13 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   Trash2,
-  Download
+  Download,
+  Users,
+  Clock,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Activity
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -65,8 +73,33 @@ const PERIOD_OPTIONS: { value: StatsPeriod; label: string }[] = [
 export function FeatureUsageStats() {
   const { t } = useLanguage();
   const [period, setPeriod] = useState<StatsPeriod>('30d');
-  const { topFeatures, categoryBreakdown, trendData, unusedFeatures, totalUsage, isLoading } = useFeatureStats(period);
+  const { 
+    topFeatures, 
+    categoryBreakdown, 
+    trendData, 
+    unusedFeatures, 
+    totalUsage, 
+    isLoading,
+    sessionStats,
+    dauData,
+    successRate
+  } = useFeatureStats(period);
   const clearStats = useClearFeatureStats();
+
+  const getDeviceIcon = (device: string) => {
+    switch (device) {
+      case 'mobile': return <Smartphone className="h-4 w-4" />;
+      case 'tablet': return <Tablet className="h-4 w-4" />;
+      default: return <Monitor className="h-4 w-4" />;
+    }
+  };
+
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return '0s';
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    return `${Math.round(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
+  };
 
   const getFeatureLabel = (name: string) => {
     const feature = ALL_FEATURES.find(f => f.name === name);
@@ -148,7 +181,47 @@ export function FeatureUsageStats() {
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Row 1 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card className="glass">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Activity className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Celkem akcí</span>
+            </div>
+            <div className="text-2xl font-bold">{totalUsage}</div>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Sessions</span>
+            </div>
+            <div className="text-2xl font-bold">{sessionStats?.totalSessions || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Ø délka session</span>
+            </div>
+            <div className="text-2xl font-bold">{formatDuration(sessionStats?.avgDuration || 0)}</div>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-muted-foreground">Úspěšnost</span>
+            </div>
+            <div className="text-2xl font-bold">{successRate?.toFixed(1) || 100}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary Cards - Row 2 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="glass">
           <CardContent className="p-4">
@@ -158,7 +231,7 @@ export function FeatureUsageStats() {
         </Card>
         <Card className="glass">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{unusedFeatures.length}</div>
+            <div className="text-2xl font-bold text-amber-500">{unusedFeatures.length}</div>
             <p className="text-sm text-muted-foreground">Nepoužívaných</p>
           </CardContent>
         </Card>
@@ -179,8 +252,9 @@ export function FeatureUsageStats() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="grid w-full grid-cols-4 mb-4">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="details">Detail</TabsTrigger>
           <TabsTrigger value="unused">Nepoužívané</TabsTrigger>
         </TabsList>
@@ -320,6 +394,180 @@ export function FeatureUsageStats() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="sessions" className="space-y-6">
+          {/* DAU Chart */}
+          <Card className="glass">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Denní aktivní uživatelé (DAU)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dauData || []}>
+                    <defs>
+                      <linearGradient id="colorDau" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => format(new Date(value), 'd.M.', { locale: cs })}
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                      allowDecimals={false}
+                    />
+                    <Tooltip 
+                      labelFormatter={(value) => format(new Date(value), 'd. MMMM yyyy', { locale: cs })}
+                      formatter={(value: number) => [value, 'Uživatelů']}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="users" 
+                      stroke="hsl(var(--chart-2))" 
+                      fillOpacity={1}
+                      fill="url(#colorDau)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Device & Browser Breakdown */}
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Zařízení</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(sessionStats?.deviceBreakdown || []).map((item) => (
+                    <div key={item.device} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getDeviceIcon(item.device)}
+                        <span className="capitalize">{item.device || 'Neznámé'}</span>
+                      </div>
+                      <Badge variant="secondary">{item.count}</Badge>
+                    </div>
+                  ))}
+                  {(!sessionStats?.deviceBreakdown?.length) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Zatím žádná data</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Prohlížeč</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(sessionStats?.browserBreakdown || []).slice(0, 5).map((item, i) => (
+                    <div key={item.browser} className="flex items-center justify-between">
+                      <span className="truncate max-w-[120px]">{item.browser || 'Neznámý'}</span>
+                      <Badge variant="secondary">{item.count}</Badge>
+                    </div>
+                  ))}
+                  {(!sessionStats?.browserBreakdown?.length) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Zatím žádná data</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Operační systém</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(sessionStats?.osBreakdown || []).slice(0, 5).map((item, i) => (
+                    <div key={item.os} className="flex items-center justify-between">
+                      <span className="truncate max-w-[120px]">{item.os || 'Neznámý'}</span>
+                      <Badge variant="secondary">{item.count}</Badge>
+                    </div>
+                  ))}
+                  {(!sessionStats?.osBreakdown?.length) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Zatím žádná data</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Combined Usage + Sessions Chart */}
+          <Card className="glass">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Aktivita vs Sessions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={trendData}>
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => format(new Date(value), 'd.M.', { locale: cs })}
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <Tooltip 
+                      labelFormatter={(value) => format(new Date(value), 'd. MMMM yyyy', { locale: cs })}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="count" 
+                      name="Akce"
+                      fill="hsl(var(--primary))" 
+                      radius={[4, 4, 0, 0]}
+                      opacity={0.7}
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="sessions" 
+                      name="Sessions"
+                      stroke="hsl(var(--chart-2))" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="details">
