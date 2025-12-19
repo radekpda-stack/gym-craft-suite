@@ -14,6 +14,12 @@ export interface WorkoutEntry {
   notes: string | null;
   created_at: string;
   user_id: string | null;
+  // New fields for different measurement types
+  time_seconds: number | null;
+  distance_meters: number | null;
+  calories: number | null;
+  watts: number | null;
+  is_pr: boolean;
 }
 
 export interface WorkoutEntryInput {
@@ -24,6 +30,12 @@ export interface WorkoutEntryInput {
   reps?: number | null;
   rpe?: number | null;
   notes?: string | null;
+  // New fields
+  time_seconds?: number | null;
+  distance_meters?: number | null;
+  calories?: number | null;
+  watts?: number | null;
+  is_pr?: boolean;
 }
 
 export interface GroupedWorkoutEntry {

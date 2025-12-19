@@ -145,6 +145,13 @@ export function WorkoutExerciseList({
                             {bestSet.weight_kg}kg × {bestSet.reps}
                           </Badge>
                         )}
+                        {/* Show PR badge if any set has is_pr */}
+                        {group.sets.some(s => s.is_pr) && (
+                          <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-xs">
+                            <Trophy className="w-3 h-3 mr-1" />
+                            PR
+                          </Badge>
+                        )}
                       </h4>
                       <p className="text-xs text-muted-foreground">
                         {group.sets.length} {group.sets.length === 1 ? 'série' : group.sets.length < 5 ? 'série' : 'sérií'}
@@ -246,11 +253,14 @@ export function WorkoutExerciseList({
                       ) : (
                         // View mode
                         <>
-                          <span className="font-medium">
+                          <span className="font-medium flex items-center gap-1">
                             {set.weight_kg ? `${set.weight_kg} kg` : '-'}
+                            {set.is_pr && (
+                              <Trophy className="w-3 h-3 text-amber-500" />
+                            )}
                           </span>
                           <span className="font-medium">
-                            {set.reps ?? '-'}
+                            {set.reps ?? set.time_seconds ? `${set.time_seconds}s` : '-'}
                           </span>
                           <span className="text-muted-foreground">
                             {set.rpe ? `@${set.rpe}` : '-'}

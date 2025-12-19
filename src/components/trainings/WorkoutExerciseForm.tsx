@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Search, Dumbbell } from 'lucide-react';
+import { Plus, X, Search, Dumbbell, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Command,
   CommandEmpty,
@@ -24,12 +25,18 @@ interface SetData {
   weight_kg: number | null;
   reps: number | null;
   rpe: number | null;
+  time_seconds: number | null;
+  distance_meters: number | null;
+  calories: number | null;
+  watts: number | null;
+  is_pr: boolean;
 }
 
 interface ExerciseFormData {
   exercise_id: string | null;
   exercise_name: string;
   sets: SetData[];
+  default_unit?: string;
 }
 
 interface WorkoutExerciseFormProps {
@@ -38,13 +45,33 @@ interface WorkoutExerciseFormProps {
   isLoading?: boolean;
 }
 
+type MeasurementUnit = 'reps' | 'seconds' | 'meters' | 'calories';
+
+const DEFAULT_SET: SetData = { 
+  weight_kg: null, 
+  reps: null, 
+  rpe: null,
+  time_seconds: null,
+  distance_meters: null,
+  calories: null,
+  watts: null,
+  is_pr: false,
+};
+
 export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerciseFormProps) {
   const { exercises, isLoading: exercisesLoading } = useExercises();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [customExerciseName, setCustomExerciseName] = useState('');
-  const [sets, setSets] = useState<SetData[]>([{ weight_kg: null, reps: null, rpe: null }]);
+  const [sets, setSets] = useState<SetData[]>([{ ...DEFAULT_SET }]);
+
+  // Determine measurement type based on selected exercise
+  const measurementUnit: MeasurementUnit = useMemo(() => {
+    if (!selectedExercise) return 'reps';
+    const unit = selectedExercise.default_unit as MeasurementUnit;
+    return ['reps', 'seconds', 'meters', 'calories'].includes(unit) ? unit : 'reps';
+  }, [selectedExercise]);
 
   const filteredExercises = useMemo(() => {
     if (!searchQuery) return exercises.slice(0, 20);
@@ -59,14 +86,15 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     setSelectedExercise(exercise);
     setCustomExerciseName('');
     setSearchOpen(false);
+    // Reset sets when changing exercise
+    setSets([{ ...DEFAULT_SET }]);
   };
 
   const handleAddSet = () => {
     const lastSet = sets[sets.length - 1];
     setSets([...sets, { 
-      weight_kg: lastSet?.weight_kg || null, 
-      reps: lastSet?.reps || null, 
-      rpe: null 
+      ...lastSet,
+      is_pr: false, // Never copy PR flag
     }]);
   };
 
@@ -76,10 +104,14 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     }
   };
 
-  const handleSetChange = (index: number, field: keyof SetData, value: string) => {
+  const handleSetChange = (index: number, field: keyof SetData, value: string | boolean) => {
     const newSets = [...sets];
-    const numValue = value === '' ? null : parseFloat(value);
-    newSets[index] = { ...newSets[index], [field]: numValue };
+    if (field === 'is_pr') {
+      newSets[index] = { ...newSets[index], is_pr: value as boolean };
+    } else {
+      const numValue = value === '' ? null : parseFloat(value as string);
+      newSets[index] = { ...newSets[index], [field]: numValue };
+    }
     setSets(newSets);
   };
 
@@ -90,12 +122,26 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     onAdd({
       exercise_id: selectedExercise?.id || null,
       exercise_name: exerciseName,
-      sets: sets.filter(s => s.weight_kg !== null || s.reps !== null),
+      sets: sets.filter(s => hasValidData(s)),
+      default_unit: measurementUnit,
     });
   };
 
+  const hasValidData = (set: SetData): boolean => {
+    switch (measurementUnit) {
+      case 'seconds':
+        return set.time_seconds !== null || set.weight_kg !== null;
+      case 'meters':
+        return set.distance_meters !== null || set.time_seconds !== null;
+      case 'calories':
+        return set.calories !== null || set.time_seconds !== null;
+      default:
+        return set.weight_kg !== null || set.reps !== null;
+    }
+  };
+
   const isValid = (selectedExercise || customExerciseName.trim()) && 
-    sets.some(s => s.weight_kg !== null || s.reps !== null);
+    sets.some(s => hasValidData(s));
 
   return (
     <div className="glass rounded-xl p-4 sm:p-5 space-y-4 animate-fade-in">
@@ -218,47 +264,179 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
         </div>
 
         <div className="space-y-2">
-          {/* Header row */}
-          <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
-            <span className="w-8 text-center">#</span>
-            <span>Váha (kg)</span>
-            <span>Opak.</span>
-            <span>RPE</span>
-            <span className="w-8"></span>
-          </div>
+          {/* Header row - dynamic based on measurement type */}
+          {measurementUnit === 'reps' && (
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <span className="w-8 text-center">#</span>
+              <span>Váha (kg)</span>
+              <span>Opak.</span>
+              <span>RPE</span>
+              <span className="w-10 text-center">PR</span>
+              <span className="w-8"></span>
+            </div>
+          )}
+          {measurementUnit === 'seconds' && (
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <span className="w-8 text-center">#</span>
+              <span>Váha (kg)</span>
+              <span>Čas (s)</span>
+              <span>RPE</span>
+              <span className="w-10 text-center">PR</span>
+              <span className="w-8"></span>
+            </div>
+          )}
+          {measurementUnit === 'meters' && (
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <span className="w-8 text-center">#</span>
+              <span>Vzdál. (m)</span>
+              <span>Čas (s)</span>
+              <span>RPE</span>
+              <span className="w-10 text-center">PR</span>
+              <span className="w-8"></span>
+            </div>
+          )}
+          {measurementUnit === 'calories' && (
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <span className="w-8 text-center">#</span>
+              <span>Kalorie</span>
+              <span>Čas (s)</span>
+              <span>Watt</span>
+              <span className="w-10 text-center">PR</span>
+              <span className="w-8"></span>
+            </div>
+          )}
 
           {sets.map((set, index) => (
             <div
               key={index}
-              className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-center"
+              className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 items-center"
             >
               <span className="w-8 text-center text-sm text-muted-foreground">
                 {index + 1}
               </span>
-              <Input
-                type="number"
-                step="0.5"
-                placeholder="0"
-                value={set.weight_kg ?? ''}
-                onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
-                className="bg-secondary border-border h-9"
-              />
-              <Input
-                type="number"
-                placeholder="0"
-                value={set.reps ?? ''}
-                onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
-                className="bg-secondary border-border h-9"
-              />
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                placeholder="-"
-                value={set.rpe ?? ''}
-                onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
-                className="bg-secondary border-border h-9"
-              />
+              
+              {/* Dynamic fields based on measurement type */}
+              {measurementUnit === 'reps' && (
+                <>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={set.weight_kg ?? ''}
+                    onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.reps ?? ''}
+                    onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    placeholder="-"
+                    value={set.rpe ?? ''}
+                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                </>
+              )}
+              
+              {measurementUnit === 'seconds' && (
+                <>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={set.weight_kg ?? ''}
+                    onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.time_seconds ?? ''}
+                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    placeholder="-"
+                    value={set.rpe ?? ''}
+                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                </>
+              )}
+              
+              {measurementUnit === 'meters' && (
+                <>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.distance_meters ?? ''}
+                    onChange={(e) => handleSetChange(index, 'distance_meters', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.time_seconds ?? ''}
+                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    placeholder="-"
+                    value={set.rpe ?? ''}
+                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                </>
+              )}
+              
+              {measurementUnit === 'calories' && (
+                <>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.calories ?? ''}
+                    onChange={(e) => handleSetChange(index, 'calories', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={set.time_seconds ?? ''}
+                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="-"
+                    value={set.watts ?? ''}
+                    onChange={(e) => handleSetChange(index, 'watts', e.target.value)}
+                    className="bg-secondary border-border h-9"
+                  />
+                </>
+              )}
+              
+              {/* PR Checkbox */}
+              <div className="w-10 flex justify-center">
+                <Checkbox
+                  checked={set.is_pr}
+                  onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
+                  className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                />
+              </div>
+              
               <Button
                 type="button"
                 variant="ghost"
