@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, Ban } from 'lucide-react';
 
 export function CreditThresholdSettings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -55,9 +55,6 @@ export function CreditThresholdSettings() {
           onChange={(e) => setLowThreshold(Number(e.target.value))}
           min={0}
         />
-        <p className="text-xs text-muted-foreground">
-          Klienti s kreditem pod tuto hranici budou označeni jako "nízký kredit"
-        </p>
       </div>
       
       <div className="space-y-2">
@@ -68,9 +65,29 @@ export function CreditThresholdSettings() {
           value={criticalThreshold}
           onChange={(e) => setCriticalThreshold(Number(e.target.value))}
         />
-        <p className="text-xs text-muted-foreground">
-          Klienti pod tuto hranici budou označeni jako "bez kreditu"
-        </p>
+      </div>
+
+      {/* Threshold visualization */}
+      <div className="p-4 rounded-xl bg-secondary/30 space-y-3">
+        <p className="text-sm font-medium text-foreground">Jak to funguje:</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="p-1.5 rounded-lg bg-warning/20">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+            </div>
+            <span className="text-muted-foreground">
+              Kredit &lt; <span className="font-semibold text-foreground">{lowThreshold} Kč</span> → Nízký kredit
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="p-1.5 rounded-lg bg-destructive/20">
+              <Ban className="w-4 h-4 text-destructive" />
+            </div>
+            <span className="text-muted-foreground">
+              Kredit ≤ <span className="font-semibold text-foreground">{criticalThreshold} Kč</span> → Bez kreditu
+            </span>
+          </div>
+        </div>
       </div>
       
       <Button 

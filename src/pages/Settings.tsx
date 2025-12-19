@@ -1,45 +1,33 @@
 import { useState } from 'react';
 import {
-  Download,
-  Upload,
-  Bell,
   CreditCard,
   Package,
   Tag,
   Dumbbell,
   Globe,
-  BarChart3,
   MessageSquare,
   Calculator,
   Building2,
   Gauge,
   FileBarChart2,
-  Zap,
   User,
   Wallet,
   BookOpen,
   Wrench,
-  Droplets,
   Users,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ProductsManagement } from '@/components/settings/ProductsManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
-import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
-import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
-import { NutritionSettings } from '@/components/settings/NutritionSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -63,7 +51,6 @@ interface SettingsCategory {
 
 export default function Settings() {
   usePageTracking('settings');
-  const [autoBackup, setAutoBackup] = useState(true);
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('profile');
@@ -135,8 +122,8 @@ export default function Settings() {
         },
         {
           id: 'capacity',
-          title: language === 'cs' ? 'Kapacita a pracovní doba' : 'Capacity & Working Hours',
-          description: language === 'cs' ? 'Pracovní dny, hodiny a délka slotů' : 'Working days, hours and slot duration',
+          title: language === 'cs' ? 'Pracovní doba (pro přehled)' : 'Working Hours (for overview)',
+          description: language === 'cs' ? 'Používá se pro přehled v kalendáři' : 'Used for calendar overview',
           icon: Gauge,
           content: <CapacitySettingsPanel />,
         },
@@ -162,13 +149,6 @@ export default function Settings() {
           description: language === 'cs' ? 'Automatické odesílání a konfigurace dotazníků' : 'Auto-send and questionnaire configuration',
           icon: MessageSquare,
           content: <FeedbackSettings />,
-        },
-        {
-          id: 'nutrition',
-          title: language === 'cs' ? 'Nutriční log' : 'Nutrition Log',
-          description: language === 'cs' ? 'Výchozí velikosti nádob pro hydrataci' : 'Default container sizes for hydration',
-          icon: Droplets,
-          content: <NutritionSettings />,
         },
       ],
     },
@@ -202,69 +182,26 @@ export default function Settings() {
         },
       ],
     },
-    // 5. SYSTÉM
+    // 5. POKROČILÉ
     {
-      id: 'system',
-      title: language === 'cs' ? 'Systém' : 'System',
+      id: 'advanced',
+      title: language === 'cs' ? 'Pokročilé' : 'Advanced',
       icon: Wrench,
       iconColor: 'text-rose-500',
       sections: [
         {
-          id: 'quick-actions',
-          title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
-          description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
-          icon: Zap,
-          content: <QuickActionSettings />,
-        },
-        {
-          id: 'backup',
-          title: t.settings.backup,
-          description: t.settings.backupDesc,
-          icon: Download,
-          content: (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-foreground">{t.settings.autoBackup}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t.settings.autoBackupDesc}
-                  </p>
-                </div>
-                <Switch checked={autoBackup} onCheckedChange={setAutoBackup} />
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
-                  <Download className="w-4 h-4" />
-                  {t.settings.exportAll}
-                </Button>
-                <Button variant="outline" className="gap-2 flex-1 glass-subtle border-0">
-                  <Upload className="w-4 h-4" />
-                  {t.settings.importData}
-                </Button>
-              </div>
-            </div>
-          ),
-        },
-        {
           id: 'credit-recalc',
-          title: language === 'cs' ? 'Přepočet kreditů' : 'Credit Recalculation',
+          title: language === 'cs' ? 'Diagnostika kreditů' : 'Credit Diagnostics',
           description: language === 'cs' ? 'Kontrola a oprava nesrovnalostí' : 'Check and fix discrepancies',
           icon: Calculator,
           content: <CreditRecalculationTool />,
         },
         {
           id: 'annual-stats',
-          title: language === 'cs' ? 'Roční statistiky' : 'Annual Statistics',
-          description: language === 'cs' ? 'Export PDF reportu' : 'Export PDF report',
+          title: language === 'cs' ? 'Exporty & reporty' : 'Exports & Reports',
+          description: language === 'cs' ? 'Export PDF reportů a statistik' : 'Export PDF reports and statistics',
           icon: FileBarChart2,
           content: <AnnualStatsExport />,
-        },
-        {
-          id: 'feature-usage',
-          title: language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics',
-          description: language === 'cs' ? 'Přehled využívaných funkcí' : 'Overview of used features',
-          icon: BarChart3,
-          content: <FeatureUsageStats />,
         },
       ],
     },

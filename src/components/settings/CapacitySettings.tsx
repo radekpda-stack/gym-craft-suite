@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCapacitySettings, type CapacitySettings as CapacitySettingsType } from '@/hooks/useCapacitySettings';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, Check } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 
 const DAYS_LABELS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
@@ -18,7 +18,7 @@ const SLOT_DURATION_OPTIONS = [
 ];
 
 export function CapacitySettingsPanel() {
-  const { settings, isConfigured, isLoading, saveSettings, isSaving } = useCapacitySettings();
+  const { settings, isLoading, saveSettings, isSaving } = useCapacitySettings();
   
   const [localSettings, setLocalSettings] = useState<CapacitySettingsType>(settings);
 
@@ -31,7 +31,7 @@ export function CapacitySettingsPanel() {
       onSuccess: () => {
         toast({
           title: 'Nastavení uloženo',
-          description: 'Kapacita kalendáře byla aktualizována.',
+          description: 'Pracovní doba byla aktualizována.',
         });
       },
       onError: () => {
@@ -152,13 +152,6 @@ export function CapacitySettingsPanel() {
           </>
         )}
       </Button>
-
-      {isConfigured && (
-        <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-          <Check className="w-3 h-3 text-green-500" />
-          Kapacita je nakonfigurována
-        </p>
-      )}
     </div>
   );
 }
