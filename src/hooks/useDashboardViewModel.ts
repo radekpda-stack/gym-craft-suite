@@ -852,9 +852,11 @@ export function useDashboardViewModel() {
           const lastTrainingDate = lastTrainingByClient.get(c.id) || null;
           
           let status: 'ok' | 'warning' | 'error' = 'ok';
-          if (creditBalance <= criticalThreshold || unpaidCount > 3) {
+          // Error: negative credit or 3+ unpaid trainings
+          if (creditBalance < 0 || unpaidCount >= 3) {
             status = 'error';
-          } else if (creditBalance < lowCreditThreshold || unpaidCount > 0) {
+          // Warning: low credit (but not negative) or has unpaid trainings
+          } else if (creditBalance <= lowCreditThreshold || unpaidCount > 0) {
             status = 'warning';
           }
           
