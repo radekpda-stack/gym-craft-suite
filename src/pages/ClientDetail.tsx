@@ -20,6 +20,7 @@ import { ClientActionsBar } from '@/components/clients/ClientActionsBar';
 import { ClientEvaluationBlock } from '@/components/clients/ClientEvaluationBlock';
 import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
+import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
 
 import { toast } from '@/hooks/use-toast';
 
@@ -155,6 +156,9 @@ export default function ClientDetail() {
           if (historyBlock) (historyBlock as HTMLButtonElement).click();
         }}
       />
+
+      {/* Attendance Statistics */}
+      <ClientAttendanceStats clientId={client.id} />
 
       {/* BLOCK D: History (Scrollable Tabs) */}
       <ClientHistoryBlock clientId={client.id} />
