@@ -1,21 +1,15 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useTrainingSessions, TrainingSession } from './useTrainingSessions';
+import { useMemo, useState } from 'react';
 import { useMeasurements, Measurement } from './useMeasurements';
 import { useDiagnostics, Diagnostic } from './useDiagnostics';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
-export type RecordType = 'training' | 'measurement' | 'diagnostic';
+export type RecordType = 'measurement' | 'diagnostic';
 export type PeriodFilter = 'today' | 'week' | 'month' | 'all';
 
 export interface BaseRecordItem {
   id: string;
   date: string;
   clientId: string;
-}
-
-export interface TrainingRecordItem extends BaseRecordItem {
-  type: 'training';
-  data: TrainingSession;
 }
 
 export interface MeasurementRecordItem extends BaseRecordItem {
@@ -28,7 +22,7 @@ export interface DiagnosticRecordItem extends BaseRecordItem {
   data: Diagnostic;
 }
 
-export type RecordItem = TrainingRecordItem | MeasurementRecordItem | DiagnosticRecordItem;
+export type RecordItem = MeasurementRecordItem | DiagnosticRecordItem;
 
 export interface RecordsFeedFilters {
   clientId: string | null;
@@ -46,7 +40,12 @@ function getDefaultFilters(): RecordsFeedFilters {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Reset recordType if it was 'training' from old data
+      if (parsed.recordType === 'training') {
+        parsed.recordType = 'all';
+      }
+      return parsed;
     }
   } catch {
     // ignore
@@ -73,8 +72,7 @@ function getPeriodRange(period: PeriodFilter): { start: Date; end: Date } | null
 export function useRecordsFeed() {
   const [filters, setFiltersState] = useState<RecordsFeedFilters>(getDefaultFilters);
   
-  // Fetch all data
-  const { data: trainings = [], isLoading: trainingsLoading } = useTrainingSessions(filters.clientId || undefined);
+  // Fetch measurements and diagnostics only
   const { data: measurements = [], isLoading: measurementsLoading } = useMeasurements(filters.clientId || undefined);
   const { data: diagnostics = [], isLoading: diagnosticsLoading } = useDiagnostics(filters.clientId || undefined);
   
@@ -101,21 +99,6 @@ export function useRecordsFeed() {
       const date = parseISO(dateStr);
       return isWithinInterval(date, periodRange);
     };
-    
-    // Add trainings
-    if (filters.recordType === 'all' || filters.recordType === 'training') {
-      trainings.forEach(training => {
-        if (isInPeriod(training.date)) {
-          items.push({
-            id: training.id,
-            date: training.date,
-            clientId: training.client_id,
-            type: 'training',
-            data: training,
-          });
-        }
-      });
-    }
     
     // Add measurements
     if (filters.recordType === 'all' || filters.recordType === 'measurement') {
@@ -151,7 +134,7 @@ export function useRecordsFeed() {
     items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     return items;
-  }, [trainings, measurements, diagnostics, filters.period, filters.recordType]);
+  }, [measurements, diagnostics, filters.period, filters.recordType]);
   
   // Group records by day
   const groupedRecords = useMemo(() => {
@@ -180,13 +163,12 @@ export function useRecordsFeed() {
   
   // Counts for each type
   const counts = useMemo(() => ({
-    training: records.filter(r => r.type === 'training').length,
     measurement: records.filter(r => r.type === 'measurement').length,
     diagnostic: records.filter(r => r.type === 'diagnostic').length,
     total: records.length,
   }), [records]);
   
-  const isLoading = trainingsLoading || measurementsLoading || diagnosticsLoading;
+  const isLoading = measurementsLoading || diagnosticsLoading;
   
   return {
     records,
