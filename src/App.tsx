@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/lib/i18n";
@@ -58,10 +58,6 @@ const App = () => (
                           <Route path="/trainings" element={<Trainings />} />
                           <Route path="/trainings/:id" element={<TrainingDetail />} />
                           <Route path="/records" element={<Records />} />
-                          {/* Redirects for old routes */}
-                          <Route path="/measurements" element={<Navigate to="/records?tab=measurements" replace />} />
-                          <Route path="/diagnostics" element={<Navigate to="/records?tab=diagnostics" replace />} />
-                          <Route path="/progress" element={<Navigate to="/records?tab=progress" replace />} />
                           <Route path="/calendar" element={<CalendarPage />} />
                           <Route path="/canceled" element={<CanceledTrainings />} />
                           <Route path="/settings" element={<Settings />} />
