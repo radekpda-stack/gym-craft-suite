@@ -738,15 +738,27 @@ export function EditExtendedDiagnosticSheet({
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Sezení denně: {formData.sittingHoursDaily}h</Label>
-                    <Slider
-                      value={[formData.sittingHoursDaily]}
-                      onValueChange={([v]) => updateField('sittingHoursDaily', v)}
-                      max={16}
-                      step={0.5}
-                      className="mt-2"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Sezení denně: {formData.sittingHoursDaily}h</Label>
+                      <Slider
+                        value={[formData.sittingHoursDaily]}
+                        onValueChange={([v]) => updateField('sittingHoursDaily', v)}
+                        max={16}
+                        step={0.5}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Spánek denně: {formData.sleepHours}h</Label>
+                      <Slider
+                        value={[formData.sleepHours]}
+                        onValueChange={([v]) => updateField('sleepHours', v)}
+                        max={12}
+                        step={0.5}
+                        className="mt-2"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 
