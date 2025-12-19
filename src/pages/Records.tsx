@@ -17,7 +17,7 @@ import {
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { EditMeasurementSheet } from '@/components/measurements/EditMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { DiagnosticDetailSheet } from '@/components/diagnostics/DiagnosticDetailSheet';
+import { EditDiagnosticSheet } from '@/components/diagnostics/EditDiagnosticSheet';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 
 export default function Records() {
@@ -46,7 +46,8 @@ export default function Records() {
   const [editMeasurementOpen, setEditMeasurementOpen] = useState(false);
   
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<Diagnostic | null>(null);
-  const [diagnosticDetailOpen, setDiagnosticDetailOpen] = useState(false);
+  const [selectedDiagnosticClient, setSelectedDiagnosticClient] = useState<Client | null>(null);
+  const [editDiagnosticOpen, setEditDiagnosticOpen] = useState(false);
   
   const handleCreateMeasurement = async (data: MeasurementFormValues): Promise<string | void> => {
     const result = await createMeasurement.mutateAsync({
@@ -71,9 +72,10 @@ export default function Records() {
     setEditMeasurementOpen(true);
   };
 
-  const handleDiagnosticClick = (diagnostic: Diagnostic, _client: Client | null) => {
+  const handleDiagnosticClick = (diagnostic: Diagnostic, client: Client | null) => {
     setSelectedDiagnostic(diagnostic);
-    setDiagnosticDetailOpen(true);
+    setSelectedDiagnosticClient(client);
+    setEditDiagnosticOpen(true);
   };
 
   const activeClients = clients.filter(c => !c.is_archived);
@@ -155,10 +157,11 @@ export default function Records() {
         client={selectedMeasurementClient}
       />
 
-      <DiagnosticDetailSheet
-        open={diagnosticDetailOpen}
-        onOpenChange={setDiagnosticDetailOpen}
+      <EditDiagnosticSheet
+        open={editDiagnosticOpen}
+        onOpenChange={setEditDiagnosticOpen}
         diagnostic={selectedDiagnostic}
+        clientName={selectedDiagnosticClient?.name}
       />
     </div>
   );
