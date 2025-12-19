@@ -6,7 +6,6 @@ import {
   Dumbbell,
   Globe,
   MessageSquare,
-  Calculator,
   Building2,
   Gauge,
   FileBarChart2,
@@ -23,7 +22,6 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
-import { CreditRecalculationTool } from '@/components/settings/CreditRecalculationTool';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
@@ -189,13 +187,6 @@ export default function Settings() {
       icon: Wrench,
       iconColor: 'text-rose-500',
       sections: [
-        {
-          id: 'credit-recalc',
-          title: language === 'cs' ? 'Diagnostika kreditů' : 'Credit Diagnostics',
-          description: language === 'cs' ? 'Kontrola a oprava nesrovnalostí' : 'Check and fix discrepancies',
-          icon: Calculator,
-          content: <CreditRecalculationTool />,
-        },
         {
           id: 'annual-stats',
           title: language === 'cs' ? 'Exporty & reporty' : 'Exports & Reports',

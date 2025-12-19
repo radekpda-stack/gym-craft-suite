@@ -90,47 +90,32 @@ export function useUpdateSetting() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
-      // First try to get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
-      // First check if setting with this key exists
-      const { data: existing } = await supabase
+      if (!user) {
+        throw new Error("Uživatel není přihlášen");
+      }
+
+      // Use upsert with user_id to handle both insert and update
+      const { data, error } = await supabase
         .from("app_settings")
-        .select("id")
-        .eq("key", key)
-        .maybeSingle();
-
-      if (existing) {
-        // Update existing setting
-        const { data, error } = await supabase
-          .from("app_settings")
-          .update({ 
-            value, 
-            updated_at: new Date().toISOString(),
-            user_id: user?.id 
-          })
-          .eq("key", key)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      } else {
-        // Insert new setting
-        const { data, error } = await supabase
-          .from("app_settings")
-          .insert({ 
+        .upsert(
+          { 
             key, 
             value, 
             updated_at: new Date().toISOString(),
-            user_id: user?.id 
-          })
-          .select()
-          .single();
+            user_id: user.id 
+          },
+          { 
+            onConflict: 'key,user_id',
+            ignoreDuplicates: false 
+          }
+        )
+        .select()
+        .single();
 
-        if (error) throw error;
-        return data;
-      }
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["app_settings"] });
