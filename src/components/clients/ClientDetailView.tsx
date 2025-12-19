@@ -23,11 +23,14 @@ import {
   Loader2,
   Star,
   CalendarDays,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCard';
@@ -93,6 +96,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       healthRestrictions: client.health_restrictions || '',
       creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
+      gender: (client.gender as 'male' | 'female' | undefined) || undefined,
       createdAt: client.created_at ? client.created_at.split('T')[0] : '',
     },
   });
@@ -108,6 +112,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       healthRestrictions: client.health_restrictions || '',
       creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
+      gender: (client.gender as 'male' | 'female' | undefined) || undefined,
       createdAt: client.created_at ? client.created_at.split('T')[0] : '',
     });
   }, [client, form]);
@@ -355,6 +360,49 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                 {client.birth_date
                   ? format(new Date(client.birth_date), 'd. MMMM yyyy', { locale: cs })
                   : '—'}
+              </p>
+            )}
+          </div>
+
+          {/* Gender */}
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-3 text-muted-foreground mb-2">
+              <User className="w-4 h-4" />
+              <span className="text-sm">Pohlaví</span>
+            </div>
+            {isEditMode ? (
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        className="flex gap-4 h-10 items-center"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="male" id="client-detail-gender-male" />
+                          <Label htmlFor="client-detail-gender-male" className="cursor-pointer">
+                            Muž
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="female" id="client-detail-gender-female" />
+                          <Label htmlFor="client-detail-gender-female" className="cursor-pointer">
+                            Žena
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <p className="font-medium text-foreground">
+                {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
               </p>
             )}
           </div>
