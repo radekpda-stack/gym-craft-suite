@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 export function useToggleFavorite() {
   const queryClient = useQueryClient();
@@ -16,6 +17,7 @@ export function useToggleFavorite() {
     },
     onSuccess: (_, { isFavorite }) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      featureTracker.track('client_favorite', 'clients', { isFavorite });
       toast({
         title: isFavorite ? 'Přidáno do oblíbených' : 'Odebráno z oblíbených',
         description: isFavorite 

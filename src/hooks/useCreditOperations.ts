@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 // ==================== Types ====================
 export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training' | 'transfer';
@@ -370,6 +371,14 @@ export function useCreateTransaction() {
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_transactions"] });
+      
+      // Track the action
+      const trackType = variables.amount > 0 ? 'credit_add' : 'credit_deduct';
+      featureTracker.track(trackType, 'finance', { 
+        amount: variables.amount, 
+        type: variables.type,
+        isShared: result.isSharedBudget 
+      });
       
       if (result.skippedCredit) {
         toast({ title: "Prodej zaznamenán", description: `Platba hotově: ${Math.abs(variables.amount)} Kč` });

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { featureTracker } from '@/hooks/useFeatureTracking';
 
 export interface TrainingPlan {
   id: string;
@@ -145,6 +146,7 @@ export function useTrainingPlans(clientId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-plans'] });
+      featureTracker.track('plan_create', 'plans');
       toast({ title: 'Plán vytvořen', description: 'Tréninkový plán byl úspěšně vytvořen.' });
     },
     onError: () => {
@@ -180,6 +182,7 @@ export function useTrainingPlans(clientId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-plans'] });
+      featureTracker.track('plan_delete', 'plans');
       toast({ title: 'Plán smazán', description: 'Tréninkový plán byl odstraněn.' });
     },
     onError: () => {
