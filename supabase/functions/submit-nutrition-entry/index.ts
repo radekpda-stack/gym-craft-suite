@@ -51,6 +51,11 @@ const foodEntrySchema = z.object({
   note: z.string().max(500).optional().nullable(),
   photo_url: z.string().url().max(500).optional().nullable(),
   food_item_id: z.string().uuid().optional().nullable(),
+  // New quality/satiation/energy fields
+  quality: z.enum(['good', 'normal', 'poor']).optional().nullable(),
+  satiation: z.enum(['just_right', 'still_hungry', 'overate']).optional().nullable(),
+  feeling_after: z.enum(['ok', 'heavy', 'bloated', 'sweet', 'low_energy', 'high_energy']).optional().nullable(),
+  energy_after: z.enum(['low', 'normal', 'high']).optional().nullable(),
 });
 
 const drinkEntrySchema = z.object({

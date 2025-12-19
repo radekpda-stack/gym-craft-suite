@@ -29,6 +29,11 @@ export interface NutritionFoodEntry {
   note?: string;
   photo_url?: string;
   created_at: string;
+  // New quality/satiation/energy fields
+  quality?: 'good' | 'normal' | 'poor';
+  satiation?: 'just_right' | 'still_hungry' | 'overate';
+  feeling_after?: 'ok' | 'heavy' | 'bloated' | 'sweet' | 'low_energy' | 'high_energy';
+  energy_after?: 'low' | 'normal' | 'high';
 }
 
 export interface NutritionDrinkEntry {
