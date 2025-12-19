@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   CreditCard,
   Package,
@@ -31,6 +31,7 @@ import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSe
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { cn } from '@/lib/utils';
 
 interface SettingsSection {
@@ -53,6 +54,7 @@ export default function Settings() {
   usePageTracking('settings');
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
+  const { data: isAdmin } = useIsAdmin();
   const [activeTab, setActiveTab] = useState('profile');
 
   const categories: SettingsCategory[] = [
@@ -196,13 +198,14 @@ export default function Settings() {
           icon: FileBarChart2,
           content: <AnnualStatsExport />,
         },
-        {
+        // Feature usage stats - only visible for admin
+        ...(isAdmin ? [{
           id: 'feature-usage',
           title: language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics',
-          description: language === 'cs' ? 'Analýza využívání funkcí aplikace' : 'App feature usage analytics',
+          description: language === 'cs' ? 'Analýza využívání funkcí aplikace od všech uživatelů' : 'App feature usage analytics from all users',
           icon: BarChart2,
           content: <FeatureUsageStats />,
-        },
+        }] : []),
       ],
     },
   ];
