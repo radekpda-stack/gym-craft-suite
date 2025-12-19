@@ -8,6 +8,7 @@ import {
   Wallet,
   Clock,
   Users,
+  Banknote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -150,7 +151,7 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
 
   if (!data) return null;
 
-  const { dayStatus, capacity, finance } = data;
+  const { dayStatus, capacity, finance, todayEstimatedIncome, uniqueClientsToday } = data;
 
   return (
     <>
@@ -164,8 +165,17 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
             icon={Users}
             label="Dnes"
             value={`${capacity.completed}/${capacity.total}`}
-            subValue={capacity.scheduled > 0 ? `${capacity.scheduled} zbývá` : undefined}
+            subValue={uniqueClientsToday > 0 ? `${uniqueClientsToday} klientů` : undefined}
           />
+          
+          {/* Estimated Income Today */}
+          {todayEstimatedIncome > 0 && (
+            <MetricChip
+              icon={Banknote}
+              label="Příjem dnes"
+              value={formatCurrency(todayEstimatedIncome)}
+            />
+          )}
           
           {/* Unpaid */}
           {finance.unpaidTotal.count > 0 && (

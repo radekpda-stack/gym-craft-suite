@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, differenceInDays, startOfYear, endOfYear } from 'date-fns';
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, differenceInDays, startOfYear, endOfYear, startOfWeek, endOfWeek } from 'date-fns';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { Status } from '@/lib/statusUtils';
 
@@ -104,6 +104,26 @@ export interface ScheduleItem {
   status: 'scheduled' | 'completed' | 'cancelled';
   hasFeedback: boolean;
   hasIssue: boolean; // high RPE, bad feedback, etc.
+  feedbackToken?: string; // For copying feedback link
+}
+
+export interface WeeklySummary {
+  trainingsThisWeek: number;
+  trainingsLastWeek: number;
+  incomeThisWeek: number;
+  incomeLastWeek: number;
+  weekTrend: 'up' | 'down' | 'stable';
+  trainingsTrend: 'up' | 'down' | 'stable';
+}
+
+export interface ClientQuickInfo {
+  id: string;
+  name: string;
+  creditBalance: number;
+  lastTrainingDate: Date | null;
+  status: 'ok' | 'warning' | 'error';
+  isFavorite: boolean;
+  unpaidCount: number;
 }
 
 export interface DashboardViewModel {
@@ -118,12 +138,22 @@ export interface DashboardViewModel {
   // Today's capacity
   capacity: CapacityInfo;
   
+  // Today's summary
+  todayEstimatedIncome: number;
+  uniqueClientsToday: number;
+  
   // Financial overview
   finance: FinanceMetrics;
   
   // Schedule
   todaySchedule: ScheduleItem[];
   weekSchedule: ScheduleItem[];
+  
+  // Weekly summary (simple, no graphs)
+  weeklySummary: WeeklySummary;
+  
+  // Clients quick overview
+  clientsQuickInfo: ClientQuickInfo[];
   
   // Trends
   trends: TrendData;
@@ -205,23 +235,23 @@ export function useDashboardViewModel() {
         // Today's trainings
         supabase
           .from('training_sessions')
-          .select('id, date, status, client_id, rpe, clients(name)')
+          .select('id, date, status, client_id, rpe, final_price, clients(name)')
           .gte('date', todayStart.toISOString())
           .lte('date', todayEnd.toISOString())
           .order('date', { ascending: true }),
         
-        // Week's trainings (for schedule)
+        // Week's trainings (for schedule + weekly summary) - includes last week for comparison
         supabase
           .from('training_sessions')
-          .select('id, date, status, client_id, clients(name)')
-          .gte('date', todayStart.toISOString())
+          .select('id, date, status, client_id, final_price, clients(name)')
+          .gte('date', subDays(todayStart, 14).toISOString())
           .lte('date', endOfDay(subDays(todayEnd, -6)).toISOString())
           .order('date', { ascending: true }),
         
         // All clients with credit balance
         supabase
           .from('clients')
-          .select('id, name, credit_balance, payment_mode, is_archived, created_at')
+          .select('id, name, credit_balance, payment_mode, is_archived, is_favorite, created_at')
           .eq('is_archived', false),
         
         // Budget group members (to exclude from low credit)
@@ -754,15 +784,112 @@ export function useDashboardViewModel() {
         successMessages.push('Kapacita ideální');
       }
       
+      // ===== TODAY'S SUMMARY =====
+      const todayEstimatedIncome = todayTrainings
+        .filter((t: any) => t.status !== 'canceled')
+        .reduce((sum: number, t: any) => sum + ((t as any).final_price || 0), 0);
+      
+      const uniqueClientsToday = new Set(todayTrainings.map((t: any) => t.client_id)).size;
+      
+      // ===== WEEKLY SUMMARY =====
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+      const lastWeekStart = subDays(weekStart, 7);
+      const lastWeekEnd = subDays(weekEnd, 7);
+      
+      const thisWeekTrainings = (weekTrainingsResult.data || []).filter((t: any) => {
+        const date = new Date(t.date);
+        return date >= weekStart && date <= weekEnd && t.status === 'completed';
+      });
+      
+      const lastWeekTrainings = (weekTrainingsResult.data || []).filter((t: any) => {
+        const date = new Date(t.date);
+        return date >= lastWeekStart && date <= lastWeekEnd && t.status === 'completed';
+      });
+      
+      const trainingsThisWeek = thisWeekTrainings.length;
+      const trainingsLastWeek = lastWeekTrainings.length;
+      const incomeThisWeek = thisWeekTrainings.reduce((sum: number, t: any) => sum + ((t as any).final_price || 0), 0);
+      const incomeLastWeek = lastWeekTrainings.reduce((sum: number, t: any) => sum + ((t as any).final_price || 0), 0);
+      
+      const getTrend = (current: number, previous: number): 'up' | 'down' | 'stable' => {
+        if (current > previous) return 'up';
+        if (current < previous) return 'down';
+        return 'stable';
+      };
+      
+      const weeklySummary: WeeklySummary = {
+        trainingsThisWeek,
+        trainingsLastWeek,
+        incomeThisWeek,
+        incomeLastWeek,
+        weekTrend: getTrend(incomeThisWeek, incomeLastWeek),
+        trainingsTrend: getTrend(trainingsThisWeek, trainingsLastWeek),
+      };
+      
+      // ===== CLIENTS QUICK INFO =====
+      const unpaidByClient = new Map<string, number>();
+      (unpaidResult.data || []).forEach((t: any) => {
+        const count = unpaidByClient.get(t.client_id) || 0;
+        unpaidByClient.set(t.client_id, count + 1);
+      });
+      
+      // Get last training date per client from all completed trainings
+      const lastTrainingByClient = new Map<string, Date>();
+      (allCompletedTrainingsResult.data || []).forEach((t: any) => {
+        const date = new Date(t.date);
+        const existing = lastTrainingByClient.get((t as any).client_id);
+        if (!existing || date > existing) {
+          lastTrainingByClient.set((t as any).client_id, date);
+        }
+      });
+      
+      const clientsQuickInfo: ClientQuickInfo[] = (clientsResult.data || [])
+        .filter((c: any) => !c.is_archived)
+        .map((c: any) => {
+          const unpaidCount = unpaidByClient.get(c.id) || 0;
+          const creditBalance = c.credit_balance || 0;
+          const lastTrainingDate = lastTrainingByClient.get(c.id) || null;
+          
+          let status: 'ok' | 'warning' | 'error' = 'ok';
+          if (creditBalance <= criticalThreshold || unpaidCount > 3) {
+            status = 'error';
+          } else if (creditBalance < lowCreditThreshold || unpaidCount > 0) {
+            status = 'warning';
+          }
+          
+          return {
+            id: c.id,
+            name: c.name,
+            creditBalance,
+            lastTrainingDate,
+            status,
+            isFavorite: c.is_favorite || false,
+            unpaidCount,
+          };
+        })
+        .sort((a: ClientQuickInfo, b: ClientQuickInfo) => {
+          // Favorites first, then by status (error > warning > ok), then alphabetically
+          if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+          const statusOrder = { error: 0, warning: 1, ok: 2 };
+          if (a.status !== b.status) return statusOrder[a.status] - statusOrder[b.status];
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 10);
+      
       return {
         dayStatus,
         allClear: tasks.length === 0,
         priorityTasks,
         totalTasksCount: tasks.length,
         capacity,
+        todayEstimatedIncome,
+        uniqueClientsToday,
         finance,
         todaySchedule,
         weekSchedule,
+        weeklySummary,
+        clientsQuickInfo,
         trends,
         successMessages,
       };

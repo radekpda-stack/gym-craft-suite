@@ -6,14 +6,19 @@ import {
   Clock,
   AlertCircle,
   XCircle,
+  Link2,
+  Check,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { format, isSameDay, startOfDay } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { DashboardViewModel, ScheduleItem } from '@/hooks/useDashboardViewModel';
+import { useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
+import { toast } from 'sonner';
 
 interface DayTimelineSectionProps {
   data: DashboardViewModel | undefined;
@@ -22,7 +27,17 @@ interface DayTimelineSectionProps {
 
 type ViewMode = 'today' | 'week';
 
-function TimelineBlock({ item, isCompact = false }: { item: ScheduleItem; isCompact?: boolean }) {
+function TimelineBlock({ 
+  item, 
+  isCompact = false,
+  onComplete,
+  onCopyLink,
+}: { 
+  item: ScheduleItem; 
+  isCompact?: boolean;
+  onComplete?: (id: string) => void;
+  onCopyLink?: (id: string) => void;
+}) {
   const navigate = useNavigate();
   
   const getStatusConfig = () => {
@@ -70,39 +85,77 @@ function TimelineBlock({ item, isCompact = false }: { item: ScheduleItem; isComp
   const config = getStatusConfig();
   const Icon = config.icon;
   
+  const handleComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onComplete?.(item.id);
+  };
+  
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCopyLink?.(item.id);
+  };
+  
   return (
-    <button
-      onClick={() => navigate(`/trainings/${item.id}`)}
+    <div
       className={cn(
         'w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all',
-        'hover:scale-[1.01] active:scale-[0.99]',
         config.bg,
         config.border
       )}
     >
-      <div className={cn(
-        'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
-        config.bg
-      )}>
-        <Icon className={cn('w-5 h-5', config.iconColor)} />
-      </div>
+      <button
+        onClick={() => navigate(`/trainings/${item.id}`)}
+        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+      >
+        <div className={cn(
+          'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
+          config.bg
+        )}>
+          <Icon className={cn('w-5 h-5', config.iconColor)} />
+        </div>
+        
+        <div className="flex-1 text-left min-w-0">
+          <p className="font-medium text-sm truncate text-foreground">
+            {item.clientName}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {!isCompact && format(item.date, 'EEEE', { locale: cs }) + ' • '}
+            {item.time}
+          </p>
+        </div>
+        
+        {item.status === 'completed' && !item.hasFeedback && (
+          <span className="text-[10px] font-medium text-[hsl(38_92%_50%)] bg-[hsl(38_92%_50%/0.1)] px-2 py-1 rounded-full">
+            Bez FB
+          </span>
+        )}
+      </button>
       
-      <div className="flex-1 text-left min-w-0">
-        <p className="font-medium text-sm truncate text-foreground">
-          {item.clientName}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {!isCompact && format(item.date, 'EEEE', { locale: cs }) + ' • '}
-          {item.time}
-        </p>
-      </div>
+      {/* Quick Actions */}
+      {item.status === 'scheduled' && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleComplete}
+          className="shrink-0 h-8 px-2 text-xs gap-1 text-[hsl(142_76%_36%)] hover:text-[hsl(142_76%_36%)] hover:bg-[hsl(142_76%_36%/0.1)]"
+        >
+          <Check className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Hotovo</span>
+        </Button>
+      )}
       
       {item.status === 'completed' && !item.hasFeedback && (
-        <span className="text-[10px] font-medium text-[hsl(38_92%_50%)] bg-[hsl(38_92%_50%/0.1)] px-2 py-1 rounded-full">
-          Bez FB
-        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopyLink}
+          className="shrink-0 h-8 px-2 text-xs gap-1"
+        >
+          <Link2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Odkaz</span>
+        </Button>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -117,7 +170,17 @@ function EmptyState({ viewMode }: { viewMode: ViewMode }) {
   );
 }
 
-function TimelineView({ items, viewMode }: { items: ScheduleItem[]; viewMode: ViewMode }) {
+function TimelineView({ 
+  items, 
+  viewMode,
+  onComplete,
+  onCopyLink,
+}: { 
+  items: ScheduleItem[]; 
+  viewMode: ViewMode;
+  onComplete?: (id: string) => void;
+  onCopyLink?: (id: string) => void;
+}) {
   const navigate = useNavigate();
   
   if (viewMode === 'today') {
@@ -125,7 +188,13 @@ function TimelineView({ items, viewMode }: { items: ScheduleItem[]; viewMode: Vi
     return (
       <div className="space-y-2">
         {items.slice(0, 8).map(item => (
-          <TimelineBlock key={item.id} item={item} isCompact />
+          <TimelineBlock 
+            key={item.id} 
+            item={item} 
+            isCompact 
+            onComplete={onComplete}
+            onCopyLink={onCopyLink}
+          />
         ))}
         {items.length > 8 && (
           <Button
@@ -172,7 +241,13 @@ function TimelineView({ items, viewMode }: { items: ScheduleItem[]; viewMode: Vi
           </div>
           <div className="space-y-2">
             {day.items.slice(0, 4).map(item => (
-              <TimelineBlock key={item.id} item={item} isCompact />
+              <TimelineBlock 
+                key={item.id} 
+                item={item} 
+                isCompact 
+                onComplete={onComplete}
+                onCopyLink={onCopyLink}
+              />
             ))}
             {day.items.length > 4 && (
               <p className="text-xs text-muted-foreground text-center py-1">
@@ -189,6 +264,69 @@ function TimelineView({ items, viewMode }: { items: ScheduleItem[]; viewMode: Vi
 export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('today');
+  const updateTraining = useUpdateTrainingSession();
+  
+  const handleComplete = async (trainingId: string) => {
+    try {
+      await updateTraining.mutateAsync({
+        id: trainingId,
+        input: { status: 'completed' },
+      });
+      toast.success('Trénink označen jako dokončený');
+    } catch (error) {
+      console.error('Error completing training:', error);
+      toast.error('Nepodařilo se dokončit trénink');
+    }
+  };
+  
+  const handleCopyLink = async (trainingId: string) => {
+    try {
+      // Create feedback link
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: feedbackRequest } = await supabase
+        .from('feedback_requests')
+        .select('token')
+        .eq('training_session_id', trainingId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (feedbackRequest?.token) {
+        const feedbackUrl = `${window.location.origin}/feedback/${feedbackRequest.token}`;
+        await navigator.clipboard.writeText(feedbackUrl);
+        toast.success('Odkaz zkopírován do schránky');
+      } else {
+        // Create new feedback request
+        const { data: training } = await supabase
+          .from('training_sessions')
+          .select('client_id')
+          .eq('id', trainingId)
+          .single();
+        
+        if (training?.client_id) {
+          const { data: newRequest, error } = await supabase
+            .from('feedback_requests')
+            .insert({
+              training_session_id: trainingId,
+              client_id: training.client_id,
+              user_id: (await supabase.auth.getUser()).data.user?.id,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            })
+            .select('token')
+            .single();
+          
+          if (error) throw error;
+          
+          const feedbackUrl = `${window.location.origin}/feedback/${newRequest.token}`;
+          await navigator.clipboard.writeText(feedbackUrl);
+          toast.success('Odkaz vytvořen a zkopírován do schránky');
+        }
+      }
+    } catch (error) {
+      console.error('Error copying feedback link:', error);
+      toast.error('Nepodařilo se zkopírovat odkaz');
+    }
+  };
   
   if (isLoading) {
     return (
@@ -252,7 +390,12 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
       
       <CardContent>
         {items.length > 0 ? (
-          <TimelineView items={items} viewMode={viewMode} />
+          <TimelineView 
+            items={items} 
+            viewMode={viewMode} 
+            onComplete={handleComplete}
+            onCopyLink={handleCopyLink}
+          />
         ) : (
           <EmptyState viewMode={viewMode} />
         )}
