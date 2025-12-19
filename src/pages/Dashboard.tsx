@@ -5,8 +5,8 @@ import { cs } from 'date-fns/locale';
 import { DashboardStatusBar } from '@/components/dashboard/DashboardStatusBar';
 import { PriorityTasksSection } from '@/components/dashboard/PriorityTasksSection';
 import { DayTimelineSection } from '@/components/dashboard/DayTimelineSection';
-import { FinancePanelSection } from '@/components/dashboard/FinancePanelSection';
-import { TrendsPanelSection } from '@/components/dashboard/TrendsPanelSection';
+import { ClientsQuickOverviewSection } from '@/components/dashboard/ClientsQuickOverviewSection';
+import { WeekSummarySection } from '@/components/dashboard/WeekSummarySection';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 
 function DashboardContent() {
@@ -32,17 +32,17 @@ function DashboardContent() {
       {/* Priority Tasks - "Co teď?" */}
       <PriorityTasksSection data={data} isLoading={isLoading} />
 
-      {/* Grid for schedule and finance */}
+      {/* Grid for schedule and clients */}
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Day Timeline */}
         <DayTimelineSection data={data} isLoading={isLoading} />
         
-        {/* Finance Panel */}
-        <FinancePanelSection data={data} isLoading={isLoading} />
+        {/* Clients Quick Overview */}
+        <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
       </div>
 
-      {/* Trends - collapsible */}
-      <TrendsPanelSection data={data} isLoading={isLoading} />
+      {/* Week Summary - collapsible */}
+      <WeekSummarySection data={data} isLoading={isLoading} />
     </div>
   );
 }
