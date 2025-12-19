@@ -22,7 +22,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
+import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { Separator } from '@/components/ui/separator';
 
 interface MobileMenuProps {
@@ -294,7 +294,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           </motion.div>
 
           {/* Quick Credit Modal */}
-          <QuickCreditModal 
+          <UnifiedCreditModal 
             open={quickCreditOpen} 
             onOpenChange={setQuickCreditOpen}
             showTrigger={false}
