@@ -130,7 +130,11 @@ interface DetailDialogProps {
 function DetailDialog({ type, onClose, trends }: DetailDialogProps) {
   if (!type) return null;
   
-  const configs = {
+  const configs: Record<Exclude<DetailType, null>, {
+    title: string;
+    icon: typeof Dumbbell;
+    stats: Array<{ label: string; value: string | number; highlight?: boolean; separator?: boolean }>;
+  }> = {
     trainings: {
       title: 'Tréninky',
       icon: Dumbbell,
@@ -149,6 +153,8 @@ function DetailDialog({ type, onClose, trends }: DetailDialogProps) {
         { label: 'Minulý měsíc', value: formatCurrency(trends.incomeLastMonth) },
         { label: 'Změna', value: `${trends.incomeChange > 0 ? '+' : ''}${trends.incomeChange}%`,
           highlight: trends.incomeChange > 0 },
+        { label: 'Přijaté kredity', value: formatCurrency(trends.creditsReceived), separator: true },
+        { label: 'Počet dobití', value: `${trends.creditsReceivedCount}×` },
       ],
     },
     cancellations: {
@@ -186,15 +192,20 @@ function DetailDialog({ type, onClose, trends }: DetailDialogProps) {
         
         <div className="space-y-3 py-2">
           {config.stats.map((stat, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
-              <span className={cn(
-                'font-semibold',
-                stat.highlight ? 'text-[hsl(142_76%_36%)]' : 'text-foreground'
-              )}>
-                {stat.value}
-              </span>
-            </div>
+            <>
+              {stat.separator && (
+                <div key={`sep-${i}`} className="border-t border-border/50 my-2" />
+              )}
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+                <span className={cn(
+                  'font-semibold',
+                  stat.highlight ? 'text-[hsl(142_76%_36%)]' : 'text-foreground'
+                )}>
+                  {stat.value}
+                </span>
+              </div>
+            </>
           ))}
         </div>
       </DialogContent>

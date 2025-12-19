@@ -67,6 +67,8 @@ export interface TrendData {
   productShare: number; // % of total income
   productIncome: number;
   totalRevenue: number;
+  creditsReceived: number;        // Celkem přijatých kreditů tento měsíc
+  creditsReceivedCount: number;   // Počet transakcí dobití
 }
 
 export interface ScheduleItem {
@@ -537,6 +539,11 @@ export function useDashboardViewModel() {
       const totalRevenue = trainingIncome + productIncome;
       const productShare = totalRevenue > 0 ? Math.round((productIncome / totalRevenue) * 100) : 0;
       
+      // Calculate credits received (positive amounts = payments/charges)
+      const creditTransactions = creditTransactionsResult.data || [];
+      const creditsReceived = creditTransactions.reduce((sum: number, t: any) => sum + (t.amount > 0 ? t.amount : 0), 0);
+      const creditsReceivedCount = creditTransactions.filter((t: any) => t.amount > 0).length;
+      
       const trends: TrendData = {
         trainingsThisMonth: thisMonthCompletedCount,
         trainingsLastMonth: lastMonthCompletedCount,
@@ -550,6 +557,8 @@ export function useDashboardViewModel() {
         productShare,
         productIncome,
         totalRevenue,
+        creditsReceived,
+        creditsReceivedCount,
       };
       
       // ===== DAY STATUS =====
