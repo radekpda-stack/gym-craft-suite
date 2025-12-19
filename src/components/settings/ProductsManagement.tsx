@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ export function ProductsManagement() {
   const [category, setCategory] = useState('supplement');
   const [stockQuantity, setStockQuantity] = useState('0');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
+  const [showMargin, setShowMargin] = useState(false);
 
   const lowStockProducts = useMemo(() => (
     products.filter(p => p.is_active && p.stock_quantity <= p.low_stock_threshold && p.category !== 'service')
@@ -97,6 +98,11 @@ export function ProductsManagement() {
   const isLowStock = (product: Product) => 
     product.category !== 'service' && product.stock_quantity <= product.low_stock_threshold;
 
+  const calculateMarginPercent = (sellPrice: number, buyPrice: number) => {
+    if (buyPrice <= 0 || sellPrice <= 0) return 0;
+    return Math.round((1 - buyPrice / sellPrice) * 100);
+  };
+
   return (
     <div className="space-y-4">
       {/* Low stock warning banner */}
@@ -113,9 +119,19 @@ export function ProductsManagement() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-foreground">Produkty a služby</h3>
         <div className="flex items-center gap-2">
+          {/* Toggle margin visibility */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowMargin(!showMargin)}
+            className="gap-2"
+          >
+            {showMargin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showMargin ? 'Skrýt marži' : 'Zobrazit marži'}
+          </Button>
           <StockReceiveDialog />
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -199,14 +215,11 @@ export function ProductsManagement() {
                   </div>
                 </div>
               )}
-              {price && purchasePrice && (
+              {price && purchasePrice && parseFloat(purchasePrice) > 0 && (
                 <div className="p-3 rounded-lg bg-secondary/50">
                   <p className="text-sm text-muted-foreground">Marže:</p>
                   <p className="text-lg font-bold text-success">
-                    {(parseFloat(price) - parseFloat(purchasePrice)).toLocaleString('cs-CZ')} Kč
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                      ({((1 - parseFloat(purchasePrice) / parseFloat(price)) * 100).toFixed(0)}%)
-                    </span>
+                    {calculateMarginPercent(parseFloat(price), parseFloat(purchasePrice))}%
                   </p>
                 </div>
               )}
@@ -342,9 +355,9 @@ export function ProductsManagement() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="font-bold text-foreground">{product.price} Kč</p>
-                    {product.purchase_price > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        nákup: {product.purchase_price} Kč • marže: {(product.price - product.purchase_price)} Kč
+                    {showMargin && product.purchase_price > 0 && (
+                      <p className="text-xs text-success font-medium">
+                        marže: {calculateMarginPercent(product.price, product.purchase_price)}%
                       </p>
                     )}
                   </div>

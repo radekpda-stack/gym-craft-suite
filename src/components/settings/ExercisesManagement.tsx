@@ -367,7 +367,7 @@ export function ExercisesManagement() {
       </div>
 
       {/* Exercises List */}
-      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
         {Object.entries(groupedExercises).map(([category, categoryExercises]) => (
           <div key={category}>
             <h4 className="text-sm font-semibold text-muted-foreground mb-2 sticky top-0 bg-background/80 backdrop-blur-sm py-1">

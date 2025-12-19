@@ -1,42 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function TrainingPricesSettings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
 
-  const [price1, setPrice1] = useState('');
-  const [price2, setPrice2] = useState('');
-  const [price3, setPrice3] = useState('');
-  const [priceFirstTraining, setPriceFirstTraining] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [prices, setPrices] = useState({
+    "1": 800,
+    "2": 1000,
+    "3": 1200,
+    "first_training": 1000,
+  });
 
-  const currentPrices = settings?.training_prices || { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+  useEffect(() => {
+    if (settings?.training_prices) {
+      setPrices(settings.training_prices);
+    }
+  }, [settings]);
 
-  const startEditing = () => {
-    setPrice1(currentPrices["1"].toString());
-    setPrice2(currentPrices["2"].toString());
-    setPrice3(currentPrices["3"].toString());
-    setPriceFirstTraining((currentPrices["first_training"] || 1000).toString());
-    setIsEditing(true);
-  };
+  const handleBlur = useCallback(async (key: string, value: number) => {
+    const currentPrices = settings?.training_prices || { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+    
+    // Only save if value actually changed
+    if (currentPrices[key] === value) return;
 
-  const handleSave = async () => {
-    await updateSetting.mutateAsync({
-      key: 'training_prices',
-      value: {
-        "1": parseInt(price1) || 800,
-        "2": parseInt(price2) || 1000,
-        "3": parseInt(price3) || 1200,
-        "first_training": parseInt(priceFirstTraining) || 1000,
-      },
-    });
+    try {
+      await updateSetting.mutateAsync({
+        key: 'training_prices',
+        value: {
+          ...currentPrices,
+          [key]: value,
+        },
+      });
+      toast.success('Cena uložena');
+    } catch {
+      toast.error('Chyba při ukládání');
+    }
+  }, [settings, updateSetting]);
 
-    setIsEditing(false);
+  const handleChange = (key: string, value: string) => {
+    setPrices(prev => ({
+      ...prev,
+      [key]: parseInt(value) || 0,
+    }));
   };
 
   if (isLoading) {
@@ -48,85 +58,76 @@ export function TrainingPricesSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-4">Ceny tréninků</h3>
-        {isEditing ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <Label>1 osoba</Label>
-                <Input
-                  type="number"
-                  value={price1}
-                  onChange={(e) => setPrice1(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label>2 osoby</Label>
-                <Input
-                  type="number"
-                  value={price2}
-                  onChange={(e) => setPrice2(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label>3+ osoby</Label>
-                <Input
-                  type="number"
-                  value={price3}
-                  onChange={(e) => setPrice3(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label>1. trénink/diagnostika</Label>
-                <Input
-                  type="number"
-                  value={priceFirstTraining}
-                  onChange={(e) => setPriceFirstTraining(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={handleSave} disabled={updateSetting.isPending}>
-                Uložit
-              </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Zrušit
-              </Button>
-            </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">1 osoba</Label>
+          <div className="relative">
+            <Input
+              type="number"
+              value={prices["1"]}
+              onChange={(e) => handleChange("1", e.target.value)}
+              onBlur={(e) => handleBlur("1", parseInt(e.target.value) || 800)}
+              className="pr-10 text-lg font-semibold"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              Kč
+            </span>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-secondary/50">
-                <p className="text-sm text-muted-foreground">1 osoba</p>
-                <p className="text-xl font-bold text-foreground">{currentPrices["1"]} Kč</p>
-              </div>
-              <div className="p-4 rounded-xl bg-secondary/50">
-                <p className="text-sm text-muted-foreground">2 osoby</p>
-                <p className="text-xl font-bold text-foreground">{currentPrices["2"]} Kč</p>
-              </div>
-              <div className="p-4 rounded-xl bg-secondary/50">
-                <p className="text-sm text-muted-foreground">3+ osoby</p>
-                <p className="text-xl font-bold text-foreground">{currentPrices["3"]} Kč</p>
-              </div>
-              <div className="p-4 rounded-xl bg-secondary/50">
-                <p className="text-sm text-muted-foreground">1. trénink/diagnostika</p>
-                <p className="text-xl font-bold text-foreground">{currentPrices["first_training"] || 1000} Kč</p>
-              </div>
-            </div>
-            <Button variant="outline" onClick={startEditing}>
-              Upravit ceny
-            </Button>
+        </div>
+        
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">2 osoby</Label>
+          <div className="relative">
+            <Input
+              type="number"
+              value={prices["2"]}
+              onChange={(e) => handleChange("2", e.target.value)}
+              onBlur={(e) => handleBlur("2", parseInt(e.target.value) || 1000)}
+              className="pr-10 text-lg font-semibold"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              Kč
+            </span>
           </div>
-        )}
+        </div>
+        
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">3+ osoby</Label>
+          <div className="relative">
+            <Input
+              type="number"
+              value={prices["3"]}
+              onChange={(e) => handleChange("3", e.target.value)}
+              onBlur={(e) => handleBlur("3", parseInt(e.target.value) || 1200)}
+              className="pr-10 text-lg font-semibold"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              Kč
+            </span>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">1. trénink</Label>
+          <div className="relative">
+            <Input
+              type="number"
+              value={prices["first_training"]}
+              onChange={(e) => handleChange("first_training", e.target.value)}
+              onBlur={(e) => handleBlur("first_training", parseInt(e.target.value) || 1000)}
+              className="pr-10 text-lg font-semibold"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              Kč
+            </span>
+          </div>
+        </div>
       </div>
-
+      
+      <p className="text-xs text-muted-foreground">
+        Změny se automaticky ukládají při opuštění pole
+      </p>
     </div>
   );
 }
