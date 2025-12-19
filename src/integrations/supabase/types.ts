@@ -357,6 +357,7 @@ export type Database = {
           name: string
           notes: string | null
           occupation: string | null
+          payment_mode: string | null
           phone: string | null
           sitting_hours_daily: number | null
           sleep_hours: number | null
@@ -384,6 +385,7 @@ export type Database = {
           name: string
           notes?: string | null
           occupation?: string | null
+          payment_mode?: string | null
           phone?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
@@ -411,6 +413,7 @@ export type Database = {
           name?: string
           notes?: string | null
           occupation?: string | null
+          payment_mode?: string | null
           phone?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
