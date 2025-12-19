@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar, HelpCircle, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
 import { ClientFiltersDialog } from '@/components/clients/ClientFiltersDialog';
 import { ClientCard } from '@/components/clients/ClientCard';
+import { SharedBudgetManager } from '@/components/clients/SharedBudgetManager';
 import { ClientFormValues } from '@/lib/validations/client';
 import { ClientListSkeleton } from '@/components/skeletons';
 import { GenderIcon } from '@/components/clients/GenderIcon';
@@ -45,6 +46,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
 import { format, differenceInYears, parse, isValid } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -98,6 +106,8 @@ export default function Clients() {
   const [creditDescription, setCreditDescription] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showGroupsSheet, setShowGroupsSheet] = useState(false);
+  const [showLegendDialog, setShowLegendDialog] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
   const { data: trainingCounts = {} } = useClientTrainingCounts();
@@ -273,11 +283,128 @@ export default function Clients() {
           </p>
         </div>
 
-        <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Nový klient</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={() => setShowLegendDialog(true)}>
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Legenda karet</TooltipContent>
+          </Tooltip>
+          
+          <Button variant="outline" className="gap-2" onClick={() => setShowGroupsSheet(true)}>
+            <LinkIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Skupiny</span>
+            {budgetGroups.length > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {budgetGroups.length}
+              </Badge>
+            )}
+          </Button>
+
+          <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nový klient</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Groups Sheet */}
+      <Sheet open={showGroupsSheet} onOpenChange={setShowGroupsSheet}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Sdílené budgety</SheetTitle>
+            <SheetDescription>
+              Propojte klienty, kteří sdílejí společný kreditový budget (např. rodina, pár).
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <SharedBudgetManager 
+              clients={clients.filter(c => !c.is_archived)} 
+              selectedClientIds={[]} 
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Legend Dialog */}
+      <Dialog open={showLegendDialog} onOpenChange={setShowLegendDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5" />
+              Legenda karet klientů
+            </DialogTitle>
+            <DialogDescription>
+              Vysvětlení barevných okrajů a indikátorů na kartách klientů.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {/* Border colors */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-muted-foreground">Barvy okraje karty</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <div className="w-4 h-4 rounded-full bg-destructive" />
+                  <div>
+                    <p className="font-medium text-sm">Červený okraj</p>
+                    <p className="text-xs text-muted-foreground">Klient má neuhrazené tréninky</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <div className="w-4 h-4 rounded-full bg-warning" />
+                  <div>
+                    <p className="font-medium text-sm">Oranžový okraj</p>
+                    <p className="text-xs text-muted-foreground">Nízký kredit (pod 500 Kč)</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <div className="w-4 h-4 rounded-full bg-success" />
+                  <div>
+                    <p className="font-medium text-sm">Zelený okraj</p>
+                    <p className="text-xs text-muted-foreground">Vše v pořádku</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Exclamation indicator */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-muted-foreground">Indikátory</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-warning/20 border border-warning">
+                    <AlertTriangle className="w-3 h-3 text-warning" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Vykřičník + číslo</p>
+                    <p className="text-xs text-muted-foreground">
+                      Počet nevyřešených položek: neuhrazené tréninky, chybějící feedback, zdravotní omezení
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <div className="flex items-center justify-center w-5 h-5">
+                    <LinkIcon className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Ikona propojení</p>
+                    <p className="text-xs text-muted-foreground">Klient je součástí sdíleného budgetu</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                  <Star className="w-5 h-5 text-warning fill-warning" />
+                  <div>
+                    <p className="font-medium text-sm">Hvězdička</p>
+                    <p className="text-xs text-muted-foreground">Oblíbený klient (zobrazí se vždy nahoře)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <CreateClientSheet
         open={isCreateSheetOpen}
