@@ -43,6 +43,10 @@ export interface TrainingSession {
   trainer_went_well: string | null;
   trainer_problems: string | null;
   trainer_recommendations: string | null;
+  // New pre/post training fields
+  prep_notes: string | null;
+  pain_reported: boolean;
+  pain_notes: string | null;
 }
 
 export interface CreateTrainingInput {
@@ -80,6 +84,10 @@ export interface UpdateTrainingInput {
   trainer_went_well?: string;
   trainer_problems?: string;
   trainer_recommendations?: string;
+  // New pre/post training fields
+  prep_notes?: string;
+  pain_reported?: boolean;
+  pain_notes?: string;
 }
 
 export function useTrainingSessions(clientId?: string) {

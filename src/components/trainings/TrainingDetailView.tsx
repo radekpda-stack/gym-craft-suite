@@ -23,10 +23,15 @@ import {
   Repeat,
   FileText,
   CreditCard,
+  ClipboardList,
+  AlertTriangle,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
@@ -64,6 +69,12 @@ const trainingDetailSchema = z.object({
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).nullable().optional(),
   status: z.enum(['scheduled', 'completed', 'canceled']),
+  // New fields
+  prep_notes: z.string().optional(),
+  trainer_went_well: z.string().optional(),
+  trainer_problems: z.string().optional(),
+  pain_reported: z.boolean().optional(),
+  pain_notes: z.string().optional(),
 });
 
 type TrainingDetailFormValues = z.infer<typeof trainingDetailSchema>;
@@ -71,7 +82,19 @@ type TrainingDetailFormValues = z.infer<typeof trainingDetailSchema>;
 interface TrainingDetailViewProps {
   training: TrainingSession;
   client: Client | null;
-  onSave: (data: { date?: Date; duration?: number; participant_count?: number; notes?: string; subjective_rating?: number | null; status?: 'scheduled' | 'completed' | 'canceled' }, tagIds: string[]) => Promise<void>;
+  onSave: (data: { 
+    date?: Date; 
+    duration?: number; 
+    participant_count?: number; 
+    notes?: string; 
+    subjective_rating?: number | null; 
+    status?: 'scheduled' | 'completed' | 'canceled';
+    prep_notes?: string;
+    trainer_went_well?: string;
+    trainer_problems?: string;
+    pain_reported?: boolean;
+    pain_notes?: string;
+  }, tagIds: string[]) => Promise<void>;
   isLoading?: boolean;
   tagIds: string[];
 }
@@ -135,6 +158,12 @@ export function TrainingDetailView({
       notes: training.notes || '',
       subjective_rating: training.subjective_rating,
       status: training.status as 'scheduled' | 'completed' | 'canceled',
+      // New fields
+      prep_notes: training.prep_notes || '',
+      trainer_went_well: training.trainer_went_well || '',
+      trainer_problems: training.trainer_problems || '',
+      pain_reported: training.pain_reported || false,
+      pain_notes: training.pain_notes || '',
     },
   });
 
@@ -147,6 +176,12 @@ export function TrainingDetailView({
       notes: training.notes || '',
       subjective_rating: training.subjective_rating,
       status: training.status as 'scheduled' | 'completed' | 'canceled',
+      // New fields
+      prep_notes: training.prep_notes || '',
+      trainer_went_well: training.trainer_went_well || '',
+      trainer_problems: training.trainer_problems || '',
+      pain_reported: training.pain_reported || false,
+      pain_notes: training.pain_notes || '',
     });
     setSelectedTagIds(initialTagIds);
   }, [training, form, initialTagIds]);
@@ -481,6 +516,40 @@ export function TrainingDetailView({
           </div>
         )}
 
+        {/* PREP NOTES Section - Before training */}
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-3">
+            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
+            <h3 className="text-base sm:text-lg font-semibold text-foreground">Příprava na trénink</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Poznámky pro přípravu tréninku (cíle, zaměření, na co se soustředit)
+          </p>
+          {isEditMode ? (
+            <FormField
+              control={form.control}
+              name="prep_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Co je cílem dnešního tréninku? Na co se zaměřit?"
+                      className="bg-secondary border-border min-h-[80px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {training.prep_notes || <span className="italic">Žádné poznámky k přípravě</span>}
+            </p>
+          )}
+        </div>
+
+        {/* WORKOUT Section */}
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <WorkoutExerciseManager
             trainingSessionId={training.id}
@@ -491,7 +560,134 @@ export function TrainingDetailView({
           />
         </div>
 
-        {/* Notes Section */}
+        {/* SUMMARY Section - After training */}
+        <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-1">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+            <h3 className="text-base sm:text-lg font-semibold text-foreground">Shrnutí po tréninku</h3>
+          </div>
+
+          {/* What went well */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-success">
+              <ThumbsUp className="w-4 h-4" />
+              <span className="text-sm font-medium">Co šlo dobře</span>
+            </div>
+            {isEditMode ? (
+              <FormField
+                control={form.control}
+                name="trainer_went_well"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Cviky, techniky, pokroky..."
+                        className="bg-secondary border-border min-h-[60px]"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
+                {training.trainer_went_well || <span className="italic">Nezadáno</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Problems */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-warning">
+              <ThumbsDown className="w-4 h-4" />
+              <span className="text-sm font-medium">Co nešlo / na čem pracovat</span>
+            </div>
+            {isEditMode ? (
+              <FormField
+                control={form.control}
+                name="trainer_problems"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Problémy, slabiny, omezení..."
+                        className="bg-secondary border-border min-h-[60px]"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
+                {training.trainer_problems || <span className="italic">Nezadáno</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Pain reporting */}
+          <div className="space-y-2 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm font-medium">Hlášená bolest</span>
+              </div>
+              {isEditMode ? (
+                <FormField
+                  control={form.control}
+                  name="pain_reported"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <span className={cn(
+                  "text-sm font-medium",
+                  training.pain_reported ? "text-destructive" : "text-muted-foreground"
+                )}>
+                  {training.pain_reported ? "Ano" : "Ne"}
+                </span>
+              )}
+            </div>
+            {(form.watch('pain_reported') || training.pain_reported) && (
+              <div className="pl-6">
+                {isEditMode ? (
+                  <FormField
+                    control={form.control}
+                    name="pain_notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Popis bolesti - kde, kdy, intenzita..."
+                            className="bg-secondary border-border min-h-[60px]"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-sm whitespace-pre-wrap">
+                    {training.pain_notes || <span className="italic">Bez popisu</span>}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* General Notes Section */}
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3">Poznámky</h3>
           {isEditMode ? (
@@ -503,7 +699,7 @@ export function TrainingDetailView({
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Poznámky k tréninku..."
+                      placeholder="Další poznámky k tréninku..."
                       className="bg-secondary border-border min-h-[100px]"
                     />
                   </FormControl>

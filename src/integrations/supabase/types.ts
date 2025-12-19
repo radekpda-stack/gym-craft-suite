@@ -3004,6 +3004,8 @@ export type Database = {
           is_generated: boolean | null
           is_late_cancellation: boolean | null
           notes: string | null
+          pain_notes: string | null
+          pain_reported: boolean | null
           parent_session_id: string | null
           participant_count: number | null
           payment_method: string | null
@@ -3011,6 +3013,7 @@ export type Database = {
           plan_day_id: string | null
           plan_week_id: string | null
           plan_workout_id: string | null
+          prep_notes: string | null
           recurrence_end_date: string | null
           recurrence_type: string | null
           rir: number | null
@@ -3042,6 +3045,8 @@ export type Database = {
           is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
+          pain_notes?: string | null
+          pain_reported?: boolean | null
           parent_session_id?: string | null
           participant_count?: number | null
           payment_method?: string | null
@@ -3049,6 +3054,7 @@ export type Database = {
           plan_day_id?: string | null
           plan_week_id?: string | null
           plan_workout_id?: string | null
+          prep_notes?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           rir?: number | null
@@ -3080,6 +3086,8 @@ export type Database = {
           is_generated?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
+          pain_notes?: string | null
+          pain_reported?: boolean | null
           parent_session_id?: string | null
           participant_count?: number | null
           payment_method?: string | null
@@ -3087,6 +3095,7 @@ export type Database = {
           plan_day_id?: string | null
           plan_week_id?: string | null
           plan_workout_id?: string | null
+          prep_notes?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           rir?: number | null
@@ -3248,42 +3257,57 @@ export type Database = {
       }
       workout_entries: {
         Row: {
+          calories: number | null
           created_at: string
+          distance_meters: number | null
           exercise_id: string | null
           exercise_name: string
           id: string
+          is_pr: boolean | null
           notes: string | null
           reps: number | null
           rpe: number | null
           set_number: number
+          time_seconds: number | null
           training_session_id: string
           user_id: string | null
+          watts: number | null
           weight_kg: number | null
         }
         Insert: {
+          calories?: number | null
           created_at?: string
+          distance_meters?: number | null
           exercise_id?: string | null
           exercise_name: string
           id?: string
+          is_pr?: boolean | null
           notes?: string | null
           reps?: number | null
           rpe?: number | null
           set_number?: number
+          time_seconds?: number | null
           training_session_id: string
           user_id?: string | null
+          watts?: number | null
           weight_kg?: number | null
         }
         Update: {
+          calories?: number | null
           created_at?: string
+          distance_meters?: number | null
           exercise_id?: string | null
           exercise_name?: string
           id?: string
+          is_pr?: boolean | null
           notes?: string | null
           reps?: number | null
           rpe?: number | null
           set_number?: number
+          time_seconds?: number | null
           training_session_id?: string
           user_id?: string | null
+          watts?: number | null
           weight_kg?: number | null
         }
         Relationships: [
