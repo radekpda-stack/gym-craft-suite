@@ -20,6 +20,19 @@ interface TrendDataPoint {
   count: number;
 }
 
+interface SessionStats {
+  totalSessions: number;
+  avgDuration: number;
+  deviceBreakdown: { device: string; count: number }[];
+  browserBreakdown: { browser: string; count: number }[];
+  osBreakdown: { os: string; count: number }[];
+}
+
+interface DailyActiveUsers {
+  date: string;
+  users: number;
+}
+
 // Define all trackable features for comparison
 export const ALL_FEATURES = [
   // Navigation
@@ -48,6 +61,7 @@ export const ALL_FEATURES = [
   { name: 'client_update', category: 'clients', label: 'Úprava klienta' },
   { name: 'client_delete', category: 'clients', label: 'Smazání klienta' },
   { name: 'client_archive', category: 'clients', label: 'Archivace klienta' },
+  { name: 'client_unarchive', category: 'clients', label: 'Obnovení klienta z archivu' },
   { name: 'client_favorite', category: 'clients', label: 'Oblíbený klient' },
   { name: 'client_filter', category: 'clients', label: 'Filtrování klientů' },
   { name: 'client_export', category: 'export', label: 'Export klientů' },
@@ -58,6 +72,7 @@ export const ALL_FEATURES = [
   { name: 'training_update', category: 'trainings', label: 'Úprava tréninku' },
   { name: 'training_complete', category: 'trainings', label: 'Dokončení tréninku' },
   { name: 'training_cancel', category: 'trainings', label: 'Zrušení tréninku' },
+  { name: 'training_delete', category: 'trainings', label: 'Smazání tréninku' },
   { name: 'training_duplicate', category: 'trainings', label: 'Duplikace tréninku' },
   { name: 'training_payment_change', category: 'trainings', label: 'Změna platby tréninku' },
   { name: 'training_add_exercise', category: 'trainings', label: 'Přidání cviku do tréninku' },
@@ -76,12 +91,14 @@ export const ALL_FEATURES = [
   // Diagnostics
   { name: 'diagnostic_create', category: 'diagnostics', label: 'Nová diagnostika' },
   { name: 'diagnostic_update', category: 'diagnostics', label: 'Úprava diagnostiky' },
+  { name: 'diagnostic_delete', category: 'diagnostics', label: 'Smazání diagnostiky' },
   { name: 'diagnostic_ai_analysis', category: 'diagnostics', label: 'AI analýza diagnostiky' },
   { name: 'diagnostic_view', category: 'diagnostics', label: 'Zobrazení diagnostiky' },
   // Finance
   { name: 'credit_add', category: 'finance', label: 'Přidání kreditu' },
   { name: 'credit_deduct', category: 'finance', label: 'Odečtení kreditu' },
   { name: 'product_sale', category: 'finance', label: 'Prodej produktu' },
+  { name: 'product_create', category: 'finance', label: 'Vytvoření produktu' },
   { name: 'quick_credit', category: 'finance', label: 'Rychlý kredit' },
   { name: 'credit_statement_export', category: 'finance', label: 'Export výpisu kreditu' },
   { name: 'unpaid_training_pay', category: 'finance', label: 'Uhrazení nezaplaceného tréninku' },
@@ -92,6 +109,8 @@ export const ALL_FEATURES = [
   { name: 'voice_record', category: 'media', label: 'Hlasová poznámka' },
   // Search & UI
   { name: 'search_open', category: 'search', label: 'Vyhledávání' },
+  { name: 'search_open_keyboard', category: 'search', label: 'Vyhledávání (klávesnice)' },
+  { name: 'search_result_select', category: 'search', label: 'Výběr výsledku vyhledávání' },
   { name: 'quick_action_menu', category: 'search', label: 'Rychlé akce (FAB)' },
   { name: 'context_menu_client', category: 'search', label: 'Kontextové menu klienta' },
   { name: 'context_menu_training', category: 'search', label: 'Kontextové menu tréninku' },
@@ -151,6 +170,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   progress: 'Progrese',
   settings: 'Nastavení',
   export: 'Export',
+  system: 'Systém',
 };
 
 function getPeriodStartDate(period: StatsPeriod): Date | null {
@@ -276,6 +296,115 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
     }
   });
 
+  // Session statistics
+  const { data: sessionStats, isLoading: loadingSessions } = useQuery({
+    queryKey: ['session-stats', period],
+    queryFn: async (): Promise<SessionStats> => {
+      let query = supabase
+        .from('user_sessions')
+        .select('duration_seconds, device_type, browser, os');
+      
+      if (startDate) {
+        query = query.gte('started_at', startDate.toISOString());
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const sessions = data || [];
+      const totalSessions = sessions.length;
+      
+      const validDurations = sessions.filter(s => s.duration_seconds != null);
+      const avgDuration = validDurations.length > 0
+        ? Math.round(validDurations.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / validDurations.length)
+        : 0;
+
+      // Device breakdown
+      const deviceCounts = new Map<string, number>();
+      const browserCounts = new Map<string, number>();
+      const osCounts = new Map<string, number>();
+
+      for (const session of sessions) {
+        if (session.device_type) {
+          deviceCounts.set(session.device_type, (deviceCounts.get(session.device_type) || 0) + 1);
+        }
+        if (session.browser) {
+          browserCounts.set(session.browser, (browserCounts.get(session.browser) || 0) + 1);
+        }
+        if (session.os) {
+          osCounts.set(session.os, (osCounts.get(session.os) || 0) + 1);
+        }
+      }
+
+      return {
+        totalSessions,
+        avgDuration,
+        deviceBreakdown: Array.from(deviceCounts.entries()).map(([device, count]) => ({ device, count })).sort((a, b) => b.count - a.count),
+        browserBreakdown: Array.from(browserCounts.entries()).map(([browser, count]) => ({ browser, count })).sort((a, b) => b.count - a.count),
+        osBreakdown: Array.from(osCounts.entries()).map(([os, count]) => ({ os, count })).sort((a, b) => b.count - a.count),
+      };
+    }
+  });
+
+  // Daily Active Users
+  const { data: dauData, isLoading: loadingDAU } = useQuery({
+    queryKey: ['dau-stats', period],
+    queryFn: async (): Promise<DailyActiveUsers[]> => {
+      const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 30;
+      const start = startOfDay(subDays(new Date(), days));
+
+      const { data, error } = await supabase
+        .from('user_sessions')
+        .select('user_id, started_at')
+        .gte('started_at', start.toISOString());
+
+      if (error) throw error;
+
+      // Group by day, count unique users
+      const dailyUsers = new Map<string, Set<string>>();
+      for (let i = 0; i < days; i++) {
+        const date = format(subDays(new Date(), days - 1 - i), 'yyyy-MM-dd');
+        dailyUsers.set(date, new Set());
+      }
+
+      for (const row of data || []) {
+        const date = format(new Date(row.started_at), 'yyyy-MM-dd');
+        if (dailyUsers.has(date)) {
+          dailyUsers.get(date)!.add(row.user_id);
+        }
+      }
+
+      const result: DailyActiveUsers[] = [];
+      dailyUsers.forEach((users, date) => {
+        result.push({ date, users: users.size });
+      });
+
+      return result;
+    }
+  });
+
+  // Success rate
+  const { data: successRate, isLoading: loadingSuccess } = useQuery({
+    queryKey: ['success-rate', period],
+    queryFn: async () => {
+      let query = supabase
+        .from('feature_usage')
+        .select('success');
+      
+      if (startDate) {
+        query = query.gte('created_at', startDate.toISOString());
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const total = data?.length || 0;
+      const successful = data?.filter(r => r.success !== false).length || 0;
+      
+      return total > 0 ? Math.round((successful / total) * 100) : 100;
+    }
+  });
+
   // Unused features
   const unusedFeatures = ALL_FEATURES.filter(
     f => !topFeatures?.some(tf => tf.feature_name === f.name)
@@ -290,7 +419,10 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
     trendData: trendData || [],
     unusedFeatures,
     totalUsage,
-    isLoading: loadingTop || loadingCategories || loadingTrend
+    sessionStats: sessionStats || { totalSessions: 0, avgDuration: 0, deviceBreakdown: [], browserBreakdown: [], osBreakdown: [] },
+    dauData: dauData || [],
+    successRate: successRate || 100,
+    isLoading: loadingTop || loadingCategories || loadingTrend || loadingSessions || loadingDAU || loadingSuccess
   };
 }
 

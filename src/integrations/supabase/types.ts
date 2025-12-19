@@ -1233,29 +1233,49 @@ export type Database = {
       feature_usage: {
         Row: {
           created_at: string
+          duration_ms: number | null
+          error_message: string | null
           feature_category: string
           feature_name: string
           id: string
           metadata: Json | null
+          session_id: string | null
+          success: boolean | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
           feature_category: string
           feature_name: string
           id?: string
           metadata?: Json | null
+          session_id?: string | null
+          success?: boolean | null
           user_id: string
         }
         Update: {
           created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
           feature_category?: string
           feature_name?: string
           id?: string
           metadata?: Json | null
+          session_id?: string | null
+          success?: boolean | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feature_usage_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback_requests: {
         Row: {
@@ -2904,6 +2924,48 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_type: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          os: string | null
+          screen_height: number | null
+          screen_width: number | null
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          os?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          os?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          started_at?: string
           user_id?: string
         }
         Relationships: []

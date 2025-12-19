@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export type AreaType = 'joint' | 'muscle';
 
@@ -105,6 +106,7 @@ export function useCreateDiagnostic() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["diagnostics"] });
       queryClient.invalidateQueries({ queryKey: ["diagnostics", variables.client_id] });
+      featureTracker.track('diagnostic_create', 'diagnostics', { area_type: variables.area_type });
       toast({
         title: "Diagnostika uložena",
         description: "Nový diagnostický záznam byl přidán.",
@@ -148,6 +150,7 @@ export function useUpdateDiagnostic() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnostics"] });
+      featureTracker.track('diagnostic_update', 'diagnostics');
       toast({
         title: "Diagnostika aktualizována",
         description: "Změny byly uloženy.",
@@ -178,6 +181,7 @@ export function useDeleteDiagnostic() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnostics"] });
+      featureTracker.track('diagnostic_delete', 'diagnostics');
       toast({
         title: "Diagnostika smazána",
         description: "Záznam byl úspěšně odstraněn.",

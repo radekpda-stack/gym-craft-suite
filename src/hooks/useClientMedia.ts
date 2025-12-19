@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export type MediaType = 'photo' | 'audio';
 
@@ -154,6 +155,7 @@ export function useCreateMedia() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["client-media", variables.client_id] });
+      featureTracker.track(variables.type === 'photo' ? 'photo_upload' : 'voice_record', 'media', { category: variables.category });
       toast({
         title: variables.type === 'photo' ? "Fotografie nahrána" : "Hlasová poznámka nahrána",
         description: "Soubor byl úspěšně uložen.",

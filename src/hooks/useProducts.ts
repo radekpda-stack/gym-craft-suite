@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { featureTracker } from "@/hooks/useFeatureTracking";
 
 export interface Product {
   id: string;
@@ -74,6 +75,7 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
+      featureTracker.track('product_create', 'finance');
       toast({
         title: "Produkt vytvořen",
         description: "Nový produkt byl úspěšně přidán.",
