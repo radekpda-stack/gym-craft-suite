@@ -18,6 +18,7 @@ import {
   BarChart3,
   FileText,
   CalendarClock,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -195,35 +196,66 @@ export function ClientSummaryCard({
         </div>
       )}
 
-      {/* Feedback Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
-          <div className="flex items-center gap-2">
+      {/* Feedback Section - Redesigned for clarity */}
+      <div className="space-y-3">
+        {/* Header with stats toggle */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-muted-foreground" />
-            <Label htmlFor="feedback-toggle" className="text-sm cursor-pointer">
-              Posílat feedback dotazník
-            </Label>
+            Zpětná vazba
+          </h3>
+          <button
+            onClick={() => setShowFeedbackStats(!showFeedbackStats)}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Historie odpovědí</span>
+            {showFeedbackStats ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        </div>
+
+        {/* Two clear options */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Option 1: Auto-send after training */}
+          <div className="p-3 rounded-xl bg-secondary/50 space-y-1">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="feedback-toggle" className="text-xs text-muted-foreground cursor-pointer">
+                Po každém tréninku
+              </Label>
+              <Switch
+                id="feedback-toggle"
+                checked={client.feedback_enabled !== false}
+                onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground/70">
+              {client.feedback_enabled !== false 
+                ? "✓ Automaticky se posílá" 
+                : "Vypnuto"}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFeedbackStats(!showFeedbackStats)}
-              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+
+          {/* Option 2: Manual link generation */}
+          <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-1">
+            <p className="text-xs text-muted-foreground">Jednorázový odkaz</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="w-full gap-1.5 h-8 text-xs"
+              onClick={() => {
+                // This would trigger link generation
+                window.open(`/feedback/${client.id}/generate`, '_blank');
+              }}
             >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Statistiky</span>
-              {showFeedbackStats ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-            <Switch
-              id="feedback-toggle"
-              checked={client.feedback_enabled !== false}
-              onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
-            />
+              <Link2 className="w-3.5 h-3.5" />
+              Vygenerovat odkaz
+            </Button>
           </div>
         </div>
         
         {/* Feedback Statistics (collapsible) */}
         {showFeedbackStats && (
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2 border-t border-border/50">
             <FeedbackStatisticsCard clientId={client.id} />
             <FeedbackTrendsChart clientId={client.id} />
           </div>
