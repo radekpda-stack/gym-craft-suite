@@ -25,6 +25,7 @@ interface BodyPainSelectorProps {
   selectedAreas: PainSelection[];
   onChange: (areas: PainSelection[]) => void;
   language?: 'cs' | 'en';
+  gender?: 'male' | 'female' | null;
 }
 
 // Functional body zones - front and back views
@@ -54,30 +55,57 @@ const BODY_ZONES = {
   ],
 };
 
-// Zone positions for clickable areas - adjusted for anatomical silhouette
-const ZONE_POSITIONS = {
+// Zone positions for male silhouette
+const ZONE_POSITIONS_MALE = {
   front: {
-    neck: { cx: 100, cy: 62, rx: 12, ry: 8 },
-    shoulder: { left: { cx: 70, cy: 82, rx: 14, ry: 10 }, right: { cx: 130, cy: 82, rx: 14, ry: 10 } },
-    chest: { cx: 100, cy: 100, rx: 20, ry: 12 },
-    elbow: { left: { cx: 52, cy: 128, rx: 9, ry: 11 }, right: { cx: 148, cy: 128, rx: 9, ry: 11 } },
-    wrist: { left: { cx: 42, cy: 165, rx: 8, ry: 8 }, right: { cx: 158, cy: 165, rx: 8, ry: 8 } },
-    hip: { left: { cx: 82, cy: 148, rx: 12, ry: 10 }, right: { cx: 118, cy: 148, rx: 12, ry: 10 } },
-    groin: { cx: 100, cy: 160, rx: 10, ry: 8 },
-    knee: { left: { cx: 84, cy: 210, rx: 10, ry: 12 }, right: { cx: 116, cy: 210, rx: 10, ry: 12 } },
-    shin: { left: { cx: 84, cy: 245, rx: 8, ry: 14 }, right: { cx: 116, cy: 245, rx: 8, ry: 14 } },
-    ankle: { left: { cx: 84, cy: 278, rx: 8, ry: 8 }, right: { cx: 116, cy: 278, rx: 8, ry: 8 } },
+    neck: { cx: 100, cy: 52, rx: 10, ry: 7 },
+    shoulder: { left: { cx: 68, cy: 72, rx: 12, ry: 9 }, right: { cx: 132, cy: 72, rx: 12, ry: 9 } },
+    chest: { cx: 100, cy: 90, rx: 18, ry: 10 },
+    elbow: { left: { cx: 48, cy: 118, rx: 8, ry: 10 }, right: { cx: 152, cy: 118, rx: 8, ry: 10 } },
+    wrist: { left: { cx: 38, cy: 155, rx: 7, ry: 7 }, right: { cx: 162, cy: 155, rx: 7, ry: 7 } },
+    hip: { left: { cx: 82, cy: 138, rx: 10, ry: 9 }, right: { cx: 118, cy: 138, rx: 10, ry: 9 } },
+    groin: { cx: 100, cy: 148, rx: 8, ry: 7 },
+    knee: { left: { cx: 84, cy: 198, rx: 9, ry: 11 }, right: { cx: 116, cy: 198, rx: 9, ry: 11 } },
+    shin: { left: { cx: 84, cy: 232, rx: 7, ry: 12 }, right: { cx: 116, cy: 232, rx: 7, ry: 12 } },
+    ankle: { left: { cx: 84, cy: 268, rx: 7, ry: 7 }, right: { cx: 116, cy: 268, rx: 7, ry: 7 } },
   },
   back: {
-    cervical_spine: { cx: 100, cy: 62, rx: 10, ry: 8 },
-    upper_back: { cx: 100, cy: 92, rx: 18, ry: 12 },
-    lower_back: { cx: 100, cy: 128, rx: 16, ry: 12 },
-    shoulder_back: { left: { cx: 70, cy: 82, rx: 14, ry: 10 }, right: { cx: 130, cy: 82, rx: 14, ry: 10 } },
-    elbow_back: { left: { cx: 52, cy: 128, rx: 9, ry: 11 }, right: { cx: 148, cy: 128, rx: 9, ry: 11 } },
-    glutes: { left: { cx: 84, cy: 158, rx: 12, ry: 10 }, right: { cx: 116, cy: 158, rx: 12, ry: 10 } },
-    hamstring: { left: { cx: 84, cy: 190, rx: 10, ry: 14 }, right: { cx: 116, cy: 190, rx: 10, ry: 14 } },
-    calf: { left: { cx: 84, cy: 245, rx: 8, ry: 14 }, right: { cx: 116, cy: 245, rx: 8, ry: 14 } },
-    achilles: { left: { cx: 84, cy: 275, rx: 6, ry: 8 }, right: { cx: 116, cy: 275, rx: 6, ry: 8 } },
+    cervical_spine: { cx: 100, cy: 52, rx: 8, ry: 6 },
+    upper_back: { cx: 100, cy: 82, rx: 16, ry: 10 },
+    lower_back: { cx: 100, cy: 118, rx: 14, ry: 10 },
+    shoulder_back: { left: { cx: 68, cy: 72, rx: 12, ry: 9 }, right: { cx: 132, cy: 72, rx: 12, ry: 9 } },
+    elbow_back: { left: { cx: 48, cy: 118, rx: 8, ry: 10 }, right: { cx: 152, cy: 118, rx: 8, ry: 10 } },
+    glutes: { left: { cx: 85, cy: 148, rx: 10, ry: 9 }, right: { cx: 115, cy: 148, rx: 10, ry: 9 } },
+    hamstring: { left: { cx: 84, cy: 178, rx: 9, ry: 12 }, right: { cx: 116, cy: 178, rx: 9, ry: 12 } },
+    calf: { left: { cx: 84, cy: 232, rx: 7, ry: 12 }, right: { cx: 116, cy: 232, rx: 7, ry: 12 } },
+    achilles: { left: { cx: 84, cy: 262, rx: 5, ry: 7 }, right: { cx: 116, cy: 262, rx: 5, ry: 7 } },
+  },
+};
+
+// Zone positions for female silhouette (slightly different proportions)
+const ZONE_POSITIONS_FEMALE = {
+  front: {
+    neck: { cx: 100, cy: 52, rx: 9, ry: 6 },
+    shoulder: { left: { cx: 72, cy: 70, rx: 10, ry: 8 }, right: { cx: 128, cy: 70, rx: 10, ry: 8 } },
+    chest: { cx: 100, cy: 88, rx: 16, ry: 10 },
+    elbow: { left: { cx: 52, cy: 116, rx: 7, ry: 9 }, right: { cx: 148, cy: 116, rx: 7, ry: 9 } },
+    wrist: { left: { cx: 42, cy: 152, rx: 6, ry: 6 }, right: { cx: 158, cy: 152, rx: 6, ry: 6 } },
+    hip: { left: { cx: 80, cy: 140, rx: 11, ry: 10 }, right: { cx: 120, cy: 140, rx: 11, ry: 10 } },
+    groin: { cx: 100, cy: 150, rx: 7, ry: 6 },
+    knee: { left: { cx: 84, cy: 200, rx: 8, ry: 10 }, right: { cx: 116, cy: 200, rx: 8, ry: 10 } },
+    shin: { left: { cx: 84, cy: 234, rx: 6, ry: 11 }, right: { cx: 116, cy: 234, rx: 6, ry: 11 } },
+    ankle: { left: { cx: 84, cy: 268, rx: 6, ry: 6 }, right: { cx: 116, cy: 268, rx: 6, ry: 6 } },
+  },
+  back: {
+    cervical_spine: { cx: 100, cy: 52, rx: 7, ry: 5 },
+    upper_back: { cx: 100, cy: 82, rx: 14, ry: 9 },
+    lower_back: { cx: 100, cy: 118, rx: 12, ry: 9 },
+    shoulder_back: { left: { cx: 72, cy: 70, rx: 10, ry: 8 }, right: { cx: 128, cy: 70, rx: 10, ry: 8 } },
+    elbow_back: { left: { cx: 52, cy: 116, rx: 7, ry: 9 }, right: { cx: 148, cy: 116, rx: 7, ry: 9 } },
+    glutes: { left: { cx: 84, cy: 150, rx: 11, ry: 10 }, right: { cx: 116, cy: 150, rx: 11, ry: 10 } },
+    hamstring: { left: { cx: 84, cy: 180, rx: 8, ry: 11 }, right: { cx: 116, cy: 180, rx: 8, ry: 11 } },
+    calf: { left: { cx: 84, cy: 234, rx: 6, ry: 11 }, right: { cx: 116, cy: 234, rx: 6, ry: 11 } },
+    achilles: { left: { cx: 84, cy: 264, rx: 5, ry: 6 }, right: { cx: 116, cy: 264, rx: 5, ry: 6 } },
   },
 };
 
@@ -99,103 +127,317 @@ const getIntensityBorder = (intensity: number): string => {
   return 'border-red-500';
 };
 
-// Anatomical body silhouette paths
-const BODY_SILHOUETTE_FRONT = `
-  M100,20
-  C112,20 122,30 122,44
-  C122,54 116,62 108,66
-  L108,70
-  C130,72 148,82 148,82
-  C158,86 162,96 162,108
-  L164,130
-  C166,138 168,148 166,158
-  L156,178
-  C154,182 150,184 146,184
-  L138,172
-  C136,168 134,166 132,168
-  L130,170
-  L128,145
-  C126,138 122,134 118,136
-  L118,162
-  C120,170 122,178 120,186
-  L118,210
-  C120,218 120,228 118,240
-  L116,260
-  C116,270 114,280 112,290
-  C110,294 106,296 100,296
-  C94,296 90,294 88,290
-  L86,260
-  C84,240 82,228 84,218
-  L82,186
-  C80,178 82,170 84,162
-  L84,136
-  C80,134 76,138 74,145
-  L72,170
-  L70,168
-  C68,166 66,168 64,172
-  L56,184
-  C52,184 48,182 46,178
-  L36,158
-  C34,148 36,138 38,130
-  L40,108
-  C40,96 44,86 54,82
-  C54,82 72,72 94,70
-  L94,66
-  C86,62 80,54 80,44
-  C80,30 90,20 100,20
+// Professional anatomical male silhouette - front view
+const MALE_SILHOUETTE_FRONT = `
+  M100,15
+  C108,15 114,22 114,32
+  C114,40 110,46 104,48
+  L104,52
+  C108,52 112,53 118,56
+  L134,58
+  C142,60 148,64 152,68
+  L156,72
+  C160,76 162,82 162,88
+  L162,95
+  C162,100 161,105 159,110
+  L156,118
+  C154,124 152,130 150,136
+  L147,145
+  C145,150 143,154 141,158
+  L139,162
+  L137,155
+  C135,148 133,142 131,138
+  L128,132
+  C126,128 124,125 122,123
+  L120,122
+  L120,135
+  C120,140 121,145 121,150
+  L121,158
+  C121,164 120,170 118,175
+  L116,182
+  C115,188 114,194 114,200
+  L114,210
+  C114,218 113,226 112,234
+  L111,245
+  C110,255 109,265 107,275
+  L105,282
+  C103,285 100,287 100,287
+  C100,287 97,285 95,282
+  L93,275
+  C91,265 90,255 89,245
+  L88,234
+  C87,226 86,218 86,210
+  L86,200
+  C86,194 85,188 84,182
+  L82,175
+  C80,170 79,164 79,158
+  L79,150
+  C79,145 80,140 80,135
+  L80,122
+  L78,123
+  C76,125 74,128 72,132
+  L69,138
+  C67,142 65,148 63,155
+  L61,162
+  L59,158
+  C57,154 55,150 53,145
+  L50,136
+  C48,130 46,124 44,118
+  L41,110
+  C39,105 38,100 38,95
+  L38,88
+  C38,82 40,76 44,72
+  L48,68
+  C52,64 58,60 66,58
+  L82,56
+  C88,53 92,52 96,52
+  L96,48
+  C90,46 86,40 86,32
+  C86,22 92,15 100,15
   Z
 `;
 
-const BODY_SILHOUETTE_BACK = `
-  M100,20
-  C112,20 122,30 122,44
-  C122,54 116,62 108,66
-  L108,70
-  C130,72 148,82 148,82
-  C158,86 162,96 162,108
-  L164,130
-  C166,138 168,148 166,158
-  L156,178
-  C154,182 150,184 146,184
-  L138,172
-  C136,168 134,166 132,168
-  L130,170
-  L128,145
-  C126,138 122,134 118,136
-  L118,162
-  C120,170 122,178 120,186
-  L118,210
-  C120,218 120,228 118,240
-  L116,260
-  C116,270 114,280 112,290
-  C110,294 106,296 100,296
-  C94,296 90,294 88,290
-  L86,260
-  C84,240 82,228 84,218
-  L82,186
-  C80,178 82,170 84,162
-  L84,136
-  C80,134 76,138 74,145
-  L72,170
-  L70,168
-  C68,166 66,168 64,172
-  L56,184
-  C52,184 48,182 46,178
-  L36,158
-  C34,148 36,138 38,130
-  L40,108
-  C40,96 44,86 54,82
-  C54,82 72,72 94,70
-  L94,66
-  C86,62 80,54 80,44
-  C80,30 90,20 100,20
+// Professional anatomical male silhouette - back view
+const MALE_SILHOUETTE_BACK = `
+  M100,15
+  C108,15 114,22 114,32
+  C114,40 110,46 104,48
+  L104,52
+  C108,52 112,53 118,56
+  L134,58
+  C142,60 148,64 152,68
+  L156,72
+  C160,76 162,82 162,88
+  L162,95
+  C162,100 161,105 159,110
+  L156,118
+  C154,124 152,130 150,136
+  L147,145
+  C145,150 143,154 141,158
+  L139,162
+  L137,155
+  C135,148 133,142 131,138
+  L128,132
+  C126,128 124,125 122,123
+  L120,122
+  L120,135
+  C120,140 121,145 121,150
+  L121,158
+  C121,164 120,170 118,175
+  L116,182
+  C115,188 114,194 114,200
+  L114,210
+  C114,218 113,226 112,234
+  L111,245
+  C110,255 109,265 107,275
+  L105,282
+  C103,285 100,287 100,287
+  C100,287 97,285 95,282
+  L93,275
+  C91,265 90,255 89,245
+  L88,234
+  C87,226 86,218 86,210
+  L86,200
+  C86,194 85,188 84,182
+  L82,175
+  C80,170 79,164 79,158
+  L79,150
+  C79,145 80,140 80,135
+  L80,122
+  L78,123
+  C76,125 74,128 72,132
+  L69,138
+  C67,142 65,148 63,155
+  L61,162
+  L59,158
+  C57,154 55,150 53,145
+  L50,136
+  C48,130 46,124 44,118
+  L41,110
+  C39,105 38,100 38,95
+  L38,88
+  C38,82 40,76 44,72
+  L48,68
+  C52,64 58,60 66,58
+  L82,56
+  C88,53 92,52 96,52
+  L96,48
+  C90,46 86,40 86,32
+  C86,22 92,15 100,15
   Z
+`;
+
+// Professional anatomical female silhouette - front view  
+const FEMALE_SILHOUETTE_FRONT = `
+  M100,15
+  C107,15 112,21 112,30
+  C112,37 109,43 104,46
+  L104,50
+  C108,50 112,52 118,55
+  L130,58
+  C136,60 142,64 146,68
+  L149,72
+  C152,76 154,82 154,88
+  L154,94
+  C154,100 153,106 150,112
+  L147,120
+  C145,128 142,136 139,144
+  L136,152
+  C134,158 131,164 129,168
+  L127,172
+  L125,165
+  C123,158 121,150 120,144
+  L119,138
+  C118,132 118,126 118,122
+  L118,134
+  C118,140 119,148 120,156
+  L120,168
+  C120,176 119,184 117,192
+  L115,202
+  C114,210 113,218 113,226
+  L112,238
+  C111,250 110,262 108,272
+  L106,280
+  C104,283 100,285 100,285
+  C100,285 96,283 94,280
+  L92,272
+  C90,262 89,250 88,238
+  L87,226
+  C87,218 86,210 85,202
+  L83,192
+  C81,184 80,176 80,168
+  L80,156
+  C81,148 82,140 82,134
+  L82,122
+  C82,126 82,132 81,138
+  L80,144
+  C79,150 77,158 75,165
+  L73,172
+  L71,168
+  C69,164 66,158 64,152
+  L61,144
+  C58,136 55,128 53,120
+  L50,112
+  C47,106 46,100 46,94
+  L46,88
+  C46,82 48,76 51,72
+  L54,68
+  C58,64 64,60 70,58
+  L82,55
+  C88,52 92,50 96,50
+  L96,46
+  C91,43 88,37 88,30
+  C88,21 93,15 100,15
+  Z
+`;
+
+// Professional anatomical female silhouette - back view
+const FEMALE_SILHOUETTE_BACK = `
+  M100,15
+  C107,15 112,21 112,30
+  C112,37 109,43 104,46
+  L104,50
+  C108,50 112,52 118,55
+  L130,58
+  C136,60 142,64 146,68
+  L149,72
+  C152,76 154,82 154,88
+  L154,94
+  C154,100 153,106 150,112
+  L147,120
+  C145,128 142,136 139,144
+  L136,152
+  C134,158 131,164 129,168
+  L127,172
+  L125,165
+  C123,158 121,150 120,144
+  L119,138
+  C118,132 118,126 118,122
+  L118,134
+  C118,140 119,148 120,156
+  L120,168
+  C120,176 119,184 117,192
+  L115,202
+  C114,210 113,218 113,226
+  L112,238
+  C111,250 110,262 108,272
+  L106,280
+  C104,283 100,285 100,285
+  C100,285 96,283 94,280
+  L92,272
+  C90,262 89,250 88,238
+  L87,226
+  C87,218 86,210 85,202
+  L83,192
+  C81,184 80,176 80,168
+  L80,156
+  C81,148 82,140 82,134
+  L82,122
+  C82,126 82,132 81,138
+  L80,144
+  C79,150 77,158 75,165
+  L73,172
+  L71,168
+  C69,164 66,158 64,152
+  L61,144
+  C58,136 55,128 53,120
+  L50,112
+  C47,106 46,100 46,94
+  L46,88
+  C46,82 48,76 51,72
+  L54,68
+  C58,64 64,60 70,58
+  L82,55
+  C88,52 92,50 96,50
+  L96,46
+  C91,43 88,37 88,30
+  C88,21 93,15 100,15
+  Z
+`;
+
+// Muscle detail lines for male front
+const MALE_MUSCLE_LINES_FRONT = `
+  M85,72 Q100,78 115,72
+  M75,85 Q100,92 125,85
+  M92,95 L92,115
+  M108,95 L108,115
+  M95,118 Q100,122 105,118
+  M82,155 L82,195
+  M118,155 L118,195
+`;
+
+// Muscle detail lines for male back
+const MALE_MUSCLE_LINES_BACK = `
+  M75,72 Q100,80 125,72
+  M80,90 Q100,98 120,90
+  M92,105 Q100,115 108,105
+  M85,145 Q100,155 115,145
+  M82,165 L82,200
+  M118,165 L118,200
+`;
+
+// Muscle detail lines for female front
+const FEMALE_MUSCLE_LINES_FRONT = `
+  M82,72 Q100,76 118,72
+  M78,88 Q100,95 122,88
+  M82,155 L82,195
+  M118,155 L118,195
+`;
+
+// Muscle detail lines for female back  
+const FEMALE_MUSCLE_LINES_BACK = `
+  M78,72 Q100,78 122,72
+  M80,90 Q100,96 120,90
+  M85,145 Q100,152 115,145
+  M82,165 L82,200
+  M118,165 L118,200
 `;
 
 export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   selectedAreas,
   onChange,
   language = 'cs',
+  gender = 'male',
 }) => {
   const [view, setView] = useState<'front' | 'back'>('front');
   const [activeZone, setActiveZone] = useState<string | null>(null);
@@ -206,6 +448,9 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   const [tempIsNew, setTempIsNew] = useState(true);
   const [tempPainType, setTempPainType] = useState<'muscle' | 'joint' | null>(null);
   const [tempSide, setTempSide] = useState<'left' | 'right' | 'both'>('both');
+
+  // Determine which silhouette and positions to use
+  const isFemale = gender === 'female';
 
   const t = {
     front: language === 'cs' ? 'Zepředu' : 'Front',
@@ -335,18 +580,20 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
         className={cn(
           "cursor-pointer transition-all duration-300",
           isSelected
-            ? cn(getIntensityColor(selection.intensity), "opacity-80")
-            : "fill-primary/10 hover:fill-primary/30"
+            ? cn(getIntensityColor(selection.intensity), "opacity-85")
+            : "fill-white/10 stroke-white/40 hover:fill-white/25"
         )}
+        strokeWidth={isSelected ? 0 : 1}
+        strokeDasharray={isSelected ? "none" : "3,2"}
         style={{
-          filter: isSelected ? 'drop-shadow(0 0 6px currentColor)' : undefined,
+          filter: isSelected ? 'drop-shadow(0 0 8px currentColor)' : undefined,
         }}
         whileHover={{ scale: 1.15, opacity: 1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => openZoneSheet(zoneId, side)}
         initial={false}
         animate={isSelected ? { 
-          scale: [1, 1.05, 1],
+          scale: [1, 1.08, 1],
           transition: { repeat: Infinity, duration: 2, ease: "easeInOut" }
         } : {}}
       />
@@ -354,8 +601,18 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   };
 
   const currentZones = BODY_ZONES[view];
-  const currentPositions = ZONE_POSITIONS[view];
-  const silhouettePath = view === 'front' ? BODY_SILHOUETTE_FRONT : BODY_SILHOUETTE_BACK;
+  const currentPositions = isFemale 
+    ? ZONE_POSITIONS_FEMALE[view] 
+    : ZONE_POSITIONS_MALE[view];
+  
+  // Select appropriate silhouette and muscle lines
+  const silhouettePath = isFemale
+    ? (view === 'front' ? FEMALE_SILHOUETTE_FRONT : FEMALE_SILHOUETTE_BACK)
+    : (view === 'front' ? MALE_SILHOUETTE_FRONT : MALE_SILHOUETTE_BACK);
+    
+  const muscleLines = isFemale
+    ? (view === 'front' ? FEMALE_MUSCLE_LINES_FRONT : FEMALE_MUSCLE_LINES_BACK)
+    : (view === 'front' ? MALE_MUSCLE_LINES_FRONT : MALE_MUSCLE_LINES_BACK);
 
   return (
     <div className="space-y-4">
@@ -389,55 +646,67 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
 
       {/* SVG Silhouette */}
       <div className="flex justify-center py-4">
-        <svg viewBox="0 0 200 310" className="w-52 h-80 sm:w-60 sm:h-[360px]">
+        <svg viewBox="0 0 200 300" className="w-52 h-80 sm:w-60 sm:h-[360px]">
           <defs>
-            {/* Body gradient */}
-            <linearGradient id="bodyGradientPro" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
-              <stop offset="50%" stopColor="hsl(var(--muted))" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
+            {/* Dark body fill gradient */}
+            <linearGradient id="bodyFillGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2a2a2a" />
+              <stop offset="50%" stopColor="#3a3a3a" />
+              <stop offset="100%" stopColor="#2a2a2a" />
             </linearGradient>
             
+            {/* Subtle highlight for depth */}
+            <filter id="bodyGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+
             {/* Glow filter for selected areas */}
-            <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <filter id="painGlow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
               <feMerge>
                 <feMergeNode in="coloredBlur"/>
                 <feMergeNode in="SourceGraphic"/>
               </feMerge>
             </filter>
-
-            {/* Subtle inner shadow */}
-            <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feOffset dx="0" dy="2"/>
-              <feGaussianBlur stdDeviation="2" result="offset-blur"/>
-              <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
-              <feFlood floodColor="black" floodOpacity="0.15" result="color"/>
-              <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
-              <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
-            </filter>
           </defs>
           
-          {/* Body silhouette */}
+          {/* Body silhouette - dark fill with light outline */}
           <motion.path 
             d={silhouettePath}
-            fill="url(#bodyGradientPro)" 
-            className="stroke-muted-foreground/30"
+            fill="url(#bodyFillGradient)" 
+            className="stroke-white/60"
             strokeWidth="1.5"
-            filter="url(#innerShadow)"
+            filter="url(#bodyGlow)"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            key={view}
+            key={`${view}-${gender}`}
           />
 
-          {/* Center line indicator for back view */}
+          {/* Anatomical muscle detail lines */}
+          <motion.path 
+            d={muscleLines}
+            fill="none" 
+            className="stroke-white/30"
+            strokeWidth="0.75"
+            strokeLinecap="round"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            key={`lines-${view}-${gender}`}
+          />
+
+          {/* Spine line for back view */}
           {view === 'back' && (
             <path 
-              d="M100,70 L100,160" 
-              className="stroke-muted-foreground/20"
+              d="M100,52 L100,145" 
+              className="stroke-white/25"
               strokeWidth="1"
-              strokeDasharray="4,4"
+              strokeDasharray="4,3"
             />
           )}
 
@@ -490,7 +759,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                     key={`${selection.area}-${selection.side}-${index}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
+                    exit={{ opacity: 0, x: 20 }}
                     className={cn(
                       "flex items-center justify-between p-3 rounded-xl border-2 bg-card/50 backdrop-blur-sm",
                       getIntensityBorder(selection.intensity)
@@ -498,36 +767,44 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg",
+                        "w-3 h-3 rounded-full",
                         getIntensityBgColor(selection.intensity)
-                      )}>
-                        {selection.intensity}
-                      </div>
+                      )} />
                       <div>
                         <div className="font-medium text-sm">{label}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {selection.isNew ? t.new : t.known}
-                          {painTypeLabel && ` · ${painTypeLabel}`}
-                          {selection.side === 'both' && ` · ${t.both.toLowerCase()}`}
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{t.intensity}: {selection.intensity}/10</span>
+                          {selection.isNew !== undefined && (
+                            <span className="text-xs">
+                              • {selection.isNew ? t.new : t.known}
+                            </span>
+                          )}
+                          {painTypeLabel && (
+                            <span className="text-xs">• {painTypeLabel}</span>
+                          )}
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => handleEdit(selection)}
-                        className="p-2 rounded-full hover:bg-muted transition-colors"
                       >
-                        <Pencil className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => handleRemove(selection)}
-                        className="p-2 rounded-full hover:bg-destructive/10 transition-colors"
                       >
-                        <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                      </button>
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   </motion.div>
                 );
@@ -538,24 +815,23 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
       </AnimatePresence>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
-        <span>{t.legend}:</span>
+      <div className="flex justify-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-amber-400 shadow-sm" />
-          <span>1-3</span>
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+          <span>{t.mild}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-orange-500 shadow-sm" />
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
           <span>4-6</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
-          <span>7-10</span>
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <span>{t.severe}</span>
         </div>
       </div>
 
-      {/* Bottom Sheet / Drawer for Zone Details */}
-      <Drawer open={activeZone !== null} onOpenChange={(open) => !open && setActiveZone(null)}>
+      {/* Bottom Sheet for Zone Details */}
+      <Drawer open={!!activeZone} onOpenChange={(open) => !open && setActiveZone(null)}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="text-center">
             <DrawerTitle>
@@ -563,25 +839,25 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
             </DrawerTitle>
           </DrawerHeader>
           
-          <div className="px-6 pb-6 space-y-6">
+          <div className="px-6 pb-6 space-y-6 overflow-y-auto">
             {/* Intensity Slider */}
             <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t.intensity}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">{t.intensity}</span>
                 <span className={cn(
-                  "font-bold text-lg px-3 py-1 rounded-full text-white shadow-md",
-                  getIntensityBgColor(tempIntensity)
+                  "text-2xl font-bold",
+                  tempIntensity <= 3 ? "text-amber-400" : tempIntensity <= 6 ? "text-orange-500" : "text-red-500"
                 )}>
                   {tempIntensity}
                 </span>
               </div>
               <Slider
                 value={[tempIntensity]}
-                onValueChange={([value]) => setTempIntensity(value)}
+                onValueChange={([v]) => setTempIntensity(v)}
                 min={1}
                 max={10}
                 step={1}
-                className="w-full"
+                className="py-2"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{t.mild}</span>
@@ -592,20 +868,21 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
             {/* Side Selection (for bilateral zones) */}
             {activeZone && isZoneBilateral(activeZone) && (
               <div className="space-y-2">
-                <div className="flex gap-2">
-                  {(['left', 'right', 'both'] as const).map((side) => (
+                <span className="text-sm font-medium">Strana</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['left', 'right', 'both'] as const).map(s => (
                     <button
-                      key={side}
+                      key={s}
                       type="button"
-                      onClick={() => setTempSide(side)}
+                      onClick={() => setTempSide(s)}
                       className={cn(
-                        "flex-1 py-2.5 px-3 text-sm rounded-xl border-2 transition-all duration-200",
-                        tempSide === side
-                          ? "border-primary bg-primary/10 text-primary font-medium"
-                          : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                        "py-2.5 px-3 text-sm rounded-xl border-2 transition-all",
+                        tempSide === s
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/50 border-muted hover:border-muted-foreground/30"
                       )}
                     >
-                      {side === 'left' ? t.left : side === 'right' ? t.right : t.both}
+                      {s === 'left' ? t.left : s === 'right' ? t.right : t.both}
                     </button>
                   ))}
                 </div>
@@ -613,71 +890,75 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
             )}
 
             {/* New/Known Toggle */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setTempIsNew(true)}
-                className={cn(
-                  "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
-                  tempIsNew
-                    ? "border-orange-500 bg-orange-500/10 text-orange-600 font-medium"
-                    : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
-                )}
-              >
-                {t.new}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTempIsNew(false)}
-                className={cn(
-                  "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
-                  !tempIsNew
-                    ? "border-blue-500 bg-blue-500/10 text-blue-600 font-medium"
-                    : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
-                )}
-              >
-                {t.known}
-              </button>
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Typ bolesti</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTempIsNew(true)}
+                  className={cn(
+                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
+                    tempIsNew
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 border-muted hover:border-muted-foreground/30"
+                  )}
+                >
+                  🆕 {t.new}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempIsNew(false)}
+                  className={cn(
+                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
+                    !tempIsNew
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 border-muted hover:border-muted-foreground/30"
+                  )}
+                >
+                  🔄 {t.known}
+                </button>
+              </div>
             </div>
 
-            {/* Pain Type (Muscle/Joint) */}
+            {/* Pain Type Toggle */}
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <span className="text-sm font-medium">Druh bolesti</span>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'muscle' ? null : 'muscle')}
                   className={cn(
-                    "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
+                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
                     tempPainType === 'muscle'
-                      ? "border-purple-500 bg-purple-500/10 text-purple-600 font-medium"
-                      : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 border-muted hover:border-muted-foreground/30"
                   )}
                 >
-                  {t.muscle}
+                  💪 {t.muscle}
                 </button>
                 <button
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'joint' ? null : 'joint')}
                   className={cn(
-                    "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
+                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
                     tempPainType === 'joint'
-                      ? "border-teal-500 bg-teal-500/10 text-teal-600 font-medium"
-                      : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 border-muted hover:border-muted-foreground/30"
                   )}
                 >
-                  {t.joint}
+                  🦴 {t.joint}
                 </button>
               </div>
             </div>
           </div>
-
-          <DrawerFooter className="flex-row gap-3">
+          
+          <DrawerFooter className="flex-row gap-2">
             <DrawerClose asChild>
-              <Button variant="outline" className="flex-1">
+              <Button variant="outline" className="flex-1 rounded-xl">
                 {t.cancel}
               </Button>
             </DrawerClose>
-            <Button onClick={handleConfirm} className="flex-1">
+            <Button onClick={handleConfirm} className="flex-1 rounded-xl">
               {t.add}
             </Button>
           </DrawerFooter>
@@ -686,5 +967,3 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
     </div>
   );
 };
-
-export default BodyPainSelector;

@@ -60,6 +60,7 @@ interface FeedbackQuestionsConfig {
 
 interface FormData {
   clientName: string;
+  clientGender: 'male' | 'female' | null;
   trainingDate: string | null;
   trainingNotes: string | null;
   expiresAt: string;
@@ -478,6 +479,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       selectedAreas={painSelections}
                       onChange={handlePainSelectionsChange}
                       language="cs"
+                      gender={formData?.clientGender}
                     />
                     
                     {/* Other pain area text input */}
