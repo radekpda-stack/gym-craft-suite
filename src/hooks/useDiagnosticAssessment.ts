@@ -2,12 +2,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+export type DiagnosticLevel = 'quick' | 'functional' | 'deep';
+
 export interface DiagnosticAssessment {
   id: string;
   diagnostic_id: string;
   user_id: string;
   created_at: string;
   updated_at: string;
+  
+  // Diagnostic Level
+  diagnostic_level?: DiagnosticLevel;
   
   // Personal Info
   handedness?: string;
@@ -36,41 +41,92 @@ export interface DiagnosticAssessment {
   long_term_goals?: string;
   training_priorities?: string[];
   
-  // Mobility
+  // Mobility with side and notes
   mobility_ankles?: string;
+  mobility_ankles_side?: string;
+  mobility_ankles_note?: string;
   mobility_hips?: string;
+  mobility_hips_side?: string;
+  mobility_hips_note?: string;
   mobility_thoracic?: string;
+  mobility_thoracic_side?: string;
+  mobility_thoracic_note?: string;
   mobility_shoulders?: string;
+  mobility_shoulders_side?: string;
+  mobility_shoulders_note?: string;
   core_stability?: string;
+  core_stability_note?: string;
   
-  // Movement Quality
+  // Movement Quality with side and notes
   squat_quality?: string;
+  squat_side?: string;
+  squat_note?: string;
   lunge_quality?: string;
+  lunge_side?: string;
+  lunge_note?: string;
   push_quality?: string;
+  push_side?: string;
+  push_note?: string;
   pull_quality?: string;
+  pull_side?: string;
+  pull_note?: string;
   hip_hinge_quality?: string;
+  hip_hinge_side?: string;
+  hip_hinge_note?: string;
   
-  // Pain Screening
+  // Pain Screening with duration, trigger, side
   pain_ankle?: string;
+  pain_ankle_duration?: string;
+  pain_ankle_trigger?: string[];
+  pain_ankle_side?: string;
   pain_knee?: string;
+  pain_knee_duration?: string;
+  pain_knee_trigger?: string[];
+  pain_knee_side?: string;
   pain_hip?: string;
+  pain_hip_duration?: string;
+  pain_hip_trigger?: string[];
+  pain_hip_side?: string;
   pain_si?: string;
+  pain_si_duration?: string;
+  pain_si_trigger?: string[];
+  pain_si_side?: string;
   pain_lumbar?: string;
+  pain_lumbar_duration?: string;
+  pain_lumbar_trigger?: string[];
+  pain_lumbar_side?: string;
   pain_thoracic?: string;
+  pain_thoracic_duration?: string;
+  pain_thoracic_trigger?: string[];
+  pain_thoracic_side?: string;
   pain_shoulder?: string;
+  pain_shoulder_duration?: string;
+  pain_shoulder_trigger?: string[];
+  pain_shoulder_side?: string;
   pain_neck?: string;
+  pain_neck_duration?: string;
+  pain_neck_trigger?: string[];
+  pain_neck_side?: string;
   
-  // Psychological
+  // Psychological - simplified
   motivation_level?: number;
   discipline_level?: number;
   preferred_training_style?: string;
   stress_management?: string;
+  training_barrier?: string; // New: "Co vám v tréninku nejčastěji brání?"
   
-  // Nutrition
+  // Nutrition - simplified
   eating_regularity?: string;
   food_allergies?: string[];
   supplements?: string[];
   dietary_restrictions?: string[];
+  all_restrictions?: string[]; // Combined restrictions field
+  
+  // Structured trainer notes
+  trainer_risks?: string;
+  trainer_priorities?: string;
+  trainer_limitations?: string;
+  trainer_other_notes?: string;
   
   // AI Analysis
   ai_analysis?: string;

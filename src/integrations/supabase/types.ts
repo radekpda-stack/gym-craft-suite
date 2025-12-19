@@ -579,11 +579,14 @@ export type Database = {
           ai_recommendations: string | null
           ai_risk_factors: string[] | null
           ai_strengths: string[] | null
+          all_restrictions: string[] | null
           allergies: string[] | null
           core_stability: string | null
+          core_stability_note: string | null
           created_at: string
           current_activities: string[] | null
           diagnostic_id: string
+          diagnostic_level: string | null
           dietary_restrictions: string[] | null
           discipline_level: number | null
           diseases: string[] | null
@@ -591,42 +594,89 @@ export type Database = {
           family_health_history: string | null
           food_allergies: string[] | null
           handedness: string | null
+          hip_hinge_note: string | null
           hip_hinge_quality: string | null
+          hip_hinge_side: string | null
           id: string
           injuries: string[] | null
           is_draft: boolean | null
           long_term_goals: string | null
+          lunge_note: string | null
           lunge_quality: string | null
+          lunge_side: string | null
           meditates: boolean | null
           mobility_ankles: string | null
+          mobility_ankles_note: string | null
+          mobility_ankles_side: string | null
           mobility_hips: string | null
+          mobility_hips_note: string | null
+          mobility_hips_side: string | null
           mobility_shoulders: string | null
+          mobility_shoulders_note: string | null
+          mobility_shoulders_side: string | null
           mobility_thoracic: string | null
+          mobility_thoracic_note: string | null
+          mobility_thoracic_side: string | null
           motivation_level: number | null
           occupation: string | null
           pain_ankle: string | null
+          pain_ankle_duration: string | null
+          pain_ankle_side: string | null
+          pain_ankle_trigger: string[] | null
           pain_areas: string[] | null
           pain_hip: string | null
+          pain_hip_duration: string | null
+          pain_hip_side: string | null
+          pain_hip_trigger: string[] | null
           pain_knee: string | null
+          pain_knee_duration: string | null
+          pain_knee_side: string | null
+          pain_knee_trigger: string[] | null
           pain_lumbar: string | null
+          pain_lumbar_duration: string | null
+          pain_lumbar_side: string | null
+          pain_lumbar_trigger: string[] | null
           pain_neck: string | null
+          pain_neck_duration: string | null
+          pain_neck_side: string | null
+          pain_neck_trigger: string[] | null
           pain_shoulder: string | null
+          pain_shoulder_duration: string | null
+          pain_shoulder_side: string | null
+          pain_shoulder_trigger: string[] | null
           pain_si: string | null
+          pain_si_duration: string | null
+          pain_si_side: string | null
+          pain_si_trigger: string[] | null
           pain_thoracic: string | null
+          pain_thoracic_duration: string | null
+          pain_thoracic_side: string | null
+          pain_thoracic_trigger: string[] | null
           preferred_training_style: string | null
+          pull_note: string | null
           pull_quality: string | null
+          pull_side: string | null
+          push_note: string | null
           push_quality: string | null
+          push_side: string | null
           regeneration_methods: string[] | null
           short_term_goals: string | null
           sitting_hours_daily: number | null
           sleep_hours: number | null
           sleep_quality: number | null
           sports_history: string | null
+          squat_note: string | null
           squat_quality: string | null
+          squat_side: string | null
           stress_level: number | null
           stress_management: string | null
           supplements: string[] | null
           surgeries: string[] | null
+          trainer_limitations: string | null
+          trainer_other_notes: string | null
+          trainer_priorities: string | null
+          trainer_risks: string | null
+          training_barrier: string | null
           training_priorities: string[] | null
           updated_at: string
           user_id: string
@@ -640,11 +690,14 @@ export type Database = {
           ai_recommendations?: string | null
           ai_risk_factors?: string[] | null
           ai_strengths?: string[] | null
+          all_restrictions?: string[] | null
           allergies?: string[] | null
           core_stability?: string | null
+          core_stability_note?: string | null
           created_at?: string
           current_activities?: string[] | null
           diagnostic_id: string
+          diagnostic_level?: string | null
           dietary_restrictions?: string[] | null
           discipline_level?: number | null
           diseases?: string[] | null
@@ -652,42 +705,89 @@ export type Database = {
           family_health_history?: string | null
           food_allergies?: string[] | null
           handedness?: string | null
+          hip_hinge_note?: string | null
           hip_hinge_quality?: string | null
+          hip_hinge_side?: string | null
           id?: string
           injuries?: string[] | null
           is_draft?: boolean | null
           long_term_goals?: string | null
+          lunge_note?: string | null
           lunge_quality?: string | null
+          lunge_side?: string | null
           meditates?: boolean | null
           mobility_ankles?: string | null
+          mobility_ankles_note?: string | null
+          mobility_ankles_side?: string | null
           mobility_hips?: string | null
+          mobility_hips_note?: string | null
+          mobility_hips_side?: string | null
           mobility_shoulders?: string | null
+          mobility_shoulders_note?: string | null
+          mobility_shoulders_side?: string | null
           mobility_thoracic?: string | null
+          mobility_thoracic_note?: string | null
+          mobility_thoracic_side?: string | null
           motivation_level?: number | null
           occupation?: string | null
           pain_ankle?: string | null
+          pain_ankle_duration?: string | null
+          pain_ankle_side?: string | null
+          pain_ankle_trigger?: string[] | null
           pain_areas?: string[] | null
           pain_hip?: string | null
+          pain_hip_duration?: string | null
+          pain_hip_side?: string | null
+          pain_hip_trigger?: string[] | null
           pain_knee?: string | null
+          pain_knee_duration?: string | null
+          pain_knee_side?: string | null
+          pain_knee_trigger?: string[] | null
           pain_lumbar?: string | null
+          pain_lumbar_duration?: string | null
+          pain_lumbar_side?: string | null
+          pain_lumbar_trigger?: string[] | null
           pain_neck?: string | null
+          pain_neck_duration?: string | null
+          pain_neck_side?: string | null
+          pain_neck_trigger?: string[] | null
           pain_shoulder?: string | null
+          pain_shoulder_duration?: string | null
+          pain_shoulder_side?: string | null
+          pain_shoulder_trigger?: string[] | null
           pain_si?: string | null
+          pain_si_duration?: string | null
+          pain_si_side?: string | null
+          pain_si_trigger?: string[] | null
           pain_thoracic?: string | null
+          pain_thoracic_duration?: string | null
+          pain_thoracic_side?: string | null
+          pain_thoracic_trigger?: string[] | null
           preferred_training_style?: string | null
+          pull_note?: string | null
           pull_quality?: string | null
+          pull_side?: string | null
+          push_note?: string | null
           push_quality?: string | null
+          push_side?: string | null
           regeneration_methods?: string[] | null
           short_term_goals?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
           sleep_quality?: number | null
           sports_history?: string | null
+          squat_note?: string | null
           squat_quality?: string | null
+          squat_side?: string | null
           stress_level?: number | null
           stress_management?: string | null
           supplements?: string[] | null
           surgeries?: string[] | null
+          trainer_limitations?: string | null
+          trainer_other_notes?: string | null
+          trainer_priorities?: string | null
+          trainer_risks?: string | null
+          training_barrier?: string | null
           training_priorities?: string[] | null
           updated_at?: string
           user_id: string
@@ -701,11 +801,14 @@ export type Database = {
           ai_recommendations?: string | null
           ai_risk_factors?: string[] | null
           ai_strengths?: string[] | null
+          all_restrictions?: string[] | null
           allergies?: string[] | null
           core_stability?: string | null
+          core_stability_note?: string | null
           created_at?: string
           current_activities?: string[] | null
           diagnostic_id?: string
+          diagnostic_level?: string | null
           dietary_restrictions?: string[] | null
           discipline_level?: number | null
           diseases?: string[] | null
@@ -713,42 +816,89 @@ export type Database = {
           family_health_history?: string | null
           food_allergies?: string[] | null
           handedness?: string | null
+          hip_hinge_note?: string | null
           hip_hinge_quality?: string | null
+          hip_hinge_side?: string | null
           id?: string
           injuries?: string[] | null
           is_draft?: boolean | null
           long_term_goals?: string | null
+          lunge_note?: string | null
           lunge_quality?: string | null
+          lunge_side?: string | null
           meditates?: boolean | null
           mobility_ankles?: string | null
+          mobility_ankles_note?: string | null
+          mobility_ankles_side?: string | null
           mobility_hips?: string | null
+          mobility_hips_note?: string | null
+          mobility_hips_side?: string | null
           mobility_shoulders?: string | null
+          mobility_shoulders_note?: string | null
+          mobility_shoulders_side?: string | null
           mobility_thoracic?: string | null
+          mobility_thoracic_note?: string | null
+          mobility_thoracic_side?: string | null
           motivation_level?: number | null
           occupation?: string | null
           pain_ankle?: string | null
+          pain_ankle_duration?: string | null
+          pain_ankle_side?: string | null
+          pain_ankle_trigger?: string[] | null
           pain_areas?: string[] | null
           pain_hip?: string | null
+          pain_hip_duration?: string | null
+          pain_hip_side?: string | null
+          pain_hip_trigger?: string[] | null
           pain_knee?: string | null
+          pain_knee_duration?: string | null
+          pain_knee_side?: string | null
+          pain_knee_trigger?: string[] | null
           pain_lumbar?: string | null
+          pain_lumbar_duration?: string | null
+          pain_lumbar_side?: string | null
+          pain_lumbar_trigger?: string[] | null
           pain_neck?: string | null
+          pain_neck_duration?: string | null
+          pain_neck_side?: string | null
+          pain_neck_trigger?: string[] | null
           pain_shoulder?: string | null
+          pain_shoulder_duration?: string | null
+          pain_shoulder_side?: string | null
+          pain_shoulder_trigger?: string[] | null
           pain_si?: string | null
+          pain_si_duration?: string | null
+          pain_si_side?: string | null
+          pain_si_trigger?: string[] | null
           pain_thoracic?: string | null
+          pain_thoracic_duration?: string | null
+          pain_thoracic_side?: string | null
+          pain_thoracic_trigger?: string[] | null
           preferred_training_style?: string | null
+          pull_note?: string | null
           pull_quality?: string | null
+          pull_side?: string | null
+          push_note?: string | null
           push_quality?: string | null
+          push_side?: string | null
           regeneration_methods?: string[] | null
           short_term_goals?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
           sleep_quality?: number | null
           sports_history?: string | null
+          squat_note?: string | null
           squat_quality?: string | null
+          squat_side?: string | null
           stress_level?: number | null
           stress_management?: string | null
           supplements?: string[] | null
           surgeries?: string[] | null
+          trainer_limitations?: string | null
+          trainer_other_notes?: string | null
+          trainer_priorities?: string | null
+          trainer_risks?: string | null
+          training_barrier?: string | null
           training_priorities?: string[] | null
           updated_at?: string
           user_id?: string
