@@ -501,10 +501,10 @@ export function useDashboardViewModel() {
       
       const productIncome = (productTransactionsResult.data || [])
         .reduce((sum: number, t: any) => sum + Math.abs(t.amount || 0), 0);
-      const totalIncome = (creditTransactionsResult.data || [])
+      const trainingIncome = (creditTransactionsResult.data || [])
         .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-      // Product share = product revenue / (total payments + product revenue)
-      const totalRevenue = totalIncome + productIncome;
+      // Total revenue = training income (payments + manual) + product sales
+      const totalRevenue = trainingIncome + productIncome;
       const productShare = totalRevenue > 0 ? Math.round((productIncome / totalRevenue) * 100) : 0;
       
       const trends: TrendData = {
