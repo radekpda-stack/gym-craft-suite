@@ -59,10 +59,10 @@ const foodEntrySchema = z.object({
 });
 
 const drinkEntrySchema = z.object({
-  // Extended drink types to match frontend
+  // Extended drink types to match frontend - added 'sugary' for simplified form
   drink_type: z.enum([
     'water', 'mineral', 'sparkling', 'tea', 'juice', 'cola', 'soda', 
-    'sports', 'alcohol', 'smoothie', 'milk', 'other'
+    'sports', 'alcohol', 'smoothie', 'milk', 'sugary', 'other'
   ]),
   drink_name: z.string().max(100).optional().nullable(),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
@@ -71,14 +71,15 @@ const drinkEntrySchema = z.object({
   amount_container_type: z.enum(['small_glass', 'large_glass', 'glass', 'mug', 'bottle', 'can']).optional().nullable(),
   amount_container_count: z.number().positive().max(100).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
-  drink_item_id: z.string().uuid().optional().nullable(), // For shared drink items
+  drink_item_id: z.string().uuid().optional().nullable(),
+  amount: z.enum(['little', 'ok', 'lots']).optional().nullable(), // Simplified amount from form
 });
 
 const coffeeEntrySchema = z.object({
-  // Extended coffee types
+  // Extended coffee types - added 'energy' for simplified form
   coffee_type: z.enum([
     'small_espresso', 'large_espresso', 'espresso', 'lungo', 'americano', 
-    'latte', 'cappuccino', 'flat_white', 'filter', 'instant', 'decaf', 'other'
+    'latte', 'cappuccino', 'flat_white', 'filter', 'instant', 'decaf', 'energy', 'other'
   ]),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
@@ -87,9 +88,9 @@ const coffeeEntrySchema = z.object({
   sugar_spoons: z.number().int().min(0).max(10).default(0),
   // Extended milk options - amount + type
   milk: z.enum([
-    'none', 'little', 'normal', 'much', // Amount
-    'cow', 'oat', 'almond', 'soy', 'coconut', // Type (for specific milk)
-    'regular', 'skim' // Legacy support
+    'none', 'little', 'normal', 'much',
+    'cow', 'oat', 'almond', 'soy', 'coconut',
+    'regular', 'skim'
   ]).optional().nullable(),
   milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
   note: z.string().max(500).optional().nullable(),

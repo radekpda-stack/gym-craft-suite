@@ -564,6 +564,7 @@ function TypeButton({ icon, label, color, onClick }: { icon: React.ReactNode; la
 
 // Food Entry Card
 function FoodEntryCard({ entry, language }: { entry: any; language: Language }) {
+  const tr = t[language];
   const qualityColors: Record<string, string> = {
     good: 'bg-green-500',
     normal: 'bg-yellow-500',
@@ -577,6 +578,21 @@ function FoodEntryCard({ entry, language }: { entry: any; language: Language }) 
     snack: '🍿',
   };
 
+  const satiationIcons: Record<string, string> = {
+    just_right: '✓',
+    still_hungry: '🍽️',
+    overate: '😵',
+  };
+
+  const feelingIcons: Record<string, string> = {
+    ok: '😌',
+    heavy: '😴',
+    bloated: '🤢',
+    sweet: '🍬',
+    low_energy: '🔋',
+    high_energy: '⚡',
+  };
+
   return (
     <Card>
       <CardContent className="py-3 flex items-center gap-3">
@@ -587,6 +603,20 @@ function FoodEntryCard({ entry, language }: { entry: any; language: Language }) 
             <span>{entry.entry_time?.slice(0, 5)}</span>
             <span>•</span>
             <span>{entry.portion_size === 'small' ? '🥄' : entry.portion_size === 'large' ? '🍲' : '🍽️'}</span>
+            {entry.satiation && (
+              <>
+                <span>•</span>
+                <span title={tr[`satiation${entry.satiation.charAt(0).toUpperCase()}${entry.satiation.slice(1).replace('_', '')}` as keyof typeof tr] || entry.satiation}>
+                  {satiationIcons[entry.satiation]}
+                </span>
+              </>
+            )}
+            {entry.feeling_after && (
+              <>
+                <span>•</span>
+                <span>{feelingIcons[entry.feeling_after]}</span>
+              </>
+            )}
           </div>
         </div>
         {entry.quality && (
