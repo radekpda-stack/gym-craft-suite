@@ -92,21 +92,61 @@ export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOve
   
   const { clientsQuickInfo } = data;
 
+  // Separate clients by status for better overview
+  const errorClients = clientsQuickInfo.filter(c => c.status === 'error');
+  const warningClients = clientsQuickInfo.filter(c => c.status === 'warning');
+  const okClients = clientsQuickInfo.filter(c => c.status === 'ok');
+  
   return (
     <Card className="glass">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Users className="w-5 h-5 text-primary" />
-          Klienti
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="w-5 h-5 text-primary" />
+            Klienti – rychlý přehled
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Top 10 klientů • Kredit a poslední aktivita
+          </p>
+        </div>
       </CardHeader>
       
       <CardContent>
         {clientsQuickInfo.length > 0 ? (
-          <div className="space-y-2">
-            {clientsQuickInfo.map(client => (
-              <ClientRow key={client.id} client={client} />
-            ))}
+          <div className="space-y-3">
+            {errorClients.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Vyžadují pozornost ({errorClients.length})
+                </p>
+                {errorClients.map(client => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
+              </div>
+            )}
+            
+            {warningClients.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-[hsl(38_92%_50%)]">
+                  K dohlédnutí ({warningClients.length})
+                </p>
+                {warningClients.map(client => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
+              </div>
+            )}
+            
+            {okClients.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  V pořádku ({okClients.length})
+                </p>
+                {okClients.map(client => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-8">
