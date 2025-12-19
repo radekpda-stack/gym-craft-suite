@@ -41,6 +41,7 @@ import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSett
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
+import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -141,6 +142,13 @@ export default function Settings() {
           description: t.settings.pricesDesc,
           icon: CreditCard,
           content: <TrainingPricesSettings />,
+        },
+        {
+          id: 'credit-thresholds',
+          title: language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds',
+          description: language === 'cs' ? 'Nastavení prahů pro upozornění' : 'Configure alert thresholds',
+          icon: Wallet,
+          content: <CreditThresholdSettings />,
         },
         {
           id: 'capacity',
