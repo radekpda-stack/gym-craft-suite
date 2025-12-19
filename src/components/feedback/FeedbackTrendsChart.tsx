@@ -27,7 +27,7 @@ const METRICS = [
   { key: 'energy', label: 'Energie', color: '#22c55e' },
   { key: 'fun', label: 'Zábava', color: '#3b82f6' },
   { key: 'bodyFeel', label: 'Pocit v těle', color: '#8b5cf6' },
-  { key: 'soreness', label: 'Svalová únava', color: '#f97316' },
+  { key: 'soreness', label: 'Svalová bolest', color: '#f97316' },
   { key: 'sessionFit', label: 'Fit tréninku', color: '#ec4899' },
 ] as const;
 

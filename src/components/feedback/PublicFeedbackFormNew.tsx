@@ -73,7 +73,7 @@ const DEFAULT_HELP_TEXTS: Record<string, string> = {
   soreness: 'Zpožděná svalová bolestivost (DOMS) - pocit ztuhlosti a citlivosti ve svalech, který se objevuje 24-72 hodin po tréninku. Je normální a ukazuje na zatížení svalů.',
   body_feel: 'Jak se celkově cítíte fyzicky? Ztuhlost, lehkost, svěžest nebo naopak těžkost a únava v těle.',
   energy: 'Vaše celková úroveň energie během dne - zda se cítíte unavený, ospalý nebo naopak plný síly a elánu.',
-  pain: 'Ostrá, bodavá nebo tupá bolest v kloubech, šlachách nebo svalech - NE běžná svalovka po tréninku. Pokud máte bolest, vyberte kde.',
+  pain: 'Ostrá, bodavá nebo tupá bolest v kloubech, šlachách nebo svalech - NE běžná svalová bolest po tréninku. Pokud máte bolest, vyberte kde.',
   session_fit: 'Hodnotí, jak dobře trénink odpovídal vaší aktuální kondici, náladě a očekávání. Byl přiměřený, nebo příliš lehký/těžký?',
   difficulty: '1-3: rezerva, mohl/a bych pokračovat | 4-6: náročné, ale kontrolované | 7-8: na hraně, ke konci těžké | 9-10: maximum/přepálené',
   fun: 'Jak moc vás trénink bavil? Cítili jste motivaci a radost z pohybu, nebo to bylo spíše utrpení?',
@@ -81,10 +81,10 @@ const DEFAULT_HELP_TEXTS: Record<string, string> = {
 
 const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
   questions: [
-    { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0, helpText: DEFAULT_HELP_TEXTS.soreness },
+    { id: 'soreness', type: 'slider', label: 'Svalová bolest', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0, helpText: DEFAULT_HELP_TEXTS.soreness },
     { id: 'body_feel', type: 'slider', label: 'Celkový pocit v těle', emoji: '🧘', minLabel: 'Špatně', maxLabel: 'Výborně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 1, helpText: DEFAULT_HELP_TEXTS.body_feel },
     { id: 'energy', type: 'slider', label: 'Energie', emoji: '⚡', minLabel: 'Vyčerpaný', maxLabel: 'Plný energie', min: 1, max: 10, defaultValue: 5, enabled: true, order: 2, helpText: DEFAULT_HELP_TEXTS.energy },
-    { id: 'pain', type: 'slider', label: 'Bolest (ne jen svalovka)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4, helpText: DEFAULT_HELP_TEXTS.pain },
+    { id: 'pain', type: 'slider', label: 'Bolest (mimo svalovou)', emoji: '🩹', minLabel: 'Žádná', maxLabel: 'Silná', min: 1, max: 10, defaultValue: 1, enabled: true, order: 3, showPainAreas: true, painAreaThreshold: 4, helpText: DEFAULT_HELP_TEXTS.pain },
     { id: 'session_fit', type: 'slider', label: 'Jak sedl trénink', emoji: '🎯', minLabel: 'Vůbec', maxLabel: 'Perfektně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 4, helpText: DEFAULT_HELP_TEXTS.session_fit },
     { id: 'difficulty', type: 'slider', label: 'Jak těžký byl trénink', emoji: '🏋️', minLabel: 'Lehký', maxLabel: 'Velmi těžký', min: 1, max: 10, defaultValue: 5, enabled: true, order: 5, helpText: DEFAULT_HELP_TEXTS.difficulty },
     { id: 'fun', type: 'slider', label: 'Jak moc to bavilo', emoji: '😊', minLabel: 'Vůbec', maxLabel: 'Maximálně', min: 1, max: 10, defaultValue: 5, enabled: true, order: 6, helpText: DEFAULT_HELP_TEXTS.fun },
