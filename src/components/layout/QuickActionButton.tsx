@@ -118,7 +118,7 @@ export function QuickActionButton() {
   return (
     <>
       {/* FAB Button */}
-      <div className="fixed bottom-20 right-4 z-[60] md:bottom-6 lg:right-6">
+      <div className="fixed bottom-[88px] right-4 z-[60] md:bottom-6 lg:right-6">
         <AnimatePresence>
           {isOpen && (
             <>
