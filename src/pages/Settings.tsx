@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import {
-  Calendar,
   Download,
   Upload,
-  Link2,
   Bell,
-  Check,
   CreditCard,
   Package,
   Tag,
@@ -21,11 +18,11 @@ import {
   User,
   Wallet,
   BookOpen,
-  Settings2,
   Wrench,
+  Droplets,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +39,7 @@ import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
+import { NutritionSettings } from '@/components/settings/NutritionSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -65,18 +63,16 @@ interface SettingsCategory {
 
 export default function Settings() {
   usePageTracking('settings');
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const [appleConnected, setAppleConnected] = useState(false);
-  const [notifications, setNotifications] = useState(true);
   const [autoBackup, setAutoBackup] = useState(true);
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('profile');
 
   const categories: SettingsCategory[] = [
+    // 1. PROFIL
     {
       id: 'profile',
-      title: language === 'cs' ? 'Profil a Vzhled' : 'Profile & Appearance',
+      title: language === 'cs' ? 'Profil' : 'Profile',
       icon: User,
       iconColor: 'text-blue-500',
       sections: [
@@ -121,19 +117,13 @@ export default function Settings() {
           icon: Building2,
           content: <CompanyProfileSettings />,
         },
-        {
-          id: 'quick-actions',
-          title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
-          description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
-          icon: Zap,
-          content: <QuickActionSettings />,
-        },
       ],
     },
+    // 2. TRÉNINKY
     {
       id: 'training',
-      title: language === 'cs' ? 'Tréninky a Finance' : 'Training & Finance',
-      icon: Wallet,
+      title: language === 'cs' ? 'Tréninky' : 'Trainings',
+      icon: Dumbbell,
       iconColor: 'text-green-500',
       sections: [
         {
@@ -144,13 +134,6 @@ export default function Settings() {
           content: <TrainingPricesSettings />,
         },
         {
-          id: 'credit-thresholds',
-          title: language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds',
-          description: language === 'cs' ? 'Nastavení prahů pro upozornění' : 'Configure alert thresholds',
-          icon: Wallet,
-          content: <CreditThresholdSettings />,
-        },
-        {
           id: 'capacity',
           title: language === 'cs' ? 'Kapacita a pracovní doba' : 'Capacity & Working Hours',
           description: language === 'cs' ? 'Pracovní dny, hodiny a délka slotů' : 'Working days, hours and slot duration',
@@ -159,6 +142,37 @@ export default function Settings() {
         },
       ],
     },
+    // 3. KLIENTI A FINANCE
+    {
+      id: 'clients',
+      title: language === 'cs' ? 'Klienti a Finance' : 'Clients & Finance',
+      icon: Users,
+      iconColor: 'text-amber-500',
+      sections: [
+        {
+          id: 'credit-thresholds',
+          title: language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds',
+          description: language === 'cs' ? 'Nastavení prahů pro upozornění na nízký kredit' : 'Configure low credit alert thresholds',
+          icon: Wallet,
+          content: <CreditThresholdSettings />,
+        },
+        {
+          id: 'feedback-settings',
+          title: language === 'cs' ? 'Nastavení feedbacku' : 'Feedback Settings',
+          description: language === 'cs' ? 'Automatické odesílání a konfigurace dotazníků' : 'Auto-send and questionnaire configuration',
+          icon: MessageSquare,
+          content: <FeedbackSettings />,
+        },
+        {
+          id: 'nutrition',
+          title: language === 'cs' ? 'Nutriční log' : 'Nutrition Log',
+          description: language === 'cs' ? 'Výchozí velikosti nádob pro hydrataci' : 'Default container sizes for hydration',
+          icon: Droplets,
+          content: <NutritionSettings />,
+        },
+      ],
+    },
+    // 4. KNIHOVNY
     {
       id: 'libraries',
       title: language === 'cs' ? 'Knihovny' : 'Libraries',
@@ -188,141 +202,19 @@ export default function Settings() {
         },
       ],
     },
+    // 5. SYSTÉM
     {
-      id: 'notifications',
-      title: language === 'cs' ? 'Notifikace' : 'Notifications',
-      icon: Bell,
-      iconColor: 'text-amber-500',
+      id: 'system',
+      title: language === 'cs' ? 'Systém' : 'System',
+      icon: Wrench,
+      iconColor: 'text-rose-500',
       sections: [
         {
-          id: 'push-notifications',
-          title: t.settings.notifications,
-          description: t.settings.notificationsDesc,
-          icon: Bell,
-          content: (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-foreground">{t.settings.pushNotifications}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t.settings.pushNotificationsDesc}
-                  </p>
-                </div>
-                <Switch checked={notifications} onCheckedChange={setNotifications} />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-foreground">{t.settings.emailReminders}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t.settings.emailRemindersDesc}
-                  </p>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-foreground">{t.settings.lowCreditAlert}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t.settings.lowCreditAlertDesc}
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </div>
-          ),
-        },
-        {
-          id: 'feedback-settings',
-          title: language === 'cs' ? 'Nastavení feedbacku' : 'Feedback Settings',
-          description: language === 'cs' ? 'Automatické odesílání a konfigurace dotazníků' : 'Auto-send and questionnaire configuration',
-          icon: MessageSquare,
-          content: <FeedbackSettings />,
-        },
-      ],
-    },
-    {
-      id: 'integrations',
-      title: language === 'cs' ? 'Integrace' : 'Integrations',
-      icon: Settings2,
-      iconColor: 'text-cyan-500',
-      sections: [
-        {
-          id: 'calendar',
-          title: t.settings.calendar,
-          description: t.settings.calendarDesc,
-          icon: Calendar,
-          content: (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl glass-subtle">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#4285F4]/10 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#4285F4]">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{t.settings.googleCalendar}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {googleConnected ? t.settings.connected : t.settings.notConnected}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant={googleConnected ? 'outline' : 'default'}
-                  onClick={() => setGoogleConnected(!googleConnected)}
-                  className="gap-2"
-                >
-                  {googleConnected ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      {t.settings.disconnect}
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-4 h-4" />
-                      {t.settings.connect}
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-xl glass-subtle">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-foreground/10 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 text-foreground">
-                      <path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{t.settings.appleCalendar}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {appleConnected ? t.settings.connected : t.settings.notConnected}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant={appleConnected ? 'outline' : 'default'}
-                  onClick={() => setAppleConnected(!appleConnected)}
-                  className="gap-2"
-                >
-                  {appleConnected ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      {t.settings.disconnect}
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-4 h-4" />
-                      {t.settings.connect}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          ),
+          id: 'quick-actions',
+          title: language === 'cs' ? 'Rychlá nabídka' : 'Quick Actions',
+          description: language === 'cs' ? 'Upravte pořadí a viditelnost akcí v plovoucím tlačítku' : 'Customize order and visibility of floating action button',
+          icon: Zap,
+          content: <QuickActionSettings />,
         },
         {
           id: 'backup',
@@ -353,14 +245,6 @@ export default function Settings() {
             </div>
           ),
         },
-      ],
-    },
-    {
-      id: 'tools',
-      title: language === 'cs' ? 'Nástroje' : 'Tools',
-      icon: Wrench,
-      iconColor: 'text-rose-500',
-      sections: [
         {
           id: 'credit-recalc',
           title: language === 'cs' ? 'Přepočet kreditů' : 'Credit Recalculation',
