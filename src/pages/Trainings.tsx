@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, Wallet, XCircle, Filter } from 'lucide-react';
+import { Search, Plus, Dumbbell, XCircle } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,18 +13,19 @@ import {
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
-import { useTrainingProgress, TRAINING_TYPES, TrainingType } from '@/hooks/useTrainingProgress';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
-import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
-import { SessionCard } from '@/components/ui/session-card';
+import { TrainingCard } from '@/components/trainings/TrainingCard';
+import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { WeeklySummaryCard } from '@/components/trainings/WeeklySummaryCard';
+import { SessionCard } from '@/components/ui/session-card';
+import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { addDays, format } from 'date-fns';
+import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { useTrainingsPageState, TimeFilter } from '@/hooks/useTrainingsPageState';
 
 const statusLabels = {
   scheduled: 'Plán',
@@ -41,13 +42,12 @@ const statusLabelsLong = {
 export default function Trainings() {
   usePageTracking('trainings');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<TrainingType | null>(null);
-  const [progressFilter, setProgressFilter] = useState<'improvement' | 'stagnation' | 'overload' | null>(null);
-  const [activeTab, setActiveTab] = useState('active');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; trainingId: string; clientName: string } | null>(null);
+
+  // Persistent page state
+  const { timeFilter, statusFilter, activeTab, setTimeFilter, setStatusFilter, setActiveTab } = useTrainingsPageState();
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
@@ -55,18 +55,57 @@ export default function Trainings() {
   const updateTraining = useUpdateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
-  const progressEvaluations = useTrainingProgress();
+
+  // Filter sessions by time period
+  const filterByTime = (sessionList: typeof sessions, filter: TimeFilter) => {
+    const now = new Date();
+    
+    if (filter === 'today') {
+      const todayStart = startOfDay(now);
+      const todayEnd = endOfDay(now);
+      return sessionList.filter(s => {
+        const sessionDate = new Date(s.date);
+        return isWithinInterval(sessionDate, { start: todayStart, end: todayEnd });
+      });
+    }
+    
+    if (filter === 'week') {
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+      return sessionList.filter(s => {
+        const sessionDate = new Date(s.date);
+        return isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
+      });
+    }
+    
+    return sessionList;
+  };
 
   // Separate active and canceled sessions
   const activeSessions = useMemo(() => sessions.filter(s => s.status !== 'canceled'), [sessions]);
   const canceledSessions = useMemo(() => sessions.filter(s => s.status === 'canceled'), [sessions]);
 
-  // Count of trainings awaiting payment (completed but unpaid)
+  // Time-filtered counts for toggle
+  const timeCounts = useMemo(() => {
+    const active = sessions.filter(s => s.status !== 'canceled');
+    return {
+      today: filterByTime(active, 'today').length,
+      week: filterByTime(active, 'week').length,
+      all: active.length,
+    };
+  }, [sessions]);
+
+  // Apply time filter first
+  const timeFilteredSessions = useMemo(() => {
+    return filterByTime(activeSessions, timeFilter);
+  }, [activeSessions, timeFilter]);
+
+  // Count of trainings awaiting payment
   const awaitingPaymentCount = useMemo(() => {
-    return activeSessions.filter(
+    return timeFilteredSessions.filter(
       s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')
     ).length;
-  }, [activeSessions]);
+  }, [timeFilteredSessions]);
 
   const handleCompleteTraining = async (sessionId: string) => {
     try {
@@ -111,7 +150,6 @@ export default function Trainings() {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
-    // Get next available time (tomorrow at same hour)
     const originalDate = new Date(session.date);
     const nextDate = addDays(new Date(), 1);
     nextDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
@@ -133,7 +171,15 @@ export default function Trainings() {
     setIsCreateSheetOpen(true);
   };
 
-  const filteredActiveSessions = activeSessions.filter((session) => {
+  const handleOpenPayment = (sessionId: string, clientName: string) => {
+    setPaymentDialog({
+      open: true,
+      trainingId: sessionId,
+      clientName,
+    });
+  };
+
+  const filteredActiveSessions = timeFilteredSessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
     const matchesSearch =
       client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -147,10 +193,7 @@ export default function Trainings() {
     }
 
     const matchesStatus = !statusFilter || session.status === statusFilter;
-    const matchesType = !typeFilter || session.training_type === typeFilter;
-    const matchesProgress = !progressFilter || progressEvaluations[session.id]?.status === progressFilter;
-
-    return matchesSearch && matchesStatus && matchesType && matchesProgress;
+    return matchesSearch && matchesStatus;
   });
 
   const filteredCanceledSessions = canceledSessions.filter((session) => {
@@ -161,7 +204,6 @@ export default function Trainings() {
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     try {
-      // Calculate recurrence end date if recurring
       let recurrence_end_date: string | undefined;
       let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
       
@@ -198,7 +240,6 @@ export default function Trainings() {
         trainingPrices,
       });
       
-      // Add tags to the created training
       if (tagIds.length > 0 && result?.session?.id) {
         await addTrainingTags.mutateAsync({
           trainingSessionId: result.session.id,
@@ -223,7 +264,7 @@ export default function Trainings() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header - Mobile optimized */}
+      {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
@@ -234,12 +275,18 @@ export default function Trainings() {
           </p>
         </div>
 
-        {/* Desktop button */}
         <Button className="gap-2 hidden sm:flex" onClick={() => setIsCreateSheetOpen(true)}>
           <Plus className="w-4 h-4" />
           Nový trénink
         </Button>
       </div>
+
+      {/* Time Filter Toggle */}
+      <TimeFilterToggle
+        value={timeFilter}
+        onChange={setTimeFilter}
+        counts={timeCounts}
+      />
 
       <CreateTrainingSheet
         key={duplicateDefaults ? 'duplicate' : 'new'}
@@ -257,9 +304,9 @@ export default function Trainings() {
           <TabsTrigger value="active" className="gap-2">
             <Dumbbell className="w-4 h-4" />
             Aktivní
-            {activeSessions.length > 0 && (
+            {timeFilteredSessions.length > 0 && (
               <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full">
-                {activeSessions.length}
+                {timeFilteredSessions.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -275,9 +322,8 @@ export default function Trainings() {
         </TabsList>
 
         <TabsContent value="active" className="mt-4 space-y-4">
-          {/* Search and Filters for active trainings */}
+          {/* Search and Status Filters */}
           <div className="space-y-3">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -288,7 +334,7 @@ export default function Trainings() {
               />
             </div>
 
-            {/* Filter pills - horizontally scrollable on mobile */}
+            {/* Status filter pills */}
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
               <Button
                 variant={statusFilter === null ? 'default' : 'outline'}
@@ -310,7 +356,6 @@ export default function Trainings() {
                   <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
                 </Button>
               ))}
-              {/* Awaiting payment filter with badge */}
               <Button
                 variant={statusFilter === 'awaiting_payment' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('awaiting_payment')}
@@ -336,15 +381,13 @@ export default function Trainings() {
             </div>
           </div>
 
-          {/* Sessions List */}
+          {/* Sessions List with new TrainingCard */}
           {isLoading ? (
             <TrainingListSkeleton />
           ) : (
             <div className="space-y-3">
               {filteredActiveSessions.map((session, index) => {
                 const client = clients.find((c) => c.id === session.client_id);
-                const isAwaitingPayment = session.status === 'completed' && 
-                  (!session.payment_status || session.payment_status === 'pending');
 
                 return (
                   <div
@@ -352,39 +395,14 @@ export default function Trainings() {
                     className="animate-slide-up"
                     style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                   >
-                    <TrainingQuickMenu
+                    <TrainingCard
                       session={session}
+                      client={client}
                       onComplete={() => handleCompleteTraining(session.id)}
                       onCancel={() => handleCancelTraining(session.id)}
+                      onPay={() => handleOpenPayment(session.id, client?.name || 'Klient')}
                       onDuplicate={() => handleDuplicateTraining(session.id)}
-                    >
-                      <div className="relative">
-                        <SessionCard
-                          session={session}
-                          client={client}
-                          progressStatus={progressEvaluations[session.id]?.status}
-                        />
-                        {/* Quick payment button for awaiting payment filter */}
-                        {statusFilter === 'awaiting_payment' && isAwaitingPayment && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 gap-1.5 h-8 px-3 rounded-lg shadow-md"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPaymentDialog({
-                                open: true,
-                                trainingId: session.id,
-                                clientName: client?.name || 'Neznámý klient',
-                              });
-                            }}
-                          >
-                            <Wallet className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Uhradit</span>
-                          </Button>
-                        )}
-                      </div>
-                    </TrainingQuickMenu>
+                    />
                   </div>
                 );
               })}
@@ -395,10 +413,10 @@ export default function Trainings() {
             <div className="glass rounded-2xl p-8 sm:p-12">
               <EmptyState
                 icon={Dumbbell}
-                title={activeSessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
-                description={activeSessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
+                title={timeFilteredSessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
+                description={timeFilteredSessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
                 size="lg"
-                action={activeSessions.length === 0 ? (
+                action={timeFilteredSessions.length === 0 ? (
                   <Button 
                     className="gap-2"
                     onClick={() => setIsCreateSheetOpen(true)}
@@ -413,7 +431,6 @@ export default function Trainings() {
         </TabsContent>
 
         <TabsContent value="canceled" className="mt-4 space-y-4">
-          {/* Search for canceled trainings */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
@@ -424,7 +441,6 @@ export default function Trainings() {
             />
           </div>
 
-          {/* Canceled Sessions List */}
           {isLoading ? (
             <TrainingListSkeleton />
           ) : (
@@ -440,8 +456,6 @@ export default function Trainings() {
                   >
                     <TrainingQuickMenu
                       session={session}
-                      onComplete={() => handleCompleteTraining(session.id)}
-                      onCancel={() => handleCancelTraining(session.id)}
                       onDuplicate={() => handleDuplicateTraining(session.id)}
                     >
                       <SessionCard

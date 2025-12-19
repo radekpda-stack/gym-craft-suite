@@ -2719,6 +2719,7 @@ export type Database = {
           recurrence_type: string | null
           rir: number | null
           rpe: number | null
+          session_notes: string | null
           status: string
           subjective_difficulty: number | null
           subjective_rating: number | null
@@ -2756,6 +2757,7 @@ export type Database = {
           recurrence_type?: string | null
           rir?: number | null
           rpe?: number | null
+          session_notes?: string | null
           status?: string
           subjective_difficulty?: number | null
           subjective_rating?: number | null
@@ -2793,6 +2795,7 @@ export type Database = {
           recurrence_type?: string | null
           rir?: number | null
           rpe?: number | null
+          session_notes?: string | null
           status?: string
           subjective_difficulty?: number | null
           subjective_rating?: number | null
