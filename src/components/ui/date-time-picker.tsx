@@ -95,12 +95,10 @@ export function DateTimePicker({
         onChange(newDate);
       }
       
-      // Show confirmation animation
+      // Close popover immediately, confirmation animation runs in background
+      setIsOpen(false);
       setShowConfirmation(true);
-      setTimeout(() => {
-        setShowConfirmation(false);
-        setIsOpen(false);
-      }, 400);
+      setTimeout(() => setShowConfirmation(false), 400);
     }
   };
 
@@ -108,7 +106,7 @@ export function DateTimePicker({
   const minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -127,9 +125,10 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-auto p-0 bg-popover border-border z-[100]" 
+        className="w-auto p-0 bg-popover border-border z-[100] max-h-[70vh] overflow-auto" 
         align="start"
         sideOffset={4}
+        collisionPadding={16}
       >
         <div className="flex flex-col sm:flex-row">
           <Calendar
