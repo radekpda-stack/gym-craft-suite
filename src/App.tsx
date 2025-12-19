@@ -19,7 +19,7 @@ import Records from "./pages/Records";
 import CalendarPage from "./pages/CalendarPage";
 import CanceledTrainings from "./pages/CanceledTrainings";
 import Settings from "./pages/Settings";
-import AIAssistant from "./pages/AIAssistant";
+// import AIAssistant from "./pages/AIAssistant"; // Hidden - AI feature disabled
 import FeedbackPage from "./pages/FeedbackPage";
 import FeedbackOverview from "./pages/FeedbackOverview";
 import PublicNutritionLog from "./pages/PublicNutritionLog";
@@ -65,7 +65,7 @@ const App = () => (
                           <Route path="/calendar" element={<CalendarPage />} />
                           <Route path="/canceled" element={<CanceledTrainings />} />
                           <Route path="/settings" element={<Settings />} />
-                          <Route path="/ai-assistant" element={<AIAssistant />} />
+                          {/* <Route path="/ai-assistant" element={<AIAssistant />} /> */} {/* Hidden - AI feature disabled */}
                           <Route path="/feedback-overview" element={<FeedbackOverview />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/pr-history" element={<PRHistory />} />

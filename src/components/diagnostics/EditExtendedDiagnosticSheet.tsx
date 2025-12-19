@@ -1098,7 +1098,7 @@ export function EditExtendedDiagnosticSheet({
                     />
                   </div>
 
-                  {/* AI Section */}
+                  {/* AI Section - Hidden for future use
                   <Collapsible open={showAISection} onOpenChange={setShowAISection}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded bg-secondary/50">
                       <span className="text-xs font-medium flex items-center gap-1">
@@ -1141,6 +1141,7 @@ export function EditExtendedDiagnosticSheet({
                       )}
                     </CollapsibleContent>
                   </Collapsible>
+                  */}
                 </TabsContent>
               </Tabs>
 

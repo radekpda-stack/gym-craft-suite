@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Zap,
   LogOut,
-  Sparkles,
+  // Sparkles, // Hidden - AI feature disabled
   TrendingUp,
   ShoppingBag,
   ClipboardList,
@@ -160,12 +160,13 @@ export function Sidebar() {
         { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
       ],
     },
-    {
-      label: 'Nástroje',
-      items: [
-        { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: t.nav.aiAssistant },
-      ],
-    },
+    // AI section hidden for future use
+    // {
+    //   label: 'Nástroje',
+    //   items: [
+    //     { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: t.nav.aiAssistant },
+    //   ],
+    // },
     {
       label: 'Systém',
       items: [
