@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Wallet,
@@ -8,6 +9,7 @@ import {
   Banknote,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -87,8 +89,77 @@ function FinanceMetric({
   );
 }
 
+type FinanceDetailType = 'income' | 'avgPerTraining' | null;
+
+interface FinanceDetailDialogProps {
+  type: FinanceDetailType;
+  onClose: () => void;
+  finance: DashboardViewModel['finance'];
+}
+
+function FinanceDetailDialog({ type, onClose, finance }: FinanceDetailDialogProps) {
+  if (!type) return null;
+  
+  const avgChange = finance.lastMonthAvgPerTraining > 0
+    ? Math.round(((finance.avgPerTraining - finance.lastMonthAvgPerTraining) / finance.lastMonthAvgPerTraining) * 100)
+    : 0;
+  
+  const configs = {
+    income: {
+      title: 'Měsíční příjem',
+      icon: Wallet,
+      stats: [
+        { label: 'Tento měsíc', value: formatCurrency(finance.monthlyIncome) },
+        { label: 'Minulý měsíc', value: formatCurrency(finance.lastMonthIncome) },
+        { label: 'Změna', value: `${finance.incomeChange > 0 ? '+' : ''}${finance.incomeChange}%`, highlight: finance.incomeChange > 0 },
+      ],
+    },
+    avgPerTraining: {
+      title: 'Průměr za trénink',
+      icon: TrendingUp,
+      stats: [
+        { label: 'Tento měsíc', value: formatCurrency(finance.avgPerTraining) },
+        { label: 'Minulý měsíc', value: formatCurrency(finance.lastMonthAvgPerTraining) },
+        { label: 'Změna', value: `${avgChange > 0 ? '+' : ''}${avgChange}%`, highlight: avgChange > 0 },
+        { label: 'Počet tréninků v průměru', value: finance.trainingsWithPriceCount },
+      ],
+    },
+  };
+  
+  const config = configs[type];
+  const Icon = config.icon;
+  
+  return (
+    <Dialog open={!!type} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Icon className="w-5 h-5 text-primary" />
+            {config.title}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-3 py-2">
+          {config.stats.map((stat, i) => (
+            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+              <span className="text-sm text-muted-foreground">{stat.label}</span>
+              <span className={cn(
+                'font-semibold',
+                stat.highlight ? 'text-[hsl(142_76%_36%)]' : 'text-foreground'
+              )}>
+                {stat.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function FinancePanelSection({ data, isLoading }: FinancePanelSectionProps) {
   const navigate = useNavigate();
+  const [activeDetail, setActiveDetail] = useState<FinanceDetailType>(null);
   
   if (isLoading) {
     return (
@@ -112,59 +183,69 @@ export function FinancePanelSection({ data, isLoading }: FinancePanelSectionProp
   const { finance } = data;
 
   return (
-    <Card className="glass">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Banknote className="w-5 h-5 text-primary" />
-          Finance
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Card className="glass">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Banknote className="w-5 h-5 text-primary" />
+            Finance
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Credit at Risk */}
+            <FinanceMetric
+              icon={AlertCircle}
+              label="Kredit v riziku"
+              value={finance.creditAtRisk.count}
+              subValue={`${finance.creditAtRisk.count} klientů`}
+              warning={finance.creditAtRisk.count > 0}
+              onClick={finance.creditAtRisk.count > 0 
+                ? () => navigate('/clients?filter=lowcredit') 
+                : undefined
+              }
+            />
+            
+            {/* Unpaid Total */}
+            <FinanceMetric
+              icon={Clock}
+              label="Nezaplaceno"
+              value={formatCurrency(finance.unpaidTotal.amount)}
+              subValue={`${finance.unpaidTotal.count} tréninků`}
+              warning={finance.unpaidTotal.count > 0 && finance.unpaidTotal.count <= 3}
+              error={finance.unpaidTotal.count > 3}
+              onClick={finance.unpaidTotal.count > 0 
+                ? () => navigate('/clients?filter=unpaid') 
+                : undefined
+              }
+            />
+            
+            {/* Monthly Income */}
+            <FinanceMetric
+              icon={Wallet}
+              label="Příjem měsíc"
+              value={formatCurrency(finance.monthlyIncome)}
+              trend={finance.incomeChange}
+              onClick={() => setActiveDetail('income')}
+            />
+            
+            {/* Average per Training */}
+            <FinanceMetric
+              icon={TrendingUp}
+              label="Ø za trénink"
+              value={formatCurrency(finance.avgPerTraining)}
+              onClick={() => setActiveDetail('avgPerTraining')}
+            />
+          </div>
+        </CardContent>
+      </Card>
       
-      <CardContent>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Credit at Risk */}
-          <FinanceMetric
-            icon={AlertCircle}
-            label="Kredit v riziku"
-            value={finance.creditAtRisk.count}
-            subValue={`${finance.creditAtRisk.count} klientů`}
-            warning={finance.creditAtRisk.count > 0}
-            onClick={finance.creditAtRisk.count > 0 
-              ? () => navigate('/clients?filter=lowcredit') 
-              : undefined
-            }
-          />
-          
-          {/* Unpaid Total */}
-          <FinanceMetric
-            icon={Clock}
-            label="Nezaplaceno"
-            value={formatCurrency(finance.unpaidTotal.amount)}
-            subValue={`${finance.unpaidTotal.count} tréninků`}
-            warning={finance.unpaidTotal.count > 0 && finance.unpaidTotal.count <= 3}
-            error={finance.unpaidTotal.count > 3}
-            onClick={finance.unpaidTotal.count > 0 
-              ? () => navigate('/clients?filter=unpaid') 
-              : undefined
-            }
-          />
-          
-          {/* Monthly Income */}
-          <FinanceMetric
-            icon={Wallet}
-            label="Příjem měsíc"
-            value={formatCurrency(finance.monthlyIncome)}
-            trend={finance.incomeChange}
-          />
-          
-          {/* Average per Training */}
-          <FinanceMetric
-            icon={TrendingUp}
-            label="Ø za trénink"
-            value={formatCurrency(finance.avgPerTraining)}
-          />
-        </div>
-      </CardContent>
-    </Card>
+      <FinanceDetailDialog
+        type={activeDetail}
+        onClose={() => setActiveDetail(null)}
+        finance={finance}
+      />
+    </>
   );
 }
