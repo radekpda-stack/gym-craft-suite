@@ -105,7 +105,7 @@ serve(async (req) => {
       .from("feedback_requests")
       .select(`
         *,
-        clients(name),
+        clients(name, gender),
         training_sessions(date, notes)
       `)
       .eq("token", token)
@@ -160,6 +160,7 @@ serve(async (req) => {
         success: true,
         data: {
           clientName: request.clients?.name || "Klient",
+          clientGender: request.clients?.gender || null,
           trainingDate: request.training_sessions?.date || null,
           trainingNotes: request.training_sessions?.notes || null,
           expiresAt: request.expires_at,
