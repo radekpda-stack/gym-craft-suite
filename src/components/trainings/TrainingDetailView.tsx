@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   ThumbsUp,
   ThumbsDown,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -97,6 +108,8 @@ interface TrainingDetailViewProps {
   }, tagIds: string[]) => Promise<void>;
   isLoading?: boolean;
   tagIds: string[];
+  onDelete?: () => Promise<void>;
+  isDeleting?: boolean;
 }
 
 const statusColors = {
@@ -116,10 +129,13 @@ export function TrainingDetailView({
   client, 
   onSave, 
   isLoading,
-  tagIds: initialTagIds 
+  tagIds: initialTagIds,
+  onDelete,
+  isDeleting 
 }: TrainingDetailViewProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const changePaymentMethod = useChangePaymentMethod();
   const { data: settings } = useAppSettings();
@@ -197,6 +213,14 @@ export function TrainingDetailView({
     form.reset();
     setSelectedTagIds(initialTagIds);
     setIsEditMode(false);
+  };
+
+  /** Handle delete confirmation */
+  const handleDeleteConfirm = async () => {
+    if (onDelete) {
+      await onDelete();
+    }
+    setShowDeleteDialog(false);
   };
 
   return (
@@ -734,7 +758,105 @@ export function TrainingDetailView({
             } : undefined}
           />
         )}
+
+        {/* Delete Training Section */}
+        {onDelete && (
+          <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5 border-destructive/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-destructive flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Nebezpečná zóna
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Trvale smazat tento trénink a všechna související data
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Smazat trénink
+              </Button>
+            </div>
+          </div>
+        )}
       </Form>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Smazat trénink?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-left">
+                <p className="text-foreground font-medium">
+                  Tato akce je NEVRATNÁ a ovlivní:
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div className="text-lg">📊</div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Historii tréninků</p>
+                      <p className="text-muted-foreground text-sm">
+                        Trénink zmizí z historie klienta. Statistiky (počet tréninků, frekvence) budou přepočítány.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div className="text-lg">💰</div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Kreditový systém</p>
+                      <p className="text-muted-foreground text-sm">
+                        Transakce spojené s tímto tréninkem ZŮSTANOU v historii. Kredit NEBUDE automaticky vrácen - pro opravu použijte manuální transakci.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div className="text-lg">🏋️</div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Data cvičení</p>
+                      <p className="text-muted-foreground text-sm">
+                        Všechny záznamy cviků a sérií budou smazány. Případné osobní rekordy budou ztraceny.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-muted-foreground text-sm italic">
+                  Opravdu chcete pokračovat?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Smazat trénink
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
