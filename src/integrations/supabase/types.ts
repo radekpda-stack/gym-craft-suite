@@ -2524,9 +2524,11 @@ export type Database = {
           pain_area: string | null
           pain_area_intensities: Json | null
           pain_area_other: string | null
+          pain_type: string | null
           red_flag_reasons: string[] | null
           rpe_rating: number
           session_fit: number | null
+          sleep_after: string | null
           sleep_hours: number | null
           sleep_quality: number | null
           soreness: number | null
@@ -2560,9 +2562,11 @@ export type Database = {
           pain_area?: string | null
           pain_area_intensities?: Json | null
           pain_area_other?: string | null
+          pain_type?: string | null
           red_flag_reasons?: string[] | null
           rpe_rating: number
           session_fit?: number | null
+          sleep_after?: string | null
           sleep_hours?: number | null
           sleep_quality?: number | null
           soreness?: number | null
@@ -2596,9 +2600,11 @@ export type Database = {
           pain_area?: string | null
           pain_area_intensities?: Json | null
           pain_area_other?: string | null
+          pain_type?: string | null
           red_flag_reasons?: string[] | null
           rpe_rating?: number
           session_fit?: number | null
+          sleep_after?: string | null
           sleep_hours?: number | null
           sleep_quality?: number | null
           soreness?: number | null

@@ -8,6 +8,7 @@ export interface PainSelection {
   area: string;
   intensity: number;
   side?: 'left' | 'right' | 'both';
+  isNew?: boolean;
 }
 
 interface BodyPainSelectorProps {
@@ -56,7 +57,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
     if (isSelected(areaId)) {
       onChange(selectedAreas.filter(a => a.area !== areaId));
     } else {
-      onChange([...selectedAreas, { area: areaId, intensity: 5 }]);
+      onChange([...selectedAreas, { area: areaId, intensity: 5, isNew: true }]);
     }
   };
 
@@ -79,6 +80,15 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
     }));
   };
 
+  const updateIsNew = (areaId: string, isNew: boolean) => {
+    onChange(selectedAreas.map(a => {
+      if (a.area === areaId) {
+        return { ...a, isNew };
+      }
+      return a;
+    }));
+  };
+
   const removeArea = (areaId: string) => {
     onChange(selectedAreas.filter(a => a.area !== areaId));
   };
@@ -95,6 +105,8 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
     both: language === 'cs' ? 'Obě' : 'Both',
     selected: language === 'cs' ? 'Vybrané oblasti' : 'Selected areas',
     legend: language === 'cs' ? 'Intenzita' : 'Intensity',
+    new: language === 'cs' ? 'Nová' : 'New',
+    known: language === 'cs' ? 'Známá' : 'Known',
   };
 
   return (
@@ -177,67 +189,101 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border-2",
+                    "flex flex-col gap-3 p-3 rounded-lg border-2",
                     getIntensityBorder(selection.intensity)
                   )}
                 >
-                  {/* Area Info */}
-                  <div className="flex items-center gap-2 min-w-[80px]">
-                    <span className="text-xl">{area.icon}</span>
-                    <span className="text-sm font-medium">{label}</span>
-                  </div>
-
-                  {/* Intensity Control */}
-                  <div className="flex items-center gap-2 flex-1">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, -1); }}
-                      className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                    
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white",
-                      getIntensityColor(selection.intensity)
-                    )}>
-                      {selection.intensity}
+                  {/* Top row: Area info + intensity + remove */}
+                  <div className="flex items-center gap-3">
+                    {/* Area Info */}
+                    <div className="flex items-center gap-2 min-w-[80px]">
+                      <span className="text-xl">{area.icon}</span>
+                      <span className="text-sm font-medium">{label}</span>
                     </div>
-                    
+
+                    {/* Intensity Control */}
+                    <div className="flex items-center gap-2 flex-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, -1); }}
+                        className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                      
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white",
+                        getIntensityColor(selection.intensity)
+                      )}>
+                        {selection.intensity}
+                      </div>
+                      
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, 1); }}
+                        className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Remove Button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, 1); }}
-                      className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
+                      onClick={(e) => { e.stopPropagation(); removeArea(selection.area); }}
+                      className="w-8 h-8 rounded-full hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      <ChevronUp className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Side Selection (for bilateral areas) */}
-                  {area.bilateral && (
+                  {/* Bottom row: Side selection + New/Known toggle */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Side Selection (for bilateral areas) */}
+                    {area.bilateral ? (
+                      <div className="flex gap-1">
+                        {(['left', 'right', 'both'] as const).map((side) => (
+                          <button
+                            key={side}
+                            onClick={(e) => { e.stopPropagation(); updateSide(selection.area, side); }}
+                            className={cn(
+                              "px-2 py-1 text-xs rounded-md transition-colors",
+                              selection.side === side
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                            )}
+                          >
+                            {side === 'left' ? t.left : side === 'right' ? t.right : t.both}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div />
+                    )}
+
+                    {/* New/Known Toggle */}
                     <div className="flex gap-1">
-                      {(['left', 'right', 'both'] as const).map((side) => (
-                        <button
-                          key={side}
-                          onClick={(e) => { e.stopPropagation(); updateSide(selection.area, side); }}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded-md transition-colors",
-                            selection.side === side
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                          )}
-                        >
-                          {side === 'left' ? t.left : side === 'right' ? t.right : t.both}
-                        </button>
-                      ))}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateIsNew(selection.area, true); }}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-md transition-colors",
+                          selection.isNew === true
+                            ? "bg-orange-500 text-white"
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                        )}
+                      >
+                        {t.new}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateIsNew(selection.area, false); }}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-md transition-colors",
+                          selection.isNew === false
+                            ? "bg-blue-500 text-white"
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                        )}
+                      >
+                        {t.known}
+                      </button>
                     </div>
-                  )}
-
-                  {/* Remove Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeArea(selection.area); }}
-                    className="w-8 h-8 rounded-full hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  </div>
                 </motion.div>
               );
             })}

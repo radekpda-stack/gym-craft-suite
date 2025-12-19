@@ -68,14 +68,14 @@ interface FormData {
 
 type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed';
 
-// Default help texts for core questions
+// Default help texts for core questions - updated with better RPE anchoring
 const DEFAULT_HELP_TEXTS: Record<string, string> = {
   soreness: 'Zpožděná svalová bolestivost (DOMS) - pocit ztuhlosti a citlivosti ve svalech, který se objevuje 24-72 hodin po tréninku. Je normální a ukazuje na zatížení svalů.',
   body_feel: 'Jak se celkově cítíte fyzicky? Ztuhlost, lehkost, svěžest nebo naopak těžkost a únava v těle.',
   energy: 'Vaše celková úroveň energie během dne - zda se cítíte unavený, ospalý nebo naopak plný síly a elánu.',
   pain: 'Ostrá, bodavá nebo tupá bolest v kloubech, šlachách nebo svalech - NE běžná svalovka po tréninku. Pokud máte bolest, vyberte kde.',
   session_fit: 'Hodnotí, jak dobře trénink odpovídal vaší aktuální kondici, náladě a očekávání. Byl přiměřený, nebo příliš lehký/těžký?',
-  difficulty: 'Subjektivní pocit náročnosti - jak moc vás trénink vyčerpal fyzicky. 1 = téměř bez námahy, 10 = úplné vyčerpání.',
+  difficulty: '1-3: rezerva, mohl/a bych pokračovat | 4-6: náročné, ale kontrolované | 7-8: na hraně, ke konci těžké | 9-10: maximum/přepálené',
   fun: 'Jak moc vás trénink bavil? Cítili jste motivaci a radost z pohybu, nebo to bylo spíše utrpení?',
 };
 
@@ -113,6 +113,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [values, setValues] = useState<Record<string, number>>({});
   const [painSelections, setPainSelections] = useState<PainSelection[]>([]);
   const [painAreaOther, setPainAreaOther] = useState('');
+  const [painType, setPainType] = useState<'muscle' | 'joint' | null>(null);
+  const [sleepAfter, setSleepAfter] = useState<'poor' | 'average' | 'good' | null>(null);
   const [note, setNote] = useState('');
 
   const questionsConfig = formData?.questionsConfig ?? DEFAULT_QUESTIONS_CONFIG;
@@ -186,7 +188,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       const painThreshold = painQuestion?.painAreaThreshold ?? 4;
       const showPainArea = (values.pain ?? 1) >= painThreshold;
 
-      // Build pain areas array from new format
+      // Build pain areas with extended data (intensity + isNew)
       const painAreasData = showPainArea ? painSelections.map(sel => {
         let areaKey = sel.area;
         if (BILATERAL_AREAS.includes(sel.area) && sel.side) {
@@ -195,10 +197,16 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         return {
           area: areaKey,
           intensity: sel.intensity,
+          isNew: sel.isNew ?? true,
         };
       }) : [];
 
       const painAreasWithSides = painAreasData.map(p => p.area);
+
+      // Build pain_area_intensities with isNew flag
+      const painAreaIntensities = painAreasData.length > 0
+        ? Object.fromEntries(painAreasData.map(p => [p.area, { intensity: p.intensity, isNew: p.isNew }]))
+        : undefined;
 
       const { data: result, error } = await supabase.functions.invoke('submit-public-feedback', {
         body: {
@@ -206,10 +214,10 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           values,
           pain_areas: painAreasWithSides.length > 0 ? painAreasWithSides : undefined,
           pain_area: painAreasWithSides.length > 0 ? painAreasWithSides.join(', ') : undefined,
-          pain_area_intensities: painAreasData.length > 0
-            ? Object.fromEntries(painAreasData.map(p => [p.area, p.intensity]))
-            : undefined,
+          pain_area_intensities: painAreaIntensities,
           pain_area_other: showPainArea && painSelections.some(s => s.area === 'other') ? painAreaOther : undefined,
+          pain_type: showPainArea && painType ? painType : undefined,
+          sleep_after: sleepAfter || undefined,
           note: note || undefined,
         },
       });
@@ -280,6 +288,28 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               <span>{question.minLabel}</span>
               <span>{question.maxLabel}</span>
             </div>
+            
+            {/* Difficulty scale anchoring */}
+            {question.id === 'difficulty' && (
+              <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground mt-2 border-t pt-2">
+                <div className="text-center">
+                  <span className="font-medium">1-3</span>
+                  <p>rezerva</p>
+                </div>
+                <div className="text-center">
+                  <span className="font-medium">4-6</span>
+                  <p>kontrola</p>
+                </div>
+                <div className="text-center">
+                  <span className="font-medium">7-8</span>
+                  <p>na hraně</p>
+                </div>
+                <div className="text-center">
+                  <span className="font-medium">9-10</span>
+                  <p>maximum</p>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -402,10 +432,48 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
             <div key={question.id}>
               {renderSlider(question)}
               
-              {/* Conditional pain area selection with new card-based selector */}
+              {/* Conditional pain area selection with pain type switch */}
               {question.id === 'pain' && showPainAreas && (
                 <Card className="mt-4 border-warning/50 bg-warning/5">
-                  <CardContent className="pt-6">
+                  <CardContent className="pt-6 space-y-4">
+                    {/* Pain Type Switch */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Je tato bolest spíš:</Label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPainType('muscle')}
+                          className={cn(
+                            "flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                            painType === 'muscle'
+                              ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                              : "border-border bg-card hover:border-muted-foreground"
+                          )}
+                        >
+                          💪 Svalová / únava
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPainType('joint')}
+                          className={cn(
+                            "flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                            painType === 'joint'
+                              ? "border-red-500 bg-red-500/10 text-red-700"
+                              : "border-border bg-card hover:border-muted-foreground"
+                          )}
+                        >
+                          🦴 Kloub / šlacha
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {painType === 'muscle' 
+                          ? 'Normální reakce na trénink, obvykle přejde do 24-48 hodin.'
+                          : painType === 'joint'
+                          ? 'Může vyžadovat pozornost – trenér upraví trénink.'
+                          : 'Pomůže nám rozlišit běžnou únavu od možného problému.'}
+                      </p>
+                    </div>
+
                     <BodyPainSelector
                       selectedAreas={painSelections}
                       onChange={handlePainSelectionsChange}
@@ -428,6 +496,53 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
             </div>
           ))}
 
+          {/* Sleep After Training Question */}
+          <Card>
+            <CardContent className="pt-6">
+              <Label className="mb-3 block text-base font-medium">
+                😴 Jak ses vyspal/a po tréninku?
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSleepAfter('poor')}
+                  className={cn(
+                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                    sleepAfter === 'poor'
+                      ? "border-red-500 bg-red-500/10 text-red-700"
+                      : "border-border bg-card hover:border-muted-foreground"
+                  )}
+                >
+                  😫 Špatně
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSleepAfter('average')}
+                  className={cn(
+                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                    sleepAfter === 'average'
+                      ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                      : "border-border bg-card hover:border-muted-foreground"
+                  )}
+                >
+                  😐 Průměrně
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSleepAfter('good')}
+                  className={cn(
+                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                    sleepAfter === 'good'
+                      ? "border-green-500 bg-green-500/10 text-green-700"
+                      : "border-border bg-card hover:border-muted-foreground"
+                  )}
+                >
+                  😊 Dobře
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Optional note */}
           {questionsConfig.noteEnabled && (
             <Card>
@@ -436,7 +551,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                   📝 Poznámka (volitelné)
                 </Label>
                 <Textarea
-                  placeholder="Cokoliv dalšího..."
+                  placeholder="Např.: dnes těžké nohy, tah v koleni při dřepech, jinak ok."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   maxLength={questionsConfig.noteMaxLength}
@@ -453,7 +568,6 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         {/* Submit Button */}
         <Button
           className="w-full mt-6 h-14 text-lg font-semibold"
-          size="lg"
           onClick={handleSubmit}
           disabled={status === 'submitting'}
         >
@@ -463,13 +577,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               Odesílám...
             </>
           ) : (
-            <>
-              <Check className="w-5 h-5 mr-2" />
-              Odeslat zpětnou vazbu
-            </>
+            'Odeslat zpětnou vazbu'
           )}
         </Button>
 
+        {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-4">
           Vaše odpovědi jsou důvěrné a pomohou zlepšit váš trénink.
         </p>

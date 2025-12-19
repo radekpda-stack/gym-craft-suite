@@ -50,9 +50,17 @@ const feedbackSchema = z.object({
   pain_area: z.string().max(200).optional(),
   pain_areas: z.array(z.string().max(50)).optional(),
   pain_area_notes: z.record(z.string(), z.string().max(100)).optional(),
-  pain_area_intensities: z.record(z.string(), z.number().int().min(1).max(10)).optional(),
+  pain_area_intensities: z.record(z.string(), z.union([
+    z.number().int().min(1).max(10),
+    z.object({
+      intensity: z.number().int().min(1).max(10),
+      isNew: z.boolean().optional(),
+    }),
+  ])).optional(),
   pain_area_side: z.enum(['left', 'right', 'both']).optional(),
   pain_area_other: z.string().max(100).optional(),
+  pain_type: z.enum(['muscle', 'joint']).optional(),
+  sleep_after: z.enum(['poor', 'average', 'good']).optional(),
   note: z.string().max(500).optional(),
 });
 
@@ -116,7 +124,7 @@ serve(async (req) => {
       );
     }
 
-    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, note } = parseResult.data;
+    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, pain_type, sleep_after, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
     console.log(`Values received:`, values);
@@ -182,10 +190,14 @@ serve(async (req) => {
     const difficulty = values.difficulty ?? 5;
     const fun = values.fun ?? 5;
 
-    // Detect red flags
+    // Detect red flags - enhanced with pain_type
     const redFlagReasons: string[] = [];
     if (pain >= painThreshold) {
       redFlagReasons.push(`Vysoká bolest (${pain}/10)`);
+    }
+    // Joint pain at medium level is also a red flag
+    if (pain_type === 'joint' && pain >= 4) {
+      redFlagReasons.push(`Kloubní/šlachová bolest (${pain}/10)`);
     }
     if (body_feel <= bodyFeelThreshold) {
       redFlagReasons.push(`Nízký pocit v těle (${body_feel}/10)`);
@@ -225,6 +237,9 @@ serve(async (req) => {
       pain_area_intensities: pain_area_intensities && Object.keys(pain_area_intensities).length > 0 
         ? pain_area_intensities 
         : null,
+      // New fields
+      pain_type: pain_type || null,
+      sleep_after: sleep_after || null,
       // Include notes in comment if present
       comment: buildComment(note, pain_area_notes),
       is_red_flag: isRedFlag,
@@ -267,9 +282,9 @@ serve(async (req) => {
       `💪 Svalovka: ${soreness}/10`,
       `🧘 Pocit: ${body_feel}/10`,
       `⚡ Energie: ${energy}/10`,
-      pain > 1 ? `🩹 Bolest: ${pain}/10` : null,
+      pain > 1 ? `🩹 Bolest: ${pain}/10${pain_type ? ` (${pain_type === 'muscle' ? 'sval' : 'kloub'})` : ''}` : null,
       `🏋️ Náročnost: ${difficulty}/10`,
-      `😊 Zábava: ${fun}/10`,
+      sleep_after ? `😴 Spánek: ${sleep_after === 'poor' ? 'špatný' : sleep_after === 'average' ? 'průměrný' : 'dobrý'}` : null,
     ].filter(Boolean).join(" | ");
 
     await supabase
