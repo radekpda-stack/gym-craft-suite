@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ShoppingBag,
   ClipboardList,
+  Bell,
   LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,6 +81,7 @@ const sections: NavSection[] = [
   {
     label: 'Systém',
     items: [
+      { to: '/reminders', icon: Bell, label: 'Připomínky' },
       { to: '/settings', icon: Settings, label: 'Nastavení' },
     ],
   },

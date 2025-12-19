@@ -6,11 +6,9 @@ import {
   LayoutDashboard,
   Users,
   Dumbbell,
-  Stethoscope,
   Activity,
   Calendar,
   Settings,
-  ChevronLeft,
   ChevronRight,
   Zap,
   LogOut,
@@ -18,6 +16,7 @@ import {
   TrendingUp,
   ShoppingBag,
   ClipboardList,
+  Bell,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -170,6 +169,7 @@ export function Sidebar() {
     {
       label: 'Systém',
       items: [
+        { id: 'reminders', to: '/reminders', icon: Bell, label: 'Připomínky' },
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
       ],
     },
