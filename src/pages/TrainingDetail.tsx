@@ -5,7 +5,6 @@ import { cs } from 'date-fns/locale';
 import {
   Dumbbell,
   Loader2,
-  Trash2,
   CheckCircle,
   XCircle,
   Users,
@@ -81,7 +80,6 @@ export default function TrainingDetail() {
   const trainingPrices = useTrainingPrices();
 
   // Dialog states
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   
@@ -305,9 +303,11 @@ export default function TrainingDetail() {
         onSave={handleSaveTraining}
         isLoading={updateTraining.isPending}
         tagIds={trainingTags.map(t => t.tag_id)}
+        onDelete={handleDelete}
+        isDeleting={deleteTraining.isPending}
       />
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Only for scheduled trainings */}
       {training.status === 'scheduled' && (
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Akce</h3>
@@ -327,54 +327,9 @@ export default function TrainingDetail() {
               <XCircle className="w-4 h-4" />
               Zrušit trénink
             </Button>
-            <Button
-              variant="ghost"
-              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="w-4 h-4" />
-              Smazat trénink
-            </Button>
           </div>
         </div>
       )}
-
-      {training.status !== 'scheduled' && (
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Akce</h3>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              variant="ghost"
-              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="w-4 h-4" />
-              Smazat trénink
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Smazat trénink?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Opravdu chcete smazat tento trénink? Tato akce je nevratná.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Smazat
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Complete Training Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
