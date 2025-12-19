@@ -683,15 +683,27 @@ export function ExtendedDiagnosticForm({
                   </div>
                 </div>
 
-                <div>
-                  <Label>Hodiny sezení denně: {formData.sittingHoursDaily}h</Label>
-                  <Slider
-                    value={[formData.sittingHoursDaily]}
-                    onValueChange={([v]) => updateField('sittingHoursDaily', v)}
-                    max={16}
-                    step={0.5}
-                    className="mt-2"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Hodiny sezení denně: {formData.sittingHoursDaily}h</Label>
+                    <Slider
+                      value={[formData.sittingHoursDaily]}
+                      onValueChange={([v]) => updateField('sittingHoursDaily', v)}
+                      max={16}
+                      step={0.5}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label>Spánek denně: {formData.sleepHours}h</Label>
+                    <Slider
+                      value={[formData.sleepHours]}
+                      onValueChange={([v]) => updateField('sleepHours', v)}
+                      max={12}
+                      step={0.5}
+                      className="mt-2"
+                    />
+                  </div>
                 </div>
               </div>
             </Card>
