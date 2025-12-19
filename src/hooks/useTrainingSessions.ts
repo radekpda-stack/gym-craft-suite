@@ -895,15 +895,32 @@ export function useChangePaymentMethod() {
 
       let newBalance: number | null = null;
 
+      const paymentLabels: Record<string, string> = {
+        paid_credit: 'kredit',
+        paid_cash: 'hotovost',
+        paid_card: 'karta',
+        paid_bank: 'převod',
+        pending: 'nezaplaceno',
+      };
+
       // Handle credit balance changes
       if (wasCredit && !willBeCredit) {
         // Refund credit: was paid by credit, now changing to another method
-        // Delete the credit transaction
+        // Instead of deleting the original transaction, create a COMPENSATING transaction
+        // This preserves the audit trail and maintains transaction immutability
+        const groupId = await getClientGroupId(clientId);
+
         await supabase
           .from("credit_transactions")
-          .delete()
-          .eq("training_session_id", trainingId)
-          .eq("type", "training");
+          .insert({
+            client_id: clientId,
+            amount: +price, // positive amount = credit refund
+            type: "manual",
+            description: `Oprava platby - vrácení kreditu (změna na ${paymentLabels[newPaymentStatus]})`,
+            training_session_id: trainingId,
+            user_id: user.id,
+            group_id: groupId,
+          });
 
         const { balance } = await applyCreditDelta(clientId, +price);
         newBalance = balance;
