@@ -54,50 +54,143 @@ const BODY_ZONES = {
   ],
 };
 
-// Zone positions for SVG silhouette
+// Zone positions for clickable areas - adjusted for anatomical silhouette
 const ZONE_POSITIONS = {
   front: {
-    neck: { cx: 100, cy: 52, rx: 14, ry: 10 },
-    shoulder: { left: { cx: 68, cy: 72, rx: 16, ry: 12 }, right: { cx: 132, cy: 72, rx: 16, ry: 12 } },
-    chest: { cx: 100, cy: 90, rx: 22, ry: 14 },
-    elbow: { left: { cx: 48, cy: 115, rx: 10, ry: 12 }, right: { cx: 152, cy: 115, rx: 10, ry: 12 } },
-    wrist: { left: { cx: 38, cy: 148, rx: 10, ry: 10 }, right: { cx: 162, cy: 148, rx: 10, ry: 10 } },
-    hip: { left: { cx: 78, cy: 135, rx: 14, ry: 12 }, right: { cx: 122, cy: 135, rx: 14, ry: 12 } },
-    groin: { cx: 100, cy: 148, rx: 12, ry: 10 },
-    knee: { left: { cx: 82, cy: 195, rx: 12, ry: 14 }, right: { cx: 118, cy: 195, rx: 12, ry: 14 } },
-    shin: { left: { cx: 82, cy: 228, rx: 10, ry: 16 }, right: { cx: 118, cy: 228, rx: 10, ry: 16 } },
-    ankle: { left: { cx: 82, cy: 262, rx: 10, ry: 10 }, right: { cx: 118, cy: 262, rx: 10, ry: 10 } },
+    neck: { cx: 100, cy: 62, rx: 12, ry: 8 },
+    shoulder: { left: { cx: 70, cy: 82, rx: 14, ry: 10 }, right: { cx: 130, cy: 82, rx: 14, ry: 10 } },
+    chest: { cx: 100, cy: 100, rx: 20, ry: 12 },
+    elbow: { left: { cx: 52, cy: 128, rx: 9, ry: 11 }, right: { cx: 148, cy: 128, rx: 9, ry: 11 } },
+    wrist: { left: { cx: 42, cy: 165, rx: 8, ry: 8 }, right: { cx: 158, cy: 165, rx: 8, ry: 8 } },
+    hip: { left: { cx: 82, cy: 148, rx: 12, ry: 10 }, right: { cx: 118, cy: 148, rx: 12, ry: 10 } },
+    groin: { cx: 100, cy: 160, rx: 10, ry: 8 },
+    knee: { left: { cx: 84, cy: 210, rx: 10, ry: 12 }, right: { cx: 116, cy: 210, rx: 10, ry: 12 } },
+    shin: { left: { cx: 84, cy: 245, rx: 8, ry: 14 }, right: { cx: 116, cy: 245, rx: 8, ry: 14 } },
+    ankle: { left: { cx: 84, cy: 278, rx: 8, ry: 8 }, right: { cx: 116, cy: 278, rx: 8, ry: 8 } },
   },
   back: {
-    cervical_spine: { cx: 100, cy: 52, rx: 12, ry: 10 },
-    upper_back: { cx: 100, cy: 80, rx: 20, ry: 14 },
-    lower_back: { cx: 100, cy: 115, rx: 18, ry: 14 },
-    shoulder_back: { left: { cx: 68, cy: 72, rx: 16, ry: 12 }, right: { cx: 132, cy: 72, rx: 16, ry: 12 } },
-    elbow_back: { left: { cx: 48, cy: 115, rx: 10, ry: 12 }, right: { cx: 152, cy: 115, rx: 10, ry: 12 } },
-    glutes: { left: { cx: 82, cy: 145, rx: 14, ry: 12 }, right: { cx: 118, cy: 145, rx: 14, ry: 12 } },
-    hamstring: { left: { cx: 82, cy: 175, rx: 12, ry: 16 }, right: { cx: 118, cy: 175, rx: 12, ry: 16 } },
-    calf: { left: { cx: 82, cy: 228, rx: 10, ry: 16 }, right: { cx: 118, cy: 228, rx: 10, ry: 16 } },
-    achilles: { left: { cx: 82, cy: 258, rx: 8, ry: 10 }, right: { cx: 118, cy: 258, rx: 8, ry: 10 } },
+    cervical_spine: { cx: 100, cy: 62, rx: 10, ry: 8 },
+    upper_back: { cx: 100, cy: 92, rx: 18, ry: 12 },
+    lower_back: { cx: 100, cy: 128, rx: 16, ry: 12 },
+    shoulder_back: { left: { cx: 70, cy: 82, rx: 14, ry: 10 }, right: { cx: 130, cy: 82, rx: 14, ry: 10 } },
+    elbow_back: { left: { cx: 52, cy: 128, rx: 9, ry: 11 }, right: { cx: 148, cy: 128, rx: 9, ry: 11 } },
+    glutes: { left: { cx: 84, cy: 158, rx: 12, ry: 10 }, right: { cx: 116, cy: 158, rx: 12, ry: 10 } },
+    hamstring: { left: { cx: 84, cy: 190, rx: 10, ry: 14 }, right: { cx: 116, cy: 190, rx: 10, ry: 14 } },
+    calf: { left: { cx: 84, cy: 245, rx: 8, ry: 14 }, right: { cx: 116, cy: 245, rx: 8, ry: 14 } },
+    achilles: { left: { cx: 84, cy: 275, rx: 6, ry: 8 }, right: { cx: 116, cy: 275, rx: 6, ry: 8 } },
   },
 };
 
 const getIntensityColor = (intensity: number): string => {
-  if (intensity <= 3) return 'fill-yellow-400';
+  if (intensity <= 3) return 'fill-amber-400';
   if (intensity <= 6) return 'fill-orange-500';
   return 'fill-red-500';
 };
 
 const getIntensityBgColor = (intensity: number): string => {
-  if (intensity <= 3) return 'bg-yellow-400';
+  if (intensity <= 3) return 'bg-amber-400';
   if (intensity <= 6) return 'bg-orange-500';
   return 'bg-red-500';
 };
 
 const getIntensityBorder = (intensity: number): string => {
-  if (intensity <= 3) return 'border-yellow-400';
+  if (intensity <= 3) return 'border-amber-400';
   if (intensity <= 6) return 'border-orange-500';
   return 'border-red-500';
 };
+
+// Anatomical body silhouette paths
+const BODY_SILHOUETTE_FRONT = `
+  M100,20
+  C112,20 122,30 122,44
+  C122,54 116,62 108,66
+  L108,70
+  C130,72 148,82 148,82
+  C158,86 162,96 162,108
+  L164,130
+  C166,138 168,148 166,158
+  L156,178
+  C154,182 150,184 146,184
+  L138,172
+  C136,168 134,166 132,168
+  L130,170
+  L128,145
+  C126,138 122,134 118,136
+  L118,162
+  C120,170 122,178 120,186
+  L118,210
+  C120,218 120,228 118,240
+  L116,260
+  C116,270 114,280 112,290
+  C110,294 106,296 100,296
+  C94,296 90,294 88,290
+  L86,260
+  C84,240 82,228 84,218
+  L82,186
+  C80,178 82,170 84,162
+  L84,136
+  C80,134 76,138 74,145
+  L72,170
+  L70,168
+  C68,166 66,168 64,172
+  L56,184
+  C52,184 48,182 46,178
+  L36,158
+  C34,148 36,138 38,130
+  L40,108
+  C40,96 44,86 54,82
+  C54,82 72,72 94,70
+  L94,66
+  C86,62 80,54 80,44
+  C80,30 90,20 100,20
+  Z
+`;
+
+const BODY_SILHOUETTE_BACK = `
+  M100,20
+  C112,20 122,30 122,44
+  C122,54 116,62 108,66
+  L108,70
+  C130,72 148,82 148,82
+  C158,86 162,96 162,108
+  L164,130
+  C166,138 168,148 166,158
+  L156,178
+  C154,182 150,184 146,184
+  L138,172
+  C136,168 134,166 132,168
+  L130,170
+  L128,145
+  C126,138 122,134 118,136
+  L118,162
+  C120,170 122,178 120,186
+  L118,210
+  C120,218 120,228 118,240
+  L116,260
+  C116,270 114,280 112,290
+  C110,294 106,296 100,296
+  C94,296 90,294 88,290
+  L86,260
+  C84,240 82,228 84,218
+  L82,186
+  C80,178 82,170 84,162
+  L84,136
+  C80,134 76,138 74,145
+  L72,170
+  L70,168
+  C68,166 66,168 64,172
+  L56,184
+  C52,184 48,182 46,178
+  L36,158
+  C34,148 36,138 38,130
+  L40,108
+  C40,96 44,86 54,82
+  C54,82 72,72 94,70
+  L94,66
+  C86,62 80,54 80,44
+  C80,30 90,20 100,20
+  Z
+`;
 
 export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   selectedAreas,
@@ -156,10 +249,6 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   const isZoneBilateral = (zoneId: string): boolean => {
     const zones = [...BODY_ZONES.front, ...BODY_ZONES.back];
     return zones.find(z => z.id === zoneId)?.bilateral ?? false;
-  };
-
-  const getSelectionKey = (zoneId: string, side?: 'left' | 'right' | 'both'): string => {
-    return side ? `${zoneId}_${side}` : zoneId;
   };
 
   const findSelection = (zoneId: string, side?: 'left' | 'right'): PainSelection | undefined => {
@@ -244,20 +333,29 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
         rx={position.rx}
         ry={position.ry}
         className={cn(
-          "cursor-pointer transition-all duration-200 stroke-2",
+          "cursor-pointer transition-all duration-300",
           isSelected
-            ? cn(getIntensityColor(selection.intensity), "stroke-white/50")
-            : "fill-muted/40 stroke-muted-foreground/30 hover:fill-primary/20 hover:stroke-primary/50"
+            ? cn(getIntensityColor(selection.intensity), "opacity-80")
+            : "fill-primary/10 hover:fill-primary/30"
         )}
-        whileHover={{ scale: 1.1 }}
+        style={{
+          filter: isSelected ? 'drop-shadow(0 0 6px currentColor)' : undefined,
+        }}
+        whileHover={{ scale: 1.15, opacity: 1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => openZoneSheet(zoneId, side)}
+        initial={false}
+        animate={isSelected ? { 
+          scale: [1, 1.05, 1],
+          transition: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+        } : {}}
       />
     );
   };
 
   const currentZones = BODY_ZONES[view];
   const currentPositions = ZONE_POSITIONS[view];
+  const silhouettePath = view === 'front' ? BODY_SILHOUETTE_FRONT : BODY_SILHOUETTE_BACK;
 
   return (
     <div className="space-y-4">
@@ -267,10 +365,10 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
           type="button"
           onClick={() => setView('front')}
           className={cn(
-            "px-6 py-2 text-sm font-medium rounded-full transition-all",
+            "px-6 py-2.5 text-sm font-medium rounded-full transition-all duration-300",
             view === 'front'
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+              : "bg-muted/50 text-muted-foreground hover:bg-muted"
           )}
         >
           {t.front}
@@ -279,10 +377,10 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
           type="button"
           onClick={() => setView('back')}
           className={cn(
-            "px-6 py-2 text-sm font-medium rounded-full transition-all",
+            "px-6 py-2.5 text-sm font-medium rounded-full transition-all duration-300",
             view === 'back'
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+              : "bg-muted/50 text-muted-foreground hover:bg-muted"
           )}
         >
           {t.back}
@@ -290,36 +388,58 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
       </div>
 
       {/* SVG Silhouette */}
-      <div className="flex justify-center">
-        <svg viewBox="0 0 200 280" className="w-48 h-72 sm:w-56 sm:h-80">
-          {/* Body outline - minimalist silhouette */}
+      <div className="flex justify-center py-4">
+        <svg viewBox="0 0 200 310" className="w-52 h-80 sm:w-60 sm:h-[360px]">
           <defs>
-            <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="hsl(var(--muted))" stopOpacity="0.1" />
+            {/* Body gradient */}
+            <linearGradient id="bodyGradientPro" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+              <stop offset="50%" stopColor="hsl(var(--muted))" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
             </linearGradient>
+            
+            {/* Glow filter for selected areas */}
+            <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+
+            {/* Subtle inner shadow */}
+            <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feOffset dx="0" dy="2"/>
+              <feGaussianBlur stdDeviation="2" result="offset-blur"/>
+              <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+              <feFlood floodColor="black" floodOpacity="0.15" result="color"/>
+              <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+              <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+            </filter>
           </defs>
           
-          {/* Head */}
-          <ellipse cx="100" cy="28" rx="22" ry="26" fill="url(#bodyGradient)" className="stroke-muted-foreground/20 stroke-1" />
-          
-          {/* Neck */}
-          <rect x="92" y="52" width="16" height="12" fill="url(#bodyGradient)" className="stroke-muted-foreground/20 stroke-1" />
-          
-          {/* Torso */}
-          <path 
-            d="M60 64 Q60 62, 68 62 L132 62 Q140 62, 140 64 L145 130 Q145 155, 122 160 L78 160 Q55 155, 55 130 Z" 
-            fill="url(#bodyGradient)" 
-            className="stroke-muted-foreground/20 stroke-1"
+          {/* Body silhouette */}
+          <motion.path 
+            d={silhouettePath}
+            fill="url(#bodyGradientPro)" 
+            className="stroke-muted-foreground/30"
+            strokeWidth="1.5"
+            filter="url(#innerShadow)"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            key={view}
           />
-          
-          {/* Arms */}
-          <path d="M60 64 Q40 75, 35 115 Q32 135, 38 155" fill="none" className="stroke-muted-foreground/20 stroke-[12]" strokeLinecap="round" />
-          <path d="M140 64 Q160 75, 165 115 Q168 135, 162 155" fill="none" className="stroke-muted-foreground/20 stroke-[12]" strokeLinecap="round" />
-          
-          {/* Legs */}
-          <path d="M78 160 Q75 200, 82 270" fill="none" className="stroke-muted-foreground/20 stroke-[16]" strokeLinecap="round" />
-          <path d="M122 160 Q125 200, 118 270" fill="none" className="stroke-muted-foreground/20 stroke-[16]" strokeLinecap="round" />
+
+          {/* Center line indicator for back view */}
+          {view === 'back' && (
+            <path 
+              d="M100,70 L100,160" 
+              className="stroke-muted-foreground/20"
+              strokeWidth="1"
+              strokeDasharray="4,4"
+            />
+          )}
 
           {/* Render clickable zones */}
           {currentZones.map(zone => {
@@ -372,13 +492,13 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-lg border-2 bg-card",
+                      "flex items-center justify-between p-3 rounded-xl border-2 bg-card/50 backdrop-blur-sm",
                       getIntensityBorder(selection.intensity)
                     )}
                   >
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white",
+                        "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg",
                         getIntensityBgColor(selection.intensity)
                       )}>
                         {selection.intensity}
@@ -420,16 +540,16 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
         <span>{t.legend}:</span>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-yellow-400" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-amber-400 shadow-sm" />
           <span>1-3</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-orange-500" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-orange-500 shadow-sm" />
           <span>4-6</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
           <span>7-10</span>
         </div>
       </div>
@@ -449,7 +569,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t.intensity}</span>
                 <span className={cn(
-                  "font-bold text-lg px-3 py-1 rounded-full text-white",
+                  "font-bold text-lg px-3 py-1 rounded-full text-white shadow-md",
                   getIntensityBgColor(tempIntensity)
                 )}>
                   {tempIntensity}
@@ -479,7 +599,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                       type="button"
                       onClick={() => setTempSide(side)}
                       className={cn(
-                        "flex-1 py-2 px-3 text-sm rounded-lg border-2 transition-all",
+                        "flex-1 py-2.5 px-3 text-sm rounded-xl border-2 transition-all duration-200",
                         tempSide === side
                           ? "border-primary bg-primary/10 text-primary font-medium"
                           : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -498,7 +618,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                 type="button"
                 onClick={() => setTempIsNew(true)}
                 className={cn(
-                  "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                  "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
                   tempIsNew
                     ? "border-orange-500 bg-orange-500/10 text-orange-600 font-medium"
                     : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -510,7 +630,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                 type="button"
                 onClick={() => setTempIsNew(false)}
                 className={cn(
-                  "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                  "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
                   !tempIsNew
                     ? "border-blue-500 bg-blue-500/10 text-blue-600 font-medium"
                     : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -527,7 +647,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'muscle' ? null : 'muscle')}
                   className={cn(
-                    "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                    "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
                     tempPainType === 'muscle'
                       ? "border-purple-500 bg-purple-500/10 text-purple-600 font-medium"
                       : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -539,7 +659,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'joint' ? null : 'joint')}
                   className={cn(
-                    "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                    "flex-1 py-3 px-4 text-sm rounded-xl border-2 transition-all duration-200",
                     tempPainType === 'joint'
                       ? "border-teal-500 bg-teal-500/10 text-teal-600 font-medium"
                       : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
