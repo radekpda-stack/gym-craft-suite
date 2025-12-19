@@ -6,6 +6,7 @@ import { MeasurementCard } from './MeasurementCard';
 import { DiagnosticCard } from './DiagnosticCard';
 import { Client } from '@/hooks/useClients';
 import { Measurement } from '@/hooks/useMeasurements';
+import { Diagnostic } from '@/hooks/useDiagnostics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileX2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,8 @@ interface RecordsFeedProps {
   measurements: Measurement[];
   isLoading: boolean;
   onCreateRecord?: () => void;
+  onMeasurementClick?: (measurement: Measurement, client: Client | null) => void;
+  onDiagnosticClick?: (diagnostic: Diagnostic, client: Client | null) => void;
 }
 
 function formatDayHeader(dateStr: string): string {
@@ -78,6 +81,8 @@ export function RecordsFeed({
   measurements,
   isLoading,
   onCreateRecord,
+  onMeasurementClick,
+  onDiagnosticClick,
 }: RecordsFeedProps) {
   // Create client lookup map
   const clientMap = useMemo(() => {
@@ -133,25 +138,31 @@ export function RecordsFeed({
               const client = clientMap.get(record.clientId) || null;
               
               switch (record.type) {
-                case 'measurement':
+                case 'measurement': {
+                  const measurementData = (record as MeasurementRecordItem).data;
                   return (
                     <MeasurementCard
                       key={record.id}
-                      measurement={(record as MeasurementRecordItem).data}
+                      measurement={measurementData}
                       client={client}
-                      previousMeasurement={getPreviousMeasurement((record as MeasurementRecordItem).data)}
+                      previousMeasurement={getPreviousMeasurement(measurementData)}
+                      onClick={() => onMeasurementClick?.(measurementData, client)}
                     />
                   );
+                }
                 
-                case 'diagnostic':
+                case 'diagnostic': {
+                  const diagnosticData = (record as DiagnosticRecordItem).data;
                   return (
                     <DiagnosticCard
                       key={record.id}
-                      diagnostic={(record as DiagnosticRecordItem).data}
+                      diagnostic={diagnosticData}
                       client={client}
                       hasAIAnalysis={false}
+                      onClick={() => onDiagnosticClick?.(diagnosticData, client)}
                     />
                   );
+                }
                 
                 default:
                   return null;

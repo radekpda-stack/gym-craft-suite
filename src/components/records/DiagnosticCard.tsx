@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Diagnostic, JOINT_OPTIONS, MUSCLE_OPTIONS } from '@/hooks/useDiagnostics';
 import { Client } from '@/hooks/useClients';
-import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 
 interface DiagnosticCardProps {
@@ -12,6 +11,7 @@ interface DiagnosticCardProps {
   client?: Client | null;
   hasAIAnalysis?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 function getAreaLabel(areaType: string, areaName: string): string {
@@ -25,15 +25,17 @@ export function DiagnosticCard({
   client,
   hasAIAnalysis = false,
   className,
+  onClick,
 }: DiagnosticCardProps) {
   const diagnosticDate = new Date(diagnostic.date);
   const isJoint = diagnostic.area_type === 'joint';
   
   return (
-    <Link
-      to={`/clients/${diagnostic.client_id}?tab=diagnostics`}
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        'block glass rounded-xl border-l-4 border-l-primary/60 transition-all duration-200 hover:glow p-3 sm:p-4',
+        'block w-full text-left glass rounded-xl border-l-4 border-l-primary/60 transition-all duration-200 hover:glow p-3 sm:p-4',
         className
       )}
     >
@@ -79,6 +81,6 @@ export function DiagnosticCard({
           {diagnostic.findings}
         </p>
       )}
-    </Link>
+    </button>
   );
 }
