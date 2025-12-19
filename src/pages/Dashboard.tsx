@@ -7,6 +7,10 @@ import { PriorityTasksSection } from '@/components/dashboard/PriorityTasksSectio
 import { DayTimelineSection } from '@/components/dashboard/DayTimelineSection';
 import { ClientsQuickOverviewSection } from '@/components/dashboard/ClientsQuickOverviewSection';
 import { WeekSummarySection } from '@/components/dashboard/WeekSummarySection';
+import { QuickStats } from '@/components/dashboard/QuickStats';
+import { TrendsPanelSection } from '@/components/dashboard/TrendsPanelSection';
+import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
+import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 
 function DashboardContent() {
@@ -43,6 +47,16 @@ function DashboardContent() {
 
       {/* Week Summary - collapsible */}
       <WeekSummarySection data={data} isLoading={isLoading} />
+
+      {/* Fun statistiky */}
+      <UpcomingAnniversariesCard />
+      
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <QuickStats />
+        <TrendsPanelSection data={data} isLoading={isLoading} />
+      </div>
+      
+      <StatsOverviewCard />
     </div>
   );
 }
