@@ -17,7 +17,7 @@ import {
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { EditMeasurementSheet } from '@/components/measurements/EditMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { EditDiagnosticSheet } from '@/components/diagnostics/EditDiagnosticSheet';
+import { EditExtendedDiagnosticSheet } from '@/components/diagnostics/EditExtendedDiagnosticSheet';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 
 export default function Records() {
@@ -157,7 +157,7 @@ export default function Records() {
         client={selectedMeasurementClient}
       />
 
-      <EditDiagnosticSheet
+      <EditExtendedDiagnosticSheet
         open={editDiagnosticOpen}
         onOpenChange={setEditDiagnosticOpen}
         diagnostic={selectedDiagnostic}
