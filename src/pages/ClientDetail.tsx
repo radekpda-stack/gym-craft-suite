@@ -11,7 +11,7 @@ import { ClientFormValues } from '@/lib/validations/client';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
-import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
+import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
 
 // New Block Components
@@ -197,7 +197,7 @@ export default function ClientDetail() {
         defaultClientId={client.id}
       />
       
-      <EnhancedCreditModal
+      <UnifiedCreditModal
         open={isCreditModalOpen}
         onOpenChange={setIsCreditModalOpen}
         defaultClientId={client.id}

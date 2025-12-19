@@ -21,7 +21,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { QuickCreditModal } from '@/components/credit/QuickCreditModal';
+import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n';
@@ -287,7 +287,7 @@ export function Sidebar() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <QuickCreditModal collapsed={collapsed} />
+          <UnifiedCreditModal collapsed={collapsed} />
         </motion.div>
       </nav>
 

@@ -4,6 +4,8 @@ import { toast } from "@/hooks/use-toast";
 import { ClientFormValues } from "@/lib/validations/client";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 
+export type PaymentMode = 'credit' | 'cash_only' | 'mixed';
+
 export interface Client {
   id: string;
   name: string;
@@ -18,6 +20,7 @@ export interface Client {
   is_archived: boolean;
   feedback_enabled: boolean;
   gender: 'male' | 'female' | null;
+  payment_mode: PaymentMode;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -262,6 +265,48 @@ export function useUpdateClientFeedback() {
       toast({
         title: "Chyba",
         description: "Nepodařilo se aktualizovat nastavení feedbacku.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUpdatePaymentMode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, payment_mode }: { id: string; payment_mode: PaymentMode }) => {
+      const { data, error } = await supabase
+        .from("clients")
+        .update({ payment_mode })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"] });
+      
+      const modeLabels: Record<PaymentMode, string> = {
+        credit: 'Kredit',
+        cash_only: 'Hotovost',
+        mixed: 'Kombinovaně',
+      };
+      
+      toast({
+        title: "Platební režim změněn",
+        description: `Nový režim: ${modeLabels[variables.payment_mode]}`,
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating payment mode:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit platební režim.",
         variant: "destructive",
       });
     },

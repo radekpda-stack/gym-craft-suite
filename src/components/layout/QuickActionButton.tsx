@@ -17,7 +17,7 @@ import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
+import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 import { useClients, useCreateClient } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
@@ -220,7 +220,7 @@ export function QuickActionButton() {
         clients={clients}
       />
 
-      <EnhancedCreditModal
+      <UnifiedCreditModal
         open={activeSheet === 'credit'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
         showTrigger={false}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CreditCard, Search, Check, Wallet, Banknote, Building2, Receipt, AlertCircle, Users } from 'lucide-react';
+import { CreditCard, Search, Check, Wallet, Banknote, Building2, Receipt, AlertCircle, Users, Plus, Minus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
@@ -20,22 +21,23 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/formatters';
 
-interface EnhancedCreditModalProps {
+interface UnifiedCreditModalProps {
   collapsed?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTrigger?: boolean;
   defaultClientId?: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
 }
 
-type PaymentMethodType = 'cash' | 'bank' | 'card' | 'revolut' | 'invoice';
+type PaymentMethodType = 'cash' | 'bank' | 'card' | 'credit';
+type OperationType = 'add' | 'subtract';
 
 const paymentMethods = [
-  { value: 'bank', label: 'Bankovní převod', icon: Building2 },
+  { value: 'bank', label: 'Převod', icon: Building2 },
   { value: 'cash', label: 'Hotovost', icon: Banknote },
   { value: 'card', label: 'Karta', icon: CreditCard },
-  { value: 'revolut', label: 'Revolut', icon: Wallet },
-  { value: 'invoice', label: 'Faktura', icon: Receipt },
 ] as const;
 
 // Remove diacritics for search
@@ -43,13 +45,15 @@ const removeDiacritics = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
-export function EnhancedCreditModal({ 
+export function UnifiedCreditModal({ 
   collapsed = false, 
   open: controlledOpen, 
   onOpenChange: controlledOnOpenChange,
   showTrigger = true,
   defaultClientId,
-}: EnhancedCreditModalProps) {
+  triggerClassName,
+  triggerLabel = 'Rychlý kredit',
+}: UnifiedCreditModalProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -66,10 +70,14 @@ export function EnhancedCreditModal({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('bank');
   const [note, setNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [operationType, setOperationType] = useState<OperationType>('add');
   
-  // Step 2 state
+  // Step 2 state - unpaid trainings
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUnpaidIds, setSelectedUnpaidIds] = useState<string[]>([]);
+  
+  // Active tab
+  const [activeTab, setActiveTab] = useState<'add' | 'adjust'>('add');
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   
@@ -92,7 +100,6 @@ export function EnhancedCreditModal({
   const personalDebt = useMemo(() => {
     if (!selectedClient || !sharedBudgetInfo?.isShared) return 0;
     const personalBalance = selectedClient.credit_balance || 0;
-    // Only consider negative balances as debt
     return personalBalance < 0 ? Math.abs(personalBalance) : 0;
   }, [selectedClient, sharedBudgetInfo]);
   
@@ -102,12 +109,24 @@ export function EnhancedCreditModal({
 
   // Filter clients based on search query (diacritics-insensitive)
   const filteredClients = useMemo(() => {
-    if (!clientSearchQuery.trim()) return clients.filter(c => !c.is_archived);
+    const activeClients = clients.filter(c => !c.is_archived);
+    if (!clientSearchQuery.trim()) return activeClients;
     const query = removeDiacritics(clientSearchQuery);
-    return clients.filter(c => !c.is_archived).filter(client => 
+    return activeClients.filter(client => 
       removeDiacritics(client.name).includes(query)
     );
   }, [clients, clientSearchQuery]);
+
+  // Set default client on open
+  useEffect(() => {
+    if (open && defaultClientId) {
+      setSelectedClientId(defaultClientId);
+      const client = clients.find(c => c.id === defaultClientId);
+      if (client) {
+        setClientSearchQuery(client.name);
+      }
+    }
+  }, [open, defaultClientId, clients]);
 
   const handleSubmit = async () => {
     if (!selectedClientId) {
@@ -129,8 +148,8 @@ export function EnhancedCreditModal({
       return;
     }
 
-    // Check if client has unpaid trainings
-    if (unpaidTrainings.length > 0 && step === 1) {
+    // For add tab - check unpaid trainings before processing
+    if (activeTab === 'add' && unpaidTrainings.length > 0 && step === 1) {
       setStep(2);
       return;
     }
@@ -142,24 +161,28 @@ export function EnhancedCreditModal({
     setIsProcessing(true);
     try {
       const numericAmount = parseFloat(amount);
+      const finalAmount = activeTab === 'add' 
+        ? Math.abs(numericAmount) 
+        : (operationType === 'add' ? Math.abs(numericAmount) : -Math.abs(numericAmount));
       
       // Create description with payment method
       const methodLabel = paymentMethods.find(m => m.value === paymentMethod)?.label || paymentMethod;
-      let description = note || 'Dobití kreditu';
-      description = `[${methodLabel}] ${description}`;
+      let description = note || (activeTab === 'add' ? 'Dobití kreditu' : 'Manuální úprava');
+      if (activeTab === 'add') {
+        description = `[${methodLabel}] ${description}`;
+      }
 
-      // Create the top-up transaction (this will go to shared budget if client is in one)
+      // Create the transaction
       await createTransaction.mutateAsync({
         client_id: selectedClientId,
-        amount: numericAmount,
-        type: 'payment',
+        amount: finalAmount,
+        type: activeTab === 'add' ? 'payment' : 'manual',
         description,
-        // Flag to clear personal debt if exists
-        clearPersonalDebt: personalDebt > 0,
+        clearPersonalDebt: activeTab === 'add' && personalDebt > 0,
       });
 
-      // Pay selected unpaid trainings from new credit
-      if (selectedUnpaidIds.length > 0) {
+      // Pay selected unpaid trainings from new credit (only for add tab)
+      if (activeTab === 'add' && selectedUnpaidIds.length > 0) {
         for (const trainingId of selectedUnpaidIds) {
           await payTraining.mutateAsync({
             trainingId,
@@ -170,9 +193,11 @@ export function EnhancedCreditModal({
       }
 
       const budgetType = sharedBudgetInfo?.isShared ? 'Sdílený kredit' : 'Kredit';
-      let successMessage = `Přičteno ${formatCurrency(numericAmount)}`;
+      let successMessage = activeTab === 'add' 
+        ? `Přičteno ${formatCurrency(Math.abs(finalAmount))}`
+        : `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${formatCurrency(Math.abs(finalAmount))}`;
       
-      if (personalDebt > 0) {
+      if (activeTab === 'add' && personalDebt > 0) {
         successMessage += ` (vyrovnán dluh ${formatCurrency(personalDebt)})`;
       }
       
@@ -181,11 +206,16 @@ export function EnhancedCreditModal({
       }
 
       toast({
-        title: `${budgetType} přidán`,
+        title: `${budgetType} upraven`,
         description: successMessage,
       });
 
-      featureTracker.track('enhanced_credit', 'finance', { paymentMethod, paidTrainings: selectedUnpaidIds.length, isShared: sharedBudgetInfo?.isShared });
+      featureTracker.track('unified_credit', 'finance', { 
+        tab: activeTab, 
+        paymentMethod, 
+        paidTrainings: selectedUnpaidIds.length, 
+        isShared: sharedBudgetInfo?.isShared 
+      });
 
       resetForm();
       setOpen(false);
@@ -209,6 +239,8 @@ export function EnhancedCreditModal({
     setNote('');
     setStep(1);
     setSelectedUnpaidIds([]);
+    setActiveTab('add');
+    setOperationType('add');
   };
 
   const handleClientSelect = (clientId: string) => {
@@ -243,18 +275,24 @@ export function EnhancedCreditModal({
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) return null;
     
-    let newBalance = effectiveCreditBalance + numericAmount;
+    let change = activeTab === 'add' 
+      ? numericAmount 
+      : (operationType === 'add' ? numericAmount : -numericAmount);
     
-    // If there's personal debt in shared budget, it will be transferred (reducing the new balance)
-    if (personalDebt > 0) {
+    let newBalance = effectiveCreditBalance + change;
+    
+    // If there's personal debt in shared budget, it will be transferred
+    if (activeTab === 'add' && personalDebt > 0) {
       newBalance -= personalDebt;
     }
     
     // Subtract unpaid trainings that will be paid
-    newBalance -= selectedUnpaidTotal;
+    if (activeTab === 'add') {
+      newBalance -= selectedUnpaidTotal;
+    }
     
     return newBalance;
-  }, [effectiveCreditBalance, amount, personalDebt, selectedUnpaidTotal]);
+  }, [effectiveCreditBalance, amount, personalDebt, selectedUnpaidTotal, activeTab, operationType]);
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -264,29 +302,29 @@ export function EnhancedCreditModal({
       {showTrigger && (
         <DialogTrigger asChild>
           <button
-            className={cn(
-              'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full',
-              'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            className={triggerClassName || cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group w-full',
+              'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
             )}
           >
-            <CreditCard className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+            <CreditCard className="w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200 group-hover:scale-105" strokeWidth={1.5} />
             {!collapsed && (
-              <span className="font-medium truncate">Rychlý kredit</span>
+              <span className="text-sm font-medium truncate">{triggerLabel}</span>
             )}
           </button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            {step === 1 ? 'Přidat kredit' : 'Uhradit neuhrazené tréninky'}
+            {step === 1 ? 'Práce s kreditem' : 'Uhradit neuhrazené tréninky'}
           </DialogTitle>
         </DialogHeader>
         
         {step === 1 ? (
           <div className="space-y-4 mt-4">
-            {/* Client search with autocomplete */}
+            {/* Client search */}
             <div className="space-y-2">
               <Label>Klient *</Label>
               <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
@@ -336,10 +374,9 @@ export function EnhancedCreditModal({
               </Popover>
             </div>
 
-            {/* Show client credit and budget info */}
+            {/* Credit info */}
             {selectedClient && !budgetLoading && (
               <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
-                {/* Shared budget indicator */}
                 {sharedBudgetInfo?.isShared && (
                   <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full w-fit">
                     <Users className="w-3 h-3" />
@@ -347,7 +384,6 @@ export function EnhancedCreditModal({
                   </div>
                 )}
                 
-                {/* Current balance - single source of truth */}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     {sharedBudgetInfo?.isShared ? 'Sdílený kredit:' : 'Kredit:'}
@@ -361,12 +397,11 @@ export function EnhancedCreditModal({
                   </span>
                 </div>
                 
-                {/* Show personal debt warning if client is in shared budget but has personal negative balance */}
-                {personalDebt > 0 && (
+                {personalDebt > 0 && activeTab === 'add' && (
                   <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-warning/10 border border-warning/20">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <AlertCircle className="w-3 h-3 text-warning" />
-                      Osobní dluh k vyrovnání:
+                      Osobní dluh:
                     </span>
                     <span className="font-semibold text-warning">
                       -{formatCurrency(personalDebt, false)}
@@ -374,7 +409,6 @@ export function EnhancedCreditModal({
                   </div>
                 )}
                 
-                {/* Unpaid trainings */}
                 {unpaidTrainings.length > 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
@@ -389,128 +423,173 @@ export function EnhancedCreditModal({
               </div>
             )}
 
-            {/* Amount input */}
-            <div className="space-y-2">
-              <Label htmlFor="amount">Částka (Kč) *</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Zadejte částku"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
-                className="text-lg h-12"
-              />
-            </div>
+            {/* Tabs for Add / Adjust */}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'add' | 'adjust')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="add" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Přidat kredit
+                </TabsTrigger>
+                <TabsTrigger value="adjust" className="gap-2">
+                  <History className="w-4 h-4" />
+                  Manuální úprava
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="add" className="space-y-4 mt-4">
+                {/* Amount input */}
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Částka (Kč) *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Zadejte částku"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    min="1"
+                    className="text-lg h-12"
+                  />
+                </div>
 
-            {/* Payment method selection */}
-            <div className="space-y-2">
-              <Label>Způsob platby</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {paymentMethods.slice(0, 4).map((method) => (
-                  <button
-                    key={method.value}
-                    type="button"
-                    onClick={() => setPaymentMethod(method.value)}
-                    className={cn(
-                      "flex items-center gap-2 p-3 rounded-xl border transition-all",
-                      paymentMethod === method.value
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border bg-secondary/50 text-muted-foreground hover:bg-secondary"
-                    )}
-                  >
-                    <method.icon className="w-4 h-4" />
-                    <span className="text-sm">{method.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Payment method selection */}
+                <div className="space-y-2">
+                  <Label>Způsob platby</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {paymentMethods.map((method) => (
+                      <button
+                        key={method.value}
+                        type="button"
+                        onClick={() => setPaymentMethod(method.value)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-3 rounded-xl border transition-all",
+                          paymentMethod === method.value
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                        )}
+                      >
+                        <method.icon className="w-5 h-5" />
+                        <span className="text-xs">{method.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Note input */}
-            <div className="space-y-2">
-              <Label htmlFor="note">Poznámka (volitelné)</Label>
-              <Textarea
-                id="note"
-                placeholder="Poznámka k transakci..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-              />
-            </div>
+                {/* Note input */}
+                <div className="space-y-2">
+                  <Label htmlFor="note">Poznámka (volitelné)</Label>
+                  <Textarea
+                    id="note"
+                    placeholder="Poznámka k transakci..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="adjust" className="space-y-4 mt-4">
+                {/* Operation type toggle */}
+                <div className="space-y-2">
+                  <Label>Typ operace</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={operationType === 'add' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => setOperationType('add')}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Přičíst
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={operationType === 'subtract' ? 'destructive' : 'outline'}
+                      className="flex-1"
+                      onClick={() => setOperationType('subtract')}
+                    >
+                      <Minus className="w-4 h-4 mr-2" />
+                      Odečíst
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Preview of new balance - unified calculation */}
+                {/* Amount input */}
+                <div className="space-y-2">
+                  <Label htmlFor="adjustAmount">Částka (Kč) *</Label>
+                  <Input
+                    id="adjustAmount"
+                    type="number"
+                    placeholder="Zadejte částku"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    min="1"
+                    className="text-lg h-12"
+                  />
+                </div>
+
+                {/* Reason input - required for manual adjustments */}
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Důvod úpravy *</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Zadejte důvod úpravy..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    required
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Preview of new balance */}
             {selectedClient && calculatedNewBalance !== null && (
-              <div className="p-4 rounded-xl bg-success/10 border border-success/20 space-y-2">
+              <div className={cn(
+                "p-4 rounded-xl border space-y-1",
+                (activeTab === 'add' || operationType === 'add')
+                  ? "bg-success/10 border-success/20" 
+                  : "bg-destructive/10 border-destructive/20"
+              )}>
                 <p className="text-sm text-muted-foreground">
                   {sharedBudgetInfo?.isShared ? 'Nový sdílený zůstatek:' : 'Nový zůstatek:'} 
                 </p>
-                <p className="text-2xl font-bold text-success">
+                <p className={cn(
+                  "text-2xl font-bold",
+                  calculatedNewBalance < 0 ? "text-destructive" : "text-success"
+                )}>
                   {formatCurrency(calculatedNewBalance)}
                 </p>
-                
-                {/* Breakdown */}
-                <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-success/20">
-                  <div className="flex justify-between">
-                    <span>Aktuální zůstatek:</span>
-                    <span>{formatCurrency(effectiveCreditBalance)}</span>
-                  </div>
-                  <div className="flex justify-between text-success">
-                    <span>+ Dobití:</span>
-                    <span>+{formatCurrency(parseFloat(amount))}</span>
-                  </div>
-                  {personalDebt > 0 && (
-                    <div className="flex justify-between text-warning">
-                      <span>- Vyrovnání osobního dluhu:</span>
-                      <span>-{formatCurrency(personalDebt)}</span>
-                    </div>
-                  )}
-                  {selectedUnpaidTotal > 0 && (
-                    <div className="flex justify-between text-warning">
-                      <span>- Úhrada tréninků:</span>
-                      <span>-{formatCurrency(selectedUnpaidTotal)}</span>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
           </div>
         ) : (
-          /* Step 2: Pay unpaid trainings */
+          /* Step 2 - Pay unpaid trainings */
           <div className="space-y-4 mt-4">
-            <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-              <p className="text-sm font-medium text-warning">
-                Klient {selectedClient?.name} má {unpaidTrainings.length} neuhrazených tréninků
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Vyberte tréninky k uhrazení z nového kreditu:
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Celkem: {formatCurrency(totalUnpaid)}
-              </p>
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              Chcete je z nového kreditu ({formatCurrency(parseFloat(amount))}) uhradit?
-            </p>
-
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={selectAllUnpaid}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAllUnpaid}
+              >
                 Vybrat vše
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setSelectedUnpaidIds([])}>
-                Zrušit výběr
-              </Button>
             </div>
-
-            <ScrollArea className="h-48">
-              <div className="space-y-2">
+            
+            <ScrollArea className="h-[200px] border rounded-lg">
+              <div className="p-2 space-y-2">
                 {unpaidTrainings.map((training) => (
                   <div
                     key={training.id}
-                    onClick={() => toggleUnpaidTraining(training.id)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+                      "flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
                       selectedUnpaidIds.includes(training.id)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-secondary/50"
+                        ? "bg-primary/10 border-primary"
+                        : "bg-secondary/30 border-border hover:bg-secondary/50"
                     )}
+                    onClick={() => toggleUnpaidTraining(training.id)}
                   >
                     <Checkbox
                       checked={selectedUnpaidIds.includes(training.id)}
@@ -518,70 +597,85 @@ export function EnhancedCreditModal({
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium">
-                        {format(new Date(training.date), 'd. MMMM', { locale: cs })}
+                        {format(new Date(training.date), 'd. MMMM yyyy', { locale: cs })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {training.participant_count} osob
                       </p>
                     </div>
-                    <span className="text-sm font-semibold">
-                      {formatCurrency(training.final_price || 0)}
+                    <span className="font-semibold text-warning">
+                      {formatCurrency(training.final_price)}
                     </span>
                   </div>
                 ))}
               </div>
             </ScrollArea>
 
-            {/* Balance preview for Step 2 */}
-            {calculatedNewBalance !== null && (
-              <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
+            {/* Balance preview after paying trainings */}
+            <div className="p-4 rounded-xl bg-secondary/50 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Přidávaný kredit:</span>
+                <span className="font-semibold text-success">+{formatCurrency(parseFloat(amount) || 0)}</span>
+              </div>
+              {personalDebt > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">K uhrazení:</span>
-                  <span className="font-semibold">{formatCurrency(selectedUnpaidTotal)}</span>
+                  <span className="text-muted-foreground">Vyrovnání dluhu:</span>
+                  <span className="font-semibold text-warning">-{formatCurrency(personalDebt)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Zbude na kreditu:</span>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Úhrada tréninků:</span>
+                <span className="font-semibold text-warning">
+                  -{formatCurrency(selectedUnpaidTotal)} ({selectedUnpaidIds.length}×)
+                </span>
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Výsledný zůstatek:</span>
                   <span className={cn(
-                    "font-semibold",
-                    calculatedNewBalance < 0 ? "text-destructive" : "text-success"
+                    "font-bold text-lg",
+                    (calculatedNewBalance || 0) < 0 ? "text-destructive" : "text-success"
                   )}>
-                    {formatCurrency(calculatedNewBalance)}
+                    {formatCurrency(calculatedNewBalance || 0)}
                   </span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="mt-6 gap-2">
           {step === 2 && (
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setStep(1)}
-              disabled={isProcessing}
             >
               Zpět
             </Button>
           )}
           <Button
-            variant={step === 2 ? "outline" : "default"}
+            variant="outline"
             onClick={() => {
-              if (step === 2) {
-                setSelectedUnpaidIds([]);
-                processTransaction();
-              } else {
-                handleSubmit();
-              }
+              resetForm();
+              setOpen(false);
             }}
-            disabled={isProcessing || !selectedClientId || !amount}
           >
-            {step === 2 ? 'Přeskočit' : 'Pokračovat'}
+            Zrušit
           </Button>
-          {step === 2 && (
-            <Button
-              onClick={processTransaction}
-              disabled={isProcessing}
-            >
-              {isProcessing ? 'Zpracovávám...' : `Uhradit (${selectedUnpaidIds.length}×)`}
-            </Button>
-          )}
+          <Button
+            onClick={step === 2 ? processTransaction : handleSubmit}
+            disabled={
+              !selectedClientId || 
+              !amount || 
+              parseFloat(amount) <= 0 || 
+              isProcessing ||
+              (activeTab === 'adjust' && !note.trim())
+            }
+          >
+            {isProcessing ? 'Zpracovávám...' : 
+             step === 2 ? `Potvrdit (${selectedUnpaidIds.length > 0 ? `uhradit ${selectedUnpaidIds.length}×` : 'pokračovat'})` : 
+             'Potvrdit'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

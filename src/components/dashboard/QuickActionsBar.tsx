@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
-import { EnhancedCreditModal } from '@/components/credit/EnhancedCreditModal';
+import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
@@ -106,7 +106,7 @@ export function QuickActionsBar() {
         isLoading={createTraining.isPending}
       />
       
-      <EnhancedCreditModal
+      <UnifiedCreditModal
         open={showCreditModal}
         onOpenChange={setShowCreditModal}
         showTrigger={false}
