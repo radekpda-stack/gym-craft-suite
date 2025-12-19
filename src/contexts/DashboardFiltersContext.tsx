@@ -145,7 +145,7 @@ export function useDashboardFilters() {
   if (!context) {
     // Return safe defaults when used outside provider (prevents crash during initial render)
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    now.setHours(23, 59, 59, 999); // End of day to include all transactions
     return {
       filters: {
         globalPeriod: '30days' as GlobalPeriod,

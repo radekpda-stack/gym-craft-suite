@@ -132,10 +132,16 @@ export function useDashboardKPIs() {
         comparisonTransactionsQuery = comparisonTransactionsQuery.in('client_id', clientFilter);
       }
 
-      const [{ data: currentTransactions }, { data: comparisonTransactions }] = await Promise.all([
+      const [{ data: currentTransactions, error: txError }, { data: comparisonTransactions }] = await Promise.all([
         currentTransactionsQuery,
         comparisonTransactionsQuery,
       ]);
+
+      // Debug logging
+      console.log('[useDashboardKPIs] Period:', periodStart.toISOString(), 'to', periodEnd.toISOString());
+      console.log('[useDashboardKPIs] Current transactions:', currentTransactions?.length);
+      console.log('[useDashboardKPIs] Product transactions:', currentTransactions?.filter(t => t.type === 'product').length);
+      if (txError) console.error('[useDashboardKPIs] Transaction error:', txError);
 
       // ===== FETCH TRAININGS =====
       // For ACCRUAL: use training date (when service delivered)
