@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SessionTrackingProvider } from "@/components/SessionTrackingProvider";
+import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
@@ -49,8 +50,9 @@ const App = () => (
                 path="/*"
                 element={
                   <ProtectedRoute>
-                    <SessionTrackingProvider>
-                      <Layout>
+                    <DashboardFiltersProvider>
+                      <SessionTrackingProvider>
+                        <Layout>
                         <Routes>
                           <Route path="/" element={<Index />} />
                           <Route path="/clients" element={<Clients />} />
@@ -72,7 +74,8 @@ const App = () => (
                         </Routes>
                       </Layout>
                     </SessionTrackingProvider>
-                  </ProtectedRoute>
+                  </DashboardFiltersProvider>
+                </ProtectedRoute>
                 }
               />
             </Routes>
