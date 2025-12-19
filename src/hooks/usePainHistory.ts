@@ -15,6 +15,9 @@ interface PainAreaStats {
   count: number;
   avgPain: number;
   lastOccurrence: string;
+  firstOccurrence: string;
+  countLast30Days: number;
+  isChronic: boolean;
 }
 
 interface PainIntensityTrendEntry {
@@ -43,10 +46,22 @@ export function usePainHistory(clientId: string | undefined) {
         pain_area_intensities: d.pain_area_intensities as Record<string, number> | null
       }));
 
-      // Calculate stats per area
-      const areaMap = new Map<string, { count: number; totalPain: number; lastDate: string }>();
+      // Calculate stats per area with chronicity tracking
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const areaMap = new Map<string, { 
+        count: number; 
+        totalPain: number; 
+        lastDate: string; 
+        firstDate: string;
+        countLast30Days: number;
+      }>();
 
       entries.forEach((entry) => {
+        const entryDate = new Date(entry.training_date);
+        const isWithin30Days = entryDate >= thirtyDaysAgo;
+
         // Use pain_area_intensities if available, otherwise fall back to pain_area
         if (entry.pain_area_intensities && Object.keys(entry.pain_area_intensities).length > 0) {
           Object.entries(entry.pain_area_intensities).forEach(([area, intensity]) => {
@@ -55,14 +70,20 @@ export function usePainHistory(clientId: string | undefined) {
             if (existing) {
               existing.count += 1;
               existing.totalPain += intensity;
+              if (isWithin30Days) existing.countLast30Days += 1;
               if (new Date(entry.training_date) > new Date(existing.lastDate)) {
                 existing.lastDate = entry.training_date;
+              }
+              if (new Date(entry.training_date) < new Date(existing.firstDate)) {
+                existing.firstDate = entry.training_date;
               }
             } else {
               areaMap.set(baseArea, {
                 count: 1,
                 totalPain: intensity,
                 lastDate: entry.training_date,
+                firstDate: entry.training_date,
+                countLast30Days: isWithin30Days ? 1 : 0,
               });
             }
           });
@@ -74,27 +95,36 @@ export function usePainHistory(clientId: string | undefined) {
             if (existing) {
               existing.count += 1;
               existing.totalPain += entry.pain || 0;
+              if (isWithin30Days) existing.countLast30Days += 1;
               if (new Date(entry.training_date) > new Date(existing.lastDate)) {
                 existing.lastDate = entry.training_date;
+              }
+              if (new Date(entry.training_date) < new Date(existing.firstDate)) {
+                existing.firstDate = entry.training_date;
               }
             } else {
               areaMap.set(baseArea, {
                 count: 1,
                 totalPain: entry.pain || 0,
                 lastDate: entry.training_date,
+                firstDate: entry.training_date,
+                countLast30Days: isWithin30Days ? 1 : 0,
               });
             }
           });
         }
       });
 
-      // Convert to array and calculate averages
+      // Convert to array and calculate averages with chronicity
       const stats: PainAreaStats[] = Array.from(areaMap.entries())
         .map(([area, data]) => ({
           area,
           count: data.count,
           avgPain: Math.round((data.totalPain / data.count) * 10) / 10,
           lastOccurrence: data.lastDate,
+          firstOccurrence: data.firstDate,
+          countLast30Days: data.countLast30Days,
+          isChronic: data.countLast30Days > 3,
         }))
         .sort((a, b) => b.count - a.count);
 

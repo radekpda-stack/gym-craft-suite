@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -183,6 +183,7 @@ export function PainHistoryCard({ clientId }: PainHistoryCardProps) {
   }
 
   const { entries, stats } = data || { entries: [], stats: [] };
+  const chronicAreas = stats.filter(s => s.isChronic);
 
   if (stats.length === 0) {
     return (
@@ -263,6 +264,20 @@ export function PainHistoryCard({ clientId }: PainHistoryCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Chronic areas warning */}
+        {chronicAreas.length > 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+            <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm text-destructive font-medium">
+                {chronicAreas.length} chronick{chronicAreas.length === 1 ? 'á oblast' : chronicAreas.length < 5 ? 'é oblasti' : 'ých oblastí'}
+              </span>
+              <p className="text-xs text-destructive/80 mt-0.5">
+                {chronicAreas.map(a => AREA_LABELS[a.area] || a.area).join(', ')} — opakuje se &gt;3× za měsíc
+              </p>
+            </div>
+          </div>
+        )}
         {/* Per-area intensity trend chart */}
         {intensityChartData.length >= 2 && (
           <div className="space-y-2">
@@ -405,14 +420,27 @@ export function PainHistoryCard({ clientId }: PainHistoryCardProps) {
               const painLevel = stat.avgPain >= 7 ? 'high' : stat.avgPain >= 4 ? 'medium' : 'low';
               
               return (
-                <div key={stat.area} className="space-y-1">
+                <div 
+                  key={stat.area} 
+                  className={cn(
+                    "space-y-1 p-2 -mx-2 rounded-lg transition-colors",
+                    stat.isChronic && "border-l-2 border-l-destructive bg-destructive/5"
+                  )}
+                >
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">
-                      {AREA_LABELS[stat.area] || stat.area}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {AREA_LABELS[stat.area] || stat.area}
+                      </span>
+                      {stat.isChronic && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+                          Chronické
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">
-                        {stat.count}×
+                        {stat.count}× {stat.isChronic && `(${stat.countLast30Days}× /30d)`}
                       </span>
                       <Badge 
                         variant="outline" 
