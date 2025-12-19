@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,14 +17,16 @@ import { useTags } from '@/hooks/useTags';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { useClientTrainingCounts } from '@/hooks/useClientTrainingCounts';
+import { useClientScheduleData } from '@/hooks/useClientScheduleData';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { EditClientSheet } from '@/components/clients/EditClientSheet';
 import { DeleteClientDialog } from '@/components/clients/DeleteClientDialog';
 import { ClientFiltersDialog } from '@/components/clients/ClientFiltersDialog';
-import { ClientQuickMenu } from '@/components/clients/ClientQuickMenu';
-import { GenderIcon } from '@/components/clients/GenderIcon';
+import { ClientCard } from '@/components/clients/ClientCard';
 import { ClientFormValues } from '@/lib/validations/client';
 import { ClientListSkeleton } from '@/components/skeletons';
+import { GenderIcon } from '@/components/clients/GenderIcon';
+import { ClientQuickMenu } from '@/components/clients/ClientQuickMenu';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Dialog,
@@ -86,7 +88,9 @@ export default function Clients() {
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [showArchived, setShowArchived] = useState(false);
+  const [viewMode, setViewMode] = useState<'today' | 'week' | 'all'>('all');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [trainingClientId, setTrainingClientId] = useState<string | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
   const [creditClient, setCreditClient] = useState<Client | null>(null);
@@ -107,6 +111,7 @@ export default function Clients() {
   const { data: clientTagsMap = {} } = useClientsWithTags();
   const { data: allTags = [] } = useTags();
   const { data: budgetGroups = [] } = useBudgetGroups();
+  const { data: scheduleData } = useClientScheduleData();
 
   // Handle URL filter parameter
   useEffect(() => {
@@ -142,10 +147,21 @@ export default function Clients() {
   const activeClients = clients.filter(c => !c.is_archived);
   const archivedClients = clients.filter(c => c.is_archived);
 
+  // Count clients for view mode tabs
+  const todayClientIds = scheduleData?.todayClientIds || new Set<string>();
+  const weekClientIds = scheduleData?.weekClientIds || new Set<string>();
+  const todayCount = activeClients.filter(c => todayClientIds.has(c.id)).length;
+  const weekCount = activeClients.filter(c => weekClientIds.has(c.id)).length;
+
   const filteredClients = clients
     .filter((client) => {
       // Archive filter
       const matchesArchive = showArchived ? client.is_archived : !client.is_archived;
+      
+      // View mode filter (Dnes / Týden / Všichni)
+      const matchesViewMode = viewMode === 'all' 
+        || (viewMode === 'today' && todayClientIds.has(client.id))
+        || (viewMode === 'week' && weekClientIds.has(client.id));
       
       const matchesSearch =
         client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,7 +176,7 @@ export default function Clients() {
 
       const matchesGender = genderFilter === 'all' || client.gender === genderFilter;
 
-      return matchesArchive && matchesSearch && matchesGoal && matchesLowCredit && matchesTag && matchesGender;
+      return matchesArchive && matchesViewMode && matchesSearch && matchesGoal && matchesLowCredit && matchesTag && matchesGender;
     })
     .sort((a, b) => {
       // Favorites always first
@@ -443,11 +459,52 @@ export default function Clients() {
           />
         </div>
 
+        {/* View Mode Toggle - Dnes / Týden / Všichni */}
+        {!showArchived && (
+          <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-full sm:w-auto">
+            <Button
+              variant={viewMode === 'today' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('today')}
+              className="flex-1 sm:flex-none gap-1.5"
+            >
+              <Calendar className="w-4 h-4" />
+              Dnes
+              <Badge variant={viewMode === 'today' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+                {todayCount}
+              </Badge>
+            </Button>
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('week')}
+              className="flex-1 sm:flex-none gap-1.5"
+            >
+              <CalendarDays className="w-4 h-4" />
+              Týden
+              <Badge variant={viewMode === 'week' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+                {weekCount}
+              </Badge>
+            </Button>
+            <Button
+              variant={viewMode === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('all')}
+              className="flex-1 sm:flex-none"
+            >
+              Všichni
+              <Badge variant={viewMode === 'all' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+                {activeClients.length}
+              </Badge>
+            </Button>
+          </div>
+        )}
+
         {/* Active/Archive Toggle */}
         <div className="flex gap-2">
           <Button
             variant={!showArchived ? 'default' : 'outline'}
-            onClick={() => setShowArchived(false)}
+            onClick={() => { setShowArchived(false); setViewMode('all'); }}
             className="flex-1 sm:flex-none"
             size="sm"
           >
@@ -504,9 +561,8 @@ export default function Clients() {
         <ClientListSkeleton />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filteredClients.map((client, index) => {
+          {filteredClients.map((client) => {
             const clientTags = clientTagsMap[client.id] || [];
-            const isSelected = selectedIds.has(client.id);
             const clientBudgetGroup = budgetGroups.find(g => g.members.some(m => m.client_id === client.id));
             const isShared = !!clientBudgetGroup;
             const displayBalance = isShared 
@@ -515,193 +571,38 @@ export default function Clients() {
             const actualBalance = isShared 
               ? (clientBudgetGroup.shared_balance || 0)
               : (client.credit_balance || 0);
+            
+            const nextTraining = scheduleData?.nextTrainings.get(client.id);
+            const unpaidData = scheduleData?.unpaidTrainings.get(client.id);
+            const missingFeedbackData = scheduleData?.missingFeedbacks.get(client.id);
 
             return (
-              <ClientQuickMenu
+              <ClientCard
                 key={client.id}
                 client={client}
+                age={calculateAge(client.birth_date)}
+                trainingCount={trainingCounts[client.id]?.count || 0}
+                lastActivityDate={trainingCounts[client.id]?.lastActivityDate}
+                tags={clientTags}
+                isSharedBudget={isShared}
+                sharedBudgetName={clientBudgetGroup?.name}
+                displayBalance={displayBalance}
+                actualBalance={actualBalance}
+                nextTraining={nextTraining ? { id: nextTraining.trainingId, date: nextTraining.date } : undefined}
+                unresolvedItems={{
+                  unpaidCount: unpaidData?.count || 0,
+                  unpaidTotal: unpaidData?.total || 0,
+                  missingFeedback: missingFeedbackData?.count || 0,
+                  hasHealthRestrictions: !!client.health_restrictions,
+                }}
+                isFavorite={client.is_favorite}
+                onAddTraining={() => setTrainingClientId(client.id)}
                 onAddCredit={() => setCreditClient(client)}
-                onAddMeasurement={() => {}}
-                onAddProgress={() => {}}
-                onAddNote={() => {}}
-              >
-                <div
-                  className={cn(
-                    "glass rounded-xl p-4 transition-all duration-200 hover:bg-secondary/50 group relative",
-                    isSelected && "ring-2 ring-primary"
-                  )}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  {/* Selection checkbox */}
-                  <div className="absolute top-2 left-2">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelectClient(client.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-
-                  {/* Favorite button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite });
-                    }}
-                    className={cn(
-                      "absolute top-2 left-8 p-1 rounded transition-all",
-                      client.is_favorite 
-                        ? "text-yellow-500" 
-                        : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500"
-                    )}
-                  >
-                    <Star className={cn("w-4 h-4", client.is_favorite && "fill-current")} />
-                  </button>
-
-                  {/* Action buttons */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCreditClient(client);
-                          }}
-                        >
-                          <Wallet className="w-3.5 h-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Přidat kredit</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setEditingClient(client);
-                          }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Upravit</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleArchiveClient(client);
-                          }}
-                        >
-                          {client.is_archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{client.is_archived ? 'Obnovit' : 'Archivovat'}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDeletingClient(client);
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Smazat</TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  <Link to={`/clients/${client.id}`} className="block">
-                    <div className="flex items-center gap-3">
-                      <ClientAvatar name={client.name} size="md" />
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                            {client.name}
-                          </h3>
-                          <GenderIcon gender={client.gender} />
-                          {calculateAge(client.birth_date) !== null && (
-                            <span className="text-xs text-muted-foreground">
-                              {calculateAge(client.birth_date)} let
-                            </span>
-                          )}
-                          {trainingCounts[client.id]?.count > 0 && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0 gap-0.5 h-5">
-                              <Dumbbell className="w-3 h-3" />
-                              {trainingCounts[client.id].count}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-1 text-sm">
-                          <span className={cn(
-                            "font-medium",
-                            actualBalance <= 0 ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
-                          )}>
-                            {formatCurrency(displayBalance)}
-                          </span>
-                          {isShared && (
-                            <Badge variant="outline" className="text-xs px-1 py-0 h-4 gap-0.5">
-                              <LinkIcon className="w-2.5 h-2.5" />
-                              {clientBudgetGroup.name}
-                            </Badge>
-                          )}
-                          {trainingCounts[client.id]?.lastActivityDate && (
-                            <span className="text-xs text-muted-foreground">
-                              • {format(new Date(trainingCounts[client.id].lastActivityDate!), 'd.M.', { locale: cs })}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            • Od {format(new Date(client.created_at), 'd.M.yyyy', { locale: cs })}
-                          </span>
-                        </div>
-                        
-                        {/* Client Tags */}
-                        {clientTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {clientTags.slice(0, 2).map((tag) => (
-                              <Badge
-                                key={tag.id}
-                                style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
-                                className="border text-xs px-1.5 py-0 h-4"
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {clientTags.length > 2 && (
-                              <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
-                                +{clientTags.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </Link>
-                </div>
-              </ClientQuickMenu>
+                onEdit={() => setEditingClient(client)}
+                onDelete={() => setDeletingClient(client)}
+                onArchive={() => handleArchiveClient(client)}
+                onToggleFavorite={() => toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite })}
+              />
             );
           })}
         </div>
