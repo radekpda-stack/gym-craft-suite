@@ -1,6 +1,7 @@
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,10 @@ const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
 
 export type MeasurementFormValues = z.infer<typeof measurementFormSchema>;
 
+export interface MeasurementFormRef {
+  prefillValues: (data: Partial<MeasurementFormValues>) => void;
+}
+
 interface MeasurementFormProps {
   onSubmit: (data: MeasurementFormValues) => Promise<string | void>;
   isLoading?: boolean;
@@ -48,12 +53,8 @@ interface MeasurementFormProps {
   defaultClientId?: string;
 }
 
-export function MeasurementForm({
-  onSubmit,
-  isLoading,
-  clients,
-  defaultClientId,
-}: MeasurementFormProps) {
+export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormProps>(
+  function MeasurementForm({ onSubmit, isLoading, clients, defaultClientId }, ref) {
   const form = useForm<MeasurementFormValues>({
     resolver: zodResolver(measurementFormSchema),
     defaultValues: {
@@ -70,6 +71,17 @@ export function MeasurementForm({
       notes: "",
     },
   });
+
+  // Expose prefillValues method via ref
+  useImperativeHandle(ref, () => ({
+    prefillValues: (data: Partial<MeasurementFormValues>) => {
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          form.setValue(key as keyof MeasurementFormValues, value);
+        }
+      });
+    },
+  }));
 
   const handleSubmit = async (data: MeasurementFormValues) => {
     await onSubmit(data);
@@ -312,4 +324,4 @@ export function MeasurementForm({
       </form>
     </Form>
   );
-}
+});
