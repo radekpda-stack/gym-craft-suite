@@ -4,8 +4,9 @@ import { format, parseISO, addDays, isSameDay } from 'date-fns';
 import { cs, enUS } from 'date-fns/locale';
 import { 
   Plus, Utensils, Droplets, Coffee, Check, ChevronLeft, ChevronRight, 
-  Globe, Sparkles, ThumbsUp, Search, X, Sun, Moon, Zap
+  Globe, Sparkles, ThumbsUp, Search, X, Sun, Moon, Zap, Download, Share
 } from 'lucide-react';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -110,6 +111,13 @@ const t = {
     emptyDayTitle: 'Žádné záznamy pro tento den',
     emptyDayNoEat: 'Nejedl/a jsem',
     emptyDayForgot: 'Zapomněl/a jsem',
+    // PWA Install
+    installApp: 'Přidat na plochu',
+    installTitle: 'Přidat na plochu',
+    installAndroid: 'Klikni na tlačítko níže pro přidání na plochu.',
+    installIOS: 'Klikni na Sdílet (Share) → Přidat na plochu (Add to Home Screen)',
+    installDone: 'Hotovo!',
+    installClose: 'Zavřít',
   },
   en: {
     title: '7-Day Food Log',
@@ -191,6 +199,13 @@ const t = {
     emptyDayTitle: 'No entries for this day',
     emptyDayNoEat: 'Didn\'t eat',
     emptyDayForgot: 'Forgot to log',
+    // PWA Install
+    installApp: 'Add to Home Screen',
+    installTitle: 'Add to Home Screen',
+    installAndroid: 'Tap the button below to add to your home screen.',
+    installIOS: 'Tap Share → Add to Home Screen',
+    installDone: 'Done!',
+    installClose: 'Close',
   }
 };
 
@@ -211,9 +226,22 @@ export default function PublicNutritionLogPage() {
   const [coffeeEntries, setCoffeeEntries] = useState<any[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [recordType, setRecordType] = useState<RecordType>(null);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
   
+  const { isInstallable, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const tr = t[language];
   const locale = language === 'cs' ? cs : enUS;
+
+  const handleInstall = async () => {
+    if (isIOS) {
+      setShowInstallDialog(true);
+    } else if (isInstallable) {
+      const success = await promptInstall();
+      if (success) {
+        toast.success(tr.installDone);
+      }
+    }
+  };
 
   useEffect(() => {
     if (token) loadSession();
@@ -342,9 +370,21 @@ export default function PublicNutritionLogPage() {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center justify-between p-4">
           <h1 className="text-lg font-bold">{tr.title}</h1>
-          <Button variant="ghost" size="icon" onClick={() => setLanguage(l => l === 'cs' ? 'en' : 'cs')}>
-            <Globe className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {(isInstallable || isIOS) && !isStandalone && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleInstall}
+                className="text-primary"
+              >
+                {isIOS ? <Share className="h-5 w-5" /> : <Download className="h-5 w-5" />}
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => setLanguage(l => l === 'cs' ? 'en' : 'cs')}>
+              <Globe className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Day Navigation */}
@@ -539,6 +579,29 @@ export default function PublicNutritionLogPage() {
               />
             )}
           </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+
+      {/* iOS Install Instructions Dialog */}
+      <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">{tr.installTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Share className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-muted-foreground">{tr.installIOS}</p>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <span className="px-2 py-1 bg-muted rounded">Share</span>
+              <span>→</span>
+              <span className="px-2 py-1 bg-muted rounded">Add to Home Screen</span>
+            </div>
+          </div>
+          <Button onClick={() => setShowInstallDialog(false)} className="w-full">
+            {tr.installClose}
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
