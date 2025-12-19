@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { RecordItem, TrainingRecordItem, MeasurementRecordItem, DiagnosticRecordItem } from '@/hooks/useRecordsFeed';
-import { TrainingCard } from '@/components/trainings/TrainingCard';
+import { RecordItem, MeasurementRecordItem, DiagnosticRecordItem } from '@/hooks/useRecordsFeed';
 import { MeasurementCard } from './MeasurementCard';
 import { DiagnosticCard } from './DiagnosticCard';
 import { Client } from '@/hooks/useClients';
@@ -17,10 +16,6 @@ interface RecordsFeedProps {
   clients: Client[];
   measurements: Measurement[];
   isLoading: boolean;
-  onTrainingComplete?: (sessionId: string) => void;
-  onTrainingCancel?: (sessionId: string) => void;
-  onTrainingPay?: (sessionId: string) => void;
-  onTrainingDuplicate?: (sessionId: string) => void;
   onCreateRecord?: () => void;
 }
 
@@ -82,10 +77,6 @@ export function RecordsFeed({
   clients,
   measurements,
   isLoading,
-  onTrainingComplete,
-  onTrainingCancel,
-  onTrainingPay,
-  onTrainingDuplicate,
   onCreateRecord,
 }: RecordsFeedProps) {
   // Create client lookup map
@@ -142,19 +133,6 @@ export function RecordsFeed({
               const client = clientMap.get(record.clientId) || null;
               
               switch (record.type) {
-                case 'training':
-                  return (
-                    <TrainingCard
-                      key={record.id}
-                      session={(record as TrainingRecordItem).data}
-                      client={client}
-                      onComplete={() => onTrainingComplete?.(record.id)}
-                      onCancel={() => onTrainingCancel?.(record.id)}
-                      onPay={() => onTrainingPay?.(record.id)}
-                      onDuplicate={() => onTrainingDuplicate?.(record.id)}
-                    />
-                  );
-                
                 case 'measurement':
                   return (
                     <MeasurementCard
@@ -171,7 +149,7 @@ export function RecordsFeed({
                       key={record.id}
                       diagnostic={(record as DiagnosticRecordItem).data}
                       client={client}
-                      hasAIAnalysis={false} // TODO: could check for AI analysis
+                      hasAIAnalysis={false}
                     />
                   );
                 

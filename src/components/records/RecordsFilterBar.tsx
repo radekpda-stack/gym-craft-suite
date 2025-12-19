@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClients } from '@/hooks/useClients';
 import { RecordsFeedFilters, PeriodFilter, RecordType } from '@/hooks/useRecordsFeed';
@@ -9,7 +8,6 @@ interface RecordsFilterBarProps {
   filters: RecordsFeedFilters;
   onFiltersChange: (filters: RecordsFeedFilters) => void;
   counts: {
-    training: number;
     measurement: number;
     diagnostic: number;
     total: number;
@@ -26,7 +24,6 @@ const periodOptions: { value: PeriodFilter; label: string }[] = [
 
 const typeOptions: { value: RecordType | 'all'; label: string }[] = [
   { value: 'all', label: 'Vše' },
-  { value: 'training', label: 'Tréninky' },
   { value: 'measurement', label: 'Měření' },
   { value: 'diagnostic', label: 'Diagnostika' },
 ];
