@@ -190,30 +190,36 @@ export function useDashboardKPIs() {
       let comparisonCreditReceived = 0;
 
       currentTransactions?.forEach((t: any) => {
+        // Handle credit top-ups (payment without product)
         if (t.type === 'payment' && t.amount > 0) {
-          currentIncome += t.amount;
-          if (t.product_id) {
-            currentProductIncome += t.amount;
-            currentProductSalesCount++;
-            const purchasePrice = t.products?.purchase_price || 0;
-            currentProductCost += purchasePrice;
-            currentCosts += purchasePrice;
-          } else {
-            // Credit top-up (not product sale)
+          if (!t.product_id) {
+            // Credit top-up only
             currentCreditReceived += t.amount;
+            currentIncome += t.amount;
           }
+        }
+        // Handle product sales (type = 'product', amount is negative)
+        if (t.type === 'product' && t.product_id) {
+          const saleAmount = Math.abs(t.amount);
+          currentProductIncome += saleAmount;
+          currentProductSalesCount++;
+          const purchasePrice = t.products?.purchase_price || 0;
+          currentProductCost += purchasePrice;
+          currentCosts += purchasePrice;
+          currentIncome += saleAmount;
         }
       });
 
       comparisonTransactions?.forEach((t: any) => {
-        if (t.type === 'payment' && t.amount > 0) {
+        if (t.type === 'payment' && t.amount > 0 && !t.product_id) {
+          comparisonCreditReceived += t.amount;
           comparisonIncome += t.amount;
-          if (t.product_id) {
-            if (t.products?.purchase_price) {
-              comparisonCosts += t.products.purchase_price;
-            }
-          } else {
-            comparisonCreditReceived += t.amount;
+        }
+        if (t.type === 'product' && t.product_id) {
+          const saleAmount = Math.abs(t.amount);
+          comparisonIncome += saleAmount;
+          if (t.products?.purchase_price) {
+            comparisonCosts += t.products.purchase_price;
           }
         }
       });
