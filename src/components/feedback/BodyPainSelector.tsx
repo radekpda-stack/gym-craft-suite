@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronUp, ChevronDown, MapPin } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
+} from '@/components/ui/drawer';
 
 export interface PainSelection {
   area: string;
   intensity: number;
   side?: 'left' | 'right' | 'both';
   isNew?: boolean;
+  painType?: 'muscle' | 'joint';
 }
 
 interface BodyPainSelectorProps {
@@ -17,28 +27,76 @@ interface BodyPainSelectorProps {
   language?: 'cs' | 'en';
 }
 
-const BODY_AREAS = [
-  { id: 'knee', icon: '🦵', labelCs: 'Koleno', labelEn: 'Knee', bilateral: true },
-  { id: 'shoulder', icon: '💪', labelCs: 'Rameno', labelEn: 'Shoulder', bilateral: true },
-  { id: 'back', icon: '🔙', labelCs: 'Záda', labelEn: 'Back', bilateral: false },
-  { id: 'hip', icon: '🦴', labelCs: 'Kyčel', labelEn: 'Hip', bilateral: true },
-  { id: 'ankle', icon: '🦶', labelCs: 'Kotník', labelEn: 'Ankle', bilateral: true },
-  { id: 'wrist', icon: '✋', labelCs: 'Zápěstí', labelEn: 'Wrist', bilateral: true },
-  { id: 'neck', icon: '🦒', labelCs: 'Krk', labelEn: 'Neck', bilateral: false },
-  { id: 'muscle', icon: '🏃', labelCs: 'Svaly', labelEn: 'Muscles', bilateral: false },
-  { id: 'other', icon: '➕', labelCs: 'Jiné', labelEn: 'Other', bilateral: false },
-];
+// Functional body zones - front and back views
+const BODY_ZONES = {
+  front: [
+    { id: 'neck', labelCs: 'Krk', labelEn: 'Neck', bilateral: false },
+    { id: 'shoulder', labelCs: 'Rameno', labelEn: 'Shoulder', bilateral: true },
+    { id: 'chest', labelCs: 'Hrudník', labelEn: 'Chest', bilateral: false },
+    { id: 'elbow', labelCs: 'Loket', labelEn: 'Elbow', bilateral: true },
+    { id: 'wrist', labelCs: 'Zápěstí/ruka', labelEn: 'Wrist/Hand', bilateral: true },
+    { id: 'hip', labelCs: 'Kyčel', labelEn: 'Hip', bilateral: true },
+    { id: 'groin', labelCs: 'Tříslo', labelEn: 'Groin', bilateral: false },
+    { id: 'knee', labelCs: 'Koleno', labelEn: 'Knee', bilateral: true },
+    { id: 'shin', labelCs: 'Holeň', labelEn: 'Shin', bilateral: true },
+    { id: 'ankle', labelCs: 'Kotník/chodidlo', labelEn: 'Ankle/Foot', bilateral: true },
+  ],
+  back: [
+    { id: 'cervical_spine', labelCs: 'Krční páteř', labelEn: 'Cervical Spine', bilateral: false },
+    { id: 'upper_back', labelCs: 'Horní záda', labelEn: 'Upper Back', bilateral: false },
+    { id: 'lower_back', labelCs: 'Bedra', labelEn: 'Lower Back', bilateral: false },
+    { id: 'shoulder_back', labelCs: 'Rameno', labelEn: 'Shoulder', bilateral: true },
+    { id: 'elbow_back', labelCs: 'Loket', labelEn: 'Elbow', bilateral: true },
+    { id: 'glutes', labelCs: 'Hýždě', labelEn: 'Glutes', bilateral: true },
+    { id: 'hamstring', labelCs: 'Zadní stehno', labelEn: 'Hamstring', bilateral: true },
+    { id: 'calf', labelCs: 'Lýtko', labelEn: 'Calf', bilateral: true },
+    { id: 'achilles', labelCs: 'Achillovka', labelEn: 'Achilles', bilateral: true },
+  ],
+};
+
+// Zone positions for SVG silhouette
+const ZONE_POSITIONS = {
+  front: {
+    neck: { cx: 100, cy: 52, rx: 14, ry: 10 },
+    shoulder: { left: { cx: 68, cy: 72, rx: 16, ry: 12 }, right: { cx: 132, cy: 72, rx: 16, ry: 12 } },
+    chest: { cx: 100, cy: 90, rx: 22, ry: 14 },
+    elbow: { left: { cx: 48, cy: 115, rx: 10, ry: 12 }, right: { cx: 152, cy: 115, rx: 10, ry: 12 } },
+    wrist: { left: { cx: 38, cy: 148, rx: 10, ry: 10 }, right: { cx: 162, cy: 148, rx: 10, ry: 10 } },
+    hip: { left: { cx: 78, cy: 135, rx: 14, ry: 12 }, right: { cx: 122, cy: 135, rx: 14, ry: 12 } },
+    groin: { cx: 100, cy: 148, rx: 12, ry: 10 },
+    knee: { left: { cx: 82, cy: 195, rx: 12, ry: 14 }, right: { cx: 118, cy: 195, rx: 12, ry: 14 } },
+    shin: { left: { cx: 82, cy: 228, rx: 10, ry: 16 }, right: { cx: 118, cy: 228, rx: 10, ry: 16 } },
+    ankle: { left: { cx: 82, cy: 262, rx: 10, ry: 10 }, right: { cx: 118, cy: 262, rx: 10, ry: 10 } },
+  },
+  back: {
+    cervical_spine: { cx: 100, cy: 52, rx: 12, ry: 10 },
+    upper_back: { cx: 100, cy: 80, rx: 20, ry: 14 },
+    lower_back: { cx: 100, cy: 115, rx: 18, ry: 14 },
+    shoulder_back: { left: { cx: 68, cy: 72, rx: 16, ry: 12 }, right: { cx: 132, cy: 72, rx: 16, ry: 12 } },
+    elbow_back: { left: { cx: 48, cy: 115, rx: 10, ry: 12 }, right: { cx: 152, cy: 115, rx: 10, ry: 12 } },
+    glutes: { left: { cx: 82, cy: 145, rx: 14, ry: 12 }, right: { cx: 118, cy: 145, rx: 14, ry: 12 } },
+    hamstring: { left: { cx: 82, cy: 175, rx: 12, ry: 16 }, right: { cx: 118, cy: 175, rx: 12, ry: 16 } },
+    calf: { left: { cx: 82, cy: 228, rx: 10, ry: 16 }, right: { cx: 118, cy: 228, rx: 10, ry: 16 } },
+    achilles: { left: { cx: 82, cy: 258, rx: 8, ry: 10 }, right: { cx: 118, cy: 258, rx: 8, ry: 10 } },
+  },
+};
 
 const getIntensityColor = (intensity: number): string => {
-  if (intensity <= 3) return 'bg-yellow-400/90';
-  if (intensity <= 6) return 'bg-orange-500/90';
-  return 'bg-red-500/90';
+  if (intensity <= 3) return 'fill-yellow-400';
+  if (intensity <= 6) return 'fill-orange-500';
+  return 'fill-red-500';
+};
+
+const getIntensityBgColor = (intensity: number): string => {
+  if (intensity <= 3) return 'bg-yellow-400';
+  if (intensity <= 6) return 'bg-orange-500';
+  return 'bg-red-500';
 };
 
 const getIntensityBorder = (intensity: number): string => {
-  if (intensity <= 3) return 'border-yellow-400 shadow-yellow-400/30';
-  if (intensity <= 6) return 'border-orange-500 shadow-orange-500/30';
-  return 'border-red-500 shadow-red-500/30';
+  if (intensity <= 3) return 'border-yellow-400';
+  if (intensity <= 6) return 'border-orange-500';
+  return 'border-red-500';
 };
 
 export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
@@ -46,307 +104,314 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   onChange,
   language = 'cs',
 }) => {
-  const [showSilhouette, setShowSilhouette] = useState(false);
-  const [silhouetteView, setSilhouetteView] = useState<'front' | 'back'>('front');
-
-  const isSelected = (areaId: string) => selectedAreas.some(a => a.area === areaId);
+  const [view, setView] = useState<'front' | 'back'>('front');
+  const [activeZone, setActiveZone] = useState<string | null>(null);
+  const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(null);
   
-  const getSelection = (areaId: string) => selectedAreas.find(a => a.area === areaId);
-
-  const toggleArea = (areaId: string) => {
-    if (isSelected(areaId)) {
-      onChange(selectedAreas.filter(a => a.area !== areaId));
-    } else {
-      onChange([...selectedAreas, { area: areaId, intensity: 5, isNew: true }]);
-    }
-  };
-
-  const updateIntensity = (areaId: string, delta: number) => {
-    onChange(selectedAreas.map(a => {
-      if (a.area === areaId) {
-        const newIntensity = Math.max(1, Math.min(10, a.intensity + delta));
-        return { ...a, intensity: newIntensity };
-      }
-      return a;
-    }));
-  };
-
-  const updateSide = (areaId: string, side: 'left' | 'right' | 'both') => {
-    onChange(selectedAreas.map(a => {
-      if (a.area === areaId) {
-        return { ...a, side };
-      }
-      return a;
-    }));
-  };
-
-  const updateIsNew = (areaId: string, isNew: boolean) => {
-    onChange(selectedAreas.map(a => {
-      if (a.area === areaId) {
-        return { ...a, isNew };
-      }
-      return a;
-    }));
-  };
-
-  const removeArea = (areaId: string) => {
-    onChange(selectedAreas.filter(a => a.area !== areaId));
-  };
+  // Temporary state for the bottom sheet
+  const [tempIntensity, setTempIntensity] = useState(5);
+  const [tempIsNew, setTempIsNew] = useState(true);
+  const [tempPainType, setTempPainType] = useState<'muscle' | 'joint' | null>(null);
+  const [tempSide, setTempSide] = useState<'left' | 'right' | 'both'>('both');
 
   const t = {
-    title: language === 'cs' ? 'Bolí tě něco?' : 'Any pain?',
-    subtitle: language === 'cs' ? 'Klikni na oblast, která tě bolí' : 'Tap the area that hurts',
-    showOnBody: language === 'cs' ? 'Ukázat na těle' : 'Show on body',
-    hideBody: language === 'cs' ? 'Skrýt siluetu' : 'Hide silhouette',
     front: language === 'cs' ? 'Zepředu' : 'Front',
     back: language === 'cs' ? 'Zezadu' : 'Back',
-    left: language === 'cs' ? 'L' : 'L',
-    right: language === 'cs' ? 'P' : 'R',
-    both: language === 'cs' ? 'Obě' : 'Both',
-    selected: language === 'cs' ? 'Vybrané oblasti' : 'Selected areas',
-    legend: language === 'cs' ? 'Intenzita' : 'Intensity',
+    left: language === 'cs' ? 'Levá' : 'Left',
+    right: language === 'cs' ? 'Pravá' : 'Right',
+    both: language === 'cs' ? 'Obě strany' : 'Both sides',
     new: language === 'cs' ? 'Nová' : 'New',
     known: language === 'cs' ? 'Známá' : 'Known',
+    muscle: language === 'cs' ? 'Svalová' : 'Muscle',
+    joint: language === 'cs' ? 'Kloub/šlacha' : 'Joint/Tendon',
+    add: language === 'cs' ? 'Přidat' : 'Add',
+    cancel: language === 'cs' ? 'Zrušit' : 'Cancel',
+    intensity: language === 'cs' ? 'Intenzita' : 'Intensity',
+    mild: language === 'cs' ? 'Mírná' : 'Mild',
+    severe: language === 'cs' ? 'Silná' : 'Severe',
+    selectedAreas: language === 'cs' ? 'Vybrané oblasti' : 'Selected areas',
+    tapToAdd: language === 'cs' ? 'Klikni na oblast pro přidání bolesti' : 'Tap an area to add pain',
+    legend: language === 'cs' ? 'Intenzita' : 'Intensity',
+    edit: language === 'cs' ? 'Upravit' : 'Edit',
+    remove: language === 'cs' ? 'Odstranit' : 'Remove',
   };
+
+  const getZoneLabel = (zoneId: string, side?: 'left' | 'right' | null): string => {
+    const zones = [...BODY_ZONES.front, ...BODY_ZONES.back];
+    const zone = zones.find(z => z.id === zoneId);
+    if (!zone) return zoneId;
+    
+    const label = language === 'cs' ? zone.labelCs : zone.labelEn;
+    
+    if (side && zone.bilateral) {
+      const sideLabel = side === 'left' 
+        ? (language === 'cs' ? 'Levé' : 'Left')
+        : (language === 'cs' ? 'Pravé' : 'Right');
+      return `${sideLabel} ${label.toLowerCase()}`;
+    }
+    
+    return label;
+  };
+
+  const isZoneBilateral = (zoneId: string): boolean => {
+    const zones = [...BODY_ZONES.front, ...BODY_ZONES.back];
+    return zones.find(z => z.id === zoneId)?.bilateral ?? false;
+  };
+
+  const getSelectionKey = (zoneId: string, side?: 'left' | 'right' | 'both'): string => {
+    return side ? `${zoneId}_${side}` : zoneId;
+  };
+
+  const findSelection = (zoneId: string, side?: 'left' | 'right'): PainSelection | undefined => {
+    return selectedAreas.find(a => {
+      if (a.area === zoneId && !side) return true;
+      if (a.area === zoneId && a.side === side) return true;
+      if (a.area === zoneId && a.side === 'both') return true;
+      return false;
+    });
+  };
+
+  const openZoneSheet = (zoneId: string, side?: 'left' | 'right') => {
+    const existing = findSelection(zoneId, side);
+    
+    if (existing) {
+      setTempIntensity(existing.intensity);
+      setTempIsNew(existing.isNew ?? true);
+      setTempPainType(existing.painType ?? null);
+      setTempSide(existing.side ?? 'both');
+    } else {
+      setTempIntensity(5);
+      setTempIsNew(true);
+      setTempPainType(null);
+      setTempSide(side ?? 'both');
+    }
+    
+    setActiveZone(zoneId);
+    setActiveSide(side ?? null);
+  };
+
+  const handleConfirm = () => {
+    if (!activeZone) return;
+    
+    const bilateral = isZoneBilateral(activeZone);
+    const finalSide = bilateral ? tempSide : undefined;
+    
+    // Remove existing selection for this zone/side
+    const filtered = selectedAreas.filter(a => {
+      if (a.area !== activeZone) return true;
+      if (!bilateral) return false;
+      if (finalSide === 'both') return false;
+      return a.side !== finalSide && a.side !== 'both';
+    });
+    
+    // Add new selection
+    const newSelection: PainSelection = {
+      area: activeZone,
+      intensity: tempIntensity,
+      side: finalSide,
+      isNew: tempIsNew,
+      painType: tempPainType ?? undefined,
+    };
+    
+    onChange([...filtered, newSelection]);
+    setActiveZone(null);
+    setActiveSide(null);
+  };
+
+  const handleEdit = (selection: PainSelection) => {
+    openZoneSheet(selection.area, selection.side === 'both' ? undefined : selection.side);
+  };
+
+  const handleRemove = (selection: PainSelection) => {
+    onChange(selectedAreas.filter(a => 
+      !(a.area === selection.area && a.side === selection.side)
+    ));
+  };
+
+  const renderZone = (
+    zoneId: string, 
+    position: { cx: number; cy: number; rx: number; ry: number },
+    side?: 'left' | 'right'
+  ) => {
+    const selection = findSelection(zoneId, side);
+    const isSelected = !!selection;
+    
+    return (
+      <motion.ellipse
+        key={`${zoneId}-${side || 'center'}`}
+        cx={position.cx}
+        cy={position.cy}
+        rx={position.rx}
+        ry={position.ry}
+        className={cn(
+          "cursor-pointer transition-all duration-200 stroke-2",
+          isSelected
+            ? cn(getIntensityColor(selection.intensity), "stroke-white/50")
+            : "fill-muted/40 stroke-muted-foreground/30 hover:fill-primary/20 hover:stroke-primary/50"
+        )}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => openZoneSheet(zoneId, side)}
+      />
+    );
+  };
+
+  const currentZones = BODY_ZONES[view];
+  const currentPositions = ZONE_POSITIONS[view];
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="text-center space-y-1">
-        <h3 className="text-lg font-semibold text-foreground">{t.title}</h3>
-        <p className="text-sm text-muted-foreground">{t.subtitle}</p>
+      {/* View Toggle */}
+      <div className="flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setView('front')}
+          className={cn(
+            "px-6 py-2 text-sm font-medium rounded-full transition-all",
+            view === 'front'
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          )}
+        >
+          {t.front}
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('back')}
+          className={cn(
+            "px-6 py-2 text-sm font-medium rounded-full transition-all",
+            view === 'back'
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          )}
+        >
+          {t.back}
+        </button>
       </div>
 
-      {/* Card Grid */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {BODY_AREAS.map((area) => {
-          const selected = isSelected(area.id);
-          const selection = getSelection(area.id);
-          const label = language === 'cs' ? area.labelCs : area.labelEn;
+      {/* SVG Silhouette */}
+      <div className="flex justify-center">
+        <svg viewBox="0 0 200 280" className="w-48 h-72 sm:w-56 sm:h-80">
+          {/* Body outline - minimalist silhouette */}
+          <defs>
+            <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="hsl(var(--muted))" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+          
+          {/* Head */}
+          <ellipse cx="100" cy="28" rx="22" ry="26" fill="url(#bodyGradient)" className="stroke-muted-foreground/20 stroke-1" />
+          
+          {/* Neck */}
+          <rect x="92" y="52" width="16" height="12" fill="url(#bodyGradient)" className="stroke-muted-foreground/20 stroke-1" />
+          
+          {/* Torso */}
+          <path 
+            d="M60 64 Q60 62, 68 62 L132 62 Q140 62, 140 64 L145 130 Q145 155, 122 160 L78 160 Q55 155, 55 130 Z" 
+            fill="url(#bodyGradient)" 
+            className="stroke-muted-foreground/20 stroke-1"
+          />
+          
+          {/* Arms */}
+          <path d="M60 64 Q40 75, 35 115 Q32 135, 38 155" fill="none" className="stroke-muted-foreground/20 stroke-[12]" strokeLinecap="round" />
+          <path d="M140 64 Q160 75, 165 115 Q168 135, 162 155" fill="none" className="stroke-muted-foreground/20 stroke-[12]" strokeLinecap="round" />
+          
+          {/* Legs */}
+          <path d="M78 160 Q75 200, 82 270" fill="none" className="stroke-muted-foreground/20 stroke-[16]" strokeLinecap="round" />
+          <path d="M122 160 Q125 200, 118 270" fill="none" className="stroke-muted-foreground/20 stroke-[16]" strokeLinecap="round" />
 
-          return (
-            <motion.button
-              key={area.id}
-              onClick={() => toggleArea(area.id)}
-              whileTap={{ scale: 0.95 }}
-              className={cn(
-                "relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
-                "min-h-[80px] sm:min-h-[90px]",
-                selected
-                  ? cn("border-2 shadow-lg", getIntensityBorder(selection?.intensity || 5))
-                  : "border-border/50 bg-card/50 hover:bg-card hover:border-border"
-              )}
-            >
-              {/* Icon */}
-              <span className="text-2xl sm:text-3xl mb-1">{area.icon}</span>
-              
-              {/* Label */}
-              <span className={cn(
-                "text-xs sm:text-sm font-medium",
-                selected ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {label}
-              </span>
-
-              {/* Intensity Badge */}
-              {selected && selection && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className={cn(
-                    "absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white",
-                    getIntensityColor(selection.intensity)
-                  )}
-                >
-                  {selection.intensity}
-                </motion.div>
-              )}
-            </motion.button>
-          );
-        })}
+          {/* Render clickable zones */}
+          {currentZones.map(zone => {
+            const position = currentPositions[zone.id as keyof typeof currentPositions];
+            if (!position) return null;
+            
+            if (zone.bilateral) {
+              const bilateralPos = position as { left: { cx: number; cy: number; rx: number; ry: number }; right: { cx: number; cy: number; rx: number; ry: number } };
+              return (
+                <React.Fragment key={zone.id}>
+                  {renderZone(zone.id, bilateralPos.left, 'left')}
+                  {renderZone(zone.id, bilateralPos.right, 'right')}
+                </React.Fragment>
+              );
+            } else {
+              const centerPos = position as { cx: number; cy: number; rx: number; ry: number };
+              return renderZone(zone.id, centerPos);
+            }
+          })}
+        </svg>
       </div>
 
-      {/* Selected Areas Details */}
+      {/* Tap hint */}
+      <p className="text-center text-sm text-muted-foreground">{t.tapToAdd}</p>
+
+      {/* Selected Areas Overview */}
       <AnimatePresence>
         {selectedAreas.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-3"
+            className="space-y-2"
           >
-            <div className="text-sm font-medium text-muted-foreground">{t.selected}:</div>
+            <div className="text-sm font-medium text-muted-foreground">{t.selectedAreas}:</div>
             
-            {selectedAreas.map((selection) => {
-              const area = BODY_AREAS.find(a => a.id === selection.area);
-              if (!area) return null;
-              const label = language === 'cs' ? area.labelCs : area.labelEn;
-
-              return (
-                <motion.div
-                  key={selection.area}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className={cn(
-                    "flex flex-col gap-3 p-3 rounded-lg border-2",
-                    getIntensityBorder(selection.intensity)
-                  )}
-                >
-                  {/* Top row: Area info + intensity + remove */}
-                  <div className="flex items-center gap-3">
-                    {/* Area Info */}
-                    <div className="flex items-center gap-2 min-w-[80px]">
-                      <span className="text-xl">{area.icon}</span>
-                      <span className="text-sm font-medium">{label}</span>
-                    </div>
-
-                    {/* Intensity Control */}
-                    <div className="flex items-center gap-2 flex-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, -1); }}
-                        className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                      
+            <div className="space-y-2">
+              {selectedAreas.map((selection, index) => {
+                const label = getZoneLabel(selection.area, selection.side === 'both' ? null : selection.side);
+                const painTypeLabel = selection.painType === 'muscle' 
+                  ? (language === 'cs' ? 'sval' : 'muscle')
+                  : selection.painType === 'joint'
+                    ? (language === 'cs' ? 'kloub' : 'joint')
+                    : null;
+                
+                return (
+                  <motion.div
+                    key={`${selection.area}-${selection.side}-${index}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border-2 bg-card",
+                      getIntensityBorder(selection.intensity)
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white",
-                        getIntensityColor(selection.intensity)
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white",
+                        getIntensityBgColor(selection.intensity)
                       )}>
                         {selection.intensity}
                       </div>
-                      
-                      <button
-                        onClick={(e) => { e.stopPropagation(); updateIntensity(selection.area, 1); }}
-                        className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Remove Button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeArea(selection.area); }}
-                      className="w-8 h-8 rounded-full hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Bottom row: Side selection + New/Known toggle */}
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Side Selection (for bilateral areas) */}
-                    {area.bilateral ? (
-                      <div className="flex gap-1">
-                        {(['left', 'right', 'both'] as const).map((side) => (
-                          <button
-                            key={side}
-                            onClick={(e) => { e.stopPropagation(); updateSide(selection.area, side); }}
-                            className={cn(
-                              "px-2 py-1 text-xs rounded-md transition-colors",
-                              selection.side === side
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                            )}
-                          >
-                            {side === 'left' ? t.left : side === 'right' ? t.right : t.both}
-                          </button>
-                        ))}
+                      <div>
+                        <div className="font-medium text-sm">{label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {selection.isNew ? t.new : t.known}
+                          {painTypeLabel && ` · ${painTypeLabel}`}
+                          {selection.side === 'both' && ` · ${t.both.toLowerCase()}`}
+                        </div>
                       </div>
-                    ) : (
-                      <div />
-                    )}
-
-                    {/* New/Known Toggle */}
-                    <div className="flex gap-1">
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); updateIsNew(selection.area, true); }}
-                        className={cn(
-                          "px-2 py-1 text-xs rounded-md transition-colors",
-                          selection.isNew === true
-                            ? "bg-orange-500 text-white"
-                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                        )}
+                        type="button"
+                        onClick={() => handleEdit(selection)}
+                        className="p-2 rounded-full hover:bg-muted transition-colors"
                       >
-                        {t.new}
+                        <Pencil className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); updateIsNew(selection.area, false); }}
-                        className={cn(
-                          "px-2 py-1 text-xs rounded-md transition-colors",
-                          selection.isNew === false
-                            ? "bg-blue-500 text-white"
-                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                        )}
+                        type="button"
+                        onClick={() => handleRemove(selection)}
+                        className="p-2 rounded-full hover:bg-destructive/10 transition-colors"
                       >
-                        {t.known}
+                        <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
                       </button>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Optional Silhouette Toggle */}
-      <div className="pt-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowSilhouette(!showSilhouette)}
-          className="w-full text-muted-foreground hover:text-foreground"
-        >
-          <MapPin className="w-4 h-4 mr-2" />
-          {showSilhouette ? t.hideBody : t.showOnBody}
-        </Button>
-      </div>
-
-      {/* Simple Silhouette (Optional) */}
-      <AnimatePresence>
-        {showSilhouette && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="space-y-3"
-          >
-            {/* View Toggle */}
-            <div className="flex justify-center gap-2">
-              <button
-                onClick={() => setSilhouetteView('front')}
-                className={cn(
-                  "px-4 py-2 text-sm rounded-full transition-colors",
-                  silhouetteView === 'front'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {t.front}
-              </button>
-              <button
-                onClick={() => setSilhouetteView('back')}
-                className={cn(
-                  "px-4 py-2 text-sm rounded-full transition-colors",
-                  silhouetteView === 'back'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {t.back}
-              </button>
-            </div>
-
-            {/* Minimalist Silhouette */}
-            <div className="flex justify-center">
-              <SimpleSilhouette
-                view={silhouetteView}
-                selectedAreas={selectedAreas}
-                onAreaClick={toggleArea}
-              />
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -368,90 +433,137 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
           <span>7-10</span>
         </div>
       </div>
+
+      {/* Bottom Sheet / Drawer for Zone Details */}
+      <Drawer open={activeZone !== null} onOpenChange={(open) => !open && setActiveZone(null)}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="text-center">
+            <DrawerTitle>
+              {activeZone && getZoneLabel(activeZone, activeSide)}
+            </DrawerTitle>
+          </DrawerHeader>
+          
+          <div className="px-6 pb-6 space-y-6">
+            {/* Intensity Slider */}
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t.intensity}</span>
+                <span className={cn(
+                  "font-bold text-lg px-3 py-1 rounded-full text-white",
+                  getIntensityBgColor(tempIntensity)
+                )}>
+                  {tempIntensity}
+                </span>
+              </div>
+              <Slider
+                value={[tempIntensity]}
+                onValueChange={([value]) => setTempIntensity(value)}
+                min={1}
+                max={10}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{t.mild}</span>
+                <span>{t.severe}</span>
+              </div>
+            </div>
+
+            {/* Side Selection (for bilateral zones) */}
+            {activeZone && isZoneBilateral(activeZone) && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {(['left', 'right', 'both'] as const).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      onClick={() => setTempSide(side)}
+                      className={cn(
+                        "flex-1 py-2 px-3 text-sm rounded-lg border-2 transition-all",
+                        tempSide === side
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                      )}
+                    >
+                      {side === 'left' ? t.left : side === 'right' ? t.right : t.both}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New/Known Toggle */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTempIsNew(true)}
+                className={cn(
+                  "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                  tempIsNew
+                    ? "border-orange-500 bg-orange-500/10 text-orange-600 font-medium"
+                    : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                )}
+              >
+                {t.new}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTempIsNew(false)}
+                className={cn(
+                  "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                  !tempIsNew
+                    ? "border-blue-500 bg-blue-500/10 text-blue-600 font-medium"
+                    : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                )}
+              >
+                {t.known}
+              </button>
+            </div>
+
+            {/* Pain Type (Muscle/Joint) */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTempPainType(tempPainType === 'muscle' ? null : 'muscle')}
+                  className={cn(
+                    "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                    tempPainType === 'muscle'
+                      ? "border-purple-500 bg-purple-500/10 text-purple-600 font-medium"
+                      : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                  )}
+                >
+                  {t.muscle}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempPainType(tempPainType === 'joint' ? null : 'joint')}
+                  className={cn(
+                    "flex-1 py-3 px-4 text-sm rounded-lg border-2 transition-all",
+                    tempPainType === 'joint'
+                      ? "border-teal-500 bg-teal-500/10 text-teal-600 font-medium"
+                      : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
+                  )}
+                >
+                  {t.joint}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <DrawerFooter className="flex-row gap-3">
+            <DrawerClose asChild>
+              <Button variant="outline" className="flex-1">
+                {t.cancel}
+              </Button>
+            </DrawerClose>
+            <Button onClick={handleConfirm} className="flex-1">
+              {t.add}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
-  );
-};
-
-// Simple minimalist silhouette component
-interface SimpleSilhouetteProps {
-  view: 'front' | 'back';
-  selectedAreas: PainSelection[];
-  onAreaClick: (areaId: string) => void;
-}
-
-const SimpleSilhouette: React.FC<SimpleSilhouetteProps> = ({
-  view,
-  selectedAreas,
-  onAreaClick,
-}) => {
-  const getPointColor = (areaId: string) => {
-    const selection = selectedAreas.find(a => a.area === areaId);
-    if (!selection) return 'fill-muted-foreground/30 stroke-muted-foreground/50';
-    if (selection.intensity <= 3) return 'fill-yellow-400 stroke-yellow-500';
-    if (selection.intensity <= 6) return 'fill-orange-500 stroke-orange-600';
-    return 'fill-red-500 stroke-red-600';
-  };
-
-  // Simplified point positions for front/back view
-  const points = view === 'front' ? [
-    { id: 'neck', cx: 100, cy: 35 },
-    { id: 'shoulder', cx: 70, cy: 55 },
-    { id: 'shoulder', cx: 130, cy: 55, side: 'right' },
-    { id: 'wrist', cx: 45, cy: 115 },
-    { id: 'wrist', cx: 155, cy: 115, side: 'right' },
-    { id: 'hip', cx: 80, cy: 120 },
-    { id: 'hip', cx: 120, cy: 120, side: 'right' },
-    { id: 'knee', cx: 80, cy: 170 },
-    { id: 'knee', cx: 120, cy: 170, side: 'right' },
-    { id: 'ankle', cx: 80, cy: 215 },
-    { id: 'ankle', cx: 120, cy: 215, side: 'right' },
-  ] : [
-    { id: 'neck', cx: 100, cy: 35 },
-    { id: 'shoulder', cx: 70, cy: 55 },
-    { id: 'shoulder', cx: 130, cy: 55, side: 'right' },
-    { id: 'back', cx: 100, cy: 85 },
-    { id: 'hip', cx: 80, cy: 120 },
-    { id: 'hip', cx: 120, cy: 120, side: 'right' },
-    { id: 'muscle', cx: 80, cy: 145 },
-    { id: 'muscle', cx: 120, cy: 145, side: 'right' },
-    { id: 'knee', cx: 80, cy: 170 },
-    { id: 'knee', cx: 120, cy: 170, side: 'right' },
-    { id: 'ankle', cx: 80, cy: 215 },
-    { id: 'ankle', cx: 120, cy: 215, side: 'right' },
-  ];
-
-  return (
-    <svg
-      viewBox="0 0 200 240"
-      className="w-40 h-48"
-    >
-      {/* Ultra minimalist body outline */}
-      <ellipse cx="100" cy="20" rx="18" ry="20" className="fill-none stroke-muted-foreground/30 stroke-2" />
-      <line x1="100" y1="40" x2="100" y2="110" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="100" y1="50" x2="55" y2="100" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="100" y1="50" x2="145" y2="100" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="55" y1="100" x2="40" y2="120" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="145" y1="100" x2="160" y2="120" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="100" y1="110" x2="80" y2="220" className="stroke-muted-foreground/30 stroke-2" />
-      <line x1="100" y1="110" x2="120" y2="220" className="stroke-muted-foreground/30 stroke-2" />
-
-      {/* Interactive points */}
-      {points.map((point, i) => (
-        <motion.circle
-          key={`${point.id}-${i}`}
-          cx={point.cx}
-          cy={point.cy}
-          r="10"
-          className={cn(
-            "cursor-pointer stroke-2 transition-colors",
-            getPointColor(point.id)
-          )}
-          whileHover={{ scale: 1.2 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => onAreaClick(point.id)}
-        />
-      ))}
-    </svg>
   );
 };
 
