@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
 
-export type TrainingStatus = 'scheduled' | 'completed' | 'canceled';
+export type TrainingStatus = 'scheduled' | 'in_progress' | 'completed' | 'canceled';
 
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 

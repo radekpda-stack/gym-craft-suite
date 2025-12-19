@@ -50,7 +50,7 @@ const trainingFormSchema = z.object({
   participant_count: z.number().min(1, "Minimálně 1 účastník").max(10, "Maximálně 10 účastníků"),
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
-  status: z.enum(["scheduled", "completed", "canceled"]),
+  status: z.enum(["scheduled", "in_progress", "completed", "canceled"]),
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),

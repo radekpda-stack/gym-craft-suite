@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils';
-import { Check, Clock, X, AlertTriangle, Wallet } from 'lucide-react';
+import { Check, Clock, X, AlertTriangle, Wallet, Play } from 'lucide-react';
 
 interface TrainingStatusBadgeProps {
-  status: 'scheduled' | 'completed' | 'canceled';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'canceled';
   paymentStatus?: string | null;
   paymentMethod?: string | null;
   className?: string;
@@ -63,6 +63,7 @@ export function TrainingStatusBadge({
   const isCompletedUnpaid = status === 'completed' && !isPaid;
   const isCompletedPaid = status === 'completed' && isPaid;
   const isScheduled = status === 'scheduled';
+  const isInProgress = status === 'in_progress';
   const isCanceled = status === 'canceled';
 
   // Get icon and styling based on state
@@ -94,6 +95,16 @@ export function TrainingStatusBadge({
         textColor: 'text-warning',
         iconColor: 'text-warning',
         label: getAwaitingPaymentLabel(paymentMethod),
+      };
+    }
+    
+    if (isInProgress) {
+      return {
+        icon: Play,
+        bgColor: 'bg-primary/10',
+        textColor: 'text-primary',
+        iconColor: 'text-primary',
+        label: 'Probíhá',
       };
     }
     
@@ -137,6 +148,7 @@ export function TrainingStatusDot({
   const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
   const isCompletedUnpaid = status === 'completed' && !isPaid;
   const isCompletedPaid = status === 'completed' && isPaid;
+  const isInProgress = status === 'in_progress';
   const isCanceled = status === 'canceled';
 
   const getConfig = () => {
@@ -148,6 +160,9 @@ export function TrainingStatusDot({
     }
     if (isCompletedUnpaid) {
       return { icon: Wallet, color: 'text-warning' };
+    }
+    if (isInProgress) {
+      return { icon: Play, color: 'text-primary' };
     }
     return { icon: Clock, color: 'text-muted-foreground' };
   };
