@@ -7,6 +7,7 @@ import {
   Globe,
   MessageSquare,
   Building2,
+  BarChart2,
   Gauge,
   FileBarChart2,
   User,
@@ -23,6 +24,7 @@ import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
+import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
@@ -193,6 +195,13 @@ export default function Settings() {
           description: language === 'cs' ? 'Export PDF reportů a statistik' : 'Export PDF reports and statistics',
           icon: FileBarChart2,
           content: <AnnualStatsExport />,
+        },
+        {
+          id: 'feature-usage',
+          title: language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics',
+          description: language === 'cs' ? 'Analýza využívání funkcí aplikace' : 'App feature usage analytics',
+          icon: BarChart2,
+          content: <FeatureUsageStats />,
         },
       ],
     },
