@@ -225,19 +225,19 @@ export function useDashboardViewModel() {
           .eq('status', 'completed')
           .eq('payment_status', 'pending'),
         
-        // This month credit transactions (income)
+        // This month credit transactions (income from payments)
         supabase
           .from('credit_transactions')
           .select('amount, type, payment_method')
-          .eq('type', 'add')
+          .in('type', ['payment', 'manual'])
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString()),
         
-        // Product transactions
+        // Product transactions (type = 'product')
         supabase
           .from('credit_transactions')
           .select('amount, type, product_id')
-          .not('product_id', 'is', null)
+          .eq('type', 'product')
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString()),
       ]);
@@ -486,10 +486,12 @@ export function useDashboardViewModel() {
         : 0;
       
       const productIncome = (productTransactionsResult.data || [])
-        .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+        .reduce((sum: number, t: any) => sum + Math.abs(t.amount || 0), 0);
       const totalIncome = (creditTransactionsResult.data || [])
         .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-      const productShare = totalIncome > 0 ? Math.round((productIncome / totalIncome) * 100) : 0;
+      // Product share = product revenue / (total payments + product revenue)
+      const totalRevenue = totalIncome + productIncome;
+      const productShare = totalRevenue > 0 ? Math.round((productIncome / totalRevenue) * 100) : 0;
       
       const trends: TrendData = {
         trainingsThisMonth: thisMonthCompletedCount,
