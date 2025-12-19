@@ -361,8 +361,8 @@ export function useAnnualStats(
         client: clientMap.get(maxWeightEntry.client_id) || 'Neznámý',
       } : null;
 
-      // Finance stats
-      const deposits = creditTransactions.filter(t => t.type === 'deposit');
+      // Finance stats - 'payment' is credit deposit, 'manual' is manual adjustment (also income)
+      const deposits = creditTransactions.filter(t => t.type === 'payment' || t.type === 'manual');
       const totalIncome = deposits.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
       const productSales = creditTransactions.filter(t => t.type === 'product');
