@@ -4,13 +4,13 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Measurement } from '@/hooks/useMeasurements';
 import { Client } from '@/hooks/useClients';
-import { Link } from 'react-router-dom';
 
 interface MeasurementCardProps {
   measurement: Measurement;
   client?: Client | null;
   previousMeasurement?: Measurement | null;
   className?: string;
+  onClick?: () => void;
 }
 
 function WeightChange({ current, previous }: { current: number | null; previous: number | null }) {
@@ -42,14 +42,16 @@ export function MeasurementCard({
   client,
   previousMeasurement,
   className,
+  onClick,
 }: MeasurementCardProps) {
   const measurementDate = new Date(measurement.date);
   
   return (
-    <Link
-      to={`/clients/${measurement.client_id}?tab=measurements`}
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        'block glass rounded-xl border-l-4 border-l-muted-foreground/50 transition-all duration-200 hover:glow p-3 sm:p-4',
+        'block w-full text-left glass rounded-xl border-l-4 border-l-muted-foreground/50 transition-all duration-200 hover:glow p-3 sm:p-4',
         className
       )}
     >
@@ -103,6 +105,6 @@ export function MeasurementCard({
           {measurement.notes}
         </p>
       )}
-    </Link>
+    </button>
   );
 }

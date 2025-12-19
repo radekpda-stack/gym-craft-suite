@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { ClipboardList, Plus, Scale, Stethoscope } from 'lucide-react';
 import { useRecordsFeed } from '@/hooks/useRecordsFeed';
-import { useClients } from '@/hooks/useClients';
-import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
+import { useClients, Client } from '@/hooks/useClients';
+import { useMeasurements, useCreateMeasurement, Measurement } from '@/hooks/useMeasurements';
+import { Diagnostic } from '@/hooks/useDiagnostics';
 import { RecordsFilterBar } from '@/components/records/RecordsFilterBar';
 import { RecordsFeed } from '@/components/records/RecordsFeed';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
+import { EditMeasurementSheet } from '@/components/measurements/EditMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { DiagnosticDetailSheet } from '@/components/diagnostics/DiagnosticDetailSheet';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 
 export default function Records() {
@@ -37,6 +40,14 @@ export default function Records() {
   const [measurementSheetOpen, setMeasurementSheetOpen] = useState(false);
   const [diagnosticSheetOpen, setDiagnosticSheetOpen] = useState(false);
   
+  // Edit/Detail state
+  const [selectedMeasurement, setSelectedMeasurement] = useState<Measurement | null>(null);
+  const [selectedMeasurementClient, setSelectedMeasurementClient] = useState<Client | null>(null);
+  const [editMeasurementOpen, setEditMeasurementOpen] = useState(false);
+  
+  const [selectedDiagnostic, setSelectedDiagnostic] = useState<Diagnostic | null>(null);
+  const [diagnosticDetailOpen, setDiagnosticDetailOpen] = useState(false);
+  
   const handleCreateMeasurement = async (data: MeasurementFormValues): Promise<string | void> => {
     const result = await createMeasurement.mutateAsync({
       client_id: data.client_id,
@@ -52,6 +63,17 @@ export default function Records() {
   
   const handleOpenCreateMenu = () => {
     setMeasurementSheetOpen(true);
+  };
+
+  const handleMeasurementClick = (measurement: Measurement, client: Client | null) => {
+    setSelectedMeasurement(measurement);
+    setSelectedMeasurementClient(client);
+    setEditMeasurementOpen(true);
+  };
+
+  const handleDiagnosticClick = (diagnostic: Diagnostic, _client: Client | null) => {
+    setSelectedDiagnostic(diagnostic);
+    setDiagnosticDetailOpen(true);
   };
 
   const activeClients = clients.filter(c => !c.is_archived);
@@ -106,6 +128,8 @@ export default function Records() {
         measurements={measurements}
         isLoading={isLoading}
         onCreateRecord={handleOpenCreateMenu}
+        onMeasurementClick={handleMeasurementClick}
+        onDiagnosticClick={handleDiagnosticClick}
       />
       
       {/* Create sheets */}
@@ -121,6 +145,20 @@ export default function Records() {
         open={diagnosticSheetOpen}
         onOpenChange={setDiagnosticSheetOpen}
         clients={activeClients}
+      />
+
+      {/* Edit/Detail sheets */}
+      <EditMeasurementSheet
+        open={editMeasurementOpen}
+        onOpenChange={setEditMeasurementOpen}
+        measurement={selectedMeasurement}
+        client={selectedMeasurementClient}
+      />
+
+      <DiagnosticDetailSheet
+        open={diagnosticDetailOpen}
+        onOpenChange={setDiagnosticDetailOpen}
+        diagnostic={selectedDiagnostic}
       />
     </div>
   );
