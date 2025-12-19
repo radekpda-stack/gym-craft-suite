@@ -161,24 +161,52 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="birthDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Datum narození</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="např. 15.03.1990"
-                  className="bg-secondary border-border"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="birthDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Datum narození</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="např. 15.03.1990"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="gender"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pohlaví</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                    className="flex gap-4 h-10 items-center"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="male" id="gender-male" />
+                      <Label htmlFor="gender-male" className="cursor-pointer">Muž</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="female" id="gender-female" />
+                      <Label htmlFor="gender-female" className="cursor-pointer">Žena</Label>
+                    </div>
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {defaultValues && (
           <FormField
@@ -199,42 +227,6 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
             )}
           />
         )}
-
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  Pohlaví
-                  {defaultValues && !defaultValues.gender && (
-                    <span className="inline-flex items-center gap-1 text-warning text-xs">
-                      <AlertCircle className="w-3 h-3" />
-                      Nevyplněno
-                    </span>
-                  )}
-                </FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    value={field.value || ''}
-                    onValueChange={field.onChange}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="gender-male" />
-                      <Label htmlFor="gender-male" className="cursor-pointer">Muž</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="gender-female" />
-                      <Label htmlFor="gender-female" className="cursor-pointer">Žena</Label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <FormField
           control={form.control}
