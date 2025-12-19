@@ -52,15 +52,22 @@ const t = {
     portionMedium: 'Střední',
     portionLarge: 'Velká',
     portionHint: 'Stačí odhad, nejde o přesnost.',
-    quality: 'Bylo to zdravé?',
-    qualityGood: 'Spíš kvalitní',
-    qualityNormal: 'Normál',
-    qualityPoor: 'Spíš slabé',
+    quality: 'Jak bys to zpětně ohodnotil/a?',
+    qualityHint: 'Bez hodnocení, jen pro lepší zpětnou vazbu trenérovi.',
+    qualityGood: 'Dobrá volba',
+    qualityNormal: 'Neutrální',
+    qualityPoor: 'Spíš špatná volba',
+    satiation: 'Byl/a jsi po jídle plný/á?',
+    satiationJustRight: 'Akorát',
+    satiationStillHungry: 'Stále hlad',
+    satiationOverate: 'Přejedení',
     feelingAfter: 'Jak ses cítil/a po jídle?',
     feelingOk: 'V pohodě',
     feelingHeavy: 'Těžké',
     feelingBloated: 'Nafouklý',
     feelingSweet: 'Chuť na sladké',
+    feelingLowEnergy: 'Bez energie',
+    feelingHighEnergy: 'Více energie',
     // Drink
     drinkType: 'Typ nápoje',
     drinkWater: 'Voda',
@@ -99,6 +106,10 @@ const t = {
     invalidLink: 'Neplatný odkaz',
     completed: 'Log dokončen',
     loading: 'Načítám...',
+    // Empty day
+    emptyDayTitle: 'Žádné záznamy pro tento den',
+    emptyDayNoEat: 'Nejedl/a jsem',
+    emptyDayForgot: 'Zapomněl/a jsem',
   },
   en: {
     title: '7-Day Food Log',
@@ -122,15 +133,22 @@ const t = {
     portionMedium: 'Medium',
     portionLarge: 'Large',
     portionHint: 'Just an estimate is fine.',
-    quality: 'Was it healthy?',
-    qualityGood: 'Mostly healthy',
-    qualityNormal: 'Normal',
+    quality: 'How would you rate this meal?',
+    qualityHint: 'No judgment, just feedback for your trainer.',
+    qualityGood: 'Good choice',
+    qualityNormal: 'Neutral',
     qualityPoor: 'Not great',
+    satiation: 'Were you full after eating?',
+    satiationJustRight: 'Just right',
+    satiationStillHungry: 'Still hungry',
+    satiationOverate: 'Overate',
     feelingAfter: 'How did you feel after eating?',
     feelingOk: 'Fine',
     feelingHeavy: 'Heavy',
     feelingBloated: 'Bloated',
     feelingSweet: 'Sweet craving',
+    feelingLowEnergy: 'Low energy',
+    feelingHighEnergy: 'More energy',
     // Drink
     drinkType: 'Drink type',
     drinkWater: 'Water',
@@ -169,6 +187,10 @@ const t = {
     invalidLink: 'Invalid link',
     completed: 'Log completed',
     loading: 'Loading...',
+    // Empty day
+    emptyDayTitle: 'No entries for this day',
+    emptyDayNoEat: 'Didn\'t eat',
+    emptyDayForgot: 'Forgot to log',
   }
 };
 
@@ -622,6 +644,7 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
   const [description, setDescription] = useState('');
   const [portionSize, setPortionSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [quality, setQuality] = useState<'good' | 'normal' | 'poor' | ''>('');
+  const [satiation, setSatiation] = useState<'just_right' | 'still_hungry' | 'overate' | ''>('');
   const [feeling, setFeeling] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -635,7 +658,8 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
         meal_type: mealType,
         portion_mode: 'portion_size',
         portion_size: portionSize,
-        quality,
+        quality: quality || null,
+        satiation: satiation || null,
         feeling_after: feeling || null,
       });
     } finally {
@@ -731,7 +755,10 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
 
       {/* Quality - 3 colored buttons */}
       <div>
-        <Label className="text-sm text-muted-foreground mb-2 block">{tr.quality}</Label>
+        <div className="flex items-center gap-1 mb-2">
+          <Label className="text-sm text-muted-foreground">{tr.quality}</Label>
+          <span className="text-xs text-muted-foreground/60" title={tr.qualityHint}>ⓘ</span>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setQuality('good')}
@@ -772,15 +799,60 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
         </div>
       </div>
 
-      {/* Feeling after - optional icons */}
+      {/* Satiation - NEW */}
       <div>
-        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter} <span className="text-xs opacity-60">(nepovinné)</span></Label>
-        <div className="grid grid-cols-4 gap-2">
+        <Label className="text-sm text-muted-foreground mb-2 block">{tr.satiation}</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => setSatiation('just_right')}
+            className={cn(
+              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
+              satiation === 'just_right' 
+                ? "border-primary bg-primary/10" 
+                : "border-border hover:border-primary/50"
+            )}
+          >
+            <span className="text-xl">✓</span>
+            <span className="text-xs mt-1">{tr.satiationJustRight}</span>
+          </button>
+          <button
+            onClick={() => setSatiation('still_hungry')}
+            className={cn(
+              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
+              satiation === 'still_hungry' 
+                ? "border-orange-500 bg-orange-500/10" 
+                : "border-border hover:border-orange-500/50"
+            )}
+          >
+            <span className="text-xl">🍽️</span>
+            <span className="text-xs mt-1">{tr.satiationStillHungry}</span>
+          </button>
+          <button
+            onClick={() => setSatiation('overate')}
+            className={cn(
+              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
+              satiation === 'overate' 
+                ? "border-red-500 bg-red-500/10" 
+                : "border-border hover:border-red-500/50"
+            )}
+          >
+            <span className="text-xl">😵</span>
+            <span className="text-xs mt-1">{tr.satiationOverate}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Feeling after - extended with energy */}
+      <div>
+        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter} <span className="text-xs opacity-60">({language === 'cs' ? 'nepovinné' : 'optional'})</span></Label>
+        <div className="grid grid-cols-3 gap-2">
           {[
             { id: 'ok', icon: '😌', label: tr.feelingOk },
             { id: 'heavy', icon: '😴', label: tr.feelingHeavy },
             { id: 'bloated', icon: '🤢', label: tr.feelingBloated },
             { id: 'sweet', icon: '🍬', label: tr.feelingSweet },
+            { id: 'low_energy', icon: '🔋', label: tr.feelingLowEnergy },
+            { id: 'high_energy', icon: '⚡', label: tr.feelingHighEnergy },
           ].map((f) => (
             <button
               key={f.id}

@@ -1716,6 +1716,54 @@ export type Database = {
           },
         ]
       }
+      nutrition_day_status: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          day_date: string
+          id: string
+          note: string | null
+          session_id: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          day_date: string
+          id?: string
+          note?: string | null
+          session_id: string
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          day_date?: string
+          id?: string
+          note?: string | null
+          session_id?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_day_status_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_day_status_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_log_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_drink_entries: {
         Row: {
           amount_container_count: number | null
@@ -1825,8 +1873,10 @@ export type Database = {
           client_id: string
           created_at: string
           description: string
+          energy_after: string | null
           entry_date: string
           entry_time: string
+          feeling_after: string | null
           grams: number | null
           id: string
           meal_type: string | null
@@ -1835,6 +1885,8 @@ export type Database = {
           portion_estimate: string | null
           portion_mode: string
           portion_size: string | null
+          quality: string | null
+          satiation: string | null
           session_id: string
           units_count: number | null
           units_label: string | null
@@ -1846,8 +1898,10 @@ export type Database = {
           client_id: string
           created_at?: string
           description: string
+          energy_after?: string | null
           entry_date: string
           entry_time?: string
+          feeling_after?: string | null
           grams?: number | null
           id?: string
           meal_type?: string | null
@@ -1856,6 +1910,8 @@ export type Database = {
           portion_estimate?: string | null
           portion_mode: string
           portion_size?: string | null
+          quality?: string | null
+          satiation?: string | null
           session_id: string
           units_count?: number | null
           units_label?: string | null
@@ -1867,8 +1923,10 @@ export type Database = {
           client_id?: string
           created_at?: string
           description?: string
+          energy_after?: string | null
           entry_date?: string
           entry_time?: string
+          feeling_after?: string | null
           grams?: number | null
           id?: string
           meal_type?: string | null
@@ -1877,6 +1935,8 @@ export type Database = {
           portion_estimate?: string | null
           portion_mode?: string
           portion_size?: string | null
+          quality?: string | null
+          satiation?: string | null
           session_id?: string
           units_count?: number | null
           units_label?: string | null
