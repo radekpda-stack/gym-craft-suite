@@ -64,11 +64,12 @@ export function useAppShortcuts(callbacks: {
       action: () => navigate('/trainings'),
       description: 'Přejít na Tréninky',
     },
-    {
-      key: 'a',
-      action: () => navigate('/ai-assistant'),
-      description: 'Přejít na AI Asistenta',
-    },
+    // AI shortcut hidden for future use
+    // {
+    //   key: 'a',
+    //   action: () => navigate('/ai-assistant'),
+    //   description: 'Přejít na AI Asistenta',
+    // },
     ...(callbacks.onNewTraining ? [{
       key: 'n',
       ctrl: true,
@@ -94,7 +95,7 @@ export const allShortcuts = [
   { keys: ['G'], description: 'Dashboard' },
   { keys: ['C'], description: 'Klienti' },
   { keys: ['T'], description: 'Tréninky' },
-  { keys: ['A'], description: 'AI Asistent' },
+  // { keys: ['A'], description: 'AI Asistent' }, // Hidden - AI feature disabled
   { keys: ['Ctrl', 'N'], description: 'Nový trénink' },
   { keys: ['Ctrl', 'Shift', 'N'], description: 'Nový klient' },
   { keys: ['?'], description: 'Zobrazit zkratky' },

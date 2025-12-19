@@ -8,7 +8,7 @@ import {
   Settings,
   Stethoscope,
   Activity,
-  Sparkles,
+  // Sparkles, // Hidden - AI feature disabled
   Command,
   LayoutDashboard,
 } from 'lucide-react';
@@ -58,7 +58,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     { name: 'Kalendář', icon: Calendar, path: '/calendar' },
     { name: 'Diagnostika', icon: Stethoscope, path: '/diagnostics' },
     { name: 'Měření', icon: Activity, path: '/measurements' },
-    { name: 'AI Asistent', icon: Sparkles, path: '/ai-assistant' },
+    // { name: 'AI Asistent', icon: Sparkles, path: '/ai-assistant' }, // Hidden - AI feature disabled
     { name: 'Nastavení', icon: Settings, path: '/settings' },
   ];
 

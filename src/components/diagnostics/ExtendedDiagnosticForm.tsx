@@ -1470,7 +1470,7 @@ export function ExtendedDiagnosticForm({
               </div>
             </Card>
 
-            {/* AI Section - Collapsible */}
+            {/* AI Section - Hidden for future use
             <Collapsible open={showAISection} onOpenChange={setShowAISection}>
               <Card className="glass p-4">
                 <CollapsibleTrigger className="w-full">
@@ -1551,6 +1551,7 @@ export function ExtendedDiagnosticForm({
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+            */}
           </TabsContent>
         </Tabs>
       )}

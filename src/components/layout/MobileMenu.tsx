@@ -12,7 +12,7 @@ import {
   LogOut,
   X,
   Zap,
-  Sparkles,
+  // Sparkles, // Hidden - AI feature disabled
   Wallet,
   ChevronRight,
   ShoppingBag,
@@ -70,12 +70,13 @@ const sections: NavSection[] = [
       { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
     ],
   },
-  {
-    label: 'Nástroje',
-    items: [
-      { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
-    ],
-  },
+  // AI section hidden for future use
+  // {
+  //   label: 'Nástroje',
+  //   items: [
+  //     { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
+  //   ],
+  // },
   {
     label: 'Systém',
     items: [
