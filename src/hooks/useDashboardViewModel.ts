@@ -36,7 +36,10 @@ export interface FinanceMetrics {
   creditAtRisk: { count: number; amount: number };
   unpaidTotal: { count: number; amount: number };
   monthlyIncome: number;
+  lastMonthIncome: number;
   avgPerTraining: number;
+  lastMonthAvgPerTraining: number;
+  trainingsWithPriceCount: number;
   incomeChange: number; // percent vs last period
 }
 
@@ -48,7 +51,11 @@ export interface TrendData {
   incomeLastMonth: number;
   incomeChange: number;
   cancellationRate: number;
+  cancelledCount: number;
+  totalTrainingsCount: number;
   productShare: number; // % of total income
+  productIncome: number;
+  totalRevenue: number;
 }
 
 export interface ScheduleItem {
@@ -441,6 +448,9 @@ export function useDashboardViewModel() {
       const trainingsWithPrice = thisMonthTrainings.filter((t: any) => t.status === 'completed' && t.final_price && t.final_price > 0);
       const avgPerTraining = trainingsWithPrice.length > 0 ? Math.round(thisMonthIncome / trainingsWithPrice.length) : 0;
       
+      const lastMonthTrainingsWithPrice = lastMonthTrainings.filter((t: any) => t.status === 'completed' && t.final_price && t.final_price > 0);
+      const lastMonthAvgPerTraining = lastMonthTrainingsWithPrice.length > 0 ? Math.round(lastMonthIncome / lastMonthTrainingsWithPrice.length) : 0;
+      
       const incomeChange = lastMonthIncome > 0 
         ? Math.round(((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100) 
         : 0;
@@ -449,7 +459,10 @@ export function useDashboardViewModel() {
         creditAtRisk: { count: creditAtRiskClients.length, amount: creditAtRiskAmount },
         unpaidTotal: { count: unpaidItems.length, amount: unpaidTotalAmount },
         monthlyIncome: thisMonthIncome,
+        lastMonthIncome,
         avgPerTraining,
+        lastMonthAvgPerTraining,
+        trainingsWithPriceCount: trainingsWithPrice.length,
         incomeChange,
       };
       
@@ -481,7 +494,7 @@ export function useDashboardViewModel() {
         ? Math.round(((thisMonthCompletedCount - lastMonthCompletedCount) / lastMonthCompletedCount) * 100)
         : 0;
       
-      const thisMonthCancelled = thisMonthTrainings.filter((t: any) => t.status === 'cancelled').length;
+      const thisMonthCancelled = thisMonthTrainings.filter((t: any) => t.status === 'canceled').length;
       const cancellationRate = thisMonthTrainings.length > 0
         ? Math.round((thisMonthCancelled / thisMonthTrainings.length) * 100)
         : 0;
@@ -502,7 +515,11 @@ export function useDashboardViewModel() {
         incomeLastMonth: lastMonthIncome,
         incomeChange,
         cancellationRate,
+        cancelledCount: thisMonthCancelled,
+        totalTrainingsCount: thisMonthTrainings.length,
         productShare,
+        productIncome,
+        totalRevenue,
       };
       
       // ===== DAY STATUS =====

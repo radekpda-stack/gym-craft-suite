@@ -155,16 +155,18 @@ function DetailDialog({ type, onClose, trends }: DetailDialogProps) {
       title: 'Zrušení',
       icon: XCircle,
       stats: [
+        { label: 'Počet zrušených', value: trends.cancelledCount },
+        { label: 'Celkem tréninků', value: trends.totalTrainingsCount },
         { label: 'Míra zrušení', value: `${trends.cancellationRate}%` },
-        { label: 'Tento měsíc', value: trends.cancellationRate === 0 ? 'Žádné zrušení' : `${trends.cancellationRate}% tréninků` },
       ],
     },
     products: {
       title: 'Produkty',
       icon: Package,
       stats: [
-        { label: 'Podíl na příjmech', value: `${trends.productShare}%` },
-        { label: 'Význam', value: trends.productShare < 5 ? 'Minoritní' : trends.productShare < 20 ? 'Střední' : 'Významný' },
+        { label: 'Příjem z produktů', value: formatCurrency(trends.productIncome) },
+        { label: 'Celkový příjem', value: formatCurrency(trends.totalRevenue) },
+        { label: 'Podíl produktů', value: `${trends.productShare}%` },
       ],
     },
   };
