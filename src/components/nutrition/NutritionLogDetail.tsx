@@ -368,13 +368,52 @@ function FoodEntryCard({ entry, onDelete }: { entry: NutritionFoodEntry; onDelet
     return '';
   };
 
+  const qualityLabels: Record<string, { text: string; color: string }> = {
+    good: { text: 'Dobrá volba', color: 'text-green-600' },
+    normal: { text: 'Neutrální', color: 'text-yellow-600' },
+    poor: { text: 'Špatná volba', color: 'text-red-600' },
+  };
+
+  const satiationLabels: Record<string, string> = {
+    just_right: 'Akorát',
+    still_hungry: 'Hlad',
+    overate: 'Přejedení',
+  };
+
+  const feelingLabels: Record<string, string> = {
+    ok: 'V pohodě',
+    heavy: 'Těžké',
+    bloated: 'Nafouklý',
+    sweet: 'Chuť na sladké',
+    low_energy: 'Bez energie',
+    high_energy: 'Více energie',
+  };
+
   return (
     <div className="p-2 rounded-lg bg-muted/50 text-sm group">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1">
           <div className="font-medium">{entry.description}</div>
           <div className="text-xs text-muted-foreground">
             {entry.entry_time.slice(0, 5)} · {portionText()}
+          </div>
+          {/* Quality, Satiation, Feeling badges */}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {entry.quality && (
+              <span className={`text-xs px-1.5 py-0.5 rounded bg-muted ${qualityLabels[entry.quality]?.color || ''}`}>
+                {qualityLabels[entry.quality]?.text || entry.quality}
+              </span>
+            )}
+            {entry.satiation && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                {satiationLabels[entry.satiation] || entry.satiation}
+              </span>
+            )}
+            {entry.feeling_after && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                {feelingLabels[entry.feeling_after] || entry.feeling_after}
+              </span>
+            )}
           </div>
           {entry.note && <div className="text-xs text-muted-foreground mt-1">{entry.note}</div>}
         </div>
