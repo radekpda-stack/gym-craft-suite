@@ -9,6 +9,10 @@ import {
   Wallet,
   XCircle,
   Package,
+  Trophy,
+  Users,
+  Clock,
+  Crown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -119,7 +123,7 @@ function TrendCard({
   );
 }
 
-type DetailType = 'trainings' | 'income' | 'cancellations' | 'products' | null;
+type DetailType = 'trainings' | 'income' | 'cancellations' | 'products' | 'yearly' | 'clients' | 'schedule' | 'topClients' | null;
 
 interface DetailDialogProps {
   type: DetailType;
@@ -174,6 +178,46 @@ function DetailDialog({ type, onClose, trends }: DetailDialogProps) {
         { label: 'Celkový příjem', value: formatCurrency(trends.totalRevenue) },
         { label: 'Podíl produktů', value: `${trends.productShare}%` },
       ],
+    },
+    yearly: {
+      title: `Rok ${new Date().getFullYear()}`,
+      icon: Trophy,
+      stats: [
+        { label: 'Odtrénované hodiny', value: `${trends.yearlyHours} h` },
+        { label: 'Celkový příjem', value: formatCurrency(trends.yearlyIncome) },
+        { label: 'Průměrná hodinovka', value: formatCurrency(trends.avgHourlyRate) },
+      ],
+    },
+    clients: {
+      title: 'Klienti',
+      icon: Users,
+      stats: [
+        { label: 'Aktivní (30 dní)', value: trends.activeClients },
+        { label: 'Celkem klientů', value: trends.totalClients },
+        { label: 'Noví tento měsíc', value: trends.newClientsThisMonth, separator: true },
+        { label: 'Retence', value: `${trends.retentionRate}%`, highlight: trends.retentionRate >= 70 },
+      ],
+    },
+    schedule: {
+      title: 'Vytížení',
+      icon: Clock,
+      stats: [
+        { label: 'Nejčastější den', value: `${trends.busiestDay} (${trends.busiestDayCount}×)` },
+        ...(trends.dayDistribution?.slice(0, 3).map((d, i) => ({
+          label: d.day,
+          value: `${d.count}×`,
+          separator: i === 0,
+        })) || []),
+      ],
+    },
+    topClients: {
+      title: 'Top klienti',
+      icon: Crown,
+      stats: trends.topClients?.map((c, i) => ({
+        label: `${i + 1}. ${c.name}`,
+        value: formatCurrency(c.value),
+        highlight: i === 0,
+      })) || [],
     },
   };
   
@@ -293,6 +337,47 @@ export function TrendsPanelSection({ data, isLoading }: TrendsPanelSectionProps)
                 current={trends.productShare}
                 previous={15}
                 onClick={() => setActiveDetail('products')}
+              />
+              
+              {/* New cards */}
+              <TrendCard
+                icon={Trophy}
+                label={`Rok ${new Date().getFullYear()}`}
+                value={`${trends.yearlyHours} h`}
+                subValue={formatCurrency(trends.yearlyIncome)}
+                current={trends.yearlyHours}
+                previous={trends.yearlyHours * 0.9}
+                onClick={() => setActiveDetail('yearly')}
+              />
+              
+              <TrendCard
+                icon={Users}
+                label="Klienti"
+                value={`${trends.activeClients} aktivních`}
+                subValue={`z ${trends.totalClients} celkem`}
+                current={trends.activeClients}
+                previous={trends.lastMonthActiveClients}
+                onClick={() => setActiveDetail('clients')}
+              />
+              
+              <TrendCard
+                icon={Clock}
+                label="Vytížení"
+                value={trends.busiestDay}
+                subValue={`${trends.busiestDayCount}× tréninků`}
+                current={trends.busiestDayCount}
+                previous={trends.busiestDayCount * 0.8}
+                onClick={() => setActiveDetail('schedule')}
+              />
+              
+              <TrendCard
+                icon={Crown}
+                label="Top klient"
+                value={formatCurrency(trends.topClientValue)}
+                subValue={trends.topClientName}
+                current={trends.topClientValue}
+                previous={trends.topClientValue * 0.8}
+                onClick={() => setActiveDetail('topClients')}
               />
             </div>
           </CardContent>
