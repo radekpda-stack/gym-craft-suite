@@ -7,10 +7,13 @@ import {
   Clock,
   AlertCircle,
   Banknote,
+  User,
+  Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel } from '@/hooks/useDashboardViewModel';
@@ -104,6 +107,8 @@ function FinanceDetailDialog({ type, onClose, finance }: FinanceDetailDialogProp
     ? Math.round(((finance.avgPerTraining - finance.lastMonthAvgPerTraining) / finance.lastMonthAvgPerTraining) * 100)
     : 0;
   
+  const { trainingsByParticipants } = finance;
+  
   const configs = {
     income: {
       title: 'Měsíční příjem',
@@ -129,6 +134,24 @@ function FinanceDetailDialog({ type, onClose, finance }: FinanceDetailDialogProp
   const config = configs[type];
   const Icon = config.icon;
   
+  const participantRows = [
+    { 
+      icon: User, 
+      label: '1 osoba', 
+      data: trainingsByParticipants.solo 
+    },
+    { 
+      icon: Users, 
+      label: '2 osoby', 
+      data: trainingsByParticipants.duo 
+    },
+    { 
+      icon: Users, 
+      label: '3+ osob', 
+      data: trainingsByParticipants.group 
+    },
+  ];
+  
   return (
     <Dialog open={!!type} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-sm">
@@ -151,6 +174,37 @@ function FinanceDetailDialog({ type, onClose, finance }: FinanceDetailDialogProp
               </span>
             </div>
           ))}
+          
+          {type === 'avgPerTraining' && (
+            <>
+              <Separator className="my-3" />
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Podle počtu osob
+              </p>
+              {participantRows.map((row, i) => {
+                const RowIcon = row.icon;
+                return (
+                  <div 
+                    key={i} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RowIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">{row.label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-foreground">
+                        {row.data.count}×
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {row.data.count > 0 ? `⌀ ${formatCurrency(row.data.avgPrice)}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
