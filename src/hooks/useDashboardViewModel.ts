@@ -437,8 +437,9 @@ export function useDashboardViewModel() {
         .filter((t: any) => t.status === 'completed')
         .reduce((sum: number, t: any) => sum + (t.final_price || 0), 0);
       
-      const completedThisMonth = thisMonthTrainings.filter((t: any) => t.status === 'completed').length;
-      const avgPerTraining = completedThisMonth > 0 ? Math.round(thisMonthIncome / completedThisMonth) : 0;
+      // Count only trainings with filled price for average calculation
+      const trainingsWithPrice = thisMonthTrainings.filter((t: any) => t.status === 'completed' && t.final_price && t.final_price > 0);
+      const avgPerTraining = trainingsWithPrice.length > 0 ? Math.round(thisMonthIncome / trainingsWithPrice.length) : 0;
       
       const incomeChange = lastMonthIncome > 0 
         ? Math.round(((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100) 
