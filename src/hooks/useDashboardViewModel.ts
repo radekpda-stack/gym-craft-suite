@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, differenceInDays } from 'date-fns';
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, differenceInDays, startOfYear, endOfYear } from 'date-fns';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { Status } from '@/lib/statusUtils';
 
@@ -69,6 +69,30 @@ export interface TrendData {
   totalRevenue: number;
   creditsReceived: number;        // Celkem přijatých kreditů tento měsíc
   creditsReceivedCount: number;   // Počet transakcí dobití
+  
+  // Roční statistiky
+  yearlyHours: number;           // Odtrénované hodiny za rok
+  yearlyIncome: number;          // Celkový příjem za rok
+  avgHourlyRate: number;         // Průměrná hodinovka
+  
+  // Aktivita klientů
+  activeClients: number;         // Aktivní klienti (30 dní)
+  totalClients: number;          // Celkem klientů
+  newClientsThisMonth: number;   // Noví klienti tento měsíc
+  retentionRate: number;         // Retence %
+  retainedClients: number;       // Počet vrátivších se klientů
+  lastMonthActiveClients: number; // Aktivní minulý měsíc
+  
+  // Časové vzorce
+  busiestDay: string;            // Nejčastější den (např. "Čtvrtek")
+  busiestDayCount: number;       // Počet tréninků v ten den
+  dayDistribution: Array<{day: string; count: number}>;
+  hourDistribution: Array<{hour: number; count: number}>;
+  
+  // Top klienti
+  topClientName: string;
+  topClientValue: number;
+  topClients: Array<{name: string; value: number}>;
 }
 
 export interface ScheduleItem {
@@ -146,6 +170,9 @@ export function useDashboardViewModel() {
       const monthEnd = endOfMonth(now);
       const lastMonthStart = startOfMonth(subMonths(now, 1));
       const lastMonthEnd = endOfMonth(subMonths(now, 1));
+      const yearStart = startOfYear(now);
+      const yearEnd = endOfYear(now);
+      const thirtyDaysAgo = subDays(now, 30);
       const sevenDaysAgo = subDays(now, 7);
       const threeDaysAgo = subDays(now, 3);
       
@@ -167,6 +194,13 @@ export function useDashboardViewModel() {
         unpaidResult,
         creditTransactionsResult,
         productTransactionsResult,
+        // New queries for trends
+        yearlyTrainingsResult,
+        activeClientsResult,
+        lastMonthActiveClientsResult,
+        newClientsResult,
+        allCompletedTrainingsResult,
+        lifetimeValueResult,
       ] = await Promise.all([
         // Today's trainings
         supabase
@@ -187,7 +221,7 @@ export function useDashboardViewModel() {
         // All clients with credit balance
         supabase
           .from('clients')
-          .select('id, name, credit_balance, payment_mode, is_archived')
+          .select('id, name, credit_balance, payment_mode, is_archived, created_at')
           .eq('is_archived', false),
         
         // Budget group members (to exclude from low credit)
@@ -260,6 +294,48 @@ export function useDashboardViewModel() {
           .eq('type', 'product')
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString()),
+        
+        // Yearly trainings (for yearly stats)
+        supabase
+          .from('training_sessions')
+          .select('id, date, status, final_price')
+          .gte('date', yearStart.toISOString())
+          .lte('date', yearEnd.toISOString())
+          .eq('status', 'completed'),
+        
+        // Active clients (last 30 days) via training_participants
+        supabase
+          .from('training_participants')
+          .select('client_id, training_session_id, training_sessions!inner(date, status)')
+          .gte('training_sessions.date', thirtyDaysAgo.toISOString())
+          .eq('training_sessions.status', 'completed'),
+        
+        // Last month active clients (for retention)
+        supabase
+          .from('training_participants')
+          .select('client_id, training_session_id, training_sessions!inner(date, status)')
+          .gte('training_sessions.date', lastMonthStart.toISOString())
+          .lte('training_sessions.date', lastMonthEnd.toISOString())
+          .eq('training_sessions.status', 'completed'),
+        
+        // New clients this month
+        supabase
+          .from('clients')
+          .select('id')
+          .gte('created_at', monthStart.toISOString())
+          .eq('is_archived', false),
+        
+        // All completed trainings for day/hour distribution
+        supabase
+          .from('training_sessions')
+          .select('id, date')
+          .eq('status', 'completed'),
+        
+        // Lifetime value - all debit transactions per client
+        supabase
+          .from('credit_transactions')
+          .select('client_id, amount, clients(name)')
+          .lt('amount', 0),
       ]);
       
       const dismissedIds = getDismissedIds();
@@ -544,6 +620,83 @@ export function useDashboardViewModel() {
       const creditsReceived = creditTransactions.reduce((sum: number, t: any) => sum + (t.amount > 0 ? t.amount : 0), 0);
       const creditsReceivedCount = creditTransactions.filter((t: any) => t.amount > 0).length;
       
+      // ===== YEARLY STATS =====
+      const yearlyTrainings = yearlyTrainingsResult.data || [];
+      const yearlyHours = yearlyTrainings.length; // 1 training = 1 hour
+      const yearlyIncome = yearlyTrainings.reduce((sum: number, t: any) => sum + (t.final_price || 0), 0);
+      const avgHourlyRate = yearlyHours > 0 ? Math.round(yearlyIncome / yearlyHours) : 0;
+      
+      // ===== CLIENT ACTIVITY =====
+      const activeClientIds = new Set((activeClientsResult.data || []).map((p: any) => p.client_id));
+      const activeClients = activeClientIds.size;
+      const totalClients = (clientsResult.data || []).length;
+      const newClientsThisMonth = (newClientsResult.data || []).length;
+      
+      // Retention - clients active this month who were also active last month
+      const lastMonthActiveClientIds = new Set((lastMonthActiveClientsResult.data || []).map((p: any) => p.client_id));
+      const thisMonthActiveClientIds = new Set(
+        (activeClientsResult.data || [])
+          .filter((p: any) => {
+            const date = new Date((p.training_sessions as any)?.date);
+            return date >= monthStart && date <= monthEnd;
+          })
+          .map((p: any) => p.client_id)
+      );
+      const retainedClients = [...lastMonthActiveClientIds].filter(id => thisMonthActiveClientIds.has(id)).length;
+      const lastMonthActiveClients = lastMonthActiveClientIds.size;
+      const retentionRate = lastMonthActiveClients > 0 
+        ? Math.round((retainedClients / lastMonthActiveClients) * 100) 
+        : 0;
+      
+      // ===== DAY/HOUR DISTRIBUTION =====
+      const allCompletedTrainings = allCompletedTrainingsResult.data || [];
+      const dayNames = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
+      const dayCountMap = new Map<number, number>();
+      const hourCountMap = new Map<number, number>();
+      
+      allCompletedTrainings.forEach((t: any) => {
+        const date = new Date(t.date);
+        const day = date.getDay();
+        const hour = date.getHours();
+        dayCountMap.set(day, (dayCountMap.get(day) || 0) + 1);
+        hourCountMap.set(hour, (hourCountMap.get(hour) || 0) + 1);
+      });
+      
+      const dayDistribution = dayNames.map((day, idx) => ({
+        day,
+        count: dayCountMap.get(idx) || 0,
+      })).sort((a, b) => b.count - a.count);
+      
+      const hourDistribution = Array.from(hourCountMap.entries())
+        .map(([hour, count]) => ({ hour, count }))
+        .sort((a, b) => b.count - a.count);
+      
+      const busiestDay = dayDistribution[0]?.day || 'N/A';
+      const busiestDayCount = dayDistribution[0]?.count || 0;
+      
+      // ===== TOP CLIENTS (LIFETIME VALUE) =====
+      const lifetimeData = lifetimeValueResult.data || [];
+      const clientSpendMap = new Map<string, { name: string; value: number }>();
+      
+      lifetimeData.forEach((t: any) => {
+        const clientId = t.client_id;
+        const clientName = (t.clients as any)?.name || 'Neznámý';
+        const amount = Math.abs(t.amount || 0);
+        
+        if (clientSpendMap.has(clientId)) {
+          clientSpendMap.get(clientId)!.value += amount;
+        } else {
+          clientSpendMap.set(clientId, { name: clientName, value: amount });
+        }
+      });
+      
+      const topClients = Array.from(clientSpendMap.values())
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+      
+      const topClientName = topClients[0]?.name || 'N/A';
+      const topClientValue = topClients[0]?.value || 0;
+      
       const trends: TrendData = {
         trainingsThisMonth: thisMonthCompletedCount,
         trainingsLastMonth: lastMonthCompletedCount,
@@ -559,6 +712,23 @@ export function useDashboardViewModel() {
         totalRevenue,
         creditsReceived,
         creditsReceivedCount,
+        // New metrics
+        yearlyHours,
+        yearlyIncome,
+        avgHourlyRate,
+        activeClients,
+        totalClients,
+        newClientsThisMonth,
+        retentionRate,
+        retainedClients,
+        lastMonthActiveClients,
+        busiestDay,
+        busiestDayCount,
+        dayDistribution,
+        hourDistribution,
+        topClientName,
+        topClientValue,
+        topClients,
       };
       
       // ===== DAY STATUS =====
