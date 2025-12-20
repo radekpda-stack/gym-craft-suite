@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus,
   X,
@@ -45,6 +45,14 @@ const quickActionsConfig: QuickAction[] = [
 ];
 
 export function QuickActionButton() {
+  const location = useLocation();
+
+  // Calendar page already has its own context-aware "+" (with prefilled date/time).
+  // Rendering both FABs causes overlap and "divný rozměr" on mobile.
+  if (location.pathname.startsWith('/calendar')) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -118,7 +126,7 @@ export function QuickActionButton() {
   return (
     <>
       {/* FAB Button */}
-      <div className="fixed bottom-[88px] right-4 z-[60] md:bottom-6 lg:right-6">
+      <div className="fixed right-4 lg:right-6 bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-[calc(24px+env(safe-area-inset-bottom))] z-[60]">
         <AnimatePresence>
           {isOpen && (
             <>
