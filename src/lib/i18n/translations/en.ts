@@ -306,6 +306,21 @@ export const en: TranslationKeys = {
     autoBackupDesc: 'Weekly backup of all data',
     exportAll: 'Export all',
     importData: 'Import data',
+    
+    // Calendar sharing
+    calendarSharing: 'Calendar Sharing',
+    calendarSharingDesc: 'Invite other trainers to view your calendar',
+    inviteTrainer: 'Invite trainer',
+    enterEmail: 'Trainer email',
+    sendInvitation: 'Send invitation',
+    myShares: 'Who I share with',
+    sharedWithMe: 'Shared with me',
+    pendingInvitations: 'Pending invitations',
+    noShares: "You haven't shared your calendar with anyone yet",
+    noSharedWithMe: "No one has shared their calendar with you yet",
+    acceptInvite: 'Accept',
+    rejectInvite: 'Reject',
+    removeShare: 'Remove share',
   },
 
   // Quick credit

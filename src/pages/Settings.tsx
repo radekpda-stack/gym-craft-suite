@@ -15,6 +15,7 @@ import {
   BookOpen,
   Wrench,
   Users,
+  Calendar,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -28,6 +29,7 @@ import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
+import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -128,6 +130,13 @@ export default function Settings() {
           description: language === 'cs' ? 'Používá se pro přehled v kalendáři' : 'Used for calendar overview',
           icon: Gauge,
           content: <CapacitySettingsPanel />,
+        },
+        {
+          id: 'calendar-sharing',
+          title: language === 'cs' ? 'Sdílení kalendáře' : 'Calendar Sharing',
+          description: language === 'cs' ? 'Pozvěte jiné trenéry k zobrazení vašeho kalendáře' : 'Invite other trainers to view your calendar',
+          icon: Calendar,
+          content: <CalendarSharingSettings />,
         },
       ],
     },

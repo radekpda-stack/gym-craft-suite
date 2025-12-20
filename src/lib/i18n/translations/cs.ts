@@ -304,6 +304,21 @@ export const cs = {
     autoBackupDesc: 'Týdenní záloha všech dat',
     exportAll: 'Exportovat vše',
     importData: 'Import dat',
+    
+    // Calendar sharing
+    calendarSharing: 'Sdílení kalendáře',
+    calendarSharingDesc: 'Pozvěte jiné trenéry k zobrazení vašeho kalendáře',
+    inviteTrainer: 'Pozvat trenéra',
+    enterEmail: 'Email trenéra',
+    sendInvitation: 'Odeslat pozvánku',
+    myShares: 'Komu sdílím',
+    sharedWithMe: 'Kdo mi sdílí',
+    pendingInvitations: 'Čekající pozvánky',
+    noShares: 'Zatím nikomu nesdílíte kalendář',
+    noSharedWithMe: 'Nikdo vám zatím nesdílí kalendář',
+    acceptInvite: 'Přijmout',
+    rejectInvite: 'Odmítnout',
+    removeShare: 'Zrušit sdílení',
   },
 
   // Quick credit
