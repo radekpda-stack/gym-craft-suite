@@ -113,6 +113,7 @@ interface TrainingDetailViewProps {
   tagIds: string[];
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
+  onTagsChange?: (tagIds: string[]) => Promise<void>;
 }
 
 const statusColors = {
@@ -134,7 +135,8 @@ export function TrainingDetailView({
   isLoading,
   tagIds: initialTagIds,
   onDelete,
-  isDeleting 
+  isDeleting,
+  onTagsChange,
 }: TrainingDetailViewProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
@@ -501,17 +503,16 @@ export function TrainingDetailView({
               <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="text-xs sm:text-sm font-medium">Tagy</span>
             </div>
-            {isEditMode ? (
-              <TrainingTagsSelector
-                selectedTagIds={selectedTagIds}
-                onChange={setSelectedTagIds}
-              />
-            ) : (
-              <TrainingTagsSelector
-                selectedTagIds={selectedTagIds}
-                onChange={() => {}}
-              />
-            )}
+            <TrainingTagsSelector
+              selectedTagIds={selectedTagIds}
+              onChange={(newTagIds) => {
+                setSelectedTagIds(newTagIds);
+                // Save tags immediately if not in edit mode
+                if (!isEditMode && onTagsChange) {
+                  onTagsChange(newTagIds);
+                }
+              }}
+            />
           </div>
         </div>
 

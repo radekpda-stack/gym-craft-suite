@@ -354,6 +354,12 @@ export default function TrainingDetail() {
         tagIds={trainingTags.map(t => t.tag_id)}
         onDelete={handleDelete}
         isDeleting={deleteTraining.isPending}
+        onTagsChange={async (tagIds) => {
+          await updateTrainingTags.mutateAsync({
+            trainingSessionId: training.id,
+            tagIds,
+          });
+        }}
       />
 
       {/* Action Buttons - Only for scheduled trainings */}
