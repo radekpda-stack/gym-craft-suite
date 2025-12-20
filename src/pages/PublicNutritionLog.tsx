@@ -722,7 +722,12 @@ function CoffeeEntryCard({ entry, language }: { entry: any; language: Language }
         <div className="text-2xl">☕</div>
         <div className="flex-1">
           <p className="font-medium">{entry.coffee_type}{entry.count > 1 ? ` ×${entry.count}` : ''}</p>
-          <p className="text-xs text-muted-foreground">{entry.entry_time?.slice(0, 5)}</p>
+          <p className="text-xs text-muted-foreground">
+            {entry.entry_time?.slice(0, 5)}
+            {entry.after_16 && (
+              <span className="ml-2 text-amber-600">• {language === 'cs' ? 'po 16:00' : 'after 4PM'}</span>
+            )}
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -736,7 +741,7 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
   const [description, setDescription] = useState('');
   const [portionSize, setPortionSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [quality, setQuality] = useState<'good' | 'normal' | 'poor' | ''>('');
+  
   const [satiation, setSatiation] = useState<'just_right' | 'still_hungry' | 'overate' | ''>('');
   const [feeling, setFeeling] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -751,7 +756,6 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
         meal_type: mealType,
         portion_mode: 'portion_size',
         portion_size: portionSize,
-        quality: quality || null,
         satiation: satiation || null,
         feeling_after: feeling || null,
       });
@@ -844,52 +848,6 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
           ))}
         </div>
         <p className="text-xs text-muted-foreground mt-1 text-center">{tr.portionHint}</p>
-      </div>
-
-      {/* Quality - 3 colored buttons */}
-      <div>
-        <div className="flex items-center gap-1 mb-2">
-          <Label className="text-sm text-muted-foreground">{tr.quality}</Label>
-          <span className="text-xs text-muted-foreground/60" title={tr.qualityHint}>ⓘ</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => setQuality('good')}
-            className={cn(
-              "p-3 rounded-xl border-2 transition-all text-center",
-              quality === 'good' 
-                ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400" 
-                : "border-border hover:border-green-500/50"
-            )}
-          >
-            <span className="text-lg">🟢</span>
-            <p className="text-xs mt-1">{tr.qualityGood}</p>
-          </button>
-          <button
-            onClick={() => setQuality('normal')}
-            className={cn(
-              "p-3 rounded-xl border-2 transition-all text-center",
-              quality === 'normal' 
-                ? "border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" 
-                : "border-border hover:border-yellow-500/50"
-            )}
-          >
-            <span className="text-lg">🟡</span>
-            <p className="text-xs mt-1">{tr.qualityNormal}</p>
-          </button>
-          <button
-            onClick={() => setQuality('poor')}
-            className={cn(
-              "p-3 rounded-xl border-2 transition-all text-center",
-              quality === 'poor' 
-                ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400" 
-                : "border-border hover:border-red-500/50"
-            )}
-          >
-            <span className="text-lg">🔴</span>
-            <p className="text-xs mt-1">{tr.qualityPoor}</p>
-          </button>
-        </div>
       </div>
 
       {/* Satiation - NEW */}
@@ -1087,7 +1045,14 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
   const [coffeeType, setCoffeeType] = useState('espresso');
   const [count, setCount] = useState<'1' | '2' | '3+'>('1');
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
+  const [after16, setAfter16] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Auto-detect if current time is after 16:00
+  useEffect(() => {
+    const hour = parseInt(time.split(':')[0]);
+    setAfter16(hour >= 16);
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -1096,6 +1061,7 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
         entry_time: time,
         coffee_type: coffeeType,
         count: count === '3+' ? 3 : parseInt(count),
+        after_16: after16,
       });
     } finally {
       setIsSaving(false);
@@ -1161,6 +1127,25 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
               {c}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* After 16:00 checkbox */}
+      <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30">
+        <button
+          onClick={() => setAfter16(!after16)}
+          className={cn(
+            "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
+            after16 
+              ? "border-amber-600 bg-amber-600 text-white" 
+              : "border-border hover:border-amber-600/50"
+          )}
+        >
+          {after16 && <Check className="h-4 w-4" />}
+        </button>
+        <div>
+          <p className="text-sm font-medium">{language === 'cs' ? 'Po 16:00' : 'After 4 PM'}</p>
+          <p className="text-xs text-muted-foreground">{language === 'cs' ? 'Káva po 16. hodině' : 'Coffee after 4 PM'}</p>
         </div>
       </div>
 
