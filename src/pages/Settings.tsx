@@ -16,6 +16,7 @@ import {
   Wrench,
   Users,
   Calendar,
+  Download,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -30,6 +31,7 @@ import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
+import { DataExport } from '@/components/settings/DataExport';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -206,6 +208,13 @@ export default function Settings() {
           description: language === 'cs' ? 'Export PDF reportů a statistik' : 'Export PDF reports and statistics',
           icon: FileBarChart2,
           content: <AnnualStatsExport />,
+        },
+        {
+          id: 'data-export',
+          title: language === 'cs' ? 'Export dat' : 'Data Export',
+          description: language === 'cs' ? 'Export všech dat pro analýzu nebo zálohu' : 'Export all data for analysis or backup',
+          icon: Download,
+          content: <DataExport />,
         },
         // Feature usage stats - only visible for admin
         ...(isAdmin ? [{
