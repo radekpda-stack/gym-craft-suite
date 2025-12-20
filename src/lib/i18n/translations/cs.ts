@@ -148,6 +148,15 @@ export const cs = {
     bulkDelete: 'Hromadné smazání',
     selectAll: 'Vybrat vše',
     deselectAll: 'Zrušit výběr',
+    trainingCounts: 'Přehled tréninků',
+    thisMonth: 'Tento měsíc',
+    last3Months: 'Posl. 3 měsíce',
+    last6Months: 'Posl. 6 měsíců',
+    thisYear: 'Letos',
+    lastYear: 'Loni',
+    totalTrainings: 'tréninků celkem',
+    averagePerMonth: 'Průměr/měsíc',
+    firstTraining: 'První trénink',
   },
 
   // Trainings
