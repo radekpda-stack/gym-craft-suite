@@ -24,6 +24,12 @@ interface BusinessAnalyticsData {
   revenuePerClient: number;
   totalRevenue: number;
   
+  // Retention details
+  totalClientsWithHistory: number;
+  churnedClientsCount: number;
+  retentionPeriodDays: number;
+  avgRetention6Months: number;
+  
   // Trends
   retentionTrend: RetentionPoint[];
   incomeTrend: IncomePoint[];
@@ -260,6 +266,11 @@ export function useBusinessAnalytics() {
       const thisMonthClientIds = new Set(thisMonthTrainings.map(t => t.client_id));
       const lastMonthClientIds = new Set(lastMonthTrainings.map(t => t.client_id));
 
+      // Calculate average retention from trend
+      const avgRetention6Months = retentionTrend.length > 0
+        ? Math.round(retentionTrend.reduce((sum, p) => sum + p.retentionRate, 0) / retentionTrend.length)
+        : 0;
+
       return {
         activeClientsCount,
         churnRate,
@@ -267,6 +278,11 @@ export function useBusinessAnalytics() {
         averageClientLifetimeMonths: avgLifetime,
         revenuePerClient,
         totalRevenue: thisMonthRevenue,
+        // Retention details
+        totalClientsWithHistory: totalClientsEver,
+        churnedClientsCount: churnedClients,
+        retentionPeriodDays: 60,
+        avgRetention6Months,
         retentionTrend,
         incomeTrend,
         predictedMonthlyIncome: predicted1,

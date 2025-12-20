@@ -7,7 +7,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from 'recharts';
 import { 
@@ -18,14 +18,20 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  Target,
   Clock,
   Percent,
+  UserMinus,
+  Info,
 } from 'lucide-react';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function BusinessAnalyticsCard() {
   const { data, isLoading } = useBusinessAnalytics();
@@ -105,15 +111,86 @@ export function BusinessAnalyticsCard() {
           <TrendBadge value={data.vsLastMonth.revenue} />
         </div>
 
-        {/* Retention */}
-        <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-1 mb-0.5">
-            <Percent className="w-3 h-3 text-warning" />
-            <span className="text-[10px] text-muted-foreground">Retence</span>
-          </div>
-          <p className="text-lg font-bold text-foreground">{data.retentionRate}%</p>
-          <p className="text-[10px] text-muted-foreground">churn {data.churnRate}%</p>
-        </div>
+        {/* Retention - enhanced */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "p-2.5 rounded-xl border cursor-help transition-colors",
+                data.retentionRate >= 80 
+                  ? "bg-success/10 border-success/20" 
+                  : data.retentionRate >= 60 
+                    ? "bg-warning/10 border-warning/20"
+                    : "bg-destructive/10 border-destructive/20"
+              )}>
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Percent className={cn(
+                    "w-3 h-3",
+                    data.retentionRate >= 80 
+                      ? "text-success" 
+                      : data.retentionRate >= 60 
+                        ? "text-warning"
+                        : "text-destructive"
+                  )} />
+                  <span className="text-[10px] text-muted-foreground">Retence ({data.retentionPeriodDays}d)</span>
+                  <Info className="w-2.5 h-2.5 text-muted-foreground/50" />
+                </div>
+                <p className={cn(
+                  "text-lg font-bold",
+                  data.retentionRate >= 80 
+                    ? "text-success" 
+                    : data.retentionRate >= 60 
+                      ? "text-warning"
+                      : "text-destructive"
+                )}>
+                  {data.retentionRate}%
+                </p>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span>{data.activeClientsCount} z {data.totalClientsWithHistory}</span>
+                  {data.churnedClientsCount > 0 && (
+                    <span className="flex items-center gap-0.5 text-destructive/80">
+                      <UserMinus className="w-2.5 h-2.5" />
+                      {data.churnedClientsCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[220px] p-3">
+              <div className="space-y-2 text-xs">
+                <p className="font-semibold">Retence {data.retentionPeriodDays} dnů</p>
+                <p className="text-muted-foreground">
+                  Procento klientů, kteří pokračují v tréninku
+                </p>
+                <div className="space-y-1 pt-1 border-t border-border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Aktivní:</span>
+                    <span className="font-medium">{data.activeClientsCount} klientů</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Odešli:</span>
+                    <span className="font-medium text-destructive">{data.churnedClientsCount} klientů</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Celkem s historií:</span>
+                    <span className="font-medium">{data.totalClientsWithHistory}</span>
+                  </div>
+                </div>
+                <div className="pt-1 border-t border-border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ø 6 měsíců:</span>
+                    <span className="font-medium">{data.avgRetention6Months}%</span>
+                  </div>
+                </div>
+                <div className="pt-1 text-[10px] text-muted-foreground/70">
+                  {data.retentionRate >= 80 ? '🟢 Výborná retence' : 
+                   data.retentionRate >= 60 ? '🟠 Průměrná retence' : 
+                   '🔴 Vyžaduje pozornost'}
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Income prediction chart */}
@@ -147,7 +224,7 @@ export function BusinessAnalyticsCard() {
                 axisLine={false}
                 tickFormatter={(v) => `${Math.round(v / 1000)}k`}
               />
-              <Tooltip
+              <RechartsTooltip
                 contentStyle={{
                   backgroundColor: 'hsl(var(--popover))',
                   border: '1px solid hsl(var(--border))',
@@ -229,7 +306,14 @@ export function BusinessAnalyticsCard() {
 
           {/* Retention trend */}
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Trend retence klientů</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                Kolik % klientů z minulého měsíce pokračovalo
+              </p>
+              <span className="text-[10px] text-muted-foreground/70">
+                Ø {data.avgRetention6Months}%
+              </span>
+            </div>
             <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.retentionTrend} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -247,21 +331,32 @@ export function BusinessAnalyticsCard() {
                     axisLine={false}
                     tickFormatter={(v) => `${v}%`}
                   />
-                  <Tooltip
+                  <RechartsTooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                       fontSize: '11px',
                     }}
-                    formatter={(value: number) => [`${value}%`, 'Retence']}
+                    formatter={(value: number, _name: string, props: any) => {
+                      const point = props.payload;
+                      return [
+                        <div key="tooltip" className="space-y-0.5">
+                          <div className="font-semibold">{value}% retence</div>
+                          <div className="text-muted-foreground">
+                            {point.activeClients} aktivních, {point.churnedClients} odešlo
+                          </div>
+                        </div>,
+                        ''
+                      ];
+                    }}
                   />
                   <Line
                     type="monotone"
                     dataKey="retentionRate"
-                    stroke="hsl(var(--warning))"
+                    stroke={`hsl(var(--${data.retentionRate >= 80 ? 'success' : data.retentionRate >= 60 ? 'warning' : 'destructive'}))`}
                     strokeWidth={2}
-                    dot={{ r: 3, fill: 'hsl(var(--warning))' }}
+                    dot={{ r: 3, fill: `hsl(var(--${data.retentionRate >= 80 ? 'success' : data.retentionRate >= 60 ? 'warning' : 'destructive'}))` }}
                   />
                 </LineChart>
               </ResponsiveContainer>
