@@ -116,6 +116,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [painAreaOther, setPainAreaOther] = useState('');
   const [painType, setPainType] = useState<'muscle' | 'joint' | null>(null);
   const [sleepAfter, setSleepAfter] = useState<'poor' | 'average' | 'good' | null>(null);
+  const [sleepHours, setSleepHours] = useState<number>(7.5);
   const [note, setNote] = useState('');
 
   const questionsConfig = formData?.questionsConfig ?? DEFAULT_QUESTIONS_CONFIG;
@@ -219,6 +220,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           pain_area_other: showPainArea && painSelections.some(s => s.area === 'other') ? painAreaOther : undefined,
           pain_type: showPainArea && painType ? painType : undefined,
           sleep_after: sleepAfter || undefined,
+          sleep_hours: sleepHours,
           note: note || undefined,
         },
       });
@@ -497,6 +499,32 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               )}
             </div>
           ))}
+
+          {/* Sleep Hours Slider */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-medium">
+                    🕐 Kolik hodin jsi spal/a?
+                  </Label>
+                  <span className="text-2xl font-bold text-primary">{sleepHours}h</span>
+                </div>
+                <Slider
+                  value={[sleepHours]}
+                  onValueChange={([v]) => setSleepHours(v)}
+                  min={4}
+                  max={12}
+                  step={0.5}
+                  className="py-2"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>4h</span>
+                  <span>12h</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Sleep After Training Question */}
           <Card>
