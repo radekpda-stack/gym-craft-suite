@@ -14,10 +14,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tag } from '@/hooks/useTags';
 
 interface TrainingCardProps {
   session: TrainingSession;
   client?: Client | null;
+  tags?: Tag[];
   className?: string;
   onComplete?: () => void;
   onCancel?: () => void;
@@ -39,6 +41,7 @@ const getBorderColor = (status: string, paymentStatus?: string | null) => {
 export function TrainingCard({
   session,
   client,
+  tags,
   className,
   onComplete,
   onCancel,
@@ -109,6 +112,24 @@ export function TrainingCard({
                 <Repeat className="w-3 h-3 text-primary" />
               )}
             </div>
+            
+            {/* Tags row */}
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="px-1.5 py-0.5 text-[10px] font-medium rounded-full"
+                    style={{ 
+                      backgroundColor: `${tag.color}20`, 
+                      color: tag.color 
+                    }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
             
             {/* Note - single line with ellipsis */}
             {session.notes && (

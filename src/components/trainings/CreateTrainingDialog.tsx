@@ -3,6 +3,7 @@ import { EnhancedTrainingForm, EnhancedTrainingFormValues } from "./EnhancedTrai
 import { useClients } from "@/hooks/useClients";
 import { useTrainingPrices } from "@/hooks/useAppSettings";
 import { useCreateTrainingSession } from "@/hooks/useTrainingSessions";
+import { useAddTrainingSessionTags } from "@/hooks/useTrainingSessionTags";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 
@@ -24,6 +25,7 @@ export function CreateTrainingDialog({
   const { data: clients = [] } = useClients();
   const trainingPrices = useTrainingPrices();
   const createTraining = useCreateTrainingSession();
+  const addTrainingTags = useAddTrainingSessionTags();
 
   const defaultValues: Partial<EnhancedTrainingFormValues> = { ...propDefaultValues };
   
@@ -37,7 +39,7 @@ export function CreateTrainingDialog({
 
   const handleSubmit = async (data: EnhancedTrainingFormValues, tagIds: string[]) => {
     try {
-      await createTraining.mutateAsync({
+      const result = await createTraining.mutateAsync({
         client_id: data.client_id,
         date: new Date(data.date).toISOString(),
         duration: data.duration,
@@ -45,6 +47,15 @@ export function CreateTrainingDialog({
         status: 'scheduled',
         participant_count: data.participant_count,
       });
+      
+      // Save tags if any were selected
+      if (tagIds.length > 0 && result?.session?.id) {
+        await addTrainingTags.mutateAsync({
+          trainingSessionId: result.session.id,
+          tagIds,
+        });
+      }
+      
       toast({ title: "Trénink vytvořen" });
       onOpenChange(false);
     } catch (error) {

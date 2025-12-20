@@ -12,7 +12,7 @@ import {
   useUpdateTrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
-import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
+import { useAddTrainingSessionTags, useAllTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { TrainingCard } from '@/components/trainings/TrainingCard';
@@ -55,6 +55,7 @@ export default function Trainings() {
   const updateTraining = useUpdateTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
+  const { data: sessionTagsMap = {} } = useAllTrainingSessionTags();
 
   // Filter sessions by time period
   const filterByTime = (sessionList: typeof sessions, filter: TimeFilter) => {
@@ -398,6 +399,7 @@ export default function Trainings() {
                     <TrainingCard
                       session={session}
                       client={client}
+                      tags={sessionTagsMap[session.id]}
                       onComplete={() => handleCompleteTraining(session.id)}
                       onCancel={() => handleCancelTraining(session.id)}
                       onPay={() => handleOpenPayment(session.id, client?.name || 'Klient')}
