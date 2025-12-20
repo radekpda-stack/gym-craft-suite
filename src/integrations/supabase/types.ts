@@ -2824,24 +2824,36 @@ export type Database = {
       }
       tags: {
         Row: {
+          affects_credit: boolean | null
+          affects_load: boolean | null
           color: string
           created_at: string
           id: string
+          is_system: boolean | null
           name: string
+          tag_type: string | null
           user_id: string | null
         }
         Insert: {
+          affects_credit?: boolean | null
+          affects_load?: boolean | null
           color?: string
           created_at?: string
           id?: string
+          is_system?: boolean | null
           name: string
+          tag_type?: string | null
           user_id?: string | null
         }
         Update: {
+          affects_credit?: boolean | null
+          affects_load?: boolean | null
           color?: string
           created_at?: string
           id?: string
+          is_system?: boolean | null
           name?: string
+          tag_type?: string | null
           user_id?: string | null
         }
         Relationships: []
