@@ -9,14 +9,15 @@ import {
   Wallet,
   MoreHorizontal,
   Calendar,
-  AlertCircle,
   Star,
   Link as LinkIcon,
   Pencil,
   Trash2,
   Archive,
   ArchiveRestore,
-  AlertTriangle,
+  CreditCard,
+  MessageSquareWarning,
+  HeartPulse,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,10 +94,11 @@ export const ClientCard = memo(function ClientCard({
   onArchive,
   onToggleFavorite,
 }: ClientCardProps) {
-  const totalUnresolved = 
-    unresolvedItems.unpaidCount + 
-    unresolvedItems.missingFeedback + 
-    (unresolvedItems.hasHealthRestrictions ? 1 : 0);
+  // Check if any unresolved items exist
+  const hasAnyUnresolved = 
+    unresolvedItems.unpaidCount > 0 || 
+    unresolvedItems.missingFeedback > 0 || 
+    unresolvedItems.hasHealthRestrictions;
 
   // Determine status color for left border
   const getStatusColor = () => {
@@ -201,27 +203,44 @@ export const ClientCard = memo(function ClientCard({
             </span>
           )}
 
-          {/* Unresolved items counter */}
-          {totalUnresolved > 0 && (
+          {/* Separate indicators for each issue type */}
+          {unresolvedItems.unpaidCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="flex items-center gap-1 text-destructive font-medium cursor-help">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {totalUnresolved}
+                <span className="flex items-center gap-0.5 text-destructive font-medium cursor-help">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span className="text-xs">{unresolvedItems.unpaidCount}</span>
                 </span>
               </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="text-sm space-y-1">
-                  {unresolvedItems.unpaidCount > 0 && (
-                    <p>• {unresolvedItems.unpaidCount}× neuhrazený trénink ({formatCurrency(unresolvedItems.unpaidTotal)})</p>
-                  )}
-                  {unresolvedItems.missingFeedback > 0 && (
-                    <p>• {unresolvedItems.missingFeedback}× chybí feedback</p>
-                  )}
-                  {unresolvedItems.hasHealthRestrictions && (
-                    <p>• ⚠️ Zdravotní omezení</p>
-                  )}
-                </div>
+              <TooltipContent>
+                <p>{unresolvedItems.unpaidCount}× neuhrazeno ({formatCurrency(unresolvedItems.unpaidTotal)})</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {unresolvedItems.missingFeedback > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 text-warning font-medium cursor-help">
+                  <MessageSquareWarning className="w-3.5 h-3.5" />
+                  <span className="text-xs">{unresolvedItems.missingFeedback}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{unresolvedItems.missingFeedback}× čeká na feedback</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {unresolvedItems.hasHealthRestrictions && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center text-orange-500 cursor-help">
+                  <HeartPulse className="w-3.5 h-3.5" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Zdravotní omezení</p>
               </TooltipContent>
             </Tooltip>
           )}
