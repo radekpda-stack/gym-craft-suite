@@ -319,6 +319,19 @@ export const cs = {
     acceptInvite: 'Přijmout',
     rejectInvite: 'Odmítnout',
     removeShare: 'Zrušit sdílení',
+    
+    // Make.com integration
+    makeIntegration: 'Make.com integrace',
+    makeIntegrationDesc: 'Import kalendáře z telefonu přes Make.com',
+    webhookUrl: 'Webhook URL',
+    apiKey: 'API klíč',
+    copyUrl: 'Kopírovat',
+    copied: 'Zkopírováno!',
+    externalEvents: 'Externí události',
+    makeInstructions: 'Zkopírujte webhook URL a API klíč do Make.com scénáře pro import událostí z kalendáře telefonu.',
+    generateApiKey: 'Vygenerovat nový klíč',
+    showApiKey: 'Zobrazit',
+    hideApiKey: 'Skrýt',
   },
 
   // Quick credit

@@ -7,12 +7,14 @@ import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
 import { useClients } from '@/hooks/useClients';
 import { useSharedTrainings } from '@/hooks/useSharedTrainings';
+import { useExternalCalendarEvents } from '@/hooks/useExternalCalendarEvents';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { AgendaItem } from '@/components/calendar/AgendaItem';
 import { SharedTrainingBlock } from '@/components/calendar/SharedTrainingBlock';
+import { ExternalEventBlock } from '@/components/calendar/ExternalEventBlock';
 import { WeekMiniGrid } from '@/components/calendar/WeekMiniGrid';
 import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
 import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
@@ -91,6 +93,7 @@ export default function CalendarPage() {
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
   const { data: sharedTrainings = [] } = useSharedTrainings();
+  const { data: externalEvents = [] } = useExternalCalendarEvents();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
@@ -112,12 +115,20 @@ export default function CalendarPage() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [sharedTrainings, currentDate]);
 
+  // Externí události pro aktuální den
+  const dayExternalEvents = useMemo(() => {
+    return externalEvents
+      .filter((event) => isSameDay(new Date(event.start_time), currentDate))
+      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+  }, [externalEvents, currentDate]);
+
   // Všechny eventy sloučené a seřazené
   const allDayEvents = useMemo(() => {
-    const own = dayEvents.map(e => ({ ...e, isShared: false as const }));
-    const shared = daySharedEvents.map(e => ({ ...e, isShared: true as const }));
-    return [...own, ...shared].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [dayEvents, daySharedEvents]);
+    const own = dayEvents.map(e => ({ ...e, type: 'own' as const, sortTime: new Date(e.date).getTime() }));
+    const shared = daySharedEvents.map(e => ({ ...e, type: 'shared' as const, sortTime: new Date(e.date).getTime() }));
+    const external = dayExternalEvents.map(e => ({ ...e, type: 'external' as const, sortTime: new Date(e.start_time).getTime() }));
+    return [...own, ...shared, ...external].sort((a, b) => a.sortTime - b.sortTime);
+  }, [dayEvents, daySharedEvents, dayExternalEvents]);
 
   // Volné sloty
   const freeSlots = useMemo(() => {
@@ -330,8 +341,12 @@ export default function CalendarPage() {
             {hasAnyEvents && (
               <div className="text-right text-sm">
                 <p className="text-foreground font-medium">{dayEvents.filter(e => e.status !== 'canceled').length} tréninků</p>
-                {daySharedEvents.length > 0 && (
-                  <p className="text-muted-foreground">+{daySharedEvents.length} obsazeno</p>
+                {(daySharedEvents.length > 0 || dayExternalEvents.length > 0) && (
+                  <p className="text-muted-foreground">
+                    {daySharedEvents.length > 0 && `+${daySharedEvents.length} obsazeno`}
+                    {daySharedEvents.length > 0 && dayExternalEvents.length > 0 && ', '}
+                    {dayExternalEvents.length > 0 && `${dayExternalEvents.length} ext.`}
+                  </p>
                 )}
               </div>
             )}
@@ -360,22 +375,26 @@ export default function CalendarPage() {
               />
             )}
 
-            {allDayEvents.map((event) => (
-              event.isShared ? (
-                <SharedTrainingBlock key={`shared-${event.id}`} training={event} />
-              ) : (
+            {allDayEvents.map((event) => {
+              if (event.type === 'shared') {
+                return <SharedTrainingBlock key={`shared-${event.id}`} training={event as any} />;
+              }
+              if (event.type === 'external') {
+                return <ExternalEventBlock key={`ext-${event.id}`} event={event as any} />;
+              }
+              return (
                 <AgendaItem
                   key={event.id}
-                  session={event}
-                  client={getClient(event.client_id)}
+                  session={event as any}
+                  client={getClient((event as any).client_id)}
                   onComplete={handleComplete}
                   onPayment={handlePayment}
                   onCancel={handleCancel}
                   onProgress={handleProgress}
                   onNote={handleNote}
                 />
-              )
-            ))}
+              );
+            })}
 
             {/* Volné sloty mezi tréninky a po nich */}
             {freeSlots.slice(freeSlots[0]?.start.getHours() === 8 ? 1 : 0).map((slot, i) => (

@@ -1407,6 +1407,45 @@ export type Database = {
         }
         Relationships: []
       }
+      external_calendar_events: {
+        Row: {
+          all_day: boolean | null
+          created_at: string | null
+          end_time: string
+          external_id: string
+          id: string
+          source: string | null
+          start_time: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          created_at?: string | null
+          end_time: string
+          external_id: string
+          id?: string
+          source?: string | null
+          start_time: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean | null
+          created_at?: string | null
+          end_time?: string
+          external_id?: string
+          id?: string
+          source?: string | null
+          start_time?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       feature_usage: {
         Row: {
           created_at: string

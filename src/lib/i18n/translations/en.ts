@@ -321,6 +321,19 @@ export const en: TranslationKeys = {
     acceptInvite: 'Accept',
     rejectInvite: 'Reject',
     removeShare: 'Remove share',
+    
+    // Make.com integration
+    makeIntegration: 'Make.com Integration',
+    makeIntegrationDesc: 'Import phone calendar via Make.com',
+    webhookUrl: 'Webhook URL',
+    apiKey: 'API Key',
+    copyUrl: 'Copy',
+    copied: 'Copied!',
+    externalEvents: 'External events',
+    makeInstructions: 'Copy the webhook URL and API key to your Make.com scenario to import events from your phone calendar.',
+    generateApiKey: 'Generate new key',
+    showApiKey: 'Show',
+    hideApiKey: 'Hide',
   },
 
   // Quick credit
