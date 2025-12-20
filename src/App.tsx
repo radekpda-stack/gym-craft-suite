@@ -27,6 +27,7 @@ import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import PRHistory from "./pages/PRHistory";
 import Reminders from "./pages/Reminders";
+import AppUsageStats from "./pages/AppUsageStats";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NotFound from "./pages/NotFound";
@@ -77,6 +78,7 @@ const App = () => (
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/pr-history" element={<PRHistory />} />
                           <Route path="/reminders" element={<Reminders />} />
+                          <Route path="/app-usage" element={<AppUsageStats />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="*" element={<NotFound />} />
