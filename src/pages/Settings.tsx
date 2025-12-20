@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   CreditCard,
   Package,
@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ProductsManagement } from '@/components/settings/ProductsManagement';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
@@ -184,13 +183,6 @@ export default function Settings() {
           description: t.settings.exercisesDesc,
           icon: Dumbbell,
           content: <ExercisesManagement />,
-        },
-        {
-          id: 'products',
-          title: t.settings.products,
-          description: t.settings.productsDesc,
-          icon: Package,
-          content: <ProductsManagement />,
         },
         {
           id: 'tags',
