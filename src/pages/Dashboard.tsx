@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 import { DashboardStatusBar } from '@/components/dashboard/DashboardStatusBar';
+import { MobileDashboardHeader } from '@/components/dashboard/MobileDashboardHeader';
 import { PriorityTasksSection } from '@/components/dashboard/PriorityTasksSection';
 import { DayTimelineSection } from '@/components/dashboard/DayTimelineSection';
 import { ClientsQuickOverviewSection } from '@/components/dashboard/ClientsQuickOverviewSection';
@@ -17,17 +18,25 @@ import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
 import { CapacityHeatmapCard } from '@/components/dashboard/CapacityHeatmapCard';
 import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
 import { BusinessAnalyticsCard } from '@/components/dashboard/BusinessAnalyticsCard';
+import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function DashboardContent() {
   usePageTracking('dashboard');
   
   const { data, isLoading } = useDashboardViewModel();
+  const isMobile = useIsMobile();
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      {/* Status Bar - always visible */}
-      <DashboardStatusBar data={data} isLoading={isLoading} />
+      {/* Mobile-only compact header */}
+      <MobileDashboardHeader data={data} isLoading={isLoading} />
+      
+      {/* Desktop Status Bar - hidden on mobile */}
+      <div className="hidden sm:block">
+        <DashboardStatusBar data={data} isLoading={isLoading} />
+      </div>
       
       {/* Header with date */}
       <div>
@@ -39,48 +48,88 @@ function DashboardContent() {
         </p>
       </div>
 
-      {/* Priority Tasks - "Co teď?" */}
+      {/* Priority Tasks - "Co teď?" - always visible */}
       <PriorityTasksSection data={data} isLoading={isLoading} />
 
-      {/* Grid for schedule and clients */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        {/* Day Timeline */}
-        <DayTimelineSection data={data} isLoading={isLoading} />
-        
-        {/* Clients Quick Overview */}
-        <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
-      </div>
+      {/* Grid for schedule and clients - visible on desktop, collapsible on mobile */}
+      {isMobile ? (
+        <CollapsibleSection title="Dnes" defaultOpen={true}>
+          <DayTimelineSection data={data} isLoading={isLoading} />
+          <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
+        </CollapsibleSection>
+      ) : (
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <DayTimelineSection data={data} isLoading={isLoading} />
+          <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
+        </div>
+      )}
 
-      {/* Week Summary - collapsible */}
-      <WeekSummarySection data={data} isLoading={isLoading} />
+      {/* Week Summary - collapsible on mobile */}
+      {isMobile ? (
+        <CollapsibleSection title="Tento týden">
+          <WeekSummarySection data={data} isLoading={isLoading} />
+        </CollapsibleSection>
+      ) : (
+        <WeekSummarySection data={data} isLoading={isLoading} />
+      )}
 
-      {/* Business Analytics */}
-      <BusinessAnalyticsCard />
+      {/* Analytics - collapsible on mobile */}
+      {isMobile ? (
+        <CollapsibleSection title="Analytika">
+          <BusinessAnalyticsCard />
+          <div className="grid grid-cols-1 gap-4">
+            <MostActiveClientsCard />
+            <ClientsAtRiskCard />
+          </div>
+        </CollapsibleSection>
+      ) : (
+        <>
+          <BusinessAnalyticsCard />
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+            <MostActiveClientsCard />
+            <ClientsAtRiskCard />
+          </div>
+        </>
+      )}
 
-      {/* Fun statistiky */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        <MostActiveClientsCard />
-        <ClientsAtRiskCard />
-      </div>
+      {/* Year comparison and Heatmap - collapsible on mobile */}
+      {isMobile ? (
+        <CollapsibleSection title="Pokročilé statistiky">
+          <YearComparisonCard />
+          <CapacityHeatmapCard />
+          <PRTimelineCard />
+        </CollapsibleSection>
+      ) : (
+        <>
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+            <YearComparisonCard />
+            <CapacityHeatmapCard />
+          </div>
+          <PRTimelineCard />
+        </>
+      )}
 
-      {/* Year comparison and Heatmap */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        <YearComparisonCard />
-        <CapacityHeatmapCard />
-      </div>
-
-      {/* PR Timeline */}
-      <PRTimelineCard />
-
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        <UpcomingAnniversariesCard />
-        <QuickStats />
-      </div>
-      
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        <TrendsPanelSection data={data} isLoading={isLoading} />
-        <StatsOverviewCard />
-      </div>
+      {/* Additional stats - collapsible on mobile */}
+      {isMobile ? (
+        <CollapsibleSection title="Další přehledy">
+          <UpcomingAnniversariesCard />
+          <QuickStats />
+          <TrendsPanelSection data={data} isLoading={isLoading} />
+          <StatsOverviewCard />
+        </CollapsibleSection>
+      ) : (
+        <>
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+            <UpcomingAnniversariesCard />
+            <QuickStats />
+          </div>
+          
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+            <TrendsPanelSection data={data} isLoading={isLoading} />
+            <StatsOverviewCard />
+          </div>
+        </>
+      )}
     </div>
   );
 }
