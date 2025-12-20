@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   ClipboardList,
   Bell,
+  BarChart3,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -106,6 +107,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const { t } = useLanguage();
 
   // Define sections with items - OPTIMIZED STRUCTURE
+  const isAdminUser = user?.email === 'radek.pda@gmail.com';
+  
   const sections: NavSection[] = [
     {
       label: 'Hlavní',
@@ -147,6 +150,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       items: [
         { id: 'reminders', to: '/reminders', icon: Bell, label: 'Připomínky' },
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
+        // Admin-only link for app usage stats
+        ...(isAdminUser ? [{ id: 'app-usage', to: '/app-usage', icon: BarChart3, label: 'Statistiky' }] : []),
       ],
     },
   ];
