@@ -17,6 +17,7 @@ import {
   Users,
   Calendar,
   Download,
+  Shield,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -32,10 +33,12 @@ import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
 import { DataExport } from '@/components/settings/DataExport';
+import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface SettingsSection {
@@ -59,7 +62,11 @@ export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
   const { data: isAdmin } = useIsAdmin();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Check if current user is the owner (radek.pda@gmail.com)
+  const isOwner = user?.email === 'radek.pda@gmail.com';
 
   const categories: SettingsCategory[] = [
     // 1. PROFIL
@@ -223,6 +230,14 @@ export default function Settings() {
           description: language === 'cs' ? 'Analýza využívání funkcí aplikace od všech uživatelů' : 'App feature usage analytics from all users',
           icon: BarChart2,
           content: <FeatureUsageStats />,
+        }] : []),
+        // Admin analytics export - only visible for owner
+        ...(isOwner ? [{
+          id: 'admin-analytics',
+          title: language === 'cs' ? 'Analytický export (Admin)' : 'Analytics Export (Admin)',
+          description: language === 'cs' ? 'Anonymizovaný export využití aplikace pro AI analýzu' : 'Anonymized app usage export for AI analysis',
+          icon: Shield,
+          content: <AdminAnalyticsExport />,
         }] : []),
       ],
     },
