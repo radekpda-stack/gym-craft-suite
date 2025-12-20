@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { ChevronLeft, MoreVertical } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useClient, useUpdateClient, useUpdateClientFeedback } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
@@ -15,7 +15,6 @@ import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialo
 import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -25,13 +24,12 @@ import { STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
 import { ClientStatusBar } from '@/components/clients/ClientStatusBar';
 import { ClientActionsBar } from '@/components/clients/ClientActionsBar';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
-import { ClientEvaluationBlock } from '@/components/clients/ClientEvaluationBlock';
+import { ClientHealthSnapshot } from '@/components/clients/ClientHealthSnapshot';
 import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
 import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
 import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
-import { ClientHeroCard } from '@/components/clients/ClientHeroCard';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
 
 import { toast } from '@/hooks/use-toast';
@@ -177,17 +175,13 @@ export default function ClientDetail() {
         </>
       )}
 
-      {/* Mobile Hero Card */}
-      {isMobile && (
-        <ClientHeroCard
-          client={client}
-          creditBalance={creditBalance}
-          unpaidCount={unpaidCount}
-          lastTrainingDate={lastTrainingDate}
-          isSharedBudget={isSharedBudget}
-          sharedBudgetName={sharedBudgetName}
-        />
-      )}
+      {/* Client Health Snapshot - visible without scroll */}
+      <ClientHealthSnapshot
+        clientId={client.id}
+        creditBalance={creditBalance}
+        trainerNote={client.notes?.split('\n')[0]?.substring(0, 100) || ''}
+        onSaveNote={handleAddNote}
+      />
 
       {/* Desktop Quick Actions (hidden on mobile - replaced by FAB) */}
       {!isMobile && (
@@ -198,25 +192,6 @@ export default function ClientDetail() {
           budgetGroupId={sharedBudgetInfo?.groupId}
           onAddTraining={() => setIsTrainingDialogOpen(true)}
           onAddNote={handleAddNote}
-        />
-      )}
-
-      {/* Evaluation Block - desktop only (mobile shows in hero) */}
-      {!isMobile && (
-        <ClientEvaluationBlock
-          clientId={client.id}
-          onViewFeedback={() => {
-            const root = document.querySelector('[data-client-history-root]');
-            const trigger = document.querySelector('[data-history-tab="feedback"]');
-            if (root) root.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (trigger) setTimeout(() => (trigger as HTMLButtonElement).click(), 150);
-          }}
-          onViewNutrition={() => {
-            const root = document.querySelector('[data-client-history-root]');
-            const trigger = document.querySelector('[data-history-tab="nutrition"]');
-            if (root) root.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (trigger) setTimeout(() => (trigger as HTMLButtonElement).click(), 150);
-          }}
         />
       )}
 
