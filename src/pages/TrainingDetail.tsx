@@ -9,6 +9,10 @@ import {
   XCircle,
   Users,
   MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
 import { TrainingDetailSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
@@ -91,6 +95,13 @@ export default function TrainingDetail() {
   const [usePriceSplit, setUsePriceSplit] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
   
+  // Trainer summary state
+  const [trainerWentWell, setTrainerWentWell] = useState('');
+  const [trainerProblems, setTrainerProblems] = useState('');
+  const [trainerRecommendations, setTrainerRecommendations] = useState('');
+  const [painReported, setPainReported] = useState(false);
+  const [painNotes, setPainNotes] = useState('');
+  
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
 
@@ -114,7 +125,20 @@ export default function TrainingDetail() {
   }
 
   const handleSaveTraining = async (
-    data: { date?: Date; duration?: number; participant_count?: number; notes?: string; subjective_rating?: number | null; status?: 'scheduled' | 'completed' | 'canceled' },
+    data: { 
+      date?: Date; 
+      duration?: number; 
+      participant_count?: number; 
+      notes?: string; 
+      subjective_rating?: number | null; 
+      status?: 'scheduled' | 'completed' | 'canceled';
+      prep_notes?: string;
+      trainer_went_well?: string;
+      trainer_problems?: string;
+      trainer_recommendations?: string;
+      pain_reported?: boolean;
+      pain_notes?: string;
+    },
     tagIds: string[]
   ) => {
     await updateTraining.mutateAsync({
@@ -126,6 +150,12 @@ export default function TrainingDetail() {
         notes: data.notes,
         subjective_rating: data.subjective_rating || undefined,
         status: data.status,
+        prep_notes: data.prep_notes,
+        trainer_went_well: data.trainer_went_well,
+        trainer_problems: data.trainer_problems,
+        trainer_recommendations: data.trainer_recommendations,
+        pain_reported: data.pain_reported,
+        pain_notes: data.pain_notes,
       },
       trainingPrices,
     });
@@ -148,6 +178,13 @@ export default function TrainingDetail() {
     setCompleteNotes(training.notes || '');
     setUsePriceSplit(existingParticipants.length > 0 || participantCount > 1);
     setPaymentMethod('credit');
+    
+    // Reset trainer summary fields
+    setTrainerWentWell(training.trainer_went_well || '');
+    setTrainerProblems(training.trainer_problems || '');
+    setTrainerRecommendations(training.trainer_recommendations || '');
+    setPainReported(training.pain_reported || false);
+    setPainNotes(training.pain_notes || '');
     
     // Initialize participant shares
     const totalPrice = getTrainingPrice(participantCount, trainingPrices);
@@ -181,6 +218,15 @@ export default function TrainingDetail() {
     const paymentStatus = getPaymentStatusFromOption(paymentMethod);
     const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
     
+    // Trainer summary data to save
+    const trainerSummaryData = {
+      trainer_went_well: trainerWentWell || undefined,
+      trainer_problems: trainerProblems || undefined,
+      trainer_recommendations: trainerRecommendations || undefined,
+      pain_reported: painReported,
+      pain_notes: painReported ? (painNotes || undefined) : undefined,
+    };
+    
     if (usePriceSplit && participantShares.length > 1) {
       // Save participants and deduct credit from each
       await saveParticipants.mutateAsync({
@@ -191,7 +237,7 @@ export default function TrainingDetail() {
         })),
       });
       
-      // Update training status to completed with payment info
+      // Update training status to completed with payment info and trainer summary
       await updateTraining.mutateAsync({
         id: training.id,
         input: {
@@ -202,6 +248,7 @@ export default function TrainingDetail() {
           payment_status: paymentStatus,
           final_price: totalPrice,
           payment_method: paymentMethodValue,
+          ...trainerSummaryData,
         },
       });
       
@@ -227,13 +274,14 @@ export default function TrainingDetail() {
           notes: completeNotes || undefined,
           trainingPrices,
         });
-        // Update payment fields
+        // Update payment fields and trainer summary
         await updateTraining.mutateAsync({
           id: training.id,
           input: {
             payment_status: paymentStatus,
             final_price: totalPrice,
             payment_method: paymentMethodValue,
+            ...trainerSummaryData,
           },
         });
       } else {
@@ -248,6 +296,7 @@ export default function TrainingDetail() {
             payment_status: paymentStatus,
             final_price: totalPrice,
             payment_method: paymentMethodValue,
+            ...trainerSummaryData,
           },
         });
       }
@@ -428,13 +477,81 @@ export default function TrainingDetail() {
               />
             </div>
 
+            {/* Trainer Summary Section */}
+            <div className="space-y-4 p-4 rounded-lg border bg-card">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Shrnutí tréninku
+              </h4>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-success">
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  Co šlo dobře
+                </Label>
+                <Textarea
+                  value={trainerWentWell}
+                  onChange={(e) => setTrainerWentWell(e.target.value)}
+                  placeholder="Cviky, techniky, pokroky..."
+                  rows={2}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-warning">
+                  <ThumbsDown className="w-3.5 h-3.5" />
+                  Co nešlo / na čem pracovat
+                </Label>
+                <Textarea
+                  value={trainerProblems}
+                  onChange={(e) => setTrainerProblems(e.target.value)}
+                  placeholder="Problémy, slabiny, omezení..."
+                  rows={2}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-primary">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Doporučení
+                </Label>
+                <Textarea
+                  value={trainerRecommendations}
+                  onChange={(e) => setTrainerRecommendations(e.target.value)}
+                  placeholder="Doporučení pro další trénink..."
+                  rows={2}
+                />
+              </div>
+              
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Hlášená bolest
+                  </Label>
+                  <Switch
+                    checked={painReported}
+                    onCheckedChange={setPainReported}
+                  />
+                </div>
+                {painReported && (
+                  <Textarea
+                    value={painNotes}
+                    onChange={(e) => setPainNotes(e.target.value)}
+                    placeholder="Popis bolesti - kde, kdy, intenzita..."
+                    rows={2}
+                  />
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Poznámky</Label>
               <Textarea
                 value={completeNotes}
                 onChange={(e) => setCompleteNotes(e.target.value)}
-                placeholder="Poznámky k tréninku..."
-                rows={3}
+                placeholder="Další poznámky k tréninku..."
+                rows={2}
               />
             </div>
           </div>
