@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags -->
+  <title>7denní jídelníček | Just Move</title>
+  <meta name="title" content="7denní jídelníček | Just Move">
+  <meta name="description" content="Zaznamenejte své stravování za posledních 7 dní a pomozte nám lépe pochopit vaše stravovací návyky.">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="">
+  <meta property="og:title" content="7denní jídelníček | Just Move">
+  <meta property="og:description" content="Zaznamenejte své stravování za posledních 7 dní a pomozte nám lépe pochopit vaše stravovací návyky.">
+  <meta property="og:image" content="/og-nutrition.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="640">
+  <meta property="og:locale" content="cs_CZ">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="">
+  <meta property="twitter:title" content="7denní jídelníček | Just Move">
+  <meta property="twitter:description" content="Zaznamenejte své stravování za posledních 7 dní a pomozte nám lépe pochopit vaše stravovací návyky.">
+  <meta property="twitter:image" content="/og-nutrition.png">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .loading {
+      text-align: center;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(249, 115, 22, 0.3);
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+    }
+  </style>
+  
+  <script>
+    // Extract token from URL and redirect to the React app
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var token = params.get('token');
+      if (token) {
+        window.location.replace('/nutrition-log/' + token);
+      } else {
+        // No token provided, show error
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelector('.loading').innerHTML = 
+            '<p style="color: #f97316;">Chybí token pro přístup k formuláři.</p>';
+        });
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Načítání formuláře...</p>
+  </div>
+</body>
+</html>
