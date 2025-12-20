@@ -23,37 +23,55 @@ import {
 export type Status = 'ok' | 'warning' | 'error';
 export type Trend = 'improving' | 'stable' | 'declining';
 
-// Status visual configuration (uses CSS variables from index.css)
+// Status visual configuration - uses Tailwind classes with CSS variables
+// IMPORTANT: Always use these classes instead of hardcoded HSL values!
 export const STATUS_CONFIG = {
   ok: {
     label: 'V pořádku',
     labelShort: 'OK',
     icon: CheckCircle2,
-    // Uses --success from index.css
-    bgClass: 'bg-[hsl(142_76%_36%/0.1)]',
-    borderClass: 'border-[hsl(142_76%_36%/0.3)]',
-    textClass: 'text-[hsl(142_76%_36%)]',
-    hoverBorderClass: 'hover:border-[hsl(142_76%_36%/0.5)]',
+    // Background with opacity
+    bgClass: 'bg-status-ok/10',
+    bgClassStrong: 'bg-status-ok/15',
+    bgClassSubtle: 'bg-status-ok/5',
+    // Border with opacity
+    borderClass: 'border-status-ok/30',
+    borderClassStrong: 'border-status-ok/50',
+    // Text color
+    textClass: 'text-status-ok',
+    // Hover states
+    hoverBgClass: 'hover:bg-status-ok/15',
+    hoverBorderClass: 'hover:border-status-ok/50',
+    // Ring for focus
+    ringClass: 'ring-status-ok/30',
   },
   warning: {
     label: 'Vyžaduje pozornost',
     labelShort: 'Pozor',
     icon: AlertCircle,
-    // Uses --warning from index.css
-    bgClass: 'bg-[hsl(38_92%_50%/0.1)]',
-    borderClass: 'border-[hsl(38_92%_50%/0.3)]',
-    textClass: 'text-[hsl(38_92%_50%)]',
-    hoverBorderClass: 'hover:border-[hsl(38_92%_50%/0.5)]',
+    bgClass: 'bg-status-warning/10',
+    bgClassStrong: 'bg-status-warning/15',
+    bgClassSubtle: 'bg-status-warning/5',
+    borderClass: 'border-status-warning/30',
+    borderClassStrong: 'border-status-warning/50',
+    textClass: 'text-status-warning',
+    hoverBgClass: 'hover:bg-status-warning/15',
+    hoverBorderClass: 'hover:border-status-warning/50',
+    ringClass: 'ring-status-warning/30',
   },
   error: {
     label: 'Kritický problém',
     labelShort: 'Kritické',
     icon: XCircle,
-    // Uses --destructive from index.css
-    bgClass: 'bg-destructive/10',
-    borderClass: 'border-destructive/30',
-    textClass: 'text-destructive',
-    hoverBorderClass: 'hover:border-destructive/50',
+    bgClass: 'bg-status-error/10',
+    bgClassStrong: 'bg-status-error/15',
+    bgClassSubtle: 'bg-status-error/5',
+    borderClass: 'border-status-error/30',
+    borderClassStrong: 'border-status-error/50',
+    textClass: 'text-status-error',
+    hoverBgClass: 'hover:bg-status-error/15',
+    hoverBorderClass: 'hover:border-status-error/50',
+    ringClass: 'ring-status-error/30',
   },
 } as const;
 
@@ -62,8 +80,8 @@ export const TREND_CONFIG = {
   improving: {
     label: 'Zlepšení',
     icon: TrendingUp,
-    textClass: 'text-[hsl(142_76%_36%)]',
-    bgClass: 'bg-[hsl(142_76%_36%/0.1)]',
+    textClass: 'text-status-ok',
+    bgClass: 'bg-status-ok/10',
   },
   stable: {
     label: 'Stabilní',
@@ -74,8 +92,32 @@ export const TREND_CONFIG = {
   declining: {
     label: 'Zhoršení',
     icon: TrendingDown,
-    textClass: 'text-destructive',
-    bgClass: 'bg-destructive/10',
+    textClass: 'text-status-error',
+    bgClass: 'bg-status-error/10',
+  },
+} as const;
+
+// Priority configuration (for alerts, tasks, etc.)
+export type Priority = 'high' | 'medium' | 'low';
+
+export const PRIORITY_CONFIG = {
+  high: {
+    label: 'Vysoká',
+    bgClass: 'bg-status-error/10',
+    borderClass: 'border-status-error/30',
+    textClass: 'text-status-error',
+  },
+  medium: {
+    label: 'Střední',
+    bgClass: 'bg-status-warning/10',
+    borderClass: 'border-status-warning/30',
+    textClass: 'text-status-warning',
+  },
+  low: {
+    label: 'Nízká',
+    bgClass: 'bg-primary/10',
+    borderClass: 'border-primary/30',
+    textClass: 'text-primary',
   },
 } as const;
 
@@ -108,11 +150,19 @@ export function getStatusClasses(status: Status) {
   const config = STATUS_CONFIG[status];
   return {
     bg: config.bgClass,
+    bgStrong: config.bgClassStrong,
+    bgSubtle: config.bgClassSubtle,
     border: config.borderClass,
+    borderStrong: config.borderClassStrong,
     text: config.textClass,
+    hoverBg: config.hoverBgClass,
     hoverBorder: config.hoverBorderClass,
-    combined: `${config.bgClass} ${config.borderClass}`,
-    interactive: `${config.bgClass} ${config.borderClass} ${config.hoverBorderClass}`,
+    ring: config.ringClass,
+    // Combined classes for common patterns
+    chip: `${config.bgClass} ${config.textClass}`,
+    card: `${config.bgClass} ${config.borderClass} border`,
+    cardInteractive: `${config.bgClass} ${config.borderClass} border ${config.hoverBorderClass}`,
+    badge: `${config.bgClass} ${config.textClass} ${config.borderClass} border`,
   };
 }
 
@@ -122,6 +172,16 @@ export function getTrendClasses(trend: Trend) {
     text: config.textClass,
     bg: config.bgClass,
     combined: `${config.bgClass} ${config.textClass}`,
+  };
+}
+
+export function getPriorityClasses(priority: Priority) {
+  const config = PRIORITY_CONFIG[priority];
+  return {
+    bg: config.bgClass,
+    border: config.borderClass,
+    text: config.textClass,
+    combined: `${config.bgClass} ${config.borderClass} ${config.textClass} border`,
   };
 }
 

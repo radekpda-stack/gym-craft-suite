@@ -171,7 +171,7 @@ export function ClientActionsSheet({
           
           {/* Generated link display */}
           {generatedLink && (
-            <div className="mb-4 p-3 rounded-xl bg-[hsl(142_76%_36%/0.1)] border border-[hsl(142_76%_36%/0.3)] flex items-center gap-3">
+            <div className="mb-4 p-3 rounded-2xl bg-status-ok/10 border border-status-ok/30 flex items-center gap-3">
               <Check className="w-5 h-5 text-[hsl(142_76%_36%)] shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">{generatedLink.type} odkaz zkopírován</p>

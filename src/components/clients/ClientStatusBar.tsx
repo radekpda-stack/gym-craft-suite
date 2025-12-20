@@ -39,7 +39,7 @@ export function ClientStatusBar({
     const config = STATUS_CONFIG[ok ? 'ok' : 'warning'];
     return (
       <div className={cn(
-        'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium',
+        'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
         config.bgClass, config.textClass
       )}>
         {ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
@@ -73,7 +73,7 @@ export function ClientStatusBar({
         
         {/* Right: Credit */}
         <div className={cn(
-          'flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-lg shrink-0',
+          'flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-lg shrink-0',
           statusConfig.bgClass,
           statusConfig.textClass
         )}>
@@ -87,7 +87,7 @@ export function ClientStatusBar({
         <StatusIndicator ok={hasFeedback} label={hasFeedback ? 'Feedback OK' : 'Chybí feedback'} />
         <StatusIndicator ok={hasNutrition} label={hasNutrition ? 'Strava OK' : 'Chybí strava'} />
         {client.training_goals && client.training_goals.length > 0 && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
             <Target className="w-3 h-3" />
             {client.training_goals[0]}
           </div>
