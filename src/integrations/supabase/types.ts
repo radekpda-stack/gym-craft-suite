@@ -2822,6 +2822,66 @@ export type Database = {
         }
         Relationships: []
       }
+      stat_events: {
+        Row: {
+          client_id: string | null
+          context_json: Json | null
+          created_at: string
+          event_name: string
+          event_type: string
+          id: string
+          recorded_at: string
+          session_id: string | null
+          unit: string | null
+          user_id: string
+          value_numeric: number | null
+          value_text: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          context_json?: Json | null
+          created_at?: string
+          event_name: string
+          event_type: string
+          id?: string
+          recorded_at?: string
+          session_id?: string | null
+          unit?: string | null
+          user_id: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          context_json?: Json | null
+          created_at?: string
+          event_name?: string
+          event_type?: string
+          id?: string
+          recorded_at?: string
+          session_id?: string | null
+          unit?: string | null
+          user_id?: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stat_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stat_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           affects_credit: boolean | null
