@@ -150,12 +150,16 @@ export default function ClientDetail() {
       <ClientEvaluationBlock
         clientId={client.id}
         onViewFeedback={() => {
-          const historyBlock = document.querySelector('[data-history-tab="feedback"]');
-          if (historyBlock) (historyBlock as HTMLButtonElement).click();
+          const root = document.querySelector('[data-client-history-root]');
+          const trigger = document.querySelector('[data-history-tab="feedback"]');
+          if (root) root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (trigger) setTimeout(() => (trigger as HTMLButtonElement).click(), 150);
         }}
         onViewNutrition={() => {
-          const historyBlock = document.querySelector('[data-history-tab="nutrition"]');
-          if (historyBlock) (historyBlock as HTMLButtonElement).click();
+          const root = document.querySelector('[data-client-history-root]');
+          const trigger = document.querySelector('[data-history-tab="nutrition"]');
+          if (root) root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (trigger) setTimeout(() => (trigger as HTMLButtonElement).click(), 150);
         }}
       />
 

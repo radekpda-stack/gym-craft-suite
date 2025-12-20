@@ -260,7 +260,7 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
   );
 
   return (
-    <div className="glass rounded-xl overflow-hidden">
+    <div className="glass rounded-xl overflow-hidden" data-client-history-root>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="border-b border-border/50">
           <TabsList className="w-full h-auto p-1 bg-transparent rounded-none justify-start gap-1 overflow-x-auto">
