@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar,
@@ -27,7 +27,7 @@ interface DayTimelineSectionProps {
 
 type ViewMode = 'today' | 'week';
 
-function TimelineBlock({ 
+const TimelineBlock = memo(function TimelineBlock({ 
   item, 
   isCompact = false,
   onComplete,
@@ -157,7 +157,7 @@ function TimelineBlock({
       )}
     </div>
   );
-}
+});
 
 function EmptyState({ viewMode }: { viewMode: ViewMode }) {
   return (

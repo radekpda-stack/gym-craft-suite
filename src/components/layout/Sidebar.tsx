@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -38,71 +38,47 @@ interface NavSection {
   items: NavItem[];
 }
 
-function NavItemButton({ 
+interface SidebarProps {
+  onCollapseChange?: (collapsed: boolean) => void;
+}
+
+const NavItemButton = memo(function NavItemButton({ 
   item, 
   isActive, 
   collapsed,
-  index,
 }: { 
   item: NavItem; 
   isActive: boolean; 
   collapsed: boolean;
-  index: number;
 }) {
   const Icon = item.icon;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ 
-        duration: 0.2, 
-        delay: index * 0.03,
-        ease: [0.25, 0.1, 0.25, 1]
-      }}
+    <NavLink
+      to={item.to}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
+        isActive
+          ? 'bg-primary/10 text-primary'
+          : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+      )}
     >
-      <NavLink
-        to={item.to}
-        className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
-          isActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-        )}
-      >
-        {/* Orange active indicator with animation */}
-        <AnimatePresence>
-          {isActive && (
-            <motion.div 
-              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"
-              initial={{ scaleY: 0, opacity: 0 }}
-              animate={{ scaleY: 1, opacity: 1 }}
-              exit={{ scaleY: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-            />
-          )}
-        </AnimatePresence>
-        <Icon className={cn(
-          'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
-          !isActive && 'group-hover:scale-105'
-        )} strokeWidth={1.5} />
-        <AnimatePresence mode="wait">
-          {!collapsed && (
-            <motion.span 
-              className="text-sm font-medium truncate"
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {item.label}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </NavLink>
-    </motion.div>
+      {/* Active indicator */}
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+      )}
+      <Icon className={cn(
+        'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
+        !isActive && 'group-hover:scale-105'
+      )} strokeWidth={1.5} />
+      {!collapsed && (
+        <span className="text-sm font-medium truncate">
+          {item.label}
+        </span>
+      )}
+    </NavLink>
   );
-}
+});
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
@@ -122,7 +98,7 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onCollapseChange }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -196,8 +172,12 @@ export function Sidebar() {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   };
 
-  // Calculate global index for staggered animation
-  let globalIndex = 0;
+  // Notify parent about collapse state changes
+  const handleToggleCollapse = () => {
+    const newCollapsed = !collapsed;
+    setCollapsed(newCollapsed);
+    onCollapseChange?.(newCollapsed);
+  };
 
   return (
     <motion.aside
@@ -261,18 +241,14 @@ export function Sidebar() {
                 <SectionLabel label={section.label} collapsed={collapsed} />
               )}
               <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const itemIndex = globalIndex++;
-                  return (
+                {section.items.map((item) => (
                     <NavItemButton
                       key={item.id}
                       item={item}
                       isActive={isActive(item.to)}
                       collapsed={collapsed}
-                      index={itemIndex}
                     />
-                  );
-                })}
+                  ))}
               </div>
               {sectionIndex < sections.length - 1 && (
                 <Separator className="my-3 bg-sidebar-border/30" />
@@ -334,7 +310,7 @@ export function Sidebar() {
 
         {/* Collapse toggle */}
         <motion.button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={handleToggleCollapse}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors duration-200"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

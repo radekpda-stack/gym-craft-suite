@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
@@ -32,6 +32,11 @@ export function Layout({ children }: LayoutProps) {
     onSearch: () => setCommandOpen(true),
   });
 
+  // Callback for sidebar state changes - passed to Sidebar component
+  const handleSidebarCollapse = useCallback((collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+  }, []);
+
   // ? shortcut for help
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,25 +52,6 @@ export function Layout({ children }: LayoutProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Listen for sidebar state changes
-  useEffect(() => {
-    const checkSidebarWidth = () => {
-      const sidebar = document.querySelector('aside');
-      if (sidebar) {
-        setSidebarCollapsed(sidebar.classList.contains('w-16'));
-      }
-    };
-
-    const observer = new MutationObserver(checkSidebarWidth);
-    const sidebar = document.querySelector('aside');
-    
-    if (sidebar) {
-      observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Reminder Notifier - checks for due reminders */}
@@ -76,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Desktop Sidebar - hidden on mobile and tablet */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar onCollapseChange={handleSidebarCollapse} />
       </div>
       
       {/* Main Content */}
