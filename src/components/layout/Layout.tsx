@@ -71,7 +71,7 @@ export function Layout({ children }: LayoutProps) {
           'min-h-screen transition-all duration-300 ease-in-out',
           'lg:ml-56', // Desktop: margin for sidebar (lg and up)
           sidebarCollapsed && 'lg:ml-16',
-          'pb-24 lg:pb-0' // Mobile/Tablet: padding for bottom nav
+          'pb-32 lg:pb-0' // Mobile/Tablet: padding for floating bottom nav
         )}
       >
         {/* Top bar with search trigger - Desktop only */}
