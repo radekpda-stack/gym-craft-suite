@@ -211,6 +211,23 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
 
   const HistoryListItem = ({ item }: { item: HistoryItem }) => {
     const isClickable = item.type === 'feedback' ? item.status === 'completed' : !!item.url;
+    const isCanceled = item.status === 'canceled';
+
+    // Status-based styling
+    const getStatusStyles = () => {
+      switch (item.status) {
+        case 'completed':
+          return 'border-l-4 border-l-green-500 bg-green-500/5 hover:bg-green-500/10';
+        case 'scheduled':
+          return 'border-l-4 border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10';
+        case 'canceled':
+          return 'border-l-4 border-l-destructive bg-muted/50 hover:bg-muted/70';
+        case 'pending':
+          return 'border-l-4 border-l-orange-500 bg-orange-500/5 hover:bg-orange-500/10';
+        default:
+          return 'border-l-4 border-l-border bg-secondary/30 hover:bg-secondary/50';
+      }
+    };
 
     return (
       <button
@@ -228,20 +245,54 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
         }}
         disabled={!isClickable}
         className={cn(
-          'w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors',
-          isClickable ? 'hover:bg-secondary/50 cursor-pointer' : 'cursor-default',
-          'bg-secondary/30'
+          'w-full flex items-center gap-4 p-4 rounded-xl text-left',
+          'transition-all duration-200 ease-out',
+          isClickable ? 'cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-[0.99]' : 'cursor-default',
+          getStatusStyles()
         )}
       >
-        <StatusIcon status={item.status} />
+        <div className={cn(
+          'flex items-center justify-center w-10 h-10 rounded-full shrink-0',
+          item.status === 'completed' && 'bg-green-500/10',
+          item.status === 'scheduled' && 'bg-blue-500/10',
+          item.status === 'canceled' && 'bg-destructive/10',
+          item.status === 'pending' && 'bg-orange-500/10',
+          !item.status && 'bg-secondary'
+        )}>
+          <StatusIcon status={item.status} />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.title}</p>
-          <p className="text-xs text-muted-foreground">{item.date}</p>
+          <div className="flex items-center gap-2">
+            <p className={cn(
+              'text-sm font-semibold truncate',
+              isCanceled && 'line-through text-muted-foreground'
+            )}>
+              {item.title}
+            </p>
+          </div>
+          <p className={cn(
+            'text-xs mt-0.5',
+            isCanceled ? 'text-muted-foreground/60' : 'text-muted-foreground'
+          )}>
+            {item.date}
+          </p>
         </div>
         {item.subtitle && (
-          <span className="text-sm font-medium text-muted-foreground">{item.subtitle}</span>
+          <span className={cn(
+            'text-sm font-bold px-2.5 py-1 rounded-lg shrink-0',
+            isCanceled 
+              ? 'bg-muted text-muted-foreground line-through' 
+              : 'bg-primary/10 text-primary'
+          )}>
+            {item.subtitle}
+          </span>
         )}
-        {isClickable && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+        {isClickable && (
+          <ChevronRight className={cn(
+            'w-5 h-5 shrink-0 transition-transform',
+            isCanceled ? 'text-muted-foreground/40' : 'text-muted-foreground'
+          )} />
+        )}
       </button>
     );
   };
@@ -305,12 +356,12 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
           </TabsList>
         </div>
 
-        <div className="p-3 max-h-[520px] overflow-y-auto">
-          <TabsContent value="trainings" className="m-0 space-y-2">
+        <div className="p-4 max-h-[520px] overflow-y-auto">
+          <TabsContent value="trainings" className="m-0 space-y-3">
             {trainingsLoading ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-16 rounded-xl" />
+                  <Skeleton key={i} className="h-[72px] rounded-xl" />
                 ))}
               </div>
             ) : trainings && trainings.length > 0 ? (
@@ -320,22 +371,24 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
             )}
           </TabsContent>
 
-          <TabsContent value="feedback" className="m-0 space-y-3">
+          <TabsContent value="feedback" className="m-0 space-y-4">
             <FeedbackTrendsChart clientId={clientId} />
 
-            {feedbackLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-16 rounded-xl" />
-                ))}
-              </div>
-            ) : feedback && feedback.length > 0 ? (
-              feedback.map(({ _trainingSessionId, ...item }: any) => (
-                <HistoryListItem key={item.id} item={item} />
-              ))
-            ) : (
-              <EmptyState icon={MessageSquare} message="Zatím žádný feedback" />
-            )}
+            <div className="space-y-3">
+              {feedbackLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-[72px] rounded-xl" />
+                  ))}
+                </div>
+              ) : feedback && feedback.length > 0 ? (
+                feedback.map(({ _trainingSessionId, ...item }: any) => (
+                  <HistoryListItem key={item.id} item={item} />
+                ))
+              ) : (
+                <EmptyState icon={MessageSquare} message="Zatím žádný feedback" />
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="nutrition" className="m-0 space-y-2">
@@ -343,18 +396,20 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
             <NutritionTab clientId={clientId} />
           </TabsContent>
 
-          <TabsContent value="notes" className="m-0 space-y-2">
+          <TabsContent value="notes" className="m-0 space-y-3">
             {parsedNotes.length > 0 ? (
               parsedNotes.map((note) => (
                 <div
                   key={note.id}
-                  className="w-full flex items-start gap-3 p-3 rounded-xl bg-secondary/30"
+                  className="w-full flex items-start gap-4 p-4 rounded-xl border-l-4 border-l-amber-500 bg-amber-500/5 transition-all duration-200 hover:bg-amber-500/10"
                 >
-                  <StickyNote className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 shrink-0">
+                    <StickyNote className="w-5 h-5 text-amber-500" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{note.text}</p>
                     {note.date && (
-                      <p className="text-xs text-muted-foreground mt-1">{note.date}</p>
+                      <p className="text-xs text-muted-foreground mt-2 font-medium">{note.date}</p>
                     )}
                   </div>
                 </div>
@@ -433,15 +488,37 @@ function NutritionTab({ clientId }: { clientId: string }) {
     item,
   }: {
     item: { id: string; title: string; date: string; status: 'scheduled' | 'completed' };
-  }) => (
-    <div className={cn('w-full flex items-center gap-3 p-3 rounded-xl text-left bg-secondary/30')}>
-      <StatusIcon status={item.status} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{item.title}</p>
-        <p className="text-xs text-muted-foreground">{item.date}</p>
+  }) => {
+    const getStatusStyles = () => {
+      switch (item.status) {
+        case 'completed':
+          return 'border-l-4 border-l-green-500 bg-green-500/5 hover:bg-green-500/10';
+        case 'scheduled':
+          return 'border-l-4 border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10';
+        default:
+          return 'border-l-4 border-l-border bg-secondary/30 hover:bg-secondary/50';
+      }
+    };
+
+    return (
+      <div className={cn(
+        'w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all duration-200',
+        getStatusStyles()
+      )}>
+        <div className={cn(
+          'flex items-center justify-center w-10 h-10 rounded-full shrink-0',
+          item.status === 'completed' && 'bg-green-500/10',
+          item.status === 'scheduled' && 'bg-blue-500/10'
+        )}>
+          <StatusIcon status={item.status} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">{item.title}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{item.date}</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (nutritionLoading) {
     return (
@@ -458,7 +535,7 @@ function NutritionTab({ clientId }: { clientId: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {nutrition.map(item => (
         <HistoryListItem key={item.id} item={item} />
       ))}
