@@ -6,7 +6,7 @@ import {
   Dumbbell,
   Calendar,
   Menu,
-  TrendingUp,
+  CreditCard,
 } from 'lucide-react';
 import { useState } from 'react';
 import { MobileMenu } from './MobileMenu';
@@ -15,7 +15,7 @@ const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-  { to: '/records', icon: TrendingUp, label: 'Záznamy' },
+  { to: '/sales', icon: CreditCard, label: 'Prodej' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
 ];
 
