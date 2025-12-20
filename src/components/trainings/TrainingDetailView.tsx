@@ -28,6 +28,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Trash2,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +85,7 @@ const trainingDetailSchema = z.object({
   prep_notes: z.string().optional(),
   trainer_went_well: z.string().optional(),
   trainer_problems: z.string().optional(),
+  trainer_recommendations: z.string().optional(),
   pain_reported: z.boolean().optional(),
   pain_notes: z.string().optional(),
 });
@@ -103,6 +105,7 @@ interface TrainingDetailViewProps {
     prep_notes?: string;
     trainer_went_well?: string;
     trainer_problems?: string;
+    trainer_recommendations?: string;
     pain_reported?: boolean;
     pain_notes?: string;
   }, tagIds: string[]) => Promise<void>;
@@ -178,6 +181,7 @@ export function TrainingDetailView({
       prep_notes: training.prep_notes || '',
       trainer_went_well: training.trainer_went_well || '',
       trainer_problems: training.trainer_problems || '',
+      trainer_recommendations: training.trainer_recommendations || '',
       pain_reported: training.pain_reported || false,
       pain_notes: training.pain_notes || '',
     },
@@ -196,6 +200,7 @@ export function TrainingDetailView({
       prep_notes: training.prep_notes || '',
       trainer_went_well: training.trainer_went_well || '',
       trainer_problems: training.trainer_problems || '',
+      trainer_recommendations: training.trainer_recommendations || '',
       pain_reported: training.pain_reported || false,
       pain_notes: training.pain_notes || '',
     });
@@ -647,6 +652,36 @@ export function TrainingDetailView({
             ) : (
               <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
                 {training.trainer_problems || <span className="italic">Nezadáno</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Recommendations */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-primary">
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-medium">Doporučení pro další trénink</span>
+            </div>
+            {isEditMode ? (
+              <FormField
+                control={form.control}
+                name="trainer_recommendations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Doporučení, tipy, úpravy pro příště..."
+                        className="bg-secondary border-border min-h-[60px]"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
+                {training.trainer_recommendations || <span className="italic">Nezadáno</span>}
               </p>
             )}
           </div>
