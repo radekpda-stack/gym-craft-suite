@@ -49,6 +49,10 @@ export const clientFormSchema = z.object({
     .string()
     .optional()
     .or(z.literal("")),
+  // Feedback settings
+  feedbackEnabled: z
+    .boolean()
+    .default(true),
   // Extended fields from diagnostics
   handedness: z.string().optional().nullable(),
   occupation: z.string().optional().nullable(),
