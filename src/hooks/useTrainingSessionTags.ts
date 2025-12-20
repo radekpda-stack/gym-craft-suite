@@ -58,6 +58,7 @@ export interface DateRange {
 
 export const trainingTagsKeys = {
   all: ["training_session_tags"] as const,
+  allMap: ["all_training_session_tags_map"] as const,
   session: (sessionId: string) => ["training_session_tags", sessionId] as const,
   clientHistory: (clientId: string) => ["client_training_history", clientId] as const,
   clientStats: (clientId: string, dateRange?: DateRange) => [
@@ -330,5 +331,41 @@ export function useClientTagStats(clientId: string | undefined, dateRange?: Date
       return Object.values(tagCounts).sort((a, b) => b.count - a.count);
     },
     enabled: !!clientId,
+  });
+}
+
+/**
+ * Fetches all training session tags and returns them as a map by session ID
+ * Used for efficiently displaying tags in training lists
+ * @returns Query result with Record<sessionId, Tag[]>
+ */
+export function useAllTrainingSessionTags() {
+  return useQuery({
+    queryKey: trainingTagsKeys.allMap,
+    queryFn: async (): Promise<Record<string, Tag[]>> => {
+      const { data, error } = await supabase
+        .from("training_session_tags")
+        .select(`
+          training_session_id,
+          tags:tag_id (id, name, color)
+        `);
+
+      if (error) throw error;
+
+      // Group tags by training_session_id
+      const map: Record<string, Tag[]> = {};
+      data.forEach(item => {
+        const tag = item.tags as unknown as Tag;
+        if (tag) {
+          if (!map[item.training_session_id]) {
+            map[item.training_session_id] = [];
+          }
+          map[item.training_session_id].push(tag);
+        }
+      });
+
+      return map;
+    },
+    staleTime: 30000, // Cache for 30 seconds
   });
 }
