@@ -55,7 +55,6 @@ const sections: NavSection[] = [
     items: [
       { to: '/calendar', icon: Calendar, label: 'Kalendář' },
       { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-      { to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
     ],
   },
   {
