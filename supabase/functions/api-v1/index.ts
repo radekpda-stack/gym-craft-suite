@@ -3,7 +3,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-user-id",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
 };
 
@@ -168,6 +168,65 @@ function validateApiKey(req: Request): boolean {
   return apiKey === validKey && !!validKey;
 }
 
+// Extract and validate user ID from request headers
+function getUserId(req: Request): { userId?: string; error?: Response } {
+  const userId = req.headers.get("x-user-id");
+  
+  if (!userId) {
+    return { 
+      error: errorResponse(
+        "UNAUTHORIZED", 
+        "Missing x-user-id header. All API requests must include a valid user ID.", 
+        401
+      ) 
+    };
+  }
+  
+  const result = uuidSchema.safeParse(userId);
+  if (!result.success) {
+    return { 
+      error: errorResponse(
+        "VALIDATION_ERROR", 
+        "Invalid x-user-id format. Must be a valid UUID.", 
+        400
+      ) 
+    };
+  }
+  
+  return { userId };
+}
+
+// Validate that a resource belongs to the authenticated user
+async function validateOwnership(
+  supabase: any, 
+  table: string, 
+  resourceId: string, 
+  userId: string,
+  userIdColumn: string = "user_id"
+): Promise<{ valid: boolean; error?: Response }> {
+  const { data, error } = await supabase
+    .from(table)
+    .select(userIdColumn)
+    .eq("id", resourceId)
+    .maybeSingle();
+  
+  if (error) {
+    console.error(`[API v1] Ownership check error for ${table}:`, error);
+    return { valid: false, error: errorResponse("INTERNAL_ERROR", "Failed to validate ownership", 500) };
+  }
+  
+  if (!data) {
+    return { valid: false, error: errorResponse("NOT_FOUND", `${table} resource not found`, 404) };
+  }
+  
+  if (data[userIdColumn] !== userId) {
+    console.warn(`[API v1] Unauthorized access attempt: user ${userId} tried to access ${table}/${resourceId} owned by ${data[userIdColumn]}`);
+    return { valid: false, error: errorResponse("FORBIDDEN", "You do not have permission to access this resource", 403) };
+  }
+  
+  return { valid: true };
+}
+
 // Parse URL path segments
 function parsePath(url: URL): { resource: string; id?: string; action?: string } {
   const pathParts = url.pathname.replace("/api-v1", "").split("/").filter(Boolean);
@@ -211,29 +270,40 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Health check - no auth required
+  if (resource === "health") {
+    return jsonResponse({ status: "ok", timestamp: new Date().toISOString() });
+  }
+
   // API key validation for ALL requests (except health check)
-  if (resource !== "health" && !validateApiKey(req)) {
+  if (!validateApiKey(req)) {
     return errorResponse("UNAUTHORIZED", "Invalid or missing API key", 401);
   }
+
+  // User ID validation - required for all authenticated requests
+  const { userId, error: userIdError } = getUserId(req);
+  if (userIdError) {
+    return userIdError;
+  }
+
+  console.log(`[API v1] Authenticated request for user: ${userId}`);
 
   try {
     switch (resource) {
       case "clients":
-        return await handleClients(supabase, method, id, url, req);
+        return await handleClients(supabase, method, id, url, req, userId!);
       case "workouts":
-        return await handleWorkouts(supabase, method, id, url, req);
+        return await handleWorkouts(supabase, method, id, url, req, userId!);
       case "workout-entries":
-        return await handleWorkoutEntries(supabase, method, id, req);
+        return await handleWorkoutEntries(supabase, method, id, req, userId!);
       case "measurements":
-        return await handleMeasurements(supabase, method, id, url, req);
+        return await handleMeasurements(supabase, method, id, url, req, userId!);
       case "diagnostics":
-        return await handleDiagnostics(supabase, method, id, url, req);
+        return await handleDiagnostics(supabase, method, id, url, req, userId!);
       case "credits":
-        return await handleCredits(supabase, method, id, action, url, req);
+        return await handleCredits(supabase, method, id, action, url, req, userId!);
       case "calendar-events":
-        return await handleCalendarEvents(supabase, method, id, url, req);
-      case "health":
-        return jsonResponse({ status: "ok", timestamp: new Date().toISOString() });
+        return await handleCalendarEvents(supabase, method, id, url, req, userId!);
       default:
         return errorResponse("NOT_FOUND", `Resource '${resource}' not found`, 404);
     }
@@ -245,11 +315,12 @@ Deno.serve(async (req) => {
 });
 
 // ============ CLIENTS ============
-async function handleClients(supabase: any, method: string, id: string | undefined, url: URL, req: Request) {
+async function handleClients(supabase: any, method: string, id: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   if (method === "GET" && !id) {
-    let query = supabase.from("clients").select("*");
+    // List clients - filtered by user_id
+    let query = supabase.from("clients").select("*").eq("user_id", userId);
     
     const name = params.get("name");
     if (name) {
@@ -277,10 +348,15 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: client, error } = await supabase
       .from("clients")
       .select("*")
       .eq("id", id)
+      .eq("user_id", userId)
       .maybeSingle();
     
     if (error) throw error;
@@ -290,6 +366,7 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       .from("training_sessions")
       .select("id, date, status")
       .eq("client_id", id)
+      .eq("user_id", userId)
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -298,6 +375,7 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       .from("measurements")
       .select("id, date, weight, body_fat_percentage")
       .eq("client_id", id)
+      .eq("user_id", userId)
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -306,6 +384,7 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       .from("training_sessions")
       .select("*", { count: "exact", head: true })
       .eq("client_id", id)
+      .eq("user_id", userId)
       .eq("status", "completed");
 
     return jsonResponse({
@@ -338,6 +417,7 @@ async function handleClients(supabase: any, method: string, id: string | undefin
         credit_balance: body!.credit_balance || 0,
         is_favorite: body!.is_favorite || false,
         is_archived: false,
+        user_id: userId, // Associate with authenticated user
       })
       .select()
       .single();
@@ -352,6 +432,10 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: body, error: validationError } = await parseAndValidate(req, clientUpdateSchema);
     if (validationError) return validationError;
 
@@ -362,6 +446,7 @@ async function handleClients(supabase: any, method: string, id: string | undefin
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -375,10 +460,15 @@ async function handleClients(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "Invalid client ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("clients")
       .update({ is_archived: true, updated_at: new Date().toISOString() })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -390,14 +480,14 @@ async function handleClients(supabase: any, method: string, id: string | undefin
 }
 
 // ============ WORKOUTS (Training Sessions) ============
-async function handleWorkouts(supabase: any, method: string, id: string | undefined, url: URL, req: Request) {
+async function handleWorkouts(supabase: any, method: string, id: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   if (method === "GET" && !id) {
     let query = supabase.from("training_sessions").select(`
       *,
       clients!inner(id, name)
-    `);
+    `).eq("user_id", userId);
     
     const clientId = params.get("client_id");
     if (clientId) {
@@ -436,6 +526,10 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
       return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: workout, error } = await supabase
       .from("training_sessions")
       .select(`
@@ -446,6 +540,7 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
         )
       `)
       .eq("id", id)
+      .eq("user_id", userId)
       .maybeSingle();
     
     if (error) throw error;
@@ -466,6 +561,10 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
     const { data: body, error: validationError } = await parseAndValidate(req, workoutCreateSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .insert({
@@ -476,6 +575,7 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
         notes: body!.notes || "",
         participant_count: body!.participant_count || 1,
         subjective_rating: body!.subjective_rating || null,
+        user_id: userId, // Associate with authenticated user
       })
       .select()
       .single();
@@ -490,6 +590,10 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
       return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: body, error: validationError } = await parseAndValidate(req, workoutUpdateSchema);
     if (validationError) return validationError;
 
@@ -500,6 +604,7 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -513,6 +618,10 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
       return errorResponse("VALIDATION_ERROR", "Invalid workout ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .update({ 
@@ -521,6 +630,7 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -532,7 +642,7 @@ async function handleWorkouts(supabase: any, method: string, id: string | undefi
 }
 
 // ============ WORKOUT ENTRIES (Exercise Sets) ============
-async function handleWorkoutEntries(supabase: any, method: string, id: string | undefined, req: Request) {
+async function handleWorkoutEntries(supabase: any, method: string, id: string | undefined, req: Request, userId: string) {
   const { error: checkError } = await supabase
     .from("workout_entries")
     .select("id")
@@ -550,6 +660,10 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
     const { data: body, error: validationError } = await parseAndValidate(req, workoutEntryCreateSchema);
     if (validationError) return validationError;
 
+    // Validate that the training session belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", body!.training_session_id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("workout_entries")
       .insert({
@@ -561,6 +675,7 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
         reps: body!.reps,
         rpe: body!.rpe,
         notes: body!.notes || "",
+        user_id: userId,
       })
       .select()
       .single();
@@ -575,6 +690,10 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
       return errorResponse("VALIDATION_ERROR", "Invalid entry ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "workout_entries", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: body, error: validationError } = await parseAndValidate(req, workoutEntryUpdateSchema);
     if (validationError) return validationError;
 
@@ -582,6 +701,7 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
       .from("workout_entries")
       .update(body)
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -595,10 +715,15 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
       return errorResponse("VALIDATION_ERROR", "Invalid entry ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "workout_entries", id, userId);
+    if (!valid) return ownershipError!;
+
     const { error } = await supabase
       .from("workout_entries")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     
     if (error) throw error;
     return jsonResponse({ message: "Entry deleted" });
@@ -608,14 +733,14 @@ async function handleWorkoutEntries(supabase: any, method: string, id: string | 
 }
 
 // ============ MEASUREMENTS ============
-async function handleMeasurements(supabase: any, method: string, id: string | undefined, url: URL, req: Request) {
+async function handleMeasurements(supabase: any, method: string, id: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   if (method === "GET") {
     let query = supabase.from("measurements").select(`
       *,
       clients(id, name)
-    `);
+    `).eq("user_id", userId);
     
     const clientId = params.get("client_id");
     if (clientId) {
@@ -657,6 +782,10 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
     const { data: body, error: validationError } = await parseAndValidate(req, measurementCreateSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("measurements")
       .insert({
@@ -677,6 +806,7 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
         calf_right: body!.calf_right,
         mental_state: body!.mental_state,
         notes: body!.notes || "",
+        user_id: userId, // Associate with authenticated user
       })
       .select()
       .single();
@@ -691,6 +821,10 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
       return errorResponse("VALIDATION_ERROR", "Invalid measurement ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "measurements", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: body, error: validationError } = await parseAndValidate(req, measurementUpdateSchema);
     if (validationError) return validationError;
 
@@ -698,6 +832,7 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
       .from("measurements")
       .update(body)
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -711,10 +846,15 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
       return errorResponse("VALIDATION_ERROR", "Invalid measurement ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "measurements", id, userId);
+    if (!valid) return ownershipError!;
+
     const { error } = await supabase
       .from("measurements")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     
     if (error) throw error;
     return jsonResponse({ message: "Measurement deleted" });
@@ -724,14 +864,14 @@ async function handleMeasurements(supabase: any, method: string, id: string | un
 }
 
 // ============ DIAGNOSTICS ============
-async function handleDiagnostics(supabase: any, method: string, id: string | undefined, url: URL, req: Request) {
+async function handleDiagnostics(supabase: any, method: string, id: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   if (method === "GET" && !id) {
     let query = supabase.from("diagnostics").select(`
       *,
       clients(id, name)
-    `);
+    `).eq("user_id", userId);
     
     const clientId = params.get("client_id");
     if (clientId) {
@@ -760,6 +900,10 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
       return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "diagnostics", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("diagnostics")
       .select(`
@@ -768,6 +912,7 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
         client_media(id, file_url, type, description, date)
       `)
       .eq("id", id)
+      .eq("user_id", userId)
       .maybeSingle();
     
     if (error) throw error;
@@ -779,6 +924,10 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
     const { data: body, error: validationError } = await parseAndValidate(req, diagnosticCreateSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("diagnostics")
       .insert({
@@ -788,6 +937,7 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
         area_name: body!.area_name,
         findings: body!.findings,
         notes: body!.notes || "",
+        user_id: userId, // Associate with authenticated user
       })
       .select()
       .single();
@@ -802,6 +952,10 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
       return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "diagnostics", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data: body, error: validationError } = await parseAndValidate(req, diagnosticUpdateSchema);
     if (validationError) return validationError;
 
@@ -809,6 +963,7 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
       .from("diagnostics")
       .update(body)
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
@@ -822,10 +977,15 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
       return errorResponse("VALIDATION_ERROR", "Invalid diagnostic ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "diagnostics", id, userId);
+    if (!valid) return ownershipError!;
+
     const { error } = await supabase
       .from("diagnostics")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     
     if (error) throw error;
     return jsonResponse({ message: "Diagnostic deleted" });
@@ -835,7 +995,7 @@ async function handleDiagnostics(supabase: any, method: string, id: string | und
 }
 
 // ============ CREDITS ============
-async function handleCredits(supabase: any, method: string, id: string | undefined, action: string | undefined, url: URL, req: Request) {
+async function handleCredits(supabase: any, method: string, id: string | undefined, action: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   // GET /credits?client_id=...
@@ -850,10 +1010,15 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
     }
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", clientId, userId);
+    if (!valid) return ownershipError!;
+
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, name, credit_balance")
       .eq("id", clientId)
+      .eq("user_id", userId)
       .maybeSingle();
     
     if (clientError) throw clientError;
@@ -867,6 +1032,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
         training_sessions(id, date, participant_count)
       `)
       .eq("client_id", clientId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     
     if (txError) throw txError;
@@ -884,6 +1050,10 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const { data: body, error: validationError } = await parseAndValidate(req, creditConsumeSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const priceMap: Record<string, number> = {
       "1": 800,
       "2": 1000,
@@ -899,6 +1069,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
       .from("clients")
       .select("credit_balance")
       .eq("id", body!.client_id)
+      .eq("user_id", userId)
       .single();
     
     if (clientError) throw clientError;
@@ -913,6 +1084,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
         type: "training_deduction",
         description: body!.note || `Training session (${sessionType})`,
         training_session_id: body!.training_session_id || null,
+        user_id: userId,
       })
       .select()
       .single();
@@ -922,7 +1094,8 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const { error: updateError } = await supabase
       .from("clients")
       .update({ credit_balance: newBalance })
-      .eq("id", body!.client_id);
+      .eq("id", body!.client_id)
+      .eq("user_id", userId);
     
     if (updateError) throw updateError;
 
@@ -938,12 +1111,17 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const { data: body, error: validationError } = await parseAndValidate(req, creditAddSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const amount = Math.abs(body!.amount);
 
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("credit_balance")
       .eq("id", body!.client_id)
+      .eq("user_id", userId)
       .single();
     
     if (clientError) throw clientError;
@@ -957,6 +1135,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
         amount: amount,
         type: "credit_purchase",
         description: body!.note || "Credit purchase",
+        user_id: userId,
       })
       .select()
       .single();
@@ -966,7 +1145,8 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     const { error: updateError } = await supabase
       .from("clients")
       .update({ credit_balance: newBalance })
-      .eq("id", body!.client_id);
+      .eq("id", body!.client_id)
+      .eq("user_id", userId);
     
     if (updateError) throw updateError;
 
@@ -989,10 +1169,15 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
       return errorResponse("VALIDATION_ERROR", "Invalid client_id format", 400);
     }
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", clientId, userId);
+    if (!valid) return ownershipError!;
+
     let query = supabase
       .from("credit_transactions")
       .select("*")
-      .eq("client_id", clientId);
+      .eq("client_id", clientId)
+      .eq("user_id", userId);
 
     const from = params.get("from");
     if (from) {
@@ -1013,6 +1198,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
       .from("clients")
       .select("id, name, credit_balance")
       .eq("id", clientId)
+      .eq("user_id", userId)
       .single();
 
     const totalAdded = transactions
@@ -1046,7 +1232,7 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
 }
 
 // ============ CALENDAR EVENTS (Training Schedule) ============
-async function handleCalendarEvents(supabase: any, method: string, id: string | undefined, url: URL, req: Request) {
+async function handleCalendarEvents(supabase: any, method: string, id: string | undefined, url: URL, req: Request, userId: string) {
   const params = url.searchParams;
 
   if (method === "GET" && !id) {
@@ -1059,7 +1245,7 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
       participant_count,
       client_id,
       clients(id, name)
-    `);
+    `).eq("user_id", userId);
     
     const dateFrom = params.get("date_from");
     if (dateFrom) {
@@ -1105,6 +1291,10 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
     const { data: body, error: validationError } = await parseAndValidate(req, calendarEventCreateSchema);
     if (validationError) return validationError;
 
+    // Validate that the client belongs to this user
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "clients", body!.client_id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .insert({
@@ -1114,6 +1304,7 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
         status: body!.status || "scheduled",
         notes: body!.notes || "",
         participant_count: body!.participant_count || 1,
+        user_id: userId, // Associate with authenticated user
       })
       .select(`
         *,
@@ -1130,6 +1321,10 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
     if (!idResult.success) {
       return errorResponse("VALIDATION_ERROR", "Invalid event ID format", 400);
     }
+
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", id, userId);
+    if (!valid) return ownershipError!;
 
     const { data: body, error: validationError } = await parseAndValidate(req, calendarEventUpdateSchema);
     if (validationError) return validationError;
@@ -1148,6 +1343,7 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
       .from("training_sessions")
       .update(updateData)
       .eq("id", id)
+      .eq("user_id", userId)
       .select(`
         *,
         clients(id, name)
@@ -1164,6 +1360,10 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
       return errorResponse("VALIDATION_ERROR", "Invalid event ID format", 400);
     }
 
+    // Validate ownership
+    const { valid, error: ownershipError } = await validateOwnership(supabase, "training_sessions", id, userId);
+    if (!valid) return ownershipError!;
+
     const { data, error } = await supabase
       .from("training_sessions")
       .update({ 
@@ -1171,6 +1371,7 @@ async function handleCalendarEvents(supabase: any, method: string, id: string | 
         canceled_at: new Date().toISOString(),
       })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     
