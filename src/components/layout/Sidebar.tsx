@@ -118,7 +118,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       items: [
         { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
         { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
-        { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' },
+        // { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' }, // Hidden
       ],
     },
     {

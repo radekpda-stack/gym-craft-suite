@@ -19,7 +19,7 @@ const mainNavItems = [
   { to: '/sales', icon: CreditCard, label: 'Prodej' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
   { to: '/records', icon: Activity, label: 'Záznamy' },
-  { to: '/training-plans', icon: ClipboardList, label: 'Plány' },
+  // { to: '/training-plans', icon: ClipboardList, label: 'Plány' }, // Hidden
   { to: '/reminders', icon: Bell, label: 'Připomínky' },
   { to: '/settings', icon: Settings, label: 'Nastavení' },
 ];
