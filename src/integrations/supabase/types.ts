@@ -1673,6 +1673,42 @@ export type Database = {
         }
         Relationships: []
       }
+      health_conditions: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          name_en: string | null
+          synonyms: string[] | null
+          usage_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          name_en?: string | null
+          synonyms?: string[] | null
+          usage_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          name_en?: string | null
+          synonyms?: string[] | null
+          usage_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       measurements: {
         Row: {
           basal_metabolism: number | null

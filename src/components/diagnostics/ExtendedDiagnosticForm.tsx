@@ -19,6 +19,8 @@ import {
   TrendingUp, TrendingDown, Minus, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HealthConditionInput } from './HealthConditionInput';
+import { HealthConditionCategory } from '@/hooks/useHealthConditions';
 import { Client } from '@/hooks/useClients';
 import { useDiagnosticAI, FinalSummaryResult } from '@/hooks/useDiagnosticAI';
 import { DiagnosticAssessment } from '@/hooks/useDiagnosticAssessment';
@@ -823,39 +825,22 @@ export function ExtendedDiagnosticForm({
               <h3 className="font-medium mb-4">Zdravotní stav</h3>
               
               <div className="space-y-4">
-                {(['diseases', 'surgeries', 'injuries', 'painAreas', 'allergies'] as const).map(field => (
+                {/* Health conditions with autocomplete */}
+                {([
+                  { field: 'diseases' as const, label: 'Nemoci', category: 'disease' as HealthConditionCategory },
+                  { field: 'surgeries' as const, label: 'Operace', category: 'surgery' as HealthConditionCategory },
+                  { field: 'injuries' as const, label: 'Úrazy', category: 'injury' as HealthConditionCategory },
+                  { field: 'painAreas' as const, label: 'Bolesti', category: 'pain' as HealthConditionCategory },
+                  { field: 'allergies' as const, label: 'Alergie', category: 'allergy' as HealthConditionCategory },
+                ]).map(({ field, label, category }) => (
                   <div key={field}>
-                    <Label>
-                      {field === 'diseases' && 'Nemoci'}
-                      {field === 'surgeries' && 'Operace'}
-                      {field === 'injuries' && 'Úrazy'}
-                      {field === 'painAreas' && 'Bolesti'}
-                      {field === 'allergies' && 'Alergie'}
-                    </Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        value={tempInput[field] || ''}
-                        onChange={(e) => setTempInput(p => ({ ...p, [field]: e.target.value }))}
-                        placeholder="Přidat..."
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray(field, tempInput[field] || ''))}
-                      />
-                      <Button 
-                        type="button" 
-                        size="icon" 
-                        variant="secondary"
-                        onClick={() => addToArray(field, tempInput[field] || '')}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {formData[field].map((item, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1">
-                          {item}
-                          <X className="w-3 h-3 cursor-pointer" onClick={() => removeFromArray(field, i)} />
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label className="mb-2 block">{label}</Label>
+                    <HealthConditionInput
+                      category={category}
+                      value={formData[field]}
+                      onChange={(value) => updateField(field, value)}
+                      placeholder={`Vyhledat ${label.toLowerCase()}...`}
+                    />
                   </div>
                 ))}
 
