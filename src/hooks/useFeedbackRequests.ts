@@ -62,6 +62,8 @@ export interface FeedbackSettings {
   trainer_signature: string | null;
   auto_send_after_training: boolean;
   feedback_questions: FeedbackQuestionsConfig | null;
+  red_flag_pain_threshold?: number;
+  red_flag_body_feel_threshold?: number;
 }
 
 export interface CreateFeedbackRequestInput {
