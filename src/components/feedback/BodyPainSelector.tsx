@@ -18,7 +18,7 @@ export interface PainSelection {
   intensity: number;
   side?: 'left' | 'right' | 'both';
   isNew?: boolean;
-  painType?: 'muscle' | 'joint';
+  painType?: 'muscle' | 'joint' | 'tendon';
 }
 
 interface BodyPainSelectorProps {
@@ -446,7 +446,7 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
   // Temporary state for the bottom sheet
   const [tempIntensity, setTempIntensity] = useState(5);
   const [tempIsNew, setTempIsNew] = useState(true);
-  const [tempPainType, setTempPainType] = useState<'muscle' | 'joint' | null>(null);
+  const [tempPainType, setTempPainType] = useState<'muscle' | 'joint' | 'tendon' | null>(null);
   const [tempSide, setTempSide] = useState<'left' | 'right' | 'both'>('both');
 
   // Determine which silhouette and positions to use
@@ -460,8 +460,9 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
     both: language === 'cs' ? 'Obě strany' : 'Both sides',
     new: language === 'cs' ? 'Nová' : 'New',
     known: language === 'cs' ? 'Známá' : 'Known',
-    muscle: language === 'cs' ? 'Svalová' : 'Muscle',
-    joint: language === 'cs' ? 'Kloub/šlacha' : 'Joint/Tendon',
+    muscle: language === 'cs' ? 'Svalová bolest' : 'Muscle',
+    joint: language === 'cs' ? 'Kloubní' : 'Joint',
+    tendon: language === 'cs' ? 'Šlachová' : 'Tendon',
     add: language === 'cs' ? 'Přidat' : 'Add',
     cancel: language === 'cs' ? 'Zrušit' : 'Cancel',
     intensity: language === 'cs' ? 'Intenzita' : 'Intensity',
@@ -752,7 +753,9 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   ? (language === 'cs' ? 'sval' : 'muscle')
                   : selection.painType === 'joint'
                     ? (language === 'cs' ? 'kloub' : 'joint')
-                    : null;
+                    : selection.painType === 'tendon'
+                      ? (language === 'cs' ? 'šlacha' : 'tendon')
+                      : null;
                 
                 return (
                   <motion.div
@@ -761,50 +764,60 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-xl border-2 bg-card/50 backdrop-blur-sm",
+                      "flex flex-col gap-2 p-3 rounded-xl border-2 bg-card/50 backdrop-blur-sm",
                       getIntensityBorder(selection.intensity)
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-3 h-3 rounded-full",
-                        getIntensityBgColor(selection.intensity)
-                      )} />
-                      <div>
-                        <div className="font-medium text-sm">{label}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
-                          <span>{t.intensity}: {selection.intensity}/10</span>
-                          {selection.isNew !== undefined && (
-                            <span className="text-xs">
-                              • {selection.isNew ? t.new : t.known}
-                            </span>
-                          )}
-                          {painTypeLabel && (
-                            <span className="text-xs">• {painTypeLabel}</span>
-                          )}
+                    {/* Main row - icon, label, actions */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className={cn(
+                          "w-3 h-3 rounded-full shrink-0",
+                          getIntensityBgColor(selection.intensity)
+                        )} />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm truncate">{label}</div>
                         </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleEdit(selection)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => handleRemove(selection)}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(selection)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleRemove(selection)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                    {/* Second row - metadata */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <span className="font-medium">{selection.intensity}/10</span>
+                      {selection.isNew !== undefined && (
+                        <span className="px-1.5 py-0.5 rounded bg-muted">
+                          {selection.isNew ? t.new : t.known}
+                        </span>
+                      )}
+                      {painTypeLabel && (
+                        <span className="px-1.5 py-0.5 rounded bg-muted">{painTypeLabel}</span>
+                      )}
+                      {selection.side && selection.side !== 'both' && (
+                        <span className="px-1.5 py-0.5 rounded bg-muted">
+                          {selection.side === 'left' ? t.left : t.right}
+                        </span>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -923,12 +936,12 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
             {/* Pain Type Toggle */}
             <div className="space-y-2">
               <span className="text-sm font-medium">Druh bolesti</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'muscle' ? null : 'muscle')}
                   className={cn(
-                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
+                    "py-2.5 px-2 text-xs rounded-xl border-2 transition-all",
                     tempPainType === 'muscle'
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted/50 border-muted hover:border-muted-foreground/30"
@@ -940,13 +953,25 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
                   type="button"
                   onClick={() => setTempPainType(tempPainType === 'joint' ? null : 'joint')}
                   className={cn(
-                    "py-2.5 px-4 text-sm rounded-xl border-2 transition-all",
+                    "py-2.5 px-2 text-xs rounded-xl border-2 transition-all",
                     tempPainType === 'joint'
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted/50 border-muted hover:border-muted-foreground/30"
                   )}
                 >
                   🦴 {t.joint}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempPainType(tempPainType === 'tendon' ? null : 'tendon')}
+                  className={cn(
+                    "py-2.5 px-2 text-xs rounded-xl border-2 transition-all",
+                    tempPainType === 'tendon'
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 border-muted hover:border-muted-foreground/30"
+                  )}
+                >
+                  🦵 {t.tendon}
                 </button>
               </div>
             </div>
