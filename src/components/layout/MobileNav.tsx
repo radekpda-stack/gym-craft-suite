@@ -36,8 +36,8 @@ export function MobileNav() {
       <div className="absolute inset-0 bg-card/95 backdrop-blur-2xl border-t border-border/30 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]" />
       
       {/* Scrollable container */}
-      <div className="relative flex items-center h-[72px] px-1 safe-area-bottom overflow-x-auto scrollbar-hide">
-        <div className="flex items-center gap-0.5 mx-auto">
+      <div className="relative flex items-center h-[72px] px-2 safe-area-bottom overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-1 mx-auto">
           {mainNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/' && location.pathname.startsWith(item.to));
