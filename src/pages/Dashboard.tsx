@@ -11,6 +11,7 @@ import { QuickStats } from '@/components/dashboard/QuickStats';
 import { TrendsPanelSection } from '@/components/dashboard/TrendsPanelSection';
 import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
 import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
+import { MostActiveClientsCard } from '@/components/dashboard/MostActiveClientsCard';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 
 function DashboardContent() {
@@ -49,7 +50,10 @@ function DashboardContent() {
       <WeekSummarySection data={data} isLoading={isLoading} />
 
       {/* Fun statistiky */}
-      <UpcomingAnniversariesCard />
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <MostActiveClientsCard />
+        <UpcomingAnniversariesCard />
+      </div>
       
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <QuickStats />
