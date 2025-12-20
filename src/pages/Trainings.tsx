@@ -474,15 +474,12 @@ export default function Trainings() {
                     className="animate-slide-up"
                     style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                   >
-                    <TrainingQuickMenu
+                    <TrainingCard
                       session={session}
+                      client={client}
+                      tags={sessionTagsMap[session.id]}
                       onDuplicate={() => handleDuplicateTraining(session.id)}
-                    >
-                      <SessionCard
-                        session={session}
-                        client={client}
-                      />
-                    </TrainingQuickMenu>
+                    />
                   </div>
                 );
               })}
