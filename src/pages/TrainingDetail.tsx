@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -31,11 +31,14 @@ import {
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { useClient, useClients } from '@/hooks/useClients';
+import { useTags } from '@/hooks/useTags';
+import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
 import { PaymentMethodSelector, PaymentOption, getPaymentStatusFromOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
 import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
+import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import {
@@ -71,6 +74,7 @@ export default function TrainingDetail() {
   const { data: client } = useClient(training?.client_id);
   const { data: clients = [] } = useClients();
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
+  const { data: allTags = [] } = useTags();
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
   const { data: existingFeedback } = useTrainingFeedback(id);
   const { data: feedbackRequest } = useFeedbackRequest(id);
@@ -82,6 +86,13 @@ export default function TrainingDetail() {
   const saveParticipants = useSaveTrainingParticipants();
   const deductParticipantsCredit = useDeductParticipantsCredit();
   const trainingPrices = useTrainingPrices();
+
+  // Tag validation
+  const currentTagIds = trainingTags.map(t => t.tag_id);
+  const tagValidation = useMemo(() => 
+    validateTrainingTags(currentTagIds, allTags), 
+    [currentTagIds, allTags]
+  );
 
   // Dialog states
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
@@ -396,6 +407,9 @@ export default function TrainingDetail() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Tag validation warning */}
+            <TagValidationAlert validation={tagValidation} compact />
+
             {/* Price split toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
               <div>
@@ -567,7 +581,13 @@ export default function TrainingDetail() {
             </Button>
             <Button 
               onClick={handleComplete} 
-              disabled={completeTraining.isPending || saveParticipants.isPending || deductParticipantsCredit.isPending}
+              disabled={
+                !tagValidation.isValid ||
+                completeTraining.isPending || 
+                saveParticipants.isPending || 
+                deductParticipantsCredit.isPending
+              }
+              title={!tagValidation.isValid ? "Doplňte povinné tagy" : undefined}
             >
               {(completeTraining.isPending || saveParticipants.isPending || deductParticipantsCredit.isPending) ? (
                 <>
