@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Check, X, Wallet, MoreHorizontal, Gauge, Target, Users, Repeat } from 'lucide-react';
 import { format } from 'date-fns';
@@ -38,7 +39,7 @@ const getBorderColor = (status: string, paymentStatus?: string | null) => {
   return 'border-l-muted-foreground';
 };
 
-export function TrainingCard({
+export const TrainingCard = memo(function TrainingCard({
   session,
   client,
   tags,
@@ -250,4 +251,4 @@ export function TrainingCard({
       </div>
     </div>
   );
-}
+});

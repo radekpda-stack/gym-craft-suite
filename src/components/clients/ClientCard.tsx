@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -73,7 +73,7 @@ interface ClientCardProps {
   onToggleFavorite: () => void;
 }
 
-export function ClientCard({
+export const ClientCard = memo(function ClientCard({
   client,
   age,
   trainingCount,
@@ -305,4 +305,4 @@ export function ClientCard({
       </div>
     </div>
   );
-}
+});

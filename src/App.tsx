@@ -31,7 +31,16 @@ import TrainingPlans from "./pages/TrainingPlans";
 import TrainingPlanDetail from "./pages/TrainingPlanDetail";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes - data is fresh
+      gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
+      refetchOnWindowFocus: false, // Reduce unnecessary refetches
+      retry: 1, // Only retry once on failure
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>

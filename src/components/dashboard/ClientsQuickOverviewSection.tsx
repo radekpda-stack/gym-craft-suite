@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Star, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,7 @@ interface ClientsQuickOverviewSectionProps {
   isLoading: boolean;
 }
 
-function ClientRow({ client }: { client: ClientQuickInfo }) {
+const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo }) {
   const navigate = useNavigate();
   
   const statusConfig = {
@@ -68,7 +69,7 @@ function ClientRow({ client }: { client: ClientQuickInfo }) {
       </div>
     </button>
   );
-}
+});
 
 export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOverviewSectionProps) {
   if (isLoading) {
