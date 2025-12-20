@@ -29,46 +29,66 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
-      {/* Blur background */}
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border/50" />
+      {/* Gradient shadow above nav */}
+      <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
       
-      {/* Safe area padding for iOS - scrollable */}
-      <div className="relative flex items-center gap-1 h-[60px] px-2 safe-area-bottom overflow-x-auto scrollbar-hide">
-        {mainNavItems.map((item) => {
-          const isActive = location.pathname === item.to || 
-            (item.to !== '/' && location.pathname.startsWith(item.to));
-          const Icon = item.icon;
+      {/* Glass background */}
+      <div className="absolute inset-0 bg-card/95 backdrop-blur-2xl border-t border-border/30 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]" />
+      
+      {/* Scrollable container */}
+      <div className="relative flex items-center h-[72px] px-1 safe-area-bottom overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-0.5 mx-auto">
+          {mainNavItems.map((item) => {
+            const isActive = location.pathname === item.to || 
+              (item.to !== '/' && location.pathname.startsWith(item.to));
+            const Icon = item.icon;
 
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 py-2 px-3 rounded-2xl transition-all touch-target flex-shrink-0',
-                'active:scale-95',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <div className={cn(
-                'p-1.5 rounded-xl transition-colors',
-                isActive && 'bg-primary/10'
-              )}>
-                <Icon className={cn(
-                  'w-5 h-5 transition-transform',
-                  isActive && 'scale-105'
-                )} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span className={cn(
-                'text-[10px] font-medium transition-colors whitespace-nowrap',
-                isActive && 'font-semibold'
-              )}>
-                {item.label}
-              </span>
-            </NavLink>
-          );
-        })}
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  'relative flex flex-col items-center justify-center min-w-[56px] py-1.5 px-2 rounded-2xl transition-all duration-200 touch-target flex-shrink-0',
+                  'active:scale-90',
+                  isActive
+                    ? 'text-primary'
+                    : 'text-muted-foreground/70 hover:text-foreground'
+                )}
+              >
+                {/* Active indicator pill */}
+                {isActive && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-primary" />
+                )}
+                
+                {/* Icon container */}
+                <div className={cn(
+                  'relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200',
+                  isActive 
+                    ? 'bg-primary/15 shadow-sm' 
+                    : 'hover:bg-secondary/50'
+                )}>
+                  <Icon 
+                    className={cn(
+                      'w-[22px] h-[22px] transition-all duration-200',
+                      isActive && 'scale-110'
+                    )} 
+                    strokeWidth={isActive ? 2.5 : 1.8} 
+                  />
+                </div>
+                
+                {/* Label */}
+                <span className={cn(
+                  'text-[9px] mt-0.5 transition-all duration-200 whitespace-nowrap',
+                  isActive 
+                    ? 'font-bold text-primary' 
+                    : 'font-medium'
+                )}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
