@@ -8,6 +8,7 @@ import { Client } from '@/hooks/useClients';
 import { Link } from 'react-router-dom';
 import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
 import { TrainingTypeBadge } from '@/components/trainings/TrainingTypeSelector';
+import { FeedbackStatusIndicator } from '@/components/trainings/FeedbackStatusIndicator';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,11 +17,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tag } from '@/hooks/useTags';
+import type { FeedbackStatus } from '@/hooks/useTrainingFeedbackStatus';
 
 interface TrainingCardProps {
   session: TrainingSession;
   client?: Client | null;
   tags?: Tag[];
+  feedbackStatus?: FeedbackStatus;
   className?: string;
   onComplete?: () => void;
   onCancel?: () => void;
@@ -43,6 +46,7 @@ export const TrainingCard = memo(function TrainingCard({
   session,
   client,
   tags,
+  feedbackStatus,
   className,
   onComplete,
   onCancel,
@@ -53,6 +57,7 @@ export const TrainingCard = memo(function TrainingCard({
   const borderColor = getBorderColor(session.status, session.payment_status);
   const isScheduled = session.status === 'scheduled';
   const isInProgress = session.status === 'in_progress';
+  const isCompleted = session.status === 'completed';
   const isAwaitingPayment =
     session.status === 'completed' &&
     (!session.payment_status || session.payment_status === 'pending');
@@ -79,6 +84,11 @@ export const TrainingCard = memo(function TrainingCard({
               <span className="font-semibold text-foreground truncate">
                 {client?.name || 'Klient'}
               </span>
+              
+              {/* Feedback status indicator for completed trainings */}
+              {isCompleted && feedbackStatus && (
+                <FeedbackStatusIndicator status={feedbackStatus} />
+              )}
             </div>
             
             {/* Secondary Row: Type, Duration, RPE/RIR, Note */}

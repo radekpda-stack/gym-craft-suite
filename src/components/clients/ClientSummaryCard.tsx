@@ -19,6 +19,9 @@ import {
   FileText,
   CalendarClock,
   Link2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -29,6 +32,7 @@ import { FeedbackStatisticsCard } from '@/components/feedback/FeedbackStatistics
 import { FeedbackTrendsChart } from '@/components/feedback/FeedbackTrendsChart';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { RecurringScheduleManager } from '@/components/clients/RecurringScheduleManager';
+import { useClientFeedbackSummary } from '@/hooks/useClientFeedbackSummary';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -78,6 +82,8 @@ export function ClientSummaryCard({
   const [showMembers, setShowMembers] = useState(false);
   const [showFeedbackStats, setShowFeedbackStats] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
+  
+  const { data: feedbackSummary } = useClientFeedbackSummary(client.id);
 
   // Determine credit status color
   const getCreditStatusColor = () => {
@@ -88,6 +94,21 @@ export function ClientSummaryCard({
   
   const statusColor = getCreditStatusColor();
   const otherMembers = sharedBudgetMembers.filter(m => m.id !== client.id);
+  
+  // Trend icon helper
+  const getTrendIcon = () => {
+    if (!feedbackSummary?.trend) return null;
+    if (feedbackSummary.trend === 'up') return <TrendingUp className="w-3.5 h-3.5 text-success" />;
+    if (feedbackSummary.trend === 'down') return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
+    return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  };
+  
+  const getTrendLabel = () => {
+    if (!feedbackSummary?.trend) return null;
+    if (feedbackSummary.trend === 'up') return '👍 Lepší';
+    if (feedbackSummary.trend === 'down') return '👎 Horší';
+    return '➖ Stejné';
+  };
 
   return (
     <div className={cn(
@@ -198,7 +219,7 @@ export function ClientSummaryCard({
 
       {/* Feedback Section - Redesigned for clarity */}
       <div className="space-y-3">
-        {/* Header with stats toggle */}
+        {/* Header with mini summary and stats toggle */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-muted-foreground" />
@@ -213,6 +234,31 @@ export function ClientSummaryCard({
             {showFeedbackStats ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
+        
+        {/* Mini feedback summary */}
+        {feedbackSummary && feedbackSummary.totalCount > 0 && (
+          <div className="flex items-center gap-4 p-2.5 rounded-lg bg-secondary/30 text-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground text-xs">Poslední:</span>
+              <span className="font-medium">{feedbackSummary.lastFeedbackFormatted}</span>
+            </div>
+            {feedbackSummary.trend && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-xs">Trend:</span>
+                <span className="flex items-center gap-1 font-medium">
+                  {getTrendIcon()}
+                  <span className="text-xs">{getTrendLabel()}</span>
+                </span>
+              </div>
+            )}
+            {feedbackSummary.averageBodyFeel && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-xs">Průměr:</span>
+                <span className="font-medium">{feedbackSummary.averageBodyFeel}/10</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Two clear options */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
