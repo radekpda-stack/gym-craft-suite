@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays, isPast, addDays } from 'date-fns';
+import { differenceInDays, differenceInHours, addDays, subDays, startOfDay } from 'date-fns';
 
 /**
  * SmartNotificationEngine
@@ -12,6 +12,7 @@ import { differenceInDays, isPast, addDays } from 'date-fns';
  * - Package expiring soon (7 days)
  * - Client inactivity (14+ days)
  * - Training streaks (5, 10, 20, 50, 100)
+ * - Pending feedback (grouped daily notification)
  * 
  * This component doesn't render anything visible.
  */
@@ -42,6 +43,7 @@ export function SmartNotificationEngine() {
           checkPackageLowBalance(user.id),
           checkPackageExpiring(user.id),
           checkInactiveClients(user.id),
+          checkPendingFeedback(user.id),
         ]);
 
         // Invalidate notifications to show new ones
@@ -224,6 +226,79 @@ async function checkInactiveClients(userId: string) {
     }
   } catch (error) {
     console.error('Inactive clients check error:', error);
+  }
+}
+
+// Check for trainings that need feedback to be sent (grouped notification)
+async function checkPendingFeedback(userId: string) {
+  try {
+    const now = new Date();
+    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    
+    // Get completed trainings from last 12-48 hours
+    const { data: trainings } = await supabase
+      .from('training_sessions')
+      .select('id, client_id, date')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .lte('date', twelveHoursAgo.toISOString())
+      .gte('date', fortyEightHoursAgo.toISOString());
+
+    if (!trainings || trainings.length === 0) return;
+
+    // Get clients with feedback enabled
+    const clientIds = [...new Set(trainings.map(t => t.client_id))];
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('id, name, feedback_enabled')
+      .in('id', clientIds)
+      .eq('feedback_enabled', true);
+
+    if (!clients || clients.length === 0) return;
+
+    const enabledClientIds = clients.map(c => c.id);
+    const relevantTrainings = trainings.filter(t => enabledClientIds.includes(t.client_id));
+
+    if (relevantTrainings.length === 0) return;
+
+    // Check which trainings already have feedback requests sent
+    const { data: existingRequests } = await supabase
+      .from('feedback_requests')
+      .select('training_session_id')
+      .in('training_session_id', relevantTrainings.map(t => t.id))
+      .not('sent_at', 'is', null);
+
+    const sentTrainingIds = new Set((existingRequests || []).map(r => r.training_session_id));
+    const pendingTrainings = relevantTrainings.filter(t => !sentTrainingIds.has(t.id));
+
+    if (pendingTrainings.length === 0) return;
+
+    // Check if we already have an unread feedback_pending notification from today
+    const todayStart = startOfDay(now).toISOString();
+    const { data: existingNotif } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', 'feedback_pending')
+      .eq('is_read', false)
+      .gte('created_at', todayStart)
+      .maybeSingle();
+
+    if (existingNotif) return; // Already notified today
+
+    // Create ONE grouped notification
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'feedback_pending',
+      title: pendingTrainings.length === 1 
+        ? '1 trénink čeká na odeslání feedbacku' 
+        : `${pendingTrainings.length} tréninků čeká na odeslání feedbacku`,
+      message: 'Klikněte pro zobrazení přehledu a odeslání.',
+      entity_type: 'feedback',
+    });
+  } catch (error) {
+    console.error('Pending feedback check error:', error);
   }
 }
 

@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { X, Plus, Loader2, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { X, Plus, Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Form,
@@ -15,6 +16,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { DatePicker } from "@/components/ui/date-time-picker";
 import { clientFormSchema, ClientFormValues } from "@/lib/validations/client";
@@ -54,6 +56,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
       birthDate: defaultValues?.birth_date || "",
       gender: defaultValues?.gender || undefined,
       createdAt: defaultValues?.created_at ? defaultValues.created_at.split('T')[0] : "",
+      feedbackEnabled: defaultValues?.feedback_enabled !== false,
     },
   });
 
@@ -74,6 +77,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
         birthDate: defaultValues.birth_date || "",
         gender: defaultValues.gender || undefined,
         createdAt: defaultValues.created_at ? defaultValues.created_at.split('T')[0] : "",
+        feedbackEnabled: defaultValues.feedback_enabled !== false,
       });
     }
   }, [defaultValues, form]);
@@ -349,6 +353,31 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Feedback Toggle */}
+        <FormField
+          control={form.control}
+          name="feedbackEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                  Posílat feedback dotazníky
+                </FormLabel>
+                <FormDescription className="text-xs">
+                  Po každém tréninku bude klientovi dostupný dotazník zpětné vazby
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
             </FormItem>
           )}
         />
