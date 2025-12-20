@@ -16,6 +16,7 @@ import { ClientsAtRiskCard } from '@/components/dashboard/ClientsAtRiskCard';
 import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
 import { CapacityHeatmapCard } from '@/components/dashboard/CapacityHeatmapCard';
 import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
+import { BusinessAnalyticsCard } from '@/components/dashboard/BusinessAnalyticsCard';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 
 function DashboardContent() {
@@ -52,6 +53,9 @@ function DashboardContent() {
 
       {/* Week Summary - collapsible */}
       <WeekSummarySection data={data} isLoading={isLoading} />
+
+      {/* Business Analytics */}
+      <BusinessAnalyticsCard />
 
       {/* Fun statistiky */}
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
