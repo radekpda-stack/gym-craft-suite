@@ -452,15 +452,13 @@ export default function CalendarPage() {
       </div>
 
       {/* FAB - Add Training */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50">
-        <Button
-          size="lg"
-          className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all"
-          onClick={() => handleOpenCreate()}
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      </div>
+      <Button
+        size="lg"
+        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center p-0"
+        onClick={() => handleOpenCreate()}
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
 
       {/* Create Training Sheet */}
       <CreateTrainingSheet
