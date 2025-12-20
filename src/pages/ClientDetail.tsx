@@ -30,6 +30,7 @@ import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
 import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
 import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
+import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
 
 import { toast } from '@/hooks/use-toast';
@@ -204,12 +205,14 @@ export default function ClientDetail() {
           <ClientTrainingCountCard clientId={client.id} />
           <ClientLTVCard clientId={client.id} />
           <ClientAttendanceStats clientId={client.id} />
+          <ClientTagAnalyticsCard clientId={client.id} />
         </CollapsibleSection>
       ) : (
         <>
           <ClientTrainingCountCard clientId={client.id} />
           <ClientLTVCard clientId={client.id} />
           <ClientAttendanceStats clientId={client.id} />
+          <ClientTagAnalyticsCard clientId={client.id} />
         </>
       )}
 
