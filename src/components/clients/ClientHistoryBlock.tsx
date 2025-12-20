@@ -27,6 +27,13 @@ import { toast } from '@/hooks/use-toast';
 
 interface ClientHistoryBlockProps {
   clientId: string;
+  notes?: string | null;
+}
+
+interface ParsedNote {
+  id: string;
+  date: string;
+  text: string;
 }
 
 interface HistoryItem {
@@ -39,9 +46,40 @@ interface HistoryItem {
   url?: string;
 }
 
-export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
+function parseNotes(notes: string | null | undefined): ParsedNote[] {
+  if (!notes) return [];
+  
+  // Notes format: "[1.1.2024 10:30]\nText poznámky\n\n[2.1.2024 14:00]\nDalší poznámka"
+  const noteBlocks = notes.split(/\n\n(?=\[)/);
+  
+  return noteBlocks
+    .map((block, index) => {
+      const match = block.match(/^\[([^\]]+)\]\n?([\s\S]*)/);
+      if (match) {
+        return {
+          id: `note-${index}`,
+          date: match[1],
+          text: match[2].trim(),
+        };
+      }
+      // Fallback for notes without date header
+      if (block.trim()) {
+        return {
+          id: `note-${index}`,
+          date: '',
+          text: block.trim(),
+        };
+      }
+      return null;
+    })
+    .filter((n): n is ParsedNote => n !== null);
+}
+
+export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('trainings');
+  
+  const parsedNotes = useMemo(() => parseNotes(notes), [notes]);
 
   const [feedbackDetailOpen, setFeedbackDetailOpen] = useState(false);
   const [activeFeedbackRequestId, setActiveFeedbackRequestId] = useState<string | null>(null);
@@ -228,6 +266,7 @@ export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
           <TabsList className="w-full h-auto p-1 bg-transparent rounded-none justify-start gap-1 overflow-x-auto">
             <TabsTrigger
               value="trainings"
+              data-history-tab="trainings"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-1.5"
             >
               <Dumbbell className="w-4 h-4" />
@@ -238,6 +277,7 @@ export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
             </TabsTrigger>
             <TabsTrigger
               value="feedback"
+              data-history-tab="feedback"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-1.5"
             >
               <MessageSquare className="w-4 h-4" />
@@ -245,6 +285,7 @@ export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
             </TabsTrigger>
             <TabsTrigger
               value="nutrition"
+              data-history-tab="nutrition"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-1.5"
             >
               <Utensils className="w-4 h-4" />
@@ -252,10 +293,14 @@ export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
             </TabsTrigger>
             <TabsTrigger
               value="notes"
+              data-history-tab="notes"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-1.5"
             >
               <StickyNote className="w-4 h-4" />
               <span>Poznámky</span>
+              {parsedNotes.length > 0 && (
+                <span className="text-xs opacity-70">({parsedNotes.length})</span>
+              )}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -298,8 +343,25 @@ export function ClientHistoryBlock({ clientId }: ClientHistoryBlockProps) {
             <NutritionTab clientId={clientId} />
           </TabsContent>
 
-          <TabsContent value="notes" className="m-0">
-            <EmptyState icon={StickyNote} message="Zatím žádné poznámky" />
+          <TabsContent value="notes" className="m-0 space-y-2">
+            {parsedNotes.length > 0 ? (
+              parsedNotes.map((note) => (
+                <div
+                  key={note.id}
+                  className="w-full flex items-start gap-3 p-3 rounded-xl bg-secondary/30"
+                >
+                  <StickyNote className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                    {note.date && (
+                      <p className="text-xs text-muted-foreground mt-1">{note.date}</p>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <EmptyState icon={StickyNote} message="Zatím žádné poznámky" />
+            )}
           </TabsContent>
         </div>
       </Tabs>

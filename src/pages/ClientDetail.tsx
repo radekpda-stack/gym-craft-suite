@@ -169,7 +169,7 @@ export default function ClientDetail() {
       <ClientAttendanceStats clientId={client.id} />
 
       {/* BLOCK D: History (Scrollable Tabs) */}
-      <ClientHistoryBlock clientId={client.id} />
+      <ClientHistoryBlock clientId={client.id} notes={client.notes} />
 
       {/* BLOCK E: Administration (Secondary, Collapsible) */}
       <ClientAdminBlock
