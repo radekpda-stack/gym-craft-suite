@@ -1844,6 +1844,7 @@ export type Database = {
       }
       nutrition_coffee_entries: {
         Row: {
+          after_16: boolean | null
           client_id: string
           coffee_type: string
           count: number
@@ -1859,6 +1860,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          after_16?: boolean | null
           client_id: string
           coffee_type: string
           count?: number
@@ -1874,6 +1876,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          after_16?: boolean | null
           client_id?: string
           coffee_type?: string
           count?: number
@@ -3206,6 +3209,7 @@ export type Database = {
           id: string
           intensity_notes: string | null
           is_generated: boolean | null
+          is_high_intensity_test: boolean | null
           is_late_cancellation: boolean | null
           notes: string | null
           pain_notes: string | null
@@ -3247,6 +3251,7 @@ export type Database = {
           id?: string
           intensity_notes?: string | null
           is_generated?: boolean | null
+          is_high_intensity_test?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
           pain_notes?: string | null
@@ -3288,6 +3293,7 @@ export type Database = {
           id?: string
           intensity_notes?: string | null
           is_generated?: boolean | null
+          is_high_intensity_test?: boolean | null
           is_late_cancellation?: boolean | null
           notes?: string | null
           pain_notes?: string | null
