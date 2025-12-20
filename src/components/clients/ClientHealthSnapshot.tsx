@@ -19,7 +19,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { FeedbackDetailDialog } from '@/components/feedback/FeedbackDetailDialog';
 import {
   useClientHealthSnapshot,
-  translatePainArea,
   TrendDirection,
   AttendanceLevel,
   CreditLevel,
@@ -34,109 +33,26 @@ interface ClientHealthSnapshotProps {
   className?: string;
 }
 
-// Trend icons and styles
-const TREND_ICONS = {
-  up: TrendingUp,
-  stable: Minus,
-  down: TrendingDown,
+// Simplified trend display - just icon and status (Master Prompt: no numbers, no reasons)
+const TREND_DISPLAY = {
+  up: { arrow: '↑', label: 'stabilní', className: 'text-status-ok' },
+  stable: { arrow: '→', label: 'stabilní', className: 'text-muted-foreground' },
+  down: { arrow: '↓', label: 'pozor', className: 'text-status-error' },
 } as const;
 
-const TREND_STYLES = {
-  up: 'text-status-ok',
-  stable: 'text-muted-foreground',
-  down: 'text-status-error',
+// Attendance display
+const ATTENDANCE_DISPLAY = {
+  regular: { emoji: '✔️', label: 'pravidelná', className: 'text-status-ok' },
+  fluctuating: { emoji: '⚠️', label: 'kolísavá', className: 'text-status-warning' },
+  dropouts: { emoji: '❌', label: 'výpadky', className: 'text-status-error' },
 } as const;
 
-// Attendance icons and styles
-const ATTENDANCE_CONFIG = {
-  regular: {
-    icon: CheckCircle2,
-    className: 'text-status-ok',
-    label: '✔️',
-  },
-  fluctuating: {
-    icon: AlertTriangle,
-    className: 'text-status-warning',
-    label: '⚠️',
-  },
-  dropouts: {
-    icon: XCircle,
-    className: 'text-status-error',
-    label: '❌',
-  },
+// Credit display
+const CREDIT_DISPLAY = {
+  ok: { emoji: '🟢', label: 'ok', className: 'text-status-ok' },
+  low: { emoji: '🟠', label: 'nízký', className: 'text-status-warning' },
+  exhausted: { emoji: '🔴', label: 'vyčerpaný', className: 'text-status-error' },
 } as const;
-
-// Credit icons and styles
-const CREDIT_CONFIG = {
-  ok: {
-    emoji: '🟢',
-    className: 'text-status-ok',
-  },
-  low: {
-    emoji: '🟠',
-    className: 'text-status-warning',
-  },
-  exhausted: {
-    emoji: '🔴',
-    className: 'text-status-error',
-  },
-} as const;
-
-function TrendIndicator({ 
-  direction, 
-  label 
-}: { 
-  direction: TrendDirection; 
-  label: string;
-}) {
-  const Icon = TREND_ICONS[direction];
-  const className = TREND_STYLES[direction];
-  
-  const arrows = {
-    up: '↑',
-    stable: '→',
-    down: '↓',
-  };
-  
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 font-medium', className)}>
-      <span className="text-base">{arrows[direction]}</span>
-      {label}
-    </span>
-  );
-}
-
-function AttendanceIndicator({ 
-  level, 
-  label 
-}: { 
-  level: AttendanceLevel; 
-  label: string;
-}) {
-  const config = ATTENDANCE_CONFIG[level];
-  
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 font-medium', config.className)}>
-      {config.label} {label}
-    </span>
-  );
-}
-
-function CreditIndicator({ 
-  level, 
-  label 
-}: { 
-  level: CreditLevel; 
-  label: string;
-}) {
-  const config = CREDIT_CONFIG[level];
-  
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 font-medium', config.className)}>
-      {config.emoji} {label}
-    </span>
-  );
-}
 
 export function ClientHealthSnapshot({
   clientId,
@@ -182,6 +98,11 @@ export function ClientHealthSnapshot({
     );
   }
 
+  const trendDisplay = TREND_DISPLAY[snapshot.trainingLoadTrend];
+  const feedbackDisplay = TREND_DISPLAY[snapshot.feedbackTrend];
+  const attendanceDisplay = ATTENDANCE_DISPLAY[snapshot.attendanceLevel];
+  const creditDisplay = CREDIT_DISPLAY[snapshot.creditLevel];
+
   return (
     <>
       <div className={cn('glass rounded-2xl p-4', className)}>
@@ -191,54 +112,51 @@ export function ClientHealthSnapshot({
           <h3 className="font-semibold text-foreground">Stav klienta</h3>
         </div>
 
-        {/* Snapshot rows */}
+        {/* Simplified snapshot rows - no numbers, no detailed reasons */}
         <div className="space-y-2.5">
           {/* Training Load */}
           <div className="flex items-center justify-between py-1">
-            <span className="text-sm text-muted-foreground">Tréninková zátěž</span>
-            <TrendIndicator 
-              direction={snapshot.trainingLoadTrend} 
-              label={snapshot.trainingLoadLabel}
-            />
+            <span className="text-sm text-muted-foreground">Zátěž</span>
+            <span className={cn('font-medium flex items-center gap-1.5', trendDisplay.className)}>
+              <span className="text-base">{trendDisplay.arrow}</span>
+              {trendDisplay.label}
+            </span>
           </div>
 
-          {/* Feedback Trend */}
+          {/* Feedback Trend - simplified */}
           <div className="flex items-center justify-between py-1">
-            <span className="text-sm text-muted-foreground">Feedback (7 dní)</span>
-            <TrendIndicator 
-              direction={snapshot.feedbackTrend} 
-              label={snapshot.feedbackTrendLabel}
-            />
+            <span className="text-sm text-muted-foreground">Feedback</span>
+            <span className={cn('font-medium flex items-center gap-1.5', feedbackDisplay.className)}>
+              <span className="text-base">{feedbackDisplay.arrow}</span>
+              {feedbackDisplay.label}
+            </span>
           </div>
 
-          {/* Recurring Pain */}
+          {/* Recurring Pain - simplified, just show "opakovaná" if exists */}
           {snapshot.recurringPain.length > 0 && (
             <div className="flex items-center justify-between py-1">
               <span className="text-sm text-muted-foreground">Bolest</span>
-              <span className="text-status-warning font-medium flex items-center gap-1">
+              <span className="text-status-warning font-medium flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4" />
-                {snapshot.recurringPain.map(p => translatePainArea(p.area)).join(', ')} 
-                <span className="text-xs opacity-70">(opak.)</span>
+                opakovaná
               </span>
             </div>
           )}
 
-          {/* Attendance */}
+          {/* Attendance - simplified */}
           <div className="flex items-center justify-between py-1">
             <span className="text-sm text-muted-foreground">Docházka</span>
-            <AttendanceIndicator 
-              level={snapshot.attendanceLevel} 
-              label={snapshot.attendanceLabel}
-            />
+            <span className={cn('font-medium flex items-center gap-1.5', attendanceDisplay.className)}>
+              {attendanceDisplay.emoji} {attendanceDisplay.label}
+            </span>
           </div>
 
-          {/* Credit */}
+          {/* Credit - simplified */}
           <div className="flex items-center justify-between py-1">
             <span className="text-sm text-muted-foreground">Kredit</span>
-            <CreditIndicator 
-              level={snapshot.creditLevel} 
-              label={snapshot.creditLabel}
-            />
+            <span className={cn('font-medium flex items-center gap-1.5', creditDisplay.className)}>
+              {creditDisplay.emoji} {creditDisplay.label}
+            </span>
           </div>
         </div>
 
@@ -323,7 +241,6 @@ export function ClientHealthSnapshot({
           <div className="mt-4 p-3 bg-muted/30 rounded-xl text-center">
             <p className="text-xs text-muted-foreground">
               Nedostatek dat pro analýzu trendů.
-              Potřeba min. 2 dokončené tréninky.
             </p>
           </div>
         )}

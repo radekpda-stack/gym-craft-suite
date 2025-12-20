@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle,
   HelpCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { BodyPainSelector, PainSelection } from './BodyPainSelector';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import {
@@ -69,7 +75,13 @@ interface FormData {
 
 type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed';
 
-// Default help texts for core questions - updated with better RPE anchoring
+// Mandatory questions that are always visible (Master Prompt requirement)
+const MANDATORY_QUESTION_IDS = ['soreness', 'pain', 'energy', 'difficulty'];
+
+// Optional questions shown in collapsible section
+const OPTIONAL_QUESTION_IDS = ['fun', 'session_fit', 'body_feel'];
+
+// Default help texts for core questions
 const DEFAULT_HELP_TEXTS: Record<string, string> = {
   soreness: 'Zpožděná svalová bolestivost (DOMS) - pocit ztuhlosti a citlivosti ve svalech, který se objevuje 24-72 hodin po tréninku. Je normální a ukazuje na zatížení svalů.',
   body_feel: 'Jak se celkově cítíte fyzicky? Ztuhlost, lehkost, svěžest nebo naopak těžkost a únava v těle.',
@@ -114,15 +126,22 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [values, setValues] = useState<Record<string, number>>({});
   const [painSelections, setPainSelections] = useState<PainSelection[]>([]);
   const [painAreaOther, setPainAreaOther] = useState('');
-  const [painType, setPainType] = useState<'muscle' | 'joint' | null>(null);
+  const [painType, setPainType] = useState<'muscle' | 'joint' | 'tendon' | null>(null);
   const [sleepAfter, setSleepAfter] = useState<'poor' | 'average' | 'good' | null>(null);
   const [sleepHours, setSleepHours] = useState<number>(7.5);
   const [note, setNote] = useState('');
+  const [showOptional, setShowOptional] = useState(false);
 
   const questionsConfig = formData?.questionsConfig ?? DEFAULT_QUESTIONS_CONFIG;
+  
+  // Split questions into mandatory and optional
   const enabledQuestions = questionsConfig.questions
     .filter(q => q.enabled)
     .sort((a, b) => a.order - b.order);
+  
+  const mandatoryQuestions = enabledQuestions.filter(q => MANDATORY_QUESTION_IDS.includes(q.id));
+  const optionalQuestions = enabledQuestions.filter(q => OPTIONAL_QUESTION_IDS.includes(q.id));
+  
   const painQuestion = questionsConfig.questions.find(q => q.id === 'pain' && q.enabled);
 
   useEffect(() => {
@@ -243,7 +262,6 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   const renderSlider = (question: FeedbackQuestion) => {
     const value = values[question.id] ?? question.defaultValue;
-    // Use custom helpText or fall back to default for core questions
     const helpText = question.helpText || DEFAULT_HELP_TEXTS[question.id];
     
     return (
@@ -429,9 +447,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           )}
         </Card>
 
-        {/* Dynamic Questions */}
+        {/* MANDATORY Questions - Always visible */}
         <div className="space-y-4">
-          {enabledQuestions.map((question) => (
+          {mandatoryQuestions.map((question) => (
             <div key={question.id}>
               {renderSlider(question)}
               
@@ -439,40 +457,54 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               {question.id === 'pain' && showPainAreas && (
                 <Card className="mt-4 border-warning/50 bg-warning/5">
                   <CardContent className="pt-6 space-y-4">
-                    {/* Pain Type Switch */}
+                    {/* Pain Type Switch - Extended with tendon option */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Je tato bolest spíš:</Label>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setPainType('muscle')}
                           className={cn(
-                            "flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
                             painType === 'muscle'
                               ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
-                          💪 Svalová / únava
+                          💪 Svalová
                         </button>
                         <button
                           type="button"
                           onClick={() => setPainType('joint')}
                           className={cn(
-                            "flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
                             painType === 'joint'
                               ? "border-red-500 bg-red-500/10 text-red-700"
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
-                          🦴 Kloub / šlacha
+                          🦴 Kloubní
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPainType('tendon')}
+                          className={cn(
+                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                            painType === 'tendon'
+                              ? "border-orange-500 bg-orange-500/10 text-orange-700"
+                              : "border-border bg-card hover:border-muted-foreground"
+                          )}
+                        >
+                          🦵 Šlachová
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {painType === 'muscle' 
                           ? 'Normální reakce na trénink, obvykle přejde do 24-48 hodin.'
                           : painType === 'joint'
-                          ? 'Může vyžadovat pozornost – trenér upraví trénink.'
+                          ? 'Kloubní bolest může vyžadovat pozornost – trenér upraví trénink.'
+                          : painType === 'tendon'
+                          ? 'Šlachová bolest může signalizovat přetížení – důležité sledovat.'
                           : 'Pomůže nám rozlišit běžnou únavu od možného problému.'}
                       </p>
                     </div>
@@ -499,101 +531,125 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               )}
             </div>
           ))}
-
-          {/* Sleep Hours Slider */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <Label className="text-base font-medium">
-                    🕐 Kolik hodin jsi spal/a?
-                  </Label>
-                  <span className="text-2xl font-bold text-primary">{sleepHours}h</span>
-                </div>
-                <Slider
-                  value={[sleepHours]}
-                  onValueChange={([v]) => setSleepHours(v)}
-                  min={4}
-                  max={12}
-                  step={0.5}
-                  className="py-2"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>4h</span>
-                  <span>12h</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sleep After Training Question */}
-          <Card>
-            <CardContent className="pt-6">
-              <Label className="mb-3 block text-base font-medium">
-                😴 Jak ses vyspal/a po tréninku?
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSleepAfter('poor')}
-                  className={cn(
-                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
-                    sleepAfter === 'poor'
-                      ? "border-red-500 bg-red-500/10 text-red-700"
-                      : "border-border bg-card hover:border-muted-foreground"
-                  )}
-                >
-                  😫 Špatně
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSleepAfter('average')}
-                  className={cn(
-                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
-                    sleepAfter === 'average'
-                      ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
-                      : "border-border bg-card hover:border-muted-foreground"
-                  )}
-                >
-                  😐 Průměrně
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSleepAfter('good')}
-                  className={cn(
-                    "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
-                    sleepAfter === 'good'
-                      ? "border-green-500 bg-green-500/10 text-green-700"
-                      : "border-border bg-card hover:border-muted-foreground"
-                  )}
-                >
-                  😊 Dobře
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Optional note */}
-          {questionsConfig.noteEnabled && (
-            <Card>
-              <CardContent className="pt-6">
-                <Label className="mb-3 block text-base font-medium">
-                  📝 Poznámka (volitelné)
-                </Label>
-                <Textarea
-                  placeholder="Např.: dnes těžké nohy, tah v koleni při dřepech, jinak ok."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  maxLength={questionsConfig.noteMaxLength}
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground mt-1 text-right">
-                  {note.length}/{questionsConfig.noteMaxLength}
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
+
+        {/* OPTIONAL Questions - Collapsible section */}
+        {optionalQuestions.length > 0 && (
+          <Collapsible open={showOptional} onOpenChange={setShowOptional} className="mt-6">
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between h-12 glass-subtle border border-border/50"
+              >
+                <span className="flex items-center gap-2">
+                  💡 Chceš doplnit více detailů?
+                  <span className="text-xs text-muted-foreground">(volitelné)</span>
+                </span>
+                <ChevronDown className={cn(
+                  "w-5 h-5 transition-transform",
+                  showOptional && "rotate-180"
+                )} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4">
+              {optionalQuestions.map((question) => renderSlider(question))}
+              
+              {/* Sleep Hours Slider - moved to optional */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-base font-medium">
+                        🕐 Kolik hodin jsi spal/a?
+                      </Label>
+                      <span className="text-2xl font-bold text-primary">{sleepHours}h</span>
+                    </div>
+                    <Slider
+                      value={[sleepHours]}
+                      onValueChange={([v]) => setSleepHours(v)}
+                      min={4}
+                      max={12}
+                      step={0.5}
+                      className="py-2"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>4h</span>
+                      <span>12h</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sleep After Training Question - moved to optional */}
+              <Card>
+                <CardContent className="pt-6">
+                  <Label className="mb-3 block text-base font-medium">
+                    😴 Jak ses vyspal/a po tréninku?
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSleepAfter('poor')}
+                      className={cn(
+                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        sleepAfter === 'poor'
+                          ? "border-red-500 bg-red-500/10 text-red-700"
+                          : "border-border bg-card hover:border-muted-foreground"
+                      )}
+                    >
+                      😫 Špatně
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSleepAfter('average')}
+                      className={cn(
+                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        sleepAfter === 'average'
+                          ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                          : "border-border bg-card hover:border-muted-foreground"
+                      )}
+                    >
+                      😐 Průměrně
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSleepAfter('good')}
+                      className={cn(
+                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        sleepAfter === 'good'
+                          ? "border-green-500 bg-green-500/10 text-green-700"
+                          : "border-border bg-card hover:border-muted-foreground"
+                      )}
+                    >
+                      😊 Dobře
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Optional note */}
+              {questionsConfig.noteEnabled && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <Label className="mb-3 block text-base font-medium">
+                      📝 Poznámka (volitelné)
+                    </Label>
+                    <Textarea
+                      placeholder="Např.: dnes těžké nohy, tah v koleni při dřepech, jinak ok."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      maxLength={questionsConfig.noteMaxLength}
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      {note.length}/{questionsConfig.noteMaxLength}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Submit Button */}
         <Button

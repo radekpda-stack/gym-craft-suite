@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Settings2, ChevronDown } from 'lucide-react';
+import { Loader2, Settings2, ChevronDown, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -53,6 +54,10 @@ export function FeedbackSettings() {
   const [questionsConfig, setQuestionsConfig] = useState<FeedbackQuestionsConfig>(DEFAULT_QUESTIONS_CONFIG);
   const [hasChanges, setHasChanges] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  // Master Prompt: Red flag threshold settings
+  const [painThreshold, setPainThreshold] = useState(7);
+  const [bodyFeelThreshold, setBodyFeelThreshold] = useState(3);
 
   useEffect(() => {
     if (settings) {
@@ -61,6 +66,9 @@ export function FeedbackSettings() {
       setTrainerSignature(settings.trainer_signature ?? '');
       setDefaultLanguage(settings.default_language ?? 'cs');
       setQuestionsConfig(settings.feedback_questions ?? DEFAULT_QUESTIONS_CONFIG);
+      // Load threshold settings
+      setPainThreshold((settings as any).red_flag_pain_threshold ?? 7);
+      setBodyFeelThreshold((settings as any).red_flag_body_feel_threshold ?? 3);
       setHasChanges(false);
     }
   }, [settings]);
@@ -76,6 +84,9 @@ export function FeedbackSettings() {
       trainer_signature: trainerSignature,
       default_language: defaultLanguage,
       feedback_questions: questionsConfig,
+      // Include threshold settings
+      red_flag_pain_threshold: painThreshold,
+      red_flag_body_feel_threshold: bodyFeelThreshold,
     });
     setHasChanges(false);
   };
@@ -153,6 +164,61 @@ export function FeedbackSettings() {
         </div>
       </div>
 
+      {/* === RED FLAG THRESHOLDS - Master Prompt === */}
+      <div className="space-y-4 p-4 rounded-xl bg-warning/5 border border-warning/20">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-4 h-4 text-warning" />
+          <Label className="text-foreground font-medium">Prahy pro Red Flags</Label>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Nastavte, při jakých hodnotách se spustí upozornění na problém.
+        </p>
+        
+        {/* Pain threshold */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label className="text-sm">Bolest (červený práh)</Label>
+            <span className="text-sm font-medium text-warning">{painThreshold}/10</span>
+          </div>
+          <Slider
+            value={[painThreshold]}
+            onValueChange={([v]) => {
+              setPainThreshold(v);
+              handleChange();
+            }}
+            min={4}
+            max={10}
+            step={1}
+            className="py-2"
+          />
+          <p className="text-xs text-muted-foreground">
+            Bolest ≥ {painThreshold} vyvolá red flag
+          </p>
+        </div>
+        
+        {/* Body feel threshold */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label className="text-sm">Pocit v těle (červený práh)</Label>
+            <span className="text-sm font-medium text-warning">{bodyFeelThreshold}/10</span>
+          </div>
+          <Slider
+            value={[bodyFeelThreshold]}
+            onValueChange={([v]) => {
+              setBodyFeelThreshold(v);
+              handleChange();
+            }}
+            min={1}
+            max={5}
+            step={1}
+            className="py-2"
+          />
+          <p className="text-xs text-muted-foreground">
+            Pocit v těle ≤ {bodyFeelThreshold} vyvolá red flag
+          </p>
+        </div>
+      </div>
+
       {/* === POKROČILÉ NASTAVENÍ === */}
       <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
         <CollapsibleTrigger asChild>
@@ -185,6 +251,10 @@ export function FeedbackSettings() {
           {/* Questionnaire Editor */}
           <div className="space-y-2">
             <Label className="text-foreground">Editor otázek dotazníku</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Povinné otázky (💪 Svalovka, 🩹 Bolest, ⚡ Energie, 🏋️ Náročnost) jsou vždy viditelné.
+              Ostatní jsou volitelné a klient je může rozbalit.
+            </p>
             <div className="glass-subtle rounded-xl p-4">
               <FeedbackQuestionsEditor
                 config={questionsConfig}

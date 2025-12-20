@@ -44,6 +44,7 @@ function isRateLimited(ip: string): boolean {
 }
 
 // Dynamic feedback schema - accepts any numeric values
+// Extended pain_type to include 'tendon' per Master Prompt
 const feedbackSchema = z.object({
   token: z.string().uuid("Invalid token format"),
   values: z.record(z.string(), z.number().int().min(1).max(10)),
@@ -59,7 +60,7 @@ const feedbackSchema = z.object({
   ])).optional(),
   pain_area_side: z.enum(['left', 'right', 'both']).optional(),
   pain_area_other: z.string().max(100).optional(),
-  pain_type: z.enum(['muscle', 'joint']).optional(),
+  pain_type: z.enum(['muscle', 'joint', 'tendon']).optional(), // Added 'tendon'
   sleep_after: z.enum(['poor', 'average', 'good']).optional(),
   sleep_hours: z.number().min(0).max(24).optional(),
   note: z.string().max(500).optional(),
@@ -133,7 +134,7 @@ serve(async (req) => {
     // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
       .from("feedback_requests")
-      .select("*, clients(name), training_sessions(date)")
+      .select("*, clients(name), training_sessions(date, is_high_intensity_test)")
       .eq("token", token)
       .maybeSingle();
 
@@ -191,19 +192,30 @@ serve(async (req) => {
     const difficulty = values.difficulty ?? 5;
     const fun = values.fun ?? 5;
 
-    // Detect red flags - enhanced with pain_type
-    const redFlagReasons: string[] = [];
-    if (pain >= painThreshold) {
-      redFlagReasons.push(`Vysoká bolest (${pain}/10)`);
+    // Check if training is marked as high intensity test (Master Prompt: red flag brake)
+    const isHighIntensityTest = request.training_sessions?.is_high_intensity_test ?? false;
+
+    // Detect red flags - enhanced with pain_type, but with brake for test trainings
+    let redFlagReasons: string[] = [];
+    let isRedFlag = false;
+
+    if (!isHighIntensityTest) {
+      // Only evaluate red flags if NOT a high intensity test training
+      if (pain >= painThreshold) {
+        redFlagReasons.push(`Vysoká bolest (${pain}/10)`);
+      }
+      // Joint or tendon pain at medium level is also a red flag
+      if ((pain_type === 'joint' || pain_type === 'tendon') && pain >= 4) {
+        const painTypeLabel = pain_type === 'joint' ? 'Kloubní' : 'Šlachová';
+        redFlagReasons.push(`${painTypeLabel} bolest (${pain}/10)`);
+      }
+      if (body_feel <= bodyFeelThreshold) {
+        redFlagReasons.push(`Nízký pocit v těle (${body_feel}/10)`);
+      }
+      isRedFlag = redFlagReasons.length > 0;
+    } else {
+      console.log(`Red flag evaluation skipped - training marked as high intensity test`);
     }
-    // Joint pain at medium level is also a red flag
-    if (pain_type === 'joint' && pain >= 4) {
-      redFlagReasons.push(`Kloubní/šlachová bolest (${pain}/10)`);
-    }
-    if (body_feel <= bodyFeelThreshold) {
-      redFlagReasons.push(`Nízký pocit v těle (${body_feel}/10)`);
-    }
-    const isRedFlag = redFlagReasons.length > 0;
 
     // Check if training_session_id exists
     if (!request.training_session_id) {
@@ -280,11 +292,12 @@ serve(async (req) => {
       .eq("id", request.id);
 
     // Create notification for trainer with feedback preview
+    const painTypeLabel = pain_type === 'muscle' ? 'sval' : pain_type === 'joint' ? 'kloub' : pain_type === 'tendon' ? 'šlacha' : null;
     const feedbackPreview = [
       `💪 Svalovka: ${soreness}/10`,
       `🧘 Pocit: ${body_feel}/10`,
       `⚡ Energie: ${energy}/10`,
-      pain > 1 ? `🩹 Bolest: ${pain}/10${pain_type ? ` (${pain_type === 'muscle' ? 'sval' : 'kloub'})` : ''}` : null,
+      pain > 1 ? `🩹 Bolest: ${pain}/10${painTypeLabel ? ` (${painTypeLabel})` : ''}` : null,
       `🏋️ Náročnost: ${difficulty}/10`,
       sleep_hours ? `🕐 Spánek: ${sleep_hours}h` : null,
       sleep_after ? `😴 Kvalita: ${sleep_after === 'poor' ? 'špatná' : sleep_after === 'average' ? 'průměrná' : 'dobrá'}` : null,
@@ -374,7 +387,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Public feedback submitted successfully: ${feedback.id}, isRedFlag: ${isRedFlag}`);
+    console.log(`Public feedback submitted successfully: ${feedback.id}, isRedFlag: ${isRedFlag}, highIntensityTest: ${isHighIntensityTest}`);
 
     return new Response(
       JSON.stringify({ success: true, feedbackId: feedback.id, isRedFlag }),

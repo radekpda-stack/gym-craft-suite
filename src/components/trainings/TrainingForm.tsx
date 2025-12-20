@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Tag, Search, Check } from "lucide-react";
+import { Loader2, Repeat, Tag, Search, Check, AlertTriangle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -54,6 +54,7 @@ const trainingFormSchema = z.object({
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),
+  is_high_intensity_test: z.boolean().optional(), // Master Prompt: red flag brake
 });
 
 export type TrainingFormValues = z.infer<typeof trainingFormSchema>;
@@ -111,6 +112,7 @@ export function TrainingForm({
       is_recurring: false,
       recurrence_type: null,
       recurrence_count: 4,
+      is_high_intensity_test: defaultValues?.is_high_intensity_test || false,
     },
   });
 
@@ -296,6 +298,31 @@ export function TrainingForm({
                 </SelectContent>
           </Select>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* High Intensity Test Toggle - Master Prompt: Red Flag Brake */}
+        <FormField
+          control={form.control}
+          name="is_high_intensity_test"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between p-4 rounded-xl bg-warning/5 border border-warning/20">
+              <div className="space-y-0.5">
+                <FormLabel className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  Vědomě vyšší zátěž / testovací trénink
+                </FormLabel>
+                <FormDescription className="text-xs">
+                  Red flags z feedbacku nebudou vyhodnoceny
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
             </FormItem>
           )}
         />
