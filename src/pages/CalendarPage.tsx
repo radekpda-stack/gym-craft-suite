@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format, addDays, subDays, isSameDay } from 'date-fns';
+import { addDays, subDays, isSameDay, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
 import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { FreeSlotIndicator } from '@/components/calendar/FreeSlotIndicator';
+import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -216,7 +217,7 @@ export default function CalendarPage() {
     setCancelDialog({ open: true, session });
   };
 
-  const confirmCancel = async () => {
+  const confirmCancel = async (deductCredit: boolean) => {
     if (!cancelDialog.session) return;
     
     const sessionDate = new Date(cancelDialog.session.date);
@@ -229,9 +230,15 @@ export default function CalendarPage() {
       participant_count: cancelDialog.session.participant_count || 1,
       isLateCancellation,
       trainingPrices,
-      deductCredit: false,
+      deductCredit,
     });
     setCancelDialog({ open: false, session: null });
+  };
+  
+  const getCancelTrainingPrice = () => {
+    if (!cancelDialog.session) return 0;
+    const participantCount = cancelDialog.session.participant_count || 1;
+    return trainingPrices[String(participantCount) as keyof typeof trainingPrices] || trainingPrices['1'] || 800;
   };
 
   const handlePayment = (session: any) => {
@@ -497,22 +504,15 @@ export default function CalendarPage() {
       </AlertDialog>
 
       {/* Cancel Dialog */}
-      <AlertDialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, session: open ? cancelDialog.session : null })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Zrušit trénink?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Trénink bude označen jako zrušený. Tuto akci nelze vrátit zpět.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zpět</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCancel} className="bg-destructive hover:bg-destructive/90">
-              Zrušit trénink
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CancelTrainingDialog
+        open={cancelDialog.open}
+        onOpenChange={(open) => setCancelDialog({ open, session: open ? cancelDialog.session : null })}
+        session={cancelDialog.session}
+        clientName={cancelDialog.session ? getClient(cancelDialog.session.client_id)?.name : undefined}
+        trainingPrice={getCancelTrainingPrice()}
+        onConfirm={confirmCancel}
+        isLoading={cancelTraining.isPending}
+      />
 
       {/* Payment Dialog */}
       {paymentDialog.session && (

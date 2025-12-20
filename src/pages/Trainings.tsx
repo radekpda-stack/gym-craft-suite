@@ -10,6 +10,7 @@ import {
   useTrainingSessions,
   useCreateTrainingSession,
   useUpdateTrainingSession,
+  useCancelTrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags, useAllTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
@@ -17,6 +18,7 @@ import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet'
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { TrainingCard } from '@/components/trainings/TrainingCard';
 import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
+import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -45,6 +47,7 @@ export default function Trainings() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; trainingId: string; clientName: string } | null>(null);
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: typeof sessions[0] | null }>({ open: false, session: null });
 
   // Persistent page state
   const { timeFilter, statusFilter, activeTab, setTimeFilter, setStatusFilter, setActiveTab } = useTrainingsPageState();
@@ -53,6 +56,7 @@ export default function Trainings() {
   const { data: sessions = [], isLoading } = useTrainingSessions();
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
+  const cancelTraining = useCancelTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
   const { data: sessionTagsMap = {} } = useAllTrainingSessionTags();
@@ -121,30 +125,44 @@ export default function Trainings() {
     }
   };
 
-  const handleCancelTraining = async (sessionId: string) => {
+  const handleOpenCancelDialog = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setCancelDialog({ open: true, session });
+    }
+  };
+
+  const handleConfirmCancel = async (deductCredit: boolean) => {
+    if (!cancelDialog.session) return;
+    
     try {
-      const now = new Date();
-      const session = sessions.find(s => s.id === sessionId);
-      const sessionDate = session ? new Date(session.date) : now;
-      const hoursUntilSession = (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const sessionDate = new Date(cancelDialog.session.date);
+      const hoursUntilSession = (sessionDate.getTime() - Date.now()) / (1000 * 60 * 60);
       const isLateCancellation = hoursUntilSession < 24;
 
-      await updateTraining.mutateAsync({
-        id: sessionId,
-        input: {
-          status: 'canceled',
-          canceled_at: now.toISOString(),
-          is_late_cancellation: isLateCancellation,
-        },
+      await cancelTraining.mutateAsync({
+        id: cancelDialog.session.id,
+        client_id: cancelDialog.session.client_id,
+        participant_count: cancelDialog.session.participant_count || 1,
+        isLateCancellation,
         trainingPrices,
+        deductCredit,
       });
+      
+      setCancelDialog({ open: false, session: null });
       toast({ 
-        title: isLateCancellation ? 'Trénink zrušen (pozdě)' : 'Trénink zrušen',
+        title: deductCredit ? 'Trénink zrušen (kredit stržen)' : 'Trénink zrušen',
         variant: isLateCancellation ? 'destructive' : 'default',
       });
     } catch (error) {
       toast({ title: 'Chyba při rušení', variant: 'destructive' });
     }
+  };
+
+  const getCancelTrainingPrice = () => {
+    if (!cancelDialog.session) return 0;
+    const participantCount = cancelDialog.session.participant_count || 1;
+    return trainingPrices[String(participantCount) as keyof typeof trainingPrices] || trainingPrices['1'] || 800;
   };
 
   const handleDuplicateTraining = (sessionId: string) => {
@@ -401,7 +419,7 @@ export default function Trainings() {
                       client={client}
                       tags={sessionTagsMap[session.id]}
                       onComplete={() => handleCompleteTraining(session.id)}
-                      onCancel={() => handleCancelTraining(session.id)}
+                      onCancel={() => handleOpenCancelDialog(session.id)}
                       onPay={() => handleOpenPayment(session.id, client?.name || 'Klient')}
                       onDuplicate={() => handleDuplicateTraining(session.id)}
                     />
@@ -494,6 +512,17 @@ export default function Trainings() {
           currentPaymentStatus="pending"
         />
       )}
+
+      {/* Cancel Training Dialog */}
+      <CancelTrainingDialog
+        open={cancelDialog.open}
+        onOpenChange={(open) => setCancelDialog({ open, session: open ? cancelDialog.session : null })}
+        session={cancelDialog.session}
+        clientName={cancelDialog.session ? clients.find(c => c.id === cancelDialog.session?.client_id)?.name : undefined}
+        trainingPrice={getCancelTrainingPrice()}
+        onConfirm={handleConfirmCancel}
+        isLoading={cancelTraining.isPending}
+      />
     </div>
   );
 }
