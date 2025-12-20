@@ -61,6 +61,7 @@ const feedbackSchema = z.object({
   pain_area_other: z.string().max(100).optional(),
   pain_type: z.enum(['muscle', 'joint']).optional(),
   sleep_after: z.enum(['poor', 'average', 'good']).optional(),
+  sleep_hours: z.number().min(0).max(24).optional(),
   note: z.string().max(500).optional(),
 });
 
@@ -124,7 +125,7 @@ serve(async (req) => {
       );
     }
 
-    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, pain_type, sleep_after, note } = parseResult.data;
+    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, pain_type, sleep_after, sleep_hours, note } = parseResult.data;
 
     console.log(`Processing public feedback submission for token: ${token}`);
     console.log(`Values received:`, values);
@@ -240,6 +241,7 @@ serve(async (req) => {
       // New fields
       pain_type: pain_type || null,
       sleep_after: sleep_after || null,
+      sleep_hours: sleep_hours ?? null,
       // Include notes in comment if present
       comment: buildComment(note, pain_area_notes),
       is_red_flag: isRedFlag,
@@ -284,7 +286,8 @@ serve(async (req) => {
       `⚡ Energie: ${energy}/10`,
       pain > 1 ? `🩹 Bolest: ${pain}/10${pain_type ? ` (${pain_type === 'muscle' ? 'sval' : 'kloub'})` : ''}` : null,
       `🏋️ Náročnost: ${difficulty}/10`,
-      sleep_after ? `😴 Spánek: ${sleep_after === 'poor' ? 'špatný' : sleep_after === 'average' ? 'průměrný' : 'dobrý'}` : null,
+      sleep_hours ? `🕐 Spánek: ${sleep_hours}h` : null,
+      sleep_after ? `😴 Kvalita: ${sleep_after === 'poor' ? 'špatná' : sleep_after === 'average' ? 'průměrná' : 'dobrá'}` : null,
     ].filter(Boolean).join(" | ");
 
     await supabase
