@@ -21,6 +21,7 @@ import { ClientEvaluationBlock } from '@/components/clients/ClientEvaluationBloc
 import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
+import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
 
 import { toast } from '@/hooks/use-toast';
 
@@ -156,6 +157,9 @@ export default function ClientDetail() {
           if (historyBlock) (historyBlock as HTMLButtonElement).click();
         }}
       />
+
+      {/* Training Count Statistics */}
+      <ClientTrainingCountCard clientId={client.id} />
 
       {/* Attendance Statistics */}
       <ClientAttendanceStats clientId={client.id} />

@@ -150,6 +150,15 @@ export const en: TranslationKeys = {
     bulkDelete: 'Bulk delete',
     selectAll: 'Select all',
     deselectAll: 'Deselect all',
+    trainingCounts: 'Training overview',
+    thisMonth: 'This month',
+    last3Months: 'Last 3 months',
+    last6Months: 'Last 6 months',
+    thisYear: 'This year',
+    lastYear: 'Last year',
+    totalTrainings: 'total trainings',
+    averagePerMonth: 'Avg/month',
+    firstTraining: 'First training',
   },
 
   // Trainings
