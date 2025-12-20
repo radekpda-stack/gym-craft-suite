@@ -94,6 +94,7 @@ const coffeeEntrySchema = z.object({
   ]).optional().nullable(),
   milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
+  after_16: z.boolean().default(false), // NEW: Coffee after 4 PM
 });
 
 const requestSchema = z.object({
