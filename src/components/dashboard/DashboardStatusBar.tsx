@@ -64,7 +64,7 @@ function StatusIndicator({ status }: { status: DayStatus }) {
   
   return (
     <div className={cn(
-      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium',
+      'flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium shrink-0',
       config.bgClass,
       config.textClass
     )}>
@@ -89,7 +89,7 @@ function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClic
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
+        'flex items-center gap-2 h-9 px-3 rounded-full text-sm transition-colors shrink-0',
         'bg-secondary/50 hover:bg-secondary',
         error && 'ring-1 ring-destructive/30',
         warning && !error && 'ring-1 ring-[hsl(38_92%_50%/0.3)]'
@@ -99,20 +99,18 @@ function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClic
         'w-4 h-4 shrink-0',
         error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
       )} />
-      <div className="flex flex-col items-start min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-medium text-foreground">{value}</span>
-          {subValue && (
-            <span className={cn(
-              'text-xs',
-              error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
-            )}>
-              {subValue}
-            </span>
-          )}
-        </div>
-        <span className="text-[10px] text-muted-foreground leading-none">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium text-foreground">{value}</span>
+        {subValue && (
+          <span className={cn(
+            'text-xs',
+            error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
+          )}>
+            {subValue}
+          </span>
+        )}
       </div>
+      <span className="text-xs text-muted-foreground hidden sm:inline">{label}</span>
     </button>
   );
 }
@@ -157,8 +155,8 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           {/* Day Status Indicator */}
           <StatusIndicator status={dayStatus} />
           
@@ -210,7 +208,7 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
             variant="outline"
             size="sm"
             onClick={() => setShowSearch(true)}
-            className="gap-2 shrink-0"
+            className="gap-2 shrink-0 h-9 rounded-full"
           >
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline">Hledat</span>
@@ -219,7 +217,7 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
           <Button
             size="sm"
             onClick={() => setShowTrainingSheet(true)}
-            className="gap-2 shrink-0"
+            className="gap-2 shrink-0 h-9 rounded-full"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Nový trénink</span>
