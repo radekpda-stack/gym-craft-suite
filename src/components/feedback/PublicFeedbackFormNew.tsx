@@ -471,7 +471,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
-                          💪 Svalová
+                          💪 Svalová bolest
                         </button>
                         <button
                           type="button"
