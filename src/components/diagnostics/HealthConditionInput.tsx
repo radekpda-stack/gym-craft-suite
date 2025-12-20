@@ -42,9 +42,13 @@ export function HealthConditionInput({
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const { searchConditions, addCondition, incrementUsage, isLoading } = useHealthConditions();
+  const { conditions, searchConditions, addCondition, incrementUsage, isLoading } = useHealthConditions();
 
-  const suggestions = searchConditions(inputValue, category);
+  // Show filtered suggestions - if no input, show top items for category
+  const suggestions = inputValue.trim() 
+    ? searchConditions(inputValue, category)
+    : conditions.filter(c => c.category === category).slice(0, 8);
+    
   const trimmedInput = inputValue.trim();
   const canAddNew = trimmedInput.length > 1 && 
     !suggestions.some(s => s.name.toLowerCase() === trimmedInput.toLowerCase()) &&
@@ -159,7 +163,7 @@ export function HealthConditionInput({
                 </div>
               ) : suggestions.length === 0 && !canAddNew ? (
                 <CommandEmpty>
-                  {inputValue ? 'Žádné výsledky' : `Začněte psát pro vyhledání`}
+                  {inputValue ? 'Žádné výsledky' : `Vyberte ${categoryLabels[category].toLowerCase()}`}
                 </CommandEmpty>
               ) : (
                 <>
