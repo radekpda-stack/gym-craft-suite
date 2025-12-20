@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.analyze-nutrition]
 verify_jwt = true
+
+[functions.calendar-webhook]
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Mail, UserPlus, X, Check, Users, Send, Loader2 } from 'lucide-react';
+import { Calendar, Mail, UserPlus, X, Check, Users, Send, Loader2, Link2, Copy, Eye, EyeOff, RefreshCw, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +14,19 @@ import {
   useDeleteCalendarShare,
 } from '@/hooks/useCalendarShares';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
 
 export function CalendarSharingSettings() {
   const { language } = useLanguage();
   const [email, setEmail] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
   
   const { data: myShares = [], isLoading: loadingMyShares } = useMyCalendarShares();
   const { data: sharedWithMe = [], isLoading: loadingSharedWithMe } = useSharedWithMe();
   const { data: pendingInvitations = [], isLoading: loadingPending } = usePendingInvitations();
+  const { data: settings } = useAppSettings();
+  const updateSetting = useUpdateSetting();
   
   const createShare = useCreateCalendarShare();
   const respondToInvitation = useRespondToInvitation();
@@ -33,6 +38,25 @@ export function CalendarSharingSettings() {
     
     await createShare.mutateAsync(email.trim());
     setEmail('');
+  };
+
+  // Get or generate API key for Make.com webhook
+  const calendarWebhookKey = (settings as any)?.calendar_webhook_key || '';
+  
+  const generateNewApiKey = async () => {
+    const newKey = crypto.randomUUID().replace(/-/g, '');
+    await updateSetting.mutateAsync({
+      key: 'calendar_webhook_key',
+      value: newKey,
+    });
+    toast.success(texts.copied);
+  };
+
+  const webhookUrl = `https://zukmwqfqmfuyqpxfjqil.supabase.co/functions/v1/calendar-webhook`;
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(texts.copied);
   };
 
   const isLoading = loadingMyShares || loadingSharedWithMe || loadingPending;
@@ -55,6 +79,18 @@ export function CalendarSharingSettings() {
       remove: 'Zrušit',
       pending: 'Čeká na přijetí',
       accepted: 'Přijato',
+      // Make.com
+      makeIntegration: 'Make.com integrace',
+      makeIntegrationDesc: 'Import kalendáře z telefonu přes Make.com',
+      webhookUrl: 'Webhook URL',
+      apiKey: 'API klíč',
+      copyUrl: 'Kopírovat',
+      copied: 'Zkopírováno!',
+      makeInstructions: 'Zkopírujte webhook URL a API klíč do Make.com scénáře pro import událostí z kalendáře telefonu.',
+      generateApiKey: 'Vygenerovat nový klíč',
+      showApiKey: 'Zobrazit',
+      hideApiKey: 'Skrýt',
+      noApiKey: 'Klikněte pro vygenerování API klíče',
     },
     en: {
       title: 'Calendar Sharing',
@@ -73,6 +109,18 @@ export function CalendarSharingSettings() {
       remove: 'Remove',
       pending: 'Pending',
       accepted: 'Accepted',
+      // Make.com
+      makeIntegration: 'Make.com Integration',
+      makeIntegrationDesc: 'Import phone calendar via Make.com',
+      webhookUrl: 'Webhook URL',
+      apiKey: 'API Key',
+      copyUrl: 'Copy',
+      copied: 'Copied!',
+      makeInstructions: 'Copy the webhook URL and API key to your Make.com scenario to import events from your phone calendar.',
+      generateApiKey: 'Generate new key',
+      showApiKey: 'Show',
+      hideApiKey: 'Hide',
+      noApiKey: 'Click to generate API key',
     },
   };
 
@@ -80,6 +128,88 @@ export function CalendarSharingSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Make.com Integration Section */}
+      <Card className="p-4 border-purple-500/30 bg-purple-500/5">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarDays className="w-5 h-5 text-purple-500" />
+          <h4 className="font-medium text-foreground">{texts.makeIntegration}</h4>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">{texts.makeInstructions}</p>
+        
+        <div className="space-y-3">
+          {/* Webhook URL */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">{texts.webhookUrl}</label>
+            <div className="flex gap-2">
+              <Input 
+                value={webhookUrl} 
+                readOnly 
+                className="font-mono text-xs bg-background/50"
+              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => copyToClipboard(webhookUrl)}
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* API Key */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">{texts.apiKey}</label>
+            <div className="flex gap-2">
+              {calendarWebhookKey ? (
+                <>
+                  <Input 
+                    value={showApiKey ? calendarWebhookKey : '••••••••••••••••••••••••'}
+                    readOnly 
+                    className="font-mono text-xs bg-background/50"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                  >
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => copyToClipboard(calendarWebhookKey)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={generateNewApiKey}
+                    disabled={updateSetting.isPending}
+                  >
+                    <RefreshCw className={cn("w-4 h-4", updateSetting.isPending && "animate-spin")} />
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={generateNewApiKey}
+                  disabled={updateSetting.isPending}
+                  className="w-full justify-start text-muted-foreground"
+                >
+                  {updateSetting.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Link2 className="w-4 h-4 mr-2" />
+                  )}
+                  {texts.noApiKey}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Invite form */}
       <form onSubmit={handleInvite} className="flex gap-2">
         <div className="relative flex-1">
