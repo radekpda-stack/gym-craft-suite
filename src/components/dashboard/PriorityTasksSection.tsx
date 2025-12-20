@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle2,
   ChevronRight,
   X,
   Wallet,
@@ -8,6 +7,7 @@ import {
   Clock,
   AlertTriangle,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, PriorityTask, dismissTask } from '@/hooks/useDashboardViewModel';
 import { useQueryClient } from '@tanstack/react-query';
+import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 
 interface PriorityTasksSectionProps {
   data: DashboardViewModel | undefined;
@@ -28,25 +29,11 @@ const TASK_TYPE_CONFIG = {
   unpaid: { icon: Clock, label: 'Platba' },
 } as const;
 
-const SEVERITY_CONFIG = {
-  ok: {
-    bgClass: 'bg-[hsl(142_76%_36%/0.08)]',
-    borderClass: 'border-[hsl(142_76%_36%/0.2)]',
-    textClass: 'text-[hsl(142_76%_36%)]',
-    hoverClass: 'hover:border-[hsl(142_76%_36%/0.4)]',
-  },
-  warning: {
-    bgClass: 'bg-[hsl(38_92%_50%/0.08)]',
-    borderClass: 'border-[hsl(38_92%_50%/0.2)]',
-    textClass: 'text-[hsl(38_92%_50%)]',
-    hoverClass: 'hover:border-[hsl(38_92%_50%/0.4)]',
-  },
-  error: {
-    bgClass: 'bg-destructive/8',
-    borderClass: 'border-destructive/20',
-    textClass: 'text-destructive',
-    hoverClass: 'hover:border-destructive/40',
-  },
+// Map task severity to unified Status
+const severityToStatus: Record<'ok' | 'warning' | 'error', Status> = {
+  ok: 'ok',
+  warning: 'warning',
+  error: 'error',
 };
 
 interface TaskCardProps {
@@ -57,15 +44,16 @@ interface TaskCardProps {
 
 function TaskCard({ task, onDismiss, onClick }: TaskCardProps) {
   const typeConfig = TASK_TYPE_CONFIG[task.type];
-  const severityConfig = SEVERITY_CONFIG[task.severity];
+  const status = severityToStatus[task.severity];
+  const config = STATUS_CONFIG[status];
   const Icon = typeConfig.icon;
 
   return (
     <div
       className={cn(
-        'relative p-4 rounded-xl border-2 transition-all group',
-        severityConfig.borderClass,
-        severityConfig.hoverClass,
+        'relative p-4 rounded-2xl border-2 transition-all group',
+        config.borderClass,
+        config.hoverBorderClass,
         'cursor-pointer'
       )}
       onClick={onClick}
@@ -76,39 +64,35 @@ function TaskCard({ task, onDismiss, onClick }: TaskCardProps) {
           e.stopPropagation();
           onDismiss();
         }}
-        className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-secondary/80 transition-all z-10"
+        className="absolute top-2 right-2 p-1.5 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-secondary/80 transition-all z-10"
         title="Skrýt na 24h"
       >
         <X className="w-4 h-4 text-muted-foreground" />
       </button>
       
       <div className="flex items-start gap-3">
-        <div className={cn('p-2.5 rounded-xl shrink-0', severityConfig.bgClass)}>
-          <Icon className={cn('w-5 h-5', severityConfig.textClass)} />
+        <div className={cn('p-2.5 rounded-xl shrink-0', config.bgClass)}>
+          <Icon className={cn('w-5 h-5', config.textClass)} />
         </div>
         
         <div className="flex-1 min-w-0 pr-6">
           <div className="flex items-center gap-2 mb-1">
             <span className={cn(
               'text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full',
-              severityConfig.bgClass,
-              severityConfig.textClass
+              config.bgClass,
+              config.textClass
             )}>
               {typeConfig.label}
             </span>
           </div>
           
-          <p className="font-semibold text-foreground truncate">
+          <p className="font-medium text-foreground text-sm leading-snug">
             {task.title}
           </p>
           
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {task.subtitle}
-          </p>
-          
-          {task.detail && (
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {task.detail}
+          {task.clientName && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {task.clientName}
             </p>
           )}
         </div>
@@ -120,12 +104,14 @@ function TaskCard({ task, onDismiss, onClick }: TaskCardProps) {
 }
 
 function SuccessState({ messages }: { messages: string[] }) {
+  const okConfig = STATUS_CONFIG.ok;
+  
   return (
     <div className="text-center py-10">
       <div className="relative inline-flex">
-        <div className="absolute inset-0 bg-[hsl(142_76%_36%/0.2)] rounded-full blur-xl" />
-        <div className="relative bg-[hsl(142_76%_36%/0.1)] p-4 rounded-full">
-          <Sparkles className="w-8 h-8 text-[hsl(142_76%_36%)]" />
+        <div className={cn('absolute inset-0 rounded-full blur-xl', okConfig.bgClassStrong)} />
+        <div className={cn('relative p-4 rounded-full', okConfig.bgClass)}>
+          <Sparkles className={cn('w-8 h-8', okConfig.textClass)} />
         </div>
       </div>
       
@@ -136,7 +122,7 @@ function SuccessState({ messages }: { messages: string[] }) {
       <div className="mt-3 space-y-1">
         {messages.map((msg, i) => (
           <p key={i} className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[hsl(142_76%_36%)]" />
+            <CheckCircle2 className={cn('w-4 h-4', okConfig.textClass)} />
             {msg}
           </p>
         ))}
@@ -163,7 +149,7 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
             {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-28 rounded-xl" />
+              <Skeleton key={i} className="h-28 rounded-2xl" />
             ))}
           </div>
         </CardContent>
@@ -174,6 +160,8 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
   if (!data) return null;
   
   const { priorityTasks, totalTasksCount, allClear, successMessages } = data;
+  const okConfig = STATUS_CONFIG.ok;
+  const warningConfig = STATUS_CONFIG.warning;
 
   return (
     <Card className="glass overflow-hidden">
@@ -182,12 +170,12 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
           <CardTitle className="flex items-center gap-2 text-lg">
             {allClear ? (
               <>
-                <CheckCircle2 className="w-5 h-5 text-[hsl(142_76%_36%)]" />
+                <CheckCircle2 className={cn('w-5 h-5', okConfig.textClass)} />
                 Vše vyřešeno
               </>
             ) : (
               <>
-                <AlertTriangle className="w-5 h-5 text-[hsl(38_92%_50%)]" />
+                <AlertTriangle className={cn('w-5 h-5', warningConfig.textClass)} />
                 Co teď?
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   {totalTasksCount} {totalTasksCount === 1 ? 'úkol' : totalTasksCount < 5 ? 'úkoly' : 'úkolů'}
@@ -195,6 +183,13 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
               </>
             )}
           </CardTitle>
+          
+          {!allClear && priorityTasks.length < totalTasksCount && (
+            <Button variant="ghost" size="sm" onClick={() => navigate('/clients')}>
+              Zobrazit vše
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
         </div>
       </CardHeader>
       
@@ -202,28 +197,19 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
         {allClear ? (
           <SuccessState messages={successMessages} />
         ) : (
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {priorityTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onDismiss={() => handleDismiss(task.id)}
-                  onClick={() => navigate(task.actionUrl)}
-                />
-              ))}
-            </div>
-            
-            {totalTasksCount > 5 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-muted-foreground"
-                onClick={() => navigate('/clients')}
-              >
-                Zobrazit všechny ({totalTasksCount})
-              </Button>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {priorityTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onDismiss={() => handleDismiss(task.id)}
+                onClick={() => {
+                  if (task.clientId) {
+                    navigate(`/clients/${task.clientId}`);
+                  }
+                }}
+              />
+            ))}
           </div>
         )}
       </CardContent>

@@ -76,6 +76,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Unified Status Colors
+        "status-ok": "hsl(var(--status-ok))",
+        "status-warning": "hsl(var(--status-warning))",
+        "status-error": "hsl(var(--status-error))",
       },
       borderRadius: {
         lg: "var(--radius)",

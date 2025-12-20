@@ -98,10 +98,10 @@ export function ClientHeroCard({
       <div className="flex items-center gap-2 mb-4">
         {/* Feedback status */}
         <div className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium flex-1 justify-center',
+          'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium flex-1 justify-center',
           feedbackOk 
-            ? 'bg-[hsl(142_76%_36%/0.1)] text-[hsl(142_76%_36%)]' 
-            : 'bg-[hsl(38_92%_50%/0.1)] text-[hsl(38_92%_50%)]'
+            ? 'bg-status-ok/10 text-status-ok' 
+            : 'bg-status-warning/10 text-status-warning'
         )}>
           <MessageSquare className="w-3.5 h-3.5" />
           {feedbackLoading ? <Skeleton className="w-8 h-3" /> : (feedbackOk ? 'FB OK' : 'Chybí FB')}
@@ -109,10 +109,10 @@ export function ClientHeroCard({
         
         {/* Nutrition status */}
         <div className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium flex-1 justify-center',
+          'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium flex-1 justify-center',
           nutritionOk 
-            ? 'bg-[hsl(142_76%_36%/0.1)] text-[hsl(142_76%_36%)]' 
-            : 'bg-[hsl(38_92%_50%/0.1)] text-[hsl(38_92%_50%)]'
+            ? 'bg-status-ok/10 text-status-ok' 
+            : 'bg-status-warning/10 text-status-warning'
         )}>
           <Utensils className="w-3.5 h-3.5" />
           {nutritionLoading ? <Skeleton className="w-8 h-3" /> : (nutritionOk ? 'Strava OK' : 'Chybí')}

@@ -2,9 +2,6 @@ import { useState } from 'react';
 import { 
   Plus, 
   Search,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
   Wallet,
   Clock,
   Users,
@@ -26,50 +23,33 @@ import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
+import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 
 interface DashboardStatusBarProps {
   data: DashboardViewModel | undefined;
   isLoading: boolean;
 }
 
-const DAY_STATUS_CONFIG: Record<DayStatus, { 
-  icon: typeof CheckCircle2; 
-  label: string; 
-  bgClass: string;
-  textClass: string;
-}> = {
-  ok: { 
-    icon: CheckCircle2, 
-    label: 'OK', 
-    bgClass: 'bg-[hsl(142_76%_36%/0.15)]',
-    textClass: 'text-[hsl(142_76%_36%)]',
-  },
-  warning: { 
-    icon: AlertCircle, 
-    label: 'Pozor', 
-    bgClass: 'bg-[hsl(38_92%_50%/0.15)]',
-    textClass: 'text-[hsl(38_92%_50%)]',
-  },
-  critical: { 
-    icon: XCircle, 
-    label: 'Problém', 
-    bgClass: 'bg-destructive/15',
-    textClass: 'text-destructive',
-  },
+// Map DayStatus to unified Status type
+const dayStatusToStatus: Record<DayStatus, Status> = {
+  ok: 'ok',
+  warning: 'warning',
+  critical: 'error',
 };
 
 function StatusIndicator({ status }: { status: DayStatus }) {
-  const config = DAY_STATUS_CONFIG[status];
+  const unifiedStatus = dayStatusToStatus[status];
+  const config = STATUS_CONFIG[unifiedStatus];
   const Icon = config.icon;
   
   return (
     <div className={cn(
       'flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium shrink-0',
-      config.bgClass,
+      config.bgClassStrong,
       config.textClass
     )}>
       <Icon className="w-4 h-4" />
-      <span className="hidden sm:inline">{config.label}</span>
+      <span className="hidden sm:inline">{config.labelShort}</span>
     </div>
   );
 }
@@ -91,20 +71,20 @@ function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClic
       className={cn(
         'flex items-center gap-2 h-9 px-3 rounded-full text-sm transition-colors shrink-0',
         'bg-secondary/50 hover:bg-secondary',
-        error && 'ring-1 ring-destructive/30',
-        warning && !error && 'ring-1 ring-[hsl(38_92%_50%/0.3)]'
+        error && 'ring-1 ring-status-error/30',
+        warning && !error && 'ring-1 ring-status-warning/30'
       )}
     >
       <Icon className={cn(
         'w-4 h-4 shrink-0',
-        error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
+        error ? 'text-status-error' : warning ? 'text-status-warning' : 'text-muted-foreground'
       )} />
       <div className="flex items-center gap-1.5">
         <span className="font-medium text-foreground">{value}</span>
         {subValue && (
           <span className={cn(
             'text-xs',
-            error ? 'text-destructive' : warning ? 'text-[hsl(38_92%_50%)]' : 'text-muted-foreground'
+            error ? 'text-status-error' : warning ? 'text-status-warning' : 'text-muted-foreground'
           )}>
             {subValue}
           </span>

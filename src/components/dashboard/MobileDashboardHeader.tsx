@@ -10,37 +10,18 @@ import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
-import { 
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
-} from 'lucide-react';
+import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 
 interface MobileDashboardHeaderProps {
   data: DashboardViewModel | undefined;
   isLoading: boolean;
 }
 
-const DAY_STATUS_CONFIG: Record<DayStatus, { 
-  icon: typeof CheckCircle2; 
-  bgClass: string;
-  textClass: string;
-}> = {
-  ok: { 
-    icon: CheckCircle2, 
-    bgClass: 'bg-[hsl(142_76%_36%/0.2)]',
-    textClass: 'text-[hsl(142_76%_36%)]',
-  },
-  warning: { 
-    icon: AlertCircle, 
-    bgClass: 'bg-[hsl(38_92%_50%/0.2)]',
-    textClass: 'text-[hsl(38_92%_50%)]',
-  },
-  critical: { 
-    icon: XCircle, 
-    bgClass: 'bg-destructive/20',
-    textClass: 'text-destructive',
-  },
+// Map DayStatus to unified Status type
+const dayStatusToStatus: Record<DayStatus, Status> = {
+  ok: 'ok',
+  warning: 'warning',
+  critical: 'error',
 };
 
 export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeaderProps) {
@@ -76,7 +57,8 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
   if (!data) return null;
 
   const { dayStatus, todayEstimatedIncome } = data;
-  const config = DAY_STATUS_CONFIG[dayStatus];
+  const unifiedStatus = dayStatusToStatus[dayStatus];
+  const config = STATUS_CONFIG[unifiedStatus];
   const StatusIcon = config.icon;
 
   return (
@@ -87,7 +69,7 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
           {/* Status Icon */}
           <div className={cn(
             'flex items-center justify-center w-10 h-10 rounded-full shrink-0',
-            config.bgClass
+            config.bgClassStrong
           )}>
             <StatusIcon className={cn('w-5 h-5', config.textClass)} />
           </div>
