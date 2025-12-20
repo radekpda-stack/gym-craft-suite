@@ -12,6 +12,10 @@ import { TrendsPanelSection } from '@/components/dashboard/TrendsPanelSection';
 import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
 import { UpcomingAnniversariesCard } from '@/components/dashboard/UpcomingAnniversariesCard';
 import { MostActiveClientsCard } from '@/components/dashboard/MostActiveClientsCard';
+import { ClientsAtRiskCard } from '@/components/dashboard/ClientsAtRiskCard';
+import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
+import { CapacityHeatmapCard } from '@/components/dashboard/CapacityHeatmapCard';
+import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 
 function DashboardContent() {
@@ -52,15 +56,27 @@ function DashboardContent() {
       {/* Fun statistiky */}
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <MostActiveClientsCard />
+        <ClientsAtRiskCard />
+      </div>
+
+      {/* Year comparison and Heatmap */}
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <YearComparisonCard />
+        <CapacityHeatmapCard />
+      </div>
+
+      {/* PR Timeline */}
+      <PRTimelineCard />
+
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <UpcomingAnniversariesCard />
+        <QuickStats />
       </div>
       
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        <QuickStats />
         <TrendsPanelSection data={data} isLoading={isLoading} />
+        <StatsOverviewCard />
       </div>
-      
-      <StatsOverviewCard />
     </div>
   );
 }
