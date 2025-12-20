@@ -22,6 +22,7 @@ import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
 import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
+import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
 
 import { toast } from '@/hooks/use-toast';
 
@@ -160,6 +161,9 @@ export default function ClientDetail() {
 
       {/* Training Count Statistics */}
       <ClientTrainingCountCard clientId={client.id} />
+
+      {/* Client LTV */}
+      <ClientLTVCard clientId={client.id} />
 
       {/* Attendance Statistics */}
       <ClientAttendanceStats clientId={client.id} />
