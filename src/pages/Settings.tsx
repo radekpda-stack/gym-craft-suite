@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ProductsManagement } from '@/components/settings/ProductsManagement';
+import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
@@ -147,6 +148,13 @@ export default function Settings() {
       icon: Users,
       iconColor: 'text-amber-500',
       sections: [
+        {
+          id: 'packages',
+          title: language === 'cs' ? 'Tréninkové balíčky' : 'Training Packages',
+          description: language === 'cs' ? 'Definice předplacených balíčků tréninků' : 'Define prepaid training packages',
+          icon: Package,
+          content: <PackagesManagement />,
+        },
         {
           id: 'credit-thresholds',
           title: language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds',

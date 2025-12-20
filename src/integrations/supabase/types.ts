@@ -239,6 +239,72 @@ export type Database = {
           },
         ]
       }
+      client_packages: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          package_id: string | null
+          package_name: string
+          price_paid: number
+          purchased_at: string | null
+          trainings_total: number
+          trainings_used: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          package_id?: string | null
+          package_name: string
+          price_paid: number
+          purchased_at?: string | null
+          trainings_total: number
+          trainings_used?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          package_id?: string | null
+          package_name?: string
+          price_paid?: number
+          purchased_at?: string | null
+          trainings_total?: number
+          trainings_used?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_packages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "training_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_recurring_schedules: {
         Row: {
           client_id: string
@@ -2912,6 +2978,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_packages: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          training_count: number
+          updated_at: string | null
+          user_id: string
+          validity_days: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+          training_count: number
+          updated_at?: string | null
+          user_id: string
+          validity_days?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          training_count?: number
+          updated_at?: string | null
+          user_id?: string
+          validity_days?: number | null
+        }
+        Relationships: []
       }
       training_participants: {
         Row: {

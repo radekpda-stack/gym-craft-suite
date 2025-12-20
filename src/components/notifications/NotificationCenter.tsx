@@ -38,6 +38,12 @@ const notificationIcons: Record<string, typeof Bell> = {
   feedback_trend_alert: TrendingDown,
   reminder: Clock,
   client_anniversary: Gift,
+  // Smart notifications
+  pr_achieved: Trophy,
+  package_low: CreditCard,
+  package_expiring: Clock,
+  inactivity_warning: AlertTriangle,
+  training_streak: Trophy,
 };
 
 const notificationColors: Record<string, string> = {
@@ -53,6 +59,12 @@ const notificationColors: Record<string, string> = {
   feedback_trend_alert: "text-orange-500",
   reminder: "text-cyan-500",
   client_anniversary: "text-amber-500",
+  // Smart notifications
+  pr_achieved: "text-warning",
+  package_low: "text-warning",
+  package_expiring: "text-orange-500",
+  inactivity_warning: "text-destructive",
+  training_streak: "text-success",
 };
 
 // Extract training ID from notification message
