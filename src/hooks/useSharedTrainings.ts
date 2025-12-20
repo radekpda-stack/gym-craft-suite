@@ -3,9 +3,39 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSharedWithMe } from './useCalendarShares';
 import { TrainingSession, TrainingStatus } from './useTrainingSessions';
 
+export interface TrainerInfo {
+  id: string;
+  email: string;
+  display_name: string | null;
+  color: string;
+}
+
 export interface SharedTraining extends TrainingSession {
   owner_user_id: string;
   isShared: true;
+  trainer?: TrainerInfo;
+}
+
+// Generování konzistentní barvy z ID
+function generateTrainerColor(userId: string): string {
+  // Predefinované barvy pro lepší rozlišitelnost
+  const colors = [
+    'hsl(200, 80%, 50%)',  // modrá
+    'hsl(280, 70%, 55%)',  // fialová
+    'hsl(160, 70%, 45%)',  // tyrkysová
+    'hsl(340, 75%, 55%)',  // růžová
+    'hsl(45, 85%, 50%)',   // žlutá
+    'hsl(120, 60%, 45%)',  // zelená
+  ];
+  
+  // Hash user ID to get consistent color index
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    hash = hash & hash;
+  }
+  
+  return colors[Math.abs(hash) % colors.length];
 }
 
 // Získání tréninků od sdílených kalendářů
@@ -19,7 +49,8 @@ export function useSharedTrainings() {
 
       const ownerIds = sharedCalendars.map(s => s.owner_user_id);
 
-      const { data, error } = await supabase
+      // Fetch trainings
+      const { data: trainings, error } = await supabase
         .from('training_sessions')
         .select('*')
         .in('user_id', ownerIds)
@@ -27,16 +58,40 @@ export function useSharedTrainings() {
 
       if (error) throw error;
 
-      return (data || []).map(session => ({
+      // Fetch trainer profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', ownerIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      // Create trainer info map with colors
+      const trainerMap = new Map<string, TrainerInfo>();
+      for (const calendar of sharedCalendars) {
+        const profile = profileMap.get(calendar.owner_user_id);
+        trainerMap.set(calendar.owner_user_id, {
+          id: calendar.owner_user_id,
+          email: profile?.email || calendar.ownerProfile?.email || '',
+          display_name: profile?.display_name || calendar.ownerProfile?.display_name || null,
+          color: generateTrainerColor(calendar.owner_user_id),
+        });
+      }
+
+      return (trainings || []).map(session => ({
         ...session,
         status: session.status as TrainingStatus,
         owner_user_id: session.user_id || '',
-        isShared: true as const
+        isShared: true as const,
+        trainer: trainerMap.get(session.user_id || ''),
       }));
     },
     enabled: sharedCalendars.length > 0
   });
 }
+
+// Export helper for consistent colors
+export { generateTrainerColor };
 
 // Kontrola kolize s vlastními i sdílenými tréninky
 export function useCheckCollision() {
