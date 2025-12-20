@@ -38,10 +38,11 @@ import { usePendingFeedbackTrainings } from '@/hooks/usePendingFeedbackTrainings
 import { useCreateFeedbackRequest } from '@/hooks/useFeedbackRequests';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
 type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending';
-type TabValue = 'to_send' | 'history';
+type TabValue = 'to_send' | 'analytics' | 'history';
 
 export default function FeedbackOverview() {
   const [activeTab, setActiveTab] = useState<TabValue>('to_send');
@@ -292,7 +293,7 @@ export default function FeedbackOverview() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="space-y-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="to_send" className="gap-2">
             <Send className="w-4 h-4" />
             K odeslání
@@ -300,8 +301,17 @@ export default function FeedbackOverview() {
               <Badge variant="secondary" className="ml-1">{stats.toSend}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Statistiky
+          </TabsTrigger>
           <TabsTrigger value="history">Historie</TabsTrigger>
         </TabsList>
+
+        {/* Tab: Analytics */}
+        <TabsContent value="analytics" className="space-y-4">
+          <FeedbackTrendsOverview days={parseInt(period) || 30} />
+        </TabsContent>
 
         {/* Tab: To Send */}
         <TabsContent value="to_send" className="space-y-4">
