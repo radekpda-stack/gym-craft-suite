@@ -34,17 +34,25 @@ interface PriceSplitManagerProps {
   primaryClientId: string;
   onChange: (participants: ParticipantShare[]) => void;
   initialParticipants?: ParticipantShare[];
+  /** Optional function to calculate price based on participant count */
+  getPriceForCount?: (count: number) => number;
 }
 
 export function PriceSplitManager({
   clients,
-  totalPrice,
+  totalPrice: initialTotalPrice,
   primaryClientId,
   onChange,
   initialParticipants,
+  getPriceForCount,
 }: PriceSplitManagerProps) {
   const [participants, setParticipants] = useState<ParticipantShare[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  
+  // Calculate the actual total price based on participant count if pricing function is provided
+  const totalPrice = getPriceForCount 
+    ? getPriceForCount(participants.length || 1) 
+    : initialTotalPrice;
 
   // Initialize with primary client
   useEffect(() => {
@@ -88,8 +96,10 @@ export function PriceSplitManager({
     if (!client || participants.some(p => p.client_id === clientId)) return;
 
     const newCount = participants.length + 1;
+    // Calculate the correct price for the NEW participant count
+    const newTotalPrice = getPriceForCount ? getPriceForCount(newCount) : initialTotalPrice;
     const equalPercentage = 100 / newCount;
-    const equalShare = totalPrice / newCount;
+    const equalShare = newTotalPrice / newCount;
 
     const updated = [
       ...participants.map(p => ({
@@ -116,8 +126,10 @@ export function PriceSplitManager({
 
     const newParticipants = participants.filter(p => p.client_id !== clientId);
     const newCount = newParticipants.length;
+    // Calculate the correct price for the NEW participant count
+    const newTotalPrice = getPriceForCount ? getPriceForCount(newCount) : initialTotalPrice;
     const equalPercentage = 100 / newCount;
-    const equalShare = totalPrice / newCount;
+    const equalShare = newTotalPrice / newCount;
 
     const updated = newParticipants.map(p => ({
       ...p,
