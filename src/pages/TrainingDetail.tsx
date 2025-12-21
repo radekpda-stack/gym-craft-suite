@@ -177,6 +177,16 @@ export default function TrainingDetail() {
     });
   };
 
+  // Handler for inline field updates (auto-save)
+  const handleFieldUpdate = async (field: string, value: string | boolean) => {
+    await updateTraining.mutateAsync({
+      id: training.id,
+      input: {
+        [field]: value,
+      },
+    });
+  };
+
   const handleDelete = async () => {
     await deleteTraining.mutateAsync(training.id);
     navigate('/trainings');
@@ -385,6 +395,7 @@ export default function TrainingDetail() {
             tagIds,
           });
         }}
+        onFieldUpdate={handleFieldUpdate}
       />
 
       {/* Action Buttons - Only for scheduled trainings */}

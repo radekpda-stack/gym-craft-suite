@@ -5,7 +5,7 @@
  * Handles inline editing of training data without page navigation.
  * Includes workout exercise management for tracking exercises and sets.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useForm } from 'react-hook-form';
@@ -38,6 +38,7 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
+import { InlineTextarea } from '@/components/trainings/InlineTextarea';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
@@ -114,6 +115,7 @@ interface TrainingDetailViewProps {
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
   onTagsChange?: (tagIds: string[]) => Promise<void>;
+  onFieldUpdate?: (field: string, value: string | boolean) => Promise<void>;
 }
 
 const statusColors = {
@@ -137,6 +139,7 @@ export function TrainingDetailView({
   onDelete,
   isDeleting,
   onTagsChange,
+  onFieldUpdate,
 }: TrainingDetailViewProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
@@ -546,7 +549,7 @@ export function TrainingDetailView({
           </div>
         )}
 
-        {/* PREP NOTES Section - Before training */}
+        {/* PREP NOTES Section - Before training - ALWAYS EDITABLE */}
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-3">
             <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -555,22 +558,12 @@ export function TrainingDetailView({
           <p className="text-xs text-muted-foreground mb-3">
             Poznámky pro přípravu tréninku (cíle, zaměření, na co se soustředit)
           </p>
-          {isEditMode ? (
-            <FormField
-              control={form.control}
-              name="prep_notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Co je cílem dnešního tréninku? Na co se zaměřit?"
-                      className="bg-secondary border-border min-h-[80px]"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          {onFieldUpdate ? (
+            <InlineTextarea
+              initialValue={training.prep_notes || ''}
+              onSave={(value) => onFieldUpdate('prep_notes', value)}
+              placeholder="Co je cílem dnešního tréninku? Na co se zaměřit?"
+              minHeight="80px"
             />
           ) : (
             <p className="text-muted-foreground whitespace-pre-wrap">
@@ -585,12 +578,11 @@ export function TrainingDetailView({
             trainingSessionId={training.id}
             clientId={training.client_id}
             trainingDate={training.date}
-            isEditMode={isEditMode}
             trainingStatus={training.status}
           />
         </div>
 
-        {/* SUMMARY Section - After training */}
+        {/* SUMMARY Section - After training - ALWAYS EDITABLE */}
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4">
           <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground mb-1">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -603,22 +595,12 @@ export function TrainingDetailView({
               <ThumbsUp className="w-4 h-4" />
               <span className="text-sm font-medium">Co šlo dobře</span>
             </div>
-            {isEditMode ? (
-              <FormField
-                control={form.control}
-                name="trainer_went_well"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Cviky, techniky, pokroky..."
-                        className="bg-secondary border-border min-h-[60px]"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {onFieldUpdate ? (
+              <InlineTextarea
+                initialValue={training.trainer_went_well || ''}
+                onSave={(value) => onFieldUpdate('trainer_went_well', value)}
+                placeholder="Cviky, techniky, pokroky..."
+                minHeight="60px"
               />
             ) : (
               <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
@@ -633,22 +615,12 @@ export function TrainingDetailView({
               <ThumbsDown className="w-4 h-4" />
               <span className="text-sm font-medium">Co nešlo / na čem pracovat</span>
             </div>
-            {isEditMode ? (
-              <FormField
-                control={form.control}
-                name="trainer_problems"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Problémy, slabiny, omezení..."
-                        className="bg-secondary border-border min-h-[60px]"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {onFieldUpdate ? (
+              <InlineTextarea
+                initialValue={training.trainer_problems || ''}
+                onSave={(value) => onFieldUpdate('trainer_problems', value)}
+                placeholder="Problémy, slabiny, omezení..."
+                minHeight="60px"
               />
             ) : (
               <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
@@ -663,22 +635,12 @@ export function TrainingDetailView({
               <MessageSquare className="w-4 h-4" />
               <span className="text-sm font-medium">Doporučení pro další trénink</span>
             </div>
-            {isEditMode ? (
-              <FormField
-                control={form.control}
-                name="trainer_recommendations"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Doporučení, tipy, úpravy pro příště..."
-                        className="bg-secondary border-border min-h-[60px]"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {onFieldUpdate ? (
+              <InlineTextarea
+                initialValue={training.trainer_recommendations || ''}
+                onSave={(value) => onFieldUpdate('trainer_recommendations', value)}
+                placeholder="Doporučení, tipy, úpravy pro příště..."
+                minHeight="60px"
               />
             ) : (
               <p className="text-muted-foreground text-sm whitespace-pre-wrap pl-6">
@@ -687,27 +649,17 @@ export function TrainingDetailView({
             )}
           </div>
 
-          {/* Pain reporting */}
+          {/* Pain reporting - ALWAYS EDITABLE */}
           <div className="space-y-2 pt-2 border-t border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="w-4 h-4" />
                 <span className="text-sm font-medium">Hlášená bolest</span>
               </div>
-              {isEditMode ? (
-                <FormField
-                  control={form.control}
-                  name="pain_reported"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+              {onFieldUpdate ? (
+                <Switch
+                  checked={training.pain_reported || false}
+                  onCheckedChange={(checked) => onFieldUpdate('pain_reported', checked)}
                 />
               ) : (
                 <span className={cn(
@@ -718,24 +670,14 @@ export function TrainingDetailView({
                 </span>
               )}
             </div>
-            {(form.watch('pain_reported') || training.pain_reported) && (
+            {training.pain_reported && (
               <div className="pl-6">
-                {isEditMode ? (
-                  <FormField
-                    control={form.control}
-                    name="pain_notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Popis bolesti - kde, kdy, intenzita..."
-                            className="bg-secondary border-border min-h-[60px]"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                {onFieldUpdate ? (
+                  <InlineTextarea
+                    initialValue={training.pain_notes || ''}
+                    onSave={(value) => onFieldUpdate('pain_notes', value)}
+                    placeholder="Popis bolesti - kde, kdy, intenzita..."
+                    minHeight="60px"
                   />
                 ) : (
                   <p className="text-muted-foreground text-sm whitespace-pre-wrap">
@@ -747,25 +689,15 @@ export function TrainingDetailView({
           </div>
         </div>
 
-        {/* General Notes Section */}
+        {/* General Notes Section - ALWAYS EDITABLE */}
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3">Poznámky</h3>
-          {isEditMode ? (
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Další poznámky k tréninku..."
-                      className="bg-secondary border-border min-h-[100px]"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          {onFieldUpdate ? (
+            <InlineTextarea
+              initialValue={training.notes || ''}
+              onSave={(value) => onFieldUpdate('notes', value)}
+              placeholder="Další poznámky k tréninku..."
+              minHeight="100px"
             />
           ) : (
             <p className="text-muted-foreground whitespace-pre-wrap">
