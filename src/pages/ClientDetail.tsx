@@ -31,6 +31,8 @@ import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStat
 import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
 import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
 import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
+import { ClientFinanceQuickCard } from '@/components/clients/ClientFinanceQuickCard';
+import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
 
 import { toast } from '@/hooks/use-toast';
@@ -176,15 +178,17 @@ export default function ClientDetail() {
         </>
       )}
 
-      {/* Client Health Snapshot - visible without scroll */}
-      <ClientHealthSnapshot
+      {/* 1. Finance Card - Always visible, top priority */}
+      <ClientFinanceQuickCard
         clientId={client.id}
         creditBalance={creditBalance}
-        trainerNote={client.notes?.split('\n')[0]?.substring(0, 100) || ''}
-        onSaveNote={handleAddNote}
+        unpaidCount={unpaidCount}
+        isSharedBudget={isSharedBudget}
+        sharedBudgetName={sharedBudgetName}
+        budgetGroupId={sharedBudgetInfo?.groupId}
       />
 
-      {/* Desktop Quick Actions (hidden on mobile - replaced by FAB) */}
+      {/* 2. Quick Actions (Desktop only - mobile has FAB) */}
       {!isMobile && (
         <ClientActionsBar
           client={client}
@@ -196,10 +200,24 @@ export default function ClientDetail() {
         />
       )}
 
-      {/* History Block - Main content */}
+      {/* 3. Client Profile Summary - Key info visible */}
+      <ClientProfileSummary
+        client={client}
+        onEditClick={() => setShowClientDetails(true)}
+      />
+
+      {/* 4. Client Health Snapshot */}
+      <ClientHealthSnapshot
+        clientId={client.id}
+        creditBalance={creditBalance}
+        trainerNote={client.notes?.split('\n')[0]?.substring(0, 100) || ''}
+        onSaveNote={handleAddNote}
+      />
+
+      {/* 5. History Block - Main content */}
       <ClientHistoryBlock clientId={client.id} notes={client.notes} />
 
-      {/* Statistics Section - collapsible on mobile */}
+      {/* 6. Statistics Section - collapsible on mobile */}
       {isMobile ? (
         <CollapsibleSection title="Statistiky">
           <ClientTrainingCountCard clientId={client.id} />
@@ -216,67 +234,47 @@ export default function ClientDetail() {
         </>
       )}
 
-      {/* Administration Section - collapsible on mobile */}
+      {/* 7. Settings Section - collapsible on mobile */}
       {isMobile ? (
-        <CollapsibleSection title="Administrativa">
+        <CollapsibleSection title="Nastavení">
           <ClientAdminBlock
             client={client}
-            creditBalance={creditBalance}
             isSharedBudget={isSharedBudget}
             budgetGroupId={sharedBudgetInfo?.groupId}
             onArchive={handleArchive}
           />
-          <div className="glass rounded-xl overflow-hidden">
-            <button
-              onClick={() => setShowClientDetails(!showClientDetails)}
-              className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
-            >
-              <span className="font-medium text-sm">Profil klienta</span>
-              <span className="text-xs text-muted-foreground">
-                {showClientDetails ? 'Skrýt' : 'Zobrazit'}
-              </span>
-            </button>
-            {showClientDetails && (
-              <div className="p-4 pt-0">
-                <ClientDetailView
-                  client={client}
-                  onSave={handleSaveClient}
-                  isLoading={updateClient.isPending}
-                />
-              </div>
-            )}
-          </div>
         </CollapsibleSection>
       ) : (
-        <>
-          <ClientAdminBlock
-            client={client}
-            creditBalance={creditBalance}
-            isSharedBudget={isSharedBudget}
-            budgetGroupId={sharedBudgetInfo?.groupId}
-            onArchive={handleArchive}
-          />
-          <div className="glass rounded-xl overflow-hidden">
-            <button
-              onClick={() => setShowClientDetails(!showClientDetails)}
-              className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
-            >
-              <span className="font-medium text-sm">Profil klienta</span>
-              <span className="text-xs text-muted-foreground">
-                {showClientDetails ? 'Skrýt' : 'Zobrazit'}
-              </span>
-            </button>
-            {showClientDetails && (
-              <div className="p-4 pt-0">
-                <ClientDetailView
-                  client={client}
-                  onSave={handleSaveClient}
-                  isLoading={updateClient.isPending}
-                />
-              </div>
-            )}
+        <ClientAdminBlock
+          client={client}
+          isSharedBudget={isSharedBudget}
+          budgetGroupId={sharedBudgetInfo?.groupId}
+          onArchive={handleArchive}
+        />
+      )}
+
+      {/* Full Profile Dialog/Sheet */}
+      {showClientDetails && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed inset-x-0 bottom-0 top-0 sm:inset-4 sm:m-auto sm:max-w-3xl sm:max-h-[90vh] bg-background rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold">Profil klienta</h2>
+              <button
+                onClick={() => setShowClientDetails(false)}
+                className="p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <ClientDetailView
+                client={client}
+                onSave={handleSaveClient}
+                isLoading={updateClient.isPending}
+              />
+            </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Mobile FAB + Bottom Sheet */}
