@@ -295,6 +295,7 @@ export default function TrainingDetail() {
         await deductParticipantsCredit.mutateAsync({
           training_session_id: training.id,
           participants: normalizedParticipants,
+          totalPrice: correctPrice,
           description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
         });
       }
