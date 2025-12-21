@@ -317,10 +317,10 @@ export function useDashboardViewModel() {
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString()),
         
-        // Product transactions (type = 'product')
+        // Product transactions (type = 'product') - this month
         supabase
           .from('credit_transactions')
-          .select('amount, type, product_id')
+          .select('amount, type, product_id, created_at')
           .eq('type', 'product')
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString()),
@@ -785,9 +785,22 @@ export function useDashboardViewModel() {
       }
       
       // ===== TODAY'S SUMMARY =====
-      const todayEstimatedIncome = todayTrainings
+      // Training income today (from final_price of non-canceled trainings)
+      const todayTrainingIncome = todayTrainings
         .filter((t: any) => t.status !== 'canceled')
         .reduce((sum: number, t: any) => sum + ((t as any).final_price || 0), 0);
+      
+      // Product sales today (negative amounts in credit_transactions, so we negate)
+      const productTransactions = productTransactionsResult.data || [];
+      const todayProductSales = productTransactions
+        .filter((t: any) => {
+          const transactionDate = new Date(t.created_at);
+          return transactionDate >= todayStart && transactionDate <= todayEnd;
+        })
+        .reduce((sum: number, t: any) => sum + Math.abs(t.amount || 0), 0);
+      
+      // Total estimated income today = trainings + product sales
+      const todayEstimatedIncome = todayTrainingIncome + todayProductSales;
       
       const uniqueClientsToday = new Set(todayTrainings.map((t: any) => t.client_id)).size;
       
