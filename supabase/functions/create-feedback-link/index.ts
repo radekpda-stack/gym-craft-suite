@@ -110,15 +110,18 @@ serve(async (req) => {
       );
     }
 
-    // Check for existing active link
-    const { data: existingLink } = await supabase
+    // Check for existing active link (use limit(1) instead of single() to avoid error on duplicates)
+    const { data: existingLinks } = await supabase
       .from("feedback_requests")
       .select("id, token, status, expires_at")
       .eq("client_id", client_id)
       .eq("training_session_id", training_id)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const existingLink = existingLinks?.[0];
 
     if (existingLink) {
       // Return existing active link
@@ -133,6 +136,14 @@ serve(async (req) => {
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Cancel any old pending requests for this training before creating new one
+    await supabase
+      .from("feedback_requests")
+      .update({ status: "cancelled" })
+      .eq("client_id", client_id)
+      .eq("training_session_id", training_id)
+      .eq("status", "pending");
 
     // Get settings for expiration hours
     const { data: settings } = await supabase
