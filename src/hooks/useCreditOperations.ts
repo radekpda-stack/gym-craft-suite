@@ -77,51 +77,33 @@ export async function getClientBudgetGroup(clientId: string) {
 }
 
 /**
- * Update shared budget balance with proper integer math
+ * Update shared budget balance atomically using SQL RPC
+ * This prevents race conditions by performing a single atomic UPDATE
  */
 export async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
-  const { data: group, error: getError } = await supabase
-    .from('client_budget_groups')
-    .select('shared_balance')
-    .eq('id', groupId)
-    .single();
+  // Use atomic RPC function to prevent race conditions
+  const { data, error } = await supabase.rpc('update_shared_balance_atomic', {
+    p_group_id: groupId,
+    p_delta: delta,
+  });
 
-  if (getError) throw getError;
-
-  const current = Math.round((group.shared_balance || 0) * 100);
-  const next = (current + Math.round(delta * 100)) / 100;
-
-  const { error: updateError } = await supabase
-    .from('client_budget_groups')
-    .update({ shared_balance: next })
-    .eq('id', groupId);
-
-  if (updateError) throw updateError;
-  return next;
+  if (error) throw error;
+  return data as number;
 }
 
 /**
- * Update individual client credit balance with proper integer math
+ * Update individual client credit balance atomically using SQL RPC
+ * This prevents race conditions by performing a single atomic UPDATE
  */
 export async function updateClientBalance(clientId: string, delta: number): Promise<number> {
-  const { data: client, error: getError } = await supabase
-    .from('clients')
-    .select('credit_balance')
-    .eq('id', clientId)
-    .single();
+  // Use atomic RPC function to prevent race conditions
+  const { data, error } = await supabase.rpc('update_client_balance_atomic', {
+    p_client_id: clientId,
+    p_delta: delta,
+  });
 
-  if (getError) throw getError;
-
-  const current = Math.round((client.credit_balance || 0) * 100);
-  const next = (current + Math.round(delta * 100)) / 100;
-
-  const { error: updateError } = await supabase
-    .from('clients')
-    .update({ credit_balance: next })
-    .eq('id', clientId);
-
-  if (updateError) throw updateError;
-  return next;
+  if (error) throw error;
+  return data as number;
 }
 
 /**

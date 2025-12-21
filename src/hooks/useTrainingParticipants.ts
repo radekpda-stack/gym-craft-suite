@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { 
+  getClientBudgetGroup, 
+  updateSharedBalance, 
+  updateClientBalance 
+} from "./useCreditOperations";
 
 export interface TrainingParticipant {
   id: string;
@@ -85,41 +90,11 @@ export function useSaveTrainingParticipants() {
   });
 }
 
-// Helper function to check if client is in a shared budget group
-async function getClientBudgetGroup(clientId: string) {
-  const { data: membership, error } = await supabase
-    .from("client_budget_members")
-    .select("group_id, client_budget_groups(id, name, shared_balance)")
-    .eq("client_id", clientId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Error checking budget group:", error);
-    return null;
-  }
-  return membership;
-}
-
-// Helper function to update shared budget balance
-async function updateSharedBudgetBalance(groupId: string, amount: number) {
-  const { data: group, error: getError } = await supabase
-    .from("client_budget_groups")
-    .select("shared_balance")
-    .eq("id", groupId)
-    .single();
-
-  if (getError) throw getError;
-
-  const newBalance = (group.shared_balance || 0) + amount;
-
-  const { error: updateError } = await supabase
-    .from("client_budget_groups")
-    .update({ shared_balance: newBalance })
-    .eq("id", groupId);
-
-  if (updateError) throw updateError;
-
-  return newBalance;
+interface ParticipantWithBudgetInfo {
+  client_id: string;
+  price_share: number;
+  groupId: string | null;
+  clientName?: string;
 }
 
 export function useDeductParticipantsCredit() {
@@ -129,67 +104,98 @@ export function useDeductParticipantsCredit() {
     mutationFn: async ({ 
       training_session_id, 
       participants,
+      totalPrice,
       description
     }: { 
       training_session_id: string;
       participants: Array<{ client_id: string; price_share: number }>;
+      totalPrice: number;
       description?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Group participants by their budget group to avoid duplicate deductions
-      const processedGroups = new Set<string>();
+      // Step 1: Get budget group info for each participant
+      const participantsWithBudget: ParticipantWithBudgetInfo[] = await Promise.all(
+        participants.map(async (p) => {
+          const budgetGroup = await getClientBudgetGroup(p.client_id);
+          return {
+            ...p,
+            groupId: budgetGroup?.group_id || null,
+          };
+        })
+      );
 
-      // Deduct credit from each participant
-      for (const participant of participants) {
+      // Step 2: Group participants by their shared budget group
+      const sharedBudgetGroups = new Map<string, ParticipantWithBudgetInfo[]>();
+      const individualParticipants: ParticipantWithBudgetInfo[] = [];
+
+      for (const p of participantsWithBudget) {
+        if (p.groupId) {
+          const existing = sharedBudgetGroups.get(p.groupId) || [];
+          existing.push(p);
+          sharedBudgetGroups.set(p.groupId, existing);
+        } else {
+          individualParticipants.push(p);
+        }
+      }
+
+      // Step 3: Process shared budget groups - deduct TOTAL training price ONCE per group
+      for (const [groupId, groupParticipants] of sharedBudgetGroups) {
+        // Fetch client names for description
+        const clientIds = groupParticipants.map(p => p.client_id);
+        const { data: clients } = await supabase
+          .from("clients")
+          .select("id, name")
+          .in("id", clientIds);
+        
+        const clientNames = clients?.map(c => c.name).join(", ") || "";
+        const participantCount = groupParticipants.length;
+        
+        // Create ONE summary transaction for the shared budget
+        const transactionDescription = participantCount > 1 
+          ? `Trénink (${participantCount} osoby: ${clientNames})`
+          : description || "Trénink (sdílený budget)";
+
+        const { error: transactionError } = await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id: groupParticipants[0].client_id, // Primary participant
+            amount: -totalPrice, // Deduct TOTAL training price
+            type: "training",
+            description: transactionDescription,
+            training_session_id,
+            user_id: user.id,
+            group_id: groupId,
+          });
+
+        if (transactionError) throw transactionError;
+
+        // Deduct total price from shared budget ONCE
+        await updateSharedBalance(groupId, -totalPrice);
+      }
+
+      // Step 4: Process individual participants - deduct their share
+      for (const participant of individualParticipants) {
         if (participant.price_share <= 0) continue;
 
-        // Check if client is in a shared budget group
-        const budgetGroup = await getClientBudgetGroup(participant.client_id);
-        const isSharedBudget = !!budgetGroup?.group_id;
-        const groupId = budgetGroup?.group_id;
-
-        // Create credit transaction
+        // Create transaction for individual participant
         const { error: transactionError } = await supabase
           .from("credit_transactions")
           .insert({
             client_id: participant.client_id,
             amount: -participant.price_share,
             type: "training",
-            description: description || `Trénink${isSharedBudget ? ' (sdílený budget)' : ''}`,
+            description: description || "Trénink",
             training_session_id,
             user_id: user.id,
-            group_id: groupId || null,
+            group_id: null,
           });
 
         if (transactionError) throw transactionError;
 
-        if (isSharedBudget && groupId) {
-          // For shared budgets, only deduct once per group
-          if (!processedGroups.has(groupId)) {
-            await updateSharedBudgetBalance(groupId, -participant.price_share);
-            processedGroups.add(groupId);
-          }
-        } else {
-          // Update individual client's credit balance
-          const { data: client, error: clientError } = await supabase
-            .from("clients")
-            .select("credit_balance")
-            .eq("id", participant.client_id)
-            .single();
-
-          if (clientError) throw clientError;
-
-          const newBalance = (client.credit_balance || 0) - participant.price_share;
-
-          const { error: updateError } = await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", participant.client_id);
-
-          if (updateError) throw updateError;
-        }
+        // Deduct from individual client balance
+        await updateClientBalance(participant.client_id, -participant.price_share);
       }
 
       return { success: true };

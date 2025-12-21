@@ -3627,6 +3627,14 @@ export type Database = {
         Returns: boolean
       }
       normalize_text: { Args: { input_text: string }; Returns: string }
+      update_client_balance_atomic: {
+        Args: { p_client_id: string; p_delta: number }
+        Returns: number
+      }
+      update_shared_balance_atomic: {
+        Args: { p_delta: number; p_group_id: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "user"
