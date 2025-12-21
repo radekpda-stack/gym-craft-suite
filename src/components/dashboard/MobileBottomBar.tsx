@@ -28,7 +28,7 @@ export function MobileBottomBar() {
   return (
     <>
       {/* Fixed bottom bar - Apple-style tab bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
         <div className="mx-3 mb-3 premium-layer">
           <div className="flex items-center justify-around py-2">
             <button
@@ -59,7 +59,7 @@ export function MobileBottomBar() {
       </div>
       
       {/* Spacer */}
-      <div className="sm:hidden h-20" />
+      <div className="md:hidden h-20" />
       
       {/* Dialogs */}
       <CreateTrainingSheet
