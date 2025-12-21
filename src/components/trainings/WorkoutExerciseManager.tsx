@@ -10,7 +10,6 @@ interface WorkoutExerciseManagerProps {
   trainingSessionId: string;
   clientId: string;
   trainingDate: string;
-  isEditMode: boolean;
   trainingStatus: string;
 }
 
@@ -18,7 +17,6 @@ export function WorkoutExerciseManager({
   trainingSessionId,
   clientId,
   trainingDate,
-  isEditMode,
   trainingStatus,
 }: WorkoutExerciseManagerProps) {
   const { toast } = useToast();
@@ -176,7 +174,6 @@ export function WorkoutExerciseManager({
       {/* Exercise List */}
       <WorkoutExerciseList
         groupedEntries={groupedEntries}
-        isEditMode={isEditMode}
         onUpdateSet={handleUpdateSet}
         onDeleteSet={handleDeleteSet}
         onDeleteExercise={handleDeleteExercise}

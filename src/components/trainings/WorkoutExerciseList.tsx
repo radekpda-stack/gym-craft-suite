@@ -33,7 +33,6 @@ import { cn } from '@/lib/utils';
 
 interface WorkoutExerciseListProps {
   groupedEntries: GroupedWorkoutEntry[];
-  isEditMode: boolean;
   onUpdateSet: (entryId: string, updates: Partial<WorkoutEntry>) => void;
   onDeleteSet: (entryId: string) => void;
   onDeleteExercise: (exerciseName: string, exerciseId: string | null) => void;
@@ -49,7 +48,6 @@ interface EditingSet {
 
 export function WorkoutExerciseList({
   groupedEntries,
-  isEditMode,
   onUpdateSet,
   onDeleteSet,
   onDeleteExercise,
@@ -104,9 +102,7 @@ export function WorkoutExerciseList({
     return (
       <div className="text-center py-8 text-muted-foreground">
         <p>Zatím nebyly přidány žádné cviky.</p>
-        {isEditMode && (
-          <p className="text-sm mt-1">Klikněte na "Přidat cvik" pro přidání cviku.</p>
-        )}
+        <p className="text-sm mt-1">Klikněte na "Přidat cvik" pro přidání cviku.</p>
       </div>
     );
   }
@@ -133,10 +129,8 @@ export function WorkoutExerciseList({
               {/* Exercise Header */}
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    {isEditMode && (
-                      <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-                    )}
+                <div className="flex items-center gap-3">
+                    <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                     <div>
                       <h4 className="font-medium text-foreground flex items-center gap-2">
                         {group.exercise_name}
@@ -160,19 +154,17 @@ export function WorkoutExerciseList({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteExercise({ name: group.exercise_name, id: group.exercise_id });
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteExercise({ name: group.exercise_name, id: group.exercise_id });
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                     {isOpen ? (
                       <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
@@ -265,45 +257,41 @@ export function WorkoutExerciseList({
                           <span className="text-muted-foreground">
                             {set.rpe ? `@${set.rpe}` : '-'}
                           </span>
-                          {isEditMode && (
-                            <div className="flex gap-1 w-16">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="w-7 h-7"
-                                onClick={() => handleStartEdit(set)}
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="w-7 h-7 text-destructive hover:text-destructive"
-                                onClick={() => onDeleteSet(set.id)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
+                          <div className="flex gap-1 w-16">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7"
+                              onClick={() => handleStartEdit(set)}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7 text-destructive hover:text-destructive"
+                              onClick={() => onDeleteSet(set.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </>
                       )}
                     </div>
                   ))}
 
                   {/* Add Set Button */}
-                  {isEditMode && (
-                    <div className="p-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => onAddSet(group.exercise_name, group.exercise_id)}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Přidat sérii
-                      </Button>
-                    </div>
-                  )}
+                  <div className="p-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => onAddSet(group.exercise_name, group.exercise_id)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Přidat sérii
+                    </Button>
+                  </div>
                 </div>
               </CollapsibleContent>
             </div>
