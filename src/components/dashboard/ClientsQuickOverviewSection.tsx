@@ -93,8 +93,12 @@ export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOve
   
   const { clientsQuickInfo } = data;
 
-  // Separate clients by status for better overview - limit to 6 total
-  const allClients = clientsQuickInfo.slice(0, 6);
+  // Mobile: max 4 clients, Desktop: max 6 clients
+  const isMobile = window.innerWidth < 640;
+  const maxClients = isMobile ? 4 : 6;
+  
+  // Separate clients by status for better overview
+  const allClients = clientsQuickInfo.slice(0, maxClients);
   const errorClients = allClients.filter(c => c.status === 'error');
   const warningClients = allClients.filter(c => c.status === 'warning');
   const okClients = allClients.filter(c => c.status === 'ok');
@@ -103,12 +107,12 @@ export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOve
     <Card className="glass">
       <CardHeader className="pb-3">
         <div>
-        <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Users className="w-5 h-5 text-primary" />
             Klienti – rychlý přehled
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Top 6 klientů • Kredit a poslední aktivita
+            Top {maxClients} klientů • Kredit a aktivita
           </p>
         </div>
       </CardHeader>

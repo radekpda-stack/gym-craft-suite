@@ -30,20 +30,20 @@ export const STATUS_CONFIG = {
     label: 'V pořádku',
     labelShort: 'OK',
     icon: CheckCircle2,
-    // Background with opacity
-    bgClass: 'bg-status-ok/10',
-    bgClassStrong: 'bg-status-ok/15',
-    bgClassSubtle: 'bg-status-ok/5',
+    // Background with opacity - NEUTRAL for "ok" state (color = problem philosophy)
+    bgClass: 'bg-muted/50',
+    bgClassStrong: 'bg-muted/70',
+    bgClassSubtle: 'bg-muted/30',
     // Border with opacity
-    borderClass: 'border-status-ok/30',
-    borderClassStrong: 'border-status-ok/50',
-    // Text color
-    textClass: 'text-status-ok',
+    borderClass: 'border-muted/50',
+    borderClassStrong: 'border-muted/70',
+    // Text color - neutral
+    textClass: 'text-muted-foreground',
     // Hover states
-    hoverBgClass: 'hover:bg-status-ok/15',
-    hoverBorderClass: 'hover:border-status-ok/50',
+    hoverBgClass: 'hover:bg-muted/70',
+    hoverBorderClass: 'hover:border-muted/70',
     // Ring for focus
-    ringClass: 'ring-status-ok/30',
+    ringClass: 'ring-muted/50',
   },
   warning: {
     label: 'Vyžaduje pozornost',
