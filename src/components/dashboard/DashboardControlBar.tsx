@@ -26,99 +26,125 @@ import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { useClientsAtRisk } from '@/hooks/useClientsAtRisk';
-import { useDashboardKPIs } from '@/hooks/useDashboardKPIs';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
-import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 
 interface DashboardControlBarProps {
   data: DashboardViewModel | undefined;
   isLoading: boolean;
 }
 
-// Map DayStatus to unified Status type
-const dayStatusToStatus: Record<DayStatus, Status> = {
-  ok: 'ok',
-  warning: 'warning',
-  critical: 'error',
+// Status tint classes for ambient background
+const statusTintClasses: Record<DayStatus, string> = {
+  ok: '',
+  warning: 'status-tint-warning',
+  critical: 'status-tint-critical',
 };
 
-function StatusIndicator({ status }: { status: DayStatus }) {
-  const unifiedStatus = dayStatusToStatus[status];
-  const config = STATUS_CONFIG[unifiedStatus];
-  const Icon = config.icon;
-  
+function StatusDot({ status }: { status: DayStatus }) {
   return (
     <div className={cn(
-      'flex items-center gap-1.5 h-8 px-2.5 rounded-full text-xs font-medium shrink-0',
-      config.bgClassStrong,
-      config.textClass
-    )}>
-      <Icon className="w-3.5 h-3.5" />
-      <span>{config.labelShort}</span>
-    </div>
+      'status-dot',
+      status === 'ok' && 'status-dot-ok',
+      status === 'warning' && 'status-dot-warning',
+      status === 'critical' && 'status-dot-error'
+    )} />
   );
 }
 
-interface MetricChipProps {
+// Minimal trend arrow - just ↑ or ↓
+function TrendArrow({ value }: { value: number }) {
+  if (value === 0) return null;
+  const Icon = value > 0 ? TrendingUp : TrendingDown;
+  return (
+    <Icon className={cn(
+      'w-3 h-3',
+      value > 0 ? 'text-emerald-400/70' : 'text-red-400/70'
+    )} />
+  );
+}
+
+// Metric instrument - like a dashboard gauge
+interface MetricProps {
   icon: typeof Wallet;
-  label: string;
   value: string | number;
-  subValue?: string;
+  label?: string;
+  trend?: number;
   warning?: boolean;
   error?: boolean;
   onClick?: () => void;
-  className?: string;
 }
 
-function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClick, className }: MetricChipProps) {
+function Metric({ icon: Icon, value, label, trend, warning, error, onClick }: MetricProps) {
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        'flex items-center gap-1.5 h-8 px-2.5 rounded-full text-xs transition-colors shrink-0',
-        'bg-secondary/50',
-        onClick && 'hover:bg-secondary cursor-pointer',
-        !onClick && 'cursor-default',
-        error && 'ring-1 ring-status-error/30',
-        warning && !error && 'ring-1 ring-status-warning/30',
-        className
+        'metric-instrument h-12 px-4 gap-2 flex-row',
+        onClick && 'cursor-pointer',
+        !onClick && 'cursor-default'
       )}
     >
       <Icon className={cn(
-        'w-3.5 h-3.5 shrink-0',
-        error ? 'text-status-error' : warning ? 'text-status-warning' : 'text-muted-foreground'
+        'w-4 h-4',
+        error ? 'text-red-400' : warning ? 'text-amber-400' : 'text-muted-foreground/60'
       )} />
-      <span className="font-medium text-foreground">{value}</span>
-      {subValue && (
-        <span className={cn(
-          'text-[10px]',
-          error ? 'text-status-error' : warning ? 'text-status-warning' : 'text-muted-foreground'
-        )}>
-          {subValue}
-        </span>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-lg font-semibold text-foreground">{value}</span>
+        {trend !== undefined && <TrendArrow value={trend} />}
+      </div>
+      {label && (
+        <span className="text-[10px] text-muted-foreground hidden lg:block">{label}</span>
       )}
-      <span className="text-[10px] text-muted-foreground hidden lg:inline">{label}</span>
     </button>
   );
 }
 
-function TrendIndicator({ value, inverted = false }: { value: number; inverted?: boolean }) {
-  if (value === 0) return null;
-  
-  const isPositive = inverted ? value < 0 : value > 0;
-  const Icon = value > 0 ? TrendingUp : TrendingDown;
+// Capacity ring - progress indicator
+function CapacityRing({ completed, total }: { completed: number; total: number }) {
+  const percentage = total > 0 ? (completed / total) * 100 : 0;
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
   
   return (
-    <span className={cn(
-      'flex items-center gap-0.5 text-[10px] font-medium',
-      isPositive ? 'text-emerald-500' : 'text-destructive'
-    )}>
-      <Icon className="w-3 h-3" />
-      {value > 0 ? '+' : ''}{value}%
-    </span>
+    <div className="metric-instrument h-12 px-4 gap-3 flex-row">
+      <div className="relative w-10 h-10 flex items-center justify-center">
+        <svg className="w-10 h-10 progress-ring" viewBox="0 0 44 44">
+          {/* Background circle */}
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            fill="none"
+            stroke="hsl(220 15% 20% / 0.5)"
+            strokeWidth="3"
+          />
+          {/* Progress circle */}
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            fill="none"
+            stroke="hsl(220 60% 60%)"
+            strokeWidth="3"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className="transition-all duration-500 ease-out"
+          />
+        </svg>
+        <span className="absolute text-xs font-semibold text-foreground">
+          {completed}
+        </span>
+      </div>
+      <div className="flex flex-col items-start">
+        <span className="text-sm font-medium text-foreground">/{total}</span>
+        <span className="text-[10px] text-muted-foreground">dnes</span>
+      </div>
+    </div>
   );
 }
 
@@ -126,7 +152,6 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
   const { trackFeature } = useFeatureTracking();
   const { data: clients = [] } = useClients();
   const { data: clientsAtRisk = [] } = useClientsAtRisk();
-  const { data: kpis } = useDashboardKPIs();
   const createTraining = useCreateTrainingSession();
   
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
@@ -146,19 +171,14 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
 
   if (isLoading) {
     return (
-      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-16 rounded-full" />
-            <Skeleton className="h-8 w-20 rounded-full" />
-            <Skeleton className="h-8 w-24 rounded-full" />
+      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3">
+        <div className="premium-layer p-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-12 w-24 rounded-2xl" />
+            <Skeleton className="h-12 w-28 rounded-2xl" />
+            <Skeleton className="h-12 w-20 rounded-2xl" />
             <div className="flex-1" />
-            <Skeleton className="h-8 w-20 rounded-full" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-28 rounded-full" />
-            <Skeleton className="h-8 w-28 rounded-full" />
-            <Skeleton className="h-8 w-20 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
           </div>
         </div>
       </div>
@@ -167,7 +187,7 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
 
   if (!data) return null;
 
-  const { dayStatus, capacity, finance, todayEstimatedIncome, uniqueClientsToday, weeklySummary, trends } = data;
+  const { dayStatus, capacity, finance, todayEstimatedIncome, weeklySummary, trends } = data;
 
   // Calculate week change percentages
   const getWeekChangePercent = (current: number, previous: number) => {
@@ -180,106 +200,100 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="space-y-1.5">
-          {/* Row 1: Day status + Today metrics + Actions */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <StatusIndicator status={dayStatus} />
+      {/* Main control bar with ambient status tint */}
+      <div className={cn(
+        'sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3',
+        statusTintClasses[dayStatus]
+      )}>
+        <div className="premium-layer p-3">
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+            {/* Status dot - the only colored element when OK */}
+            <div className="flex items-center gap-2 shrink-0">
+              <StatusDot status={dayStatus} />
+            </div>
             
-            <MetricChip
-              icon={Users}
-              label="Dnes"
-              value={`${capacity.completed}/${capacity.total}`}
-              subValue={uniqueClientsToday > 1 ? `(${uniqueClientsToday})` : undefined}
-            />
+            {/* Capacity ring */}
+            <CapacityRing completed={capacity.completed} total={capacity.total} />
             
+            {/* Today's income */}
             {todayEstimatedIncome > 0 && (
-              <MetricChip
+              <Metric
                 icon={Banknote}
-                label="Příjem"
                 value={formatCurrency(todayEstimatedIncome)}
               />
             )}
             
+            {/* Weekly trainings with trend */}
+            <Metric
+              icon={Dumbbell}
+              value={weeklySummary.trainingsThisWeek}
+              label="týden"
+              trend={trainingsWeekChange}
+            />
+            
+            {/* Weekly income with trend */}
+            <Metric
+              icon={Wallet}
+              value={formatCurrency(weeklySummary.incomeThisWeek)}
+              trend={incomeWeekChange}
+            />
+            
+            {/* Problems - only show when exist */}
             {finance.unpaidTotal.count > 0 && (
-              <MetricChip
+              <Metric
                 icon={Clock}
-                label="Nezaplaceno"
                 value={finance.unpaidTotal.count}
-                subValue={formatCurrency(finance.unpaidTotal.amount)}
-                warning={finance.unpaidTotal.count > 0 && finance.unpaidTotal.count <= 3}
+                warning={finance.unpaidTotal.count <= 3}
                 error={finance.unpaidTotal.count > 3}
                 onClick={() => setShowUnpaidDialog(true)}
               />
             )}
             
             {finance.creditAtRisk.count > 0 && (
-              <MetricChip
-                icon={Wallet}
-                label="Kredit"
+              <Metric
+                icon={AlertTriangle}
                 value={finance.creditAtRisk.count}
                 warning
                 onClick={() => setShowCreditDialog(true)}
               />
             )}
             
-            <div className="flex-1" />
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSearch(true)}
-              className="gap-1.5 shrink-0 h-8 rounded-full px-3"
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline text-xs">Hledat</span>
-            </Button>
-            
-            <Button
-              size="sm"
-              onClick={() => setShowTrainingSheet(true)}
-              className="gap-1.5 shrink-0 h-8 rounded-full px-3"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="text-xs">Nový</span>
-            </Button>
-          </div>
-
-          {/* Row 2: Weekly stats + Trends */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-blue-500/10 text-xs shrink-0">
-              <Dumbbell className="w-3.5 h-3.5 text-blue-500" />
-              <span className="font-medium text-foreground">{weeklySummary.trainingsThisWeek}</span>
-              <span className="text-muted-foreground hidden sm:inline">týden</span>
-              <TrendIndicator value={trainingsWeekChange} />
-            </div>
-            
-            <div className="flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-emerald-500/10 text-xs shrink-0">
-              <Wallet className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="font-medium text-foreground">{formatCurrency(weeklySummary.incomeThisWeek)}</span>
-              <span className="text-muted-foreground hidden sm:inline">týden</span>
-              <TrendIndicator value={incomeWeekChange} />
-            </div>
-            
-            <div className={cn(
-              'flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs shrink-0',
-              trends.cancellationRate > 10 ? 'bg-destructive/10' : 'bg-secondary/30'
-            )}>
-              <CalendarX className={cn(
-                'w-3.5 h-3.5',
-                trends.cancellationRate > 10 ? 'text-destructive' : 'text-muted-foreground'
-              )} />
-              <span className="font-medium text-foreground">{trends.cancellationRate}%</span>
-              <span className="text-muted-foreground hidden sm:inline">zrušeno</span>
-            </div>
-            
             {clientsAtRisk.length > 0 && (
-              <div className="flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-status-warning/10 text-xs shrink-0">
-                <AlertTriangle className="w-3.5 h-3.5 text-status-warning" />
-                <span className="font-medium text-foreground">{clientsAtRisk.length}</span>
-                <span className="text-muted-foreground hidden sm:inline">rizikoví</span>
-              </div>
+              <Metric
+                icon={Users}
+                value={clientsAtRisk.length}
+                warning
+              />
             )}
+            
+            {trends.cancellationRate > 5 && (
+              <Metric
+                icon={CalendarX}
+                value={`${trends.cancellationRate}%`}
+                warning={trends.cancellationRate > 5}
+                error={trends.cancellationRate > 15}
+              />
+            )}
+            
+            <div className="flex-1 min-w-4" />
+            
+            {/* Actions - minimal style */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSearch(true)}
+              className="h-10 w-10 rounded-full shrink-0 premium-hover"
+            >
+              <Search className="w-4 h-4 text-muted-foreground" />
+            </Button>
+            
+            <Button
+              size="icon"
+              onClick={() => setShowTrainingSheet(true)}
+              className="h-10 w-10 rounded-full shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -298,59 +312,57 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
         onOpenChange={setShowSearch} 
       />
       
-      {/* Unpaid Detail Dialog */}
+      {/* Unpaid Dialog - minimal style */}
       <Dialog open={showUnpaidDialog} onOpenChange={setShowUnpaidDialog}>
-        <DialogContent>
+        <DialogContent className="premium-layer border-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-status-warning" />
+            <DialogTitle className="text-lg font-semibold">
               Nezaplacené tréninky
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-center">
-            <p className="text-3xl font-bold text-foreground">
+          <div className="py-6 text-center">
+            <p className="text-4xl font-semibold text-foreground">
               {formatCurrency(finance.unpaidTotal.amount)}
             </p>
-            <p className="text-muted-foreground mt-1">
-              {finance.unpaidTotal.count} nezaplacených tréninků
+            <p className="text-sm text-muted-foreground mt-2">
+              {finance.unpaidTotal.count} položek
             </p>
             <Button 
-              className="mt-4" 
+              className="mt-6" 
               onClick={() => {
                 setShowUnpaidDialog(false);
                 window.location.href = '/clients?filter=unpaid';
               }}
             >
-              Zobrazit klienty
+              Zobrazit
             </Button>
           </div>
         </DialogContent>
       </Dialog>
       
-      {/* Credit Detail Dialog */}
+      {/* Credit Dialog */}
       <Dialog open={showCreditDialog} onOpenChange={setShowCreditDialog}>
-        <DialogContent>
+        <DialogContent className="premium-layer border-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-status-warning" />
-              Klienti s nízkým kreditem
+            <DialogTitle className="text-lg font-semibold">
+              Nízký kredit
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-center">
-            <p className="text-3xl font-bold text-foreground">
+          <div className="py-6 text-center">
+            <p className="text-4xl font-semibold text-foreground">
               {finance.creditAtRisk.count}
             </p>
-            <p className="text-muted-foreground mt-1">
-              klientů potřebuje doplnit kredit
+            <p className="text-sm text-muted-foreground mt-2">
+              klientů
             </p>
             <Button 
-              className="mt-4" 
+              className="mt-6" 
               onClick={() => {
                 setShowCreditDialog(false);
                 window.location.href = '/clients?filter=lowcredit';
               }}
             >
-              Zobrazit klienty
+              Zobrazit
             </Button>
           </div>
         </DialogContent>

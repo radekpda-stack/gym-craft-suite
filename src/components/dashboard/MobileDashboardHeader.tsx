@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { AlertTriangle, Users, Banknote } from 'lucide-react';
+import { AlertTriangle, Banknote } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
-import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 import {
   Dialog,
   DialogContent,
@@ -17,11 +16,11 @@ interface MobileDashboardHeaderProps {
   isLoading: boolean;
 }
 
-// Map DayStatus to unified Status type
-const dayStatusToStatus: Record<DayStatus, Status> = {
-  ok: 'ok',
-  warning: 'warning',
-  critical: 'error',
+// Status tint for ambient background
+const statusTintClasses: Record<DayStatus, string> = {
+  ok: '',
+  warning: 'status-tint-warning',
+  critical: 'status-tint-critical',
 };
 
 export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeaderProps) {
@@ -29,12 +28,13 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
 
   if (isLoading) {
     return (
-      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-9 rounded-full" />
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-          <Skeleton className="h-9 w-12 rounded-lg" />
+      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3">
+        <div className="premium-layer p-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-14 w-14 rounded-2xl" />
+            <Skeleton className="h-14 flex-1 rounded-2xl" />
+            <Skeleton className="h-14 w-14 rounded-2xl" />
+          </div>
         </div>
       </div>
     );
@@ -43,84 +43,95 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
   if (!data) return null;
 
   const { dayStatus, todayEstimatedIncome, capacity, priorityTasks } = data;
-  const unifiedStatus = dayStatusToStatus[dayStatus];
-  const config = STATUS_CONFIG[unifiedStatus];
-  const StatusIcon = config.icon;
-
   const criticalTasksCount = priorityTasks.filter(t => t.severity === 'error').length;
   const totalTasksCount = priorityTasks.length;
 
+  // Progress percentage for capacity
+  const capacityPercent = capacity.total > 0 ? (capacity.completed / capacity.total) * 100 : 0;
+
   return (
     <>
-      {/* Mobile-only compact header with 4 metrics */}
-      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-2">
-          {/* Status Icon */}
-          <div className={cn(
-            'flex items-center justify-center w-9 h-9 rounded-full shrink-0',
-            config.bgClassStrong
-          )}>
-            <StatusIcon className={cn('w-4 h-4', config.textClass)} />
-          </div>
-          
-          {/* Trainings today */}
-          <div className="flex flex-col items-center justify-center h-9 px-3 rounded-lg bg-secondary/50 min-w-0">
-            <div className="flex items-center gap-1">
-              <Users className="w-3 h-3 text-muted-foreground" />
-              <span className="text-sm font-bold text-foreground">
-                {capacity.completed}/{capacity.total}
-              </span>
+      {/* Mobile header - Watch/CarPlay style */}
+      <div className={cn(
+        'sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3',
+        statusTintClasses[dayStatus]
+      )}>
+        <div className="premium-layer p-3">
+          <div className="flex items-center gap-3">
+            {/* Capacity ring - large tappable */}
+            <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+              <svg className="w-14 h-14 progress-ring" viewBox="0 0 56 56">
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke="hsl(220 15% 20% / 0.5)"
+                  strokeWidth="4"
+                />
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke={dayStatus === 'critical' ? 'hsl(0 70% 55%)' : dayStatus === 'warning' ? 'hsl(38 80% 50%)' : 'hsl(220 60% 60%)'}
+                  strokeWidth="4"
+                  strokeDasharray={2 * Math.PI * 24}
+                  strokeDashoffset={2 * Math.PI * 24 * (1 - capacityPercent / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-base font-semibold text-foreground">{capacity.completed}</span>
+                <span className="text-[10px] text-muted-foreground -mt-0.5">/{capacity.total}</span>
+              </div>
             </div>
-            <span className="text-[9px] text-muted-foreground -mt-0.5">dnes</span>
-          </div>
-          
-          {/* Today's income */}
-          <div className="flex-1 flex flex-col items-center justify-center h-9 px-3 rounded-lg bg-secondary/50 min-w-0">
-            <div className="flex items-center gap-1">
-              <Banknote className="w-3 h-3 text-muted-foreground" />
-              <span className="text-sm font-bold text-foreground truncate">
-                {formatCurrency(todayEstimatedIncome)}
-              </span>
+            
+            {/* Today's income - primary metric */}
+            <div className="flex-1 metric-instrument h-14 px-4">
+              <div className="flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-muted-foreground/60" />
+                <span className="text-2xl font-semibold text-foreground">
+                  {formatCurrency(todayEstimatedIncome)}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">příjem dnes</span>
             </div>
-            <span className="text-[9px] text-muted-foreground -mt-0.5">příjem</span>
-          </div>
-          
-          {/* Critical tasks - only show if there are tasks */}
-          {totalTasksCount > 0 && (
-            <button
-              onClick={() => setShowTasksDialog(true)}
-              className={cn(
-                'flex flex-col items-center justify-center h-9 px-3 rounded-lg min-w-0 transition-colors',
-                criticalTasksCount > 0 
-                  ? 'bg-status-error/10 ring-1 ring-status-error/30' 
-                  : 'bg-status-warning/10'
-              )}
-            >
-              <div className="flex items-center gap-1">
+            
+            {/* Tasks indicator - only show if tasks exist */}
+            {totalTasksCount > 0 && (
+              <button
+                onClick={() => setShowTasksDialog(true)}
+                className={cn(
+                  'w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-all duration-150',
+                  criticalTasksCount > 0 
+                    ? 'bg-red-500/10 border border-red-500/20' 
+                    : 'bg-amber-500/10 border border-amber-500/20'
+                )}
+              >
                 <AlertTriangle className={cn(
-                  'w-3 h-3',
-                  criticalTasksCount > 0 ? 'text-status-error' : 'text-status-warning'
+                  'w-5 h-5',
+                  criticalTasksCount > 0 ? 'text-red-400' : 'text-amber-400'
                 )} />
                 <span className={cn(
-                  'text-sm font-bold',
-                  criticalTasksCount > 0 ? 'text-status-error' : 'text-status-warning'
+                  'text-sm font-semibold mt-0.5',
+                  criticalTasksCount > 0 ? 'text-red-400' : 'text-amber-400'
                 )}>
                   {totalTasksCount}
                 </span>
-              </div>
-              <span className="text-[9px] text-muted-foreground -mt-0.5">úkoly</span>
-            </button>
-          )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Tasks Dialog */}
       <Dialog open={showTasksDialog} onOpenChange={setShowTasksDialog}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="premium-layer border-0 max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-status-warning" />
-              Prioritní úkoly ({totalTasksCount})
+            <DialogTitle className="text-lg font-semibold">
+              Úkoly ({totalTasksCount})
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -128,10 +139,10 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
               <div
                 key={task.id}
                 className={cn(
-                  'p-3 rounded-lg border',
+                  'p-4 rounded-xl transition-all duration-150 premium-hover',
                   task.severity === 'error' 
-                    ? 'bg-status-error/5 border-status-error/20'
-                    : 'bg-status-warning/5 border-status-warning/20'
+                    ? 'bg-red-500/5 border-l-2 border-red-500/50'
+                    : 'bg-amber-500/5 border-l-2 border-amber-500/50'
                 )}
               >
                 <p className="font-medium text-sm text-foreground">{task.title}</p>

@@ -9,7 +9,6 @@ import {
   Link2,
   Check,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -17,7 +16,6 @@ import { format, isSameDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { DashboardViewModel, ScheduleItem } from '@/hooks/useDashboardViewModel';
 import { useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
-import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { toast } from 'sonner';
 
 interface DayTimelineSectionProps {
@@ -27,6 +25,7 @@ interface DayTimelineSectionProps {
 
 type ViewMode = 'today' | 'week';
 
+// Apple Calendar style timeline block
 const TimelineBlock = memo(function TimelineBlock({ 
   item, 
   isCompact = false,
@@ -40,50 +39,34 @@ const TimelineBlock = memo(function TimelineBlock({
 }) {
   const navigate = useNavigate();
   
-  const getStatusConfig = () => {
-    if (item.status === 'cancelled') {
-      return {
-        bg: 'bg-destructive/10',
-        border: 'border-destructive/30',
-        icon: XCircle,
-        iconColor: 'text-destructive',
-      };
-    }
+  const getStatusClass = () => {
+    if (item.status === 'cancelled') return 'timeline-item-cancelled';
     if (item.status === 'completed') {
-      if (item.hasIssue) {
-        return {
-          bg: 'bg-[hsl(38_92%_50%/0.1)]',
-          border: 'border-[hsl(38_92%_50%/0.3)]',
-          icon: AlertCircle,
-          iconColor: 'text-[hsl(38_92%_50%)]',
-        };
-      }
-      if (!item.hasFeedback) {
-        return {
-          bg: 'bg-[hsl(38_92%_50%/0.08)]',
-          border: 'border-[hsl(38_92%_50%/0.2)]',
-          icon: Clock,
-          iconColor: 'text-[hsl(38_92%_50%)]',
-        };
-      }
-      return {
-        bg: 'bg-[hsl(142_76%_36%/0.08)]',
-        border: 'border-[hsl(142_76%_36%/0.2)]',
-        icon: CheckCircle2,
-        iconColor: 'text-[hsl(142_76%_36%)]',
-      };
+      if (item.hasIssue) return 'timeline-item-issue';
+      return 'timeline-item-completed';
     }
-    // scheduled
-    return {
-      bg: 'bg-primary/8',
-      border: 'border-primary/20',
-      icon: Clock,
-      iconColor: 'text-primary',
-    };
+    return 'timeline-item-scheduled';
   };
-  
-  const config = getStatusConfig();
-  const Icon = config.icon;
+
+  const getStatusIcon = () => {
+    if (item.status === 'cancelled') return XCircle;
+    if (item.status === 'completed') {
+      if (item.hasIssue) return AlertCircle;
+      return CheckCircle2;
+    }
+    return Clock;
+  };
+
+  const getIconColor = () => {
+    if (item.status === 'cancelled') return 'text-muted-foreground/40';
+    if (item.status === 'completed') {
+      if (item.hasIssue) return 'text-amber-400/70';
+      return 'text-emerald-400/70';
+    }
+    return 'text-blue-400/70';
+  };
+
+  const StatusIcon = getStatusIcon();
   
   const handleComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,63 +79,50 @@ const TimelineBlock = memo(function TimelineBlock({
   };
   
   return (
-    <div
-      className={cn(
-        'w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all',
-        config.bg,
-        config.border
-      )}
-    >
+    <div className={cn('timeline-item', getStatusClass())}>
       <button
         onClick={() => navigate(`/trainings/${item.id}`)}
-        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-3 flex-1 min-w-0"
       >
-        <div className={cn(
-          'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
-          config.bg
-        )}>
-          <Icon className={cn('w-5 h-5', config.iconColor)} />
-        </div>
+        <StatusIcon className={cn('w-4 h-4 shrink-0', getIconColor())} />
         
         <div className="flex-1 text-left min-w-0">
           <p className="font-medium text-sm truncate text-foreground">
             {item.clientName}
           </p>
           <p className="text-xs text-muted-foreground">
-            {!isCompact && format(item.date, 'EEEE', { locale: cs }) + ' • '}
+            {!isCompact && format(item.date, 'EEE', { locale: cs }) + ' · '}
             {item.time}
           </p>
         </div>
         
         {item.status === 'completed' && !item.hasFeedback && (
-          <span className="text-[10px] font-medium text-[hsl(38_92%_50%)] bg-[hsl(38_92%_50%/0.1)] px-2 py-1 rounded-full">
-            Bez FB
+          <span className="text-[10px] font-medium text-amber-400/80 px-2 py-0.5 rounded-full bg-amber-400/10">
+            FB
           </span>
         )}
       </button>
       
-      {/* Quick Actions */}
+      {/* Quick Actions - minimal */}
       {item.status === 'scheduled' && (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={handleComplete}
-          className="shrink-0 h-8 px-2 text-xs gap-1 text-[hsl(142_76%_36%)] hover:text-[hsl(142_76%_36%)] hover:bg-[hsl(142_76%_36%/0.1)]"
+          className="h-8 w-8 rounded-full shrink-0 text-emerald-400/70 hover:text-emerald-400 hover:bg-emerald-400/10"
         >
-          <Check className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Hotovo</span>
+          <Check className="w-4 h-4" />
         </Button>
       )}
       
       {item.status === 'completed' && !item.hasFeedback && (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={handleCopyLink}
-          className="shrink-0 h-8 px-2 text-xs gap-1"
+          className="h-8 w-8 rounded-full shrink-0 text-muted-foreground hover:text-foreground"
         >
-          <Link2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Odkaz</span>
+          <Link2 className="w-4 h-4" />
         </Button>
       )}
     </div>
@@ -161,10 +131,10 @@ const TimelineBlock = memo(function TimelineBlock({
 
 function EmptyState({ viewMode }: { viewMode: ViewMode }) {
   return (
-    <div className="text-center py-10">
-      <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+    <div className="text-center py-12">
+      <Calendar className="w-10 h-10 mx-auto mb-3 text-muted-foreground/20" />
       <p className="text-sm text-muted-foreground">
-        {viewMode === 'today' ? 'Dnes žádné tréninky' : 'Tento týden žádné tréninky'}
+        {viewMode === 'today' ? 'Žádné tréninky' : 'Tento týden prázdný'}
       </p>
     </div>
   );
@@ -184,7 +154,6 @@ function TimelineView({
   const navigate = useNavigate();
   
   if (viewMode === 'today') {
-    // Simple list for today
     return (
       <div className="space-y-2">
         {items.slice(0, 8).map(item => (
@@ -197,14 +166,12 @@ function TimelineView({
           />
         ))}
         {items.length > 8 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full text-muted-foreground"
+          <button
             onClick={() => navigate('/calendar')}
+            className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Zobrazit všechny ({items.length})
-          </Button>
+            +{items.length - 8} další
+          </button>
         )}
       </div>
     );
@@ -216,7 +183,7 @@ function TimelineView({
     if (!acc[dayKey]) {
       acc[dayKey] = {
         date: item.date,
-        label: format(item.date, 'EEEE d.M.', { locale: cs }),
+        label: format(item.date, 'EEE d.M.', { locale: cs }),
         isToday: isSameDay(item.date, new Date()),
         items: [],
       };
@@ -234,8 +201,8 @@ function TimelineView({
       {days.map(day => (
         <div key={day.label}>
           <div className={cn(
-            'text-xs font-semibold uppercase tracking-wider mb-2 px-1',
-            day.isToday ? 'text-primary' : 'text-muted-foreground'
+            'text-[10px] font-medium uppercase tracking-wider mb-2 px-1',
+            day.isToday ? 'text-blue-400' : 'text-muted-foreground/60'
           )}>
             {day.isToday ? 'Dnes' : day.label}
           </div>
@@ -250,8 +217,8 @@ function TimelineView({
               />
             ))}
             {day.items.length > 4 && (
-              <p className="text-xs text-muted-foreground text-center py-1">
-                +{day.items.length - 4} další
+              <p className="text-[10px] text-muted-foreground/60 text-center py-1">
+                +{day.items.length - 4}
               </p>
             )}
           </div>
@@ -272,16 +239,15 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
         id: trainingId,
         input: { status: 'completed' },
       });
-      toast.success('Trénink označen jako dokončený');
+      toast.success('Dokončeno');
     } catch (error) {
       console.error('Error completing training:', error);
-      toast.error('Nepodařilo se dokončit trénink');
+      toast.error('Chyba');
     }
   };
   
   const handleCopyLink = async (trainingId: string) => {
     try {
-      // Create feedback link
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: feedbackRequest } = await supabase
         .from('feedback_requests')
@@ -294,9 +260,8 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
       if (feedbackRequest?.token) {
         const feedbackUrl = `${window.location.origin}/feedback/${feedbackRequest.token}`;
         await navigator.clipboard.writeText(feedbackUrl);
-        toast.success('Odkaz zkopírován do schránky');
+        toast.success('Zkopírováno');
       } else {
-        // Create new feedback request
         const { data: training } = await supabase
           .from('training_sessions')
           .select('client_id')
@@ -319,32 +284,28 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
           
           const feedbackUrl = `${window.location.origin}/feedback/${newRequest.token}`;
           await navigator.clipboard.writeText(feedbackUrl);
-          toast.success('Odkaz vytvořen a zkopírován do schránky');
+          toast.success('Vytvořeno a zkopírováno');
         }
       }
     } catch (error) {
       console.error('Error copying feedback link:', error);
-      toast.error('Nepodařilo se zkopírovat odkaz');
+      toast.error('Chyba');
     }
   };
   
   if (isLoading) {
     return (
-      <Card className="glass">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-32 rounded-lg" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-16 rounded-xl" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="premium-layer p-4">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-7 w-28 rounded-lg" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-14 rounded-xl" />
+          ))}
+        </div>
+      </div>
     );
   }
   
@@ -353,53 +314,49 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
   const items = viewMode === 'today' ? data.todaySchedule : data.weekSchedule;
 
   return (
-    <Card className="glass">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Calendar className="w-5 h-5 text-primary" />
-            Klienti
-          </CardTitle>
-          
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setViewMode('today')}
-              className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-colors',
-                viewMode === 'today' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-transparent text-muted-foreground hover:bg-secondary'
-              )}
-            >
-              Dnes
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-colors',
-                viewMode === 'week' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-transparent text-muted-foreground hover:bg-secondary'
-              )}
-            >
-              Týden
-            </button>
-          </div>
+    <div className="premium-layer p-4">
+      {/* Header - minimal */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium text-foreground">Klienti</span>
+        
+        {/* Segmented control - Apple style */}
+        <div className="flex rounded-lg bg-secondary/30 p-0.5">
+          <button
+            onClick={() => setViewMode('today')}
+            className={cn(
+              'px-3 py-1 text-xs font-medium rounded-md transition-all duration-150',
+              viewMode === 'today' 
+                ? 'bg-background/80 text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Dnes
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={cn(
+              'px-3 py-1 text-xs font-medium rounded-md transition-all duration-150',
+              viewMode === 'week' 
+                ? 'bg-background/80 text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Týden
+          </button>
         </div>
-      </CardHeader>
+      </div>
       
-      <CardContent>
-        {items.length > 0 ? (
-          <TimelineView 
-            items={items} 
-            viewMode={viewMode} 
-            onComplete={handleComplete}
-            onCopyLink={handleCopyLink}
-          />
-        ) : (
-          <EmptyState viewMode={viewMode} />
-        )}
-      </CardContent>
-    </Card>
+      {/* Timeline */}
+      {items.length > 0 ? (
+        <TimelineView 
+          items={items} 
+          viewMode={viewMode} 
+          onComplete={handleComplete}
+          onCopyLink={handleCopyLink}
+        />
+      ) : (
+        <EmptyState viewMode={viewMode} />
+      )}
+    </div>
   );
 }
