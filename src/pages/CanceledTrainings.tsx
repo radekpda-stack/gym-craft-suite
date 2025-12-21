@@ -17,8 +17,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function CanceledTrainings() {
+  usePageTracking('canceled_trainings');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();

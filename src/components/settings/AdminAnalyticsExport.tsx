@@ -121,7 +121,7 @@ export function AdminAnalyticsExport() {
     try {
       const { start, end } = getDateRange();
       const files: { name: string; content: string }[] = [];
-      const totalSteps = 5;
+      const totalSteps = 7;
 
       // 1. Fetch feature_usage data
       setProgress({ step: `${t.processing} feature_usage...`, current: 1, total: totalSteps });
@@ -148,8 +148,30 @@ export function AdminAnalyticsExport() {
         content: convertToCSV(anonymizedUsage),
       });
 
-      // 2. Create usage summary
-      setProgress({ step: `${t.processing} usage_summary...`, current: 2, total: totalSteps });
+      // 2. Fetch session data
+      setProgress({ step: `${t.processing} user_sessions...`, current: 2, total: totalSteps });
+      
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('user_sessions')
+        .select('*')
+        .gte('started_at', start)
+        .lte('started_at', end)
+        .order('started_at', { ascending: false });
+
+      if (sessionError) throw sessionError;
+
+      const anonymizedSessions = (sessionData || []).map(row => ({
+        ...row,
+        user_id: hashUserId(row.user_id),
+      }));
+
+      files.push({
+        name: 'user_sessions.csv',
+        content: convertToCSV(anonymizedSessions),
+      });
+
+      // 3. Create usage summary with session stats
+      setProgress({ step: `${t.processing} usage_summary...`, current: 3, total: totalSteps });
       
       const uniqueUsers = new Set(usageData?.map(r => r.user_id) || []);
       const categoryCount: Record<string, number> = {};
@@ -167,6 +189,33 @@ export function AdminAnalyticsExport() {
       const sortedFeatures = Object.entries(featureCount).sort((a, b) => b[1] - a[1]);
       const days = Object.keys(dailyUsage).length || 1;
 
+      // Calculate session stats
+      const validSessions = sessionData?.filter(s => s.duration_seconds != null) || [];
+      const avgSessionDuration = validSessions.length > 0
+        ? Math.round(validSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / validSessions.length)
+        : 0;
+      
+      const deviceBreakdown: Record<string, number> = {};
+      const browserBreakdown: Record<string, number> = {};
+      sessionData?.forEach(s => {
+        if (s.device_type) deviceBreakdown[s.device_type] = (deviceBreakdown[s.device_type] || 0) + 1;
+        if (s.browser) browserBreakdown[s.browser] = (browserBreakdown[s.browser] || 0) + 1;
+      });
+
+      // Calculate DAU (Daily Active Users)
+      const dauMap: Record<string, Set<string>> = {};
+      sessionData?.forEach(s => {
+        const day = s.started_at.substring(0, 10);
+        if (!dauMap[day]) dauMap[day] = new Set();
+        dauMap[day].add(s.user_id);
+      });
+      const dauData = Object.entries(dauMap).map(([date, users]) => ({ date, unique_users: users.size }));
+
+      // Calculate success rate
+      const totalEvents = usageData?.length || 0;
+      const successfulEvents = usageData?.filter(r => r.success !== false).length || 0;
+      const successRate = totalEvents > 0 ? Math.round((successfulEvents / totalEvents) * 100) : 100;
+
       const usageSummary = {
         active_trainers: uniqueUsers.size,
         total_events: usageData?.length || 0,
@@ -175,6 +224,19 @@ export function AdminAnalyticsExport() {
         least_used_sections: sortedCategories.slice(-5).reverse().map(([name, count]) => ({ name, count })),
         top_features: sortedFeatures.slice(0, 10).map(([name, count]) => ({ name, count })),
         date_range: { start, end },
+        // Session stats
+        session_stats: {
+          total_sessions: sessionData?.length || 0,
+          avg_duration_seconds: avgSessionDuration,
+          device_breakdown: Object.entries(deviceBreakdown).map(([device, count]) => ({ device, count })),
+          browser_breakdown: Object.entries(browserBreakdown).map(([browser, count]) => ({ browser, count })),
+        },
+        // DAU stats
+        daily_active_users: dauData,
+        avg_dau: dauData.length > 0 ? Math.round(dauData.reduce((sum, d) => sum + d.unique_users, 0) / dauData.length) : 0,
+        // Success rate
+        success_rate_percent: successRate,
+        failed_events: totalEvents - successfulEvents,
       };
 
       files.push({
@@ -182,8 +244,8 @@ export function AdminAnalyticsExport() {
         content: JSON.stringify(usageSummary, null, 2),
       });
 
-      // 3. Feature usage breakdown
-      setProgress({ step: `${t.processing} feature_usage...`, current: 3, total: totalSteps });
+      // 4. Feature usage breakdown
+      setProgress({ step: `${t.processing} feature_usage...`, current: 4, total: totalSteps });
       
       const featureUsageByUser: Record<string, Set<string>> = {};
       (usageData || []).forEach(row => {
@@ -219,8 +281,8 @@ export function AdminAnalyticsExport() {
         content: convertToCSV(featureUsageData),
       });
 
-      // 4. Friction points analysis
-      setProgress({ step: `${t.processing} friction_points...`, current: 4, total: totalSteps });
+      // 5. Friction points analysis
+      setProgress({ step: `${t.processing} friction_points...`, current: 5, total: totalSteps });
       
       const frictionIndicators = [
         'cancel', 'delete', 'error', 'undo', 'back', 'close', 'abandon', 'fail'
@@ -259,8 +321,8 @@ export function AdminAnalyticsExport() {
         content: convertToCSV(frictionData),
       });
 
-      // 5. Metadata
-      setProgress({ step: `${t.processing} metadata...`, current: 5, total: totalSteps });
+      // 6. Metadata
+      setProgress({ step: `${t.processing} metadata...`, current: 6, total: totalSteps });
       
       const metadata = {
         app_version: '1.0.0',

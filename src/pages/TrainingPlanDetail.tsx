@@ -69,8 +69,10 @@ import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { GeneratePlanSheet } from '@/components/plans/GeneratePlanSheet';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingPlanDetail() {
+  usePageTracking('training_plan_detail');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading } = usePlanDetail(id);
