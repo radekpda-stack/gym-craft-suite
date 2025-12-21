@@ -46,7 +46,7 @@ function DashboardContent() {
       <MobileDashboardHeader data={data} isLoading={isLoading} />
       
       {/* Desktop Control Bar */}
-      <div className="hidden sm:block">
+      <div className="hidden md:block">
         <DashboardControlBar data={data} isLoading={isLoading} />
       </div>
       
@@ -74,7 +74,7 @@ function DashboardContent() {
       </div>
 
       {/* MOBILE: DayTimeline first - main focus */}
-      <div className="sm:hidden">
+      <div className="md:hidden">
         <DayTimelineSection data={data} isLoading={isLoading} />
       </div>
 
@@ -84,13 +84,13 @@ function DashboardContent() {
       )}
 
       {/* DESKTOP: Grid for schedule and clients */}
-      <div className="hidden sm:grid gap-5 lg:grid-cols-2">
+      <div className="hidden md:grid gap-5 lg:grid-cols-2">
         <DayTimelineSection data={data} isLoading={isLoading} />
         <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
       </div>
 
       {/* MOBILE: ClientsQuickOverview */}
-      <div className="sm:hidden">
+      <div className="md:hidden">
         <ClientsQuickOverviewSection data={data} isLoading={isLoading} />
       </div>
 

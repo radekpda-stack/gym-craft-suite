@@ -28,7 +28,7 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
 
   if (isLoading) {
     return (
-      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3">
+      <div className="md:hidden sticky top-0 z-40 -mx-4 px-4 py-3">
         <div className="premium-layer p-3">
           <div className="flex items-center gap-3">
             <Skeleton className="h-14 w-14 rounded-2xl" />
@@ -53,7 +53,7 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
     <>
       {/* Mobile header - Watch/CarPlay style */}
       <div className={cn(
-        'sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3',
+        'md:hidden sticky top-0 z-40 -mx-4 px-4 py-3',
         statusTintClasses[dayStatus]
       )}>
         <div className="premium-layer p-3">
