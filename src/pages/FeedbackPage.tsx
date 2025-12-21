@@ -1,7 +1,9 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { PublicFeedbackFormNew } from '@/components/feedback/PublicFeedbackFormNew';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function FeedbackPage() {
+  usePageTracking('public_feedback');
   const { token: pathToken } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const queryToken = searchParams.get('t');

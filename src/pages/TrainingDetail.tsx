@@ -66,8 +66,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingDetail() {
+  usePageTracking('training_detail');
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: training, isLoading: trainingLoading } = useTrainingSession(id);

@@ -34,10 +34,12 @@ import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsC
 import { ClientFinanceQuickCard } from '@/components/clients/ClientFinanceQuickCard';
 import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 import { toast } from '@/hooks/use-toast';
 
 export default function ClientDetail() {
+  usePageTracking('client_detail');
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: allSessions = [] } = useTrainingSessions(id);

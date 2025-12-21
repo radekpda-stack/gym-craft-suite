@@ -19,6 +19,7 @@ export type FeatureCategory =
   | 'progress'
   | 'settings'
   | 'export'
+  | 'reminders'
   | 'system';
 
 interface TrackOptions {

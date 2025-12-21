@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 interface SessionData {
   id: string;
@@ -215,6 +216,7 @@ const normalizeText = (text: string): string => {
 };
 
 export default function PublicNutritionLogPage() {
+  usePageTracking('public_nutrition_log');
   const { token } = useParams<{ token: string }>();
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);

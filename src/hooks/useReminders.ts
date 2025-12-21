@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { featureTracker } from './useFeatureTracking';
 
 export interface Reminder {
   id: string;
@@ -112,6 +113,7 @@ export const useCreateReminder = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      featureTracker.track('reminder_create', 'reminders');
       toast.success('Připomínka vytvořena');
     },
     onError: (error) => {
@@ -138,6 +140,7 @@ export const useUpdateReminder = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      featureTracker.track('reminder_update', 'reminders');
     },
     onError: (error) => {
       console.error('Error updating reminder:', error);
@@ -160,6 +163,7 @@ export const useDeleteReminder = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      featureTracker.track('reminder_delete', 'reminders');
       toast.success('Připomínka smazána');
     },
     onError: (error) => {
@@ -186,6 +190,7 @@ export const useCompleteReminder = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      featureTracker.track('reminder_complete', 'reminders');
       toast.success('Připomínka dokončena');
     },
     onError: (error) => {

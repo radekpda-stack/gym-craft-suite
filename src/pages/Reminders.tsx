@@ -22,8 +22,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 const Reminders = () => {
+  usePageTracking('reminders');
   const [createOpen, setCreateOpen] = useState(false);
   const [activeList, setActiveList] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

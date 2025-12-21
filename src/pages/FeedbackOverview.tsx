@@ -39,12 +39,14 @@ import { useCreateFeedbackRequest } from '@/hooks/useFeedbackRequests';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
 type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending';
 type TabValue = 'to_send' | 'analytics' | 'history';
 
 export default function FeedbackOverview() {
+  usePageTracking('feedback_overview');
   const [activeTab, setActiveTab] = useState<TabValue>('to_send');
   const [period, setPeriod] = useState<PeriodOption>('30');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');

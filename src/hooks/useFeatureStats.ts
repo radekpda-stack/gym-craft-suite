@@ -48,8 +48,15 @@ export const ALL_FEATURES = [
   { name: 'page_view_client_detail', category: 'navigation', label: 'Detail klienta' },
   { name: 'page_view_training_detail', category: 'navigation', label: 'Detail tréninku' },
   { name: 'page_view_training_plans', category: 'navigation', label: 'Tréninkové plány' },
+  { name: 'page_view_training_plan_detail', category: 'navigation', label: 'Detail tréninkovému plánu' },
   { name: 'page_view_pr_history', category: 'navigation', label: 'Historie PR' },
   { name: 'page_view_reminders', category: 'navigation', label: 'Připomínky' },
+  { name: 'page_view_feedback_overview', category: 'navigation', label: 'Přehled feedbacků' },
+  { name: 'page_view_canceled_trainings', category: 'navigation', label: 'Zrušené tréninky' },
+  { name: 'page_view_public_nutrition_log', category: 'navigation', label: 'Veřejný nutriční log' },
+  { name: 'page_view_public_feedback', category: 'navigation', label: 'Veřejný feedback' },
+  { name: 'page_view_auth', category: 'navigation', label: 'Přihlášení' },
+  { name: 'page_view_not_found', category: 'navigation', label: '404 stránka' },
   // Calendar
   { name: 'calendar_day_view', category: 'calendar', label: 'Denní pohled kalendáře' },
   { name: 'calendar_week_view', category: 'calendar', label: 'Týdenní pohled kalendáře' },
@@ -148,9 +155,15 @@ export const ALL_FEATURES = [
   { name: 'settings_feedback', category: 'settings', label: 'Nastavení feedbacku' },
   { name: 'settings_quick_actions', category: 'settings', label: 'Nastavení rychlých akcí' },
   { name: 'settings_nutrition', category: 'settings', label: 'Nastavení stravy' },
+  // Reminders
+  { name: 'reminder_create', category: 'reminders', label: 'Vytvoření připomínky' },
+  { name: 'reminder_complete', category: 'reminders', label: 'Dokončení připomínky' },
+  { name: 'reminder_delete', category: 'reminders', label: 'Smazání připomínky' },
+  { name: 'reminder_update', category: 'reminders', label: 'Úprava připomínky' },
   // Export
   { name: 'annual_stats_export', category: 'export', label: 'Export ročních statistik' },
   { name: 'dashboard_kpi_detail', category: 'navigation', label: 'Detail KPI na dashboardu' },
+  { name: 'analytics_export', category: 'export', label: 'Analytický export' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -170,6 +183,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   progress: 'Progrese',
   settings: 'Nastavení',
   export: 'Export',
+  reminders: 'Připomínky',
   system: 'Systém',
 };
 
