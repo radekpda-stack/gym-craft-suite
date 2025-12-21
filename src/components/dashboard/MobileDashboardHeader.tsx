@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, Users, Banknote } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
-import { CommandPalette } from '@/components/search/CommandPalette';
-import { useClients } from '@/hooks/useClients';
-import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
-import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
 import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface MobileDashboardHeaderProps {
   data: DashboardViewModel | undefined;
@@ -25,30 +25,16 @@ const dayStatusToStatus: Record<DayStatus, Status> = {
 };
 
 export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeaderProps) {
-  const { trackFeature } = useFeatureTracking();
-  const { data: clients = [] } = useClients();
-  const createTraining = useCreateTrainingSession();
-  
-  const [showTrainingSheet, setShowTrainingSheet] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  
-  const handleCreateTraining = async (formData: any) => {
-    try {
-      await createTraining.mutateAsync(formData);
-      setShowTrainingSheet(false);
-      trackFeature('create_training', 'trainings');
-    } catch (error) {
-      console.error('Error creating training:', error);
-    }
-  };
+  const [showTasksDialog, setShowTasksDialog] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <Skeleton className="h-10 flex-1 rounded-xl" />
-          <Skeleton className="h-10 w-10 rounded-full" />
+      <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 w-12 rounded-lg" />
         </div>
       </div>
     );
@@ -56,61 +42,107 @@ export function MobileDashboardHeader({ data, isLoading }: MobileDashboardHeader
 
   if (!data) return null;
 
-  const { dayStatus, todayEstimatedIncome } = data;
+  const { dayStatus, todayEstimatedIncome, capacity, priorityTasks } = data;
   const unifiedStatus = dayStatusToStatus[dayStatus];
   const config = STATUS_CONFIG[unifiedStatus];
   const StatusIcon = config.icon;
 
+  const criticalTasksCount = priorityTasks.filter(t => t.severity === 'error').length;
+  const totalTasksCount = priorityTasks.length;
+
   return (
     <>
-      {/* Mobile-only compact header */}
+      {/* Mobile-only compact header with 4 metrics */}
       <div className="sm:hidden sticky top-0 z-40 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Status Icon */}
           <div className={cn(
-            'flex items-center justify-center w-10 h-10 rounded-full shrink-0',
+            'flex items-center justify-center w-9 h-9 rounded-full shrink-0',
             config.bgClassStrong
           )}>
-            <StatusIcon className={cn('w-5 h-5', config.textClass)} />
+            <StatusIcon className={cn('w-4 h-4', config.textClass)} />
           </div>
           
-          {/* Main metric - Today's income */}
-          <button 
-            onClick={() => setShowSearch(true)}
-            className="flex-1 flex flex-col items-center justify-center h-12 rounded-xl bg-secondary/50 active:bg-secondary transition-colors"
-          >
-            <span className="text-lg font-bold text-foreground">
-              {formatCurrency(todayEstimatedIncome)}
-            </span>
-            <span className="text-[10px] text-muted-foreground -mt-0.5">
-              Příjem dnes
-            </span>
-          </button>
+          {/* Trainings today */}
+          <div className="flex flex-col items-center justify-center h-9 px-3 rounded-lg bg-secondary/50 min-w-0">
+            <div className="flex items-center gap-1">
+              <Users className="w-3 h-3 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground">
+                {capacity.completed}/{capacity.total}
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground -mt-0.5">dnes</span>
+          </div>
           
-          {/* Quick action - New training */}
-          <Button
-            size="icon"
-            onClick={() => setShowTrainingSheet(true)}
-            className="w-12 h-12 rounded-full shrink-0 shadow-lg"
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
+          {/* Today's income */}
+          <div className="flex-1 flex flex-col items-center justify-center h-9 px-3 rounded-lg bg-secondary/50 min-w-0">
+            <div className="flex items-center gap-1">
+              <Banknote className="w-3 h-3 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground truncate">
+                {formatCurrency(todayEstimatedIncome)}
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground -mt-0.5">příjem</span>
+          </div>
+          
+          {/* Critical tasks - only show if there are tasks */}
+          {totalTasksCount > 0 && (
+            <button
+              onClick={() => setShowTasksDialog(true)}
+              className={cn(
+                'flex flex-col items-center justify-center h-9 px-3 rounded-lg min-w-0 transition-colors',
+                criticalTasksCount > 0 
+                  ? 'bg-status-error/10 ring-1 ring-status-error/30' 
+                  : 'bg-status-warning/10'
+              )}
+            >
+              <div className="flex items-center gap-1">
+                <AlertTriangle className={cn(
+                  'w-3 h-3',
+                  criticalTasksCount > 0 ? 'text-status-error' : 'text-status-warning'
+                )} />
+                <span className={cn(
+                  'text-sm font-bold',
+                  criticalTasksCount > 0 ? 'text-status-error' : 'text-status-warning'
+                )}>
+                  {totalTasksCount}
+                </span>
+              </div>
+              <span className="text-[9px] text-muted-foreground -mt-0.5">úkoly</span>
+            </button>
+          )}
         </div>
       </div>
-      
-      {/* Dialogs */}
-      <CreateTrainingSheet
-        open={showTrainingSheet}
-        onOpenChange={setShowTrainingSheet}
-        onSubmit={handleCreateTraining}
-        clients={clients}
-        isLoading={createTraining.isPending}
-      />
-      
-      <CommandPalette 
-        open={showSearch} 
-        onOpenChange={setShowSearch} 
-      />
+
+      {/* Tasks Dialog */}
+      <Dialog open={showTasksDialog} onOpenChange={setShowTasksDialog}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-status-warning" />
+              Prioritní úkoly ({totalTasksCount})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {priorityTasks.map((task) => (
+              <div
+                key={task.id}
+                className={cn(
+                  'p-3 rounded-lg border',
+                  task.severity === 'error' 
+                    ? 'bg-status-error/5 border-status-error/20'
+                    : 'bg-status-warning/5 border-status-warning/20'
+                )}
+              >
+                <p className="font-medium text-sm text-foreground">{task.title}</p>
+                {task.subtitle && (
+                  <p className="text-xs text-muted-foreground mt-1">{task.subtitle}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
