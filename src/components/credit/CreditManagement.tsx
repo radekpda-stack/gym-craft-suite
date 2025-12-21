@@ -15,6 +15,7 @@ import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, Cred
 import { useSharedBudgetBalance, useSharedBudgetTransactions } from '@/hooks/useSharedBudgetBalance';
 import { useProducts } from '@/hooks/useProducts';
 import { useTrainingPrices, calculateRemainingTrainings } from '@/hooks/useAppSettings';
+import { useUndoTransaction } from '@/hooks/useUndoActions';
 import { cn } from '@/lib/utils';
 import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
 import { formatCurrency } from '@/lib/formatters';
@@ -32,6 +33,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
   const trainingPrices = useTrainingPrices();
   const createTransaction = useCreateTransaction();
   const deleteTransaction = useDeleteTransaction();
+  const { registerTransactionUndo } = useUndoTransaction();
 
   // Shared budget info
   const { data: sharedBudgetInfo, isLoading: sharedLoading } = useSharedBudgetBalance(clientId);
@@ -63,12 +65,19 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) return;
 
-    await createTransaction.mutateAsync({
+    const result = await createTransaction.mutateAsync({
       client_id: clientId,
       amount: amount,
       type: 'payment',
       description: paymentDescription || 'Platba kreditu',
     });
+
+    // Register undo action
+    registerTransactionUndo(
+      { id: result.undoData.transactionId, amount: result.undoData.amount, client_id: result.undoData.clientId },
+      'Platba přidána',
+      `${formatCurrency(amount)}`
+    );
 
     setPaymentAmount('');
     setPaymentDescription('');
@@ -81,13 +90,20 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
 
     const totalAmount = product.price * productQuantity;
 
-    await createTransaction.mutateAsync({
+    const result = await createTransaction.mutateAsync({
       client_id: clientId,
       amount: -totalAmount,
       type: 'product',
       description: `${product.name}${productQuantity > 1 ? ` (${productQuantity}x)` : ''}`,
       product_id: product.id,
     });
+
+    // Register undo action
+    registerTransactionUndo(
+      { id: result.undoData.transactionId, amount: result.undoData.amount, client_id: result.undoData.clientId },
+      'Produkt prodán',
+      `${product.name} - ${formatCurrency(totalAmount)}`
+    );
 
     setSelectedProduct('');
     setProductQuantity(1);
@@ -98,12 +114,21 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
     const amount = parseFloat(manualAmount);
     if (isNaN(amount) || amount === 0) return;
 
-    await createTransaction.mutateAsync({
+    const finalAmount = manualIsDeduction ? -Math.abs(amount) : Math.abs(amount);
+
+    const result = await createTransaction.mutateAsync({
       client_id: clientId,
-      amount: manualIsDeduction ? -Math.abs(amount) : Math.abs(amount),
+      amount: finalAmount,
       type: 'manual',
       description: manualDescription || 'Manuální úprava',
     });
+
+    // Register undo action
+    registerTransactionUndo(
+      { id: result.undoData.transactionId, amount: result.undoData.amount, client_id: result.undoData.clientId },
+      manualIsDeduction ? 'Kredit odečten' : 'Kredit přidán',
+      `${formatCurrency(Math.abs(finalAmount))}`
+    );
 
     setManualAmount('');
     setManualDescription('');

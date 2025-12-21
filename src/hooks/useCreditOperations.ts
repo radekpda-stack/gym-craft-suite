@@ -344,7 +344,19 @@ export function useCreateTransaction() {
         newBalance = balance;
       }
 
-      return { transaction, newBalance, skippedCredit: input.skip_credit_update, isSharedBudget, clearedDebt };
+      return { 
+        transaction, 
+        newBalance, 
+        skippedCredit: input.skip_credit_update, 
+        isSharedBudget, 
+        clearedDebt,
+        // Return data needed for undo
+        undoData: {
+          transactionId: transaction.id,
+          clientId: input.client_id,
+          amount: input.amount,
+        }
+      };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });

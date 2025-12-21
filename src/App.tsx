@@ -10,6 +10,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SessionTrackingProvider } from "@/components/SessionTrackingProvider";
 import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
+import { UndoProvider } from "@/contexts/UndoContext";
+import { UndoToast } from "@/components/ui/UndoToast";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
@@ -48,10 +50,12 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <TooltipProvider>
-          <OfflineBanner />
-          <Toaster />
-          <Sonner />
+        <UndoProvider>
+          <TooltipProvider>
+            <OfflineBanner />
+            <Toaster />
+            <Sonner />
+            <UndoToast />
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
@@ -93,7 +97,8 @@ const App = () => (
               />
             </Routes>
           </BrowserRouter>
-        </TooltipProvider>
+          </TooltipProvider>
+        </UndoProvider>
       </LanguageProvider>
     </QueryClientProvider>
   </ErrorBoundary>

@@ -41,6 +41,7 @@ import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackS
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
+import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,6 +89,7 @@ export default function TrainingDetail() {
   const saveParticipants = useSaveTrainingParticipants();
   const deductParticipantsCredit = useDeductParticipantsCredit();
   const trainingPrices = useTrainingPrices();
+  const { registerTrainingDeleteUndo } = useUndoTrainingDelete();
 
   // Tag validation
   const currentTagIds = trainingTags.map(t => t.tag_id);
@@ -190,7 +192,26 @@ export default function TrainingDetail() {
   };
 
   const handleDelete = async () => {
-    await deleteTraining.mutateAsync(training.id);
+    const result = await deleteTraining.mutateAsync({ id: training.id, captureForUndo: true });
+    
+    // Register undo if we have the training data
+    if (result.trainingData) {
+      registerTrainingDeleteUndo(
+        {
+          client_id: result.trainingData.client_id,
+          date: result.trainingData.date,
+          duration: result.trainingData.duration,
+          notes: result.trainingData.notes,
+          status: result.trainingData.status,
+          participant_count: result.trainingData.participant_count,
+          training_type: result.trainingData.training_type,
+          training_goal: result.trainingData.training_goal,
+          prep_notes: result.trainingData.prep_notes,
+        },
+        'Trénink smazán'
+      );
+    }
+    
     navigate('/trainings');
   };
 
