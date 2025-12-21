@@ -479,15 +479,28 @@ export function useDeleteTrainingSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, captureForUndo }: { id: string; captureForUndo?: boolean }) => {
+      // Capture training data before deletion if undo is needed
+      let trainingData = null;
+      if (captureForUndo) {
+        const { data } = await supabase
+          .from("training_sessions")
+          .select("*")
+          .eq("id", id)
+          .single();
+        trainingData = data;
+      }
+
       const { error } = await supabase
         .from("training_sessions")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
+      
+      return { trainingData };
     },
-    onSuccess: () => {
+    onSuccess: (_result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       featureTracker.track('training_delete', 'trainings');
       toast({
