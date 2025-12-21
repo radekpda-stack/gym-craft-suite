@@ -93,21 +93,22 @@ export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOve
   
   const { clientsQuickInfo } = data;
 
-  // Separate clients by status for better overview
-  const errorClients = clientsQuickInfo.filter(c => c.status === 'error');
-  const warningClients = clientsQuickInfo.filter(c => c.status === 'warning');
-  const okClients = clientsQuickInfo.filter(c => c.status === 'ok');
+  // Separate clients by status for better overview - limit to 6 total
+  const allClients = clientsQuickInfo.slice(0, 6);
+  const errorClients = allClients.filter(c => c.status === 'error');
+  const warningClients = allClients.filter(c => c.status === 'warning');
+  const okClients = allClients.filter(c => c.status === 'ok');
   
   return (
     <Card className="glass">
       <CardHeader className="pb-3">
         <div>
-          <CardTitle className="flex items-center gap-2 text-lg">
+        <CardTitle className="flex items-center gap-2 text-lg">
             <Users className="w-5 h-5 text-primary" />
             Klienti – rychlý přehled
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Top 10 klientů • Kredit a poslední aktivita
+            Top 6 klientů • Kredit a poslední aktivita
           </p>
         </div>
       </CardHeader>
