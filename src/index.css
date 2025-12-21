@@ -403,4 +403,130 @@
     box-shadow: 0 6px 30px hsl(24 100% 50% / 0.4);
     transform: translateY(-1px);
   }
+
+  /* ===== APPLE/TESLA PREMIUM STYLE ===== */
+  
+  /* Floating layer - no hard borders, soft shadows */
+  .premium-layer {
+    background: hsl(220 15% 8% / 0.6);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.04);
+    box-shadow: 
+      0 1px 3px hsl(0 0% 0% / 0.12),
+      0 8px 24px hsl(0 0% 0% / 0.16),
+      inset 0 1px 0 hsl(0 0% 100% / 0.02);
+    border-radius: 20px;
+  }
+
+  .premium-layer-sm {
+    background: hsl(220 15% 10% / 0.5);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid hsl(0 0% 100% / 0.03);
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.15);
+    border-radius: 14px;
+  }
+
+  /* Metric instrument styling */
+  .metric-instrument {
+    @apply flex flex-col items-center justify-center;
+    background: hsl(220 15% 10% / 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(0 0% 100% / 0.03);
+    border-radius: 16px;
+    transition: all 0.15s ease-out;
+  }
+
+  .metric-instrument:hover {
+    background: hsl(220 15% 12% / 0.5);
+    transform: scale(1.01);
+  }
+
+  .metric-instrument:active {
+    transform: scale(0.99);
+  }
+
+  /* Apple-style micro interaction */
+  .premium-hover {
+    transition: all 0.15s ease-out;
+  }
+
+  .premium-hover:hover {
+    transform: scale(1.01);
+    background: hsl(220 15% 12% / 0.6);
+  }
+
+  .premium-hover:active {
+    transform: scale(0.99);
+  }
+
+  /* Day status ambient tints */
+  .status-tint-ok {
+    /* Neutral - no tint */
+  }
+
+  .status-tint-warning {
+    background: linear-gradient(180deg, hsl(38 80% 50% / 0.03) 0%, transparent 100%);
+  }
+
+  .status-tint-critical {
+    background: linear-gradient(180deg, hsl(0 70% 50% / 0.04) 0%, transparent 100%);
+  }
+
+  /* Apple Calendar timeline item */
+  .timeline-item {
+    @apply relative flex items-center gap-3 p-3;
+    background: hsl(220 15% 10% / 0.3);
+    border: 1px solid hsl(0 0% 100% / 0.03);
+    border-radius: 14px;
+    transition: all 0.15s ease-out;
+  }
+
+  .timeline-item:hover {
+    background: hsl(220 15% 12% / 0.4);
+    transform: scale(1.005);
+  }
+
+  .timeline-item-completed {
+    border-left: 3px solid hsl(142 50% 45% / 0.5);
+  }
+
+  .timeline-item-scheduled {
+    border-left: 3px solid hsl(220 60% 60% / 0.5);
+  }
+
+  .timeline-item-issue {
+    border-left: 3px solid hsl(38 80% 50% / 0.6);
+  }
+
+  .timeline-item-cancelled {
+    border-left: 3px solid hsl(0 60% 50% / 0.4);
+    opacity: 0.6;
+  }
+
+  /* Progress ring for capacity */
+  .progress-ring {
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+
+  /* Minimal badge - just a dot */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-ok {
+    background: hsl(220 15% 40%);
+  }
+
+  .status-dot-warning {
+    background: hsl(38 80% 50%);
+  }
+
+  .status-dot-error {
+    background: hsl(0 70% 55%);
+    box-shadow: 0 0 8px hsl(0 70% 55% / 0.4);
+  }
 }
