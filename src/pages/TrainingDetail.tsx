@@ -224,7 +224,11 @@ export default function TrainingDetail() {
 
   const handleComplete = async () => {
     const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
-    const totalPrice = getExpectedPrice();
+    // For price split, use the actual sum of participant shares to ensure consistency
+    // This fixes the bug where totalPrice didn't match the sum of price_shares
+    const totalPrice = usePriceSplit && participantShares.length > 1
+      ? participantShares.reduce((sum, p) => sum + p.price_share, 0)
+      : getExpectedPrice();
     const shouldDeductCredit = paymentMethod === 'credit';
     const paymentStatus = getPaymentStatusFromOption(paymentMethod);
     const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
@@ -239,13 +243,26 @@ export default function TrainingDetail() {
     };
     
     if (usePriceSplit && participantShares.length > 1) {
+      // Calculate the correct price for this participant count
+      const correctPrice = getTrainingPrice(participantCount, trainingPrices);
+      
+      // Normalize participant shares to match the correct price
+      // This ensures the sum of price_shares equals the expected price for the participant count
+      const currentSum = participantShares.reduce((sum, p) => sum + p.price_share, 0);
+      const normalizedParticipants = currentSum !== correctPrice
+        ? participantShares.map(p => ({
+            client_id: p.client_id,
+            price_share: Math.round((p.price_share / currentSum) * correctPrice),
+          }))
+        : participantShares.map(p => ({
+            client_id: p.client_id,
+            price_share: p.price_share,
+          }));
+      
       // Save participants and deduct credit from each
       await saveParticipants.mutateAsync({
         training_session_id: training.id,
-        participants: participantShares.map(p => ({
-          client_id: p.client_id,
-          price_share: p.price_share,
-        })),
+        participants: normalizedParticipants,
       });
       
       // Update training status to completed with payment info and trainer summary
@@ -257,7 +274,7 @@ export default function TrainingDetail() {
           subjective_rating: completeRating || undefined,
           notes: completeNotes || undefined,
           payment_status: paymentStatus,
-          final_price: totalPrice,
+          final_price: correctPrice,
           payment_method: paymentMethodValue,
           ...trainerSummaryData,
         },
@@ -267,10 +284,7 @@ export default function TrainingDetail() {
       if (shouldDeductCredit) {
         await deductParticipantsCredit.mutateAsync({
           training_session_id: training.id,
-          participants: participantShares.map(p => ({
-            client_id: p.client_id,
-            price_share: p.price_share,
-          })),
+          participants: normalizedParticipants,
           description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
         });
       }
@@ -468,6 +482,7 @@ export default function TrainingDetail() {
                 primaryClientId={training.client_id}
                 onChange={setParticipantShares}
                 initialParticipants={participantShares}
+                getPriceForCount={(count) => getTrainingPrice(count, trainingPrices)}
               />
             ) : (
               <div className="p-4 rounded-lg bg-secondary/50 border">
