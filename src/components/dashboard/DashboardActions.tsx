@@ -1,0 +1,92 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, Search, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
+import { CommandPalette } from '@/components/search/CommandPalette';
+import { useClients } from '@/hooks/useClients';
+import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+export function DashboardActions() {
+  const [showTrainingSheet, setShowTrainingSheet] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  
+  const { data: clients = [] } = useClients();
+  const createTraining = useCreateTrainingSession();
+  
+  const handleCreateTraining = async (formData: any) => {
+    try {
+      await createTraining.mutateAsync(formData);
+      setShowTrainingSheet(false);
+    } catch (error) {
+      console.error('Error creating training:', error);
+    }
+  };
+  
+  return (
+    <>
+      {/* Fixed bottom action bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-3 pointer-events-none">
+        <div className="max-w-lg mx-auto">
+          <div className="liquid-glass-strong rounded-2xl p-2 pointer-events-auto">
+            <div className="flex items-center justify-around gap-2">
+              {/* New Training */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTrainingSheet(true)}
+                className="flex-1 h-12 rounded-xl hover:bg-primary/10 flex flex-col items-center gap-0.5"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <span className="text-[10px] text-muted-foreground">Nový</span>
+              </Button>
+              
+              {/* Search */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSearch(true)}
+                className="flex-1 h-12 rounded-xl hover:bg-secondary/50 flex flex-col items-center gap-0.5"
+              >
+                <Search className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Hledat</span>
+              </Button>
+              
+              {/* Statistics */}
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="flex-1 h-12 rounded-xl hover:bg-secondary/50 flex flex-col items-center gap-0.5"
+              >
+                <Link to="/statistics">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Statistiky</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Spacer for fixed bottom bar */}
+      <div className="h-24" />
+      
+      {/* Dialogs */}
+      <CreateTrainingSheet
+        open={showTrainingSheet}
+        onOpenChange={setShowTrainingSheet}
+        onSubmit={handleCreateTraining}
+        isLoading={createTraining.isPending}
+        clients={clients}
+      />
+      
+      <CommandPalette
+        open={showSearch}
+        onOpenChange={setShowSearch}
+      />
+    </>
+  );
+}
