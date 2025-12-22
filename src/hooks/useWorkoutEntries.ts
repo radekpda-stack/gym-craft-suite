@@ -20,6 +20,11 @@ export interface WorkoutEntry {
   calories: number | null;
   watts: number | null;
   is_pr: boolean;
+  // Cardio machine specific fields
+  heart_rate_zone: number | null;
+  avg_heart_rate: number | null;
+  max_heart_rate: number | null;
+  pace_per_500m: number | null;
 }
 
 export interface WorkoutEntryInput {
@@ -36,6 +41,11 @@ export interface WorkoutEntryInput {
   calories?: number | null;
   watts?: number | null;
   is_pr?: boolean;
+  // Cardio machine specific fields
+  heart_rate_zone?: number | null;
+  avg_heart_rate?: number | null;
+  max_heart_rate?: number | null;
+  pace_per_500m?: number | null;
 }
 
 export interface GroupedWorkoutEntry {
@@ -258,7 +268,7 @@ export function useSyncToClientStats() {
             entries: [],
           };
         }
-        acc[key].entries.push(entry);
+        acc[key].entries.push(entry as WorkoutEntry);
         return acc;
       }, {} as Record<string, { exercise_id: string | null; exercise_name: string; entries: WorkoutEntry[] }>);
 
