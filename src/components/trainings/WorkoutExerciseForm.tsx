@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Search, Dumbbell, Trophy } from 'lucide-react';
+import { Plus, X, Search, Dumbbell, Trophy, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,9 +17,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useExercises, Exercise } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
+import { parseTime, formatTime, parsePace, formatPace } from '@/lib/timeUtils';
 
 interface SetData {
   weight_kg: number | null;
@@ -30,6 +38,11 @@ interface SetData {
   calories: number | null;
   watts: number | null;
   is_pr: boolean;
+  // Cardio machine specific fields
+  heart_rate_zone: number | null;
+  avg_heart_rate: number | null;
+  max_heart_rate: number | null;
+  pace_per_500m: number | null;
 }
 
 interface ExerciseFormData {
@@ -45,7 +58,7 @@ interface WorkoutExerciseFormProps {
   isLoading?: boolean;
 }
 
-type MeasurementUnit = 'reps' | 'seconds' | 'meters' | 'calories';
+type MeasurementUnit = 'reps' | 'seconds' | 'meters' | 'calories' | 'cardio_machine';
 
 const DEFAULT_SET: SetData = { 
   weight_kg: null, 
@@ -56,6 +69,10 @@ const DEFAULT_SET: SetData = {
   calories: null,
   watts: null,
   is_pr: false,
+  heart_rate_zone: null,
+  avg_heart_rate: null,
+  max_heart_rate: null,
+  pace_per_500m: null,
 };
 
 export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerciseFormProps) {
@@ -65,12 +82,16 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetData[]>([{ ...DEFAULT_SET }]);
+  
+  // State for time/pace input as strings
+  const [timeInputs, setTimeInputs] = useState<string[]>(['']);
+  const [paceInputs, setPaceInputs] = useState<string[]>(['']);
 
   // Determine measurement type based on selected exercise
   const measurementUnit: MeasurementUnit = useMemo(() => {
     if (!selectedExercise) return 'reps';
     const unit = selectedExercise.default_unit as MeasurementUnit;
-    return ['reps', 'seconds', 'meters', 'calories'].includes(unit) ? unit : 'reps';
+    return ['reps', 'seconds', 'meters', 'calories', 'cardio_machine'].includes(unit) ? unit : 'reps';
   }, [selectedExercise]);
 
   const filteredExercises = useMemo(() => {
@@ -88,6 +109,8 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     setSearchOpen(false);
     // Reset sets when changing exercise
     setSets([{ ...DEFAULT_SET }]);
+    setTimeInputs(['']);
+    setPaceInputs(['']);
   };
 
   const handleAddSet = () => {
@@ -96,11 +119,15 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
       ...lastSet,
       is_pr: false, // Never copy PR flag
     }]);
+    setTimeInputs([...timeInputs, timeInputs[timeInputs.length - 1] || '']);
+    setPaceInputs([...paceInputs, paceInputs[paceInputs.length - 1] || '']);
   };
 
   const handleRemoveSet = (index: number) => {
     if (sets.length > 1) {
       setSets(sets.filter((_, i) => i !== index));
+      setTimeInputs(timeInputs.filter((_, i) => i !== index));
+      setPaceInputs(paceInputs.filter((_, i) => i !== index));
     }
   };
 
@@ -112,6 +139,30 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
       const numValue = value === '' ? null : parseFloat(value as string);
       newSets[index] = { ...newSets[index], [field]: numValue };
     }
+    setSets(newSets);
+  };
+
+  const handleTimeInputChange = (index: number, value: string) => {
+    const newTimeInputs = [...timeInputs];
+    newTimeInputs[index] = value;
+    setTimeInputs(newTimeInputs);
+    
+    // Parse and set the time_seconds value
+    const seconds = parseTime(value);
+    const newSets = [...sets];
+    newSets[index] = { ...newSets[index], time_seconds: seconds };
+    setSets(newSets);
+  };
+
+  const handlePaceInputChange = (index: number, value: string) => {
+    const newPaceInputs = [...paceInputs];
+    newPaceInputs[index] = value;
+    setPaceInputs(newPaceInputs);
+    
+    // Parse and set the pace_per_500m value
+    const seconds = parsePace(value);
+    const newSets = [...sets];
+    newSets[index] = { ...newSets[index], pace_per_500m: seconds };
     setSets(newSets);
   };
 
@@ -129,6 +180,8 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
 
   const hasValidData = (set: SetData): boolean => {
     switch (measurementUnit) {
+      case 'cardio_machine':
+        return set.distance_meters !== null || set.time_seconds !== null || set.calories !== null;
       case 'seconds':
         return set.time_seconds !== null || set.weight_kg !== null;
       case 'meters':
@@ -305,148 +358,269 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
               <span className="w-8"></span>
             </div>
           )}
+          {measurementUnit === 'cardio_machine' && (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="flex items-center gap-1 text-primary">
+                <Heart className="w-3 h-3" />
+                <span>Kardio trenažér</span>
+              </div>
+            </div>
+          )}
 
           {sets.map((set, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 items-center"
-            >
-              <span className="w-8 text-center text-sm text-muted-foreground">
-                {index + 1}
-              </span>
-              
-              {/* Dynamic fields based on measurement type */}
-              {measurementUnit === 'reps' && (
-                <>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    placeholder="0"
-                    value={set.weight_kg ?? ''}
-                    onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.reps ?? ''}
-                    onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    placeholder="-"
-                    value={set.rpe ?? ''}
-                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                </>
+            <div key={index}>
+              {/* Cardio machine layout */}
+              {measurementUnit === 'cardio_machine' ? (
+                <div className="space-y-2 p-3 bg-secondary/50 rounded-lg border border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Série {index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Checkbox
+                          checked={set.is_pr}
+                          onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
+                          className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                        />
+                        <span className="text-xs text-muted-foreground">PR</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="w-6 h-6"
+                        onClick={() => handleRemoveSet(index)}
+                        disabled={sets.length === 1}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Row 1: Distance, Time, Watts */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Vzdálenost (m)</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.distance_meters ?? ''}
+                        onChange={(e) => handleSetChange(index, 'distance_meters', e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Čas (m:ss)</Label>
+                      <Input
+                        placeholder="0:00"
+                        value={timeInputs[index] || ''}
+                        onChange={(e) => handleTimeInputChange(index, e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Watty</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.watts ?? ''}
+                        onChange={(e) => handleSetChange(index, 'watts', e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Row 2: Pace, HR Zone, Avg HR, Max HR */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tempo/500m</Label>
+                      <Input
+                        placeholder="0:00"
+                        value={paceInputs[index] || ''}
+                        onChange={(e) => handlePaceInputChange(index, e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">TZ (1-5)</Label>
+                      <Select
+                        value={set.heart_rate_zone?.toString() || ''}
+                        onValueChange={(value) => handleSetChange(index, 'heart_rate_zone', value)}
+                      >
+                        <SelectTrigger className="bg-background border-border h-9">
+                          <SelectValue placeholder="-" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="2">2</SelectItem>
+                          <SelectItem value="3">3</SelectItem>
+                          <SelectItem value="4">4</SelectItem>
+                          <SelectItem value="5">5</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Avg HR</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.avg_heart_rate ?? ''}
+                        onChange={(e) => handleSetChange(index, 'avg_heart_rate', e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max HR</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.max_heart_rate ?? ''}
+                        onChange={(e) => handleSetChange(index, 'max_heart_rate', e.target.value)}
+                        className="bg-background border-border h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Standard set layout */
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 items-center">
+                  <span className="w-8 text-center text-sm text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  
+                  {/* Dynamic fields based on measurement type */}
+                  {measurementUnit === 'reps' && (
+                    <>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        placeholder="0"
+                        value={set.weight_kg ?? ''}
+                        onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.reps ?? ''}
+                        onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        placeholder="-"
+                        value={set.rpe ?? ''}
+                        onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                    </>
+                  )}
+                  
+                  {measurementUnit === 'seconds' && (
+                    <>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        placeholder="0"
+                        value={set.weight_kg ?? ''}
+                        onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.time_seconds ?? ''}
+                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        placeholder="-"
+                        value={set.rpe ?? ''}
+                        onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                    </>
+                  )}
+                  
+                  {measurementUnit === 'meters' && (
+                    <>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.distance_meters ?? ''}
+                        onChange={(e) => handleSetChange(index, 'distance_meters', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.time_seconds ?? ''}
+                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        placeholder="-"
+                        value={set.rpe ?? ''}
+                        onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                    </>
+                  )}
+                  
+                  {measurementUnit === 'calories' && (
+                    <>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.calories ?? ''}
+                        onChange={(e) => handleSetChange(index, 'calories', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={set.time_seconds ?? ''}
+                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="-"
+                        value={set.watts ?? ''}
+                        onChange={(e) => handleSetChange(index, 'watts', e.target.value)}
+                        className="bg-secondary border-border h-9"
+                      />
+                    </>
+                  )}
+                  
+                  {/* PR Checkbox */}
+                  <div className="w-10 flex justify-center">
+                    <Checkbox
+                      checked={set.is_pr}
+                      onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
+                      className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                    />
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="w-8 h-8"
+                    onClick={() => handleRemoveSet(index)}
+                    disabled={sets.length === 1}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
               )}
-              
-              {measurementUnit === 'seconds' && (
-                <>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    placeholder="0"
-                    value={set.weight_kg ?? ''}
-                    onChange={(e) => handleSetChange(index, 'weight_kg', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.time_seconds ?? ''}
-                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    placeholder="-"
-                    value={set.rpe ?? ''}
-                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                </>
-              )}
-              
-              {measurementUnit === 'meters' && (
-                <>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.distance_meters ?? ''}
-                    onChange={(e) => handleSetChange(index, 'distance_meters', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.time_seconds ?? ''}
-                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    placeholder="-"
-                    value={set.rpe ?? ''}
-                    onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                </>
-              )}
-              
-              {measurementUnit === 'calories' && (
-                <>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.calories ?? ''}
-                    onChange={(e) => handleSetChange(index, 'calories', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={set.time_seconds ?? ''}
-                    onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="-"
-                    value={set.watts ?? ''}
-                    onChange={(e) => handleSetChange(index, 'watts', e.target.value)}
-                    className="bg-secondary border-border h-9"
-                  />
-                </>
-              )}
-              
-              {/* PR Checkbox */}
-              <div className="w-10 flex justify-center">
-                <Checkbox
-                  checked={set.is_pr}
-                  onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
-                  className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                />
-              </div>
-              
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8"
-                onClick={() => handleRemoveSet(index)}
-                disabled={sets.length === 1}
-              >
-                <X className="w-3 h-3" />
-              </Button>
             </div>
           ))}
         </div>
