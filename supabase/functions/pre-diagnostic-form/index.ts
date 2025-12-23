@@ -22,7 +22,10 @@ serve(async (req) => {
 
     if (req.method === "GET") {
       // Get form data by token
+      console.log("GET request for token:", token, "from URL:", url.pathname);
+      
       if (!token || token === "pre-diagnostic-form") {
+        console.log("Token missing or invalid");
         return new Response(
           JSON.stringify({ error: "Token is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -55,11 +58,14 @@ serve(async (req) => {
         .single();
 
       if (formError || !form) {
+        console.log("Form not found for token:", token, "error:", formError);
         return new Response(
           JSON.stringify({ error: "Form not found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      
+      console.log("Form found:", { id: form.id, source: form.source, status: form.status });
 
       // Check if expired
       if (new Date(form.expires_at) < new Date()) {
