@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Dumbbell,
+  Target,
   Activity,
   Calendar,
   Settings,
@@ -128,7 +129,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       label: 'Záznamy',
       items: [
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
-        { id: 'exercises', to: '/exercises', icon: Dumbbell, label: 'Cviky' },
+        { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
         { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
       ],
