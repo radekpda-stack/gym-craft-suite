@@ -19,6 +19,7 @@ import {
   Download,
   Shield,
   RefreshCw,
+  KeyRound,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -36,6 +37,7 @@ import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSe
 import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
+import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -118,6 +120,13 @@ export default function Settings() {
           description: language === 'cs' ? 'Údaje pro hlavičku PDF výpisů' : 'Details for PDF statement headers',
           icon: Building2,
           content: <CompanyProfileSettings />,
+        },
+        {
+          id: 'password',
+          title: language === 'cs' ? 'Změna hesla' : 'Change Password',
+          description: language === 'cs' ? 'Změňte si přístupové heslo k účtu' : 'Change your account password',
+          icon: KeyRound,
+          content: <PasswordChangeSettings />,
         },
       ],
     },
