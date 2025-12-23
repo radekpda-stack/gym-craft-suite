@@ -1,11 +1,12 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, XCircle, ChevronRight, Users, Banknote, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { DashboardViewModel, ScheduleItem } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 
 interface TodayTimelineCardProps {
   data: DashboardViewModel | undefined;
@@ -65,6 +66,28 @@ const TimelineRow = memo(function TimelineRow({ item, isNext }: { item: Schedule
   );
 });
 
+interface MetricCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  subtext?: string;
+}
+
+function MetricCard({ icon, label, value, subtext }: MetricCardProps) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30">
+      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-lg font-bold text-foreground tabular-nums">{value}</p>
+        {subtext && <p className="text-xs text-muted-foreground/70">{subtext}</p>}
+      </div>
+    </div>
+  );
+}
+
 export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
   const navigate = useNavigate();
   
@@ -75,10 +98,17 @@ export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
           <Skeleton className="h-6 w-28" />
           <Skeleton className="h-5 w-16" />
         </div>
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Skeleton key={i} className="h-14 rounded-xl" />
-          ))}
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} className="h-14 rounded-xl" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -92,6 +122,11 @@ export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
   // Find the first non-completed, non-cancelled training (next)
   const nextIndex = trainings.findIndex(t => t.status === 'scheduled');
   
+  // Calculate progress
+  const completedCount = data.capacity.completed;
+  const totalCount = data.todaySchedule.length;
+  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  
   return (
     <div className="hero-card p-5">
       {/* Header */}
@@ -103,45 +138,97 @@ export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Dnešní plán</h2>
             <p className="text-xs text-muted-foreground">
-              {format(new Date(), 'd. MMMM', { locale: cs })}
+              {format(new Date(), 'EEEE, d. MMMM', { locale: cs })}
             </p>
           </div>
         </div>
-        <span className="text-2xl font-bold text-foreground tabular-nums">
-          {data.todaySchedule.length}
-        </span>
+        
+        {/* Progress indicator */}
+        {totalCount > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <span className="text-2xl font-bold text-foreground tabular-nums">
+                {completedCount}/{totalCount}
+              </span>
+              <p className="text-xs text-muted-foreground">dokončeno</p>
+            </div>
+          </div>
+        )}
       </div>
       
-      {/* Timeline */}
-      {trainings.length > 0 ? (
-        <div className="timeline-apple space-y-1">
-          {trainings.map((item, index) => (
-            <TimelineRow 
-              key={item.id} 
-              item={item} 
-              isNext={index === nextIndex}
-            />
-          ))}
-          
-          {hasMore && (
-            <button
-              onClick={() => navigate('/calendar')}
-              className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
-            >
-              +{data.todaySchedule.length - 6} další
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="text-center py-10">
-          <div className="inline-flex p-4 rounded-3xl bg-muted/30 mb-4">
-            <Calendar className="w-8 h-8 text-muted-foreground/50" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">Žádné tréninky</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">Volný den</p>
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div className="mb-6">
+          <Progress value={progressPercent} className="h-2" />
         </div>
       )}
+      
+      {/* Main content - 2 column layout on desktop */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Timeline - takes 2 columns */}
+        <div className="lg:col-span-2">
+          {trainings.length > 0 ? (
+            <div className="timeline-apple space-y-1">
+              {trainings.map((item, index) => (
+                <TimelineRow 
+                  key={item.id} 
+                  item={item} 
+                  isNext={index === nextIndex}
+                />
+              ))}
+              
+              {hasMore && (
+                <button
+                  onClick={() => navigate('/calendar')}
+                  className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
+                >
+                  +{data.todaySchedule.length - 6} další
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <div className="inline-flex p-4 rounded-3xl bg-muted/30 mb-4">
+                <Calendar className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Žádné tréninky</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Volný den</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Metrics sidebar - 1 column */}
+        <div className="space-y-3">
+          <MetricCard
+            icon={<Banknote className="w-5 h-5 text-primary" />}
+            label="Očekávaný příjem"
+            value={`${data.todayEstimatedIncome.toLocaleString('cs-CZ')} Kč`}
+          />
+          
+          <MetricCard
+            icon={<Users className="w-5 h-5 text-primary" />}
+            label="Unikátní klienti"
+            value={data.uniqueClientsToday}
+          />
+          
+          <MetricCard
+            icon={<TrendingUp className="w-5 h-5 text-primary" />}
+            label="Kapacita"
+            value={`${data.capacity.completed + data.capacity.scheduled}`}
+            subtext={`${data.capacity.completed} hotovo, ${data.capacity.scheduled} zbývá`}
+          />
+          
+          {/* Quick calendar access */}
+          <button
+            onClick={() => navigate('/calendar')}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-border/50 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            Celý kalendář
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
