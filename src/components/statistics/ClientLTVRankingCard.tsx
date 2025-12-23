@@ -124,24 +124,24 @@ export function ClientLTVRankingCard() {
           Lifetime Value klientů
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <p className="text-sm text-muted-foreground mb-1">Top 10 celkem</p>
-            <p className="text-2xl font-bold">{formatCurrency(data?.totalLTV || 0)}</p>
+      <CardContent className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="p-3 sm:p-4 rounded-xl bg-warning/10 border border-warning/20">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Top 10 celkem</p>
+            <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrency(data?.totalLTV || 0)}</p>
           </div>
-          <div className="p-4 rounded-xl bg-secondary/50">
-            <p className="text-sm text-muted-foreground mb-1">Průměrná LTV</p>
-            <p className="text-2xl font-bold">{formatCurrency(data?.avgLTV || 0)}</p>
+          <div className="p-3 sm:p-4 rounded-xl bg-secondary/50">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Průměrná LTV</p>
+            <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrency(data?.avgLTV || 0)}</p>
           </div>
         </div>
 
-        <div className="h-64">
+        <div className="h-48 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 0, right: 20, left: 80, bottom: 0 }}
+              margin={{ top: 0, right: 10, left: 60, bottom: 0 }}
             >
               <XAxis
                 type="number"
@@ -150,13 +150,13 @@ export function ClientLTVRankingCard() {
                 tickLine={false}
                 tickFormatter={(v) => `${Math.round(v / 1000)}k`}
               />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={75}
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={55}
               />
               <Tooltip
                 contentStyle={{
@@ -181,15 +181,15 @@ export function ClientLTVRankingCard() {
             <div
               key={client.id}
               className={cn(
-                'flex items-center justify-between p-3 rounded-lg',
+                'flex items-center justify-between p-2.5 sm:p-3 rounded-lg gap-2',
                 i === 0 && 'bg-warning/10 border border-warning/20',
                 i > 0 && 'bg-secondary/30'
               )}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <span
                   className={cn(
-                    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                    'w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
                     i === 0 && 'bg-warning/20 text-warning',
                     i === 1 && 'bg-muted text-muted-foreground',
                     i > 1 && 'bg-secondary text-muted-foreground'
@@ -197,14 +197,14 @@ export function ClientLTVRankingCard() {
                 >
                   {i + 1}
                 </span>
-                <div>
-                  <p className="font-medium">{client.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {client.trainings} tréninků • {client.months} měsíců • Ø {formatCurrency(client.avgPerMonth)}/m
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{client.name}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                    {client.trainings} tréninků • {client.months}m
                   </p>
                 </div>
               </div>
-              <span className="font-bold text-lg text-success">
+              <span className="font-bold text-sm sm:text-lg text-success flex-shrink-0">
                 {formatCurrency(client.revenue)}
               </span>
             </div>

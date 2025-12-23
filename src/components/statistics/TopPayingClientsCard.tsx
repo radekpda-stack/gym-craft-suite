@@ -27,13 +27,13 @@ export function TopPayingClientsCard() {
   }));
 
   const expandedContent = (
-    <div className="space-y-6">
-      <div className="h-64">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="h-48 sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
             layout="vertical"
-            margin={{ top: 0, right: 20, left: 80, bottom: 0 }}
+            margin={{ top: 0, right: 10, left: 60, bottom: 0 }}
           >
             <XAxis
               type="number"
@@ -45,10 +45,10 @@ export function TopPayingClientsCard() {
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              width={75}
+              width={55}
             />
             <Tooltip
               contentStyle={{
@@ -75,25 +75,25 @@ export function TopPayingClientsCard() {
             <div
               key={client.name}
               className={cn(
-                'flex items-center justify-between p-3 rounded-lg',
+                'flex items-center justify-between p-2.5 sm:p-3 rounded-lg gap-2',
                 i === 0 && 'bg-warning/10 border border-warning/20',
                 i > 0 && 'bg-secondary/30'
               )}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center',
+                    'w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0',
                     i === 0 && 'bg-warning/20 text-warning',
                     i === 1 && 'bg-muted text-muted-foreground',
                     i > 1 && 'bg-secondary text-muted-foreground'
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
-                <span className="font-medium">{client.name}</span>
+                <span className="font-medium text-sm truncate">{client.name}</span>
               </div>
-              <span className="font-bold text-success">
+              <span className="font-bold text-sm sm:text-base text-success flex-shrink-0">
                 {formatCurrency(client.amount)}
               </span>
             </div>

@@ -27,12 +27,12 @@ export function StatisticsCard({
 
   if (isLoading) {
     return (
-      <Card className={cn("glass overflow-hidden", className)}>
-        <CardHeader className="pb-2">
-          <Skeleton className="h-5 w-32" />
+      <Card className={cn("overflow-hidden", className)}>
+        <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+          <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-32" />
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+          <Skeleton className="h-28 sm:h-32" />
         </CardContent>
       </Card>
     );
@@ -42,33 +42,33 @@ export function StatisticsCard({
     <>
       <Card 
         className={cn(
-          "glass overflow-hidden cursor-pointer group transition-all duration-200 hover:shadow-lg hover:border-primary/20",
+          "overflow-hidden cursor-pointer group transition-all duration-200 hover:shadow-lg hover:border-primary/20 relative",
           className
         )}
         onClick={() => expandedContent && setIsExpanded(true)}
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              {icon}
-              {title}
+        <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2 min-w-0">
+              <span className="shrink-0">{icon}</span>
+              <span className="truncate">{title}</span>
             </CardTitle>
             {expandedContent && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsExpanded(true);
                 }}
               >
-                <Maximize2 className="h-3.5 w-3.5" />
+                <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 px-4 sm:px-6 pb-4 sm:pb-6">
           {children}
         </CardContent>
         {expandedContent && (

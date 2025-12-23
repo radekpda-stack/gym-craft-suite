@@ -38,7 +38,7 @@ export function FinanceStatsSection() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Hero KPI Cards */}
       <HeroKPIGrid>
         <KPICard
@@ -77,7 +77,7 @@ export function FinanceStatsSection() {
       <MonthlyProgressCard />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <RevenueBreakdownCard />
         <AverageTrainingPriceCard />
         <TopPayingClientsCard />
