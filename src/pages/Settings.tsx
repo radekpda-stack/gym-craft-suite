@@ -19,6 +19,7 @@ import {
   Calendar,
   Download,
   Shield,
+  RefreshCw,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -35,6 +36,7 @@ import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSe
 import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
 import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
+import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -213,6 +215,13 @@ export default function Settings() {
       icon: Wrench,
       iconColor: 'text-rose-500',
       sections: [
+        {
+          id: 'app-refresh',
+          title: language === 'cs' ? 'Obnovení aplikace' : 'App Refresh',
+          description: language === 'cs' ? 'Vynutit obnovení dat a vyčištění cache' : 'Force data refresh and cache clearing',
+          icon: RefreshCw,
+          content: <AppRefreshSettings />,
+        },
         {
           id: 'annual-stats',
           title: language === 'cs' ? 'Exporty & reporty' : 'Exports & Reports',
