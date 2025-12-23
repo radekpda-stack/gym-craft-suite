@@ -236,24 +236,14 @@ export default function ClientDetail() {
         </>
       )}
 
-      {/* 7. Settings Section - collapsible on mobile */}
-      {isMobile ? (
-        <CollapsibleSection title="Nastavení">
-          <ClientAdminBlock
-            client={client}
-            isSharedBudget={isSharedBudget}
-            budgetGroupId={sharedBudgetInfo?.groupId}
-            onArchive={handleArchive}
-          />
-        </CollapsibleSection>
-      ) : (
-        <ClientAdminBlock
-          client={client}
-          isSharedBudget={isSharedBudget}
-          budgetGroupId={sharedBudgetInfo?.groupId}
-          onArchive={handleArchive}
-        />
-      )}
+      {/* 7. Settings Section */}
+      <ClientAdminBlock
+        client={client}
+        isSharedBudget={isSharedBudget}
+        budgetGroupId={sharedBudgetInfo?.groupId}
+        onArchive={handleArchive}
+        defaultExpanded={!isMobile}
+      />
 
       {/* Full Profile Dialog/Sheet */}
       {showClientDetails && (

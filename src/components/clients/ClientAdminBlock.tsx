@@ -16,6 +16,7 @@ interface ClientAdminBlockProps {
   isSharedBudget?: boolean;
   budgetGroupId?: string;
   onArchive?: () => void;
+  defaultExpanded?: boolean;
 }
 
 export function ClientAdminBlock({
@@ -23,8 +24,9 @@ export function ClientAdminBlock({
   isSharedBudget,
   budgetGroupId,
   onArchive,
+  defaultExpanded = false,
 }: ClientAdminBlockProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const updatePaymentMode = useUpdatePaymentMode();
 
   const handlePaymentModeChange = (mode: PaymentMode) => {
