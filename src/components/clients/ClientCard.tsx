@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
+import { format, isToday, isTomorrow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   ChevronRight,
@@ -115,10 +115,17 @@ export const ClientCard = memo(function ClientCard({
     return format(d, 'EEE d.M. HH:mm', { locale: cs });
   };
 
+  // Credit balance color
+  const getCreditColor = () => {
+    if (actualBalance <= 0) return 'text-destructive';
+    if (actualBalance < 500) return 'text-warning';
+    return 'text-emerald-400';
+  };
+
   return (
     <div
       className={cn(
-        "glass rounded-xl p-4 transition-all duration-200 hover:bg-secondary/50 group relative border-l-4",
+        "hero-card p-4 transition-all duration-200 premium-touch group relative border-l-4",
         getStatusColor()
       )}
     >
@@ -130,18 +137,18 @@ export const ClientCard = memo(function ClientCard({
           onToggleFavorite();
         }}
         className={cn(
-          "absolute top-2 right-2 p-1 rounded transition-all z-10",
+          "absolute top-3 right-3 p-1.5 rounded-lg transition-all z-10",
           isFavorite 
-            ? "text-yellow-500" 
-            : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500"
+            ? "text-yellow-500 bg-yellow-500/10" 
+            : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-yellow-500 hover:bg-yellow-500/10"
         )}
       >
         <Star className={cn("w-4 h-4", isFavorite && "fill-current")} />
       </button>
 
       <Link to={`/clients/${client.id}`} className="block">
-        {/* Header Row: Avatar + Name + Info */}
-        <div className="flex items-start gap-3 pr-6">
+        {/* === TOP SECTION: Identity === */}
+        <div className="flex items-start gap-3 pr-8">
           <ClientAvatar name={client.name} size="sm" className="flex-shrink-0" />
           
           <div className="flex-1 min-w-0">
@@ -155,20 +162,20 @@ export const ClientCard = memo(function ClientCard({
               )}
             </div>
             
-            {/* Tags row */}
+            {/* Tags row - max 2 visible */}
             {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
+              <div className="flex flex-wrap gap-1 mt-1.5">
                 {tags.slice(0, 2).map((tag) => (
                   <Badge
                     key={tag.id}
-                    style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
-                    className="border text-xs px-1.5 py-0 h-4"
+                    style={{ backgroundColor: tag.color + '15', color: tag.color, borderColor: tag.color + '30' }}
+                    className="border text-[10px] px-1.5 py-0 h-4"
                   >
                     {tag.name}
                   </Badge>
                 ))}
                 {tags.length > 2 && (
-                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
+                  <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
                     +{tags.length - 2}
                   </Badge>
                 )}
@@ -176,91 +183,105 @@ export const ClientCard = memo(function ClientCard({
             )}
           </div>
 
-          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 mt-1 group-hover:text-muted-foreground transition-colors" />
         </div>
 
-        {/* Stats Row: Credit + Trainings + Next Training */}
-        <div className="flex items-center gap-3 mt-3 text-sm flex-wrap">
-          <span className={cn(
-            "font-semibold flex items-center gap-1",
-            actualBalance <= 0 ? "text-destructive" : actualBalance < 500 ? "text-warning" : "text-success"
-          )}>
-            <Wallet className="w-3.5 h-3.5" />
-            {formatCurrency(displayBalance)}
-          </span>
-          
-          {isSharedBudget && (
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-0.5">
-              <LinkIcon className="w-2.5 h-2.5" />
-              {sharedBudgetName}
-            </Badge>
-          )}
+        {/* === SEPARATOR === */}
+        <div className="border-t border-border/30 my-3" />
 
-          {trainingCount > 0 && (
-            <span className="text-muted-foreground flex items-center gap-1">
-              <Dumbbell className="w-3.5 h-3.5" />
-              {trainingCount}×
-            </span>
-          )}
+        {/* === BOTTOM SECTION: Data === */}
+        <div className="flex items-center justify-between">
+          {/* Left: Credit instrument */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center',
+                actualBalance <= 0 ? 'bg-destructive/10' : 
+                actualBalance < 500 ? 'bg-warning/10' : 'bg-emerald-500/10'
+              )}>
+                <Wallet className={cn('w-4 h-4', getCreditColor())} />
+              </div>
+              <div>
+                <p className={cn('text-sm font-semibold tabular-nums', getCreditColor())}>
+                  {formatCurrency(displayBalance)}
+                </p>
+                {isSharedBudget && (
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                    <LinkIcon className="w-2.5 h-2.5" />
+                    {sharedBudgetName}
+                  </p>
+                )}
+              </div>
+            </div>
 
-          {/* Separate indicators for each issue type */}
-          {unresolvedItems.unpaidCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 text-destructive font-medium cursor-help">
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span className="text-xs">{unresolvedItems.unpaidCount}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{unresolvedItems.unpaidCount}× neuhrazeno ({formatCurrency(unresolvedItems.unpaidTotal)})</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+            {trainingCount > 0 && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Dumbbell className="w-3.5 h-3.5" />
+                <span className="text-xs tabular-nums">{trainingCount}×</span>
+              </div>
+            )}
+          </div>
 
-          {unresolvedItems.missingFeedback > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 text-warning font-medium cursor-help">
-                  <MessageSquareWarning className="w-3.5 h-3.5" />
-                  <span className="text-xs">{unresolvedItems.missingFeedback}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{unresolvedItems.missingFeedback}× čeká na feedback</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+          {/* Right: Issue indicators */}
+          <div className="flex items-center gap-2">
+            {unresolvedItems.unpaidCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-destructive cursor-help">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">{unresolvedItems.unpaidCount}</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{unresolvedItems.unpaidCount}× neuhrazeno ({formatCurrency(unresolvedItems.unpaidTotal)})</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
-          {unresolvedItems.hasHealthRestrictions && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center text-orange-500 cursor-help">
-                  <HeartPulse className="w-3.5 h-3.5" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Zdravotní omezení</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+            {unresolvedItems.missingFeedback > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-warning cursor-help">
+                    <MessageSquareWarning className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">{unresolvedItems.missingFeedback}</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{unresolvedItems.missingFeedback}× čeká na feedback</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {unresolvedItems.hasHealthRestrictions && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center text-orange-500 cursor-help">
+                    <HeartPulse className="w-3.5 h-3.5" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Zdravotní omezení</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
 
         {/* Next Training Row */}
         {nextTraining && (
-          <div className="flex items-center gap-2 mt-2 text-sm text-primary">
+          <div className="flex items-center gap-2 mt-3 text-sm text-primary">
             <Calendar className="w-3.5 h-3.5" />
             <span className="font-medium">{formatNextTraining(nextTraining.date)}</span>
           </div>
         )}
       </Link>
 
-      {/* Quick Actions - Always visible */}
-      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/50">
+      {/* Quick Actions */}
+      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
         <Button
           size="sm"
           variant="ghost"
-          className="flex-1 h-8 text-xs gap-1 hover:bg-primary/10 hover:text-primary"
+          className="flex-1 h-9 text-xs gap-1.5 rounded-xl hover:bg-primary/10 hover:text-primary"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -274,7 +295,7 @@ export const ClientCard = memo(function ClientCard({
         <Button
           size="sm"
           variant="ghost"
-          className="flex-1 h-8 text-xs gap-1 hover:bg-success/10 hover:text-success"
+          className="flex-1 h-9 text-xs gap-1.5 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-400"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -290,7 +311,7 @@ export const ClientCard = memo(function ClientCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
+              className="h-9 w-9 p-0 rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="w-4 h-4" />
