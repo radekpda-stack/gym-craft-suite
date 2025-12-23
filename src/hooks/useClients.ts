@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { ClientFormValues } from "@/lib/validations/client";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { useClientLimit } from "@/hooks/useClientLimit";
 
 export type PaymentMode = 'credit' | 'cash_only' | 'mixed';
 
@@ -91,7 +92,7 @@ export function useCreateClient() {
   const { isDemo, canCreateClient } = useDemoMode();
 
   return useMutation({
-    mutationFn: async (values: ClientFormValues) => {
+    mutationFn: async (values: ClientFormValues & { skipLimitCheck?: boolean }) => {
       // Block in demo mode if limit reached
       if (isDemo && !canCreateClient) {
         throw new Error("DEMO_LIMIT: V demo režimu lze vytvořit pouze 1 klienta.");
@@ -110,6 +111,27 @@ export function useCreateClient() {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
+
+      // Check client limit before creating (unless explicitly skipped)
+      if (!values.skipLimitCheck) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('client_limit')
+          .eq('id', user.id)
+          .single();
+
+        const clientLimit = profile?.client_limit ?? 5;
+
+        const { count } = await supabase
+          .from('clients')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_archived', false);
+
+        if ((count ?? 0) >= clientLimit) {
+          throw new Error(`CLIENT_LIMIT: Dosáhli jste limitu ${clientLimit} aktivních klientů. Pro navýšení limitu kontaktujte podporu.`);
+        }
+      }
 
       const { data, error } = await supabase
         .from("clients")
@@ -148,8 +170,19 @@ export function useCreateClient() {
         description: "Nový klient byl úspěšně přidán.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error creating client:", error);
+      
+      // Handle client limit error with specific message
+      if (error.message.startsWith('CLIENT_LIMIT:')) {
+        toast({
+          title: "Limit klientů dosažen",
+          description: error.message.replace('CLIENT_LIMIT: ', ''),
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit klienta. Zkuste to prosím znovu.",
