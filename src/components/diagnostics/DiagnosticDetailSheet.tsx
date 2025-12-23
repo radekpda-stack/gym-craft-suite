@@ -9,7 +9,7 @@ import { Diagnostic } from '@/hooks/useDiagnostics';
 interface DiagnosticDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  diagnostic: Diagnostic | null;
+  diagnostic: Diagnostic | DiagnosticWithAssessment | null;
 }
 
 export function DiagnosticDetailSheet({
@@ -19,10 +19,17 @@ export function DiagnosticDetailSheet({
 }: DiagnosticDetailSheetProps) {
   if (!diagnostic) return null;
 
-  // Convert Diagnostic to DiagnosticWithAssessment format
+  // Convert to DiagnosticWithAssessment format if needed
   const diagnosticWithAssessment: DiagnosticWithAssessment = {
-    ...diagnostic,
-    assessment: undefined,
+    id: diagnostic.id,
+    client_id: diagnostic.client_id,
+    date: diagnostic.date,
+    area_type: diagnostic.area_type,
+    area_name: diagnostic.area_name,
+    findings: diagnostic.findings,
+    notes: diagnostic.notes,
+    created_at: diagnostic.created_at,
+    assessment: 'assessment' in diagnostic ? diagnostic.assessment : undefined,
   };
 
   return (
