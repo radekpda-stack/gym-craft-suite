@@ -20,6 +20,9 @@ import {
   Shield,
   RefreshCw,
   KeyRound,
+  ClipboardList,
+  UtensilsCrossed,
+  Stethoscope,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -38,6 +41,8 @@ import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
 import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSettings';
+import { NutritionQuestionnaireSettings } from '@/components/settings/NutritionQuestionnaireSettings';
+import { DiagnosticQuestionnaireSettings } from '@/components/settings/DiagnosticQuestionnaireSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -181,16 +186,39 @@ export default function Settings() {
           icon: Wallet,
           content: <CreditThresholdSettings />,
         },
+      ],
+    },
+    // 4. DOTAZNÍKY
+    {
+      id: 'questionnaires',
+      title: language === 'cs' ? 'Dotazníky' : 'Questionnaires',
+      icon: ClipboardList,
+      iconColor: 'text-cyan-500',
+      sections: [
         {
           id: 'feedback-settings',
-          title: language === 'cs' ? 'Nastavení feedbacku' : 'Feedback Settings',
-          description: language === 'cs' ? 'Automatické odesílání a konfigurace dotazníků' : 'Auto-send and questionnaire configuration',
+          title: language === 'cs' ? 'Feedbackový dotazník' : 'Feedback Questionnaire',
+          description: language === 'cs' ? 'Otázky a nastavení po-tréninkového feedbacku' : 'Post-training feedback questions and settings',
           icon: MessageSquare,
           content: <FeedbackSettings />,
         },
+        {
+          id: 'nutrition-questionnaire',
+          title: language === 'cs' ? 'Jídelní deník' : 'Food Diary',
+          description: language === 'cs' ? 'Nastavení a texty nutričního dotazníku' : 'Nutrition questionnaire settings and texts',
+          icon: UtensilsCrossed,
+          content: <NutritionQuestionnaireSettings />,
+        },
+        {
+          id: 'diagnostic-questionnaire',
+          title: language === 'cs' ? 'Vstupní diagnostika' : 'Intake Diagnostic',
+          description: language === 'cs' ? 'Sekce a otázky vstupního dotazníku' : 'Intake questionnaire sections and questions',
+          icon: Stethoscope,
+          content: <DiagnosticQuestionnaireSettings />,
+        },
       ],
     },
-    // 4. KNIHOVNY
+    // 5. KNIHOVNY
     {
       id: 'libraries',
       title: language === 'cs' ? 'Knihovny' : 'Libraries',
@@ -213,7 +241,7 @@ export default function Settings() {
         },
       ],
     },
-    // 5. POKROČILÉ
+    // 6. POKROČILÉ
     {
       id: 'advanced',
       title: language === 'cs' ? 'Pokročilé' : 'Advanced',
