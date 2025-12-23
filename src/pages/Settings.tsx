@@ -256,13 +256,6 @@ export default function Settings() {
           content: <AppRefreshSettings />,
         },
         {
-          id: 'annual-stats',
-          title: language === 'cs' ? 'Exporty & reporty' : 'Exports & Reports',
-          description: language === 'cs' ? 'Export PDF reportů a statistik' : 'Export PDF reports and statistics',
-          icon: FileBarChart2,
-          content: <AnnualStatsExport />,
-        },
-        {
           id: 'data-export',
           title: language === 'cs' ? 'Export dat' : 'Data Export',
           description: language === 'cs' ? 'Export všech dat pro analýzu nebo zálohu' : 'Export all data for analysis or backup',
