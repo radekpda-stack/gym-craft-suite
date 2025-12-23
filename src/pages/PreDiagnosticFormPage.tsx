@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PreDiagnosticFormContent } from '@/components/pre-diagnostic/PreDiagnosticFormContent';
 import { PreDiagnosticComplete } from '@/components/pre-diagnostic/PreDiagnosticComplete';
@@ -74,8 +73,6 @@ interface FormState {
 
 export default function PreDiagnosticFormPage() {
   const { token } = useParams<{ token: string }>();
-  const [searchParams] = useSearchParams();
-  const isNewClient = token === 'new' || searchParams.get('source') === 'new';
   
   const [loading, setLoading] = useState(true);
   const [formState, setFormState] = useState<FormState | null>(null);
@@ -85,25 +82,21 @@ export default function PreDiagnosticFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+  // Determine if this is a new client based on formState (after loading)
+  const isNewClientMode = formState?.source === 'new_client';
+
   // Load form data
   useEffect(() => {
     const loadForm = async () => {
-      if (!token || isNewClient) {
-        // For new client, we need to create a form first or just show empty form
+      if (!token) {
+        toast.error('Chybí token formuláře');
         setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('pre-diagnostic-form', {
-          method: 'GET',
-          body: null,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        // Alternative: direct fetch since invoke might not support path params well
+        console.log('Loading form with token:', token);
+        
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pre-diagnostic-form/${token}`,
           {
@@ -114,20 +107,21 @@ export default function PreDiagnosticFormPage() {
           }
         );
 
+        const result = await response.json();
+        console.log('Form load response:', result);
+
         if (!response.ok) {
-          const errorData = await response.json();
-          if (errorData.expired) {
+          if (result.expired) {
             setIsExpired(true);
-          } else if (errorData.completed) {
+          } else if (result.completed) {
             setIsCompleted(true);
           } else {
-            toast.error('Formulář nenalezen');
+            toast.error(result.error || 'Formulář nenalezen');
           }
           setLoading(false);
           return;
         }
 
-        const result = await response.json();
         setFormState(result.form);
         setFormData(result.answers || {});
         
@@ -151,7 +145,7 @@ export default function PreDiagnosticFormPage() {
     };
 
     loadForm();
-  }, [token, isNewClient]);
+  }, [token]);
 
   // Autosave handler
   const handleAutosave = useCallback(async (data: PreDiagnosticFormData) => {
@@ -202,7 +196,7 @@ export default function PreDiagnosticFormPage() {
             action: 'submit',
             formId: formState.id,
             answers: data,
-            newClientData: isNewClient || formState.source === 'new_client' ? {
+            newClientData: isNewClientMode ? {
               name: data.name,
               email: data.email,
               phone: data.phone,
@@ -258,7 +252,7 @@ export default function PreDiagnosticFormPage() {
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       lastSaved={lastSaved}
-      isNewClient={isNewClient || formState?.source === 'new_client'}
+      isNewClient={isNewClientMode}
       clientName={formState?.client?.name}
     />
   );
