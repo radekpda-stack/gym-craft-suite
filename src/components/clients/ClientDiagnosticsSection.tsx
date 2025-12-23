@@ -52,10 +52,13 @@ function getSeverityFromFindings(findings: string): {
 }
 
 export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnosticsSectionProps) {
-  const { data: diagnosticsWithAssessments = [], isLoading } = useDiagnosticAssessments(clientId);
+  const { data: diagnosticsWithAssessments = [], isLoading, error } = useDiagnosticAssessments(clientId);
   const { data: clients = [] } = useClients();
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticWithAssessment | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Debug log
+  console.log('[ClientDiagnosticsSection] clientId:', clientId, 'diagnostics:', diagnosticsWithAssessments.length, 'error:', error);
 
   // Stats
   const totalDiagnostics = diagnosticsWithAssessments.length;
