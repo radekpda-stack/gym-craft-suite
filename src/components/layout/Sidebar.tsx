@@ -148,7 +148,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
     {
       label: 'Systém',
       items: [
-        { id: 'reminders', to: '/reminders', icon: Bell, label: 'Připomínky' },
+        // Reminders removed
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
         // Admin-only link for app usage stats
         ...(isAdminUser ? [{ id: 'app-usage', to: '/app-usage', icon: BarChart3, label: 'Statistiky' }] : []),

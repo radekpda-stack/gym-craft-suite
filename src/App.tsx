@@ -30,7 +30,7 @@ import FeedbackOverview from "./pages/FeedbackOverview";
 import PublicNutritionLog from "./pages/PublicNutritionLog";
 import Sales from "./pages/Sales";
 import PRHistory from "./pages/PRHistory";
-import Reminders from "./pages/Reminders";
+// Reminders feature removed
 import AppUsageStats from "./pages/AppUsageStats";
 import Statistics from "./pages/Statistics";
 import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
@@ -89,7 +89,7 @@ const App = () => (
                           <Route path="/feedback-overview" element={<FeedbackOverview />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/pr-history" element={<PRHistory />} />
-                          <Route path="/reminders" element={<Reminders />} />
+                          {/* Reminders route removed */}
                           <Route path="/app-usage" element={<AppUsageStats />} />
                           <Route path="/statistics" element={<Statistics />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}

@@ -80,7 +80,7 @@ const sections: NavSection[] = [
   {
     label: 'Systém',
     items: [
-      { to: '/reminders', icon: Bell, label: 'Připomínky' },
+      // Reminders removed
       { to: '/settings', icon: Settings, label: 'Nastavení' },
     ],
   },

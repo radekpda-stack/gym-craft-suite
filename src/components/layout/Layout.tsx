@@ -7,7 +7,7 @@ import { PageTransition } from './PageTransition';
 import { QuickActionButton } from './QuickActionButton';
 import { CommandPalette, useCommandPalette } from '@/components/search/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
-import { ReminderNotifier } from '@/components/reminders/ReminderNotifier';
+// ReminderNotifier removed
 import { useClientAnniversaryNotifier } from '@/hooks/useClientAnniversaries';
 import { useAppShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
@@ -54,8 +54,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Reminder Notifier - checks for due reminders */}
-      <ReminderNotifier />
+      {/* Reminder Notifier removed */}
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
