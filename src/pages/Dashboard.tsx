@@ -4,7 +4,7 @@ import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { HeroAttentionCard } from '@/components/dashboard/HeroAttentionCard';
 import { TodayTimelineCard } from '@/components/dashboard/TodayTimelineCard';
-import { MetricsInstruments } from '@/components/dashboard/MetricsInstruments';
+
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 
 function DashboardContent() {
@@ -28,10 +28,6 @@ function DashboardContent() {
           <TodayTimelineCard data={data} isLoading={isLoading} />
         </div>
         
-        {/* Metrics row - WHOOP style instruments */}
-        <div className="mt-4">
-          <MetricsInstruments data={data} isLoading={isLoading} />
-        </div>
       </div>
       
       {/* Fixed bottom actions */}
