@@ -150,7 +150,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       label: 'Systém',
       items: [
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
-        ...(isAdminUser ? [{ id: 'app-usage', to: '/app-usage', icon: Activity, label: 'App Usage' }] : []),
       ],
     },
   ];
