@@ -16,6 +16,8 @@ import { UndoToast } from "@/components/ui/UndoToast";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import DemoPage from "./pages/DemoPage";
+import WaitingForApproval from "./pages/WaitingForApproval";
+import UserApprovals from "./pages/admin/UserApprovals";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import Trainings from "./pages/Trainings";
@@ -65,6 +67,7 @@ const App = () => (
             <DemoProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/waiting-for-approval" element={<WaitingForApproval />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
               <Route path="/pre-diagnostic/:token" element={<PreDiagnosticFormPage />} />
@@ -98,6 +101,7 @@ const App = () => (
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
+                          <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Layout>

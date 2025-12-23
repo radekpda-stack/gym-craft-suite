@@ -3186,24 +3186,51 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
+          admin_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          client_limit: number
           created_at: string | null
           display_name: string | null
           email: string
+          first_login_at: string | null
           id: string
+          last_login_at: string | null
+          subscription_type: string
+          trial_until: string | null
           updated_at: string | null
         }
         Insert: {
+          account_status?: string
+          admin_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          client_limit?: number
           created_at?: string | null
           display_name?: string | null
           email: string
+          first_login_at?: string | null
           id: string
+          last_login_at?: string | null
+          subscription_type?: string
+          trial_until?: string | null
           updated_at?: string | null
         }
         Update: {
+          account_status?: string
+          admin_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          client_limit?: number
           created_at?: string | null
           display_name?: string | null
           email?: string
+          first_login_at?: string | null
           id?: string
+          last_login_at?: string | null
+          subscription_type?: string
+          trial_until?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -4081,6 +4108,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_approval_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          note: string | null
+          performed_by: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          performed_by: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          performed_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_name: string | null
+          id: string
+          last_seen: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_name?: string | null
+          id?: string
+          last_seen?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_name?: string | null
+          id?: string
+          last_seen?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
