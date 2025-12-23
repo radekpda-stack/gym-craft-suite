@@ -34,6 +34,8 @@ import PRHistory from "./pages/PRHistory";
 import AppUsageStats from "./pages/AppUsageStats";
 import Statistics from "./pages/Statistics";
 import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
+import Exercises from "./pages/Exercises";
+import ExerciseDetail from "./pages/ExerciseDetail";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NotFound from "./pages/NotFound";
@@ -92,6 +94,8 @@ const App = () => (
                           {/* Reminders route removed */}
                           <Route path="/app-usage" element={<AppUsageStats />} />
                           <Route path="/statistics" element={<Statistics />} />
+                          <Route path="/exercises" element={<Exercises />} />
+                          <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="*" element={<NotFound />} />
