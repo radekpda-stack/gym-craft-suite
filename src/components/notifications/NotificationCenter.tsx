@@ -36,7 +36,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   feedback_received: MessageSquare,
   feedback_red_flag: AlertTriangle,
   feedback_trend_alert: TrendingDown,
-  reminder: Clock,
+  // reminder removed
   client_anniversary: Gift,
   // Smart notifications
   pr_achieved: Trophy,
@@ -57,7 +57,7 @@ const notificationColors: Record<string, string> = {
   feedback_received: "text-green-500",
   feedback_red_flag: "text-destructive",
   feedback_trend_alert: "text-orange-500",
-  reminder: "text-cyan-500",
+  // reminder removed
   client_anniversary: "text-amber-500",
   // Smart notifications
   pr_achieved: "text-warning",
