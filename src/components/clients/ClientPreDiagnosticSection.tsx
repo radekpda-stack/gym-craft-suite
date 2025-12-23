@@ -20,6 +20,7 @@ import {
   Briefcase,
   Heart,
   Pencil,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,8 +29,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { useClientPreDiagnostic, usePreDiagnosticAnswers, useCreateClientPreDiagnostic } from '@/hooks/usePreDiagnosticForms';
+import { 
+  useClientPreDiagnostic, 
+  usePreDiagnosticAnswers, 
+  useCreateClientPreDiagnostic,
+  PreDiagnosticAnswer,
+} from '@/hooks/usePreDiagnosticForms';
 import { EditPreDiagnosticAnswerDialog } from '@/components/pre-diagnostic/EditPreDiagnosticAnswerDialog';
+import { PreDiagnosticTrainerSummary } from '@/components/pre-diagnostic/PreDiagnosticTrainerSummary';
+import { exportPreDiagnosticPdf } from '@/components/pre-diagnostic/PreDiagnosticPdfExport';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -80,14 +88,16 @@ function formatValue(value: any): string {
   return String(value);
 }
 
-// Reusable answer card component with edit button
+// Reusable answer card component with edit button and source indicator
 function AnswerCard({
   answer,
   onEdit,
 }: {
-  answer: { id: string; field_key: string; value: any };
-  onEdit: (answer: { id: string; field_key: string; value: any }) => void;
+  answer: PreDiagnosticAnswer;
+  onEdit: (answer: PreDiagnosticAnswer) => void;
 }) {
+  const isEdited = answer.edited_by_trainer === true;
+  
   return (
     <div className="bg-muted/50 rounded-lg p-3 group relative">
       <button
@@ -97,25 +107,62 @@ function AnswerCard({
       >
         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
-      <p className="text-xs text-muted-foreground pr-6">
-        {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-      </p>
-      <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
+      <div className="flex items-center gap-2 pr-6">
+        <p className="text-xs text-muted-foreground">
+          {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
+        </p>
+        {isEdited ? (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-warning/10 text-warning border-warning/30">
+            <Pencil className="w-2.5 h-2.5 mr-0.5" />
+            Upraveno
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/30">
+            <User className="w-2.5 h-2.5 mr-0.5" />
+            Od klienta
+          </Badge>
+        )}
+      </div>
+      <p className="font-medium text-foreground mt-1">{formatValue(answer.value)}</p>
+      {isEdited && answer.original_value !== undefined && (
+        <p className="text-xs text-muted-foreground mt-1 italic">
+          Původně: {formatValue(answer.original_value)}
+        </p>
+      )}
     </div>
   );
 }
 
 export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDiagnosticSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [editingAnswer, setEditingAnswer] = useState<{ id: string; field_key: string; value: any } | null>(null);
+  const [editingAnswer, setEditingAnswer] = useState<PreDiagnosticAnswer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { data: preDiagnostic, isLoading: loadingForm } = useClientPreDiagnostic(clientId);
   const { data: answers = [], isLoading: loadingAnswers } = usePreDiagnosticAnswers(preDiagnostic?.id);
   const createPreDiagnostic = useCreateClientPreDiagnostic();
 
-  const handleEditAnswer = (answer: { id: string; field_key: string; value: any }) => {
+  const handleEditAnswer = (answer: PreDiagnosticAnswer) => {
     setEditingAnswer(answer);
     setEditDialogOpen(true);
+  };
+
+  const handleExportPdf = async () => {
+    if (!preDiagnostic) return;
+    
+    setIsExporting(true);
+    try {
+      await exportPreDiagnosticPdf({
+        form: preDiagnostic,
+        clientName,
+      });
+      toast.success('PDF bylo úspěšně vygenerováno');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Nepodařilo se vygenerovat PDF');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const isLoading = loadingForm || loadingAnswers;
@@ -154,6 +201,9 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
   const hasCompletedForm = preDiagnostic?.status === 'completed';
   const hasPendingForm = preDiagnostic && preDiagnostic.status !== 'completed';
 
+  // Count edited answers
+  const editedCount = answers.filter(a => a.edited_by_trainer === true).length;
+
   return (
     <div className="glass rounded-2xl overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -177,6 +227,12 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
               {!preDiagnostic && (
                 <Badge variant="outline" className="text-muted-foreground">
                   Nevyplněno
+                </Badge>
+              )}
+              {editedCount > 0 && (
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                  <Pencil className="w-3 h-3 mr-1" />
+                  {editedCount} upraveno
                 </Badge>
               )}
             </div>
@@ -330,6 +386,14 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </div>
                   </div>
                 )}
+
+                {/* Trainer Summary Section */}
+                <PreDiagnosticTrainerSummary
+                  form={preDiagnostic}
+                  clientName={clientName}
+                  onExportPdf={handleExportPdf}
+                  isExporting={isExporting}
+                />
               </div>
             )}
 

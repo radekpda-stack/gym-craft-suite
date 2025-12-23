@@ -3001,26 +3001,70 @@ export type Database = {
           },
         ]
       }
+      pre_diagnostic_answer_history: {
+        Row: {
+          answer_id: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_value: Json
+          previous_value: Json
+        }
+        Insert: {
+          answer_id: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value: Json
+          previous_value: Json
+        }
+        Update: {
+          answer_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value?: Json
+          previous_value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_diagnostic_answer_history_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "pre_diagnostic_answers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pre_diagnostic_answers: {
         Row: {
           created_at: string
+          edited_at: string | null
+          edited_by_trainer: boolean | null
           field_key: string
           form_id: string
           id: string
+          original_value: Json | null
           value: Json
         }
         Insert: {
           created_at?: string
+          edited_at?: string | null
+          edited_by_trainer?: boolean | null
           field_key: string
           form_id: string
           id?: string
+          original_value?: Json | null
           value: Json
         }
         Update: {
           created_at?: string
+          edited_at?: string | null
+          edited_by_trainer?: boolean | null
           field_key?: string
           form_id?: string
           id?: string
+          original_value?: Json | null
           value?: Json
         }
         Relationships: [
@@ -3035,6 +3079,7 @@ export type Database = {
       }
       pre_diagnostic_forms: {
         Row: {
+          approved_at: string | null
           client_id: string | null
           completed_at: string | null
           created_at: string
@@ -3043,11 +3088,16 @@ export type Database = {
           locked: boolean
           source: string
           status: string
+          summary_approved: boolean | null
           token: string
+          trainer_recommendations: string | null
+          trainer_restrictions: string | null
+          trainer_summary: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -3056,11 +3106,16 @@ export type Database = {
           locked?: boolean
           source?: string
           status?: string
+          summary_approved?: boolean | null
           token?: string
+          trainer_recommendations?: string | null
+          trainer_restrictions?: string | null
+          trainer_summary?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -3069,7 +3124,11 @@ export type Database = {
           locked?: boolean
           source?: string
           status?: string
+          summary_approved?: boolean | null
           token?: string
+          trainer_recommendations?: string | null
+          trainer_restrictions?: string | null
+          trainer_summary?: string | null
           updated_at?: string
           user_id?: string
         }

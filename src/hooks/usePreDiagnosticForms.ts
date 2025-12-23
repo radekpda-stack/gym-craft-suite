@@ -15,6 +15,21 @@ export interface PreDiagnosticForm {
   completed_at: string | null;
   client_name?: string | null;
   client_email?: string | null;
+  trainer_summary?: string | null;
+  trainer_recommendations?: string | null;
+  trainer_restrictions?: string | null;
+  summary_approved?: boolean;
+  approved_at?: string | null;
+}
+
+export interface PreDiagnosticAnswer {
+  id: string;
+  form_id: string;
+  field_key: string;
+  value: any;
+  original_value?: any;
+  edited_by_trainer?: boolean;
+  edited_at?: string | null;
 }
 
 // Fetch all pre-diagnostic forms for the current user
@@ -211,21 +226,46 @@ export function usePreDiagnosticAnswers(formId: string | undefined) {
         .eq('form_id', formId);
 
       if (error) throw error;
-      return data;
+      return data as PreDiagnosticAnswer[];
     },
     enabled: !!formId,
   });
 }
 
-// Update a pre-diagnostic answer
+// Update a pre-diagnostic answer with history tracking
 export function useUpdatePreDiagnosticAnswer() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ answerId, value }: { answerId: string; value: any }) => {
+      // First get the current answer to save history
+      const { data: currentAnswer, error: fetchError } = await supabase
+        .from('pre_diagnostic_answers')
+        .select('*')
+        .eq('id', answerId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Save to history
+      await supabase
+        .from('pre_diagnostic_answer_history')
+        .insert({
+          answer_id: answerId,
+          previous_value: currentAnswer.value,
+          new_value: value,
+          changed_by: 'trainer',
+        });
+
+      // Update the answer with tracking info
       const { data, error } = await supabase
         .from('pre_diagnostic_answers')
-        .update({ value })
+        .update({ 
+          value,
+          original_value: currentAnswer.original_value || currentAnswer.value,
+          edited_by_trainer: true,
+          edited_at: new Date().toISOString(),
+        })
         .eq('id', answerId)
         .select()
         .single();
@@ -240,6 +280,77 @@ export function useUpdatePreDiagnosticAnswer() {
     onError: (error) => {
       console.error('Error updating pre-diagnostic answer:', error);
       toast.error('Nepodařilo se aktualizovat odpověď');
+    },
+  });
+}
+
+// Update trainer summary
+export function useUpdateTrainerSummary() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      formId, 
+      summary, 
+      recommendations, 
+      restrictions 
+    }: { 
+      formId: string; 
+      summary?: string; 
+      recommendations?: string; 
+      restrictions?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('pre_diagnostic_forms')
+        .update({ 
+          trainer_summary: summary,
+          trainer_recommendations: recommendations,
+          trainer_restrictions: restrictions,
+        })
+        .eq('id', formId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as PreDiagnosticForm;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pre-diagnostic-forms'] });
+      toast.success('Souhrn byl uložen');
+    },
+    onError: (error) => {
+      console.error('Error updating trainer summary:', error);
+      toast.error('Nepodařilo se uložit souhrn');
+    },
+  });
+}
+
+// Approve summary for client
+export function useApproveSummary() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (formId: string) => {
+      const { data, error } = await supabase
+        .from('pre_diagnostic_forms')
+        .update({ 
+          summary_approved: true,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', formId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as PreDiagnosticForm;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pre-diagnostic-forms'] });
+      toast.success('Souhrn byl schválen');
+    },
+    onError: (error) => {
+      console.error('Error approving summary:', error);
+      toast.error('Nepodařilo se schválit souhrn');
     },
   });
 }
