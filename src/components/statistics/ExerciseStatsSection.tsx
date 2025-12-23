@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
+import { useGenderStats } from '@/hooks/useGenderStats';
 import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
 import { TopExercisesCard } from './TopExercisesCard';
 import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
@@ -7,9 +9,17 @@ import { RecordWeightsCard } from './RecordWeightsCard';
 import { StrengthProgressCard } from './StrengthProgressCard';
 import { Dumbbell, Trophy, Zap, Target, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ExerciseCountModal } from './modals/ExerciseCountModal';
+import { PRsDetailModal } from './modals/PRsDetailModal';
+import { UniqueExercisesModal } from './modals/UniqueExercisesModal';
+import { MaxWeightModal } from './modals/MaxWeightModal';
+
+type ExerciseModal = 'count' | 'prs' | 'unique' | 'maxweight' | null;
 
 export function ExerciseStatsSection() {
   const { data: stats, isLoading } = useAnnualStats('year');
+  const { data: genderStats } = useGenderStats();
+  const [activeModal, setActiveModal] = useState<ExerciseModal>(null);
 
   if (isLoading) {
     return (
@@ -41,6 +51,8 @@ export function ExerciseStatsSection() {
           subtitle="tento rok"
           icon={<Dumbbell className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="warning"
+          onClick={() => setActiveModal('count')}
+          clickable
         />
         <KPICard
           title="Osobní rekordy"
@@ -48,6 +60,8 @@ export function ExerciseStatsSection() {
           subtitle={`${prRate}% úspěšnost`}
           icon={<Trophy className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="success"
+          onClick={() => setActiveModal('prs')}
+          clickable
         />
         <KPICard
           title="Unikátních cviků"
@@ -55,6 +69,8 @@ export function ExerciseStatsSection() {
           subtitle="různých cviků"
           icon={<Target className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="primary"
+          onClick={() => setActiveModal('unique')}
+          clickable
         />
         <KPICard
           title="Max váha"
@@ -62,6 +78,8 @@ export function ExerciseStatsSection() {
           subtitle={stats?.maxWeightLifted?.exercise || 'žádný záznam'}
           icon={<Zap className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="destructive"
+          onClick={() => setActiveModal('maxweight')}
+          clickable
         />
       </HeroKPIGrid>
 
@@ -77,6 +95,29 @@ export function ExerciseStatsSection() {
 
       {/* Strength Progress */}
       <StrengthProgressCard />
+
+      {/* Modals */}
+      <ExerciseCountModal 
+        open={activeModal === 'count'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <PRsDetailModal 
+        open={activeModal === 'prs'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+        genderStats={genderStats?.prsByGender}
+      />
+      <UniqueExercisesModal 
+        open={activeModal === 'unique'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <MaxWeightModal 
+        open={activeModal === 'maxweight'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
     </div>
   );
 }

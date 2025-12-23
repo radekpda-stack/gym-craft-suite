@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
@@ -15,10 +16,17 @@ import {
   Loader2 
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TotalIncomeModal } from './modals/TotalIncomeModal';
+import { MonthlyAverageModal } from './modals/MonthlyAverageModal';
+import { TrainingIncomeModal } from './modals/TrainingIncomeModal';
+import { ProductIncomeModal } from './modals/ProductIncomeModal';
+
+type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | null;
 
 export function FinanceStatsSection() {
   const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
+  const [activeModal, setActiveModal] = useState<FinanceModal>(null);
 
   const isLoading = statsLoading || analyticsLoading;
 
@@ -49,6 +57,8 @@ export function FinanceStatsSection() {
           trend={analytics?.vsLastMonth.revenue}
           trendLabel="vs minulý měsíc"
           variant="success"
+          onClick={() => setActiveModal('income')}
+          clickable
         />
         <KPICard
           title="Měsíční průměr"
@@ -56,6 +66,8 @@ export function FinanceStatsSection() {
           subtitle="průměr za rok"
           icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="primary"
+          onClick={() => setActiveModal('monthly')}
+          clickable
         />
         <KPICard
           title="Z tréninků"
@@ -63,6 +75,8 @@ export function FinanceStatsSection() {
           subtitle={`${stats?.completedTrainings || 0} tréninků`}
           icon={<Dumbbell className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="default"
+          onClick={() => setActiveModal('training')}
+          clickable
         />
         <KPICard
           title="Z produktů"
@@ -70,6 +84,8 @@ export function FinanceStatsSection() {
           subtitle={`${stats?.topProducts?.length || 0} produktů`}
           icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="warning"
+          onClick={() => setActiveModal('products')}
+          clickable
         />
       </HeroKPIGrid>
 
@@ -85,6 +101,28 @@ export function FinanceStatsSection() {
 
       {/* Year Comparison */}
       <YearComparisonCard />
+
+      {/* Modals */}
+      <TotalIncomeModal 
+        open={activeModal === 'income'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <MonthlyAverageModal 
+        open={activeModal === 'monthly'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <TrainingIncomeModal 
+        open={activeModal === 'training'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <ProductIncomeModal 
+        open={activeModal === 'products'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
     </div>
   );
 }
