@@ -176,31 +176,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
             {/* Navigation */}
             <nav className="p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-180px)]">
-              {/* Quick Credit Button */}
-              <motion.button
-                onClick={() => setQuickCreditOpen(true)}
-                className="w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors text-left bg-primary/10 hover:bg-primary/15"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-primary/20">
-                    <Wallet className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-sm font-semibold text-primary">Rychlý kredit</span>
-                </div>
-                <motion.div
-                  animate={{ x: [0, 3, 0] }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                >
-                  <ChevronRight className="w-4 h-4 text-primary/60" />
-                </motion.div>
-              </motion.button>
-
-              <Separator className="bg-border/30" />
-
               {sections.map((section, sectionIndex) => (
                 <motion.div 
                   key={sectionIndex} 
