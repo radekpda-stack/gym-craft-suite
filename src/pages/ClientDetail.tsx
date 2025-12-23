@@ -33,6 +33,7 @@ import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
 import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { ClientFinanceQuickCard } from '@/components/clients/ClientFinanceQuickCard';
 import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
+import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
@@ -216,7 +217,10 @@ export default function ClientDetail() {
         onSaveNote={handleAddNote}
       />
 
-      {/* 5. History Block - Main content */}
+      {/* 5. Diagnostics Section */}
+      <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
+
+      {/* 6. History Block - Main content */}
       <ClientHistoryBlock clientId={client.id} notes={client.notes} />
 
       {/* 6. Statistics Section - collapsible on mobile */}
