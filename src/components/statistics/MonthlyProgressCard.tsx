@@ -220,6 +220,8 @@ export function MonthlyProgressCard() {
       isLoading={isLoading}
       expandedContent={expandedContent}
       className="col-span-2"
+      infoDescription="Graf zobrazuje vývoj počtu tréninků a příjmů za posledních 12 měsíců."
+      infoCalculation="Počítají se pouze dokončené tréninky. Příjmy jsou součtem všech kladných transakcí (platby, nabití kreditu) v daném měsíci."
     >
       <div className="h-32">
         <ResponsiveContainer width="100%" height="100%">

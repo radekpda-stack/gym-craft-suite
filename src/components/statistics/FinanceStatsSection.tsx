@@ -74,6 +74,8 @@ export function FinanceStatsSection() {
           variant="success"
           onClick={() => setActiveModal('income')}
           clickable
+          infoDescription="Celkové příjmy od začátku roku. Zahrnuje tréninky i prodeje produktů."
+          infoCalculation="Součet všech kladných transakcí (platby, nabití kreditu) za aktuální kalendářní rok."
         />
         <KPICard
           title="Průměr (dokončené měsíce)"
@@ -83,6 +85,8 @@ export function FinanceStatsSection() {
           variant="primary"
           onClick={() => setActiveModal('monthly')}
           clickable
+          infoDescription="Průměrný měsíční příjem počítaný pouze z dokončených měsíců. Nezahrnuje aktuální nedokončený měsíc."
+          infoCalculation="(Celkový příjem za dokončené měsíce) / (počet dokončených měsíců v roce)"
         />
         <KPICard
           title="Z tréninků"
@@ -92,6 +96,8 @@ export function FinanceStatsSection() {
           variant="default"
           onClick={() => setActiveModal('training')}
           clickable
+          infoDescription="Příjmy pouze z tréninků, bez produktů."
+          infoCalculation="Součet odečtů kreditu za dokončené tréninky × cena tréninku."
         />
         {hasPendingPayments ? (
           <KPICard
@@ -102,6 +108,8 @@ export function FinanceStatsSection() {
             variant="destructive"
             onClick={() => setActiveModal('pending')}
             clickable
+            infoDescription="Klienti se záporným kreditním zůstatkem - dlužné částky za tréninky."
+            infoCalculation="Součet záporných zůstatků klientů = částky k zaplacení."
           />
         ) : (
           <KPICard
@@ -112,6 +120,8 @@ export function FinanceStatsSection() {
             variant="warning"
             onClick={() => setActiveModal('products')}
             clickable
+            infoDescription="Příjmy z prodeje produktů (doplňky stravy, vybavení apod.)."
+            infoCalculation="Součet všech transakcí spojených s prodejem produktů."
           />
         )}
       </HeroKPIGrid>

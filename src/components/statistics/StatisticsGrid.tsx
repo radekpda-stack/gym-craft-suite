@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Maximize2 } from 'lucide-react';
+import { StatInfoTooltip } from './StatInfoTooltip';
 
 interface StatisticsCardProps {
   title: string;
@@ -13,6 +14,8 @@ interface StatisticsCardProps {
   expandedContent?: React.ReactNode;
   isLoading?: boolean;
   className?: string;
+  infoDescription?: string;
+  infoCalculation?: string;
 }
 
 export function StatisticsCard({ 
@@ -21,7 +24,9 @@ export function StatisticsCard({
   children, 
   expandedContent,
   isLoading,
-  className 
+  className,
+  infoDescription,
+  infoCalculation,
 }: StatisticsCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -53,19 +58,28 @@ export function StatisticsCard({
               <span className="shrink-0">{icon}</span>
               <span className="truncate">{title}</span>
             </CardTitle>
-            {expandedContent && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsExpanded(true);
-                }}
-              >
-                <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </Button>
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              {infoDescription && (
+                <StatInfoTooltip 
+                  title={title} 
+                  description={infoDescription} 
+                  calculation={infoCalculation} 
+                />
+              )}
+              {expandedContent && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(true);
+                  }}
+                >
+                  <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0 px-4 sm:px-6 pb-4 sm:pb-6">

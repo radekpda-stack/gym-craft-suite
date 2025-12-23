@@ -187,6 +187,8 @@ export function ClientAcquisitionCard() {
       icon={<UserPlus className="h-4 w-4 text-success" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
+      infoDescription="Porovnání nově získaných klientů a těch, kteří přestali trénovat, za posledních 6 měsíců."
+      infoCalculation="Nový klient = vytvořen v daném měsíci. Odešlý klient = měl trénink v předchozích měsících, ale v daném měsíci a později již ne."
     >
       <div className="flex flex-col items-center justify-center py-4">
         <div className="flex items-center gap-4">
