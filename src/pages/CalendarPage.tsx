@@ -326,40 +326,38 @@ export default function CalendarPage() {
             sharedSessions={sharedTrainings}
             onDaySelect={(date) => {
               setCurrentDate(date);
-              setViewMode('agenda');
+              // Zachováváme viewMode na 'week' - neměníme na 'agenda'
             }} 
           />
         </div>
       )}
 
-      {/* Date header for agenda view */}
-      {viewMode === 'agenda' && (
-        <div className="px-4 py-3 border-b border-border/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold text-foreground capitalize">
-                {format(currentDate, 'EEEE', { locale: cs })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
-              </p>
-            </div>
-            {/* Denní souhrn */}
-            {hasAnyEvents && (
-              <div className="text-right text-sm">
-                <p className="text-foreground font-medium">{dayEvents.filter(e => e.status !== 'canceled').length} tréninků</p>
-                {(daySharedEvents.length > 0 || dayExternalEvents.length > 0) && (
-                  <p className="text-muted-foreground">
-                    {daySharedEvents.length > 0 && `+${daySharedEvents.length} obsazeno`}
-                    {daySharedEvents.length > 0 && dayExternalEvents.length > 0 && ', '}
-                    {dayExternalEvents.length > 0 && `${dayExternalEvents.length} ext.`}
-                  </p>
-                )}
-              </div>
-            )}
+      {/* Date header - zobrazuje se vždy */}
+      <div className="px-4 py-3 border-b border-border/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-lg font-semibold text-foreground capitalize">
+              {format(currentDate, 'EEEE', { locale: cs })}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
+            </p>
           </div>
+          {/* Denní souhrn */}
+          {hasAnyEvents && (
+            <div className="text-right text-sm">
+              <p className="text-foreground font-medium">{dayEvents.filter(e => e.status !== 'canceled').length} tréninků</p>
+              {(daySharedEvents.length > 0 || dayExternalEvents.length > 0) && (
+                <p className="text-muted-foreground">
+                  {daySharedEvents.length > 0 && `+${daySharedEvents.length} obsazeno`}
+                  {daySharedEvents.length > 0 && dayExternalEvents.length > 0 && ', '}
+                  {dayExternalEvents.length > 0 && `${dayExternalEvents.length} ext.`}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Agenda List */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
