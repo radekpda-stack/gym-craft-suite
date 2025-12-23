@@ -9,7 +9,7 @@ import { ClientAcquisitionCard } from './ClientAcquisitionCard';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
 import { Users, UserPlus, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 export function ClientStatsSection() {
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
@@ -57,72 +57,44 @@ export function ClientStatsSection() {
 
       {/* Hero KPI Cards */}
       <HeroKPIGrid>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div>
-              <KPICard
-                title="Aktivní klienti"
-                value={activeClients30}
-                subtitle="posledních 30 dní"
-                icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />}
-                trend={analytics?.vsLastMonth.clients}
-                trendLabel="vs minulý měsíc"
-                variant="primary"
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Klienti s alespoň 1 tréninkem za posledních 30 dní</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div>
-              <KPICard
-                title="Noví klienti"
-                value={newClients}
-                subtitle="první trénink ≤30 dní"
-                icon={<UserPlus className="h-5 w-5 sm:h-6 sm:w-6" />}
-                variant="success"
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Klienti, kteří začali trénovat v posledních 30 dnech</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div>
-              <KPICard
-                title="Retence (60d)"
-                value={`${retentionRate}%`}
-                subtitle={`30d: ${analytics?.retentionRate30Days || 0}%`}
-                icon={<UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />}
-                variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>% klientů, kteří pokračují v tréninku</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div>
-              <KPICard
-                title="Odešlí klienti"
-                value={churnedClients}
-                subtitle={`prům. délka ${avgLifetime}m`}
-                icon={<AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6" />}
-                variant={churnedClients > 5 ? 'destructive' : 'default'}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Klienti bez tréninku 60+ dní</p>
-          </TooltipContent>
-        </Tooltip>
+        <KPICard
+          title="Aktivní klienti"
+          value={activeClients30}
+          subtitle="posledních 30 dní"
+          icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />}
+          trend={analytics?.vsLastMonth.clients}
+          trendLabel="vs minulý měsíc"
+          variant="primary"
+          infoDescription="Počet klientů s alespoň 1 dokončeným tréninkem za posledních 30 dní."
+          infoCalculation="Unikátní klienti, kteří mají záznam o dokončeném tréninku v období (dnes - 30 dní)."
+        />
+        <KPICard
+          title="Noví klienti"
+          value={newClients}
+          subtitle="první trénink ≤30 dní"
+          icon={<UserPlus className="h-5 w-5 sm:h-6 sm:w-6" />}
+          variant="success"
+          infoDescription="Klienti, kteří absolvovali svůj první trénink v posledních 30 dnech."
+          infoCalculation="Klienti, jejichž nejstarší trénink je v rozmezí 0-30 dní od dneška."
+        />
+        <KPICard
+          title="Retence (60d)"
+          value={`${retentionRate}%`}
+          subtitle={`30d: ${analytics?.retentionRate30Days || 0}%`}
+          icon={<UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />}
+          variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
+          infoDescription="Procento klientů, kteří pokračují v trénování. 60d = bez tréninku max 60 dní."
+          infoCalculation="(Aktivní klienti za 60 dní / Celkový počet nearchivovaných klientů) × 100%"
+        />
+        <KPICard
+          title="Odešlí klienti"
+          value={churnedClients}
+          subtitle={`prům. délka ${avgLifetime}m`}
+          icon={<AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6" />}
+          variant={churnedClients > 5 ? 'destructive' : 'default'}
+          infoDescription="Klienti bez tréninku déle než 60 dní. Můžou potřebovat kontaktování."
+          infoCalculation="Počet nearchivovaných klientů, jejichž poslední trénink je starší než 60 dní."
+        />
       </HeroKPIGrid>
 
       {/* Client Analytics */}

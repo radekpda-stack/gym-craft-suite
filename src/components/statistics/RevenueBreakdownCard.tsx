@@ -119,6 +119,8 @@ export function RevenueBreakdownCard() {
       icon={<Wallet className="h-4 w-4 text-primary" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
+      infoDescription="Rozdělení příjmů podle způsobu platby - hotovost, karta, kredit nebo ostatní."
+      infoCalculation="Součet všech kladných transakcí (platby) rozdělených podle zvoleného způsobu platby."
     >
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">

@@ -203,6 +203,8 @@ export function ClientRetentionCard() {
       icon={<UserCheck className="h-4 w-4 text-success" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
+      infoDescription="Sleduje aktivitu klientů na základě posledního tréninku. Aktivní = trénink do 14 dní, Varování = 14-30 dní, Neaktivní = 30+ dní."
+      infoCalculation="Míra retence = (aktivní klienti / celkový počet nearchivovaných klientů) × 100%"
     >
       <div className="space-y-4">
         <div className="text-center">

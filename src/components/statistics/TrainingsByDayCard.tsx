@@ -136,6 +136,8 @@ export function TrainingsByDayCard() {
       icon={<Calendar className="h-4 w-4 text-primary" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
+      infoDescription="Rozložení tréninků během týdne za poslední 3 měsíce. Pomáhá identifikovat nejsilnější a nejslabší dny."
+      infoCalculation="Počítají se všechny dokončené tréninky za posledních 90 dní, seskupené podle dne v týdnu."
     >
       <div className="h-36">
         <ResponsiveContainer width="100%" height="100%">

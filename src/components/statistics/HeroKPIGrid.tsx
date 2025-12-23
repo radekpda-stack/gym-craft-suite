@@ -1,6 +1,12 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ChevronRight, HelpCircle } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 interface KPICardProps {
   title: string;
@@ -13,6 +19,8 @@ interface KPICardProps {
   className?: string;
   onClick?: () => void;
   clickable?: boolean;
+  infoDescription?: string;
+  infoCalculation?: string;
 }
 
 export function KPICard({
@@ -26,6 +34,8 @@ export function KPICard({
   className,
   onClick,
   clickable = false,
+  infoDescription,
+  infoCalculation,
 }: KPICardProps) {
   const variantStyles = {
     default: 'from-secondary/80 to-secondary/40 border-border',
@@ -57,8 +67,41 @@ export function KPICard({
         className
       )}
     >
+      {/* Info tooltip */}
+      {infoDescription && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="w-72 text-sm" 
+            side="top" 
+            align="end"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h4 className="font-semibold">{title}</h4>
+              <p className="text-muted-foreground">{infoDescription}</p>
+              {infoCalculation && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground">Způsob výpočtu:</p>
+                  <p className="text-xs text-muted-foreground mt-1">{infoCalculation}</p>
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+      
       {/* Clickable indicator */}
-      {isClickable && (
+      {isClickable && !infoDescription && (
         <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity">
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </div>

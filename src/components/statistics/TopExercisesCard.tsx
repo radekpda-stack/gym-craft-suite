@@ -145,6 +145,8 @@ export function TopExercisesCard() {
       icon={<Dumbbell className="h-4 w-4 text-warning" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
+      infoDescription="Nejčastěji používané cviky za posledních 3 měsíce u všech klientů."
+      infoCalculation="Počet = kolikrát byl cvik zaznamenán. Objem = váha × opakování × série. PR = počet osobních rekordů."
     >
       <div className="space-y-2">
         {(data?.topByFrequency || []).slice(0, 5).map((ex, i) => (
