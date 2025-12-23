@@ -39,6 +39,7 @@ import { Switch } from "@/components/ui/switch";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
 import { TrainingTagsSelector } from "./TrainingTagsSelector";
+import { PreviousTrainingPreview } from "./PreviousTrainingPreview";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
@@ -213,6 +214,9 @@ export function TrainingForm({
             </FormItem>
           )}
         />
+
+        {/* Previous Training Preview - shows when client is selected */}
+        <PreviousTrainingPreview clientId={form.watch("client_id")} />
 
         <div className="grid grid-cols-3 gap-4">
           <FormField
