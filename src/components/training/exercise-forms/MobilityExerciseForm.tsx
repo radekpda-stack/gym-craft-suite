@@ -74,7 +74,6 @@ export function MobilityExerciseForm({
           <div className="flex gap-2 mt-1">
             <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
               <Activity className="w-3 h-3 mr-1" />
-              <Stretching className="w-3 h-3 mr-1" />
               MOBILITA
             </Badge>
             {exercise.is_unilateral && (
