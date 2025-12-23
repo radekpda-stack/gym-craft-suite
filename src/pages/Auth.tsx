@@ -322,14 +322,14 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background">
       {/* Left side - Branding (hidden on mobile, visible on lg+) */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 bg-gradient-to-br from-primary/30 via-background to-background p-12 flex-col justify-center items-center relative overflow-hidden">
-        {/* Sharp geometric accent */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-warning" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsl(24_100%_55%/0.25),_transparent_50%)]" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 bg-gradient-to-br from-primary/20 via-background to-background p-12 flex-col justify-center items-center relative overflow-hidden">
+        {/* Sharp geometric accent - Volt green */}
+        <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsl(68_100%_50%/0.15),_transparent_50%)]" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         
         <div className="relative z-10 max-w-lg text-center">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-xl bg-primary/20 border-2 border-primary/40 mb-8 shadow-lg">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-xl bg-primary/20 border-2 border-primary/40 mb-8 shadow-volt">
             <Dumbbell className="w-12 h-12 text-primary" />
           </div>
           <h1 className="text-4xl xl:text-5xl font-black text-foreground mb-4 tracking-tight">
@@ -343,7 +343,7 @@ export default function Auth() {
             {features.map((feature, index) => (
               <div 
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-xl bg-card border-2 border-border hover:border-primary/40 transition-all duration-150 shadow-lg hover:shadow-xl group"
+                className="flex items-center gap-4 p-4 rounded-xl bg-card border border-primary/20 hover:border-primary/50 transition-all duration-150 shadow-lg hover:shadow-volt group"
               >
                 <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30 group-hover:bg-primary/30 transition-colors">
                   <feature.icon className="w-7 h-7 text-primary" />
@@ -360,12 +360,12 @@ export default function Auth() {
 
       {/* Right side - Auth form */}
       <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-8 lg:px-12 xl:px-16 relative">
-        {/* Mobile top accent */}
-        <div className="lg:hidden absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-warning" />
+        {/* Mobile top accent - Volt green */}
+        <div className="lg:hidden absolute top-0 left-0 w-full h-1.5 bg-primary" />
         
         {/* Mobile header */}
         <div className="lg:hidden text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-xl bg-primary/20 border-2 border-primary/40 mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-xl bg-primary/20 border-2 border-primary/40 mb-4 shadow-volt">
             <Dumbbell className="w-10 h-10 text-primary" />
           </div>
           <h1 className="text-2xl font-black text-foreground">Just Move <span className="text-primary">Asistent</span></h1>
