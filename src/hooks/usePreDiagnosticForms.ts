@@ -49,7 +49,7 @@ export function useUnassignedPreDiagnostics() {
         .from('pre_diagnostic_forms')
         .select('*')
         .eq('user_id', user.id)
-        .eq('source', 'new')
+        .eq('source', 'new_client')
         .eq('status', 'completed')
         .is('client_id', null)
         .order('completed_at', { ascending: false });
@@ -107,7 +107,7 @@ export function useCreatePreDiagnosticInvite() {
         .insert({
           user_id: user.id,
           token,
-          source: 'new',
+          source: 'new_client',
           status: 'pending',
           expires_at: expiresAt.toISOString(),
         })
@@ -149,7 +149,7 @@ export function useCreateClientPreDiagnostic() {
           user_id: user.id,
           client_id: clientId,
           token,
-          source: 'existing',
+          source: 'existing_client',
           status: 'pending',
           expires_at: expiresAt.toISOString(),
         })
