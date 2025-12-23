@@ -31,7 +31,7 @@ import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStat
 import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
 import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
 import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
-import { ClientFinanceQuickCard } from '@/components/clients/ClientFinanceQuickCard';
+
 import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
 import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
 import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
@@ -181,17 +181,7 @@ export default function ClientDetail() {
         </>
       )}
 
-      {/* 1. Finance Card - Always visible, top priority */}
-      <ClientFinanceQuickCard
-        clientId={client.id}
-        creditBalance={creditBalance}
-        unpaidCount={unpaidCount}
-        isSharedBudget={isSharedBudget}
-        sharedBudgetName={sharedBudgetName}
-        budgetGroupId={sharedBudgetInfo?.groupId}
-      />
-
-      {/* 2. Quick Actions (Desktop only - mobile has FAB) */}
+      {/* Quick Actions (Desktop only - mobile has FAB) */}
       {!isMobile && (
         <ClientActionsBar
           client={client}
