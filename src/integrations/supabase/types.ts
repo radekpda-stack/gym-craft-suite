@@ -3001,6 +3001,88 @@ export type Database = {
           },
         ]
       }
+      pre_diagnostic_answers: {
+        Row: {
+          created_at: string
+          field_key: string
+          form_id: string
+          id: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          form_id: string
+          id?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          form_id?: string
+          id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_diagnostic_answers_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "pre_diagnostic_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_diagnostic_forms: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          locked: boolean
+          source: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked?: boolean
+          source?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked?: boolean
+          source?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_diagnostic_forms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
