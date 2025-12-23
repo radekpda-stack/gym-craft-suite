@@ -53,6 +53,8 @@ export interface AnnualStatsData {
   trainingIncome: number;
   productIncome: number;
   avgMonthlyIncome: number;
+  avgMonthlyIncomeCompleted: number; // Only completed months
+  pendingPayments: { count: number; amount: number };
   topProducts: Array<{ name: string; count: number; revenue: number }>;
   
   // Measurements & Diagnostics
@@ -373,6 +375,26 @@ export function useAnnualStats(
 
       const months = Math.max(1, totalDays / 30);
       const avgMonthlyIncome = totalIncome / months;
+      
+      // Average for completed months only (exclude current month)
+      const currentMonth = format(new Date(), 'yyyy-MM');
+      const completedMonthsIncome = Object.entries(monthIncome)
+        .filter(([month]) => month !== currentMonth)
+        .map(([, income]) => income);
+      const avgMonthlyIncomeCompleted = completedMonthsIncome.length > 0
+        ? completedMonthsIncome.reduce((a, b) => a + b, 0) / completedMonthsIncome.length
+        : avgMonthlyIncome;
+
+      // Pending payments - clients with negative balance or unpaid trainings
+      const clientBalances: Record<string, number> = {};
+      creditTransactions.forEach(t => {
+        clientBalances[t.client_id] = (clientBalances[t.client_id] || 0) + t.amount;
+      });
+      const pendingClients = Object.entries(clientBalances).filter(([, balance]) => balance < -50);
+      const pendingPayments = {
+        count: pendingClients.length,
+        amount: Math.abs(pendingClients.reduce((sum, [, balance]) => sum + balance, 0)),
+      };
 
       // Top products
       const productCounts: Record<string, { count: number; revenue: number }> = {};
@@ -453,6 +475,8 @@ export function useAnnualStats(
         trainingIncome,
         productIncome,
         avgMonthlyIncome: Math.round(avgMonthlyIncome),
+        avgMonthlyIncomeCompleted: Math.round(avgMonthlyIncomeCompleted),
+        pendingPayments,
         topProducts,
         
         totalMeasurements: measurements.length,

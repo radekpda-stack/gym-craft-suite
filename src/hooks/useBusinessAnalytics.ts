@@ -18,8 +18,11 @@ interface IncomePoint {
 interface BusinessAnalyticsData {
   // Current metrics
   activeClientsCount: number;
+  activeClients30Days: number; // New: 30-day active
+  newClientsCount: number; // New: first training ≤30 days ago
   churnRate: number;
   retentionRate: number;
+  retentionRate30Days: number; // New: 30-day retention
   averageClientLifetimeMonths: number;
   revenuePerClient: number;
   totalRevenue: number;
@@ -116,6 +119,8 @@ export function useBusinessAnalytics() {
       
       // Active clients (had training in last 60 days)
       const sixtyDaysAgo = subMonths(now, 2);
+      const thirtyDaysAgo = subMonths(now, 1);
+      
       const { data: recentTrainings } = await supabase
         .from('training_sessions')
         .select('client_id')
@@ -125,6 +130,22 @@ export function useBusinessAnalytics() {
 
       const activeClientIds = new Set((recentTrainings || []).map(t => t.client_id));
       const activeClientsCount = activeClientIds.size;
+
+      // 30-day active clients
+      const { data: recent30Trainings } = await supabase
+        .from('training_sessions')
+        .select('client_id')
+        .eq('user_id', user.id)
+        .gte('date', thirtyDaysAgo.toISOString())
+        .eq('status', 'completed');
+      const activeClients30Days = new Set((recent30Trainings || []).map(t => t.client_id)).size;
+
+      // New clients (first training ≤30 days ago)
+      const newClients = clients.filter(c => {
+        const created = new Date(c.created_at);
+        return created >= thirtyDaysAgo && !c.is_archived;
+      });
+      const newClientsCount = newClients.length;
 
       // Churned clients (had trainings before but not in last 60 days)
       const { data: olderTrainings } = await supabase
@@ -140,6 +161,12 @@ export function useBusinessAnalytics() {
       const totalClientsEver = new Set([...activeClientIds, ...olderClientIds]).size;
       const churnRate = totalClientsEver > 0 ? Math.round((churnedClients / totalClientsEver) * 100) : 0;
       const retentionRate = 100 - churnRate;
+      
+      // 30-day retention
+      const clients30DaysAgoIds = new Set((recent30Trainings || []).map(t => t.client_id));
+      const retentionRate30Days = clients30DaysAgoIds.size > 0 
+        ? Math.round((activeClients30Days / Math.max(activeClientsCount, 1)) * 100)
+        : retentionRate;
 
       // Average client lifetime
       const archivedClients = clients.filter(c => c.is_archived);
@@ -273,8 +300,11 @@ export function useBusinessAnalytics() {
 
       return {
         activeClientsCount,
+        activeClients30Days,
+        newClientsCount,
         churnRate,
         retentionRate,
+        retentionRate30Days,
         averageClientLifetimeMonths: avgLifetime,
         revenuePerClient,
         totalRevenue: thisMonthRevenue,
