@@ -78,7 +78,7 @@ import {
 const trainingDetailSchema = z.object({
   date: z.date(),
   duration: z.number().min(15).max(240),
-  participant_count: z.number().min(1).max(10),
+  participant_count: z.number().min(1).max(5),
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).nullable().optional(),
   status: z.enum(['scheduled', 'completed', 'canceled']),
@@ -408,7 +408,7 @@ export function TrainingDetailView({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        {[1, 2, 3, 4, 5].map((num) => (
                           <SelectItem key={num} value={num.toString()}>
                             {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
                           </SelectItem>
