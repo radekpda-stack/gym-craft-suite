@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
 import {
   Stethoscope,
   Plus,
@@ -18,6 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { JOINT_OPTIONS, MUSCLE_OPTIONS } from '@/hooks/useDiagnostics';
 import { useDiagnosticAssessments, DiagnosticWithAssessment } from '@/hooks/useDiagnosticAssessments';
 import { DiagnosticDetailSheet } from '@/components/diagnostics/DiagnosticDetailSheet';
+import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { useClients } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
 
 interface ClientDiagnosticsSectionProps {
@@ -52,7 +53,9 @@ function getSeverityFromFindings(findings: string): {
 
 export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnosticsSectionProps) {
   const { data: diagnosticsWithAssessments = [], isLoading } = useDiagnosticAssessments(clientId);
+  const { data: clients = [] } = useClients();
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticWithAssessment | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Stats
   const totalDiagnostics = diagnosticsWithAssessments.length;
@@ -89,12 +92,10 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
             variant="ghost"
             size="sm"
             className="gap-1 text-xs"
-            asChild
+            onClick={() => setIsCreateOpen(true)}
           >
-            <Link to="/diagnostics">
-              <Plus className="w-4 h-4" />
-              Nová
-            </Link>
+            <Plus className="w-4 h-4" />
+            Nová
           </Button>
         </div>
 
@@ -185,12 +186,10 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
               variant="outline"
               size="sm"
               className="mt-3 gap-2"
-              asChild
+              onClick={() => setIsCreateOpen(true)}
             >
-              <Link to="/diagnostics">
-                <Plus className="w-4 h-4" />
-                Přidat diagnostiku
-              </Link>
+              <Plus className="w-4 h-4" />
+              Přidat diagnostiku
             </Button>
           </div>
         )}
@@ -201,6 +200,14 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
         open={!!selectedDiagnostic}
         onOpenChange={(open) => !open && setSelectedDiagnostic(null)}
         diagnostic={selectedDiagnostic}
+      />
+
+      {/* Create Sheet */}
+      <CreateDiagnosticSheet
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        clients={clients}
+        defaultClientId={clientId}
       />
     </>
   );
