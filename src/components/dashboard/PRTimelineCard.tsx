@@ -84,37 +84,37 @@ export function PRTimelineCard() {
 
       {/* KPI Summary - 4 cards */}
       {data && (
-        <div className="grid grid-cols-4 gap-2">
-          <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/20">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-warning/10 border border-warning/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
-              <Trophy className="w-3 h-3 text-warning" />
-              <span className="text-[10px] text-muted-foreground">Celkem PR</span>
+              <Trophy className="w-3 h-3 text-warning shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">Celkem PR</span>
             </div>
-            <p className="text-lg font-bold text-foreground">{data.totalPRCount}</p>
+            <p className="text-base sm:text-lg font-bold text-foreground">{data.totalPRCount}</p>
           </div>
           
-          <div className="p-2.5 rounded-xl bg-success/10 border border-success/20">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-success/10 border border-success/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
-              <Zap className="w-3 h-3 text-success" />
-              <span className="text-[10px] text-muted-foreground">PR/týden</span>
+              <Zap className="w-3 h-3 text-success shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">PR/týden</span>
             </div>
-            <p className="text-lg font-bold text-foreground">{data.prVelocity}</p>
+            <p className="text-base sm:text-lg font-bold text-foreground">{data.prVelocity}</p>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
-              <GenderIcon gender="male" className="w-3 h-3" />
-              <span className="text-[10px] text-muted-foreground">Muži</span>
+              <GenderIcon gender="male" className="w-3 h-3 shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">Muži</span>
             </div>
-            <p className="text-lg font-bold text-foreground">{data.genderStats.male.count}</p>
+            <p className="text-base sm:text-lg font-bold text-foreground">{data.genderStats.male.count}</p>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
-              <GenderIcon gender="female" className="w-3 h-3" />
-              <span className="text-[10px] text-muted-foreground">Ženy</span>
+              <GenderIcon gender="female" className="w-3 h-3 shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">Ženy</span>
             </div>
-            <p className="text-lg font-bold text-foreground">{data.genderStats.female.count}</p>
+            <p className="text-base sm:text-lg font-bold text-foreground">{data.genderStats.female.count}</p>
           </div>
         </div>
       )}
@@ -149,7 +149,7 @@ export function PRTimelineCard() {
             </Select>
 
             <Select value={prType} onValueChange={(v) => setPRType(v as PRType)}>
-              <SelectTrigger className="h-8 text-xs w-28">
+              <SelectTrigger className="h-8 text-xs w-32 shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
