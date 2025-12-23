@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar, HelpCircle, AlertTriangle, ClipboardList } from 'lucide-react';
+import { PreDiagnosticInviteDialog } from '@/components/pre-diagnostic/PreDiagnosticInviteDialog';
+import { UnassignedPreDiagnosticList } from '@/components/pre-diagnostic/UnassignedPreDiagnosticList';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +110,7 @@ export default function Clients() {
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showGroupsSheet, setShowGroupsSheet] = useState(false);
   const [showLegendDialog, setShowLegendDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
   const { data: trainingCounts = {} } = useClientTrainingCounts();
@@ -293,6 +296,11 @@ export default function Clients() {
             <TooltipContent>Legenda karet</TooltipContent>
           </Tooltip>
           
+          <Button variant="outline" className="gap-2" onClick={() => setShowInviteDialog(true)}>
+            <ClipboardList className="w-4 h-4" />
+            <span className="hidden sm:inline">Pozvat klienta</span>
+          </Button>
+
           <Button variant="outline" className="gap-2" onClick={() => setShowGroupsSheet(true)}>
             <LinkIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Skupiny</span>
@@ -309,6 +317,15 @@ export default function Clients() {
           </Button>
         </div>
       </div>
+
+      {/* Pre-diagnostic invite dialog */}
+      <PreDiagnosticInviteDialog 
+        open={showInviteDialog} 
+        onOpenChange={setShowInviteDialog} 
+      />
+
+      {/* Unassigned pre-diagnostics */}
+      <UnassignedPreDiagnosticList clients={clients.filter(c => !c.is_archived)} />
 
       {/* Groups Sheet */}
       <Sheet open={showGroupsSheet} onOpenChange={setShowGroupsSheet}>
