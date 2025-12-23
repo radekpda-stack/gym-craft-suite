@@ -47,7 +47,7 @@ const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
   date: z.string().min(1, "Zadejte datum"),
   duration: z.number().min(15, "Minimálně 15 minut").max(300, "Maximálně 300 minut"),
-  participant_count: z.number().min(1, "Minimálně 1 účastník").max(10, "Maximálně 10 účastníků"),
+  participant_count: z.number().min(1, "Minimálně 1 účastník").max(5, "Maximálně 5 účastníků"),
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "in_progress", "completed", "canceled"]),
@@ -249,7 +249,7 @@ export function TrainingForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent className="bg-popover border-border">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    {[1, 2, 3, 4, 5].map((num) => (
                       <SelectItem key={num} value={num.toString()}>
                         {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
                       </SelectItem>
