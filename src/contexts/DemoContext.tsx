@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getDemoClient, getDemoTraining, getDemoDashboardStats, getDemoExercises, getDemoTags, resetDemoData, DemoClient, DemoTraining, DemoDashboardStats, DemoExercise, DemoTag } from '@/lib/demo-data';
+import { getDemoClient, getDemoTraining, getDemoDashboardStats, getDemoExercises, getDemoTags, resetDemoData, updateDemoClientData, updateDemoTrainingData, DemoClient, DemoTraining, DemoDashboardStats, DemoExercise, DemoTag } from '@/lib/demo-data';
 
 // Virtual demo user - never stored in database
 export const DEMO_USER = {
@@ -86,11 +86,13 @@ export function DemoProvider({ children }: DemoProviderProps) {
   // Reset demo data on page reload (handled by React state reset)
   
   const updateDemoClient = useCallback((updates: Partial<DemoClient>) => {
-    setDemoClient(prev => prev ? { ...prev, ...updates } : null);
+    const updated = updateDemoClientData(updates);
+    setDemoClient(updated);
   }, []);
   
   const updateDemoTraining = useCallback((updates: Partial<DemoTraining>) => {
-    setDemoTraining(prev => prev ? { ...prev, ...updates } : null);
+    const updated = updateDemoTrainingData(updates);
+    setDemoTraining(updated);
   }, []);
   
   const resetDemo = useCallback(() => {

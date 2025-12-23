@@ -15,6 +15,7 @@ import {
   BookOpen,
   Wrench,
   Users,
+  Play,
   Calendar,
   Download,
   Shield,
@@ -40,6 +41,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { canSeeDemoLink } from '@/contexts/DemoContext';
+import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
 
 interface SettingsSection {
   id: string;
@@ -238,6 +242,35 @@ export default function Settings() {
           description: language === 'cs' ? 'Anonymizovaný export využití aplikace pro AI analýzu' : 'Anonymized app usage export for AI analysis',
           icon: Shield,
           content: <AdminAnalyticsExport />,
+        }] : []),
+        // Demo mode link - only visible for owner (radek.pda@gmail.com)
+        ...(canSeeDemoLink(user?.email) ? [{
+          id: 'demo-mode',
+          title: language === 'cs' ? 'DEMO režim' : 'DEMO Mode',
+          description: language === 'cs' ? 'Interní demo režim pro testování a AI analýzu' : 'Internal demo mode for testing and AI analysis',
+          icon: Play,
+          content: (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {language === 'cs' 
+                  ? 'DEMO režim je veřejně přístupný přes URL, ale skrytý před běžnými uživateli. Slouží pro technickou a UX analýzu aplikace.'
+                  : 'DEMO mode is publicly accessible via URL but hidden from regular users. Used for technical and UX analysis.'}
+              </p>
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={() => window.open('/demo', '_blank')}
+              >
+                <ExternalLink className="w-4 h-4" />
+                {language === 'cs' ? 'Otevřít DEMO režim' : 'Open DEMO Mode'}
+              </Button>
+              <div className="mt-4 p-3 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground font-mono">
+                  URL: {window.location.origin}/demo
+                </p>
+              </div>
+            </div>
+          ),
         }] : []),
       ],
     },
