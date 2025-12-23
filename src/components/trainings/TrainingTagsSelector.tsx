@@ -279,7 +279,11 @@ export function TrainingTagsSelector({
                   <button
                     key={preset.name}
                     type="button"
-                    onClick={() => handleApplyPreset(preset)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleApplyPreset(preset);
+                    }}
                     className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors text-left"
                     style={{ borderColor: `${preset.color}40` }}
                   >
@@ -338,7 +342,11 @@ export function TrainingTagsSelector({
                             <button
                               key={tag.id}
                               type="button"
-                              onClick={() => handleToggleTag(tag.id)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleToggleTag(tag.id);
+                              }}
                               className={cn(
                                 "flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all",
                                 isSelected && "ring-2 ring-offset-1 ring-offset-background"
