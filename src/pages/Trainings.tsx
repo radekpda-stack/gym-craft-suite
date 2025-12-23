@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, XCircle } from 'lucide-react';
+import { Search, Plus, Dumbbell, XCircle, Wallet, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,14 +17,13 @@ import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags, useAllTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
-import { TrainingCard } from '@/components/trainings/TrainingCard';
+import { SwipeableTrainingCard } from '@/components/trainings/SwipeableTrainingCard';
 import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { SessionCard } from '@/components/ui/session-card';
-import { TrainingQuickMenu } from '@/components/trainings/TrainingQuickMenu';
+import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
@@ -43,6 +43,7 @@ const statusLabelsLong = {
 
 export default function Trainings() {
   usePageTracking('trainings');
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
@@ -51,6 +52,31 @@ export default function Trainings() {
 
   // Persistent page state
   const { timeFilter, statusFilter, activeTab, setTimeFilter, setStatusFilter, setActiveTab } = useTrainingsPageState();
+
+  // FAB Actions
+  const fabActions: FABAction[] = [
+    {
+      id: 'new-training',
+      icon: <Dumbbell className="h-5 w-5" />,
+      label: 'Nový trénink',
+      onClick: () => setIsCreateSheetOpen(true),
+      variant: 'primary',
+    },
+    {
+      id: 'quick-sale',
+      icon: <ShoppingBag className="h-5 w-5" />,
+      label: 'Rychlý prodej',
+      onClick: () => navigate('/sales?action=quick-sale'),
+      variant: 'default',
+    },
+    {
+      id: 'top-up-credit',
+      icon: <Wallet className="h-5 w-5" />,
+      label: 'Dobít kredit',
+      onClick: () => navigate('/clients?action=top-up'),
+      variant: 'success',
+    },
+  ];
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
@@ -414,7 +440,7 @@ export default function Trainings() {
                     className="animate-slide-up"
                     style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                   >
-                    <TrainingCard
+                    <SwipeableTrainingCard
                       session={session}
                       client={client}
                       tags={sessionTagsMap[session.id]}
@@ -474,7 +500,7 @@ export default function Trainings() {
                     className="animate-slide-up"
                     style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                   >
-                    <TrainingCard
+                    <SwipeableTrainingCard
                       session={session}
                       client={client}
                       tags={sessionTagsMap[session.id]}
@@ -520,6 +546,11 @@ export default function Trainings() {
         onConfirm={handleConfirmCancel}
         isLoading={cancelTraining.isPending}
       />
+
+      {/* Mobile FAB Menu */}
+      <div className="sm:hidden">
+        <FloatingActionButton actions={fabActions} />
+      </div>
     </div>
   );
 }

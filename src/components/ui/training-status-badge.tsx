@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils';
-import { Check, Clock, X, AlertTriangle, Wallet, Play } from 'lucide-react';
+import { Check, Clock, X, Wallet, Play } from 'lucide-react';
+import { 
+  getCombinedStatus, 
+  getPaymentStatusConfig, 
+  isPaid,
+  PAYMENT_STATUS_CONFIG,
+  PaymentStatusType 
+} from '@/lib/payment-status';
 
 interface TrainingStatusBadgeProps {
   status: 'scheduled' | 'in_progress' | 'completed' | 'canceled';
@@ -10,46 +17,15 @@ interface TrainingStatusBadgeProps {
 }
 
 /**
- * Training Status Badge with new visual interpretation:
- * - Scheduled (pending) → Grey dot
- * - Completed + Unpaid → Orange exclamation with payment method
- * - Completed + Paid → Green check
+ * Training Status Badge with unified visual interpretation:
+ * - Scheduled (pending) → Grey clock
+ * - In Progress → Primary play
+ * - Completed + Unpaid → Orange wallet (warning)
+ * - Completed + Paid → Green check with payment method icon
+ * - Completed + Debt → Red alert
  * - Canceled → Red X
+ * - Late Cancel → Grey X (with note about deduction)
  */
-/**
- * Get payment label based on payment_status
- */
-function getPaymentLabel(paymentStatus: string | null | undefined): string {
-  switch (paymentStatus) {
-    case 'paid_credit':
-      return 'Zaplaceno (kredit)';
-    case 'paid_cash':
-      return 'Zaplaceno (hotově)';
-    case 'paid_card':
-      return 'Zaplaceno (kartou)';
-    case 'paid_bank':
-      return 'Zaplaceno (převodem)';
-    case 'pending':
-    default:
-      return 'Nezaplaceno';
-  }
-}
-
-/**
- * Get awaiting payment label with intended payment method
- */
-function getAwaitingPaymentLabel(paymentMethod: string | null | undefined): string {
-  switch (paymentMethod) {
-    case 'cash':
-      return 'Čeká na platbu (hotově)';
-    case 'card':
-      return 'Čeká na platbu (kartou)';
-    case 'bank':
-      return 'Čeká na platbu (převodem)';
-    default:
-      return 'Čeká na platbu';
-  }
-}
 
 export function TrainingStatusBadge({ 
   status, 
@@ -58,17 +34,26 @@ export function TrainingStatusBadge({
   className,
   showLabel = true,
 }: TrainingStatusBadgeProps) {
-  // Determine visual state - isPaid is TRUE for any paid_* status
-  const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
-  const isCompletedUnpaid = status === 'completed' && !isPaid;
-  const isCompletedPaid = status === 'completed' && isPaid;
-  const isScheduled = status === 'scheduled';
   const isInProgress = status === 'in_progress';
   const isCanceled = status === 'canceled';
+  const isCompleted = status === 'completed';
+  const isLateCancel = paymentStatus === 'late_cancel';
+  const paidStatus = isPaid(paymentStatus);
+  const isUnpaidDebt = paymentStatus === 'unpaid';
 
   // Get icon and styling based on state
   const getConfig = () => {
+    // Canceled
     if (isCanceled) {
+      if (isLateCancel) {
+        return {
+          icon: X,
+          bgColor: 'bg-muted',
+          textColor: 'text-muted-foreground',
+          iconColor: 'text-muted-foreground',
+          label: 'Pozdní zrušení',
+        };
+      }
       return {
         icon: X,
         bgColor: 'bg-destructive/10',
@@ -78,26 +63,7 @@ export function TrainingStatusBadge({
       };
     }
     
-    if (isCompletedPaid) {
-      return {
-        icon: Check,
-        bgColor: 'bg-success/10',
-        textColor: 'text-success',
-        iconColor: 'text-success',
-        label: getPaymentLabel(paymentStatus),
-      };
-    }
-    
-    if (isCompletedUnpaid) {
-      return {
-        icon: Wallet,
-        bgColor: 'bg-warning/10',
-        textColor: 'text-warning',
-        iconColor: 'text-warning',
-        label: getAwaitingPaymentLabel(paymentMethod),
-      };
-    }
-    
+    // In Progress
     if (isInProgress) {
       return {
         icon: Play,
@@ -105,6 +71,45 @@ export function TrainingStatusBadge({
         textColor: 'text-primary',
         iconColor: 'text-primary',
         label: 'Probíhá',
+      };
+    }
+    
+    // Completed with payment status
+    if (isCompleted) {
+      // Unpaid debt
+      if (isUnpaidDebt) {
+        const config = PAYMENT_STATUS_CONFIG.unpaid;
+        return {
+          icon: config.icon,
+          bgColor: config.bgColor,
+          textColor: config.color,
+          iconColor: config.color,
+          label: config.label,
+        };
+      }
+      
+      // Paid
+      if (paidStatus && paymentStatus) {
+        const config = getPaymentStatusConfig(paymentStatus);
+        return {
+          icon: config.icon,
+          bgColor: config.bgColor,
+          textColor: config.color,
+          iconColor: config.color,
+          label: config.label,
+        };
+      }
+      
+      // Awaiting payment (pending)
+      const pendingConfig = PAYMENT_STATUS_CONFIG.pending;
+      return {
+        icon: Wallet,
+        bgColor: pendingConfig.bgColor,
+        textColor: pendingConfig.color,
+        iconColor: pendingConfig.color,
+        label: paymentMethod 
+          ? `Čeká na platbu (${getMethodLabel(paymentMethod)})`
+          : 'Čeká na platbu',
       };
     }
     
@@ -136,27 +141,44 @@ export function TrainingStatusBadge({
   );
 }
 
+function getMethodLabel(method: string): string {
+  switch (method) {
+    case 'cash': return 'hotově';
+    case 'card': return 'kartou';
+    case 'bank': return 'převodem';
+    case 'credit': return 'kreditem';
+    default: return method;
+  }
+}
+
 /**
- * Compact status indicator (just the dot/icon)
+ * Compact status indicator (just the icon)
  */
 export function TrainingStatusDot({ 
   status, 
   paymentStatus, 
   className,
 }: Omit<TrainingStatusBadgeProps, 'showLabel' | 'paymentMethod'>) {
-  // isPaid is TRUE for any paid_* status
-  const isPaid = paymentStatus && paymentStatus.startsWith('paid_');
-  const isCompletedUnpaid = status === 'completed' && !isPaid;
-  const isCompletedPaid = status === 'completed' && isPaid;
+  const paidStatus = isPaid(paymentStatus);
+  const isCompletedUnpaid = status === 'completed' && !paidStatus;
+  const isCompletedPaid = status === 'completed' && paidStatus;
+  const isUnpaidDebt = paymentStatus === 'unpaid';
   const isInProgress = status === 'in_progress';
   const isCanceled = status === 'canceled';
+  const isLateCancel = paymentStatus === 'late_cancel';
 
   const getConfig = () => {
     if (isCanceled) {
-      return { icon: X, color: 'text-destructive' };
+      return { 
+        icon: X, 
+        color: isLateCancel ? 'text-muted-foreground' : 'text-destructive' 
+      };
     }
     if (isCompletedPaid) {
       return { icon: Check, color: 'text-success' };
+    }
+    if (isUnpaidDebt) {
+      return { icon: PAYMENT_STATUS_CONFIG.unpaid.icon, color: 'text-destructive' };
     }
     if (isCompletedUnpaid) {
       return { icon: Wallet, color: 'text-warning' };
@@ -172,5 +194,35 @@ export function TrainingStatusDot({
 
   return (
     <Icon className={cn('w-4 h-4', config.color, className)} />
+  );
+}
+
+/**
+ * Payment Status Badge (standalone for payment-only views)
+ */
+export function PaymentStatusBadge({
+  status,
+  className,
+  showLabel = true,
+}: {
+  status: string | null | undefined;
+  className?: string;
+  showLabel?: boolean;
+}) {
+  const config = getPaymentStatusConfig(status);
+  const Icon = config.icon;
+  
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+        config.bgColor,
+        config.color,
+        className
+      )}
+    >
+      <Icon className={cn('w-3.5 h-3.5', config.color)} />
+      {showLabel && <span>{config.shortLabel}</span>}
+    </div>
   );
 }

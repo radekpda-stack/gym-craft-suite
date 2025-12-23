@@ -1,6 +1,7 @@
-import { CreditCard, Wallet, Banknote, Building2, Clock } from 'lucide-react';
+import { CreditCard, Wallet, Banknote, Building2, Clock, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PaymentMethod, PaymentStatus } from '@/hooks/useTrainingSessions';
+import { PAYMENT_STATUS_CONFIG, PaymentStatusType } from '@/lib/payment-status';
 
 export type PaymentOption = 'credit' | 'cash' | 'card' | 'bank' | 'later';
 
@@ -87,12 +88,13 @@ export function getPaymentMethodFromOption(option: PaymentOption): PaymentMethod
 }
 
 export function getPaymentStatusLabel(status: PaymentStatus | null): string {
-  switch (status) {
-    case 'paid_credit': return 'Z kreditu';
-    case 'paid_cash': return 'Hotově';
-    case 'paid_card': return 'Kartou';
-    case 'paid_bank': return 'Převodem';
-    case 'pending': return 'Nezaplaceno';
-    default: return 'Neznámý';
-  }
+  if (!status) return 'Neznámý';
+  const config = PAYMENT_STATUS_CONFIG[status as PaymentStatusType];
+  return config?.shortLabel || 'Neznámý';
+}
+
+export function getPaymentStatusLabelFull(status: PaymentStatus | null): string {
+  if (!status) return 'Neznámý';
+  const config = PAYMENT_STATUS_CONFIG[status as PaymentStatusType];
+  return config?.label || 'Neznámý';
 }
