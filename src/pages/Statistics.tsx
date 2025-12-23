@@ -1,17 +1,11 @@
 import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { CapacityHeatmapCard } from '@/components/dashboard/CapacityHeatmapCard';
-import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
-import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
-import { StatsOverviewCard } from '@/components/dashboard/StatsOverviewCard';
-import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
-import { RevenueBreakdownCard } from '@/components/statistics/RevenueBreakdownCard';
-import { ClientRetentionCard } from '@/components/statistics/ClientRetentionCard';
-import { TrainingsByDayCard } from '@/components/statistics/TrainingsByDayCard';
-import { TopExercisesCard } from '@/components/statistics/TopExercisesCard';
-import { MonthlyProgressCard } from '@/components/statistics/MonthlyProgressCard';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3, DollarSign, Dumbbell, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FinanceStatsSection } from '@/components/statistics/FinanceStatsSection';
+import { ExerciseStatsSection } from '@/components/statistics/ExerciseStatsSection';
+import { ClientStatsSection } from '@/components/statistics/ClientStatsSection';
 
 export default function Statistics() {
   usePageTracking('statistics');
@@ -28,48 +22,43 @@ export default function Statistics() {
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary" />
-            Pokročilé statistiky
+            Statistiky
           </h1>
           <p className="text-sm text-muted-foreground">
-            Detailní analýzy a přehledy - klikněte pro rozšířený pohled
+            Kompletní přehled vaší práce v číslech a grafech
           </p>
         </div>
       </div>
 
-      {/* Stats Overview with PDF export */}
-      <StatsOverviewCard />
+      {/* Category Tabs */}
+      <Tabs defaultValue="finance" className="w-full">
+        <TabsList className="w-full grid grid-cols-3 h-auto p-1">
+          <TabsTrigger value="finance" className="flex items-center gap-2 py-3">
+            <DollarSign className="h-4 w-4" />
+            <span className="hidden sm:inline">Finance</span>
+          </TabsTrigger>
+          <TabsTrigger value="exercises" className="flex items-center gap-2 py-3">
+            <Dumbbell className="h-4 w-4" />
+            <span className="hidden sm:inline">Cviky</span>
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="flex items-center gap-2 py-3">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Klienti</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Main statistics grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Monthly progress - wider */}
-        <div className="md:col-span-2">
-          <MonthlyProgressCard />
-        </div>
+        <TabsContent value="finance" className="mt-6">
+          <FinanceStatsSection />
+        </TabsContent>
 
-        {/* Client retention */}
-        <ClientRetentionCard />
+        <TabsContent value="exercises" className="mt-6">
+          <ExerciseStatsSection />
+        </TabsContent>
 
-        {/* Revenue breakdown */}
-        <RevenueBreakdownCard />
-
-        {/* Trainings by day */}
-        <TrainingsByDayCard />
-
-        {/* Top exercises */}
-        <TopExercisesCard />
-      </div>
-
-      {/* Year comparison */}
-      <YearComparisonCard />
-
-      {/* Client analytics */}
-      <ClientAnalyticsCard />
-
-      {/* Capacity Heatmap */}
-      <CapacityHeatmapCard />
-
-      {/* PR Timeline */}
-      <PRTimelineCard />
+        <TabsContent value="clients" className="mt-6">
+          <ClientStatsSection />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
