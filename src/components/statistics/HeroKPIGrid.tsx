@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 
 interface KPICardProps {
   title: string;
@@ -11,6 +11,8 @@ interface KPICardProps {
   trendLabel?: string;
   variant?: 'default' | 'success' | 'warning' | 'destructive' | 'primary';
   className?: string;
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
 export function KPICard({
@@ -22,6 +24,8 @@ export function KPICard({
   trendLabel,
   variant = 'default',
   className,
+  onClick,
+  clickable = false,
 }: KPICardProps) {
   const variantStyles = {
     default: 'from-secondary/80 to-secondary/40 border-border',
@@ -39,16 +43,27 @@ export function KPICard({
     primary: 'bg-primary/20 text-primary',
   };
 
+  const isClickable = clickable || !!onClick;
+
   return (
     <div
+      onClick={onClick}
       className={cn(
         'relative overflow-hidden rounded-xl border p-4 sm:p-5',
         'bg-gradient-to-br backdrop-blur-sm',
         'transition-all duration-200 hover:shadow-lg hover:scale-[1.02]',
         variantStyles[variant],
+        isClickable && 'cursor-pointer active:scale-[0.98]',
         className
       )}
     >
+      {/* Clickable indicator */}
+      {isClickable && (
+        <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity">
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+      
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
