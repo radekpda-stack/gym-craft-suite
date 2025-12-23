@@ -6,6 +6,121 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper to build comprehensive health restrictions from form answers
+function buildHealthRestrictions(answers: Record<string, any>): string {
+  const parts: string[] = [];
+  
+  // Pain areas
+  if (answers.pain_areas && Array.isArray(answers.pain_areas) && answers.pain_areas.length > 0) {
+    const painInfo: string[] = [];
+    painInfo.push(`Bolestivé oblasti: ${answers.pain_areas.join(', ')}`);
+    if (answers.pain_type) painInfo.push(`Typ: ${answers.pain_type}`);
+    if (answers.pain_duration) painInfo.push(`Trvání: ${answers.pain_duration}`);
+    if (answers.pain_limitation) painInfo.push(`Omezení: ${answers.pain_limitation}`);
+    parts.push(painInfo.join(' | '));
+  }
+  
+  // Injuries
+  if (answers.injury_history === true || answers.injury_history === 'yes') {
+    const injuries = answers.injury_details || answers.injuries || 'Ano (bez upřesnění)';
+    parts.push(`Úrazy: ${injuries}`);
+  }
+  
+  // Surgeries
+  if (answers.surgery_history === true || answers.surgery_history === 'yes') {
+    const surgeries = answers.surgery_details || answers.surgeries || 'Ano (bez upřesnění)';
+    parts.push(`Operace: ${surgeries}`);
+  }
+  
+  // Medications
+  if (answers.medications === true || answers.medications === 'yes' || answers.medication_details) {
+    const meds = answers.medication_details || answers.medications_list || 'Ano (bez upřesnění)';
+    parts.push(`Léky: ${meds}`);
+  }
+  
+  // Health conditions/diseases
+  if (answers.health_conditions && Array.isArray(answers.health_conditions) && answers.health_conditions.length > 0) {
+    parts.push(`Zdravotní stavy: ${answers.health_conditions.join(', ')}`);
+  }
+  
+  // General health notes
+  if (answers.health_notes) {
+    parts.push(`Poznámky: ${answers.health_notes}`);
+  }
+  
+  return parts.join('\n');
+}
+
+// Helper to build training goals from form answers
+function buildTrainingGoals(answers: Record<string, any>): string[] {
+  const goals: string[] = [];
+  
+  if (answers.main_goal) {
+    goals.push(answers.main_goal);
+  }
+  
+  if (answers.goals) {
+    if (Array.isArray(answers.goals)) {
+      goals.push(...answers.goals);
+    } else {
+      goals.push(answers.goals);
+    }
+  }
+  
+  if (answers.priorities && Array.isArray(answers.priorities)) {
+    goals.push(...answers.priorities);
+  }
+  
+  // Remove duplicates
+  return [...new Set(goals)];
+}
+
+// Helper to map daily activity type to sitting hours
+function getSittingHours(activityType: string): number | null {
+  switch (activityType) {
+    case 'sedentary':
+    case 'sedavé':
+      return 8;
+    case 'light':
+    case 'lehká':
+      return 6;
+    case 'moderate':
+    case 'středně aktivní':
+      return 4;
+    case 'active':
+    case 'aktivní':
+      return 2;
+    case 'very_active':
+    case 'velmi aktivní':
+      return 1;
+    default:
+      return null;
+  }
+}
+
+// Helper to build comprehensive client notes from answers
+function buildNotes(answers: Record<string, any>): string {
+  const parts: string[] = [];
+  
+  if (answers.open_question) {
+    parts.push(answers.open_question);
+  }
+  
+  if (answers.expectations) {
+    parts.push(`Očekávání: ${answers.expectations}`);
+  }
+  
+  if (answers.preferred_training_time) {
+    parts.push(`Preferovaný čas tréninku: ${answers.preferred_training_time}`);
+  }
+  
+  if (answers.training_frequency) {
+    parts.push(`Frekvence tréninku: ${answers.training_frequency}`);
+  }
+  
+  return parts.join('\n');
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -171,6 +286,8 @@ serve(async (req) => {
           );
         }
 
+        console.log("Submit action - answers received:", JSON.stringify(answers, null, 2));
+
         // Get form
         const { data: form, error: formError } = await supabase
           .from("pre_diagnostic_forms")
@@ -193,6 +310,36 @@ serve(async (req) => {
         }
 
         let clientId = form.client_id;
+
+        // Build comprehensive client data from answers
+        const healthRestrictions = buildHealthRestrictions(answers);
+        const trainingGoals = buildTrainingGoals(answers);
+        const notes = buildNotes(answers);
+        const sittingHours = answers.sitting_hours_daily || getSittingHours(answers.daily_activity_type);
+
+        // Client data to save
+        const clientData: Record<string, any> = {
+          birth_date: answers.birth_date || null,
+          gender: answers.gender || null,
+          occupation: answers.occupation || answers.daily_activity_type || null,
+          sitting_hours_daily: sittingHours,
+          current_activities: Array.isArray(answers.current_activities) 
+            ? answers.current_activities 
+            : answers.current_activities ? [answers.current_activities] : null,
+          sleep_hours: answers.sleep_hours || answers.sleep_hours_avg || null,
+          sports_history: answers.exercise_experience || answers.sports_history || null,
+          stress_level: answers.stress_level || null,
+          health_restrictions: healthRestrictions || null,
+          training_goals: trainingGoals.length > 0 ? trainingGoals : null,
+          notes: notes || null,
+          handedness: answers.handedness || null,
+          dietary_restrictions: Array.isArray(answers.dietary_restrictions)
+            ? answers.dietary_restrictions
+            : null,
+          supplements: Array.isArray(answers.supplements)
+            ? answers.supplements
+            : null,
+        };
 
         // If new client source and newClientData provided, check if email exists
         if (form.source === "new_client" && newClientData) {
@@ -217,7 +364,7 @@ serve(async (req) => {
             // Don't auto-create, just save form for manual assignment
             clientId = null;
           } else {
-            // Create new client
+            // Create new client with full data
             const { data: newClient, error: clientError } = await supabase
               .from("clients")
               .insert({
@@ -225,13 +372,7 @@ serve(async (req) => {
                 name,
                 email,
                 phone: phone || null,
-                // Map common pre-diagnostic fields to client
-                birth_date: answers.birth_date || null,
-                gender: answers.gender || null,
-                occupation: answers.occupation || null,
-                health_restrictions: answers.health_notes || null,
-                training_goals: answers.goals ? [answers.goals] : [],
-                notes: answers.open_question || null,
+                ...clientData,
               })
               .select()
               .single();
@@ -241,10 +382,11 @@ serve(async (req) => {
               return new Response(
                 JSON.stringify({ error: "Failed to create client" }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
+            );
             }
 
             clientId = newClient.id;
+            console.log("New client created with ID:", clientId);
           }
         } else if (clientId) {
           // Update existing client with pre-diagnostic data (only fill missing fields)
@@ -258,24 +400,84 @@ serve(async (req) => {
             const updates: Record<string, any> = {};
 
             // Only update if field is empty/null
-            if (!existingClient.birth_date && answers.birth_date) {
-              updates.birth_date = answers.birth_date;
+            if (!existingClient.birth_date && clientData.birth_date) {
+              updates.birth_date = clientData.birth_date;
             }
-            if (!existingClient.occupation && answers.occupation) {
-              updates.occupation = answers.occupation;
+            if (!existingClient.gender && clientData.gender) {
+              updates.gender = clientData.gender;
             }
-            if (!existingClient.health_restrictions && answers.health_notes) {
-              updates.health_restrictions = answers.health_notes;
+            if (!existingClient.occupation && clientData.occupation) {
+              updates.occupation = clientData.occupation;
             }
-            if ((!existingClient.training_goals || existingClient.training_goals.length === 0) && answers.goals) {
-              updates.training_goals = Array.isArray(answers.goals) ? answers.goals : [answers.goals];
+            if (!existingClient.sitting_hours_daily && clientData.sitting_hours_daily) {
+              updates.sitting_hours_daily = clientData.sitting_hours_daily;
+            }
+            if ((!existingClient.current_activities || existingClient.current_activities.length === 0) && clientData.current_activities) {
+              updates.current_activities = clientData.current_activities;
+            }
+            if (!existingClient.sleep_hours && clientData.sleep_hours) {
+              updates.sleep_hours = clientData.sleep_hours;
+            }
+            if (!existingClient.sports_history && clientData.sports_history) {
+              updates.sports_history = clientData.sports_history;
+            }
+            if (!existingClient.stress_level && clientData.stress_level) {
+              updates.stress_level = clientData.stress_level;
+            }
+            if (!existingClient.health_restrictions && clientData.health_restrictions) {
+              updates.health_restrictions = clientData.health_restrictions;
+            }
+            if ((!existingClient.training_goals || existingClient.training_goals.length === 0) && clientData.training_goals) {
+              updates.training_goals = clientData.training_goals;
+            }
+            if (!existingClient.handedness && clientData.handedness) {
+              updates.handedness = clientData.handedness;
+            }
+            if ((!existingClient.dietary_restrictions || existingClient.dietary_restrictions.length === 0) && clientData.dietary_restrictions) {
+              updates.dietary_restrictions = clientData.dietary_restrictions;
+            }
+            if ((!existingClient.supplements || existingClient.supplements.length === 0) && clientData.supplements) {
+              updates.supplements = clientData.supplements;
+            }
+            // Append notes if existing
+            if (clientData.notes) {
+              if (existingClient.notes) {
+                updates.notes = existingClient.notes + '\n\n--- Z pre-diagnostiky ---\n' + clientData.notes;
+              } else {
+                updates.notes = clientData.notes;
+              }
             }
 
             if (Object.keys(updates).length > 0) {
+              console.log("Updating existing client with:", updates);
               await supabase
                 .from("clients")
                 .update(updates)
                 .eq("id", clientId);
+            }
+          }
+        }
+
+        // Create weight measurement if weight is provided
+        if (clientId && answers.weight) {
+          const weight = parseFloat(answers.weight);
+          if (!isNaN(weight) && weight > 0) {
+            console.log("Creating weight measurement for client:", clientId, "weight:", weight);
+            const { error: measurementError } = await supabase
+              .from("measurements")
+              .insert({
+                client_id: clientId,
+                user_id: form.user_id,
+                date: new Date().toISOString().split('T')[0],
+                weight: weight,
+                notes: "Z pre-diagnostického formuláře",
+              });
+            
+            if (measurementError) {
+              console.error("Error creating measurement:", measurementError);
+              // Don't fail the whole submission for this
+            } else {
+              console.log("Weight measurement created successfully");
             }
           }
         }
