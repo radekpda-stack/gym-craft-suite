@@ -216,3 +216,30 @@ export function usePreDiagnosticAnswers(formId: string | undefined) {
     enabled: !!formId,
   });
 }
+
+// Update a pre-diagnostic answer
+export function useUpdatePreDiagnosticAnswer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ answerId, value }: { answerId: string; value: any }) => {
+      const { data, error } = await supabase
+        .from('pre_diagnostic_answers')
+        .update({ value })
+        .eq('id', answerId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pre-diagnostic-answers'] });
+      toast.success('Odpověď byla aktualizována');
+    },
+    onError: (error) => {
+      console.error('Error updating pre-diagnostic answer:', error);
+      toast.error('Nepodařilo se aktualizovat odpověď');
+    },
+  });
+}

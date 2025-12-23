@@ -19,6 +19,7 @@ import {
   Scale,
   Briefcase,
   Heart,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useClientPreDiagnostic, usePreDiagnosticAnswers, useCreateClientPreDiagnostic } from '@/hooks/usePreDiagnosticForms';
+import { EditPreDiagnosticAnswerDialog } from '@/components/pre-diagnostic/EditPreDiagnosticAnswerDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -78,11 +80,43 @@ function formatValue(value: any): string {
   return String(value);
 }
 
+// Reusable answer card component with edit button
+function AnswerCard({
+  answer,
+  onEdit,
+}: {
+  answer: { id: string; field_key: string; value: any };
+  onEdit: (answer: { id: string; field_key: string; value: any }) => void;
+}) {
+  return (
+    <div className="bg-muted/50 rounded-lg p-3 group relative">
+      <button
+        onClick={() => onEdit(answer)}
+        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+        title="Upravit"
+      >
+        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+      <p className="text-xs text-muted-foreground pr-6">
+        {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
+      </p>
+      <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
+    </div>
+  );
+}
+
 export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDiagnosticSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [editingAnswer, setEditingAnswer] = useState<{ id: string; field_key: string; value: any } | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { data: preDiagnostic, isLoading: loadingForm } = useClientPreDiagnostic(clientId);
   const { data: answers = [], isLoading: loadingAnswers } = usePreDiagnosticAnswers(preDiagnostic?.id);
   const createPreDiagnostic = useCreateClientPreDiagnostic();
+
+  const handleEditAnswer = (answer: { id: string; field_key: string; value: any }) => {
+    setEditingAnswer(answer);
+    setEditDialogOpen(true);
+  };
 
   const isLoading = loadingForm || loadingAnswers;
 
@@ -216,12 +250,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {groupedAnswers.basic.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -236,12 +265,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {groupedAnswers.activity.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -256,12 +280,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                       {groupedAnswers.sleep.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -276,12 +295,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="space-y-3">
                       {groupedAnswers.goals.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -296,12 +310,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="space-y-3">
                       {groupedAnswers.health.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -316,12 +325,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                     </h4>
                     <div className="space-y-3">
                       {groupedAnswers.other.map((answer) => (
-                        <div key={answer.field_key} className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground">
-                            {FIELD_LABELS[answer.field_key]?.label || answer.field_key}
-                          </p>
-                          <p className="font-medium text-foreground">{formatValue(answer.value)}</p>
-                        </div>
+                        <AnswerCard key={answer.field_key} answer={answer} onEdit={handleEditAnswer} />
                       ))}
                     </div>
                   </div>
@@ -357,6 +361,14 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Edit dialog */}
+      <EditPreDiagnosticAnswerDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        answer={editingAnswer}
+        fieldLabel={editingAnswer ? (FIELD_LABELS[editingAnswer.field_key]?.label || editingAnswer.field_key) : ''}
+      />
     </div>
   );
 }
