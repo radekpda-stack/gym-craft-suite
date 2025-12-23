@@ -1,16 +1,11 @@
 import { useEffect } from 'react';
 import { useDemoMode } from '@/contexts/DemoContext';
-import { Layout } from '@/components/layout/Layout';
-import { DashboardFiltersProvider } from '@/contexts/DashboardFiltersContext';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Index from './Index';
-import Clients from './Clients';
-import Trainings from './Trainings';
-import Settings from './Settings';
-import NotFound from './NotFound';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { DemoDashboard, DemoClients, DemoTrainings, DemoSettings, DemoLayout } from '@/components/demo';
 
 export default function DemoPage() {
   const { isDemo } = useDemoMode();
+  const location = useLocation();
 
   // Set noindex meta tag for demo
   useEffect(() => {
@@ -29,16 +24,14 @@ export default function DemoPage() {
   }
 
   return (
-    <DashboardFiltersProvider>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/trainings" element={<Trainings />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Layout>
-    </DashboardFiltersProvider>
+    <DemoLayout>
+      <Routes>
+        <Route path="/" element={<DemoDashboard />} />
+        <Route path="/clients" element={<DemoClients />} />
+        <Route path="/trainings" element={<DemoTrainings />} />
+        <Route path="/settings" element={<DemoSettings />} />
+        <Route path="*" element={<Navigate to="/demo" replace />} />
+      </Routes>
+    </DemoLayout>
   );
 }
