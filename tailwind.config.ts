@@ -95,13 +95,15 @@ export default {
         "3xl": "1.25rem",
       },
       boxShadow: {
-        'sharp': '0 4px 0 hsl(0 0% 0% / 0.3)',
-        'sharp-sm': '0 2px 0 hsl(0 0% 0% / 0.3)',
-        'glow': '0 0 60px hsl(24 100% 55% / 0.35)',
-        'glow-sm': '0 0 20px hsl(24 100% 55% / 0.25)',
-        'inset': 'inset 0 2px 4px hsl(0 0% 0% / 0.3)',
-        'brutal': '4px 4px 0 hsl(0 0% 0% / 0.4)',
-        'brutal-sm': '2px 2px 0 hsl(0 0% 0% / 0.4)',
+        'sharp': '0 4px 0 hsl(0 0% 0% / 0.4)',
+        'sharp-sm': '0 2px 0 hsl(0 0% 0% / 0.4)',
+        'glow': '0 0 60px hsl(68 100% 50% / 0.4)',
+        'glow-sm': '0 0 20px hsl(68 100% 50% / 0.3)',
+        'inset': 'inset 0 2px 4px hsl(0 0% 0% / 0.4)',
+        'brutal': '4px 4px 0 hsl(0 0% 0% / 0.5)',
+        'brutal-sm': '2px 2px 0 hsl(0 0% 0% / 0.5)',
+        'volt': '0 0 30px hsl(68 100% 50% / 0.35)',
+        'volt-lg': '0 0 50px hsl(68 100% 50% / 0.45)',
       },
       keyframes: {
         "accordion-down": {
@@ -143,12 +145,16 @@ export default {
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
         "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(24 100% 55% / 0.2)" },
-          "50%": { boxShadow: "0 0 40px hsl(24 100% 55% / 0.4)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(68 100% 50% / 0.25)" },
+          "50%": { boxShadow: "0 0 40px hsl(68 100% 50% / 0.5)" },
         },
         "border-glow": {
-          "0%, 100%": { borderColor: "hsl(24 100% 55% / 0.3)" },
-          "50%": { borderColor: "hsl(24 100% 55% / 0.6)" },
+          "0%, 100%": { borderColor: "hsl(68 100% 50% / 0.3)" },
+          "50%": { borderColor: "hsl(68 100% 50% / 0.6)" },
+        },
+        "volt-pulse": {
+          "0%, 100%": { opacity: "1", boxShadow: "0 0 20px hsl(68 100% 50% / 0.3)" },
+          "50%": { opacity: "0.9", boxShadow: "0 0 35px hsl(68 100% 50% / 0.5)" },
         },
       },
       animation: {
@@ -162,6 +168,7 @@ export default {
         "sharp-slide": "sharp-slide 0.2s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "border-glow": "border-glow 2s ease-in-out infinite",
+        "volt-pulse": "volt-pulse 2s ease-in-out infinite",
       },
     },
   },
