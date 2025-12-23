@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 export type TrainingStatus = 'scheduled' | 'in_progress' | 'completed' | 'canceled';
 
@@ -91,9 +92,54 @@ export interface UpdateTrainingInput {
 }
 
 export function useTrainingSessions(clientId?: string) {
+  const { isDemo, demoTraining } = useDemoMode();
+  
   return useQuery({
-    queryKey: ["training_sessions", clientId],
+    queryKey: ["training_sessions", clientId, isDemo],
     queryFn: async () => {
+      // In demo mode, return demo training data
+      if (isDemo && demoTraining) {
+        const demoSession: TrainingSession = {
+          id: demoTraining.id,
+          client_id: demoTraining.client_id,
+          date: demoTraining.date,
+          duration: demoTraining.duration,
+          notes: demoTraining.notes,
+          subjective_rating: demoTraining.subjective_rating,
+          status: demoTraining.status as TrainingStatus,
+          canceled_at: null,
+          is_late_cancellation: false,
+          participant_count: demoTraining.participant_count,
+          recurrence_type: null,
+          recurrence_end_date: null,
+          parent_session_id: null,
+          created_at: demoTraining.created_at,
+          updated_at: demoTraining.updated_at,
+          user_id: 'demo-admin-0001',
+          payment_status: demoTraining.payment_status as PaymentStatus,
+          final_price: demoTraining.final_price,
+          payment_method: null,
+          training_type: demoTraining.training_type,
+          training_goal: demoTraining.training_goal,
+          rpe: null,
+          rir: null,
+          total_volume: null,
+          intensity_notes: null,
+          subjective_difficulty: null,
+          trainer_went_well: null,
+          trainer_problems: null,
+          trainer_recommendations: null,
+          prep_notes: null,
+          pain_reported: false,
+          pain_notes: null,
+        };
+        
+        if (clientId && demoSession.client_id !== clientId) {
+          return [] as TrainingSession[];
+        }
+        return [demoSession] as TrainingSession[];
+      }
+      
       let query = supabase
         .from("training_sessions")
         .select("*")
@@ -173,9 +219,30 @@ function generateRecurringDates(
 
 export function useCreateTrainingSession() {
   const queryClient = useQueryClient();
+  const { isDemo, canCreateTraining } = useDemoMode();
 
   return useMutation({
     mutationFn: async (input: CreateTrainingInput & { trainingPrices?: { "1": number; "2": number; "3": number } }) => {
+      // Block in demo mode if limit reached
+      if (isDemo && !canCreateTraining) {
+        throw new Error("DEMO_LIMIT: V demo režimu lze vytvořit pouze 1 trénink.");
+      }
+      
+      // In demo mode, simulate creation without DB
+      if (isDemo) {
+        return {
+          session: {
+            id: 'demo-new-training',
+            client_id: input.client_id,
+            date: input.date,
+            duration: input.duration || 60,
+            status: input.status || 'scheduled',
+            created_at: new Date().toISOString(),
+          },
+          createdCount: 1,
+        };
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ClientFormValues } from "@/lib/validations/client";
 import { featureTracker } from "@/hooks/useFeatureTracking";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 export type PaymentMode = 'credit' | 'cash_only' | 'mixed';
 
@@ -27,9 +28,34 @@ export interface Client {
 }
 
 export function useClients() {
+  const { isDemo, demoClient } = useDemoMode();
+  
   return useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", isDemo],
     queryFn: async () => {
+      // In demo mode, return demo client data
+      if (isDemo && demoClient) {
+        return [{
+          id: demoClient.id,
+          name: demoClient.name,
+          email: demoClient.email,
+          phone: demoClient.phone,
+          training_goals: demoClient.training_goals,
+          notes: demoClient.notes,
+          health_restrictions: demoClient.health_restrictions,
+          credit_balance: demoClient.credit_balance,
+          birth_date: demoClient.birth_date,
+          is_favorite: demoClient.is_favorite,
+          is_archived: demoClient.is_archived,
+          feedback_enabled: true,
+          gender: demoClient.gender as 'male' | 'female' | null,
+          payment_mode: 'credit' as PaymentMode,
+          created_at: demoClient.created_at,
+          updated_at: demoClient.updated_at,
+          user_id: 'demo-admin-0001',
+        }] as Client[];
+      }
+      
       const { data, error } = await supabase
         .from("clients")
         .select("*")
@@ -62,9 +88,26 @@ export function useClient(id: string | undefined) {
 
 export function useCreateClient() {
   const queryClient = useQueryClient();
+  const { isDemo, canCreateClient } = useDemoMode();
 
   return useMutation({
     mutationFn: async (values: ClientFormValues) => {
+      // Block in demo mode if limit reached
+      if (isDemo && !canCreateClient) {
+        throw new Error("DEMO_LIMIT: V demo režimu lze vytvořit pouze 1 klienta.");
+      }
+      
+      // In demo mode, simulate creation without DB
+      if (isDemo) {
+        return {
+          id: 'demo-new-client',
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          created_at: new Date().toISOString(),
+        };
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
