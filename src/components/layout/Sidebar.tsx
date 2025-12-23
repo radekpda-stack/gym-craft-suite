@@ -136,6 +136,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       label: 'Finance',
       items: [
         { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
+        { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
       ],
     },
     // AI section hidden for future use
@@ -148,10 +149,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
     {
       label: 'Systém',
       items: [
-        // Reminders removed
         { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
-        // Admin-only link for app usage stats
-        ...(isAdminUser ? [{ id: 'app-usage', to: '/app-usage', icon: BarChart3, label: 'Statistiky' }] : []),
+        ...(isAdminUser ? [{ id: 'app-usage', to: '/app-usage', icon: Activity, label: 'App Usage' }] : []),
       ],
     },
   ];

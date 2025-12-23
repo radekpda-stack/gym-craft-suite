@@ -6,7 +6,7 @@ import {
   Users,
   Dumbbell,
   Calendar,
-  ShoppingBag,
+  BarChart3,
   MoreHorizontal,
 } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
@@ -16,7 +16,7 @@ const mainNavItems = [
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-  { to: '/sales', icon: ShoppingBag, label: 'Prodej' },
+  { to: '/statistics', icon: BarChart3, label: 'Statistiky' },
 ];
 
 export function MobileNav() {
