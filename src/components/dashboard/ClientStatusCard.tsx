@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Star, AlertCircle, Wallet } from 'lucide-react';
+import { Users, Star, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, ClientQuickInfo } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CreditLevelIndicator } from '@/components/ui/credit-level-indicator';
 
 interface ClientStatusCardProps {
   data: DashboardViewModel | undefined;
@@ -40,15 +41,12 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
         <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
       )}
       
-      {/* Credit balance */}
-      <span className={cn(
-        'text-xs tabular-nums shrink-0',
-        client.creditBalance <= 0 ? 'text-red-400' : 
-        client.creditBalance < 500 ? 'text-amber-400' : 
-        'text-muted-foreground'
-      )}>
-        {client.creditBalance.toLocaleString('cs-CZ')} Kč
-      </span>
+      {/* Credit level indicator with leaves */}
+      <CreditLevelIndicator 
+        creditBalance={client.creditBalance} 
+        size="sm"
+        showAmount
+      />
     </button>
   );
 });
@@ -89,7 +87,9 @@ export function ClientStatusCard({ data, isLoading }: ClientStatusCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" />
+          <div className="icon-modern-sm">
+            <Users className="w-4 h-4 text-primary" />
+          </div>
           <span className="text-sm font-semibold text-foreground">Klienti</span>
         </div>
         {problemCount > 0 && (
