@@ -33,6 +33,7 @@ import PRHistory from "./pages/PRHistory";
 import Reminders from "./pages/Reminders";
 import AppUsageStats from "./pages/AppUsageStats";
 import Statistics from "./pages/Statistics";
+import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
+              <Route path="/pre-diagnostic/:token" element={<PreDiagnosticFormPage />} />
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               <Route
