@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Star, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, ClientQuickInfo } from '@/hooks/useDashboardViewModel';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { CreditLevelIndicator } from '@/components/ui/credit-level-indicator';
 
 interface ClientsQuickOverviewSectionProps {
   data: DashboardViewModel | undefined;
@@ -47,18 +47,17 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
         </p>
       </div>
       
-      <div className="text-right shrink-0">
-        <p className={cn(
-          'text-sm font-medium',
-          client.creditBalance < 0 ? 'text-red-400' : 
-          client.creditBalance < 800 ? 'text-amber-400' : 'text-foreground'
-        )}>
-          {formatCurrency(client.creditBalance)}
-        </p>
+      <div className="text-right shrink-0 flex items-center gap-2">
+        {/* Credit Leaves Indicator */}
+        <CreditLevelIndicator 
+          creditBalance={client.creditBalance} 
+          size="sm"
+          showAmount
+        />
         {client.unpaidCount > 0 && (
-          <p className="text-[10px] text-red-400/80">
-            {client.unpaidCount} nezapl.
-          </p>
+          <span className="text-[10px] text-red-400/80 bg-red-500/10 px-1.5 py-0.5 rounded-full">
+            {client.unpaidCount}
+          </span>
         )}
       </div>
       
@@ -66,7 +65,6 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
     </button>
   );
 });
-
 export function ClientsQuickOverviewSection({ data, isLoading }: ClientsQuickOverviewSectionProps) {
   if (isLoading) {
     return (
