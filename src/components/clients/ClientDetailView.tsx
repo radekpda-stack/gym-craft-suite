@@ -35,6 +35,7 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { ClientTagsManager } from '@/components/clients/ClientTagsManager';
 import { ClientBudgetGroupCard } from '@/components/clients/ClientBudgetGroupCard';
 import { FeedbackHistoryList } from '@/components/feedback/FeedbackHistoryList';
+import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
@@ -580,6 +581,9 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
             </p>
           )}
         </div>
+
+        {/* Pre-diagnostic Section */}
+        <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
 
         {/* Feedback History Section */}
         <FeedbackHistoryList clientId={client.id} />
