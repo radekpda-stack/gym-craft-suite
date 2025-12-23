@@ -1190,6 +1190,33 @@ export type Database = {
           },
         ]
       }
+      equipment: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_cz: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_cz: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_cz?: string
+        }
+        Relationships: []
+      }
       exercise_entries: {
         Row: {
           client_id: string
@@ -1297,6 +1324,81 @@ export type Database = {
           },
         ]
       }
+      exercise_equipment_map: {
+        Row: {
+          created_at: string | null
+          equipment_id: string
+          exercise_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          equipment_id: string
+          exercise_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          equipment_id?: string
+          exercise_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_equipment_map_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_equipment_map_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_muscle_groups: {
+        Row: {
+          created_at: string | null
+          exercise_id: string
+          id: string
+          muscle_group_id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          muscle_group_id: string
+          role: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          muscle_group_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscle_groups_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_muscle_groups_muscle_group_id_fkey"
+            columns: ["muscle_group_id"]
+            isOneToOne: false
+            referencedRelation: "muscle_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_muscles: {
         Row: {
           created_at: string
@@ -1374,6 +1476,42 @@ export type Database = {
           },
         ]
       }
+      exercise_tag_map: {
+        Row: {
+          created_at: string | null
+          exercise_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_tag_map_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_tag_map_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           category: string
@@ -1397,6 +1535,8 @@ export type Database = {
           name: string
           name_cs: string | null
           name_en: string | null
+          performance_load: string | null
+          rehab_safe: boolean | null
           search_name: string | null
           secondary_muscle_groups: string[] | null
           slug: string | null
@@ -1429,6 +1569,8 @@ export type Database = {
           name: string
           name_cs?: string | null
           name_en?: string | null
+          performance_load?: string | null
+          rehab_safe?: boolean | null
           search_name?: string | null
           secondary_muscle_groups?: string[] | null
           slug?: string | null
@@ -1461,6 +1603,8 @@ export type Database = {
           name?: string
           name_cs?: string | null
           name_en?: string | null
+          performance_load?: string | null
+          rehab_safe?: boolean | null
           search_name?: string | null
           secondary_muscle_groups?: string[] | null
           slug?: string | null
@@ -1791,6 +1935,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      muscle_group_aliases: {
+        Row: {
+          alias: string
+          created_at: string | null
+          id: string
+          muscle_group_id: string | null
+        }
+        Insert: {
+          alias: string
+          created_at?: string | null
+          id?: string
+          muscle_group_id?: string | null
+        }
+        Update: {
+          alias?: string
+          created_at?: string | null
+          id?: string
+          muscle_group_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "muscle_group_aliases_muscle_group_id_fkey"
+            columns: ["muscle_group_id"]
+            isOneToOne: false
+            referencedRelation: "muscle_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      muscle_groups: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          name: string
+          name_cz: string
+          name_en: string
+          region: string
+          side_relevant: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          name_cz: string
+          name_en: string
+          region: string
+          side_relevant?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          name_cz?: string
+          name_en?: string
+          region?: string
+          side_relevant?: boolean | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
