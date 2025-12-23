@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
+import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { MonthlyProgressCard } from './MonthlyProgressCard';
 import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
@@ -13,6 +14,7 @@ import {
   TrendingUp, 
   Dumbbell, 
   ShoppingBag,
+  AlertCircle,
   Loader2 
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +23,7 @@ import { MonthlyAverageModal } from './modals/MonthlyAverageModal';
 import { TrainingIncomeModal } from './modals/TrainingIncomeModal';
 import { ProductIncomeModal } from './modals/ProductIncomeModal';
 
-type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | null;
+type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | null;
 
 export function FinanceStatsSection() {
   const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
@@ -29,6 +31,12 @@ export function FinanceStatsSection() {
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
 
   const isLoading = statsLoading || analyticsLoading;
+
+  // Generate insights
+  const insights = generateFinanceInsights(
+    stats ? { ...stats, pendingPayments: stats.pendingPayments } : null,
+    analytics?.vsLastMonth
+  );
 
   if (isLoading) {
     return (
@@ -45,8 +53,15 @@ export function FinanceStatsSection() {
     );
   }
 
+  const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Insight Bar */}
+      {insights.length > 0 && (
+        <InsightsBar insights={insights} />
+      )}
+
       {/* Hero KPI Cards */}
       <HeroKPIGrid>
         <KPICard
@@ -61,9 +76,9 @@ export function FinanceStatsSection() {
           clickable
         />
         <KPICard
-          title="Měsíční průměr"
-          value={formatCurrency(stats?.avgMonthlyIncome || 0)}
-          subtitle="průměr za rok"
+          title="Průměr (dokončené měsíce)"
+          value={formatCurrency(stats?.avgMonthlyIncomeCompleted || 0)}
+          subtitle="bez aktuálního měsíce"
           icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />}
           variant="primary"
           onClick={() => setActiveModal('monthly')}
@@ -78,16 +93,43 @@ export function FinanceStatsSection() {
           onClick={() => setActiveModal('training')}
           clickable
         />
-        <KPICard
-          title="Z produktů"
-          value={formatCurrency(stats?.productIncome || 0)}
-          subtitle={`${stats?.topProducts?.length || 0} produktů`}
-          icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant="warning"
-          onClick={() => setActiveModal('products')}
-          clickable
-        />
+        {hasPendingPayments ? (
+          <KPICard
+            title="K zaplacení"
+            value={formatCurrency(stats?.pendingPayments?.amount || 0)}
+            subtitle={`${stats?.pendingPayments?.count || 0} klientů`}
+            icon={<AlertCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
+            variant="destructive"
+            onClick={() => setActiveModal('pending')}
+            clickable
+          />
+        ) : (
+          <KPICard
+            title="Z produktů"
+            value={formatCurrency(stats?.productIncome || 0)}
+            subtitle={`${stats?.topProducts?.length || 0} produktů`}
+            icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
+            variant="warning"
+            onClick={() => setActiveModal('products')}
+            clickable
+          />
+        )}
       </HeroKPIGrid>
+
+      {/* Show products card if pending payments shown in KPI */}
+      {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <KPICard
+            title="Z produktů"
+            value={formatCurrency(stats?.productIncome || 0)}
+            subtitle={`${stats?.topProducts?.length || 0} produktů`}
+            icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
+            variant="warning"
+            onClick={() => setActiveModal('products')}
+            clickable
+          />
+        </div>
+      )}
 
       {/* Monthly Progress Chart */}
       <MonthlyProgressCard />
