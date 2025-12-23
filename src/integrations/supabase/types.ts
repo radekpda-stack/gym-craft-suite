@@ -104,6 +104,103 @@ export type Database = {
         }
         Relationships: []
       }
+      cardio_entries: {
+        Row: {
+          avg_heart_rate: number | null
+          avg_speed_kmh: number | null
+          avg_watts: number | null
+          client_id: string
+          created_at: string
+          date: string
+          distance_meters: number | null
+          duration_seconds: number
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          is_pr: boolean | null
+          is_test: boolean | null
+          leg_fatigue: boolean | null
+          max_heart_rate: number | null
+          max_speed_kmh: number | null
+          max_watts: number | null
+          notes: string | null
+          rpe: number | null
+          training_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          avg_watts?: number | null
+          client_id: string
+          created_at?: string
+          date?: string
+          distance_meters?: number | null
+          duration_seconds: number
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          is_pr?: boolean | null
+          is_test?: boolean | null
+          leg_fatigue?: boolean | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          max_watts?: number | null
+          notes?: string | null
+          rpe?: number | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          avg_watts?: number | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          distance_meters?: number | null
+          duration_seconds?: number
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          is_pr?: boolean | null
+          is_test?: boolean | null
+          leg_fatigue?: boolean | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          max_watts?: number | null
+          notes?: string | null
+          rpe?: number | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cardio_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cardio_entries_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cardio_entries_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_budget_groups: {
         Row: {
           created_at: string
@@ -1522,6 +1619,7 @@ export type Database = {
           description_en: string | null
           difficulty: string | null
           equipment: string[] | null
+          exercise_type: string | null
           id: string
           image_url: string | null
           instructions_cs: string | null
@@ -1556,6 +1654,7 @@ export type Database = {
           description_en?: string | null
           difficulty?: string | null
           equipment?: string[] | null
+          exercise_type?: string | null
           id?: string
           image_url?: string | null
           instructions_cs?: string | null
@@ -1590,6 +1689,7 @@ export type Database = {
           description_en?: string | null
           difficulty?: string | null
           equipment?: string[] | null
+          exercise_type?: string | null
           id?: string
           image_url?: string | null
           instructions_cs?: string | null
@@ -1932,6 +2032,88 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobility_entries: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          duration_seconds: number | null
+          exercise_id: string | null
+          exercise_name: string
+          hold_seconds: number | null
+          id: string
+          notes: string | null
+          quality_rating: string | null
+          range_of_motion: string | null
+          rpe: number | null
+          sets: number | null
+          side: string | null
+          training_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name: string
+          hold_seconds?: number | null
+          id?: string
+          notes?: string | null
+          quality_rating?: string | null
+          range_of_motion?: string | null
+          rpe?: number | null
+          sets?: number | null
+          side?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name?: string
+          hold_seconds?: number | null
+          id?: string
+          notes?: string | null
+          quality_rating?: string | null
+          range_of_motion?: string | null
+          rpe?: number | null
+          sets?: number | null
+          side?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobility_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mobility_entries_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mobility_entries_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -3027,6 +3209,85 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      skill_entries: {
+        Row: {
+          attempts: number | null
+          client_id: string
+          created_at: string
+          date: string
+          duration_seconds: number | null
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          is_breakthrough: boolean | null
+          notes: string | null
+          rpe: number | null
+          successful: number | null
+          technique_rating: string | null
+          training_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          client_id: string
+          created_at?: string
+          date?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          is_breakthrough?: boolean | null
+          notes?: string | null
+          rpe?: number | null
+          successful?: number | null
+          technique_rating?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          is_breakthrough?: boolean | null
+          notes?: string | null
+          rpe?: number | null
+          successful?: number | null
+          technique_rating?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_entries_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_entries_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stat_events: {
         Row: {
