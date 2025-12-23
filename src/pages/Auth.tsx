@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Loader2, Dumbbell, Users, Calendar, TrendingUp, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const authSchema = z.object({
   email: z.string().email({ message: 'Neplatná e-mailová adresa' }),
@@ -140,11 +141,23 @@ export default function Auth() {
         });
       }
     } else {
+      // Notify admin about new registration
+      try {
+        await supabase.functions.invoke('notify-admin-new-user', {
+          body: {
+            userEmail: email,
+            registeredAt: new Date().toISOString(),
+          },
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify admin:', notifyError);
+      }
+
       toast({
         title: 'Registrace úspěšná',
-        description: 'Účet byl vytvořen. Nyní jste přihlášeni.',
+        description: 'Váš účet čeká na schválení administrátorem.',
       });
-      navigate('/', { replace: true });
+      navigate('/waiting-for-approval', { replace: true });
     }
   };
 
