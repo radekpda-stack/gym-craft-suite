@@ -11,9 +11,11 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SessionTrackingProvider } from "@/components/SessionTrackingProvider";
 import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
 import { UndoProvider } from "@/contexts/UndoContext";
+import { DemoProvider } from "@/contexts/DemoContext";
 import { UndoToast } from "@/components/ui/UndoToast";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import DemoPage from "./pages/DemoPage";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import Trainings from "./pages/Trainings";
@@ -57,10 +59,13 @@ const App = () => (
             <Sonner />
             <UndoToast />
           <BrowserRouter>
+            <DemoProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
+              {/* Demo route - public, no auth required */}
+              <Route path="/demo/*" element={<DemoPage />} />
               <Route
                 path="/*"
                 element={
@@ -96,6 +101,7 @@ const App = () => (
                 }
               />
             </Routes>
+            </DemoProvider>
           </BrowserRouter>
           </TooltipProvider>
         </UndoProvider>
