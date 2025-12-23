@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, subDays } from "date-fns";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 export interface DashboardStats {
   totalClients: number;
@@ -15,9 +16,26 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats() {
+  const { isDemo, demoDashboardStats } = useDemoMode();
+  
   return useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", isDemo],
     queryFn: async () => {
+      // In demo mode, return demo stats
+      if (isDemo && demoDashboardStats) {
+        return {
+          totalClients: demoDashboardStats.totalClients,
+          sessionsThisWeek: demoDashboardStats.weeklyTrainings,
+          sessionsThisMonth: demoDashboardStats.completedTrainings,
+          sessionsThisYear: demoDashboardStats.totalTrainings,
+          sessionsAllTime: demoDashboardStats.totalTrainings,
+          averagePerWeek: demoDashboardStats.weeklyTrainings,
+          averageRating: demoDashboardStats.averageRating,
+          canceledSessions: 2,
+          lateCancellations: 1,
+        } as DashboardStats;
+      }
+      
       const now = new Date();
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
