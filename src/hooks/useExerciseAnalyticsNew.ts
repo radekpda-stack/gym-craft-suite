@@ -25,6 +25,8 @@ interface MovementPatternItem {
   pattern: string;
   label: string;
   count: number;
+  totalEntries?: number;
+  coverage?: number;
 }
 
 interface UnusedExercise {
@@ -39,6 +41,8 @@ export interface ExerciseAnalyticsNewData {
   totalVolume: number;
   loadDistribution: LoadDistributionItem[];
   movementPatterns: MovementPatternItem[];
+  movementPatternsCoverage: number;
+  movementPatternsTotalEntries: number;
   unusedExercises: UnusedExercise[];
 }
 
@@ -66,6 +70,49 @@ const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   conditioning: 'Conditioning',
   mobility: 'Mobility',
 };
+
+// Fallback mapping: category → movement pattern
+const CATEGORY_TO_MOVEMENT_PATTERN: Record<string, string> = {
+  'Kardio': 'conditioning',
+  'Cardio': 'conditioning',
+  'Horní tělo': 'push_horizontal',
+  'Upper Body': 'push_horizontal',
+  'Dolní tělo': 'squat',
+  'Lower Body': 'squat',
+  'Core': 'core_anti_extension',
+  'Břicho': 'core_anti_extension',
+  'Abs': 'core_anti_extension',
+  'Nohy': 'squat',
+  'Legs': 'squat',
+  'Záda': 'pull_horizontal',
+  'Back': 'pull_horizontal',
+  'Hrudník': 'push_horizontal',
+  'Chest': 'push_horizontal',
+  'Ramena': 'push_vertical',
+  'Shoulders': 'push_vertical',
+  'Biceps': 'pull_horizontal',
+  'Triceps': 'push_horizontal',
+  'Paže': 'push_horizontal',
+  'Arms': 'push_horizontal',
+  'Hýždě': 'hinge',
+  'Glutes': 'hinge',
+  'Stehna': 'squat',
+  'Quadriceps': 'squat',
+  'Hamstrings': 'hinge',
+  'Lýtka': 'locomotion',
+  'Calves': 'locomotion',
+  'Mobilita': 'mobility',
+  'Mobility': 'mobility',
+  'Síla': 'squat',
+  'Strength': 'squat',
+};
+
+// Get movement pattern with fallback to category-based mapping
+function getMovementPatternWithFallback(pattern: string | null | undefined, category: string | null | undefined): string | null {
+  if (pattern) return pattern;
+  if (!category) return null;
+  return CATEGORY_TO_MOVEMENT_PATTERN[category] || null;
+}
 
 // Map categories to muscle groups
 function getCategoryMuscleGroup(category: string): string {
@@ -220,23 +267,34 @@ export function useExerciseAnalyticsNew(
         comparisonValue: Math.round((muscleGroupsAll[group as keyof typeof muscleGroupsAll] / maxValueAll) * 100),
       }));
 
-      // Movement patterns (consolidated)
+      // Movement patterns (consolidated) with fallback mapping
       const patternCounts = new Map<string, number>();
+      const totalEntries = entries?.length || 0;
+      let entriesWithPattern = 0;
+
       entries?.forEach(e => {
         const exercise = e.exercises as any;
-        const pattern = exercise?.movement_pattern;
+        const rawPattern = exercise?.movement_pattern;
+        const category = exercise?.category;
+        const pattern = getMovementPatternWithFallback(rawPattern, category);
+        
         if (pattern) {
+          entriesWithPattern++;
           // Consolidate similar patterns
           const consolidated = MOVEMENT_PATTERN_LABELS[pattern] || pattern;
           patternCounts.set(consolidated, (patternCounts.get(consolidated) || 0) + 1);
         }
       });
 
+      const coverage = totalEntries > 0 ? Math.round((entriesWithPattern / totalEntries) * 100) : 0;
+
       const movementPatterns: MovementPatternItem[] = Array.from(patternCounts.entries())
         .map(([label, count]) => ({
           pattern: label.toLowerCase().replace(/\s/g, '_'),
           label,
           count,
+          totalEntries,
+          coverage,
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
@@ -258,6 +316,8 @@ export function useExerciseAnalyticsNew(
         totalVolume,
         loadDistribution,
         movementPatterns,
+        movementPatternsCoverage: coverage,
+        movementPatternsTotalEntries: totalEntries,
         unusedExercises,
       };
     },
