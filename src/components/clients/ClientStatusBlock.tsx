@@ -11,13 +11,18 @@ import {
   CheckCircle2, 
   Calendar,
   MessageSquare,
+  Phone,
+  Mail,
+  MapPin,
+  Briefcase,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Client } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, differenceInYears } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   generateClientTasks, 
@@ -159,6 +164,11 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
       isRedFlag: latest.is_red_flag,
     };
   }, [feedbackData]);
+
+  // Calculate age
+  const age = client.birth_date 
+    ? differenceInYears(new Date(), new Date(client.birth_date))
+    : null;
   
   const config = STATUS_CONFIG[statusInfo.status];
 
@@ -179,11 +189,16 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
           <h1 className="text-xl font-bold text-foreground truncate">
             {client.name}
           </h1>
-          {client.training_goals && client.training_goals.length > 0 && (
-            <p className="text-sm text-muted-foreground truncate">
-              {client.training_goals[0]}
-            </p>
-          )}
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {age && <span>{age} let</span>}
+            {age && client.occupation && <span>•</span>}
+            {client.occupation && (
+              <span className="flex items-center gap-1">
+                <Briefcase className="w-3 h-3" />
+                {client.occupation}
+              </span>
+            )}
+          </div>
         </div>
         
         {/* Status badge */}
@@ -197,6 +212,46 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
           </span>
         </div>
       </div>
+
+      {/* Contact info row */}
+      {(client.email || client.phone) && (
+        <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border/50 text-sm">
+          {client.email && (
+            <a 
+              href={`mailto:${client.email}`}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="truncate max-w-[180px]">{client.email}</span>
+            </a>
+          )}
+          {client.phone && (
+            <a 
+              href={`tel:${client.phone}`}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              <span>{client.phone}</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Training goals as tags */}
+      {client.training_goals && client.training_goals.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {client.training_goals.slice(0, 3).map((goal, i) => (
+            <Badge key={i} variant="secondary" className="text-xs">
+              {goal}
+            </Badge>
+          ))}
+          {client.training_goals.length > 3 && (
+            <Badge variant="outline" className="text-xs">
+              +{client.training_goals.length - 3}
+            </Badge>
+          )}
+        </div>
+      )}
       
       {/* Status reasons (if any) */}
       {statusInfo.reasons.length > 0 && statusInfo.status !== 'ok' && (
