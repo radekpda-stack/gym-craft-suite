@@ -10,7 +10,7 @@ export function ExerciseLibraryStats() {
   const { data, isLoading } = useExerciseLibraryStats();
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
       <div className="col-span-2 md:col-span-1 lg:col-span-2">
         <MuscularLoadChart 
           data={data?.categoryDistribution || []} 
