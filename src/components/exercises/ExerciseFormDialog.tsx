@@ -73,7 +73,7 @@ const formSchema = z.object({
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional().nullable(),
   environment: z.enum(ENVIRONMENTS),
   equipment: z.array(z.string()),
-  muscle_groups: z.array(z.string()),
+  muscle_groups: z.array(z.string()).min(1, 'Vyberte alespoň jednu svalovou skupinu'),
   supported_metrics: z.array(z.string()),
   is_unilateral: z.boolean(),
   is_bodyweight: z.boolean(),
@@ -87,7 +87,20 @@ const formSchema = z.object({
   risk_notes: z.string().optional(),
   trainer_notes: z.string().optional(),
   rehab_safe: z.boolean(),
-});
+}).refine(
+  (data) => {
+    // For strength exercises, movement_pattern should be required
+    const strengthCategories = ['Síla', 'Horní tělo', 'Dolní tělo', 'Nohy', 'Paže', 'Záda', 'Hrudník', 'Ramena'];
+    if (strengthCategories.includes(data.category) && !data.movement_pattern) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Pohybový vzorec je povinný pro silové cviky',
+    path: ['movement_pattern'],
+  }
+);
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -302,23 +315,30 @@ export function ExerciseFormDialog({ open, onOpenChange, exercise, onDuplicate }
                     <FormField
                       control={form.control}
                       name="movement_pattern"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pohybový vzorec</FormLabel>
-                          <Select value={field.value || ''} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Vyberte" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {MOVEMENT_PATTERNS.map(p => (
-                                <SelectItem key={p} value={p}>{LABELS.movement[p]}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const strengthCategories = ['Síla', 'Horní tělo', 'Dolní tělo', 'Nohy', 'Paže', 'Záda', 'Hrudník', 'Ramena'];
+                        const isStrength = strengthCategories.includes(form.watch('category'));
+                        return (
+                          <FormItem>
+                            <FormLabel>
+                              Pohybový vzorec {isStrength && '*'}
+                            </FormLabel>
+                            <Select value={field.value || ''} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Vyberte" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {MOVEMENT_PATTERNS.map(p => (
+                                  <SelectItem key={p} value={p}>{LABELS.movement[p]}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
 
                     <FormField
