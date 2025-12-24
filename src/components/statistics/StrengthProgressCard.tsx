@@ -7,11 +7,11 @@ import { format, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--success))',
-  'hsl(var(--warning))',
-  'hsl(var(--destructive))',
-  'hsl(280, 87%, 65%)',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
 ];
 
 export function StrengthProgressCard() {
@@ -100,7 +100,7 @@ export function StrengthProgressCard() {
   }
 
   return (
-    <Card>
+    <Card className="analytics-chart">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <TrendingUp className="h-5 w-5 text-primary" />

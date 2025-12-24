@@ -24,9 +24,9 @@ const PERIOD_OPTIONS = [
 ];
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--success))',
-  'hsl(var(--warning))',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
 ];
 
 export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: ExerciseProgressChartProps) {
@@ -172,7 +172,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       {data?.hasStrength && (exerciseType === 'strength' || exerciseType === 'mixed') && (
         <>
           {/* Weight over time */}
-          <Card>
+          <Card className="analytics-chart">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -208,7 +208,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           </Card>
 
           {/* Volume over time */}
-          <Card>
+          <Card className="analytics-chart">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -236,7 +236,13 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       }}
                       formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Objem']}
                     />
-                    <Area type="monotone" dataKey="volume" stroke={COLORS[1]} fill={`${COLORS[1]}20`} strokeWidth={2} />
+                    <defs>
+                      <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={COLORS[1]} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={COLORS[1]} stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="volume" stroke={COLORS[1]} fill="url(#volumeGradient)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -245,7 +251,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
 
           {/* Estimated 1RM */}
           {data.strengthData.some(d => d.estimated1RM) && (
-            <Card>
+            <Card className="analytics-chart">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -287,7 +293,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       {data?.hasCardio && (exerciseType === 'cardio' || exerciseType === 'mixed') && (
         <>
           {/* Pace / Speed over time */}
-          <Card>
+          <Card className="analytics-chart">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -339,7 +345,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
 
           {/* Power over time (if available) */}
           {data.cardioData.some(d => d.watts) && (
-            <Card>
+            <Card className="analytics-chart">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -367,7 +373,13 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                         }}
                         formatter={(value: number) => [`${value} W`, 'Výkon']}
                       />
-                      <Area type="monotone" dataKey="watts" stroke={COLORS[2]} fill={`${COLORS[2]}20`} strokeWidth={2} />
+                      <defs>
+                        <linearGradient id="wattsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={COLORS[2]} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={COLORS[2]} stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="watts" stroke={COLORS[2]} fill="url(#wattsGradient)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -376,7 +388,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           )}
 
           {/* Distance over time */}
-          <Card>
+          <Card className="analytics-chart">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -404,7 +416,13 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       }}
                       formatter={(value: number) => [`${value.toFixed(2)} km`, 'Vzdálenost']}
                     />
-                    <Area type="monotone" dataKey="distance" stroke={COLORS[1]} fill={`${COLORS[1]}20`} strokeWidth={2} />
+                    <defs>
+                      <linearGradient id="distanceGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={COLORS[1]} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={COLORS[1]} stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="distance" stroke={COLORS[1]} fill="url(#distanceGradient)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
