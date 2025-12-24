@@ -39,6 +39,8 @@ import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
 import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
 import ExerciseAnalytics from "./pages/ExerciseAnalytics";
+import ClientAnalytics from "./pages/ClientAnalytics";
+import FinanceAnalytics from "./pages/FinanceAnalytics";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NotFound from "./pages/NotFound";
@@ -98,6 +100,8 @@ const App = () => (
                           {/* Reminders route removed */}
                           <Route path="/app-usage" element={<AppUsageStats />} />
                           <Route path="/statistics" element={<Statistics />} />
+                          <Route path="/statistics/analytics" element={<FinanceAnalytics />} />
+                          <Route path="/clients/analytics" element={<ClientAnalytics />} />
                           <Route path="/exercises" element={<Exercises />} />
                           <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
