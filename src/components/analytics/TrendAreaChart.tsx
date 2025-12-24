@@ -35,12 +35,12 @@ export function TrendAreaChart({
   formatValue = defaultFormat
 }: TrendAreaChartProps) {
   return (
-    <div style={{ height }}>
+    <div className="analytics-chart" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
             <linearGradient id={gradient.id} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={gradient.color} stopOpacity={0.4} />
+              <stop offset="0%" stopColor={gradient.color} stopOpacity={0.35} />
               <stop offset="100%" stopColor={gradient.color} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -70,6 +70,7 @@ export function TrendAreaChart({
               backgroundColor: 'hsl(var(--card))',
               border: '1px solid hsl(var(--border))',
               borderRadius: '8px',
+              boxShadow: '0 4px 12px hsl(0 0% 0% / 0.3)',
             }}
             formatter={(value: number) => [formatValue(value), '']}
             labelFormatter={(label) => label}

@@ -17,7 +17,7 @@ export function FinanceAnalyticsMainCard({ data, onShowDetail }: FinanceAnalytic
   }));
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <Card className="analytics-card">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-medium">Přehled financí</CardTitle>
         <Button 
@@ -33,20 +33,20 @@ export function FinanceAnalyticsMainCard({ data, onShowDetail }: FinanceAnalytic
       <CardContent className="space-y-6">
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-4 rounded-lg bg-background/50">
+          <div className="analytics-metric">
             <DollarSign className="h-5 w-5 mx-auto mb-2 text-primary" />
-            <div className="text-2xl font-bold">{formatCurrency(data.totalIncome)}</div>
-            <div className="text-xs text-muted-foreground">Celkový příjem</div>
+            <div className="analytics-metric-value">{formatCurrency(data.totalIncome)}</div>
+            <div className="analytics-metric-label">Celkový příjem</div>
           </div>
-          <div className="text-center p-4 rounded-lg bg-background/50">
-            <Dumbbell className="h-5 w-5 mx-auto mb-2 text-chart-1" />
-            <div className="text-2xl font-bold">{formatCurrency(data.trainingIncome)}</div>
-            <div className="text-xs text-muted-foreground">Z tréninků</div>
+          <div className="analytics-metric">
+            <Dumbbell className="h-5 w-5 mx-auto mb-2 text-primary" />
+            <div className="analytics-metric-value">{formatCurrency(data.trainingIncome)}</div>
+            <div className="analytics-metric-label">Z tréninků</div>
           </div>
-          <div className="text-center p-4 rounded-lg bg-background/50">
-            <ShoppingBag className="h-5 w-5 mx-auto mb-2 text-chart-2" />
-            <div className="text-2xl font-bold">{formatCurrency(data.productIncome)}</div>
-            <div className="text-xs text-muted-foreground">Z produktů</div>
+          <div className="analytics-metric">
+            <ShoppingBag className="h-5 w-5 mx-auto mb-2 text-primary" />
+            <div className="analytics-metric-value">{formatCurrency(data.productIncome)}</div>
+            <div className="analytics-metric-label">Z produktů</div>
           </div>
         </div>
 
@@ -83,13 +83,13 @@ export function FinanceAnalyticsMainCard({ data, onShowDetail }: FinanceAnalytic
               {data.clientBreakdown.slice(0, 5).map((client, index) => (
                 <div 
                   key={client.clientId}
-                  className="flex items-center justify-between p-2 rounded-lg bg-background/30"
+                  className="analytics-list-item"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground w-4">{index + 1}.</span>
                     <span className="text-sm font-medium">{client.clientName}</span>
                   </div>
-                  <span className="text-sm font-bold">{formatCurrency(client.totalIncome)}</span>
+                  <span className="text-sm font-semibold">{formatCurrency(client.totalIncome)}</span>
                 </div>
               ))}
             </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar, HelpCircle, AlertTriangle, ClipboardList } from 'lucide-react';
+import { Search, Plus, ChevronRight, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, CheckSquare, Square, Users, Link as LinkIcon, Archive, ArchiveRestore, CalendarDays, Calendar, HelpCircle, AlertTriangle, ClipboardList, BarChart3 } from 'lucide-react';
 import { PreDiagnosticInviteDialog } from '@/components/pre-diagnostic/PreDiagnosticInviteDialog';
 import { UnassignedPreDiagnosticList } from '@/components/pre-diagnostic/UnassignedPreDiagnosticList';
 import { formatCurrency } from '@/lib/formatters';
@@ -90,6 +90,7 @@ const calculateAge = (birthDateStr: string | null): number | null => {
 export default function Clients() {
   usePageTracking('clients');
   const { trackFeature } = useFeatureTracking();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
@@ -287,6 +288,15 @@ export default function Clients() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={() => navigate('/clients/analytics')}>
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Analytika klientů</TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" onClick={() => setShowLegendDialog(true)}>
