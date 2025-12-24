@@ -5,8 +5,10 @@ import {
   Search, 
   Filter,
   Plus,
-  Download,
-  Users
+  Users,
+  Clock,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,14 +70,15 @@ export default function NutritionCampaigns() {
     navigate(`/clients/${clientId}`);
   };
 
-  const handleAnalyze = (sessionId: string) => {
-    navigate(`/nutrition/analysis?campaign=${sessionId}`);
+  // Navigate to campaign detail instead of analysis
+  const handleOpenDetail = (sessionId: string) => {
+    navigate(`/nutrition/campaigns/${sessionId}`);
   };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
@@ -114,7 +117,7 @@ export default function NutritionCampaigns() {
                 <p className="text-sm text-muted-foreground">Aktivních</p>
               </div>
               <div className="p-3 rounded-lg bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-600" />
+                <Clock className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -127,7 +130,7 @@ export default function NutritionCampaigns() {
                 <p className="text-sm text-muted-foreground">Dokončených</p>
               </div>
               <div className="p-3 rounded-lg bg-green-500/10">
-                <Download className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -148,7 +151,7 @@ export default function NutritionCampaigns() {
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Stav" />
               </SelectTrigger>
@@ -156,7 +159,6 @@ export default function NutritionCampaigns() {
                 <SelectItem value="all">Všechny stavy</SelectItem>
                 <SelectItem value="active">Aktivní</SelectItem>
                 <SelectItem value="completed">Dokončené</SelectItem>
-                <SelectItem value="expired">Vypršelé</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -178,7 +180,7 @@ export default function NutritionCampaigns() {
             <p className="text-sm text-muted-foreground mt-1">
               {searchQuery || statusFilter !== 'all' 
                 ? 'Zkuste změnit filtry' 
-                : 'Vytvořte první kampaň'}
+                : 'Vytvořte první kampaň pro sledování stravy klienta'}
             </p>
             {!searchQuery && statusFilter === 'all' && (
               <Button className="mt-4" onClick={() => setShowNewModal(true)}>
@@ -196,7 +198,7 @@ export default function NutritionCampaigns() {
               campaign={campaign}
               onComplete={handleComplete}
               onViewClient={handleViewClient}
-              onAnalyze={handleAnalyze}
+              onOpenDetail={handleOpenDetail}
             />
           ))}
         </div>

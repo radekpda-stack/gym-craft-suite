@@ -189,7 +189,7 @@ export default function NutritionOverview() {
                   key={campaign.id}
                   campaign={campaign}
                   variant="compact"
-                  onAnalyze={handleAnalyze}
+                  onOpenDetail={handleAnalyze}
                   onViewClient={handleViewClient}
                 />
               ))}
