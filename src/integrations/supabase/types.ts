@@ -4566,6 +4566,14 @@ export type Database = {
         Returns: string
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_inherited_tags_for_session: {
+        Args: { p_session_id: string }
+        Returns: string[]
+      }
+      get_training_session_all_tags: {
+        Args: { p_session_id: string }
+        Returns: string[]
+      }
       get_unused_exercises: {
         Args: { p_end_date: string; p_start_date: string; p_user_id: string }
         Returns: {
