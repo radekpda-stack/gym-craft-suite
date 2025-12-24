@@ -187,7 +187,7 @@ export default function Exercises() {
             </p>
           </div>
         </div>
-        <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none sm:justify-end sm:flex-wrap">
           {bulkEditMode ? (
             <>
               <Button
