@@ -71,9 +71,10 @@ const sections: NavSection[] = [
   {
     label: 'Strava',
     items: [
-      { to: '/nutrition', icon: Utensils, label: 'Přehled stravy' },
-      { to: '/nutrition/questionnaires', icon: FileText, label: 'Dotazníky' },
-      { to: '/nutrition/infographics', icon: PieChart, label: 'Infografika' },
+      { to: '/nutrition', icon: Utensils, label: 'Přehled' },
+      { to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
+      { to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
+      { to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
       { to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
     ],
   },

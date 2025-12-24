@@ -17,7 +17,6 @@ import {
   TrendingUp,
   ShoppingBag,
   ClipboardList,
-  Bell,
   BarChart3,
   LucideIcon,
   Utensils,
@@ -140,9 +139,10 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
     {
       label: 'Strava',
       items: [
-        { id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Přehled stravy' },
-        { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileText, label: 'Dotazníky' },
-        { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: PieChart, label: 'Infografika' },
+        { id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Přehled' },
+        { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
+        { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
+        { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
         { id: 'nutrition-settings', to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
       ],
     },
