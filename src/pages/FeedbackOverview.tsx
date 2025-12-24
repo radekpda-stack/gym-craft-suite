@@ -253,17 +253,26 @@ export default function FeedbackOverview() {
   // Copy feedback link to clipboard
   const copyFeedbackLink = async (trainingId: string, clientId: string) => {
     try {
-      // Create feedback request if doesn't exist
+      // Create or reuse feedback request
       const result = await createFeedbackRequest.mutateAsync({
         client_id: clientId,
         training_session_id: trainingId,
       });
-      
+
       const feedbackUrl = `${window.location.origin}/feedback/${result.token}`;
-      await navigator.clipboard.writeText(feedbackUrl);
-      toast.success('Odkaz zkopírován do schránky');
-    } catch (error) {
-      toast.error('Nepodařilo se vytvořit odkaz');
+
+      try {
+        await navigator.clipboard.writeText(feedbackUrl);
+        toast.success('Odkaz zkopírován do schránky');
+      } catch (clipboardError) {
+        console.warn('Clipboard write failed, showing prompt instead:', clipboardError);
+        // Fallback: show prompt so user can manually copy
+        window.prompt('Zkopírujte odkaz:', feedbackUrl);
+        toast.message('Odkaz připraven', { description: 'Pokud nešel zkopírovat automaticky, najdete ho v okně pro ruční kopírování.' });
+      }
+    } catch (error: any) {
+      console.error('Error creating feedback link:', error);
+      toast.error(error?.message || 'Nepodařilo se vytvořit odkaz');
     }
   };
 
