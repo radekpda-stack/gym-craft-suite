@@ -1,14 +1,35 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Mail, LogOut } from 'lucide-react';
+import { Clock, Mail, LogOut, Loader2 } from 'lucide-react';
 
 export default function WaitingForApproval() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, loading: authLoading, isAuthenticated } = useAuth();
+  const { isLoading: statusLoading, isApproved } = useAccountStatus();
 
   const handleSignOut = async () => {
     await signOut();
   };
+
+  // If user is not logged in, send them to auth
+  if (!authLoading && !isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // If account is already approved, do not keep them stuck here
+  if (!authLoading && !statusLoading && isApproved) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (authLoading || statusLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -28,28 +49,21 @@ export default function WaitingForApproval() {
               <strong>E-mail účtu:</strong> {user?.email}
             </p>
           </div>
-          
+
           <div className="flex items-start gap-3 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <Mail className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
             <div className="text-sm">
               <p className="font-medium text-foreground">Potřebujete pomoc?</p>
               <p className="text-muted-foreground mt-1">
                 Kontaktujte nás na{' '}
-                <a 
-                  href="mailto:support@justmove.cz" 
-                  className="text-primary hover:underline"
-                >
+                <a href="mailto:support@justmove.cz" className="text-primary hover:underline">
                   support@justmove.cz
                 </a>
               </p>
             </div>
           </div>
 
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            onClick={handleSignOut}
-          >
+          <Button variant="outline" className="w-full" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />
             Odhlásit se
           </Button>
