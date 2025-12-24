@@ -249,7 +249,7 @@ export default function FeedbackOverview() {
     }
   };
 
-  // Copy feedback message to clipboard - one click action
+  // Copy feedback link to clipboard - one click action
   const copyFeedbackLink = async (trainingId: string, clientId: string) => {
     try {
       // Create or reuse feedback request
@@ -259,24 +259,12 @@ export default function FeedbackOverview() {
       });
 
       const feedbackUrl = `${window.location.origin}/feedback/${result.token}`;
-      const message = `Ahoj, prosím rychlá zpětná vazba po včerejším tréninku (1 min): ${feedbackUrl} Díky.`;
 
-      try {
-        await navigator.clipboard.writeText(message);
-        toast.success('Zpráva zkopírována do schránky');
-      } catch (clipboardError) {
-        console.warn('Clipboard write failed, trying URL only:', clipboardError);
-        // Fallback: try just the URL
-        try {
-          await navigator.clipboard.writeText(feedbackUrl);
-          toast.success('Odkaz zkopírován do schránky');
-        } catch {
-          toast.error('Nepodařilo se zkopírovat');
-        }
-      }
+      await navigator.clipboard.writeText(feedbackUrl);
+      toast.success('Odkaz zkopírován do schránky');
     } catch (error: any) {
-      console.error('Error creating feedback link:', error);
-      toast.error(error?.message || 'Nepodařilo se vytvořit odkaz');
+      console.error('Error creating/copying feedback link:', error);
+      toast.error(error?.message || 'Nepodařilo se zkopírovat odkaz');
     }
   };
 

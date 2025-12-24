@@ -11,7 +11,10 @@ export default function FeedbackPage() {
   // Support both /feedback/:token and /feedback?t=token
   const token = pathToken || queryToken;
 
-  if (!token) {
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+
+  if (!token || !isUuid(token)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Neplatný odkaz</p>

@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { differenceInHours, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import {
-  MessageSquare,
-  Copy,
-  Check,
-  Clock,
-  Bell,
-  Link2,
-} from 'lucide-react';
+import { MessageSquare, Copy, Check, Clock, Bell, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,9 +36,6 @@ interface TrainingFeedbackSectionProps {
     reminder_count: number;
   } | null;
 }
-
-const MESSAGE_TEMPLATE = (url: string) =>
-  `Ahoj, prosím rychlá zpětná vazba po včerejším tréninku (1 min): ${url} Díky.`;
 
 type LinkData = {
   url: string;
@@ -121,7 +111,7 @@ export function TrainingFeedbackSection({
     }
   };
 
-  // Auto-generate link on first render for completed trainings (keeps UI simple)
+  // Auto-generate link on first render for completed trainings
   useEffect(() => {
     if (trainingStatus !== 'completed') return;
     if (!feedbackEnabled) return;
@@ -134,29 +124,22 @@ export function TrainingFeedbackSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainingStatus, feedbackEnabled, status, trainingId, clientId]);
 
-  // Copy full message to clipboard - one click action
-  const handleCopyMessage = async () => {
+  // One-click copy URL
+  const handleCopyLink = async () => {
     if (!linkData) return;
 
-    const message = MESSAGE_TEMPLATE(linkData.url);
-
     try {
-      await navigator.clipboard.writeText(message);
+      await navigator.clipboard.writeText(linkData.url);
       setCopied(true);
-      toast.success('Zpráva zkopírována do schránky');
-      trackFeature('feedback_message_copy', 'feedback');
+      toast.success('Odkaz zkopírován do schránky');
+      trackFeature('feedback_link_copy', 'feedback');
       setTimeout(() => setCopied(false), 2000);
-
-      // Mark as sent in background
-      await supabase.functions.invoke('mark-feedback-sent', {
-        body: { token: linkData.token, send_channel: 'whatsapp' },
-      });
     } catch {
-      toast.error('Nepodařilo se zkopírovat zprávu');
+      toast.error('Nepodařilo se zkopírovat odkaz');
     }
   };
 
-  // Mark reminder sent and copy message
+  // Mark reminder sent
   const handleSendReminder = async () => {
     if (!linkData) return;
 
@@ -164,12 +147,10 @@ export function TrainingFeedbackSection({
       await supabase.functions.invoke('mark-feedback-reminder', {
         body: { token: linkData.token },
       });
-      
-      // Also copy the message
-      await handleCopyMessage();
       toast.success('Připomínka zaznamenána');
     } catch (error) {
       console.error('Error marking reminder:', error);
+      toast.error('Nepodařilo se uložit připomínku');
     }
   };
 
@@ -231,9 +212,7 @@ export function TrainingFeedbackSection({
             {status === 'received' ? 'Doručena' : status === 'waiting' ? 'Čeká' : 'Neposlána'}
           </Badge>
         </div>
-        <CardDescription>
-          Pošlete klientovi odkaz pro vyplnění zpětné vazby
-        </CardDescription>
+        <CardDescription>Pošlete klientovi odkaz pro vyplnění zpětné vazby</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -249,11 +228,9 @@ export function TrainingFeedbackSection({
             {linkData ? (
               <div className="space-y-3">
                 <Button
-                  onClick={handleCopyMessage}
-                  className={cn(
-                    'w-full',
-                    copied && 'bg-green-600 hover:bg-green-700'
-                  )}
+                  variant={copied ? 'default' : 'outline'}
+                  onClick={handleCopyLink}
+                  className={cn('w-full', copied && 'bg-green-600 hover:bg-green-700')}
                 >
                   {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copied ? 'Zkopírováno!' : 'Kopírovat odkaz'}
