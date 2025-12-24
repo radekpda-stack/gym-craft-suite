@@ -75,7 +75,6 @@ const sections: NavSection[] = [
       { to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
       { to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
       { to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
-      { to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
     ],
   },
   {
