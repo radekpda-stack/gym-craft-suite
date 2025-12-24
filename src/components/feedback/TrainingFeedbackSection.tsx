@@ -103,6 +103,15 @@ export function TrainingFeedbackSection({
         token: data.token,
         expiresAt: data.expiresAt,
       });
+      
+      // Track link generation
+      trackFeature('feedback_link_generated', 'feedback', {
+        metadata: {
+          client_id: clientId,
+          training_id: trainingId,
+          hours_since_training: hoursSinceTraining,
+        }
+      });
     } catch (error: any) {
       console.error('Error generating feedback link:', error);
       toast.error(error.message || 'Chyba při vytváření odkazu');
