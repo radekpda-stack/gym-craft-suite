@@ -128,6 +128,8 @@ export function TrainingFeedbackSection({
   const handleCopyLink = async () => {
     if (!linkData) return;
 
+    const urlToCopy = linkData.url.trim();
+
     const copyToClipboard = async (text: string): Promise<boolean> => {
       // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
@@ -159,7 +161,7 @@ export function TrainingFeedbackSection({
       }
     };
 
-    const success = await copyToClipboard(linkData.url);
+    const success = await copyToClipboard(urlToCopy);
     if (success) {
       setCopied(true);
       toast.success('Odkaz zkopírován do schránky');
@@ -167,7 +169,7 @@ export function TrainingFeedbackSection({
       setTimeout(() => setCopied(false), 2000);
     } else {
       // Ultimate fallback: show URL in prompt
-      window.prompt('Zkopírujte odkaz:', linkData.url);
+      window.prompt('Zkopírujte odkaz:', urlToCopy);
       toast.info('Zkopírujte odkaz z okna výše');
     }
   };

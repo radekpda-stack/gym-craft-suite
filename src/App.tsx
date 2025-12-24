@@ -71,6 +71,8 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/waiting-for-approval" element={<WaitingForApproval />} />
+              {/* Public feedback routes (no auth) */}
+              <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
               <Route path="/pre-diagnostic/:token" element={<PreDiagnosticFormPage />} />

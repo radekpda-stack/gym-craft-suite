@@ -258,7 +258,7 @@ export default function FeedbackOverview() {
         training_session_id: trainingId,
       });
 
-      const feedbackUrl = `${window.location.origin}/feedback/${result.token}`;
+      const feedbackUrl = `${window.location.origin}/feedback/${result.token}`.trim();
 
       // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
