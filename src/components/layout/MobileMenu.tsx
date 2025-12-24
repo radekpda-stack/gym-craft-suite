@@ -23,7 +23,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
+
 import { Separator } from '@/components/ui/separator';
 
 interface MobileMenuProps {
@@ -90,7 +90,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, user } = useAuth();
-  const [quickCreditOpen, setQuickCreditOpen] = useState(false);
 
   const handleNavigation = (to: string) => {
     navigate(to);
@@ -270,12 +269,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             </motion.div>
           </motion.div>
 
-          {/* Quick Credit Modal */}
-          <UnifiedCreditModal 
-            open={quickCreditOpen} 
-            onOpenChange={setQuickCreditOpen}
-            showTrigger={false}
-          />
         </>
       )}
     </AnimatePresence>

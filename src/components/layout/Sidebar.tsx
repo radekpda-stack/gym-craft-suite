@@ -22,7 +22,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
+
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n';
@@ -262,15 +262,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           ))}
         </div>
         
-        {/* Quick Credit */}
-        <motion.div 
-          className="pt-3 mt-3 border-t border-sidebar-border/30"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <UnifiedCreditModal collapsed={collapsed} />
-        </motion.div>
       </nav>
 
       {/* User & Controls */}
