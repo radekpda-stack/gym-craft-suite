@@ -31,44 +31,52 @@ export function YearComparisonCard() {
   const currentYear = new Date().getFullYear();
   const lastYear = currentYear - 1;
 
-  const StatCard = ({ 
-    label, 
-    current, 
-    last, 
-    percentChange, 
-    icon: Icon, 
-    isCurrency = false 
-  }: { 
-    label: string; 
-    current: number; 
-    last: number; 
-    percentChange: number; 
+  const StatCard = ({
+    label,
+    current,
+    last,
+    percentChange,
+    icon: Icon,
+    isCurrency = false,
+  }: {
+    label: string;
+    current: number;
+    last: number;
+    percentChange: number;
     icon: React.ElementType;
     isCurrency?: boolean;
   }) => (
-    <div className="p-3 rounded-xl bg-secondary/30 space-y-1">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-xs">{label}</span>
+    <div className="p-3 rounded-xl bg-secondary/30 space-y-2 min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+          <Icon className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-xs truncate">{label}</span>
+        </div>
+        <div
+          className={cn(
+            'shrink-0 flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded',
+            percentChange > 0 && 'bg-success/10 text-success',
+            percentChange < 0 && 'bg-destructive/10 text-destructive',
+            percentChange === 0 && 'bg-muted text-muted-foreground'
+          )}
+        >
+          {percentChange > 0 ? (
+            <TrendingUp className="w-3 h-3" />
+          ) : percentChange < 0 ? (
+            <TrendingDown className="w-3 h-3" />
+          ) : null}
+          {percentChange > 0 ? '+' : ''}
+          {percentChange}%
+        </div>
       </div>
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-lg font-bold text-foreground">
-            {isCurrency ? `${current.toLocaleString('cs-CZ')} Kč` : current}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            vs {isCurrency ? `${last.toLocaleString('cs-CZ')} Kč` : last} ({lastYear})
-          </p>
-        </div>
-        <div className={cn(
-          'flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded',
-          percentChange > 0 && 'bg-success/10 text-success',
-          percentChange < 0 && 'bg-destructive/10 text-destructive',
-          percentChange === 0 && 'bg-muted text-muted-foreground'
-        )}>
-          {percentChange > 0 ? <TrendingUp className="w-3 h-3" /> : percentChange < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-          {percentChange > 0 ? '+' : ''}{percentChange}%
-        </div>
+
+      <div className="space-y-1 min-w-0">
+        <p className="text-base sm:text-lg font-bold text-foreground leading-tight break-words">
+          {isCurrency ? `${current.toLocaleString('cs-CZ')} Kč` : current}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">
+          vs {isCurrency ? `${last.toLocaleString('cs-CZ')} Kč` : last} ({lastYear})
+        </p>
       </div>
     </div>
   );
@@ -103,7 +111,7 @@ export function YearComparisonCard() {
       </CardHeader>
       <CardContent>
         {viewMode === 'overview' ? (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <StatCard
               label="Tréninky"
               current={data.trainings.currentYear}
