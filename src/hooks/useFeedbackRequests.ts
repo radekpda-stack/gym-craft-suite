@@ -168,6 +168,21 @@ export function useCreateFeedbackRequest() {
     mutationFn: async (input: CreateFeedbackRequestInput) => {
       if (!user) throw new Error('Nepřihlášen');
 
+      // Check if feedback request already exists for this training
+      if (input.training_session_id) {
+        const { data: existing } = await supabase
+          .from('feedback_requests')
+          .select('*')
+          .eq('training_session_id', input.training_session_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (existing) {
+          // Return existing request instead of creating new one
+          return existing as FeedbackRequest;
+        }
+      }
+
       const expirationHours = input.expiration_hours || 48;
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + expirationHours);
@@ -194,8 +209,10 @@ export function useCreateFeedbackRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feedback-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-feedback-trainings'] });
     },
     onError: (error) => {
+      console.error('Error creating feedback request:', error);
       toast.error(`Chyba: ${error.message}`);
     },
   });
