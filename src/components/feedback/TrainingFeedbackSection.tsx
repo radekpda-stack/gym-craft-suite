@@ -124,18 +124,51 @@ export function TrainingFeedbackSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainingStatus, feedbackEnabled, status, trainingId, clientId]);
 
-  // One-click copy URL
+  // One-click copy URL with fallback for mobile
   const handleCopyLink = async () => {
     if (!linkData) return;
 
-    try {
-      await navigator.clipboard.writeText(linkData.url);
+    const copyToClipboard = async (text: string): Promise<boolean> => {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          console.warn('Clipboard API failed');
+        }
+      }
+
+      // Fallback: create temporary input and use execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        return true;
+      } catch {
+        return false;
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    };
+
+    const success = await copyToClipboard(linkData.url);
+    if (success) {
       setCopied(true);
       toast.success('Odkaz zkopírován do schránky');
       trackFeature('feedback_link_copy', 'feedback');
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Nepodařilo se zkopírovat odkaz');
+    } else {
+      // Ultimate fallback: show URL in prompt
+      window.prompt('Zkopírujte odkaz:', linkData.url);
+      toast.info('Zkopírujte odkaz z okna výše');
     }
   };
 

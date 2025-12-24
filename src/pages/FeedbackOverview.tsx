@@ -260,11 +260,40 @@ export default function FeedbackOverview() {
 
       const feedbackUrl = `${window.location.origin}/feedback/${result.token}`;
 
-      await navigator.clipboard.writeText(feedbackUrl);
-      toast.success('Odkaz zkopírován do schránky');
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(feedbackUrl);
+          toast.success('Odkaz zkopírován do schránky');
+          return;
+        } catch (clipboardError) {
+          console.warn('Clipboard API failed:', clipboardError);
+        }
+      }
+
+      // Fallback: create temporary input and use execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = feedbackUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        toast.success('Odkaz zkopírován do schránky');
+      } catch {
+        // Ultimate fallback: show URL in prompt
+        window.prompt('Zkopírujte odkaz:', feedbackUrl);
+        toast.info('Zkopírujte odkaz z okna výše');
+      } finally {
+        document.body.removeChild(textArea);
+      }
     } catch (error: any) {
       console.error('Error creating/copying feedback link:', error);
-      toast.error(error?.message || 'Nepodařilo se zkopírovat odkaz');
+      toast.error(error?.message || 'Nepodařilo se vytvořit odkaz');
     }
   };
 
