@@ -1402,6 +1402,7 @@ export type Database = {
           tempo: string | null
           time_seconds: number | null
           training_phase: string | null
+          training_session_id: string | null
           training_type: string | null
           updated_at: string
           user_id: string
@@ -1422,6 +1423,7 @@ export type Database = {
           tempo?: string | null
           time_seconds?: number | null
           training_phase?: string | null
+          training_session_id?: string | null
           training_type?: string | null
           updated_at?: string
           user_id: string
@@ -1442,6 +1444,7 @@ export type Database = {
           tempo?: string | null
           time_seconds?: number | null
           training_phase?: string | null
+          training_session_id?: string | null
           training_type?: string | null
           updated_at?: string
           user_id?: string
@@ -1460,6 +1463,13 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_entries_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
             referencedColumns: ["id"]
           },
         ]
