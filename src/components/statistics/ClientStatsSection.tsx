@@ -1,13 +1,14 @@
+import { useMemo } from 'react';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
-import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
 import { InsightsBar, generateClientInsights } from './InsightsBar';
 import { ClientRetentionCard } from './ClientRetentionCard';
 import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
 import { ClientActivityCard } from './ClientActivityCard';
 import { ClientAcquisitionCard } from './ClientAcquisitionCard';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
-import { Users, UserPlus, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
+import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
+import { Users, UserPlus, UserCheck, AlertTriangle, Loader2, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -27,12 +28,17 @@ export function ClientStatsSection() {
     analytics?.retentionRate
   );
 
+  // Sparkline data from monthly trend
+  const activitySparklineData = useMemo(() => {
+    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.trainings }));
+  }, [stats?.monthlyTrend]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
+            <Skeleton key={i} className="h-40 rounded-xl" />
           ))}
         </div>
         <div className="flex items-center justify-center py-12">
@@ -47,6 +53,7 @@ export function ClientStatsSection() {
   const retentionRate = analytics?.retentionRate || 0;
   const churnedClients = analytics?.churnedClientsCount || 0;
   const avgLifetime = analytics?.averageClientLifetimeMonths || 0;
+  const totalClients = stats?.totalClients || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -55,47 +62,63 @@ export function ClientStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* Hero KPI Cards */}
-      <HeroKPIGrid>
-        <KPICard
-          title="Aktivní klienti"
-          value={activeClients30}
-          subtitle="posledních 30 dní"
-          icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />}
-          trend={analytics?.vsLastMonth.clients}
-          trendLabel="vs minulý měsíc"
-          variant="primary"
-          infoDescription="Počet klientů s alespoň 1 dokončeným tréninkem za posledních 30 dní."
-          infoCalculation="Unikátní klienti, kteří mají záznam o dokončeném tréninku v období (dnes - 30 dní)."
+      {/* WHOOP-style Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <GaugeCard
+          title="Retence (60d)"
+          value={retentionRate}
+          maxValue={100}
+          displayValue={`${retentionRate}%`}
+          sublabel="aktivní"
+          description={`30d: ${analytics?.retentionRate30Days || 0}%`}
+          variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
+          size="md"
         />
-        <KPICard
+        
+        <GaugeCard
+          title="Aktivita"
+          value={totalClients > 0 ? (activeClients30 / totalClients) * 100 : 0}
+          maxValue={100}
+          displayValue={String(activeClients30)}
+          sublabel="aktivních"
+          description={`z ${totalClients} klientů`}
+          variant="blue"
+          size="md"
+        />
+
+        <SparklineCard
+          title="Tréninková aktivita"
+          value={`${stats?.avgTrainingsPerWeek || 0}/týden`}
+          subtitle="průměrně"
+          data={activitySparklineData}
+          trend={analytics?.vsLastMonth.clients}
+          variant="primary"
+          icon={<Activity className="h-4 w-4" />}
+        />
+
+        <MetricCard
           title="Noví klienti"
           value={newClients}
           subtitle="první trénink ≤30 dní"
-          icon={<UserPlus className="h-5 w-5 sm:h-6 sm:w-6" />}
+          progress={Math.min((newClients / 10) * 100, 100)}
           variant="success"
-          infoDescription="Klienti, kteří absolvovali svůj první trénink v posledních 30 dnech."
-          infoCalculation="Klienti, jejichž nejstarší trénink je v rozmezí 0-30 dní od dneška."
+          icon={<UserPlus className="h-4 w-4" />}
+          showProgressValue={false}
         />
-        <KPICard
-          title="Retence (60d)"
-          value={`${retentionRate}%`}
-          subtitle={`30d: ${analytics?.retentionRate30Days || 0}%`}
-          icon={<UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
-          infoDescription="Procento klientů, kteří pokračují v trénování. 60d = bez tréninku max 60 dní."
-          infoCalculation="(Aktivní klienti za 60 dní / Celkový počet nearchivovaných klientů) × 100%"
-        />
-        <KPICard
+      </div>
+
+      {/* Warning card for churned clients if any */}
+      {churnedClients > 0 && (
+        <MetricCard
           title="Odešlí klienti"
           value={churnedClients}
-          subtitle={`prům. délka ${avgLifetime}m`}
-          icon={<AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant={churnedClients > 5 ? 'destructive' : 'default'}
-          infoDescription="Klienti bez tréninku déle než 60 dní. Můžou potřebovat kontaktování."
-          infoCalculation="Počet nearchivovaných klientů, jejichž poslední trénink je starší než 60 dní."
+          subtitle={`prům. délka ${avgLifetime} měsíců`}
+          progress={Math.min((churnedClients / 10) * 100, 100)}
+          variant="destructive"
+          orientation="horizontal"
+          icon={<AlertTriangle className="h-4 w-4" />}
         />
-      </HeroKPIGrid>
+      )}
 
       {/* Client Analytics */}
       <ClientAnalyticsCard />

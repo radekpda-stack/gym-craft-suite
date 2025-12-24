@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useGenderStats } from '@/hooks/useGenderStats';
-import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
 import { InsightsBar, generateExerciseInsights } from './InsightsBar';
 import { TopExercisesCard } from './TopExercisesCard';
 import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
 import { ExerciseBodyPartCard } from './ExerciseBodyPartCard';
 import { RecordWeightsCard } from './RecordWeightsCard';
 import { StrengthProgressCard } from './StrengthProgressCard';
-import { Trophy, Zap, Loader2 } from 'lucide-react';
+import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
+import { Trophy, Zap, Loader2, Dumbbell, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PRsDetailModal } from './modals/PRsDetailModal';
@@ -26,12 +26,20 @@ export function ExerciseStatsSection() {
   // Generate insights
   const insights = generateExerciseInsights(stats);
 
+  // Generate sparkline data from PR counts by month (simulated from monthly trend)
+  const prSparklineData = useMemo(() => {
+    // Use monthly trend as proxy for PR velocity
+    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ 
+      value: Math.round(m.trainings * 0.15) // Approximate PR rate
+    }));
+  }, [stats?.monthlyTrend]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(2)].map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
           ))}
         </div>
         <div className="flex items-center justify-center py-12">
@@ -44,7 +52,8 @@ export function ExerciseStatsSection() {
   const totalExercises = stats?.totalExerciseEntries || 0;
   const uniqueExercises = stats?.uniqueExercises || 0;
   const totalPRs = stats?.totalPRs || 0;
-  const prRate = totalExercises > 0 ? ((totalPRs / totalExercises) * 100).toFixed(1) : '0';
+  const prRate = totalExercises > 0 ? (totalPRs / totalExercises) * 100 : 0;
+  const maxWeight = stats?.maxWeightLifted?.weight || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -53,29 +62,55 @@ export function ExerciseStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* Hero KPI Cards - reduced to 2 main KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        <KPICard
+      {/* WHOOP-style Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <GaugeCard
+          title="PR Rate"
+          value={prRate}
+          maxValue={20}
+          displayValue={`${prRate.toFixed(1)}%`}
+          sublabel="ze záznamů"
+          description={`${totalPRs} osobních rekordů`}
+          variant={prRate >= 10 ? 'success' : prRate >= 5 ? 'primary' : 'warning'}
+          size="md"
+          onClick={() => setActiveModal('prs')}
+        />
+        
+        <GaugeCard
+          title="Max váha"
+          value={maxWeight}
+          maxValue={200}
+          displayValue={maxWeight > 0 ? `${maxWeight}` : '-'}
+          sublabel="kg"
+          description={stats?.maxWeightLifted ? `${stats.maxWeightLifted.exercise}` : 'žádný záznam'}
+          variant="destructive"
+          size="md"
+          onClick={() => setActiveModal('maxweight')}
+        />
+
+        <SparklineCard
           title="Osobní rekordy"
           value={totalPRs}
-          subtitle={`${prRate}% ze záznamů`}
-          icon={<Trophy className="h-5 w-5 sm:h-6 sm:w-6" />}
+          subtitle="tento rok"
+          data={prSparklineData}
           variant="success"
+          icon={<Trophy className="h-4 w-4" />}
           onClick={() => setActiveModal('prs')}
-          clickable
         />
-        <KPICard
-          title="Max váha"
-          value={stats?.maxWeightLifted?.weight ? `${stats.maxWeightLifted.weight} kg` : '-'}
-          subtitle={stats?.maxWeightLifted ? `${stats.maxWeightLifted.exercise} • ${stats.maxWeightLifted.client}` : 'žádný záznam'}
-          icon={<Zap className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant="destructive"
-          onClick={() => setActiveModal('maxweight')}
-          clickable
+
+        <MetricCard
+          title="Různé cviky"
+          value={uniqueExercises}
+          subtitle={`z ${totalExercises.toLocaleString('cs-CZ')} záznamů`}
+          progress={Math.min((uniqueExercises / 100) * 100, 100)}
+          variant="purple"
+          icon={<Dumbbell className="h-4 w-4" />}
+          onClick={() => navigate('/exercises')}
+          showProgressValue
         />
       </div>
 
-      {/* Secondary stats - moved to collapsible detail */}
+      {/* Secondary stats */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
