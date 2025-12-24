@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
@@ -9,13 +10,15 @@ import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
 import { TopPayingClientsCard } from './TopPayingClientsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
 import { formatCurrency } from '@/lib/formatters';
+import { Button } from '@/components/ui/button';
 import { 
   DollarSign, 
   TrendingUp, 
   Dumbbell, 
   ShoppingBag,
   AlertCircle,
-  Loader2 
+  Loader2,
+  BarChart3
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TotalIncomeModal } from './modals/TotalIncomeModal';
@@ -26,6 +29,7 @@ import { ProductIncomeModal } from './modals/ProductIncomeModal';
 type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | null;
 
 export function FinanceStatsSection() {
+  const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
@@ -57,6 +61,19 @@ export function FinanceStatsSection() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Analytics Link */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/statistics/analytics')}
+          className="gap-2"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Pokročilá analytika
+        </Button>
+      </div>
+
       {/* Insight Bar */}
       {insights.length > 0 && (
         <InsightsBar insights={insights} />

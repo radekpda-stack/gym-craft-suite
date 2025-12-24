@@ -18,13 +18,13 @@ interface DistributionDonutChartProps {
 }
 
 const DEFAULT_COLORS = [
-  'hsl(68 100% 50%)',    // Primary volt
-  'hsl(75 100% 45%)',    // Lighter green
-  'hsl(50 100% 50%)',    // Yellow
-  'hsl(45 100% 55%)',    // Orange yellow
+  'hsl(68 100% 50%)',    // Primary volt (chart-1)
+  'hsl(260 90% 65%)',    // Violet (chart-2)
+  'hsl(140 70% 55%)',    // Green (chart-3)
+  'hsl(35 90% 60%)',     // Amber (chart-4)
+  'hsl(10 80% 60%)',     // Coral (chart-5)
   'hsl(180 70% 45%)',    // Cyan
   'hsl(200 70% 50%)',    // Blue
-  'hsl(280 70% 60%)',    // Purple
   'hsl(320 70% 55%)',    // Pink
 ];
 
@@ -39,7 +39,7 @@ export function DistributionDonutChart({
 }: DistributionDonutChartProps) {
   return (
     <div>
-      <div style={{ height }}>
+      <div className="analytics-chart" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -65,10 +65,11 @@ export function DistributionDonutChart({
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
+                boxShadow: '0 4px 12px hsl(0 0% 0% / 0.3)',
               }}
               formatter={(value: number, name: string) => {
                 const item = data.find(d => d.name === name);
-                return [`${item?.percentage || value}%`, name];
+                return [`${item?.percentage ?? Math.round(value)}%`, name];
               }}
             />
           </PieChart>
