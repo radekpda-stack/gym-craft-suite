@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
 import { ChevronLeft } from 'lucide-react';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
-import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { ClientFormValues } from '@/lib/validations/client';
@@ -22,18 +20,16 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
 
 // New simplified components
-import { ClientStatusHeader } from '@/components/clients/ClientStatusHeader';
+import { ClientStatusBlock } from '@/components/clients/ClientStatusBlock';
 import { ClientActionHub } from '@/components/clients/ClientActionHub';
+import { ClientHistoryCollapsed } from '@/components/clients/ClientHistoryCollapsed';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
-import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
-import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
-  const { data: allSessions = [] } = useTrainingSessions(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
   const updateClient = useUpdateClient();
@@ -42,11 +38,6 @@ export default function ClientDetail() {
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
-
-  const clientSessions = allSessions.map(s => ({
-    ...s,
-    status: s.status as 'scheduled' | 'completed' | 'canceled'
-  }));
 
   if (clientLoading) {
     return <ClientDetailSkeleton />;
@@ -65,37 +56,18 @@ export default function ClientDetail() {
     );
   }
 
-  const completedSessions = clientSessions.filter(s => s.status === 'completed');
-  const scheduledSessions = clientSessions.filter(s => s.status === 'scheduled');
-  
   // Shared budget info
   const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
   const sharedBalance = sharedBudgetInfo?.sharedBalance ?? 0;
-  const sharedBudgetName = sharedBudgetInfo?.groupName ?? undefined;
   const creditBalance = isSharedBudget ? sharedBalance : (client.credit_balance || 0);
   
   // Unpaid stats
   const unpaidCount = unpaidTrainings.length;
-  
-  // Last and next training dates
-  const lastCompletedSession = completedSessions[0];
-  const lastTrainingDate = lastCompletedSession 
-    ? format(new Date(lastCompletedSession.date), 'd.M.yyyy', { locale: cs })
-    : undefined;
-  
-  const nextScheduledSession = scheduledSessions.find(s => new Date(s.date) > new Date());
-  const nextTrainingDate = nextScheduledSession
-    ? format(new Date(nextScheduledSession.date), 'd.M. HH:mm', { locale: cs })
-    : undefined;
 
   // Credit status for mobile header
   const creditStatus = getCreditStatus(creditBalance, unpaidCount > 0);
   const statusConfig = STATUS_CONFIG[creditStatus];
 
-  const handleSaveClient = async (data: ClientFormValues) => {
-    await updateClient.mutateAsync({ id: client.id, values: data });
-  };
-  
   const handleAddNote = async (note: string) => {
     const currentNotes = client.notes || '';
     const newNotes = currentNotes 
@@ -117,10 +89,14 @@ export default function ClientDetail() {
     toast({ title: client.is_archived ? 'Klient obnoven' : 'Klient archivován' });
   };
 
+  const handleSaveClient = async (data: ClientFormValues) => {
+    await updateClient.mutateAsync({ id: client.id, values: data });
+  };
+
   return (
     <div className="space-y-4 animate-fade-in pb-24 sm:pb-4">
       {/* Mobile compact header */}
-      {isMobile ? (
+      {isMobile && (
         <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">
           <div className="flex items-center gap-3">
             <Link to="/clients" className="p-2 -ml-2 rounded-full hover:bg-secondary/50">
@@ -143,30 +119,25 @@ export default function ClientDetail() {
             )}
           </div>
         </div>
-      ) : (
-        <>
-          {/* Desktop Breadcrumbs */}
-          <PageBreadcrumbs
-            items={[
-              { label: 'Klienti', href: '/clients' },
-              { label: client.name },
-            ]}
-          />
-
-          {/* Desktop Status Header */}
-          <ClientStatusHeader
-            client={client}
-            creditBalance={creditBalance}
-            lastTrainingDate={lastTrainingDate}
-            nextTrainingDate={nextTrainingDate}
-            isSharedBudget={isSharedBudget}
-            sharedBudgetName={sharedBudgetName}
-            unpaidCount={unpaidCount}
-          />
-        </>
       )}
 
-      {/* 🎯 Dominant CTA - ClientActionHub */}
+      {/* Desktop Breadcrumbs */}
+      {!isMobile && (
+        <PageBreadcrumbs
+          items={[
+            { label: 'Klienti', href: '/clients' },
+            { label: client.name },
+          ]}
+        />
+      )}
+
+      {/* 🔴 Section 1: Immediate Status Block */}
+      <ClientStatusBlock
+        client={client}
+        creditBalance={creditBalance}
+      />
+
+      {/* 🔵 Section 2 & 3: Dominant CTA + Quick Actions */}
       <ClientActionHub
         client={client}
         creditBalance={creditBalance}
@@ -175,14 +146,11 @@ export default function ClientDetail() {
         onAddCredit={() => setIsCreditModalOpen(true)}
       />
 
-      {/* Client Profile Summary (collapsed) */}
-      <ClientProfileSummary
-        client={client}
-        onEditClick={() => setShowClientDetails(true)}
+      {/* ⚪ Section 4: History & Context (collapsed) */}
+      <ClientHistoryCollapsed
+        clientId={client.id}
+        notes={client.notes}
       />
-
-      {/* 📋 History Block (collapsed by default) */}
-      <ClientHistoryBlock clientId={client.id} notes={client.notes} />
 
       {/* ⚙️ Admin/Settings Section */}
       <ClientAdminBlock
@@ -221,7 +189,6 @@ export default function ClientDetail() {
       {isMobile && (
         <ClientActionsSheet
           client={client}
-          lastCompletedTrainingId={lastCompletedSession?.id}
           isSharedBudget={isSharedBudget}
           budgetGroupId={sharedBudgetInfo?.groupId}
           onAddTraining={() => setIsTrainingDialogOpen(true)}
