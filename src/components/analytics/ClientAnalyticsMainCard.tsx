@@ -10,11 +10,11 @@ interface ClientAnalyticsMainCardProps {
 }
 
 export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsMainCardProps) {
-  const trendData = data.clientActivityTrend
+  const trendData = (data?.clientActivityTrend ?? [])
     .filter((_, i) => i % 3 === 0)
     .map(d => ({ label: d.label, value: d.sessions }));
 
-  const distributionData = data.activityDistribution.map(d => ({
+  const distributionData = (data?.activityDistribution ?? []).map(d => ({
     name: `${d.bucket} tréninků`,
     value: d.count,
     percentage: d.percentage,
@@ -92,13 +92,13 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
         </div>
 
         {/* LTV Distribution */}
-        {data.ltvDistribution.length > 0 && (
+        {(data?.ltvDistribution ?? []).length > 0 && (
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-3">
               Rozložení podle objemu tréninků
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {data.ltvDistribution.map((bucket, i) => (
+              {(data?.ltvDistribution ?? []).map((bucket, i) => (
                 <div 
                   key={bucket.bucket}
                   className="p-3 rounded-lg bg-muted/20 text-center"
