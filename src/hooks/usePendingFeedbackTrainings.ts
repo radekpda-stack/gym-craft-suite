@@ -9,7 +9,7 @@ export interface PendingFeedbackTraining {
   date: string;
   hours_since_training: number;
   feedback_request_id?: string;
-  feedback_status?: 'not_created' | 'created_not_sent' | 'sent_pending' | 'completed';
+  feedback_status?: 'not_created' | 'link_copied' | 'sent_pending' | 'completed';
 }
 
 export function usePendingFeedbackTrainings() {
@@ -48,7 +48,7 @@ export function usePendingFeedbackTrainings() {
       // Get existing feedback requests for these trainings
       const { data: requests } = await supabase
         .from('feedback_requests')
-        .select('id, training_session_id, status, sent_at')
+        .select('id, training_session_id, status, sent_at, link_copied_at')
         .in('training_session_id', enabledTrainings.map((t: any) => t.id));
 
       const requestMap = new Map(
@@ -66,8 +66,10 @@ export function usePendingFeedbackTrainings() {
             feedback_status = 'completed';
           } else if (request.sent_at) {
             feedback_status = 'sent_pending';
+          } else if (request.link_copied_at) {
+            feedback_status = 'link_copied';
           } else {
-            feedback_status = 'created_not_sent';
+            feedback_status = 'not_created';
           }
         }
 
