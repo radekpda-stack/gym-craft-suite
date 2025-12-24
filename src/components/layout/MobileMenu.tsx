@@ -12,6 +12,7 @@ import {
   LogOut,
   X,
   Zap,
+  MessageSquare,
   // Sparkles, // Hidden - AI feature disabled
   Wallet,
   ChevronRight,
@@ -68,6 +69,12 @@ const sections: NavSection[] = [
     label: 'Finance',
     items: [
       { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
+    ],
+  },
+  {
+    label: 'Komunikace',
+    items: [
+      { to: '/feedback', icon: MessageSquare, label: 'Feedbacky' },
     ],
   },
   // AI section hidden for future use
