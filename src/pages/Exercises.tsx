@@ -171,11 +171,11 @@ export default function Exercises() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 justify-center sm:justify-start">
           <Dumbbell className="w-6 h-6 text-primary shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold truncate">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl font-bold">
               {language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
             </h1>
             <p className="text-muted-foreground text-sm">
@@ -187,7 +187,7 @@ export default function Exercises() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
           {bulkEditMode ? (
             <>
               <Button
