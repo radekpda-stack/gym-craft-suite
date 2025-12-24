@@ -178,6 +178,13 @@ export function useCreateFeedbackRequest() {
           .maybeSingle();
 
         if (existing) {
+          // Update link_copied_at if not already set
+          if (!existing.link_copied_at) {
+            await supabase
+              .from('feedback_requests')
+              .update({ link_copied_at: new Date().toISOString() })
+              .eq('id', existing.id);
+          }
           // Return existing request instead of creating new one
           return existing as FeedbackRequest;
         }
@@ -196,6 +203,7 @@ export function useCreateFeedbackRequest() {
           custom_message: input.custom_message || null,
           trainer_signature: input.trainer_signature || null,
           expires_at: expiresAt.toISOString(),
+          link_copied_at: new Date().toISOString(), // Mark as copied immediately
         })
         .select(`
           *,

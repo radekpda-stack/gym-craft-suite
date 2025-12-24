@@ -18,7 +18,6 @@ import {
   XCircle,
   Mail,
   MailOpen,
-  Link2Off,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -232,19 +231,19 @@ export default function FeedbackOverview() {
       case 'sent_pending':
         return { 
           color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400', 
-          label: 'Odesláno', 
+          label: 'Odesláno e-mailem', 
           Icon: Mail 
         };
-      case 'created_not_sent':
+      case 'link_copied':
         return { 
           color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', 
-          label: 'Odkaz vytvořen', 
-          Icon: Link2Off 
+          label: 'Odkaz zkopírován', 
+          Icon: Copy 
         };
       default:
         return { 
           color: 'bg-muted text-muted-foreground', 
-          label: 'Neodesláno', 
+          label: 'Čeká na odeslání', 
           Icon: MailOpen 
         };
     }
