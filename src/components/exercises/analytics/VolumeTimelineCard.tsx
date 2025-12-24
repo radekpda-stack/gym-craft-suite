@@ -15,6 +15,7 @@ interface VolumeTimelineCardProps {
   data: VolumeDataPoint[];
   comparisonMode: ComparisonMode;
   isLoading?: boolean;
+  helpText?: string;
 }
 
 function formatVolume(value: number): string {
@@ -27,6 +28,7 @@ export function VolumeTimelineCard({
   data,
   comparisonMode,
   isLoading,
+  helpText,
 }: VolumeTimelineCardProps) {
   const isEmpty = !data || data.length === 0 || data.every(d => d.volume === 0);
 
@@ -37,6 +39,7 @@ export function VolumeTimelineCard({
       isLoading={isLoading}
       isEmpty={isEmpty}
       className="md:col-span-2"
+      helpText={helpText}
     >
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">

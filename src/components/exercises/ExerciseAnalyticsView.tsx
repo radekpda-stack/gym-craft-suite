@@ -5,7 +5,7 @@ import { AnalyticsGrid, AnalyticsGridItem } from './analytics/AnalyticsGrid';
 import { VolumeTimelineCard } from './analytics/VolumeTimelineCard';
 import { LoadDistributionCard } from './analytics/LoadDistributionCard';
 import { MovementPatternsCard } from './analytics/MovementPatternsCard';
-import { UnusedExercisesCard } from './analytics/UnusedExercisesCard';
+import { TopExercisesCard } from './analytics/TopExercisesCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClients } from '@/hooks/useClients';
@@ -15,6 +15,13 @@ const PERIOD_OPTIONS: { value: AnalyticsPeriod; label: string }[] = [
   { value: 30, label: '30 dní' },
   { value: 90, label: '90 dní' },
 ];
+
+// Help texts for analytics cards
+const HELP_TEXTS = {
+  volume: 'Týdenní souhrn tréninkového objemu (sets × reps × kg). Čárkovaná čára = průměr všech klientů.',
+  loadDistribution: 'Procentuální rozložení objemu mezi svalovými skupinami. Výběr = vybraní klienti, Průměr = celá databáze.',
+  movementPatterns: 'Které pohybové vzorce (squat, hinge, push, pull...) se v tréninku objevují nejčastěji.',
+};
 
 export function ExerciseAnalyticsView() {
   const [period, setPeriod] = useState<AnalyticsPeriod>(30);
@@ -87,6 +94,7 @@ export function ExerciseAnalyticsView() {
             data={data?.volumeTimeline || []}
             comparisonMode={comparisonMode}
             isLoading={isLoading}
+            helpText={HELP_TEXTS.volume}
           />
         </AnalyticsGridItem>
 
@@ -95,6 +103,7 @@ export function ExerciseAnalyticsView() {
           <LoadDistributionCard
             data={data?.loadDistribution || []}
             isLoading={isLoading}
+            helpText={HELP_TEXTS.loadDistribution}
           />
         </AnalyticsGridItem>
 
@@ -105,13 +114,14 @@ export function ExerciseAnalyticsView() {
             coverage={data?.movementPatternsCoverage}
             totalEntries={data?.movementPatternsTotalEntries}
             isLoading={isLoading}
+            helpText={HELP_TEXTS.movementPatterns}
           />
         </AnalyticsGridItem>
 
-        {/* Unused Exercises - full width */}
+        {/* Top Exercises - full width */}
         <AnalyticsGridItem className="md:col-span-2">
-          <UnusedExercisesCard
-            data={data?.unusedExercises || []}
+          <TopExercisesCard
+            data={data?.topExercises || []}
             periodLabel={periodLabel}
             isLoading={isLoading}
           />

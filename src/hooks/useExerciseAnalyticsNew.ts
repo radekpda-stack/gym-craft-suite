@@ -29,11 +29,12 @@ interface MovementPatternItem {
   coverage?: number;
 }
 
-interface UnusedExercise {
+interface TopExercise {
   id: string;
   name: string;
   category: string;
-  lastUsed: string | null;
+  usageCount: number;
+  totalVolume: number;
 }
 
 export interface ExerciseAnalyticsNewData {
@@ -43,7 +44,7 @@ export interface ExerciseAnalyticsNewData {
   movementPatterns: MovementPatternItem[];
   movementPatternsCoverage: number;
   movementPatternsTotalEntries: number;
-  unusedExercises: UnusedExercise[];
+  topExercises: TopExercise[];
 }
 
 const MUSCLE_GROUP_LABELS: Record<string, string> = {
@@ -257,14 +258,15 @@ export function useExerciseAnalyticsNew(
         muscleGroupsAll[group as keyof typeof muscleGroupsAll] += volume;
       });
 
-      const maxValue = Math.max(...Object.values(muscleGroups), 1);
-      const maxValueAll = Math.max(...Object.values(muscleGroupsAll), 1);
+      // Calculate total volume for percentage calculation
+      const totalMuscleVolume = Object.values(muscleGroups).reduce((sum, v) => sum + v, 0) || 1;
+      const totalMuscleVolumeAll = Object.values(muscleGroupsAll).reduce((sum, v) => sum + v, 0) || 1;
 
       const loadDistribution: LoadDistributionItem[] = ['lower', 'upper', 'core', 'other'].map(group => ({
         group,
         label: MUSCLE_GROUP_LABELS[group],
-        value: Math.round((muscleGroups[group as keyof typeof muscleGroups] / maxValue) * 100),
-        comparisonValue: Math.round((muscleGroupsAll[group as keyof typeof muscleGroupsAll] / maxValueAll) * 100),
+        value: Math.round((muscleGroups[group as keyof typeof muscleGroups] / totalMuscleVolume) * 100),
+        comparisonValue: Math.round((muscleGroupsAll[group as keyof typeof muscleGroupsAll] / totalMuscleVolumeAll) * 100),
       }));
 
       // Movement patterns (consolidated) with fallback mapping
@@ -299,16 +301,40 @@ export function useExerciseAnalyticsNew(
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
-      // Unused exercises
-      const usedExerciseIds = new Set(entries?.map(e => e.exercise_id).filter(Boolean));
-      const unusedExercises: UnusedExercise[] = (allExercises || [])
-        .filter(ex => !usedExerciseIds.has(ex.id))
-        .slice(0, 20)
+      // Top exercises - aggregate by exercise
+      const exerciseStats = new Map<string, { id: string; name: string; category: string; count: number; volume: number }>();
+      
+      entries?.forEach(e => {
+        const exerciseId = e.exercise_id;
+        if (!exerciseId) return;
+        
+        const exercise = e.exercises as any;
+        const existing = exerciseStats.get(exerciseId);
+        const volume = (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 0);
+        
+        if (existing) {
+          existing.count += 1;
+          existing.volume += volume;
+        } else {
+          exerciseStats.set(exerciseId, {
+            id: exerciseId,
+            name: e.exercise_name,
+            category: exercise?.category || 'Ostatní',
+            count: 1,
+            volume,
+          });
+        }
+      });
+
+      const topExercises: TopExercise[] = Array.from(exerciseStats.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
         .map(ex => ({
           id: ex.id,
-          name: ex.name_cs || ex.name,
+          name: ex.name,
           category: ex.category,
-          lastUsed: null,
+          usageCount: ex.count,
+          totalVolume: ex.volume,
         }));
 
       return {
@@ -318,7 +344,7 @@ export function useExerciseAnalyticsNew(
         movementPatterns,
         movementPatternsCoverage: coverage,
         movementPatternsTotalEntries: totalEntries,
-        unusedExercises,
+        topExercises,
       };
     },
     enabled: !!user?.id,

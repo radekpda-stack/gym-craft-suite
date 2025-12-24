@@ -12,10 +12,11 @@ interface LoadDistributionItem {
 interface LoadDistributionCardProps {
   data: LoadDistributionItem[];
   isLoading?: boolean;
+  helpText?: string;
 }
 
-export function LoadDistributionCard({ data, isLoading }: LoadDistributionCardProps) {
-  const isEmpty = !data || data.length === 0 || data.every(d => d.value === 0);
+export function LoadDistributionCard({ data, isLoading, helpText }: LoadDistributionCardProps) {
+  const isEmpty = !data || data.length === 0 || data.every(d => d.value === 0 && d.comparisonValue === 0);
 
   const legend = (
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -37,6 +38,7 @@ export function LoadDistributionCard({ data, isLoading }: LoadDistributionCardPr
       isLoading={isLoading}
       isEmpty={isEmpty}
       actions={legend}
+      helpText={helpText}
     >
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
