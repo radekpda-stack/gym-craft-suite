@@ -7,7 +7,7 @@ export interface NutritionSessionWithClient {
   client_id: string;
   start_date: string;
   end_date: string;
-  status: 'active' | 'completed' | 'expired';
+  status: 'active' | 'completed';
   token: string;
   created_at: string;
   updated_at: string;
@@ -84,7 +84,7 @@ export function useAllNutritionSessions() {
         client_id: session.client_id,
         start_date: session.start_date,
         end_date: session.end_date,
-        status: session.status as 'active' | 'completed' | 'expired',
+        status: session.status as 'active' | 'completed',
         token: session.token,
         created_at: session.created_at,
         updated_at: session.updated_at,

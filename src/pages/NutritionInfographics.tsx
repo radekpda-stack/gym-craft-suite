@@ -68,13 +68,11 @@ export default function NutritionInfographics() {
     const statusCounts = {
       active: sessions.filter(s => s.status === 'active').length,
       completed: sessions.filter(s => s.status === 'completed').length,
-      expired: sessions.filter(s => s.status === 'expired').length,
     };
 
     const statusDistribution = [
       { name: 'Aktivní', value: statusCounts.active, color: 'hsl(142, 76%, 36%)' },
       { name: 'Dokončené', value: statusCounts.completed, color: 'hsl(221, 83%, 53%)' },
-      { name: 'Vypršelé', value: statusCounts.expired, color: 'hsl(0, 84%, 60%)' },
     ].filter(d => d.value > 0);
 
     return { entryTypes, topClients, statusDistribution };

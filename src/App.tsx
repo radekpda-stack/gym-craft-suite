@@ -45,11 +45,11 @@ import FinanceAnalytics from "./pages/FinanceAnalytics";
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NutritionOverview from "./pages/NutritionOverview";
 import NutritionCampaigns from "./pages/NutritionCampaigns";
+import NutritionCampaignDetail from "./pages/NutritionCampaignDetail";
 import NutritionAnalysis from "./pages/NutritionAnalysis";
 import NutritionTemplate from "./pages/NutritionTemplate";
 import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
 import NutritionInfographics from "./pages/NutritionInfographics";
-import NutritionSettings from "./pages/NutritionSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -116,11 +116,11 @@ const App = () => (
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           <Route path="/nutrition" element={<NutritionOverview />} />
                           <Route path="/nutrition/campaigns" element={<NutritionCampaigns />} />
+                          <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
                           <Route path="/nutrition/analysis" element={<NutritionAnalysis />} />
                           <Route path="/nutrition/template" element={<NutritionTemplate />} />
                           <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
                           <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
-                          <Route path="/nutrition/settings" element={<NutritionSettings />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />

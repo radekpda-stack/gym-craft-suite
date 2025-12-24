@@ -5,14 +5,12 @@ import {
   Plus, 
   TrendingUp,
   FileText,
-  BarChart3,
   Settings,
   Clock,
   CheckCircle2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAllNutritionSessions, useNutritionStats } from '@/hooks/useAllNutritionSessions';
 import { useUpdateNutritionLogSession } from '@/hooks/useNutritionLog';
@@ -44,7 +42,7 @@ export default function NutritionOverview() {
   };
 
   const handleAnalyze = (sessionId: string) => {
-    navigate(`/nutrition/analysis?campaign=${sessionId}`);
+    navigate(`/nutrition/campaigns/${sessionId}`);
   };
 
   return (
@@ -204,7 +202,7 @@ export default function NutritionOverview() {
           <CardTitle>Rychlé akce</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
@@ -216,26 +214,18 @@ export default function NutritionOverview() {
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/nutrition/analysis')}
-            >
-              <BarChart3 className="h-6 w-6" />
-              <span>Analýza</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
               onClick={() => navigate('/nutrition/template')}
             >
-              <FileText className="h-6 w-6" />
+              <Settings className="h-6 w-6" />
               <span>Šablona dotazníku</span>
             </Button>
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/nutrition/settings')}
+              onClick={() => setShowNewModal(true)}
             >
-              <Settings className="h-6 w-6" />
-              <span>Nastavení</span>
+              <Plus className="h-6 w-6" />
+              <span>Nová kampaň</span>
             </Button>
           </div>
         </CardContent>
