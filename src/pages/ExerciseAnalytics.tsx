@@ -387,18 +387,25 @@ export default function ExerciseAnalytics() {
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Nepodařilo se načíst data</p>
         </Card>
+      ) : !data || !data.volumeTrend ? (
+        <Card className="p-8 text-center">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground">
+            Žádná data pro vybrané období
+          </p>
+        </Card>
       ) : (
         <div className="space-y-6">
           {/* Main Overview or Comparison Views */}
           {!filters.comparisonMode && (
             <>
               <AnalyticsMainCard 
-                data={data!} 
+                data={data} 
                 onShowDetail={() => setShowDetail(true)} 
               />
               {showDetail && (
                 <AnalyticsDetailView 
-                  data={data!} 
+                  data={data} 
                   onClose={() => setShowDetail(false)} 
                 />
               )}
