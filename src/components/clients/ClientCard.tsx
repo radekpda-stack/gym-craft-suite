@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   ChevronRight,
@@ -17,6 +17,7 @@ import {
   CreditCard,
   MessageSquareWarning,
   HeartPulse,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -121,6 +122,21 @@ export const ClientCard = memo(function ClientCard({
     return 'text-emerald-400';
   };
 
+  // Calculate days since last training
+  const getDaysSinceTraining = () => {
+    if (!lastActivityDate) return null;
+    return differenceInDays(new Date(), new Date(lastActivityDate));
+  };
+  
+  const daysSince = getDaysSinceTraining();
+  
+  const getDaysSinceColor = () => {
+    if (daysSince === null) return 'text-muted-foreground';
+    if (daysSince <= 3) return 'text-success';
+    if (daysSince <= 7) return 'text-warning';
+    return 'text-destructive';
+  };
+
   return (
     <div
       className={cn(
@@ -218,6 +234,32 @@ export const ClientCard = memo(function ClientCard({
                 <Dumbbell className="w-3.5 h-3.5" />
                 <span className="text-xs tabular-nums">{trainingCount}×</span>
               </div>
+            )}
+
+            {/* Days since last training indicator */}
+            {daysSince !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={cn("flex items-center gap-1 cursor-help", getDaysSinceColor())}>
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium tabular-nums">{daysSince}d</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {daysSince === 0 
+                      ? 'Trénink dnes' 
+                      : daysSince === 1 
+                        ? 'Včera' 
+                        : `Před ${daysSince} dny`}
+                  </p>
+                  {lastActivityDate && (
+                    <p className="text-muted-foreground text-xs">
+                      {format(new Date(lastActivityDate), 'd. MMMM yyyy', { locale: cs })}
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
 

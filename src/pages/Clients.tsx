@@ -153,6 +153,7 @@ export default function Clients() {
       id: client.id, 
       is_archived: !client.is_archived 
     });
+    trackFeature(client.is_archived ? 'client_restore' : 'client_archive', 'clients');
   };
 
   const allGoals = [...new Set(clients.flatMap(c => c.training_goals || []))];
@@ -217,18 +218,21 @@ export default function Clients() {
   const handleCreateClient = async (data: ClientFormValues) => {
     await createClient.mutateAsync(data);
     setIsCreateSheetOpen(false);
+    trackFeature('client_create', 'clients');
   };
 
   const handleEditClient = async (data: ClientFormValues) => {
     if (!editingClient) return;
     await updateClient.mutateAsync({ id: editingClient.id, values: data });
     setEditingClient(null);
+    trackFeature('client_update', 'clients');
   };
 
   const handleDeleteClient = async () => {
     if (!deletingClient) return;
     await deleteClient.mutateAsync(deletingClient.id);
     setDeletingClient(null);
+    trackFeature('client_delete', 'clients');
   };
 
   const handleAddCredit = async () => {
@@ -246,6 +250,7 @@ export default function Clients() {
     setCreditAmount('');
     setCreditDescription('');
     setCreditClient(null);
+    trackFeature('credit_add', 'finance');
   };
 
   const getCreditColor = (credit: number) => {

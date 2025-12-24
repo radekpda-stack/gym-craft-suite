@@ -7,6 +7,8 @@ import { CommandPalette } from '@/components/search/CommandPalette';
 import { QuickNoteDialog } from '@/components/dashboard/QuickNoteDialog';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
+import { useFeatureTracking } from '@/hooks/useFeatureTracking';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuickAction {
   id: string;
@@ -18,6 +20,8 @@ interface QuickAction {
 
 export function QuickActionsGrid() {
   const navigate = useNavigate();
+  const { trackFeature } = useFeatureTracking();
+  const { toast } = useToast();
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showNote, setShowNote] = useState(false);
@@ -29,35 +33,48 @@ export function QuickActionsGrid() {
     try {
       await createTraining.mutateAsync(formData);
       setShowTrainingSheet(false);
+      trackFeature('quick_action_create_training', 'trainings');
+      toast({ title: 'Trénink vytvořen' });
     } catch (error) {
       console.error('Error creating training:', error);
+      toast({ title: 'Chyba při vytváření tréninku', variant: 'destructive' });
     }
+  };
+  
+  const handleOpenSearch = () => {
+    setShowSearch(true);
+    trackFeature('quick_action_search', 'search');
+  };
+  
+  const handleOpenNote = () => {
+    setShowNote(true);
+    trackFeature('quick_action_note', 'clients');
   };
   
   const actions: QuickAction[] = [
     {
       id: 'new-training',
       label: 'Nový trénink',
-      icon: <Plus className="w-5 h-5" />,
+      icon: <Plus className="w-4 h-4" />,
       primary: true,
       onClick: () => setShowTrainingSheet(true),
     },
     {
       id: 'search',
       label: 'Hledat',
-      icon: <Search className="w-5 h-5" />,
-      onClick: () => setShowSearch(true),
+      icon: <Search className="w-4 h-4" />,
+      onClick: handleOpenSearch,
     },
     {
       id: 'note',
       label: 'Poznámka',
-      icon: <StickyNote className="w-5 h-5" />,
-      onClick: () => setShowNote(true),
+      icon: <StickyNote className="w-4 h-4" />,
+      onClick: handleOpenNote,
     },
     {
       id: 'stats',
       label: 'Statistiky',
-      icon: <BarChart3 className="w-5 h-5" />,
+      icon: <BarChart3 className="w-4 h-4" />,
       onClick: () => navigate('/statistics'),
     },
   ];

@@ -12,11 +12,13 @@ import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export function QuickActionsBar() {
   const navigate = useNavigate();
   const { trackFeature } = useFeatureTracking();
+  const { toast } = useToast();
   const { data: clients = [] } = useClients();
   const createTraining = useCreateTrainingSession();
   
@@ -28,8 +30,10 @@ export function QuickActionsBar() {
       await createTraining.mutateAsync(data);
       setShowTrainingSheet(false);
       trackFeature('create_training', 'trainings');
+      toast({ title: 'Trénink vytvořen' });
     } catch (error) {
       console.error('Error creating training:', error);
+      toast({ title: 'Chyba při vytváření tréninku', variant: 'destructive' });
     }
   };
   
