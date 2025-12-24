@@ -24,21 +24,40 @@ export interface TimelineEvent {
   relatedId?: string;
 }
 
-export function useClientTimeline(clientId: string | undefined, options?: { limit?: number }) {
+export interface TimelineOptions {
+  limit?: number;
+  daysBack?: number;
+}
+
+export function useClientTimeline(clientId: string | undefined, options?: TimelineOptions) {
   return useQuery({
-    queryKey: ['client-timeline', clientId, options?.limit],
+    queryKey: ['client-timeline', clientId, options?.limit, options?.daysBack],
     queryFn: async (): Promise<TimelineEvent[]> => {
       if (!clientId) return [];
 
       const events: TimelineEvent[] = [];
+      
+      // Calculate date filter if daysBack is specified
+      let dateFilter: string | undefined;
+      if (options?.daysBack) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - options.daysBack);
+        dateFilter = cutoffDate.toISOString();
+      }
 
       // Fetch trainings
-      const { data: trainings } = await supabase
+      let trainingsQuery = supabase
         .from('training_sessions')
         .select('id, date, status, notes, duration')
         .eq('client_id', clientId)
         .order('date', { ascending: false })
         .limit(options?.limit || 50);
+      
+      if (dateFilter) {
+        trainingsQuery = trainingsQuery.gte('date', dateFilter);
+      }
+      
+      const { data: trainings } = await trainingsQuery;
 
       trainings?.forEach(t => {
         const statusMap: Record<string, TimelineEventType> = {
@@ -59,12 +78,18 @@ export function useClientTimeline(clientId: string | undefined, options?: { limi
       });
 
       // Fetch feedback
-      const { data: feedbacks } = await supabase
+      let feedbackQuery = supabase
         .from('training_feedback')
         .select('id, training_date, pain, body_feel, energy_rating, is_red_flag, red_flag_reasons, comment')
         .eq('client_id', clientId)
         .order('training_date', { ascending: false })
         .limit(options?.limit || 50);
+      
+      if (dateFilter) {
+        feedbackQuery = feedbackQuery.gte('training_date', dateFilter);
+      }
+      
+      const { data: feedbacks } = await feedbackQuery;
 
       feedbacks?.forEach(f => {
         events.push({
@@ -80,12 +105,18 @@ export function useClientTimeline(clientId: string | undefined, options?: { limi
       });
 
       // Fetch measurements
-      const { data: measurements } = await supabase
+      let measurementsQuery = supabase
         .from('measurements')
         .select('id, date, weight, body_fat_percentage, muscle_mass')
         .eq('client_id', clientId)
         .order('date', { ascending: false })
         .limit(options?.limit || 20);
+      
+      if (dateFilter) {
+        measurementsQuery = measurementsQuery.gte('date', dateFilter);
+      }
+      
+      const { data: measurements } = await measurementsQuery;
 
       measurements?.forEach(m => {
         const parts: string[] = [];
@@ -104,12 +135,18 @@ export function useClientTimeline(clientId: string | undefined, options?: { limi
       });
 
       // Fetch credit transactions
-      const { data: transactions } = await supabase
+      let transactionsQuery = supabase
         .from('credit_transactions')
         .select('id, created_at, amount, type, description')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false })
         .limit(options?.limit || 30);
+      
+      if (dateFilter) {
+        transactionsQuery = transactionsQuery.gte('created_at', dateFilter);
+      }
+      
+      const { data: transactions } = await transactionsQuery;
 
       transactions?.forEach(t => {
         events.push({
@@ -120,6 +157,59 @@ export function useClientTimeline(clientId: string | undefined, options?: { limi
           description: t.description || `${t.amount > 0 ? '+' : ''}${t.amount} Kč`,
           metadata: { amount: t.amount, type: t.type },
           relatedId: t.id,
+        });
+      });
+
+      // Fetch diagnostics
+      let diagnosticsQuery = supabase
+        .from('diagnostics')
+        .select('id, date, area_name, area_type, findings')
+        .eq('client_id', clientId)
+        .order('date', { ascending: false })
+        .limit(options?.limit || 20);
+      
+      if (dateFilter) {
+        diagnosticsQuery = diagnosticsQuery.gte('date', dateFilter);
+      }
+      
+      const { data: diagnostics } = await diagnosticsQuery;
+
+      diagnostics?.forEach(d => {
+        events.push({
+          id: `diagnostic-${d.id}`,
+          type: 'diagnostic',
+          date: d.date,
+          title: `Diagnostika: ${d.area_name}`,
+          description: d.findings?.substring(0, 100) || undefined,
+          metadata: { area_type: d.area_type },
+          relatedId: d.id,
+        });
+      });
+
+      // Fetch media uploads
+      let mediaQuery = supabase
+        .from('client_media')
+        .select('id, created_at, file_name, type, category, description')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(options?.limit || 20);
+      
+      if (dateFilter) {
+        mediaQuery = mediaQuery.gte('created_at', dateFilter);
+      }
+      
+      const { data: media } = await mediaQuery;
+
+      media?.forEach(m => {
+        const typeLabel = m.type === 'image' ? 'Fotka' : m.type === 'video' ? 'Video' : 'Soubor';
+        events.push({
+          id: `media-${m.id}`,
+          type: 'media_uploaded',
+          date: m.created_at,
+          title: `${typeLabel} nahráno`,
+          description: m.description || m.category || m.file_name,
+          metadata: { type: m.type, category: m.category },
+          relatedId: m.id,
         });
       });
 

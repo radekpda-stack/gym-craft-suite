@@ -9,23 +9,35 @@ import {
   AlertTriangle,
   Calendar,
   ChevronDown,
-  ChevronUp,
   Clock,
   CheckCircle,
   XCircle,
-  Filter,
+  Stethoscope,
+  Image,
+  CheckCheck,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useClientTimeline, TimelineEvent, TimelineEventType } from '@/hooks/useClientTimeline';
+import { useRedFlagResolutions, useResolveRedFlag } from '@/hooks/useRedFlagResolutions';
 
 interface ClientTimelineProps {
   clientId: string;
   defaultLimit?: number;
   showFilters?: boolean;
 }
+
+type FilterType = TimelineEventType | 'all' | 'red_flags' | 'last_14_days';
 
 const EVENT_CONFIG: Record<TimelineEventType, {
   icon: typeof Dumbbell;
@@ -63,7 +75,7 @@ const EVENT_CONFIG: Record<TimelineEventType, {
     bgColor: 'bg-purple-500/10',
   },
   diagnostic: {
-    icon: Dumbbell,
+    icon: Stethoscope,
     color: 'text-orange-600',
     bgColor: 'bg-orange-500/10',
   },
@@ -78,9 +90,9 @@ const EVENT_CONFIG: Record<TimelineEventType, {
     bgColor: 'bg-secondary',
   },
   media_uploaded: {
-    icon: Calendar,
-    color: 'text-muted-foreground',
-    bgColor: 'bg-secondary',
+    icon: Image,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-500/10',
   },
 };
 
@@ -109,10 +121,21 @@ function groupEventsByDate(events: TimelineEvent[]): Record<string, TimelineEven
 
 export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true }: ClientTimelineProps) {
   const [limit, setLimit] = useState(defaultLimit);
-  const [filterType, setFilterType] = useState<TimelineEventType | 'all' | 'red_flags'>('all');
-  const { data: events = [], isLoading } = useClientTimeline(clientId, { limit: 100 });
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
+  const [resolutionNote, setResolutionNote] = useState('');
+  
+  const daysBack = filterType === 'last_14_days' ? 14 : undefined;
+  const { data: events = [], isLoading } = useClientTimeline(clientId, { limit: 100, daysBack });
+  const { data: resolutions = [] } = useRedFlagResolutions(clientId);
+  const resolveRedFlag = useResolveRedFlag();
+
+  // Create a set of resolved feedback IDs for quick lookup
+  const resolvedFeedbackIds = new Set(resolutions.map(r => r.feedback_id));
 
   const filteredEvents = events.filter(event => {
+    if (filterType === 'last_14_days') return true; // Already filtered by daysBack
     if (filterType === 'all') return true;
     if (filterType === 'red_flags') return event.isRedFlag;
     return event.type === filterType;
@@ -120,6 +143,27 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
 
   const groupedEvents = groupEventsByDate(filteredEvents);
   const hasMore = events.length > limit;
+
+  const handleResolveClick = (feedbackId: string) => {
+    setSelectedFeedbackId(feedbackId);
+    setResolutionNote('');
+    setResolveDialogOpen(true);
+  };
+
+  const handleResolveSubmit = () => {
+    if (!selectedFeedbackId) return;
+    resolveRedFlag.mutate({
+      feedbackId: selectedFeedbackId,
+      clientId,
+      note: resolutionNote || undefined,
+    }, {
+      onSuccess: () => {
+        setResolveDialogOpen(false);
+        setSelectedFeedbackId(null);
+        setResolutionNote('');
+      }
+    });
+  };
 
   if (isLoading) {
     return (
@@ -160,6 +204,14 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
             Vše
           </Button>
           <Button
+            variant={filterType === 'last_14_days' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('last_14_days')}
+            className="h-7 text-xs"
+          >
+            14 dní
+          </Button>
+          <Button
             variant={filterType === 'red_flags' ? 'destructive' : 'outline'}
             size="sm"
             onClick={() => setFilterType('red_flags')}
@@ -192,6 +244,22 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
           >
             Měření
           </Button>
+          <Button
+            variant={filterType === 'diagnostic' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('diagnostic')}
+            className="h-7 text-xs"
+          >
+            Diagnostiky
+          </Button>
+          <Button
+            variant={filterType === 'media_uploaded' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('media_uploaded')}
+            className="h-7 text-xs"
+          >
+            Média
+          </Button>
         </div>
       )}
 
@@ -214,6 +282,10 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
             {dayEvents.map((event, idx) => {
               const config = EVENT_CONFIG[event.type];
               const Icon = config.icon;
+              const feedbackId = event.type === 'feedback_received' && event.relatedId 
+                ? event.relatedId 
+                : null;
+              const isResolved = feedbackId ? resolvedFeedbackIds.has(feedbackId) : false;
               
               return (
                 <div
@@ -227,7 +299,8 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                   <div className={cn(
                     'relative z-10 flex items-center justify-center w-10 h-10 rounded-full shrink-0',
                     config.bgColor,
-                    event.isRedFlag && 'ring-2 ring-destructive'
+                    event.isRedFlag && !isResolved && 'ring-2 ring-destructive',
+                    event.isRedFlag && isResolved && 'ring-2 ring-green-500'
                   )}>
                     <Icon className={cn('w-4 h-4', config.color)} />
                   </div>
@@ -236,11 +309,17 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                   <div className="flex-1 min-w-0 pt-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-medium text-sm text-foreground flex items-center gap-2">
+                        <p className="font-medium text-sm text-foreground flex items-center gap-2 flex-wrap">
                           {event.title}
-                          {event.isRedFlag && (
+                          {event.isRedFlag && !isResolved && (
                             <Badge variant="destructive" className="h-4 text-[10px] px-1">
                               Red flag
+                            </Badge>
+                          )}
+                          {event.isRedFlag && isResolved && (
+                            <Badge variant="outline" className="h-4 text-[10px] px-1 border-green-500/50 text-green-600 gap-0.5">
+                              <CheckCheck className="w-2.5 h-2.5" />
+                              Vyřešeno
                             </Badge>
                           )}
                         </p>
@@ -250,9 +329,21 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                           </p>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {format(new Date(event.date), 'HH:mm')}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {event.isRedFlag && !isResolved && feedbackId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleResolveClick(feedbackId)}
+                          >
+                            Vyřešit
+                          </Button>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(event.date), 'HH:mm')}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Metadata badges */}
@@ -294,6 +385,24 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                         {event.metadata.amount > 0 ? '+' : ''}{event.metadata.amount} Kč
                       </Badge>
                     )}
+
+                    {event.metadata && event.type === 'diagnostic' && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] h-4 px-1 mt-1"
+                      >
+                        {event.metadata.area_type}
+                      </Badge>
+                    )}
+
+                    {event.metadata && event.type === 'media_uploaded' && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] h-4 px-1 mt-1"
+                      >
+                        {event.metadata.category || event.metadata.type}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               );
@@ -314,6 +423,34 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
           Zobrazit více
         </Button>
       )}
+
+      {/* Resolve Red Flag Dialog */}
+      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Označit red flag jako vyřešený</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Poznámka k vyřešení (volitelné)..."
+              value={resolutionNote}
+              onChange={(e) => setResolutionNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
+              Zrušit
+            </Button>
+            <Button 
+              onClick={handleResolveSubmit}
+              disabled={resolveRedFlag.isPending}
+            >
+              {resolveRedFlag.isPending ? 'Ukládám...' : 'Označit jako vyřešený'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
