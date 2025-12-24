@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { Layers } from 'lucide-react';
+import { AnalyticsCard } from './AnalyticsCard';
 
 interface MovementPatternItem {
   pattern: string;
@@ -14,118 +13,53 @@ interface MovementPatternsCardProps {
 }
 
 const PATTERN_COLORS: Record<string, string> = {
-  squat: 'hsl(217, 91%, 60%)',    // blue
-  hinge: 'hsl(263, 70%, 50%)',    // purple
-  push: 'hsl(25, 95%, 53%)',      // orange
-  pull: 'hsl(142, 71%, 45%)',     // green
-  carry: 'hsl(187, 85%, 43%)',    // cyan
-  rotation: 'hsl(339, 82%, 51%)', // rose
-  core: 'hsl(270, 50%, 50%)',     // violet
-  lunge: 'hsl(330, 80%, 60%)',    // pink
-  locomotion: 'hsl(173, 80%, 40%)', // teal
-  conditioning: 'hsl(0, 72%, 51%)', // red
-  mobility: 'hsl(199, 89%, 48%)', // sky
+  squat: 'bg-blue-500',
+  hinge: 'bg-purple-500',
+  push: 'bg-orange-500',
+  pull: 'bg-green-500',
+  carry: 'bg-cyan-500',
+  rotation: 'bg-rose-500',
+  core: 'bg-violet-500',
+  lunge: 'bg-pink-500',
+  locomotion: 'bg-teal-500',
+  conditioning: 'bg-red-500',
+  mobility: 'bg-sky-500',
 };
 
 export function MovementPatternsCard({ data, isLoading }: MovementPatternsCardProps) {
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" />
-            Pohybové vzorce
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[160px] flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" />
-            Pohybové vzorce
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[160px] flex items-center justify-center text-muted-foreground text-sm">
-            Žádná data
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const maxCount = Math.max(...data.map(d => d.count));
+  const isEmpty = !data || data.length === 0;
+  const maxCount = Math.max(...(data?.map(d => d.count) || [1]), 1);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-primary" />
-          <CardTitle className="text-sm font-medium">Pohybové vzorce</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[160px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-              barCategoryGap="15%"
-            >
-              <XAxis
-                dataKey="label"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                interval={0}
-                angle={-35}
-                textAnchor="end"
-                height={50}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                width={25}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg">
-                        <p className="font-medium text-xs">{d.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {d.count} záznamů
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={PATTERN_COLORS[entry.label.toLowerCase()] || 'hsl(var(--primary))'}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <AnalyticsCard
+      title="Pohybové vzorce"
+      icon={Layers}
+      isLoading={isLoading}
+      isEmpty={isEmpty}
+    >
+      <div className="h-[180px] flex flex-col justify-center space-y-2">
+        {data?.slice(0, 6).map((item) => {
+          const width = Math.round((item.count / maxCount) * 100);
+          const colorClass = PATTERN_COLORS[item.pattern] || PATTERN_COLORS[item.label.toLowerCase()] || 'bg-primary';
+          
+          return (
+            <div key={item.pattern} className="group">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span className="text-foreground font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                  {item.count}
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${colorClass} rounded-full transition-all duration-500 ease-out`}
+                  style={{ width: `${width}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </AnalyticsCard>
   );
 }
