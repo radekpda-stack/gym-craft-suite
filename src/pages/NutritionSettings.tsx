@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Utensils, 
@@ -8,7 +8,10 @@ import {
   RotateCcw,
   Coffee,
   Droplets,
-  ListChecks
+  ListChecks,
+  Plus,
+  X,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
+import { useAuth } from '@/hooks/useAuth';
 
 // Default settings
 const defaultSettings = {
@@ -41,29 +46,145 @@ const defaultSettings = {
   thankYouMessage: 'Děkujeme za vyplnění dotazníku! Vaše odpovědi nám pomohou lépe pochopit vaše stravovací návyky.',
 };
 
-export default function NutritionSettings() {
-  const [settings, setSettings] = useState(defaultSettings);
-  const [hasChanges, setHasChanges] = useState(false);
+type NutritionSettingsType = typeof defaultSettings;
 
-  const updateSetting = <K extends keyof typeof defaultSettings>(
+export default function NutritionSettings() {
+  const { user } = useAuth();
+  const { data: appSettings, isLoading: isLoadingSettings } = useAppSettings();
+  const updateSettingMutation = useUpdateSetting();
+  
+  const [settings, setSettings] = useState<NutritionSettingsType>(defaultSettings);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [editingField, setEditingField] = useState<keyof NutritionSettingsType | null>(null);
+
+  // Load settings from database
+  useEffect(() => {
+    if (appSettings?.nutrition_settings) {
+      setSettings({ ...defaultSettings, ...appSettings.nutrition_settings });
+    }
+  }, [appSettings]);
+
+  const updateSetting = <K extends keyof NutritionSettingsType>(
     key: K, 
-    value: typeof defaultSettings[K]
+    value: NutritionSettingsType[K]
   ) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    // In a real app, this would save to the database
-    toast.success('Nastavení uloženo');
-    setHasChanges(false);
+  const addCategory = (field: 'mealCategories' | 'drinkCategories' | 'coffeeTypes' | 'qualityOptions') => {
+    if (!newCategory.trim()) return;
+    if (settings[field].includes(newCategory.trim())) {
+      toast.error('Tato kategorie již existuje');
+      return;
+    }
+    updateSetting(field, [...settings[field], newCategory.trim()]);
+    setNewCategory('');
+    setEditingField(null);
+  };
+
+  const removeCategory = (field: 'mealCategories' | 'drinkCategories' | 'coffeeTypes' | 'qualityOptions', index: number) => {
+    const newCategories = [...settings[field]];
+    newCategories.splice(index, 1);
+    updateSetting(field, newCategories);
+  };
+
+  const handleSave = async () => {
+    if (!user) {
+      toast.error('Musíte být přihlášeni');
+      return;
+    }
+    
+    try {
+      await updateSettingMutation.mutateAsync({
+        key: 'nutrition_settings',
+        value: settings
+      });
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   };
 
   const handleReset = () => {
     setSettings(defaultSettings);
-    setHasChanges(false);
-    toast.info('Nastavení obnoveno na výchozí hodnoty');
+    setHasChanges(true);
+    toast.info('Nastavení obnoveno na výchozí hodnoty - uložte pro potvrzení');
   };
+
+  if (isLoadingSettings) {
+    return (
+      <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const renderEditableCategories = (
+    field: 'mealCategories' | 'drinkCategories' | 'coffeeTypes' | 'qualityOptions',
+    variant: 'secondary' | 'outline' = 'secondary'
+  ) => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {settings[field].map((category, index) => (
+          <Badge 
+            key={index} 
+            variant={variant} 
+            className="text-sm py-1.5 px-3 pr-1.5 flex items-center gap-1.5 group"
+          >
+            {category}
+            <button
+              onClick={() => removeCategory(field, index)}
+              className="opacity-50 hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+      {editingField === field ? (
+        <div className="flex gap-2">
+          <Input
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            placeholder="Nová kategorie..."
+            className="flex-1"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCategory(field);
+              }
+              if (e.key === 'Escape') {
+                setEditingField(null);
+                setNewCategory('');
+              }
+            }}
+            autoFocus
+          />
+          <Button size="sm" onClick={() => addCategory(field)}>
+            Přidat
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => {
+            setEditingField(null);
+            setNewCategory('');
+          }}>
+            Zrušit
+          </Button>
+        </div>
+      ) : (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setEditingField(field)}
+          className="mt-2"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Přidat kategorii
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -79,12 +200,16 @@ export default function NutritionSettings() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleReset} disabled={!hasChanges}>
+          <Button variant="outline" onClick={handleReset} disabled={!hasChanges || updateSettingMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Obnovit výchozí
           </Button>
-          <Button onClick={handleSave} disabled={!hasChanges}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={handleSave} disabled={!hasChanges || updateSettingMutation.isPending}>
+            {updateSettingMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             Uložit změny
           </Button>
         </div>
@@ -214,16 +339,7 @@ export default function NutritionSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {settings.mealCategories.map((category, index) => (
-                <Badge key={index} variant="secondary" className="text-sm py-1.5 px-3">
-                  {category}
-                </Badge>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Pro úpravu kategorií kontaktujte podporu
-            </p>
+            {renderEditableCategories('mealCategories')}
           </CardContent>
         </Card>
 
@@ -239,16 +355,7 @@ export default function NutritionSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {settings.drinkCategories.map((category, index) => (
-                <Badge key={index} variant="secondary" className="text-sm py-1.5 px-3">
-                  {category}
-                </Badge>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Pro úpravu kategorií kontaktujte podporu
-            </p>
+            {renderEditableCategories('drinkCategories')}
           </CardContent>
         </Card>
 
@@ -264,16 +371,7 @@ export default function NutritionSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {settings.coffeeTypes.map((type, index) => (
-                <Badge key={index} variant="secondary" className="text-sm py-1.5 px-3">
-                  {type}
-                </Badge>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Pro úpravu typů kontaktujte podporu
-            </p>
+            {renderEditableCategories('coffeeTypes')}
           </CardContent>
         </Card>
 
@@ -289,13 +387,7 @@ export default function NutritionSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {settings.qualityOptions.map((option, index) => (
-                <Badge key={index} variant="outline" className="text-sm py-1.5 px-3">
-                  {option}
-                </Badge>
-              ))}
-            </div>
+            {renderEditableCategories('qualityOptions', 'outline')}
           </CardContent>
         </Card>
       </div>
