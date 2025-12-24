@@ -16,6 +16,9 @@ import {
   Copy,
   ExternalLink,
   XCircle,
+  Mail,
+  MailOpen,
+  Link2Off,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -207,13 +210,43 @@ export default function FeedbackOverview() {
   };
 
   // Helper to get status color based on hours since training
-  const getStatusBadge = (hours: number) => {
+  const getTimeBadge = (hours: number) => {
     if (hours < 24) {
       return { color: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', label: 'Čerstvé', icon: '🟢' };
     } else if (hours < 48) {
       return { color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', label: 'Je čas', icon: '🟠' };
     } else {
       return { color: 'bg-destructive/20 text-destructive', label: 'Zpožděné', icon: '🔴' };
+    }
+  };
+
+  // Helper to get feedback status badge
+  const getFeedbackStatusBadge = (status: string | undefined) => {
+    switch (status) {
+      case 'completed':
+        return { 
+          color: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', 
+          label: 'Vyplněn', 
+          Icon: CheckCircle2 
+        };
+      case 'sent_pending':
+        return { 
+          color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400', 
+          label: 'Odesláno', 
+          Icon: Mail 
+        };
+      case 'created_not_sent':
+        return { 
+          color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', 
+          label: 'Odkaz vytvořen', 
+          Icon: Link2Off 
+        };
+      default:
+        return { 
+          color: 'bg-muted text-muted-foreground', 
+          label: 'Neodesláno', 
+          Icon: MailOpen 
+        };
     }
   };
 
@@ -311,25 +344,34 @@ export default function FeedbackOverview() {
                   ) : pendingTrainings.length > 0 ? (
                     <div className="space-y-2">
                       {pendingTrainings.map((training) => {
-                        const statusBadge = getStatusBadge(training.hours_since_training);
+                        const timeBadge = getTimeBadge(training.hours_since_training);
+                        const feedbackStatus = getFeedbackStatusBadge(training.feedback_status);
+                        const FeedbackIcon = feedbackStatus.Icon;
                         return (
                           <div
                             key={training.id}
-                            className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                            className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors"
                           >
-                            {/* Status indicator */}
-                            <Badge className={cn('shrink-0', statusBadge.color)}>
-                              {statusBadge.icon} {Math.round(training.hours_since_training)}h
+                            {/* Time indicator */}
+                            <Badge className={cn('shrink-0', timeBadge.color)}>
+                              {timeBadge.icon} {Math.round(training.hours_since_training)}h
                             </Badge>
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
-                              <Link 
-                                to={`/clients/${training.client_id}`}
-                                className="font-medium hover:underline"
-                              >
-                                {training.client_name}
-                              </Link>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Link 
+                                  to={`/clients/${training.client_id}`}
+                                  className="font-medium hover:underline"
+                                >
+                                  {training.client_name}
+                                </Link>
+                                {/* Feedback status badge */}
+                                <Badge variant="outline" className={cn('text-xs gap-1', feedbackStatus.color)}>
+                                  <FeedbackIcon className="w-3 h-3" />
+                                  {feedbackStatus.label}
+                                </Badge>
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 {format(new Date(training.date), 'd.M.yyyy HH:mm', { locale: cs })}
                               </p>
