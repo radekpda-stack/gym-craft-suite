@@ -23,6 +23,7 @@ import {
   ClipboardList,
   UtensilsCrossed,
   Stethoscope,
+  UserCog,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -43,6 +44,7 @@ import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
 import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSettings';
 import { NutritionQuestionnaireSettings } from '@/components/settings/NutritionQuestionnaireSettings';
 import { DiagnosticQuestionnaireSettings } from '@/components/settings/DiagnosticQuestionnaireSettings';
+import { UserManagementSettings } from '@/components/settings/UserManagementSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -280,6 +282,22 @@ export default function Settings() {
         }] : []),
       ],
     },
+    // 7. ADMINISTRACE (only for admins)
+    ...(isAdmin ? [{
+      id: 'admin',
+      title: language === 'cs' ? 'Administrace' : 'Administration',
+      icon: Shield,
+      iconColor: 'text-red-500',
+      sections: [
+        {
+          id: 'user-management',
+          title: language === 'cs' ? 'Správa uživatelů' : 'User Management',
+          description: language === 'cs' ? 'Schvalování a správa přístupů uživatelů' : 'User approvals and access management',
+          icon: UserCog,
+          content: <UserManagementSettings />,
+        },
+      ],
+    }] : []),
   ];
 
   const renderSection = (section: SettingsSection) => (
