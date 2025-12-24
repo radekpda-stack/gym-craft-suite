@@ -34,6 +34,9 @@ export function useYearOverYearStats() {
   return useQuery({
     queryKey: ['year-over-year-stats'],
     queryFn: async (): Promise<YearOverYearStats> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const now = new Date();
       const currentYear = now.getFullYear();
       const lastYear = currentYear - 1;
@@ -41,15 +44,15 @@ export function useYearOverYearStats() {
       const currentYearStart = startOfYear(now);
       const currentYearEnd = now; // up to today
       const lastYearStart = startOfYear(subYears(now, 1));
-      const lastYearEnd = endOfYear(subYears(now, 1));
 
       // For fair comparison, use same period in both years (Jan 1 to today's date)
       const lastYearSamePeriodEnd = new Date(lastYear, now.getMonth(), now.getDate());
 
-      // Fetch training sessions for both years
+      // Fetch training sessions for both years - filtered by user_id
       const { data: currentYearTrainings } = await supabase
         .from('training_sessions')
         .select('id, date, final_price')
+        .eq('user_id', user.id)
         .gte('date', currentYearStart.toISOString().split('T')[0])
         .lte('date', currentYearEnd.toISOString().split('T')[0])
         .eq('status', 'completed');
@@ -57,20 +60,23 @@ export function useYearOverYearStats() {
       const { data: lastYearTrainings } = await supabase
         .from('training_sessions')
         .select('id, date, final_price')
+        .eq('user_id', user.id)
         .gte('date', lastYearStart.toISOString().split('T')[0])
         .lte('date', lastYearSamePeriodEnd.toISOString().split('T')[0])
         .eq('status', 'completed');
 
-      // Fetch clients created in both years
+      // Fetch clients created in both years - filtered by user_id
       const { data: currentYearClients } = await supabase
         .from('clients')
         .select('id, created_at')
+        .eq('user_id', user.id)
         .gte('created_at', currentYearStart.toISOString())
         .lte('created_at', currentYearEnd.toISOString());
 
       const { data: lastYearClients } = await supabase
         .from('clients')
         .select('id, created_at')
+        .eq('user_id', user.id)
         .gte('created_at', lastYearStart.toISOString())
         .lte('created_at', lastYearSamePeriodEnd.toISOString());
 
