@@ -116,11 +116,13 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
     return groups;
   }, [filteredExercises]);
 
-  const openCategories = useMemo(() => {
+  const [openCategories, setOpenCategories] = useState<string[]>([]);
+
+  // Auto-expand all categories when searching or in bulk edit mode
+  useMemo(() => {
     if (searchQuery.trim() || bulkEditMode) {
-      return Object.keys(groupedExercises);
+      setOpenCategories(Object.keys(groupedExercises));
     }
-    return [];
   }, [searchQuery, groupedExercises, bulkEditMode]);
 
   const selectedExercises = useMemo(() => {
@@ -293,7 +295,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
           <p>{language === 'cs' ? 'Žádné cviky nenalezeny' : 'No exercises found'}</p>
         </div>
       ) : (
-        <Accordion type="multiple" value={openCategories} className="space-y-2">
+        <Accordion type="multiple" value={openCategories} onValueChange={setOpenCategories} className="space-y-2">
           {Object.entries(groupedExercises)
             .sort(([a], [b]) => a.localeCompare(b, 'cs'))
             .map(([category, categoryExercises]) => {
