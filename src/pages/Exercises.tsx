@@ -111,35 +111,38 @@ export default function Exercises() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Dumbbell className="w-6 h-6 text-primary" />
-            {language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {language === 'cs' 
-              ? `${exercises.length} cviků v knihovně` 
-              : `${exercises.length} exercises in library`}
-          </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+          <Dumbbell className="w-6 h-6 text-primary shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold truncate">
+              {language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {language === 'cs' 
+                ? `${exercises.length} cviků v knihovně` 
+                : `${exercises.length} exercises in library`}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/exercises/analytics')}
+            className="gap-1.5"
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Analytika
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden xs:inline">Analytika</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className={cn(showFilters && 'bg-primary/10')}
+            className={cn("gap-1.5", showFilters && 'bg-primary/10')}
           >
-            <Filter className="w-4 h-4 mr-2" />
-            Filtry
+            <Filter className="w-4 h-4" />
+            <span className="hidden xs:inline">Filtry</span>
           </Button>
         </div>
       </div>

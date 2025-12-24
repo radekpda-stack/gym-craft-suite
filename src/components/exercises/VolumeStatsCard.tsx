@@ -53,12 +53,12 @@ export function VolumeStatsCard({ totalVolume, volumeTrend, isLoading }: VolumeS
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-3xl font-bold text-primary">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="min-w-0 shrink-0">
+            <p className="text-2xl sm:text-3xl font-bold text-primary">
               {formatVolume(totalVolume)}
             </p>
-            <p className="text-xs text-muted-foreground">kg za 30 dní</p>
+            <p className="text-xs text-muted-foreground whitespace-nowrap">kg za 30 dní</p>
           </div>
           <div className="flex-1 h-12">
             <ResponsiveContainer width="100%" height="100%">

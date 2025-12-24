@@ -275,10 +275,10 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             Klienti
           </h1>
@@ -287,10 +287,10 @@ export default function Clients() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={() => navigate('/clients/analytics')}>
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => navigate('/clients/analytics')}>
                 <BarChart3 className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
@@ -299,21 +299,23 @@ export default function Clients() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={() => setShowLegendDialog(true)}>
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => setShowLegendDialog(true)}>
                 <HelpCircle className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Legenda karet</TooltipContent>
           </Tooltip>
           
-          <Button variant="outline" className="gap-2" onClick={() => setShowInviteDialog(true)}>
+          <Button variant="outline" size="icon" className="shrink-0 sm:hidden" onClick={() => setShowInviteDialog(true)}>
             <ClipboardList className="w-4 h-4" />
-            <span className="hidden sm:inline">Pozvat klienta</span>
+          </Button>
+          <Button variant="outline" className="gap-2 hidden sm:flex" onClick={() => setShowInviteDialog(true)}>
+            <ClipboardList className="w-4 h-4" />
+            <span>Pozvat klienta</span>
           </Button>
 
-          <Button variant="outline" className="gap-2" onClick={() => setShowGroupsSheet(true)}>
+          <Button variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowGroupsSheet(true)}>
             <LinkIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Skupiny</span>
             {budgetGroups.length > 0 && (
               <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                 {budgetGroups.length}
@@ -321,9 +323,8 @@ export default function Clients() {
             )}
           </Button>
 
-          <Button className="gap-2" onClick={() => setIsCreateSheetOpen(true)}>
+          <Button className="gap-1.5 shrink-0" onClick={() => setIsCreateSheetOpen(true)}>
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Nový klient</span>
           </Button>
         </div>
       </div>
@@ -615,16 +616,16 @@ export default function Clients() {
 
         {/* View Mode Toggle - Dnes / Týden / Všichni */}
         {!showArchived && (
-          <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-full sm:w-auto">
+          <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-full overflow-x-auto">
             <Button
               variant={viewMode === 'today' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('today')}
-              className="flex-1 sm:flex-none gap-1.5"
+              className="flex-1 gap-1 px-2 min-w-0"
             >
-              <Calendar className="w-4 h-4" />
-              Dnes
-              <Badge variant={viewMode === 'today' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+              <Calendar className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline">Dnes</span>
+              <Badge variant={viewMode === 'today' ? 'secondary' : 'outline'} className="h-5 px-1.5 text-xs shrink-0">
                 {todayCount}
               </Badge>
             </Button>
@@ -632,11 +633,11 @@ export default function Clients() {
               variant={viewMode === 'week' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('week')}
-              className="flex-1 sm:flex-none gap-1.5"
+              className="flex-1 gap-1 px-2 min-w-0"
             >
-              <CalendarDays className="w-4 h-4" />
-              Týden
-              <Badge variant={viewMode === 'week' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+              <CalendarDays className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline">Týden</span>
+              <Badge variant={viewMode === 'week' ? 'secondary' : 'outline'} className="h-5 px-1.5 text-xs shrink-0">
                 {weekCount}
               </Badge>
             </Button>
@@ -644,10 +645,10 @@ export default function Clients() {
               variant={viewMode === 'all' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('all')}
-              className="flex-1 sm:flex-none"
+              className="flex-1 gap-1 px-2 min-w-0"
             >
-              Všichni
-              <Badge variant={viewMode === 'all' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+              <span className="truncate">Všichni</span>
+              <Badge variant={viewMode === 'all' ? 'secondary' : 'outline'} className="h-5 px-1.5 text-xs shrink-0">
                 {activeClients.length}
               </Badge>
             </Button>

@@ -45,22 +45,22 @@ export function ActivityTrendCard({ currentMonth, lastMonth, trendPercent, isLoa
           />
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
+      <CardContent className="overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className={cn(
-            "p-3 rounded-full",
+            "p-2 sm:p-3 rounded-full shrink-0",
             isPositive && "bg-green-500/10",
             isNegative && "bg-red-500/10",
             isNeutral && "bg-muted"
           )}>
-            {isPositive && <TrendingUp className="w-8 h-8 text-green-500" />}
-            {isNegative && <TrendingDown className="w-8 h-8 text-red-500" />}
-            {isNeutral && <Minus className="w-8 h-8 text-muted-foreground" />}
+            {isPositive && <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />}
+            {isNegative && <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />}
+            {isNeutral && <Minus className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />}
           </div>
-          <div>
+          <div className="min-w-0 overflow-hidden">
             <div className="flex items-baseline gap-1">
               <span className={cn(
-                "text-2xl font-bold",
+                "text-xl sm:text-2xl font-bold",
                 isPositive && "text-green-500",
                 isNegative && "text-red-500",
                 isNeutral && "text-muted-foreground"
@@ -69,10 +69,10 @@ export function ActivityTrendCard({ currentMonth, lastMonth, trendPercent, isLoa
                 {trendPercent}%
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               {currentMonth} záznamů tento měsíc
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               vs. {lastMonth} minulý měsíc
             </p>
           </div>
