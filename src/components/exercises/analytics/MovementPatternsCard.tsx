@@ -20,6 +20,7 @@ interface MovementPatternsCardProps {
   coverage?: number;
   totalEntries?: number;
   isLoading?: boolean;
+  helpText?: string;
 }
 
 const PATTERN_COLORS: Record<string, string> = {
@@ -36,7 +37,7 @@ const PATTERN_COLORS: Record<string, string> = {
   mobility: 'bg-sky-500',
 };
 
-export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, isLoading }: MovementPatternsCardProps) {
+export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, isLoading, helpText }: MovementPatternsCardProps) {
   const isEmpty = !data || data.length === 0;
   const maxCount = Math.max(...(data?.map(d => d.count) || [1]), 1);
   const totalCounted = data?.reduce((sum, d) => sum + d.count, 0) || 0;
@@ -47,6 +48,7 @@ export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, i
       icon={Layers}
       isLoading={isLoading}
       isEmpty={isEmpty}
+      helpText={helpText}
     >
       <div className="h-[180px] flex flex-col justify-center space-y-2">
         {coverage < 100 && totalEntries > 0 && (

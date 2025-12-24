@@ -1,7 +1,13 @@
 import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, HelpCircle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AnalyticsCardProps {
   title: string;
@@ -12,6 +18,7 @@ interface AnalyticsCardProps {
   isEmpty?: boolean;
   emptyMessage?: string;
   className?: string;
+  helpText?: string;
 }
 
 export function AnalyticsCard({
@@ -23,6 +30,7 @@ export function AnalyticsCard({
   isEmpty,
   emptyMessage = 'Žádná data pro zvolené období',
   className,
+  helpText,
 }: AnalyticsCardProps) {
   return (
     <Card className={className}>
@@ -31,6 +39,18 @@ export function AnalyticsCard({
           <div className="flex items-center gap-2">
             {Icon && <Icon className="w-4 h-4 text-primary shrink-0" />}
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            {helpText && (
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[280px] text-xs">
+                    <p>{helpText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           {actions && <div className="shrink-0">{actions}</div>}
         </div>
