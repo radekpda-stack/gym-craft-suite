@@ -32,6 +32,8 @@ import { ClientNutritionCard } from '@/components/clients/ClientNutritionCard';
 import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
 import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
 import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
+import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
+import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -39,6 +41,7 @@ export default function ClientDetail() {
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
+  const { data: sessions = [] } = useTrainingSessions(id);
   const updateClient = useUpdateClient();
   const isMobile = useIsMobile();
   
@@ -157,8 +160,15 @@ export default function ClientDetail() {
       <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
       <ClientMeasurementsCard clientId={client.id} />
 
-      {/* 📆 Section 5: Training History & Nutrition */}
+      {/* 📆 Section 5: Training History & Feedback */}
       <ClientHistoryCollapsed clientId={client.id} notes={client.notes} />
+      <div data-section="feedback">
+        <ClientFeedbackCard 
+          clientId={client.id} 
+          clientName={client.name}
+          lastCompletedTrainingId={sessions.find((s: any) => s.status === 'completed')?.id}
+        />
+      </div>
       <ClientNutritionCard clientId={client.id} clientName={client.name} />
 
       {/* 📝 Section 6: Notes & Media */}

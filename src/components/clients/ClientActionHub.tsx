@@ -305,10 +305,13 @@ export function ClientActionHub({
           <Button
             variant="outline"
             onClick={() => {
-              const completed = sessions.find((s: any) => s.status === 'completed');
-              if (completed) {
-                // Generate feedback link for last completed
-                handleDominantAction();
+              // Scroll to feedback section
+              const feedbackSection = document.querySelector('[data-section="feedback"]');
+              if (feedbackSection) {
+                feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Trigger open by dispatching click
+                const trigger = feedbackSection.querySelector('button');
+                if (trigger) trigger.click();
               }
             }}
             className="flex flex-col items-center gap-1.5 h-auto py-3 px-2"
