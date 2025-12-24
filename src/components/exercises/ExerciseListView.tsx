@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, CheckSquare, Square } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -119,7 +119,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   // Auto-expand all categories when searching or in bulk edit mode
-  useMemo(() => {
+  useEffect(() => {
     if (searchQuery.trim() || bulkEditMode) {
       setOpenCategories(Object.keys(groupedExercises));
     }
@@ -324,17 +324,24 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                       )}
                     </div>
                     {bulkEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mr-2"
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="mr-2 rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           selectCategory(category);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectCategory(category);
+                          }
+                        }}
                       >
                         Vybrat vše
-                      </Button>
+                      </div>
                     )}
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
