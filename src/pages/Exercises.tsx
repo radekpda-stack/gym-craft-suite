@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, BarChart3, Edit2, X, CheckSquare, Square } from 'lucide-react';
+import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, BarChart3, Edit2, X, CheckSquare, Square, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,8 @@ import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExerc
 import { cn } from '@/lib/utils';
 import { ExerciseLibraryStats } from '@/components/exercises/ExerciseLibraryStats';
 import { BulkExerciseEditDialog } from '@/components/exercises/BulkExerciseEditDialog';
+import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
+import { FloatingActionButton } from '@/components/ui/floating-action-button';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -59,6 +61,9 @@ export default function Exercises() {
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
+  
+  // Create exercise dialog
+  const [showCreateExercise, setShowCreateExercise] = useState(false);
 
   const { data: exercises = [], isLoading } = useExercisesWithUsage();
 
@@ -447,6 +452,27 @@ export default function Exercises() {
         selectedExercises={selectedExercises}
         onComplete={handleBulkEditComplete}
       />
+
+      {/* Create Exercise Dialog */}
+      <ExerciseFormDialog
+        open={showCreateExercise}
+        onOpenChange={setShowCreateExercise}
+      />
+
+      {/* Floating Action Button for mobile */}
+      {!bulkEditMode && (
+        <FloatingActionButton
+          actions={[
+            {
+              id: 'new-exercise',
+              icon: <Plus className="h-5 w-5" />,
+              label: 'Nový cvik',
+              onClick: () => setShowCreateExercise(true),
+              variant: 'primary',
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }
