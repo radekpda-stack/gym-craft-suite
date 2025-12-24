@@ -2157,6 +2157,62 @@ export type Database = {
           },
         ]
       }
+      message_log: {
+        Row: {
+          channel: string
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          invite_id: string
+          invite_type: string
+          metadata: Json | null
+          provider_message_id: string | null
+          recipient: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invite_id: string
+          invite_type: string
+          metadata?: Json | null
+          provider_message_id?: string | null
+          recipient?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invite_id?: string
+          invite_type?: string
+          metadata?: Json | null
+          provider_message_id?: string | null
+          recipient?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mobility_entries: {
         Row: {
           client_id: string
@@ -3474,6 +3530,51 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      red_flag_resolutions: {
+        Row: {
+          client_id: string
+          created_at: string
+          feedback_id: string
+          id: string
+          resolution_note: string | null
+          resolved_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          feedback_id: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          feedback_id?: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "red_flag_resolutions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "red_flag_resolutions_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "training_feedback"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reminders: {
         Row: {
