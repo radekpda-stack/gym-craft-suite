@@ -1612,14 +1612,18 @@ export type Database = {
       exercises: {
         Row: {
           category: string
+          contraindicated_areas: string[] | null
           created_at: string
           default_unit: string
           description: string | null
           description_cs: string | null
           description_en: string | null
           difficulty: string | null
+          environment: string | null
           equipment: string[] | null
           exercise_type: string | null
+          exercise_type_v2: string | null
+          fatigue_accumulation: string | null
           id: string
           image_url: string | null
           instructions_cs: string | null
@@ -1634,12 +1638,19 @@ export type Database = {
           name_cs: string | null
           name_en: string | null
           performance_load: string | null
+          recovery_hours: number | null
           rehab_safe: boolean | null
+          requires_supervision: boolean | null
+          risk_level: string | null
+          risk_notes: string | null
           search_name: string | null
           secondary_muscle_groups: string[] | null
           slug: string | null
           source: string
           subcategory: string | null
+          subjective_difficulty: number | null
+          supported_metrics: string[] | null
+          trainer_notes: string | null
           training_type: string[] | null
           updated_at: string
           user_id: string | null
@@ -1647,14 +1658,18 @@ export type Database = {
         }
         Insert: {
           category: string
+          contraindicated_areas?: string[] | null
           created_at?: string
           default_unit?: string
           description?: string | null
           description_cs?: string | null
           description_en?: string | null
           difficulty?: string | null
+          environment?: string | null
           equipment?: string[] | null
           exercise_type?: string | null
+          exercise_type_v2?: string | null
+          fatigue_accumulation?: string | null
           id?: string
           image_url?: string | null
           instructions_cs?: string | null
@@ -1669,12 +1684,19 @@ export type Database = {
           name_cs?: string | null
           name_en?: string | null
           performance_load?: string | null
+          recovery_hours?: number | null
           rehab_safe?: boolean | null
+          requires_supervision?: boolean | null
+          risk_level?: string | null
+          risk_notes?: string | null
           search_name?: string | null
           secondary_muscle_groups?: string[] | null
           slug?: string | null
           source?: string
           subcategory?: string | null
+          subjective_difficulty?: number | null
+          supported_metrics?: string[] | null
+          trainer_notes?: string | null
           training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
@@ -1682,14 +1704,18 @@ export type Database = {
         }
         Update: {
           category?: string
+          contraindicated_areas?: string[] | null
           created_at?: string
           default_unit?: string
           description?: string | null
           description_cs?: string | null
           description_en?: string | null
           difficulty?: string | null
+          environment?: string | null
           equipment?: string[] | null
           exercise_type?: string | null
+          exercise_type_v2?: string | null
+          fatigue_accumulation?: string | null
           id?: string
           image_url?: string | null
           instructions_cs?: string | null
@@ -1704,12 +1730,19 @@ export type Database = {
           name_cs?: string | null
           name_en?: string | null
           performance_load?: string | null
+          recovery_hours?: number | null
           rehab_safe?: boolean | null
+          requires_supervision?: boolean | null
+          risk_level?: string | null
+          risk_notes?: string | null
           search_name?: string | null
           secondary_muscle_groups?: string[] | null
           slug?: string | null
           source?: string
           subcategory?: string | null
+          subjective_difficulty?: number | null
+          supported_metrics?: string[] | null
+          trainer_notes?: string | null
           training_type?: string[] | null
           updated_at?: string
           user_id?: string | null
