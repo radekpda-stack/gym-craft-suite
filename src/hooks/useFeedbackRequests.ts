@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useLogMessage } from '@/hooks/useMessageLog';
 
 export interface FeedbackRequest {
   id: string;
@@ -229,6 +230,7 @@ export function useCreateFeedbackRequest() {
 
 export function useSendFeedbackEmail() {
   const queryClient = useQueryClient();
+  const logMessage = useLogMessage();
 
   return useMutation({
     mutationFn: async (request: FeedbackRequest) => {
@@ -260,7 +262,31 @@ export function useSendFeedbackEmail() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Log failed email
+        await logMessage.mutateAsync({
+          invite_type: 'feedback',
+          invite_id: request.id,
+          client_id: request.client_id,
+          channel: 'email',
+          recipient: request.clients.email,
+          status: 'failed',
+          metadata: { error: error.message },
+        });
+        throw error;
+      }
+
+      // Log successful email
+      await logMessage.mutateAsync({
+        invite_type: 'feedback',
+        invite_id: request.id,
+        client_id: request.client_id,
+        channel: 'email',
+        recipient: request.clients.email,
+        status: 'sent',
+        metadata: { trainingDate },
+      });
+
       return data;
     },
     onSuccess: () => {
