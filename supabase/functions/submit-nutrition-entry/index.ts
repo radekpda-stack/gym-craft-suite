@@ -7,6 +7,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Normalize response time to prevent timing attacks
+const MIN_RESPONSE_TIME_MS = 150;
+
+async function normalizeResponseTime<T>(startTime: number, response: T): Promise<T> {
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_RESPONSE_TIME_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed));
+  }
+  return response;
+}
+
+// Sanitize validation errors - only return field names, not schema details
+function sanitizeValidationErrors(error: z.ZodError): string[] {
+  return [...new Set(error.issues.map(issue => issue.path[0]?.toString() || 'unknown'))];
+}
+
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; firstRequest: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -36,7 +52,7 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX_REQUESTS;
 }
 
-// Validation schemas for each entry type - FIXED to match frontend values
+// Validation schemas for each entry type
 const foodEntrySchema = z.object({
   description: z.string().min(1, "Description required").max(500, "Description too long"),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
@@ -51,7 +67,6 @@ const foodEntrySchema = z.object({
   note: z.string().max(500).optional().nullable(),
   photo_url: z.string().url().max(500).optional().nullable(),
   food_item_id: z.string().uuid().optional().nullable(),
-  // New quality/satiation/energy fields
   quality: z.enum(['good', 'normal', 'poor']).optional().nullable(),
   satiation: z.enum(['just_right', 'still_hungry', 'overate']).optional().nullable(),
   feeling_after: z.enum(['ok', 'heavy', 'bloated', 'sweet', 'low_energy', 'high_energy']).optional().nullable(),
@@ -59,7 +74,6 @@ const foodEntrySchema = z.object({
 });
 
 const drinkEntrySchema = z.object({
-  // Extended drink types to match frontend - added 'sugary' for simplified form
   drink_type: z.enum([
     'water', 'mineral', 'sparkling', 'tea', 'juice', 'cola', 'soda', 
     'sports', 'alcohol', 'smoothie', 'milk', 'sugary', 'other'
@@ -72,11 +86,10 @@ const drinkEntrySchema = z.object({
   amount_container_count: z.number().positive().max(100).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
   drink_item_id: z.string().uuid().optional().nullable(),
-  amount: z.enum(['little', 'ok', 'lots']).optional().nullable(), // Simplified amount from form
+  amount: z.enum(['little', 'ok', 'lots']).optional().nullable(),
 });
 
 const coffeeEntrySchema = z.object({
-  // Extended coffee types - added 'energy' for simplified form
   coffee_type: z.enum([
     'small_espresso', 'large_espresso', 'espresso', 'lungo', 'americano', 
     'latte', 'cappuccino', 'flat_white', 'filter', 'instant', 'decaf', 'energy', 'other'
@@ -86,7 +99,6 @@ const coffeeEntrySchema = z.object({
   count: z.number().int().positive().max(20).default(1),
   sugar: z.boolean().default(false),
   sugar_spoons: z.number().int().min(0).max(10).default(0),
-  // Extended milk options - amount + type
   milk: z.enum([
     'none', 'little', 'normal', 'much',
     'cow', 'oat', 'almond', 'soy', 'coconut',
@@ -94,16 +106,18 @@ const coffeeEntrySchema = z.object({
   ]).optional().nullable(),
   milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
-  after_16: z.boolean().default(false), // NEW: Coffee after 4 PM
+  after_16: z.boolean().default(false),
 });
 
 const requestSchema = z.object({
   token: z.string().uuid("Invalid token format"),
   type: z.enum(['food', 'drink', 'coffee']),
-  entry: z.unknown(), // Will be validated based on type
+  entry: z.unknown(),
 });
 
 serve(async (req) => {
+  const startTime = Date.now();
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -113,27 +127,35 @@ serve(async (req) => {
     const clientIP = getClientIP(req);
     if (isRateLimited(clientIP)) {
       console.warn(`Rate limit exceeded for IP: ${clientIP}`);
-      return new Response(JSON.stringify({ error: 'Too many requests' }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Too many requests', code: 'RATE_LIMITED' }), 
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     // Parse and validate base request
     const rawBody = await req.json();
-    console.log('Received request:', JSON.stringify(rawBody, null, 2));
+    console.log('Received request type:', rawBody?.type);
     
     const baseResult = requestSchema.safeParse(rawBody);
     
     if (!baseResult.success) {
       console.error("Base validation error:", baseResult.error.flatten());
-      return new Response(JSON.stringify({ 
-        error: 'Invalid request', 
-        details: baseResult.error.flatten().fieldErrors 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const invalidFields = sanitizeValidationErrors(baseResult.error);
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ 
+          error: 'Invalid request', 
+          code: 'VALIDATION_ERROR',
+          fields: invalidFields
+        }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     const { token, type, entry } = baseResult.data;
@@ -146,13 +168,18 @@ serve(async (req) => {
         const result = foodEntrySchema.safeParse(entry);
         if (!result.success) {
           console.error("Food entry validation error:", result.error.flatten());
-          return new Response(JSON.stringify({ 
-            error: 'Invalid food entry', 
-            details: result.error.flatten().fieldErrors 
-          }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          const invalidFields = sanitizeValidationErrors(result.error);
+          return await normalizeResponseTime(startTime, new Response(
+            JSON.stringify({ 
+              error: 'Invalid food entry', 
+              code: 'VALIDATION_ERROR',
+              fields: invalidFields
+            }), 
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          ));
         }
         validatedEntry = result.data;
         break;
@@ -161,13 +188,18 @@ serve(async (req) => {
         const result = drinkEntrySchema.safeParse(entry);
         if (!result.success) {
           console.error("Drink entry validation error:", result.error.flatten());
-          return new Response(JSON.stringify({ 
-            error: 'Invalid drink entry', 
-            details: result.error.flatten().fieldErrors 
-          }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          const invalidFields = sanitizeValidationErrors(result.error);
+          return await normalizeResponseTime(startTime, new Response(
+            JSON.stringify({ 
+              error: 'Invalid drink entry', 
+              code: 'VALIDATION_ERROR',
+              fields: invalidFields
+            }), 
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          ));
         }
         validatedEntry = result.data;
         break;
@@ -176,13 +208,18 @@ serve(async (req) => {
         const result = coffeeEntrySchema.safeParse(entry);
         if (!result.success) {
           console.error("Coffee entry validation error:", result.error.flatten());
-          return new Response(JSON.stringify({ 
-            error: 'Invalid coffee entry', 
-            details: result.error.flatten().fieldErrors 
-          }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          const invalidFields = sanitizeValidationErrors(result.error);
+          return await normalizeResponseTime(startTime, new Response(
+            JSON.stringify({ 
+              error: 'Invalid coffee entry', 
+              code: 'VALIDATION_ERROR',
+              fields: invalidFields
+            }), 
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          ));
         }
         validatedEntry = result.data;
         break;
@@ -193,6 +230,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    console.log(`Verifying token: ${token.substring(0, 8)}...`);
+
     // Verify token and get session
     const { data: session, error: sessionError } = await supabase
       .from('nutrition_log_sessions')
@@ -202,17 +241,23 @@ serve(async (req) => {
 
     if (sessionError || !session) {
       console.warn(`Invalid token attempt: ${token.substring(0, 8)}...`);
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Invalid token', code: 'NOT_FOUND' }), 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     if (session.status === 'completed') {
-      return new Response(JSON.stringify({ error: 'Session completed' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Session completed', code: 'SESSION_COMPLETED' }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     // Insert validated entry based on type
@@ -239,10 +284,13 @@ serve(async (req) => {
 
     if (error) {
       console.error('Insert error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to save entry', details: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Failed to save entry', code: 'SAVE_ERROR' }), 
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     // For food entries, get AI calorie estimate asynchronously
@@ -294,15 +342,21 @@ serve(async (req) => {
 
     console.log(`Successfully saved ${type} entry for session ${session.id}`);
 
-    return new Response(JSON.stringify({ success: true, entry: data, calorieEstimate }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return await normalizeResponseTime(startTime, new Response(
+      JSON.stringify({ success: true, entry: data, calorieEstimate }), 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    ));
 
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return await normalizeResponseTime(Date.now(), new Response(
+      JSON.stringify({ error: 'Unable to save entry', code: 'INTERNAL_ERROR' }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    ));
   }
 });

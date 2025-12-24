@@ -6,7 +6,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Normalize response time to prevent timing attacks
+const MIN_RESPONSE_TIME_MS = 150;
+
+async function normalizeResponseTime<T>(startTime: number, response: T): Promise<T> {
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_RESPONSE_TIME_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed));
+  }
+  return response;
+}
+
 serve(async (req) => {
+  const startTime = Date.now();
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,13 +35,22 @@ serve(async (req) => {
     const token = url.searchParams.get("token");
 
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Token je povinný" }),
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Token je povinný", code: "MISSING_TOKEN" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
-    console.log(`Fetching feedback form for token: ${token}`);
+    // Validate token format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(token)) {
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Neplatný odkaz", code: "INVALID_TOKEN" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      ));
+    }
+
+    console.log(`Fetching feedback form for token: ${token.substring(0, 8)}...`);
 
     // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
@@ -43,25 +65,29 @@ serve(async (req) => {
 
     if (requestError) {
       console.error("Error finding request:", requestError);
-      throw new Error("Chyba při hledání požadavku");
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Nepodařilo se načíst formulář", code: "LOAD_ERROR" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      ));
     }
 
+    // Use consistent response for not found (prevents token enumeration)
     if (!request) {
-      return new Response(
+      return await normalizeResponseTime(startTime, new Response(
         JSON.stringify({ error: "Neplatný odkaz", code: "NOT_FOUND" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Check if already completed
     if (request.status === "completed") {
-      return new Response(
+      return await normalizeResponseTime(startTime, new Response(
         JSON.stringify({ 
           error: "Zpětná vazba již byla odeslána", 
           code: "ALREADY_COMPLETED" 
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Check expiration
@@ -72,17 +98,17 @@ serve(async (req) => {
         .update({ status: "expired" })
         .eq("id", request.id);
 
-      return new Response(
+      return await normalizeResponseTime(startTime, new Response(
         JSON.stringify({ 
           error: "Platnost odkazu vypršela", 
           code: "EXPIRED" 
         }),
         { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Return form data
-    return new Response(
+    return await normalizeResponseTime(startTime, new Response(
       JSON.stringify({
         success: true,
         data: {
@@ -99,15 +125,15 @@ serve(async (req) => {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
-    );
+    ));
   } catch (error: any) {
     console.error("Error in get-feedback-form:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
+    return await normalizeResponseTime(Date.now(), new Response(
+      JSON.stringify({ error: "Nepodařilo se načíst formulář", code: "INTERNAL_ERROR" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
-    );
+    ));
   }
 });
