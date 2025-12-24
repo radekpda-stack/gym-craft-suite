@@ -19,13 +19,19 @@ import { STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
 
-// New simplified components
+// Client card components
 import { ClientStatusBlock } from '@/components/clients/ClientStatusBlock';
 import { ClientActionHub } from '@/components/clients/ClientActionHub';
 import { ClientHistoryCollapsed } from '@/components/clients/ClientHistoryCollapsed';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPersonalInfo } from '@/components/clients/ClientPersonalInfo';
+import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
+import { ClientMeasurementsCard } from '@/components/clients/ClientMeasurementsCard';
+import { ClientNutritionCard } from '@/components/clients/ClientNutritionCard';
+import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
+import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
+import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -132,16 +138,10 @@ export default function ClientDetail() {
         />
       )}
 
-      {/* 🔴 Section 1: Immediate Status Block */}
-      <ClientStatusBlock
-        client={client}
-        creditBalance={creditBalance}
-      />
+      {/* 🔴 Section 1: Immediate Status Block with contact info */}
+      <ClientStatusBlock client={client} creditBalance={creditBalance} />
 
-      {/* 👤 Section 1.5: Personal Info (from diagnostics/prediagnostics) */}
-      <ClientPersonalInfo client={client} />
-
-      {/* 🔵 Section 2 & 3: Dominant CTA + Quick Actions */}
+      {/* 🔵 Section 2: Dominant CTA + Quick Actions */}
       <ClientActionHub
         client={client}
         creditBalance={creditBalance}
@@ -150,10 +150,27 @@ export default function ClientDetail() {
         onAddCredit={() => setIsCreditModalOpen(true)}
       />
 
-      {/* ⚪ Section 4: History & Context (collapsed) */}
-      <ClientHistoryCollapsed
+      {/* 👤 Section 3: Personal Info */}
+      <ClientPersonalInfo client={client} />
+
+      {/* 🩺 Section 4: Health & Diagnostics */}
+      <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
+      <ClientMeasurementsCard clientId={client.id} />
+
+      {/* 📆 Section 5: Training History & Nutrition */}
+      <ClientHistoryCollapsed clientId={client.id} notes={client.notes} />
+      <ClientNutritionCard clientId={client.id} clientName={client.name} />
+
+      {/* 📝 Section 6: Notes & Media */}
+      <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
+      <ClientMediaGallery clientId={client.id} />
+
+      {/* 💰 Section 7: Finance */}
+      <ClientFinanceCard
         clientId={client.id}
-        notes={client.notes}
+        creditBalance={creditBalance}
+        isSharedBudget={isSharedBudget}
+        budgetGroupName={sharedBudgetInfo?.groupName}
       />
 
       {/* ⚙️ Admin/Settings Section */}
