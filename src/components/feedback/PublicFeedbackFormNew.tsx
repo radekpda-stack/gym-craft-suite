@@ -344,7 +344,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="public-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Načítám formulář...</p>
@@ -356,8 +356,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Error state
   if (status === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
             <h2 className="text-xl font-semibold mb-2">Chyba</h2>
@@ -371,8 +371,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Expired state
   if (status === 'expired') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-warning" />
             <h2 className="text-xl font-semibold mb-2">Platnost vypršela</h2>
@@ -388,8 +388,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Already completed state
   if (status === 'completed') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="w-12 h-12 mx-auto mb-4 text-primary" />
             <h2 className="text-xl font-semibold mb-2">Již vyplněno</h2>
@@ -405,8 +405,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Success state
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-primary" />
@@ -426,10 +426,10 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   // Form state
   return (
-    <div className="min-h-screen bg-background py-6 px-4">
+    <div className="public-page py-6 px-4">
       <div className="max-w-lg mx-auto">
         {/* Header with explanation */}
-        <Card className="mb-6">
+        <Card className="public-card mb-6">
           <CardHeader className="text-center pb-4">
             <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-7 h-7 text-primary" />

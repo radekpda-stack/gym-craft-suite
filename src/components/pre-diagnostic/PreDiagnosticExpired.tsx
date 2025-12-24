@@ -3,8 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function PreDiagnosticExpired() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-md w-full glass border-0">
+    <div className="public-page flex items-center justify-center p-4">
+      <Card className="public-card max-w-md w-full">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
             <Clock className="w-8 h-8 text-warning" />

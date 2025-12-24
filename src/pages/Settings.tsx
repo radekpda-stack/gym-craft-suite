@@ -320,9 +320,7 @@ export default function Settings() {
     return (
       <div className="space-y-4 animate-fade-in pb-24">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            {t.settings.title}
-          </h1>
+          <h1 className="page-title">{t.settings.title}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {t.settings.subtitle}
           </p>
@@ -364,9 +362,7 @@ export default function Settings() {
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl">
       <div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">
-          {t.settings.title}
-        </h1>
+        <h1 className="page-title-lg">{t.settings.title}</h1>
         <p className="text-muted-foreground mt-1">
           {t.settings.subtitle}
         </p>
