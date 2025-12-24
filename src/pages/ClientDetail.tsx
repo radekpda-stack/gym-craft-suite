@@ -25,6 +25,7 @@ import { ClientActionHub } from '@/components/clients/ClientActionHub';
 import { ClientHistoryCollapsed } from '@/components/clients/ClientHistoryCollapsed';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
+import { ClientPersonalInfo } from '@/components/clients/ClientPersonalInfo';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -136,6 +137,9 @@ export default function ClientDetail() {
         client={client}
         creditBalance={creditBalance}
       />
+
+      {/* 👤 Section 1.5: Personal Info (from diagnostics/prediagnostics) */}
+      <ClientPersonalInfo client={client} />
 
       {/* 🔵 Section 2 & 3: Dominant CTA + Quick Actions */}
       <ClientActionHub
