@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Dumbbell, Users, Activity, ChevronRight } from 'lucide-react';
+import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, BarChart3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,15 +123,25 @@ export default function Exercises() {
               : `${exercises.length} exercises in library`}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(showFilters && 'bg-primary/10')}
-        >
-          <Filter className="w-4 h-4 mr-2" />
-          Filtry
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/exercises/analytics')}
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Analytika
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(showFilters && 'bg-primary/10')}
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filtry
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Section */}
