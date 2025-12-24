@@ -736,19 +736,24 @@ export function TrainingDetailView({
         {/* Delete Training Section */}
         {onDelete && (
           <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5 border-destructive/20">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="space-y-2">
                 <h3 className="text-sm font-medium text-destructive flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Nebezpečná zóna
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Trvale smazat tento trénink a všechna související data
+                <p className="text-sm text-muted-foreground">
+                  Trvale smaže trénink včetně záznamů cviků a sérií.
                 </p>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Trénink zmizí z historie a statistik klienta</li>
+                  <li>Kredit se <span className="font-medium text-foreground">neodečítá ani nevrací</span> – transakce zůstanou beze změny</li>
+                  <li>Záznamy cviků a osobní rekordy budou ztraceny</li>
+                </ul>
               </div>
               <Button
                 variant="outline"
-                className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive shrink-0"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isDeleting}
               >
