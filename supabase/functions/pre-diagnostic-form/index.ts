@@ -198,6 +198,21 @@ serve(async (req) => {
         );
       }
 
+      // Track opened_at if not already set (first open)
+      const { data: formWithOpened } = await supabase
+        .from("pre_diagnostic_forms")
+        .select("opened_at")
+        .eq("id", form.id)
+        .single();
+
+      if (!formWithOpened?.opened_at) {
+        await supabase
+          .from("pre_diagnostic_forms")
+          .update({ opened_at: new Date().toISOString() })
+          .eq("id", form.id);
+        console.log(`Marked pre-diagnostic form ${form.id} as opened`);
+      }
+
       // Get existing answers (for draft)
       const { data: answers } = await supabase
         .from("pre_diagnostic_answers")

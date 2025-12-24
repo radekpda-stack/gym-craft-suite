@@ -3,7 +3,6 @@ import { differenceInHours, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { MessageSquare, Copy, Check, Clock, Bell, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { FeedbackSummaryCard } from './FeedbackSummaryCard';
+import { InviteStatusBadge } from './InviteStatusBadge';
 import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 
 interface TrainingFeedbackSectionProps {
@@ -33,6 +33,7 @@ interface TrainingFeedbackSectionProps {
     status: string;
     expires_at: string;
     sent_at: string | null;
+    opened_at: string | null;
     reminder_count: number;
   } | null;
 }
@@ -244,17 +245,13 @@ export function TrainingFeedbackSection({
             <MessageSquare className="w-5 h-5" />
             Zpětná vazba
           </CardTitle>
-          <Badge
-            variant={status === 'received' ? 'default' : status === 'waiting' ? 'secondary' : 'outline'}
-            className={cn(
-              status === 'received' && 'bg-green-500/20 text-green-600 border-green-500/30',
-              status === 'waiting' && 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30'
-            )}
-          >
-            {status === 'received' && <Check className="w-3 h-3 mr-1" />}
-            {status === 'waiting' && <Clock className="w-3 h-3 mr-1" />}
-            {status === 'received' ? 'Doručena' : status === 'waiting' ? 'Čeká' : 'Neposlána'}
-          </Badge>
+          <InviteStatusBadge
+            status={feedbackRequest?.status || 'pending'}
+            sentAt={feedbackRequest?.sent_at}
+            openedAt={feedbackRequest?.opened_at}
+            completedAt={status === 'received' ? new Date().toISOString() : null}
+            expiresAt={feedbackRequest?.expires_at}
+          />
         </div>
         <CardDescription>Pošlete klientovi odkaz pro vyplnění zpětné vazby</CardDescription>
       </CardHeader>

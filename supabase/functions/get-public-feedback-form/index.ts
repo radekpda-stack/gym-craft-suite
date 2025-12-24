@@ -151,6 +151,15 @@ serve(async (req) => {
       );
     }
 
+    // Track opened_at if not already set (first open)
+    if (!request.opened_at) {
+      await supabase
+        .from("feedback_requests")
+        .update({ opened_at: new Date().toISOString() })
+        .eq("id", request.id);
+      console.log(`Marked feedback request ${request.id} as opened`);
+    }
+
     // Get user's feedback settings for questions configuration
     const { data: feedbackSettings } = await supabase
       .from("feedback_settings")

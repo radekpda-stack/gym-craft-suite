@@ -14,6 +14,7 @@ export interface FeedbackRequest {
   trainer_signature: string | null;
   expires_at: string;
   sent_at: string | null;
+  opened_at: string | null;
   completed_at: string | null;
   reminder_count: number;
   last_reminder_at: string | null;

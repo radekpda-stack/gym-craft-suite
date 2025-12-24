@@ -728,6 +728,7 @@ export function TrainingDetailView({
               status: feedbackRequest.status,
               expires_at: feedbackRequest.expires_at,
               sent_at: feedbackRequest.sent_at,
+              opened_at: feedbackRequest.opened_at || null,
               reminder_count: feedbackRequest.reminder_count || 0,
             } : undefined}
           />
