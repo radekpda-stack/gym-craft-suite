@@ -155,36 +155,39 @@ export default function ExerciseAnalytics() {
   }, [filters.clientIds, activeClients]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Button 
             variant="ghost" 
             size="icon"
+            className="shrink-0"
             onClick={() => navigate('/exercises')}
           >
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              Analytika cviků
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+              <span className="truncate">Analytika cviků</span>
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1 truncate">
               Dlouhodobé statistiky a srovnání
             </p>
           </div>
         </div>
 
         {/* Saved Views */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 ml-10 sm:ml-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Folder className="w-4 h-4 mr-2" />
-                {selectedView ? views.find(v => v.id === selectedView)?.name : 'Uložené pohledy'}
-                <ChevronDown className="w-4 h-4 ml-2" />
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                <Folder className="w-4 h-4 mr-1 sm:mr-2 shrink-0" />
+                <span className="truncate max-w-[100px] sm:max-w-[150px]">
+                  {selectedView ? views.find(v => v.id === selectedView)?.name : 'Uložené pohledy'}
+                </span>
+                <ChevronDown className="w-4 h-4 ml-1 sm:ml-2 shrink-0" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -263,80 +266,84 @@ export default function ExerciseAnalytics() {
 
       {/* Filters Bar */}
       <Card className="border-border/50">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Period Selector */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <Select 
-                value={filters.periodType} 
-                onValueChange={(v) => updateFilter('periodType', v as PeriodType)}
-              >
-                <SelectTrigger className="w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERIOD_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+        <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            {/* Top row: Period + Client selector */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              {/* Period Selector */}
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Select 
+                  value={filters.periodType} 
+                  onValueChange={(v) => updateFilter('periodType', v as PeriodType)}
+                >
+                  <SelectTrigger className="w-28 sm:w-36 text-xs sm:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERIOD_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Client Selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="min-w-0 max-w-[160px] sm:max-w-[200px] text-xs sm:text-sm">
+                    <Users className="w-4 h-4 mr-1 sm:mr-2 shrink-0" />
+                    <span className="truncate">{selectedClientNames}</span>
+                    <ChevronDown className="w-4 h-4 ml-1 sm:ml-2 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 max-h-80 overflow-auto">
+                  <DropdownMenuItem 
+                    onClick={() => updateFilter('clientIds', [])}
+                    className={cn(!filters.clientIds?.length && 'bg-primary/10')}
+                  >
+                    Všichni klienti
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {activeClients.map(client => (
+                    <DropdownMenuItem
+                      key={client.id}
+                      onClick={() => toggleClient(client.id)}
+                      className={cn(
+                        'flex items-center gap-2',
+                        filters.clientIds?.includes(client.id) && 'bg-primary/10'
+                      )}
+                    >
+                      <div className={cn(
+                        'w-4 h-4 rounded border flex items-center justify-center shrink-0',
+                        filters.clientIds?.includes(client.id) 
+                          ? 'bg-primary border-primary' 
+                          : 'border-muted-foreground'
+                      )}>
+                        {filters.clientIds?.includes(client.id) && (
+                          <span className="text-primary-foreground text-xs">✓</span>
+                        )}
+                      </div>
+                      <span className="truncate">{client.name}</span>
+                    </DropdownMenuItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* Client Selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="min-w-40">
-                  <Users className="w-4 h-4 mr-2" />
-                  {selectedClientNames}
-                  <ChevronDown className="w-4 h-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 max-h-80 overflow-auto">
-                <DropdownMenuItem 
-                  onClick={() => updateFilter('clientIds', [])}
-                  className={cn(!filters.clientIds?.length && 'bg-primary/10')}
-                >
-                  Všichni klienti
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {activeClients.map(client => (
-                  <DropdownMenuItem
-                    key={client.id}
-                    onClick={() => toggleClient(client.id)}
-                    className={cn(
-                      'flex items-center gap-2',
-                      filters.clientIds?.includes(client.id) && 'bg-primary/10'
-                    )}
-                  >
-                    <div className={cn(
-                      'w-4 h-4 rounded border flex items-center justify-center',
-                      filters.clientIds?.includes(client.id) 
-                        ? 'bg-primary border-primary' 
-                        : 'border-muted-foreground'
-                    )}>
-                      {filters.clientIds?.includes(client.id) && (
-                        <span className="text-primary-foreground text-xs">✓</span>
-                      )}
-                    </div>
-                    {client.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Comparison Mode */}
-            <div className="flex items-center gap-2 ml-auto">
-              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+            {/* Bottom row: Comparison Mode Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+              <TrendingUp className="w-4 h-4 text-muted-foreground shrink-0" />
               <Tabs 
                 value={filters.comparisonMode || 'none'} 
                 onValueChange={(v) => updateFilter('comparisonMode', v === 'none' ? undefined : v as ComparisonMode)}
+                className="min-w-0"
               >
-                <TabsList className="h-8">
-                  <TabsTrigger value="none" className="text-xs px-2">Přehled</TabsTrigger>
-                  <TabsTrigger value="clients" className="text-xs px-2">Klienti</TabsTrigger>
-                  <TabsTrigger value="average" className="text-xs px-2">Průměr</TabsTrigger>
-                  <TabsTrigger value="history" className="text-xs px-2">Historie</TabsTrigger>
+                <TabsList className="h-8 w-auto">
+                  <TabsTrigger value="none" className="text-xs px-2 sm:px-3 whitespace-nowrap">Přehled</TabsTrigger>
+                  <TabsTrigger value="clients" className="text-xs px-2 sm:px-3 whitespace-nowrap">Klienti</TabsTrigger>
+                  <TabsTrigger value="average" className="text-xs px-2 sm:px-3 whitespace-nowrap">Průměr</TabsTrigger>
+                  <TabsTrigger value="history" className="text-xs px-2 sm:px-3 whitespace-nowrap">Historie</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
