@@ -37,11 +37,23 @@ export function FinanceStatsSection() {
 
   const isLoading = statsLoading || analyticsLoading;
 
-  // Generate insights
+  // Generate insights - must be before any conditional return
   const insights = generateFinanceInsights(
     stats ? { ...stats, pendingPayments: stats.pendingPayments } : null,
     analytics?.vsLastMonth
   );
+
+  // Prepare sparkline data from monthly trend - must be before any conditional return
+  const sparklineData = useMemo(() => {
+    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.income }));
+  }, [stats?.monthlyTrend]);
+
+  // Calculate monthly goal progress (example: 100k CZK target)
+  const monthlyGoal = 100000;
+  const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
+  const goalProgress = Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
+  
+  const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
 
   if (isLoading) {
     return (
@@ -57,18 +69,6 @@ export function FinanceStatsSection() {
       </div>
     );
   }
-
-  const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
-
-  // Prepare sparkline data from monthly trend
-  const sparklineData = useMemo(() => {
-    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.income }));
-  }, [stats?.monthlyTrend]);
-
-  // Calculate monthly goal progress (example: 100k CZK target)
-  const monthlyGoal = 100000;
-  const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
-  const goalProgress = Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
