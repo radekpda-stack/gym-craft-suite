@@ -36,6 +36,7 @@ import {
 import { ClientAnalyticsMainCard } from '@/components/analytics/ClientAnalyticsMainCard';
 import { ClientAnalyticsDetailView } from '@/components/analytics/ClientAnalyticsDetailView';
 import { ClientActivityComparisonView } from '@/components/analytics/ClientActivityComparisonView';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 const PERIOD_LABELS: Record<PeriodType, string> = {
   month: 'Tento měsíc',
@@ -46,6 +47,7 @@ const PERIOD_LABELS: Record<PeriodType, string> = {
 };
 
 export default function ClientAnalytics() {
+  usePageTracking('client_analytics');
   const navigate = useNavigate();
   const { data: clients = [] } = useClients();
   const { views, saveView, deleteView, isLoading: viewsLoading } = useClientSavedViews();

@@ -17,8 +17,10 @@ import { useUpdateNutritionLogSession } from '@/hooks/useNutritionLog';
 import { CampaignCard } from '@/components/nutrition/CampaignCard';
 import { NewCampaignModal } from '@/components/nutrition/NewCampaignModal';
 import { toast } from 'sonner';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function NutritionOverview() {
+  usePageTracking('nutrition_overview');
   const navigate = useNavigate();
   const { data: sessions, isLoading } = useAllNutritionSessions();
   const { stats } = useNutritionStats();

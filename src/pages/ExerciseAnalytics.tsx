@@ -54,6 +54,7 @@ import { AverageComparisonView } from '@/components/analytics/AverageComparisonV
 import { HistoryComparisonView } from '@/components/analytics/HistoryComparisonView';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: 'month', label: 'Tento měsíc' },
@@ -69,6 +70,7 @@ const COMPARISON_OPTIONS: { value: ComparisonMode; label: string; description: s
 ];
 
 export default function ExerciseAnalytics() {
+  usePageTracking('exercise_analytics');
   const navigate = useNavigate();
   const { data: clients = [] } = useClients();
   const { views, saveView, deleteView, isLoading: viewsLoading } = useSavedViews();

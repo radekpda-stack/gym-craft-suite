@@ -15,6 +15,7 @@ import { ExerciseClientToggle } from '@/components/exercises/ExerciseClientToggl
 import { ExerciseProgressChart } from '@/components/exercises/ExerciseProgressChart';
 import { ExerciseHistoryTable } from '@/components/exercises/ExerciseHistoryTable';
 import { ExerciseClientComparison } from '@/components/exercises/ExerciseClientComparison';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -68,6 +69,7 @@ const EQUIPMENT_LABELS: Record<string, string> = {
 };
 
 export default function ExerciseDetail() {
+  usePageTracking('exercise_detail');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();

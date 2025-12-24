@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Loader2, Dumbbell, Users, Calendar, TrendingUp, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 const authSchema = z.object({
   email: z.string().email({ message: 'Neplatná e-mailová adresa' }),
@@ -28,6 +29,8 @@ const passwordSchema = z.object({
 type AuthView = 'main' | 'forgot-password' | 'reset-password';
 
 export default function Auth() {
+  usePageTracking('auth');
+  const { trackFeature } = useFeatureTracking();
   useRenderTracker('Auth');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
