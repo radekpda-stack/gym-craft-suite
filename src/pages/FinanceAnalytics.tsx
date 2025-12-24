@@ -39,8 +39,10 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function FinanceAnalytics() {
+  usePageTracking('finance_analytics');
   const navigate = useNavigate();
   const [periodType, setPeriodType] = useState<FinancePeriodType>('month');
   const [comparisonMode, setComparisonMode] = useState<FinanceComparisonMode>('clients');

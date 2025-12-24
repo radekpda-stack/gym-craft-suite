@@ -26,10 +26,12 @@ import { useAllNutritionSessions } from '@/hooks/useAllNutritionSessions';
 import { useUpdateNutritionLogSession } from '@/hooks/useNutritionLog';
 import { CampaignCard } from '@/components/nutrition/CampaignCard';
 import { NewCampaignModal } from '@/components/nutrition/NewCampaignModal';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type StatusFilter = 'all' | 'active' | 'completed' | 'expired';
 
 export default function NutritionCampaigns() {
+  usePageTracking('nutrition_campaigns');
   const navigate = useNavigate();
   const { data: sessions, isLoading } = useAllNutritionSessions();
   const updateSession = useUpdateNutritionLogSession();

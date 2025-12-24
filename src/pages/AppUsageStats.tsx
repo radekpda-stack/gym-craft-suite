@@ -1,23 +1,96 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { BarChart3, Activity, Clock } from 'lucide-react';
+import { BarChart3, Activity, Clock, Download, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppUsageAnalytics, AnalyticsPeriod } from '@/hooks/useAppUsageAnalytics';
-import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { CategoryDistributionChart } from '@/components/analytics/CategoryDistributionChart';
 import { NavigationVsActionsChart } from '@/components/analytics/NavigationVsActionsChart';
 import { ModuleConversionTable } from '@/components/analytics/ModuleConversionTable';
 import { FrictionPointsCard } from '@/components/analytics/FrictionPointsCard';
 import { UsageRecommendations } from '@/components/analytics/UsageRecommendations';
 import { TopFeaturesTable } from '@/components/analytics/TopFeaturesTable';
+import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 const ALLOWED_EMAIL = 'radek.pda@gmail.com';
 
+// Export helper function
+function exportAnalyticsToExcel(data: any, period: AnalyticsPeriod) {
+  const wb = XLSX.utils.book_new();
+  
+  // 1. Summary sheet
+  const summaryData = [
+    ['Přehled používání aplikace', ''],
+    ['Období', period === '7d' ? '7 dní' : period === '30d' ? '30 dní' : '90 dní'],
+    ['Datum exportu', new Date().toLocaleDateString('cs-CZ')],
+    ['', ''],
+    ['Celkem událostí', data.totalEvents],
+    ['Unikátních sessions', data.uniqueSessions],
+    ['Ø událostí/session', data.avgEventsPerSession],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Přehled');
+  
+  // 2. Category distribution
+  const catData = [
+    ['Kategorie', 'Počet', 'Procento'],
+    ...data.categoryDistribution.map((c: any) => [c.label, c.count, `${c.percentage}%`])
+  ];
+  const wsCat = XLSX.utils.aoa_to_sheet(catData);
+  XLSX.utils.book_append_sheet(wb, wsCat, 'Kategorie');
+  
+  // 3. Top features
+  const topData = [
+    ['Funkce', 'Kategorie', 'Počet použití'],
+    ...data.topFeatures.map((f: any) => [f.label, f.category, f.count])
+  ];
+  const wsTop = XLSX.utils.aoa_to_sheet(topData);
+  XLSX.utils.book_append_sheet(wb, wsTop, 'Nejpoužívanější');
+  
+  // 4. Least used features
+  const leastData = [
+    ['Funkce', 'Kategorie', 'Počet použití'],
+    ...data.leastUsedFeatures.map((f: any) => [f.label, f.category, f.count])
+  ];
+  const wsLeast = XLSX.utils.aoa_to_sheet(leastData);
+  XLSX.utils.book_append_sheet(wb, wsLeast, 'Málo používané');
+  
+  // 5. Module conversion
+  const modData = [
+    ['Modul', 'Zobrazení', 'Akce', 'Konverze'],
+    ...data.moduleConversion.map((m: any) => [m.label, m.views, m.actions, `${m.conversionRate}%`])
+  ];
+  const wsMod = XLSX.utils.aoa_to_sheet(modData);
+  XLSX.utils.book_append_sheet(wb, wsMod, 'Konverze modulů');
+  
+  // 6. Friction points
+  const frictionData = [
+    ['Problém', 'Typ', 'Počet', 'Závažnost', 'Doporučení'],
+    ...data.frictionPoints.map((f: any) => [f.pattern, f.type, f.count, f.severity, f.suggestion])
+  ];
+  const wsFriction = XLSX.utils.aoa_to_sheet(frictionData);
+  XLSX.utils.book_append_sheet(wb, wsFriction, 'Problémy');
+  
+  // 7. Recommendations
+  const recData = [
+    ['Typ', 'Doporučení'],
+    ...data.recommendations.map((r: any) => [r.type, r.message])
+  ];
+  const wsRec = XLSX.utils.aoa_to_sheet(recData);
+  XLSX.utils.book_append_sheet(wb, wsRec, 'Doporučení');
+  
+  // Download
+  XLSX.writeFile(wb, `app-usage-analytics-${period}-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 export default function AppUsageStats() {
   usePageTracking('app_usage_stats');
+  const { trackFeature } = useFeatureTracking();
   
   const { user } = useAuth();
   const [period, setPeriod] = useState<AnalyticsPeriod>('30d');
@@ -27,6 +100,17 @@ export default function AppUsageStats() {
   if (user?.email !== ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
   }
+
+  const handleExport = () => {
+    if (!data) return;
+    trackFeature('export_app_usage_analytics', 'export', { metadata: { period } });
+    exportAnalyticsToExcel(data, period);
+    exportAnalyticsToExcel(data, period);
+    toast({
+      title: 'Export úspěšný',
+      description: 'Analytika byla exportována do Excel souboru.',
+    });
+  };
 
   if (error) {
     return (
@@ -52,13 +136,22 @@ export default function AppUsageStats() {
           </p>
         </div>
 
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as AnalyticsPeriod)}>
-          <TabsList>
-            <TabsTrigger value="7d">7 dní</TabsTrigger>
-            <TabsTrigger value="30d">30 dní</TabsTrigger>
-            <TabsTrigger value="90d">90 dní</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-3">
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as AnalyticsPeriod)}>
+            <TabsList>
+              <TabsTrigger value="7d">7 dní</TabsTrigger>
+              <TabsTrigger value="30d">30 dní</TabsTrigger>
+              <TabsTrigger value="90d">90 dní</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {data && (
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              Export
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

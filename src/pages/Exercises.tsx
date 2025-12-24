@@ -8,8 +8,10 @@ import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 export default function Exercises() {
+  usePageTracking('exercises');
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<string>('list');
   const [showCreateExercise, setShowCreateExercise] = useState(false);
