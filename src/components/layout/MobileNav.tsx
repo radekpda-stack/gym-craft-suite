@@ -3,20 +3,18 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
-  Users,
   Dumbbell,
+  Target,
   Calendar,
-  BarChart3,
   MoreHorizontal,
 } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
 
 const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
-  { to: '/clients', icon: Users, label: 'Klienti' },
-  { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-  { to: '/statistics', icon: BarChart3, label: 'Statistiky' },
+  { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+  { to: '/exercises', icon: Target, label: 'Cviky' },
 ];
 
 export function MobileNav() {
