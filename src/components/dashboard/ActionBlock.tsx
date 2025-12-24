@@ -9,41 +9,68 @@ import {
   Sparkles,
   CheckCircle2,
   Zap,
+  Calendar,
+  Play,
+  Heart,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { DashboardViewModel, PriorityTask, dismissTask } from '@/hooks/useDashboardViewModel';
+import { DashboardViewModel, dismissTask } from '@/hooks/useDashboardViewModel';
 import { useQueryClient } from '@tanstack/react-query';
 import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ClientTask, TaskType, TaskSeverity } from '@/lib/clientTasksLogic';
 
 interface ActionBlockProps {
   data: DashboardViewModel | undefined;
   isLoading: boolean;
 }
 
-const TASK_TYPE_CONFIG = {
-  overload: { icon: AlertTriangle, label: 'Přetížení', actionLabel: 'Otevřít' },
-  credit: { icon: Wallet, label: 'Kredit', actionLabel: 'Dobít' },
-  feedback: { icon: MessageSquare, label: 'Feedback', actionLabel: 'Poslat' },
-  unpaid: { icon: Wallet, label: 'Platba', actionLabel: 'Řešit' },
-} as const;
+// Mapování typů úkolů na ikony a popisky
+const TASK_TYPE_CONFIG: Record<TaskType, { icon: typeof AlertTriangle; label: string }> = {
+  'training-now': { icon: Play, label: 'Teď' },
+  'training-today': { icon: Calendar, label: 'Dnes' },
+  'overload': { icon: AlertTriangle, label: 'Přetížení' },
+  'health-issue': { icon: Heart, label: 'Zdraví' },
+  'feedback': { icon: MessageSquare, label: 'Feedback' },
+  'credit': { icon: Wallet, label: 'Kredit' },
+  'no-training': { icon: Clock, label: 'Neaktivní' },
+  'unpaid': { icon: Wallet, label: 'Platba' },
+  'note': { icon: MessageSquare, label: 'Poznámka' },
+  'schedule': { icon: Calendar, label: 'Plán' },
+};
 
-const severityToStatus: Record<'ok' | 'warning' | 'error', Status> = {
-  ok: 'ok',
-  warning: 'warning',
+const severityToStatus: Record<TaskSeverity, Status> = {
   error: 'error',
+  warning: 'warning',
+  info: 'ok',
+};
+
+// Kompatibilita s oběma typy (PriorityTask z useDashboardViewModel a ClientTask)
+type DisplayTask = {
+  id: string;
+  type: TaskType | 'overload' | 'credit' | 'feedback' | 'unpaid';
+  severity: TaskSeverity | Status;
+  clientId: string;
+  clientName: string;
+  title: string;
+  subtitle: string;
+  detail?: string;
+  actionLabel?: string;
+  meta?: Record<string, any>;
 };
 
 interface ActionRowProps {
-  task: PriorityTask;
+  task: DisplayTask;
   onDismiss: () => void;
   onClick: () => void;
 }
 
 const ActionRow = memo(function ActionRow({ task, onDismiss, onClick }: ActionRowProps) {
-  const typeConfig = TASK_TYPE_CONFIG[task.type];
-  const status = severityToStatus[task.severity];
+  const typeConfig = TASK_TYPE_CONFIG[task.type as TaskType] || { icon: AlertTriangle, label: task.type };
+  const severity = task.severity === 'ok' ? 'info' : task.severity;
+  const status = severityToStatus[severity as TaskSeverity] || 'warning';
   const config = STATUS_CONFIG[status];
   const Icon = typeConfig.icon;
 
@@ -89,7 +116,7 @@ const ActionRow = memo(function ActionRow({ task, onDismiss, onClick }: ActionRo
         'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground',
         'transition-colors'
       )}>
-        {typeConfig.actionLabel}
+        {task.actionLabel || 'Otevřít'}
       </span>
       
       {/* Dismiss */}

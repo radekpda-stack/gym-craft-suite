@@ -13,15 +13,15 @@ export type DayStatus = 'ok' | 'warning' | 'critical';
 
 export interface PriorityTask {
   id: string;
-  type: 'overload' | 'credit' | 'feedback' | 'unpaid';
-  severity: Status;
+  type: 'overload' | 'credit' | 'feedback' | 'unpaid' | 'health-issue' | 'no-training' | 'training-now' | 'training-today';
+  severity: 'error' | 'warning' | 'info';
   clientId: string;
   clientName: string;
   title: string;
   subtitle: string;
   detail?: string;
   actionUrl: string;
-  actionLabel?: string;
+  actionLabel: string;
   meta?: Record<string, any>;
 }
 

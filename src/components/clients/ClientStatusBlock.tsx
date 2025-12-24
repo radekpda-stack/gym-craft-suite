@@ -1,13 +1,16 @@
+/**
+ * CLIENT STATUS BLOCK
+ * ====================
+ * Zobrazuje okamžitý stav klienta na kartě klienta.
+ * Používá sdílenou logiku z clientTasksLogic - jeden zdroj pravdy.
+ */
+
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { 
-  Activity, 
   AlertTriangle, 
   CheckCircle2, 
   Calendar,
   MessageSquare,
-  TrendingDown,
-  Zap,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -16,6 +19,15 @@ import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 import { format, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { 
+  generateClientTasks, 
+  ClientTask, 
+  getDominantTask,
+  ClientData,
+  TrainingSession,
+  FeedbackData,
+  FeedbackRequest,
+} from '@/lib/clientTasksLogic';
 
 interface ClientStatusBlockProps {
   client: Client;
@@ -23,12 +35,6 @@ interface ClientStatusBlockProps {
 }
 
 type ClientStatus = 'ok' | 'warning' | 'risk';
-
-interface StatusInfo {
-  status: ClientStatus;
-  label: string;
-  reasons: string[];
-}
 
 const STATUS_CONFIG = {
   ok: {
@@ -56,7 +62,80 @@ const STATUS_CONFIG = {
 
 export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockProps) {
   const { data: sessions = [] } = useTrainingSessions(client.id);
-  const { data: feedbackData } = useClientFeedback(client.id);
+  const { data: feedbackData = [] } = useClientFeedback(client.id);
+  
+  // Prázdný array pro feedback requests - zjednodušeno
+  const feedbackRequests: FeedbackRequest[] = [];
+  
+  // Konverze dat do formátu pro sdílenou logiku
+  const clientData: ClientData = useMemo(() => ({
+    id: client.id,
+    name: client.name,
+    credit_balance: creditBalance,
+    payment_mode: client.payment_mode,
+    feedback_enabled: client.feedback_enabled,
+  }), [client, creditBalance]);
+  
+  const sessionsData: TrainingSession[] = useMemo(() => 
+    sessions.map((s: any) => ({
+      id: s.id,
+      date: s.date,
+      status: s.status,
+      rpe: s.rpe,
+      final_price: s.final_price,
+      payment_status: s.payment_status,
+    }))
+  , [sessions]);
+  
+  const feedbackDataFormatted: FeedbackData[] = useMemo(() => 
+    feedbackData.map((f: any) => ({
+      id: f.id,
+      training_date: f.training_date,
+      pain: f.pain,
+      body_feel: f.body_feel,
+      rpe_rating: f.rpe_rating,
+      is_red_flag: f.is_red_flag,
+    }))
+  , [feedbackData]);
+  
+  const feedbackRequestsFiltered: FeedbackRequest[] = useMemo(() => 
+    feedbackRequests
+      .filter((fr: any) => fr.client_id === client.id)
+      .map((fr: any) => ({
+        training_session_id: fr.training_session_id,
+        status: fr.status,
+      }))
+  , [feedbackRequests, client.id]);
+  
+  // Generování úkolů pomocí sdílené logiky
+  const tasks = useMemo(() => 
+    generateClientTasks({
+      client: clientData,
+      sessions: sessionsData,
+      feedback: feedbackDataFormatted,
+      feedbackRequests: feedbackRequestsFiltered,
+    })
+  , [clientData, sessionsData, feedbackDataFormatted, feedbackRequestsFiltered]);
+  
+  // Určení statusu z úkolů
+  const statusInfo = useMemo(() => {
+    const hasError = tasks.some(t => t.severity === 'error');
+    const hasWarning = tasks.some(t => t.severity === 'warning');
+    
+    const status: ClientStatus = hasError ? 'risk' : hasWarning ? 'warning' : 'ok';
+    const labels: Record<ClientStatus, string> = {
+      ok: 'V pořádku',
+      warning: 'Pozor',
+      risk: 'Riziko',
+    };
+    
+    // Důvody = subtitly úkolů (bez info úkolů)
+    const reasons = tasks
+      .filter(t => t.severity !== 'info')
+      .map(t => t.subtitle + (t.detail ? ` (${t.detail})` : ''));
+    
+    return { status, label: labels[status], reasons };
+  }, [tasks]);
   
   // Get last completed training
   const lastTraining = useMemo(() => {
@@ -81,66 +160,7 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
     };
   }, [feedbackData]);
   
-  // Auto-evaluate client status
-  const statusInfo = useMemo((): StatusInfo => {
-    const reasons: string[] = [];
-    let status: ClientStatus = 'ok';
-    
-    // Check credit
-    if (client.payment_mode !== 'cash_only') {
-      if (creditBalance <= 0) {
-        reasons.push('Bez kreditu');
-        status = 'risk';
-      } else if (creditBalance < 800) {
-        reasons.push('Nízký kredit');
-        if (status === 'ok') status = 'warning';
-      }
-    }
-    
-    // Check training frequency
-    if (lastTraining) {
-      if (lastTraining.daysAgo > 14) {
-        reasons.push(`${lastTraining.daysAgo} dní bez tréninku`);
-        status = 'risk';
-      } else if (lastTraining.daysAgo > 7) {
-        reasons.push(`${lastTraining.daysAgo} dní od tréninku`);
-        if (status === 'ok') status = 'warning';
-      }
-    } else {
-      reasons.push('Žádný trénink');
-      if (status === 'ok') status = 'warning';
-    }
-    
-    // Check feedback issues
-    if (lastFeedback) {
-      if (lastFeedback.isRedFlag) {
-        reasons.push('Red flag ve feedbacku');
-        status = 'risk';
-      } else if (lastFeedback.pain >= 7) {
-        reasons.push(`Vysoká bolest (${lastFeedback.pain}/10)`);
-        status = 'risk';
-      } else if (lastFeedback.pain >= 5) {
-        reasons.push(`Bolest (${lastFeedback.pain}/10)`);
-        if (status === 'ok') status = 'warning';
-      }
-      
-      if (lastFeedback.rpe >= 9) {
-        reasons.push(`Vysoké RPE (${lastFeedback.rpe})`);
-        if (status === 'ok') status = 'warning';
-      }
-    }
-    
-    const labels: Record<ClientStatus, string> = {
-      ok: 'V pořádku',
-      warning: 'Pozor',
-      risk: 'Riziko',
-    };
-    
-    return { status, label: labels[status], reasons };
-  }, [client, creditBalance, lastTraining, lastFeedback]);
-  
   const config = STATUS_CONFIG[statusInfo.status];
-  const StatusIcon = config.icon;
 
   return (
     <div className={cn(
@@ -181,7 +201,7 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
       {/* Status reasons (if any) */}
       {statusInfo.reasons.length > 0 && statusInfo.status !== 'ok' && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
-          {statusInfo.reasons.map((reason, i) => (
+          {statusInfo.reasons.slice(0, 3).map((reason, i) => (
             <span 
               key={i}
               className={cn(
@@ -193,6 +213,11 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
               {reason}
             </span>
           ))}
+          {statusInfo.reasons.length > 3 && (
+            <span className={cn('text-xs px-2 py-1 rounded-lg', config.bg, config.text)}>
+              +{statusInfo.reasons.length - 3}
+            </span>
+          )}
         </div>
       )}
       
@@ -241,4 +266,55 @@ export function ClientStatusBlock({ client, creditBalance }: ClientStatusBlockPr
       </div>
     </div>
   );
+}
+
+// Export tasks pro použití v ClientActionHub
+export function useClientTasks(client: Client, creditBalance: number) {
+  const { data: sessions = [] } = useTrainingSessions(client.id);
+  const { data: feedbackData = [] } = useClientFeedback(client.id);
+  
+  // Prázdný array pro feedback requests - zjednodušeno
+  const feedbackRequests: FeedbackRequest[] = [];
+  
+  return useMemo(() => {
+    const clientData: ClientData = {
+      id: client.id,
+      name: client.name,
+      credit_balance: creditBalance,
+      payment_mode: client.payment_mode,
+      feedback_enabled: client.feedback_enabled,
+    };
+    
+    const sessionsData: TrainingSession[] = sessions.map((s: any) => ({
+      id: s.id,
+      date: s.date,
+      status: s.status,
+      rpe: s.rpe,
+      final_price: s.final_price,
+      payment_status: s.payment_status,
+    }));
+    
+    const feedbackDataFormatted: FeedbackData[] = feedbackData.map((f: any) => ({
+      id: f.id,
+      training_date: f.training_date,
+      pain: f.pain,
+      body_feel: f.body_feel,
+      rpe_rating: f.rpe_rating,
+      is_red_flag: f.is_red_flag,
+    }));
+    
+    const feedbackRequestsFiltered: FeedbackRequest[] = feedbackRequests
+      .filter((fr: any) => fr.client_id === client.id)
+      .map((fr: any) => ({
+        training_session_id: fr.training_session_id,
+        status: fr.status,
+      }));
+    
+    return generateClientTasks({
+      client: clientData,
+      sessions: sessionsData,
+      feedback: feedbackDataFormatted,
+      feedbackRequests: feedbackRequestsFiltered,
+    });
+  }, [client, creditBalance, sessions, feedbackData, feedbackRequests]);
 }
