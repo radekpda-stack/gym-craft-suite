@@ -49,11 +49,11 @@ interface FeedbackHistoryListProps {
 }
 
 const STATUS_CONFIG = {
-  pending: { label: 'Čeká', icon: Clock, color: 'bg-yellow-500/20 text-yellow-700' },
-  sent: { label: 'Odesláno', icon: Mail, color: 'bg-blue-500/20 text-blue-700' },
-  completed: { label: 'Vyplněno', icon: CheckCircle, color: 'bg-green-500/20 text-green-700' },
-  expired: { label: 'Expirováno', icon: AlertCircle, color: 'bg-gray-500/20 text-gray-700' },
-  cancelled: { label: 'Zrušeno', icon: XCircle, color: 'bg-red-500/20 text-red-700' },
+  pending: { label: 'Vygenerováno', icon: Clock, color: 'bg-secondary text-muted-foreground' },
+  sent: { label: 'Odesláno', icon: Mail, color: 'bg-primary/20 text-primary' },
+  completed: { label: 'Vyplněno', icon: CheckCircle, color: 'bg-primary/20 text-primary' },
+  expired: { label: 'Expirováno', icon: AlertCircle, color: 'bg-muted text-muted-foreground' },
+  cancelled: { label: 'Zrušeno', icon: XCircle, color: 'bg-muted text-muted-foreground' },
 };
 
 // Component to render a single feedback request with detail dialog support
@@ -151,7 +151,7 @@ function FeedbackRequestCard({
                       </Badge>
                     )}
                     {feedback.pain !== null && feedback.pain >= 4 && (
-                      <Badge className="text-xs bg-orange-500/20 text-orange-700">
+                      <Badge variant="secondary" className="text-xs">
                         Bolest: {feedback.pain}/10
                       </Badge>
                     )}
@@ -161,8 +161,8 @@ function FeedbackRequestCard({
                       </Badge>
                     )}
                     {feedback.is_red_flag && (
-                      <Badge className="text-xs bg-red-500/20 text-red-700">
-                        ⚠️ Red Flag
+                      <Badge variant="secondary" className="text-xs">
+                        ⚠️ Pozor
                       </Badge>
                     )}
                   </div>

@@ -387,7 +387,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-primary" />
             <h2 className="text-xl font-semibold mb-2">Již vyplněno</h2>
             <p className="text-muted-foreground">
               Zpětná vazba pro tento trénink již byla odeslána. Děkujeme!
@@ -404,8 +404,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-500" />
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-xl font-semibold mb-2">Děkujeme!</h2>
             <p className="text-muted-foreground">
@@ -424,27 +424,41 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   return (
     <div className="min-h-screen bg-background py-6 px-4">
       <div className="max-w-lg mx-auto">
-        {/* Header */}
+        {/* Header with explanation */}
         <Card className="mb-6">
           <CardHeader className="text-center pb-4">
             <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-7 h-7 text-primary" />
             </div>
-            <CardTitle className="text-xl">Jak ti je po včerejším tréninku?</CardTitle>
-            <p className="text-sm text-muted-foreground mt-2">
-              Díky tomu příště nastavím trénink přesněji. (1 minuta)
-            </p>
+            <CardTitle className="text-xl">Krátká zpětná vazba po tréninku</CardTitle>
           </CardHeader>
-          {formData?.trainingDate && (
-            <CardContent className="pt-0">
+          <CardContent className="pt-0 space-y-4">
+            {/* Intro explanation text */}
+            <div className="text-sm text-muted-foreground text-center space-y-2">
+              <p>
+                Tento formulář slouží trenérovi k lepšímu pochopení,
+                jak tvé tělo reagovalo na poslední trénink.
+              </p>
+              <p>
+                Odpovědi pomáhají přizpůsobit další tréninky tak,
+                aby byly bezpečné, efektivní a dlouhodobě udržitelné.
+              </p>
+              <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground/80 mt-2">
+                <Clock className="w-3.5 h-3.5" />
+                Vyplnění zabere přibližně 1–2 minuty
+              </p>
+            </div>
+
+            {/* Training date */}
+            {formData?.trainingDate && (
               <div className="p-3 rounded-lg bg-secondary/50 border text-sm text-center">
                 <span className="text-muted-foreground">Trénink:</span>{' '}
                 <span className="font-medium">
                   {format(new Date(formData.trainingDate), 'd.M.yyyy HH:mm', { locale: cs })}
                 </span>
               </div>
-            </CardContent>
-          )}
+            )}
+          </CardContent>
         </Card>
 
         {/* MANDATORY Questions - Always visible */}
@@ -455,7 +469,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               
               {/* Conditional pain area selection with pain type switch */}
               {question.id === 'pain' && showPainAreas && (
-                <Card className="mt-4 border-warning/50 bg-warning/5">
+                <Card className="mt-4 border-border bg-secondary/30">
                   <CardContent className="pt-6 space-y-4">
                     {/* Pain Type Switch - Extended with tendon option */}
                     <div className="space-y-2">
@@ -467,7 +481,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           className={cn(
                             "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
                             painType === 'muscle'
-                              ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                              ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
@@ -479,7 +493,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           className={cn(
                             "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
                             painType === 'joint'
-                              ? "border-red-500 bg-red-500/10 text-red-700"
+                              ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
@@ -491,7 +505,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           className={cn(
                             "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
                             painType === 'tendon'
-                              ? "border-orange-500 bg-orange-500/10 text-orange-700"
+                              ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
                           )}
                         >
@@ -593,7 +607,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       className={cn(
                         "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
                         sleepAfter === 'poor'
-                          ? "border-red-500 bg-red-500/10 text-red-700"
+                          ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
                       )}
                     >
@@ -605,7 +619,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       className={cn(
                         "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
                         sleepAfter === 'average'
-                          ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                          ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
                       )}
                     >
@@ -617,7 +631,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       className={cn(
                         "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
                         sleepAfter === 'good'
-                          ? "border-green-500 bg-green-500/10 text-green-700"
+                          ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
                       )}
                     >
