@@ -299,7 +299,15 @@ export function useSyncToClientStats() {
         const isPR = !previousBest || previousBest.length === 0 || 
           (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
 
-        // Create exercise entry for client stats
+        // First delete any existing entry for this exercise in this session
+        await supabase
+          .from('exercise_entries')
+          .delete()
+          .eq('training_session_id', trainingSessionId)
+          .eq('exercise_name', group.exercise_name)
+          .eq('user_id', user.id);
+
+        // Create exercise entry for client stats with training_session_id
         const { error: insertError } = await supabase
           .from('exercise_entries')
           .insert({
@@ -313,6 +321,7 @@ export function useSyncToClientStats() {
             date: trainingDate.split('T')[0],
             user_id: user.id,
             notes: bestSet.notes || '',
+            training_session_id: trainingSessionId,
           });
 
         if (insertError) {
