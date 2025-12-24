@@ -67,9 +67,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingDetail() {
+  const { trackFeature } = useFeatureTracking();
   usePageTracking('training_detail');
   const { id } = useParams();
   const navigate = useNavigate();
@@ -360,6 +361,19 @@ export default function TrainingDetail() {
         });
       }
     }
+    
+    // Track training completion
+    trackFeature('training_complete', 'trainings', {
+      metadata: {
+        training_id: training.id,
+        client_id: training.client_id,
+        participant_count: participantCount,
+        payment_method: paymentMethodValue,
+        total_price: totalPrice,
+        has_rating: !!completeRating,
+      }
+    });
+    
     setShowCompleteDialog(false);
     navigate('/trainings');
   };
@@ -387,6 +401,17 @@ export default function TrainingDetail() {
       trainingPrices,
       deductCredit: cancelDeductCredit,
     });
+    
+    // Track training cancellation
+    trackFeature('training_cancel', 'trainings', {
+      metadata: {
+        training_id: training.id,
+        client_id: training.client_id,
+        is_late_cancellation: isLateCancellation,
+        deduct_credit: cancelDeductCredit,
+      }
+    });
+    
     setShowCancelDialog(false);
   };
 

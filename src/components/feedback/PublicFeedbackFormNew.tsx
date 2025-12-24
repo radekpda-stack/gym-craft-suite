@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { trackEvent, startTimedEvent } from '@/lib/analytics';
 import {
   Popover,
   PopoverContent,
@@ -131,6 +132,10 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [sleepHours, setSleepHours] = useState<number>(7.5);
   const [note, setNote] = useState('');
   const [showOptional, setShowOptional] = useState(false);
+  
+  // Timing for form completion
+  const formOpenTime = useRef<number>(Date.now());
+  const hasTrackedOpen = useRef(false);
 
   const questionsConfig = formData?.questionsConfig ?? DEFAULT_QUESTIONS_CONFIG;
   
@@ -194,6 +199,18 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
       setFormData(result.data);
       setStatus('ready');
+      
+      // Track form open event (only once)
+      if (!hasTrackedOpen.current) {
+        hasTrackedOpen.current = true;
+        formOpenTime.current = Date.now();
+        trackEvent('feedback_form_open', 'feedback', {
+          metadata: {
+            token_hash: token.substring(0, 8),
+            has_training_date: !!result.data?.trainingDate,
+          }
+        });
+      }
     } catch (error) {
       console.error('Error loading form:', error);
       setErrorMessage('Chyba při načítání formuláře');
@@ -208,6 +225,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   const handleSubmit = async () => {
     setStatus('submitting');
+    const completionTimeMs = Date.now() - formOpenTime.current;
+    const questionsCount = questionsConfig.questions.filter(q => q.enabled).length;
 
     try {
       const painThreshold = painQuestion?.painAreaThreshold ?? 4;
@@ -256,9 +275,33 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         throw new Error(result.error || 'Chyba při odesílání');
       }
 
+      // Track successful submission
+      trackEvent('feedback_form_submit', 'feedback', {
+        metadata: {
+          token_hash: token.substring(0, 8),
+          fields_count: questionsCount,
+          has_pain: showPainArea,
+          has_note: !!note,
+        },
+        duration_ms: completionTimeMs,
+        success: true,
+      });
+
       setStatus('success');
     } catch (error: any) {
       console.error('Error submitting feedback:', error);
+      
+      // Track submission error
+      trackEvent('feedback_form_submit_error', 'feedback', {
+        metadata: {
+          token_hash: token.substring(0, 8),
+          fields_count: questionsCount,
+        },
+        duration_ms: completionTimeMs,
+        success: false,
+        error_message: error.message || 'Unknown error',
+      });
+      
       setErrorMessage(error.message || 'Chyba při odesílání');
       setStatus('error');
     }
