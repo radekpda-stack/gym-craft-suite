@@ -425,23 +425,32 @@ export default function TrainingDetail() {
       {/* Action Buttons - Only for scheduled trainings */}
       {training.status === 'scheduled' && (
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Akce</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Změna stavu tréninku</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Označte trénink jako dokončený nebo změňte jeho stav na zrušený.
+          </p>
           <div className="flex flex-wrap gap-3">
-            <Button
-              className="gap-2"
-              onClick={openCompleteDialog}
-            >
-              <CheckCircle className="w-4 h-4" />
-              Dokončit trénink
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 text-destructive border-destructive hover:bg-destructive/10"
-              onClick={openCancelDialog}
-            >
-              <XCircle className="w-4 h-4" />
-              Zrušit trénink
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                className="gap-2"
+                onClick={openCompleteDialog}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Dokončit trénink
+              </Button>
+              <span className="text-xs text-muted-foreground ml-1">Odečte kredit a zaznamená platbu</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="outline"
+                className="gap-2 text-warning border-warning hover:bg-warning/10"
+                onClick={openCancelDialog}
+              >
+                <XCircle className="w-4 h-4" />
+                Zrušit trénink
+              </Button>
+              <span className="text-xs text-muted-foreground ml-1">Změní status, volitelně odečte kredit</span>
+            </div>
           </div>
         </div>
       )}
