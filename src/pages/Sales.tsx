@@ -37,12 +37,12 @@ export default function Sales() {
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  "flex-1 gap-2 py-2.5 px-3 sm:px-4",
-                  "data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+                  "flex-1 gap-2 py-2.5 px-3 sm:px-4 text-foreground/70",
+                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm rounded-lg"
                 )}
               >
                 <Icon className="w-4 h-4" />
-                <span className="hidden xs:inline">{tab.label}</span>
+                <span className="hidden xs:inline uppercase">{tab.label}</span>
               </TabsTrigger>
             );
           })}
