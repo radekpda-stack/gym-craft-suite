@@ -86,7 +86,7 @@ const sections: NavSection[] = [
   {
     label: 'Komunikace',
     items: [
-      { to: '/feedback', icon: MessageSquare, label: 'Feedbacky' },
+      { to: '/feedback-overview', icon: MessageSquare, label: 'Feedbacky' },
     ],
   },
   // AI section hidden for future use
