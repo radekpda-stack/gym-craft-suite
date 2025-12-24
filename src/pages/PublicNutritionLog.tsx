@@ -328,7 +328,7 @@ export default function PublicNutritionLogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="public-page flex items-center justify-center">
         <div className="text-muted-foreground">{tr.loading}</div>
       </div>
     );
@@ -336,8 +336,8 @@ export default function PublicNutritionLogPage() {
 
   if (error || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <p className="text-lg font-medium text-destructive">{tr.invalidLink}</p>
           </CardContent>
@@ -348,10 +348,10 @@ export default function PublicNutritionLogPage() {
 
   if (session.status === 'completed') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card w-full max-w-md">
           <CardContent className="pt-6 text-center">
-            <Check className="h-12 w-12 mx-auto text-green-500 mb-4" />
+            <Check className="h-12 w-12 mx-auto text-primary mb-4" />
             <p className="text-lg font-medium">{tr.completed}</p>
           </CardContent>
         </Card>
@@ -367,7 +367,7 @@ export default function PublicNutritionLogPage() {
   const dayIsComplete = dayEntries.food.length >= 3;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="public-page pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center justify-between p-4">
@@ -481,7 +481,7 @@ export default function PublicNutritionLogPage() {
         {/* Entries List */}
         <div className="space-y-2">
           {totalEntries === 0 ? (
-            <Card className="border-dashed border-2">
+            <Card className="empty-card">
               <CardContent className="py-10 text-center">
                 <motion.button
                   whileTap={{ scale: 0.95 }}

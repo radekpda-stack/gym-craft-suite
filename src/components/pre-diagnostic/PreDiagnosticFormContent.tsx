@@ -538,7 +538,7 @@ export function PreDiagnosticFormContent({
   const StepIcon = currentStepData.icon;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="public-page pb-24">
       {/* Header */}
       <div className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="container mx-auto px-4 py-4">
@@ -565,7 +565,7 @@ export function PreDiagnosticFormContent({
 
       {/* Content */}
       <div className="container mx-auto px-4 py-6">
-        <Card className="glass border-0 mb-6">
+        <Card className="public-card mb-6">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

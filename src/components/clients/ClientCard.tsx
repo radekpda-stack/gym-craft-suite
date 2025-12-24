@@ -5,7 +5,6 @@ import { cs } from 'date-fns/locale';
 import {
   ChevronRight,
   Dumbbell,
-  Plus,
   Wallet,
   MoreHorizontal,
   Calendar,
@@ -302,7 +301,7 @@ export const ClientCard = memo(function ClientCard({
             onAddCredit();
           }}
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Wallet className="w-3.5 h-3.5" />
           Kredit
         </Button>
 

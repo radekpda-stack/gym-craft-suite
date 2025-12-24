@@ -9,8 +9,8 @@ interface Props {
 
 export function PreDiagnosticWelcome({ onStart, clientName }: Props) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-md w-full glass border-0">
+    <div className="public-page flex items-center justify-center p-4">
+      <Card className="public-card max-w-md w-full">
         <CardContent className="pt-8 pb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">

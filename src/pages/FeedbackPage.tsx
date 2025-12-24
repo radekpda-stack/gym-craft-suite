@@ -37,8 +37,8 @@ export default function FeedbackPage() {
   if (!token) {
     const canExtractFromPasted = !!extractUuid(pasted);
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card w-full max-w-md">
           <CardHeader>
             <CardTitle>Neplatný odkaz</CardTitle>
           </CardHeader>

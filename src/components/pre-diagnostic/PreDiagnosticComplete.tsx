@@ -10,8 +10,8 @@ export function PreDiagnosticComplete() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-md w-full glass border-0">
+    <div className="public-page flex items-center justify-center p-4">
+      <Card className="public-card max-w-md w-full">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-8 h-8 text-primary" />
