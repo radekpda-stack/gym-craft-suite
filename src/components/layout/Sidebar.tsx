@@ -122,6 +122,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       items: [
         { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
         { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
+        { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
         // { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' }, // Hidden
       ],
     },
@@ -131,7 +132,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-        { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
       ],
     },
     {
