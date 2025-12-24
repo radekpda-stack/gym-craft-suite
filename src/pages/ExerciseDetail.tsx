@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Dumbbell, Users, Activity, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Users, Activity, Trophy, TrendingUp, TrendingDown, Minus, BarChart3, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,10 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { ExerciseClientToggle } from '@/components/exercises/ExerciseClientToggle';
+import { ExerciseProgressChart } from '@/components/exercises/ExerciseProgressChart';
+import { ExerciseHistoryTable } from '@/components/exercises/ExerciseHistoryTable';
+import { ExerciseClientComparison } from '@/components/exercises/ExerciseClientComparison';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -68,8 +73,15 @@ export default function ExerciseDetail() {
   const { language } = useLanguage();
   const { exercises } = useExercises();
   const { data: stats, isLoading: statsLoading } = useExerciseStats(id || null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const exercise = exercises.find((e) => e.id === id);
+  
+  // Determine exercise type
+  const exerciseType: 'strength' | 'cardio' | 'mixed' = 
+    exercise?.category?.toLowerCase().includes('kardio') || exercise?.category?.toLowerCase().includes('cardio')
+      ? 'cardio'
+      : 'strength';
 
   if (!exercise) {
     return (
@@ -160,12 +172,23 @@ export default function ExerciseDetail() {
         </Card>
       </div>
 
+      {/* Client Toggle */}
+      <ExerciseClientToggle value={selectedClientId} onChange={setSelectedClientId} />
+
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
-          <TabsTrigger value="clients">Klienti</TabsTrigger>
-          <TabsTrigger value="prs">Historie PR</TabsTrigger>
+          <TabsTrigger value="charts" className="flex items-center gap-1">
+            <BarChart3 className="w-4 h-4" />
+            Grafy
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-1">
+            <History className="w-4 h-4" />
+            Historie
+          </TabsTrigger>
+          <TabsTrigger value="clients">Porovnání</TabsTrigger>
+          <TabsTrigger value="prs">PR</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -257,8 +280,36 @@ export default function ExerciseDetail() {
           )}
         </TabsContent>
 
-        {/* Clients Tab */}
+        {/* Charts Tab */}
+        <TabsContent value="charts" className="space-y-4">
+          <ExerciseProgressChart 
+            exerciseId={id!} 
+            exerciseType={exerciseType} 
+            clientId={selectedClientId} 
+          />
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <ExerciseHistoryTable 
+            exerciseId={id!} 
+            exerciseType={exerciseType} 
+            clientId={selectedClientId} 
+          />
+        </TabsContent>
+
+        {/* Client Comparison Tab */}
         <TabsContent value="clients" className="space-y-4">
+          {selectedClientId ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Pro porovnání klientů přepněte na "Všichni klienti".
+              </CardContent>
+            </Card>
+          ) : (
+            <ExerciseClientComparison exerciseId={id!} exerciseType={exerciseType} />
+          )}
+        </TabsContent>
           {statsLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
@@ -340,7 +391,7 @@ export default function ExerciseDetail() {
 
         {/* PR History Tab */}
         <TabsContent value="prs" className="space-y-4">
-          {stats?.prHistory.length === 0 ? (
+          {!stats?.prHistory?.length ? (
             <div className="text-center py-8 text-muted-foreground">
               <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Zatím žádné osobní rekordy</p>
