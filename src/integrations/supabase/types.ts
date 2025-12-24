@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_saved_views: {
+        Row: {
+          created_at: string
+          description: string | null
+          filters: Json
+          id: string
+          is_default: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+          user_id: string
+          view_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+          user_id: string
+          view_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+          user_id?: string
+          view_type?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null
