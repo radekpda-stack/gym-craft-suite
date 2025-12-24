@@ -4310,6 +4310,117 @@ export type Database = {
           },
         ]
       }
+      training_template_exercises: {
+        Row: {
+          block_type: string | null
+          created_at: string
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          notes: string | null
+          reps_max: number | null
+          reps_min: number | null
+          rest_seconds: number | null
+          rir: number | null
+          rpe: number | null
+          sets: number | null
+          sort_order: number | null
+          template_id: string
+          tempo: string | null
+          time_seconds: number | null
+        }
+        Insert: {
+          block_type?: string | null
+          created_at?: string
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          notes?: string | null
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          rir?: number | null
+          rpe?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          template_id: string
+          tempo?: string | null
+          time_seconds?: number | null
+        }
+        Update: {
+          block_type?: string | null
+          created_at?: string
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          notes?: string | null
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          rir?: number | null
+          rpe?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          template_id?: string
+          tempo?: string | null
+          time_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_template_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_template_exercises_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          estimated_duration: number | null
+          id: string
+          is_public: boolean | null
+          name: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_duration?: number | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_duration?: number | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transaction_tags: {
         Row: {
           id: string
