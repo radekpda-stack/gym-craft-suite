@@ -20,6 +20,9 @@ import {
   ClipboardList,
   Bell,
   LucideIcon,
+  Utensils,
+  FileText,
+  PieChart,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -63,6 +66,15 @@ const sections: NavSection[] = [
     items: [
       { to: '/clients', icon: Users, label: 'Klienti' },
       { to: '/records', icon: Activity, label: 'Záznamy' },
+    ],
+  },
+  {
+    label: 'Strava',
+    items: [
+      { to: '/nutrition', icon: Utensils, label: 'Přehled stravy' },
+      { to: '/nutrition/questionnaires', icon: FileText, label: 'Dotazníky' },
+      { to: '/nutrition/infographics', icon: PieChart, label: 'Infografika' },
+      { to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
     ],
   },
   {
