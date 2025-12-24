@@ -48,12 +48,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Account not approved - redirect to waiting page
+  // Only redirect if we have data and the status is explicitly not approved
   if (isPending || isRejected || isSuspended) {
-    return <Navigate to="/waiting-for-approval" replace />;
-  }
-
-  // Only allow approved users
-  if (!isApproved) {
     return <Navigate to="/waiting-for-approval" replace />;
   }
 
