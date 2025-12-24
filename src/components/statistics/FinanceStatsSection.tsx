@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
-import { HeroKPIGrid, KPICard } from './HeroKPIGrid';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { MonthlyProgressCard } from './MonthlyProgressCard';
@@ -11,6 +10,7 @@ import { TopPayingClientsCard } from './TopPayingClientsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
+import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -18,7 +18,8 @@ import {
   ShoppingBag,
   AlertCircle,
   Loader2,
-  BarChart3
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TotalIncomeModal } from './modals/TotalIncomeModal';
@@ -59,6 +60,16 @@ export function FinanceStatsSection() {
 
   const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
 
+  // Prepare sparkline data from monthly trend
+  const sparklineData = useMemo(() => {
+    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.income }));
+  }, [stats?.monthlyTrend]);
+
+  // Calculate monthly goal progress (example: 100k CZK target)
+  const monthlyGoal = 100000;
+  const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
+  const goalProgress = Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Analytics Link */}
@@ -79,81 +90,78 @@ export function FinanceStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* Hero KPI Cards */}
-      <HeroKPIGrid>
-        <KPICard
+      {/* WHOOP-style Gauge Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <GaugeCard
+          title="Měsíční cíl"
+          value={goalProgress}
+          maxValue={100}
+          displayValue={`${Math.round(goalProgress)}%`}
+          sublabel="splněno"
+          description={`${formatCurrency(currentMonthIncome)} z ${formatCurrency(monthlyGoal)}`}
+          variant={goalProgress >= 100 ? 'success' : goalProgress >= 70 ? 'primary' : 'warning'}
+          size="md"
+          onClick={() => setActiveModal('monthly')}
+        />
+        
+        <SparklineCard
           title="Celkový příjem"
           value={formatCurrency(stats?.totalIncome || 0)}
           subtitle="tento rok"
-          icon={<DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />}
+          data={sparklineData}
           trend={analytics?.vsLastMonth.revenue}
-          trendLabel="vs minulý měsíc"
           variant="success"
+          icon={<DollarSign className="h-4 w-4" />}
           onClick={() => setActiveModal('income')}
-          clickable
-          infoDescription="Celkové příjmy od začátku roku. Zahrnuje tréninky i prodeje produktů."
-          infoCalculation="Součet všech kladných transakcí (platby, nabití kreditu) za aktuální kalendářní rok."
         />
-        <KPICard
-          title="Průměr (dokončené měsíce)"
-          value={formatCurrency(stats?.avgMonthlyIncomeCompleted || 0)}
-          subtitle="bez aktuálního měsíce"
-          icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant="primary"
-          onClick={() => setActiveModal('monthly')}
-          clickable
-          infoDescription="Průměrný měsíční příjem počítaný pouze z dokončených měsíců. Nezahrnuje aktuální nedokončený měsíc."
-          infoCalculation="(Celkový příjem za dokončené měsíce) / (počet dokončených měsíců v roce)"
-        />
-        <KPICard
+        
+        <MetricCard
           title="Z tréninků"
           value={formatCurrency(stats?.trainingIncome || 0)}
           subtitle={`${stats?.completedTrainings || 0} tréninků`}
-          icon={<Dumbbell className="h-5 w-5 sm:h-6 sm:w-6" />}
-          variant="default"
+          progress={stats?.totalIncome ? (stats.trainingIncome / stats.totalIncome) * 100 : 0}
+          variant="blue"
+          icon={<Dumbbell className="h-4 w-4" />}
           onClick={() => setActiveModal('training')}
-          clickable
-          infoDescription="Příjmy pouze z tréninků, bez produktů."
-          infoCalculation="Součet odečtů kreditu za dokončené tréninky × cena tréninku."
+          showProgressValue
         />
+
         {hasPendingPayments ? (
-          <KPICard
+          <MetricCard
             title="K zaplacení"
             value={formatCurrency(stats?.pendingPayments?.amount || 0)}
             subtitle={`${stats?.pendingPayments?.count || 0} klientů`}
-            icon={<AlertCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
+            progress={100}
             variant="destructive"
+            icon={<AlertCircle className="h-4 w-4" />}
             onClick={() => setActiveModal('pending')}
-            clickable
-            infoDescription="Klienti se záporným kreditním zůstatkem - dlužné částky za tréninky."
-            infoCalculation="Součet záporných zůstatků klientů = částky k zaplacení."
           />
         ) : (
-          <KPICard
+          <MetricCard
             title="Z produktů"
             value={formatCurrency(stats?.productIncome || 0)}
             subtitle={`${stats?.topProducts?.length || 0} produktů`}
-            icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
+            progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
             variant="warning"
+            icon={<ShoppingBag className="h-4 w-4" />}
             onClick={() => setActiveModal('products')}
-            clickable
-            infoDescription="Příjmy z prodeje produktů (doplňky stravy, vybavení apod.)."
-            infoCalculation="Součet všech transakcí spojených s prodejem produktů."
+            showProgressValue
           />
         )}
-      </HeroKPIGrid>
+      </div>
 
       {/* Show products card if pending payments shown in KPI */}
       {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <KPICard
+          <MetricCard
             title="Z produktů"
             value={formatCurrency(stats?.productIncome || 0)}
             subtitle={`${stats?.topProducts?.length || 0} produktů`}
-            icon={<ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />}
+            progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
             variant="warning"
+            orientation="horizontal"
+            icon={<ShoppingBag className="h-4 w-4" />}
             onClick={() => setActiveModal('products')}
-            clickable
           />
         </div>
       )}

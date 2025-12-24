@@ -909,9 +909,107 @@
   /* Chart colors - soft, non-judgmental palette */
   .chart-color-1 { color: hsl(var(--primary)); }
   .chart-color-2 { color: hsl(260 90% 65%); }
-  .chart-color-3 { color: hsl(140 70% 55%); }
-  .chart-color-4 { color: hsl(35 90% 60%); }
-  .chart-color-5 { color: hsl(10 80% 60%); }
+  .chart-color-3 { color: hsl(142 76% 45%); }
+  .chart-color-4 { color: hsl(38 92% 50%); }
+  .chart-color-5 { color: hsl(0 84% 60%); }
+
+  /* ===== WHOOP-STYLE GAUGE & METRIC CARDS ===== */
+  
+  /* Gauge card styling */
+  .gauge-card {
+    @apply bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.8) 0%,
+      hsl(var(--card) / 0.4) 100%
+    );
+  }
+
+  .gauge-card:hover {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 
+      0 8px 32px hsl(0 0% 0% / 0.3),
+      0 0 0 1px hsl(var(--border) / 0.1);
+  }
+
+  /* Gauge arc glow animation */
+  .gauge-arc {
+    filter: drop-shadow(0 0 6px var(--gauge-glow, hsl(68 100% 50% / 0.4)));
+  }
+
+  .gauge-dot {
+    filter: drop-shadow(0 0 8px var(--gauge-glow, hsl(68 100% 50% / 0.6)));
+    animation: gaugePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes gaugePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.1); }
+  }
+
+  /* Sparkline card styling */
+  .sparkline-card {
+    @apply bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card) / 0.8) 0%,
+      hsl(var(--card) / 0.5) 100%
+    );
+  }
+
+  .sparkline-card:hover {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 
+      0 8px 32px hsl(0 0% 0% / 0.25),
+      inset 0 1px 0 hsl(0 0% 100% / 0.05);
+  }
+
+  /* Metric card styling */
+  .metric-card {
+    @apply bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.7) 0%,
+      hsl(var(--card) / 0.4) 100%
+    );
+  }
+
+  .metric-card:hover {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 8px 32px hsl(0 0% 0% / 0.25);
+  }
+
+  /* Vertical progress bar glow */
+  .metric-card .progress-glow {
+    box-shadow: 0 0 12px currentColor;
+  }
+
+  /* WHOOP-style stat grid */
+  .whoop-grid {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  /* Glowing number effect */
+  .glow-number {
+    text-shadow: 0 0 20px currentColor;
+  }
+
+  /* Health indicator bar */
+  .health-bar {
+    @apply h-1.5 rounded-full overflow-hidden bg-muted/30;
+  }
+
+  .health-bar-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  /* Strain/Recovery ring colors */
+  .ring-strain { --ring-color: hsl(0 84% 60%); }
+  .ring-recovery { --ring-color: hsl(142 76% 45%); }
+  .ring-sleep { --ring-color: hsl(217 91% 60%); }
+  .ring-hrv { --ring-color: hsl(271 81% 56%); }
 
   /* ===== PUBLIC PAGE STANDARDIZATION ===== */
   
