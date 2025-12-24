@@ -160,10 +160,13 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   }, [questionsConfig]);
 
   const loadFormData = async () => {
+    console.log('Loading form data for token:', token);
     try {
       const { data: result, error } = await supabase.functions.invoke('get-public-feedback-form', {
         body: { token },
       });
+
+      console.log('Edge function response:', { result, error });
 
       if (error) {
         console.error('Error loading form:', error);
@@ -183,6 +186,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
       }
       
       if (result?.error) {
+        console.error('Form error:', result.error, result.code);
         setErrorMessage(result.error || 'Neplatný odkaz');
         setStatus('error');
         return;

@@ -71,14 +71,17 @@ serve(async (req) => {
     // Get token from query params or body (supports both direct URL and supabase.functions.invoke)
     const url = new URL(req.url);
     let token = url.searchParams.get("token");
+    
+    console.log(`Request method: ${req.method}, URL token: ${token ? token.substring(0, 20) + '...' : 'null'}`);
 
     // If not in query params, try to get from body
     if (!token && req.method === "POST") {
       try {
         const body = await req.json();
         token = body.token;
-      } catch {
-        // ignore parse errors
+        console.log(`Body token: ${token ? token.substring(0, 20) + '...' : 'null'}, full length: ${token?.length || 0}`);
+      } catch (e) {
+        console.warn('Failed to parse request body:', e);
       }
     }
 
@@ -89,9 +92,12 @@ serve(async (req) => {
       );
     }
 
+    // Trim whitespace and validate token format
+    token = token.trim();
+    
     // Validate token format
     if (!isValidUUID(token)) {
-      console.warn(`Invalid token format from IP ${clientIP}: ${token.substring(0, 20)}...`);
+      console.warn(`Invalid token format from IP ${clientIP}: ${token.substring(0, 20)}... (length: ${token.length})`);
       return new Response(
         JSON.stringify({ error: "Neplatný formát tokenu", code: "INVALID_TOKEN" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
