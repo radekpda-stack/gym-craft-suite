@@ -43,6 +43,10 @@ import ClientAnalytics from "./pages/ClientAnalytics";
 import FinanceAnalytics from "./pages/FinanceAnalytics";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
+import NutritionOverview from "./pages/NutritionOverview";
+import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
+import NutritionInfographics from "./pages/NutritionInfographics";
+import NutritionSettings from "./pages/NutritionSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -107,6 +111,10 @@ const App = () => (
                           <Route path="/exercises" element={<Exercises />} />
                           <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
+                          <Route path="/nutrition" element={<NutritionOverview />} />
+                          <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
+                          <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
+                          <Route path="/nutrition/settings" element={<NutritionSettings />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
