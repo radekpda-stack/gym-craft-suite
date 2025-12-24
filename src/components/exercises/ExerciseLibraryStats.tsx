@@ -8,6 +8,7 @@ import { MovementPatternsCard } from './analytics/MovementPatternsCard';
 import { UnusedExercisesCard } from './analytics/UnusedExercisesCard';
 
 const PERIOD_LABELS: Record<AnalyticsPeriod, string> = {
+  7: '7 dní',
   30: '30 dní',
   90: '90 dní',
   custom: 'Vlastní',

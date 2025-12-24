@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { subDays, format, eachDayOfInterval, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
-export type AnalyticsPeriod = 30 | 90 | 'custom';
+export type AnalyticsPeriod = 7 | 30 | 90 | 'custom';
 export type ComparisonMode = 'client' | 'all';
 
 interface VolumeDataPoint {
