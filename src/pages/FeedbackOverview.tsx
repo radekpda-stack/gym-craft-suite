@@ -259,38 +259,47 @@ export default function FeedbackOverview() {
       });
 
       const feedbackUrl = `${window.location.origin}/feedback/${result.token}`.trim();
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // Try modern clipboard API first
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(feedbackUrl);
-          toast.success('Odkaz zkopírován do schránky');
-          return;
-        } catch (clipboardError) {
-          console.warn('Clipboard API failed:', clipboardError);
+      const copyToClipboard = async (text: string): Promise<boolean> => {
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch {
+            // fall through
+          }
         }
-      }
 
-      // Fallback: create temporary input and use execCommand
-      const textArea = document.createElement('textarea');
-      textArea.value = feedbackUrl;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
 
-      try {
-        document.execCommand('copy');
+        try {
+          return document.execCommand('copy');
+        } catch {
+          return false;
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      };
+
+      const success = await copyToClipboard(feedbackUrl);
+      if (success) {
         toast.success('Odkaz zkopírován do schránky');
-      } catch {
-        // Ultimate fallback: show URL in prompt
-        window.prompt('Zkopírujte odkaz:', feedbackUrl);
-        toast.info('Zkopírujte odkaz z okna výše');
-      } finally {
-        document.body.removeChild(textArea);
+        // iOS/Android někdy "zkrátí" vložený text – pro jistotu nabídneme plný odkaz i v okně.
+        if (isMobile) window.prompt('Pro jistotu zkopírujte celý odkaz:', feedbackUrl);
+        return;
       }
+
+      window.prompt('Zkopírujte odkaz:', feedbackUrl);
+      toast.info('Zkopírujte odkaz z okna výše');
     } catch (error: any) {
       console.error('Error creating/copying feedback link:', error);
       toast.error(error?.message || 'Nepodařilo se vytvořit odkaz');
