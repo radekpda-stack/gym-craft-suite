@@ -1929,6 +1929,7 @@ export type Database = {
           is_link_generated: boolean | null
           last_reminder_at: string | null
           link_copied_at: string | null
+          opened_at: string | null
           reminder_count: number | null
           send_channel: string | null
           sent_at: string | null
@@ -1949,6 +1950,7 @@ export type Database = {
           is_link_generated?: boolean | null
           last_reminder_at?: string | null
           link_copied_at?: string | null
+          opened_at?: string | null
           reminder_count?: number | null
           send_channel?: string | null
           sent_at?: string | null
@@ -1969,6 +1971,7 @@ export type Database = {
           is_link_generated?: boolean | null
           last_reminder_at?: string | null
           link_copied_at?: string | null
+          opened_at?: string | null
           reminder_count?: number | null
           send_channel?: string | null
           sent_at?: string | null
@@ -3213,6 +3216,7 @@ export type Database = {
           expires_at: string
           id: string
           locked: boolean
+          opened_at: string | null
           source: string
           status: string
           summary_approved: boolean | null
@@ -3231,6 +3235,7 @@ export type Database = {
           expires_at?: string
           id?: string
           locked?: boolean
+          opened_at?: string | null
           source?: string
           status?: string
           summary_approved?: boolean | null
@@ -3249,6 +3254,7 @@ export type Database = {
           expires_at?: string
           id?: string
           locked?: boolean
+          opened_at?: string | null
           source?: string
           status?: string
           summary_approved?: boolean | null

@@ -33,7 +33,9 @@ import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
 import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
 import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
+import { ClientStickyHeader } from '@/components/clients/ClientStickyHeader';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
+import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -42,12 +44,18 @@ export default function ClientDetail() {
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
   const { data: sessions = [] } = useTrainingSessions(id);
+  const { data: feedbackData = [] } = useClientFeedback(id);
   const updateClient = useUpdateClient();
   const isMobile = useIsMobile();
   
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
+
+  // Derived data for sticky header
+  const lastCompletedSession = sessions.find((s: any) => s.status === 'completed');
+  const lastFeedback = feedbackData[0];
+  const hasRedFlag = feedbackData.some(f => f.is_red_flag);
 
   if (clientLoading) {
     return <ClientDetailSkeleton />;
@@ -105,6 +113,18 @@ export default function ClientDetail() {
 
   return (
     <div className="space-y-4 animate-fade-in pb-24 sm:pb-4">
+      {/* Desktop Sticky Header (shows on scroll) */}
+      {!isMobile && (
+        <ClientStickyHeader
+          client={client}
+          creditBalance={creditBalance}
+          unpaidCount={unpaidCount}
+          lastTrainingDate={lastCompletedSession?.date}
+          lastFeedbackDate={lastFeedback?.training_date}
+          hasRedFlag={hasRedFlag}
+        />
+      )}
+
       {/* Mobile compact header */}
       {isMobile && (
         <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">

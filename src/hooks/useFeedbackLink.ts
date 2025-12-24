@@ -7,6 +7,7 @@ interface FeedbackRequest {
   status: string;
   expires_at: string;
   sent_at: string | null;
+  opened_at: string | null;
   reminder_count: number;
   completed_at: string | null;
 }
@@ -19,7 +20,7 @@ export function useFeedbackRequest(trainingId: string | undefined) {
 
       const { data, error } = await supabase
         .from('feedback_requests')
-        .select('id, token, status, expires_at, sent_at, reminder_count, completed_at')
+        .select('id, token, status, expires_at, sent_at, opened_at, reminder_count, completed_at')
         .eq('training_session_id', trainingId)
         .order('created_at', { ascending: false })
         .limit(1)
