@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
+import { ExerciseLibraryStats } from '@/components/exercises/ExerciseLibraryStats';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -88,6 +95,15 @@ export default function Exercises() {
     return groups;
   }, [filteredExercises]);
 
+  // Calculate which categories should be open (when searching)
+  const openCategories = useMemo(() => {
+    if (searchQuery.trim()) {
+      // When searching, open all categories that have results
+      return Object.keys(groupedExercises);
+    }
+    return []; // Default: all closed
+  }, [searchQuery, groupedExercises]);
+
   const handleExerciseClick = (exerciseId: string) => {
     navigate(`/exercises/${exerciseId}`);
   };
@@ -117,6 +133,9 @@ export default function Exercises() {
           Filtry
         </Button>
       </div>
+
+      {/* Statistics Section */}
+      <ExerciseLibraryStats />
 
       {/* Search and Filters */}
       <div className="space-y-3">
@@ -175,7 +194,7 @@ export default function Exercises() {
         )}
       </div>
 
-      {/* Exercise List */}
+      {/* Exercise List with Accordion */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -186,61 +205,80 @@ export default function Exercises() {
           <p>{language === 'cs' ? 'Žádné cviky nenalezeny' : 'No exercises found'}</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedExercises).map(([category, exercises]) => (
-            <div key={category}>
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary" />
-                {category}
-                <Badge variant="secondary" className="ml-2">{exercises.length}</Badge>
-              </h2>
-              <div className="grid gap-2">
-                {exercises.map((exercise) => (
-                  <Card
-                    key={exercise.id}
-                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
-                    onClick={() => handleExerciseClick(exercise.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium truncate">
-                            {exercise.name_cs || exercise.name}
-                          </h3>
-                          {exercise.difficulty && (
-                            <Badge variant="outline" className="text-xs shrink-0">
-                              {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
-                            </Badge>
-                          )}
+        <Accordion 
+          type="multiple" 
+          value={openCategories}
+          className="space-y-2"
+        >
+          {Object.entries(groupedExercises)
+            .sort(([a], [b]) => a.localeCompare(b, 'cs'))
+            .map(([category, exercises]) => (
+            <AccordionItem 
+              key={category} 
+              value={category}
+              className="border rounded-lg px-4 bg-card"
+            >
+              <AccordionTrigger className="hover:no-underline py-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="font-semibold text-base">{category}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {exercises.length}
+                  </Badge>
+                  {exercises.some(e => e.usageCount > 0) && (
+                    <Activity className="w-3.5 h-3.5 text-green-500" />
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="grid gap-2 pt-2">
+                  {exercises.map((exercise) => (
+                    <Card
+                      key={exercise.id}
+                      className="p-3 hover:bg-muted/50 transition-colors cursor-pointer group border-muted"
+                      onClick={() => handleExerciseClick(exercise.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium truncate text-sm">
+                              {exercise.name_cs || exercise.name}
+                            </h3>
+                            {exercise.difficulty && (
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                            {exercise.movement_pattern && (
+                              <span>
+                                {MOVEMENT_PATTERN_LABELS[exercise.movement_pattern] || exercise.movement_pattern}
+                              </span>
+                            )}
+                            {exercise.usageCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Activity className="w-3 h-3" />
+                                {exercise.usageCount}×
+                              </span>
+                            )}
+                            {exercise.clientCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {exercise.clientCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          {exercise.movement_pattern && (
-                            <span>
-                              {MOVEMENT_PATTERN_LABELS[exercise.movement_pattern] || exercise.movement_pattern}
-                            </span>
-                          )}
-                          {exercise.usageCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Activity className="w-3 h-3" />
-                              {exercise.usageCount}×
-                            </span>
-                          )}
-                          {exercise.clientCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {exercise.clientCount}
-                            </span>
-                          )}
-                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
+                    </Card>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
       )}
     </div>
   );
