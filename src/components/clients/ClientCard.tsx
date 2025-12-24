@@ -1,9 +1,11 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Dumbbell,
   Wallet,
   MoreHorizontal,
@@ -18,6 +20,13 @@ import {
   MessageSquareWarning,
   HeartPulse,
   Clock,
+  Briefcase,
+  Moon,
+  Activity,
+  AlertCircle,
+  Utensils,
+  Pill,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +39,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Client } from '@/hooks/useClients';
 import { GenderIcon } from '@/components/clients/GenderIcon';
 import { cn } from '@/lib/utils';
@@ -74,6 +88,21 @@ interface ClientCardProps {
   onToggleFavorite: () => void;
 }
 
+// Helper to check if client has personal data
+function hasPersonalData(client: Client): boolean {
+  return !!(
+    client.occupation ||
+    client.sports_history ||
+    client.current_activities?.length ||
+    client.sleep_hours ||
+    client.stress_level ||
+    client.dietary_restrictions?.length ||
+    client.supplements?.length ||
+    client.sitting_hours_daily ||
+    client.health_restrictions
+  );
+}
+
 export const ClientCard = memo(function ClientCard({
   client,
   age,
@@ -94,6 +123,8 @@ export const ClientCard = memo(function ClientCard({
   onArchive,
   onToggleFavorite,
 }: ClientCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   // Check if any unresolved items exist
   const hasAnyUnresolved = 
     unresolvedItems.unpaidCount > 0 || 
@@ -137,6 +168,8 @@ export const ClientCard = memo(function ClientCard({
     return 'text-destructive';
   };
 
+  const clientHasData = hasPersonalData(client);
+
   return (
     <div
       className={cn(
@@ -174,6 +207,29 @@ export const ClientCard = memo(function ClientCard({
               <GenderIcon gender={client.gender} />
               {age !== null && (
                 <span className="text-xs text-muted-foreground">{age} let</span>
+              )}
+            </div>
+            
+            {/* Personal info row - occupation, health */}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {client.occupation && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Briefcase className="w-3 h-3" />
+                  {client.occupation}
+                </span>
+              )}
+              {client.health_restrictions && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-orange-500 flex items-center gap-1 cursor-help">
+                      <HeartPulse className="w-3 h-3" />
+                      Omezení
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">{client.health_restrictions}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
             
@@ -316,6 +372,89 @@ export const ClientCard = memo(function ClientCard({
           </div>
         )}
       </Link>
+
+      {/* Expandable Personal Data Section */}
+      {clientHasData && (
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+          <CollapsibleTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 mt-3 pt-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-center border-t border-border/30"
+            >
+              <User className="w-3 h-3" />
+              <span>Osobní data</span>
+              {isExpanded ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="grid grid-cols-2 gap-2 text-xs bg-secondary/30 rounded-lg p-3">
+              {/* Lifestyle data */}
+              {client.sleep_hours && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Moon className="w-3 h-3 shrink-0" />
+                  <span>Spánek: <span className="text-foreground">{client.sleep_hours}h</span></span>
+                </div>
+              )}
+              
+              {client.stress_level && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Stres: <span className="text-foreground">{client.stress_level}/10</span></span>
+                </div>
+              )}
+              
+              {client.sitting_hours_daily && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Briefcase className="w-3 h-3 shrink-0" />
+                  <span>Sezení: <span className="text-foreground">{client.sitting_hours_daily}h/den</span></span>
+                </div>
+              )}
+
+              {/* Sports & Activities */}
+              {client.current_activities && client.current_activities.length > 0 && (
+                <div className="flex items-start gap-1.5 text-muted-foreground col-span-2">
+                  <Activity className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>Aktivity: <span className="text-foreground">{client.current_activities.join(', ')}</span></span>
+                </div>
+              )}
+              
+              {client.sports_history && (
+                <div className="flex items-start gap-1.5 text-muted-foreground col-span-2">
+                  <Dumbbell className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>Historie: <span className="text-foreground">{client.sports_history}</span></span>
+                </div>
+              )}
+
+              {/* Diet & Supplements */}
+              {client.dietary_restrictions && client.dietary_restrictions.length > 0 && (
+                <div className="flex items-start gap-1.5 text-muted-foreground col-span-2">
+                  <Utensils className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>Dieta: <span className="text-foreground">{client.dietary_restrictions.join(', ')}</span></span>
+                </div>
+              )}
+              
+              {client.supplements && client.supplements.length > 0 && (
+                <div className="flex items-start gap-1.5 text-muted-foreground col-span-2">
+                  <Pill className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>Suplementy: <span className="text-foreground">{client.supplements.join(', ')}</span></span>
+                </div>
+              )}
+
+              {/* Health restrictions - full width */}
+              {client.health_restrictions && (
+                <div className="flex items-start gap-1.5 text-orange-500 col-span-2">
+                  <HeartPulse className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground">Omezení: <span className="text-orange-400">{client.health_restrictions}</span></span>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Quick Actions */}
       <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/30">

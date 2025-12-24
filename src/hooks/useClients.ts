@@ -26,6 +26,16 @@ export interface Client {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  // Extended personal data fields
+  handedness: string | null;
+  occupation: string | null;
+  sitting_hours_daily: number | null;
+  sports_history: string | null;
+  current_activities: string[] | null;
+  sleep_hours: number | null;
+  stress_level: number | null;
+  dietary_restrictions: string[] | null;
+  supplements: string[] | null;
 }
 
 export function useClients() {
