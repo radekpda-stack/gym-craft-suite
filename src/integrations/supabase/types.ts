@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_snapshots: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          metrics: Json
+          period_end: string
+          period_start: string
+          scope: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          metrics?: Json
+          period_end: string
+          period_start: string
+          scope: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          metrics?: Json
+          period_end?: string
+          period_start?: string
+          scope?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null
@@ -4375,7 +4408,147 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      analytics_baseline_movement_patterns: {
+        Row: {
+          avg_volume: number | null
+          client_count: number | null
+          movement_pattern: string | null
+          total_entries: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      analytics_baseline_muscle_groups: {
+        Row: {
+          avg_volume: number | null
+          client_count: number | null
+          muscle_group: string | null
+          total_volume: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      analytics_baseline_volume: {
+        Row: {
+          avg_volume: number | null
+          client_count: number | null
+          day: string | null
+          total_volume: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      analytics_client_activity: {
+        Row: {
+          client_id: string | null
+          month: string | null
+          session_count: number | null
+          total_duration: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_client_ltv: {
+        Row: {
+          client_id: string | null
+          first_transaction: string | null
+          last_transaction: string | null
+          net_value: number | null
+          total_credits: number | null
+          total_debits: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_exercise_volume_daily: {
+        Row: {
+          client_id: string | null
+          day: string | null
+          entry_count: number | null
+          total_volume: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_movement_patterns: {
+        Row: {
+          client_id: string | null
+          entries_count: number | null
+          movement_pattern: string | null
+          user_id: string | null
+          volume: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_muscle_group_distribution: {
+        Row: {
+          client_id: string | null
+          entry_count: number | null
+          muscle_group: string | null
+          user_id: string | null
+          volume: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_revenue_by_source: {
+        Row: {
+          source: string | null
+          total_amount: number | null
+          transaction_count: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      analytics_revenue_daily: {
+        Row: {
+          credits: number | null
+          day: string | null
+          debits: number | null
+          net_revenue: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_search_name: {
@@ -4383,6 +4556,15 @@ export type Database = {
         Returns: string
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_unused_exercises: {
+        Args: { p_end_date: string; p_start_date: string; p_user_id: string }
+        Returns: {
+          category: string
+          exercise_id: string
+          exercise_name: string
+          last_used: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
