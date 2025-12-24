@@ -38,6 +38,7 @@ import Statistics from "./pages/Statistics";
 import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
 import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
+import ExerciseAnalytics from "./pages/ExerciseAnalytics";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NotFound from "./pages/NotFound";
@@ -98,6 +99,7 @@ const App = () => (
                           <Route path="/app-usage" element={<AppUsageStats />} />
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/exercises" element={<Exercises />} />
+                          <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
