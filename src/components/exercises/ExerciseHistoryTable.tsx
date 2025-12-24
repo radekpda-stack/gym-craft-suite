@@ -249,7 +249,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                 >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1">
-                      {row.isPR && <Trophy className="w-3 h-3 text-yellow-500" />}
+                      {row.isPR && <Trophy className="w-3 h-3 text-primary" />}
                       {format(new Date(row.date), 'd.M.yy', { locale: cs })}
                     </div>
                   </TableCell>
@@ -294,7 +294,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   )}
                   <TableCell className="text-center">
                     {row.rpe ? (
-                      <Badge variant={row.rpe >= 8 ? 'destructive' : row.rpe >= 6 ? 'secondary' : 'outline'}>
+                      <Badge variant="secondary" className="text-muted-foreground">
                         {row.rpe}
                       </Badge>
                     ) : '-'}

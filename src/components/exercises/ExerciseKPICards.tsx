@@ -31,9 +31,9 @@ interface ExerciseKPICardsProps {
 }
 
 const TrendBadge = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
-  if (trend === 'up') return <Badge className="bg-green-500/20 text-green-600 border-0">↑ Růst</Badge>;
-  if (trend === 'down') return <Badge className="bg-red-500/20 text-red-600 border-0">↓ Pokles</Badge>;
-  return <Badge variant="secondary">— Stabil</Badge>;
+  if (trend === 'up') return <Badge variant="secondary" className="text-muted-foreground">↑ Růst</Badge>;
+  if (trend === 'down') return <Badge variant="secondary" className="text-muted-foreground">↓ Pokles</Badge>;
+  return <Badge variant="secondary" className="text-muted-foreground">— Stabil</Badge>;
 };
 
 const formatPace = (seconds: number | null) => {
@@ -51,7 +51,7 @@ export function ExerciseKPICards({ exerciseType, strengthKPIs, cardioKPIs, clien
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Trophy className="w-4 h-4 text-yellow-500" />
+                <Trophy className="w-4 h-4 text-primary" />
                 <span>Max váha</span>
               </div>
               <StatInfoTooltip
@@ -146,7 +146,7 @@ export function ExerciseKPICards({ exerciseType, strengthKPIs, cardioKPIs, clien
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Timer className="w-4 h-4 text-green-500" />
+                <Timer className="w-4 h-4 text-primary" />
                 <span>Nejrychlejší tempo</span>
               </div>
               <StatInfoTooltip
@@ -190,7 +190,7 @@ export function ExerciseKPICards({ exerciseType, strengthKPIs, cardioKPIs, clien
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Gauge className="w-4 h-4 text-orange-500" />
+                <Gauge className="w-4 h-4 text-primary" />
                 <span>Výkon (W)</span>
               </div>
               <StatInfoTooltip
@@ -212,7 +212,7 @@ export function ExerciseKPICards({ exerciseType, strengthKPIs, cardioKPIs, clien
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Heart className="w-4 h-4 text-red-500" />
+                <Heart className="w-4 h-4 text-muted-foreground" />
                 <span>Průměrná TF</span>
               </div>
               <StatInfoTooltip

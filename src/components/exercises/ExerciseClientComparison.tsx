@@ -23,7 +23,7 @@ const COLORS = [
   'hsl(var(--chart-5))',
 ];
 
-const PODIUM_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
+// Removed podium colors - using unified chart palette
 
 export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseClientComparisonProps) {
   const navigate = useNavigate();
@@ -216,8 +216,8 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   }
 
   const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
-    if (trend === 'up') return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (trend === 'down') return <TrendingDown className="w-4 h-4 text-red-500" />;
+    if (trend === 'up') return <TrendingUp className="w-4 h-4 text-muted-foreground" />;
+    if (trend === 'down') return <TrendingDown className="w-4 h-4 text-muted-foreground" />;
     return <Minus className="w-4 h-4 text-muted-foreground" />;
   };
 
@@ -237,7 +237,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
     <div className="space-y-4">
       {/* Strength comparison */}
       {showStrength && data?.hasStrength && (
-        <Card>
+        <Card className="analytics-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -270,7 +270,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                     {strengthChartData.map((entry, index) => (
                       <Cell 
                         key={entry.clientId} 
-                        fill={index < 3 ? PODIUM_COLORS[index] : COLORS[index % COLORS.length]}
+                        fill={COLORS[index % COLORS.length]}
                         className="cursor-pointer"
                         onClick={() => navigate(`/clients/${entry.clientId}`)}
                       />
@@ -302,13 +302,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                       onClick={() => navigate(`/clients/${client.clientId}`)}
                     >
                       <td className="py-3 px-2">
-                        <span className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                          idx === 0 && "bg-yellow-500/20 text-yellow-600",
-                          idx === 1 && "bg-gray-300/30 text-gray-600",
-                          idx === 2 && "bg-orange-500/20 text-orange-600",
-                          idx > 2 && "bg-muted text-muted-foreground"
-                        )}>
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-muted text-muted-foreground">
                           {idx + 1}
                         </span>
                       </td>
@@ -321,7 +315,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                       </td>
                       <td className="py-3 px-2 text-right">
                         {client.prCount > 0 && (
-                          <Badge variant="outline" className="text-yellow-600">
+                          <Badge variant="outline" className="text-primary">
                             <Trophy className="w-3 h-3 mr-1" />
                             {client.prCount}
                           </Badge>
@@ -344,7 +338,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
 
       {/* Cardio comparison */}
       {showCardio && data?.hasCardio && (
-        <Card>
+        <Card className="analytics-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -379,13 +373,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                       onClick={() => navigate(`/clients/${client.clientId}`)}
                     >
                       <td className="py-3 px-2">
-                        <span className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                          idx === 0 && "bg-yellow-500/20 text-yellow-600",
-                          idx === 1 && "bg-gray-300/30 text-gray-600",
-                          idx === 2 && "bg-orange-500/20 text-orange-600",
-                          idx > 2 && "bg-muted text-muted-foreground"
-                        )}>
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-muted text-muted-foreground">
                           {idx + 1}
                         </span>
                       </td>
