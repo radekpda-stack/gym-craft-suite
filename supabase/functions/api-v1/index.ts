@@ -144,13 +144,11 @@ function errorResponse(code: string, message: string, status: number, details?: 
   );
 }
 
-// Validation error response
+// Validation error response - sanitized to only expose field names
 function validationErrorResponse(error: z.ZodError) {
-  const issues = error.issues.map(issue => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-  }));
-  return errorResponse("VALIDATION_ERROR", "Request validation failed", 400, { issues });
+  // Only expose field names, not validation rules or expected values
+  const fields = [...new Set(error.issues.map(issue => issue.path[0]?.toString() || 'unknown'))];
+  return errorResponse("VALIDATION_ERROR", "Invalid input provided", 400, { fields });
 }
 
 // Success response helper
@@ -309,8 +307,8 @@ Deno.serve(async (req) => {
     }
   } catch (error: unknown) {
     console.error("[API v1] Error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse("INTERNAL_ERROR", message, 500);
+    // Never expose internal error messages to clients
+    return errorResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }
 });
 

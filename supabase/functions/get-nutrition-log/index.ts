@@ -6,6 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Normalize response time to prevent timing attacks
+const MIN_RESPONSE_TIME_MS = 150;
+
+async function normalizeResponseTime<T>(startTime: number, response: T): Promise<T> {
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_RESPONSE_TIME_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed));
+  }
+  return response;
+}
+
 const DEFAULT_CONTAINER_SIZES = {
   default_glass_ml: 250,
   default_mug_ml: 300,
@@ -14,6 +25,8 @@ const DEFAULT_CONTAINER_SIZES = {
 };
 
 serve(async (req) => {
+  const startTime = Date.now();
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,15 +44,32 @@ serve(async (req) => {
     }
 
     if (!token) {
-      return new Response(JSON.stringify({ error: 'Token required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Token required', code: 'MISSING_TOKEN' }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
+    }
+
+    // Validate token format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(token)) {
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Invalid token', code: 'INVALID_TOKEN' }), 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    console.log(`Fetching nutrition log for token: ${token.substring(0, 8)}...`);
 
     // Get session by token
     const { data: session, error: sessionError } = await supabase
@@ -49,10 +79,14 @@ serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Use consistent response for not found (prevents token enumeration)
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Invalid token', code: 'NOT_FOUND' }), 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
     }
 
     // Get entries and settings in parallel
@@ -69,21 +103,27 @@ serve(async (req) => {
       ...(settingsRes.data?.value as Record<string, number> || {}),
     };
 
-    return new Response(JSON.stringify({
-      session,
-      food: foodRes.data || [],
-      drinks: drinksRes.data || [],
-      coffee: coffeeRes.data || [],
-      containerSizes,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return await normalizeResponseTime(startTime, new Response(
+      JSON.stringify({
+        session,
+        food: foodRes.data || [],
+        drinks: drinksRes.data || [],
+        coffee: coffeeRes.data || [],
+        containerSizes,
+      }), 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    ));
 
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return await normalizeResponseTime(Date.now(), new Response(
+      JSON.stringify({ error: 'Unable to load data', code: 'INTERNAL_ERROR' }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    ));
   }
 });

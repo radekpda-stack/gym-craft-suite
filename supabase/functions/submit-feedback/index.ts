@@ -7,6 +7,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Normalize response time to prevent timing attacks
+const MIN_RESPONSE_TIME_MS = 150;
+
+async function normalizeResponseTime<T>(startTime: number, response: T): Promise<T> {
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_RESPONSE_TIME_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed));
+  }
+  return response;
+}
+
 // Zod schema for input validation
 const feedbackSchema = z.object({
   token: z.string().uuid("Invalid token format"),
@@ -23,7 +34,14 @@ const feedbackSchema = z.object({
   comment: z.string().max(200).optional(),
 });
 
+// Sanitize validation errors - only return field names, not schema details
+function sanitizeValidationErrors(error: z.ZodError): string[] {
+  return [...new Set(error.issues.map(issue => issue.path[0]?.toString() || 'unknown'))];
+}
+
 serve(async (req) => {
+  const startTime = Date.now();
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,18 +58,20 @@ serve(async (req) => {
     
     if (!parseResult.success) {
       console.error("Validation error:", parseResult.error.flatten());
-      return new Response(
+      const invalidFields = sanitizeValidationErrors(parseResult.error);
+      return await normalizeResponseTime(startTime, new Response(
         JSON.stringify({ 
           error: "Neplatná data", 
-          details: parseResult.error.flatten().fieldErrors 
+          code: "VALIDATION_ERROR",
+          fields: invalidFields
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     const { token, ...feedbackData } = parseResult.data;
 
-    console.log(`Processing feedback submission for token: ${token}`);
+    console.log(`Processing feedback submission for token: ${token.substring(0, 8)}...`);
 
     // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
@@ -62,23 +82,27 @@ serve(async (req) => {
 
     if (requestError) {
       console.error("Error finding request:", requestError);
-      throw new Error("Chyba při hledání požadavku");
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Nepodařilo se zpracovat požadavek", code: "PROCESS_ERROR" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      ));
     }
 
+    // Use consistent response for not found (prevents token enumeration)
     if (!request) {
-      console.error("Request not found for token:", token);
-      return new Response(
-        JSON.stringify({ error: "Neplatný nebo expirovaný odkaz" }),
+      console.error("Request not found for token:", token.substring(0, 8));
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Neplatný nebo expirovaný odkaz", code: "NOT_FOUND" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Check if already completed
     if (request.status === "completed") {
-      return new Response(
-        JSON.stringify({ error: "Zpětná vazba již byla odeslána" }),
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Zpětná vazba již byla odeslána", code: "ALREADY_COMPLETED" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Check expiration
@@ -89,10 +113,10 @@ serve(async (req) => {
         .update({ status: "expired" })
         .eq("id", request.id);
 
-      return new Response(
-        JSON.stringify({ error: "Platnost odkazu vypršela" }),
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Platnost odkazu vypršela", code: "EXPIRED" }),
         { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      ));
     }
 
     // Create feedback entry
@@ -115,7 +139,10 @@ serve(async (req) => {
 
     if (feedbackError) {
       console.error("Error creating feedback:", feedbackError);
-      throw new Error("Chyba při ukládání zpětné vazby");
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: "Nepodařilo se uložit zpětnou vazbu", code: "SAVE_ERROR" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      ));
     }
 
     // Update request status to completed
@@ -148,21 +175,21 @@ serve(async (req) => {
 
     console.log("Feedback submitted successfully:", feedback.id);
 
-    return new Response(
-      JSON.stringify({ success: true, feedbackId: feedback.id }),
+    return await normalizeResponseTime(startTime, new Response(
+      JSON.stringify({ success: true }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
-    );
+    ));
   } catch (error: any) {
     console.error("Error in submit-feedback:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
+    return await normalizeResponseTime(Date.now(), new Response(
+      JSON.stringify({ error: "Nepodařilo se odeslat zpětnou vazbu", code: "INTERNAL_ERROR" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
-    );
+    ));
   }
 });
