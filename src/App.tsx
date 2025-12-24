@@ -44,6 +44,9 @@ import FinanceAnalytics from "./pages/FinanceAnalytics";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
 import NutritionOverview from "./pages/NutritionOverview";
+import NutritionCampaigns from "./pages/NutritionCampaigns";
+import NutritionAnalysis from "./pages/NutritionAnalysis";
+import NutritionTemplate from "./pages/NutritionTemplate";
 import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
 import NutritionInfographics from "./pages/NutritionInfographics";
 import NutritionSettings from "./pages/NutritionSettings";
@@ -112,6 +115,9 @@ const App = () => (
                           <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           <Route path="/nutrition" element={<NutritionOverview />} />
+                          <Route path="/nutrition/campaigns" element={<NutritionCampaigns />} />
+                          <Route path="/nutrition/analysis" element={<NutritionAnalysis />} />
+                          <Route path="/nutrition/template" element={<NutritionTemplate />} />
                           <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
                           <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
                           <Route path="/nutrition/settings" element={<NutritionSettings />} />
