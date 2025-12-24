@@ -9,7 +9,9 @@ import {
   User,
   Calendar,
   FileText,
-  XCircle
+  XCircle,
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +32,7 @@ interface CampaignCardProps {
   campaign: NutritionSessionWithClient;
   onComplete?: (id: string) => void;
   onViewClient?: (clientId: string) => void;
-  onAnalyze?: (id: string) => void;
+  onOpenDetail?: (id: string) => void;
   variant?: 'default' | 'compact';
 }
 
@@ -38,7 +40,7 @@ export function CampaignCard({
   campaign, 
   onComplete, 
   onViewClient,
-  onAnalyze,
+  onOpenDetail,
   variant = 'default' 
 }: CampaignCardProps) {
   const startDate = parseISO(campaign.start_date);
@@ -55,7 +57,13 @@ export function CampaignCard({
   
   const isActive = campaign.status === 'active';
   const isCompleted = campaign.status === 'completed';
-  const isExpired = campaign.status === 'expired' || (!isCompleted && isAfter(today, endDate));
+  const isExpired = !isCompleted && isAfter(today, endDate);
+
+  // Calculate expected entries and completion rate
+  const expectedEntries = totalDays * 3; // Default 3 food entries per day
+  const actualEntries = campaign.entries_count;
+  const completionRate = Math.round((actualEntries / expectedEntries) * 100);
+  const hasLowEntries = completionRate < 50;
 
   const copyLink = async () => {
     const url = `${window.location.origin}/nutrition-log/${campaign.token}`;
@@ -98,7 +106,10 @@ export function CampaignCard({
 
   if (variant === 'compact') {
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+      <div 
+        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+        onClick={() => onOpenDetail?.(campaign.id)}
+      >
         <div className="flex items-center gap-3">
           <div className={cn(
             "p-2 rounded-full",
@@ -117,22 +128,24 @@ export function CampaignCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {getStatusBadge()}
-          {isCompleted && onAnalyze && (
-            <Button variant="outline" size="sm" onClick={() => onAnalyze(campaign.id)}>
-              Analyzovat
-            </Button>
+          {hasLowEntries && (
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
           )}
+          {getStatusBadge()}
         </div>
       </div>
     );
   }
 
   return (
-    <Card className={cn(
-      "transition-all hover:shadow-md",
-      isActive && "border-blue-500/30 bg-blue-500/5"
-    )}>
+    <Card 
+      className={cn(
+        "transition-all hover:shadow-md cursor-pointer",
+        isActive && "border-blue-500/30 bg-blue-500/5",
+        hasLowEntries && isActive && "border-amber-500/30 bg-amber-500/5"
+      )}
+      onClick={() => onOpenDetail?.(campaign.id)}
+    >
       <CardContent className="pt-5">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -157,38 +170,36 @@ export function CampaignCard({
           </div>
           
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onViewClient?.(campaign.client_id)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onOpenDetail?.(campaign.id); }}>
+                <Eye className="h-4 w-4 mr-2" />
+                Otevřít detail
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onViewClient?.(campaign.client_id); }}>
                 <User className="h-4 w-4 mr-2" />
                 Zobrazit klienta
               </DropdownMenuItem>
               {isActive && (
                 <>
-                  <DropdownMenuItem onClick={copyLink}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); copyLink(); }}>
                     <Copy className="h-4 w-4 mr-2" />
                     Kopírovat odkaz
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={openForm}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openForm(); }}>
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Otevřít formulář
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onComplete?.(campaign.id)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onComplete?.(campaign.id); }}>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Ukončit kampaň
                   </DropdownMenuItem>
                 </>
-              )}
-              {isCompleted && onAnalyze && (
-                <DropdownMenuItem onClick={() => onAnalyze(campaign.id)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Analyzovat
-                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -198,9 +209,17 @@ export function CampaignCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             {getStatusBadge()}
-            <span className="text-sm text-muted-foreground">
-              {campaign.entries_count} záznamů
-            </span>
+            <div className="flex items-center gap-2">
+              {hasLowEntries && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Málo dat
+                </Badge>
+              )}
+              <span className="text-sm text-muted-foreground">
+                {campaign.entries_count} záznamů
+              </span>
+            </div>
           </div>
 
           {isActive && (
@@ -229,31 +248,17 @@ export function CampaignCard({
           </div>
         </div>
 
-        {/* Actions */}
-        {isActive && (
-          <div className="flex gap-2 mt-4 pt-4 border-t">
-            <Button variant="outline" size="sm" className="flex-1" onClick={openForm}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Otevřít
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={copyLink}>
-              <Copy className="h-4 w-4 mr-2" />
-              Poslat odkaz
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onComplete?.(campaign.id)}>
-              Ukončit
-            </Button>
-          </div>
-        )}
-
-        {isCompleted && onAnalyze && (
-          <div className="mt-4 pt-4 border-t">
-            <Button className="w-full" onClick={() => onAnalyze(campaign.id)}>
-              <FileText className="h-4 w-4 mr-2" />
-              Analyzovat kampaň
-            </Button>
-          </div>
-        )}
+        {/* Primary CTA - always visible */}
+        <div className="mt-4 pt-4 border-t">
+          <Button 
+            className="w-full" 
+            variant={isActive ? "default" : "outline"}
+            onClick={(e) => { e.stopPropagation(); onOpenDetail?.(campaign.id); }}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            {campaign.entries_count === 0 ? 'Zatím žádná data' : 'Otevřít detail'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

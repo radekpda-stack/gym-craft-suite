@@ -2803,10 +2803,13 @@ export type Database = {
           client_id: string
           created_at: string
           end_date: string
+          expected_entries_per_day: number | null
           id: string
           start_date: string
           status: string
+          template_snapshot: Json | null
           token: string
+          trainer_notes: string | null
           updated_at: string
           user_id: string
         }
@@ -2814,10 +2817,13 @@ export type Database = {
           client_id: string
           created_at?: string
           end_date: string
+          expected_entries_per_day?: number | null
           id?: string
           start_date?: string
           status?: string
+          template_snapshot?: Json | null
           token?: string
+          trainer_notes?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2825,10 +2831,13 @@ export type Database = {
           client_id?: string
           created_at?: string
           end_date?: string
+          expected_entries_per_day?: number | null
           id?: string
           start_date?: string
           status?: string
+          template_snapshot?: Json | null
           token?: string
+          trainer_notes?: string | null
           updated_at?: string
           user_id?: string
         }
