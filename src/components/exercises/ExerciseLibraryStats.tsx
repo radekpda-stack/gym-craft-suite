@@ -54,6 +54,8 @@ export function ExerciseLibraryStats() {
         <AnalyticsGridItem>
           <MovementPatternsCard
             data={data?.movementPatterns || []}
+            coverage={data?.movementPatternsCoverage}
+            totalEntries={data?.movementPatternsTotalEntries}
             isLoading={isLoading}
           />
         </AnalyticsGridItem>
