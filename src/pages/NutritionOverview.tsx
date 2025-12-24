@@ -50,7 +50,7 @@ export default function NutritionOverview() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header with sticky CTA */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Utensils className="h-6 w-6 text-primary" />
@@ -60,9 +60,9 @@ export default function NutritionOverview() {
             Správa stravovacích kampaní
           </p>
         </div>
-        <Button size="lg" onClick={() => setShowNewModal(true)} className="shadow-lg">
+        <Button size="lg" onClick={() => setShowNewModal(true)} className="shadow-lg w-full sm:w-auto">
           <Plus className="h-5 w-5 mr-2" />
-          Nová stravovací kampaň
+          <span className="sm:inline">Nová kampaň</span>
         </Button>
       </div>
 
