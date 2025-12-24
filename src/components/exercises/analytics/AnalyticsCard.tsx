@@ -27,12 +27,12 @@ export function AnalyticsCard({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-primary" />}
+            {Icon && <Icon className="w-4 h-4 text-primary shrink-0" />}
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
           </div>
-          {actions}
+          {actions && <div className="shrink-0">{actions}</div>}
         </div>
       </CardHeader>
       <CardContent>
