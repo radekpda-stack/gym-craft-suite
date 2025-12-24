@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, BarChart3 } from 'lucide-react';
+import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, BarChart3, Edit2, X, CheckSquare, Square } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Accordion,
@@ -17,6 +18,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
 import { ExerciseLibraryStats } from '@/components/exercises/ExerciseLibraryStats';
+import { BulkExerciseEditDialog } from '@/components/exercises/BulkExerciseEditDialog';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -34,6 +36,7 @@ const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   locomotion: 'Lokomoce',
   conditioning: 'Kondice',
   mobility: 'Mobilita',
+  diagonal_press: 'Diagonální tlak',
   other: 'Ostatní',
 };
 
@@ -51,6 +54,11 @@ export default function Exercises() {
   const [patternFilter, setPatternFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Bulk edit mode
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
 
   const { data: exercises = [], isLoading } = useExercisesWithUsage();
 
@@ -95,17 +103,64 @@ export default function Exercises() {
     return groups;
   }, [filteredExercises]);
 
-  // Calculate which categories should be open (when searching)
+  // Calculate which categories should be open (when searching or in bulk edit mode)
   const openCategories = useMemo(() => {
-    if (searchQuery.trim()) {
-      // When searching, open all categories that have results
+    if (searchQuery.trim() || bulkEditMode) {
       return Object.keys(groupedExercises);
     }
-    return []; // Default: all closed
-  }, [searchQuery, groupedExercises]);
+    return [];
+  }, [searchQuery, groupedExercises, bulkEditMode]);
+
+  // Get selected exercises for dialog
+  const selectedExercises = useMemo(() => {
+    return exercises.filter((e) => selectedIds.has(e.id));
+  }, [exercises, selectedIds]);
 
   const handleExerciseClick = (exerciseId: string) => {
-    navigate(`/exercises/${exerciseId}`);
+    if (bulkEditMode) {
+      toggleSelection(exerciseId);
+    } else {
+      navigate(`/exercises/${exerciseId}`);
+    }
+  };
+
+  const toggleSelection = (exerciseId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) {
+        next.delete(exerciseId);
+      } else {
+        next.add(exerciseId);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredExercises.map((e) => e.id)));
+  };
+
+  const selectNone = () => {
+    setSelectedIds(new Set());
+  };
+
+  const selectCategory = (category: string) => {
+    const categoryExercises = groupedExercises[category] || [];
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      categoryExercises.forEach((e) => next.add(e.id));
+      return next;
+    });
+  };
+
+  const exitBulkEditMode = () => {
+    setBulkEditMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkEditComplete = () => {
+    setShowBulkEditDialog(false);
+    exitBulkEditMode();
   };
 
   return (
@@ -119,36 +174,88 @@ export default function Exercises() {
               {language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
             </h1>
             <p className="text-muted-foreground text-sm">
-              {language === 'cs' 
-                ? `${exercises.length} cviků v knihovně` 
-                : `${exercises.length} exercises in library`}
+              {bulkEditMode 
+                ? `${selectedIds.size} vybráno z ${filteredExercises.length}`
+                : language === 'cs' 
+                  ? `${exercises.length} cviků v knihovně` 
+                  : `${exercises.length} exercises in library`}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/exercises/analytics')}
-            className="gap-1.5"
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden xs:inline">Analytika</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn("gap-1.5", showFilters && 'bg-primary/10')}
-          >
-            <Filter className="w-4 h-4" />
-            <span className="hidden xs:inline">Filtry</span>
-          </Button>
+          {bulkEditMode ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAll}
+                className="gap-1.5"
+              >
+                <CheckSquare className="w-4 h-4" />
+                Vše
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectNone}
+                className="gap-1.5"
+              >
+                <Square className="w-4 h-4" />
+                Nic
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowBulkEditDialog(true)}
+                disabled={selectedIds.size === 0}
+                className="gap-1.5"
+              >
+                <Edit2 className="w-4 h-4" />
+                Upravit ({selectedIds.size})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exitBulkEditMode}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkEditMode(true)}
+                className="gap-1.5"
+              >
+                <Edit2 className="w-4 h-4" />
+                <span className="hidden xs:inline">Hromadná úprava</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/exercises/analytics')}
+                className="gap-1.5"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden xs:inline">Analytika</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn("gap-1.5", showFilters && 'bg-primary/10')}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="hidden xs:inline">Filtry</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Statistics Section */}
-      <ExerciseLibraryStats />
+      {/* Statistics Section - hide in bulk edit mode */}
+      {!bulkEditMode && <ExerciseLibraryStats />}
 
       {/* Search and Filters */}
       <div className="space-y-3">
@@ -225,74 +332,121 @@ export default function Exercises() {
         >
           {Object.entries(groupedExercises)
             .sort(([a], [b]) => a.localeCompare(b, 'cs'))
-            .map(([category, exercises]) => (
-            <AccordionItem 
-              key={category} 
-              value={category}
-              className="border rounded-lg px-4 bg-card"
-            >
-              <AccordionTrigger className="hover:no-underline py-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="font-semibold text-base">{category}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {exercises.length}
-                  </Badge>
-                  {exercises.some(e => e.usageCount > 0) && (
-                    <Activity className="w-3.5 h-3.5 text-green-500" />
-                  )}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-3">
-                <div className="grid gap-2 pt-2">
-                  {exercises.map((exercise) => (
-                    <Card
-                      key={exercise.id}
-                      className="p-3 hover:bg-muted/50 transition-colors cursor-pointer group border-muted"
-                      onClick={() => handleExerciseClick(exercise.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium truncate text-sm">
-                              {exercise.name_cs || exercise.name}
-                            </h3>
-                            {exercise.difficulty && (
-                              <Badge variant="outline" className="text-xs shrink-0">
-                                {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
-                              </Badge>
+            .map(([category, categoryExercises]) => {
+              const selectedInCategory = categoryExercises.filter((e) => selectedIds.has(e.id)).length;
+              
+              return (
+                <AccordionItem 
+                  key={category} 
+                  value={category}
+                  className="border rounded-lg px-4 bg-card"
+                >
+                  <AccordionTrigger className="hover:no-underline py-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="font-semibold text-base">{category}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {categoryExercises.length}
+                      </Badge>
+                      {bulkEditMode && selectedInCategory > 0 && (
+                        <Badge variant="default" className="text-xs">
+                          {selectedInCategory} vybráno
+                        </Badge>
+                      )}
+                      {!bulkEditMode && categoryExercises.some(e => e.usageCount > 0) && (
+                        <Activity className="w-3.5 h-3.5 text-green-500" />
+                      )}
+                    </div>
+                    {bulkEditMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mr-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectCategory(category);
+                        }}
+                      >
+                        Vybrat vše
+                      </Button>
+                    )}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="grid gap-2 pt-2">
+                      {categoryExercises.map((exercise) => {
+                        const isSelected = selectedIds.has(exercise.id);
+                        
+                        return (
+                          <Card
+                            key={exercise.id}
+                            className={cn(
+                              "p-3 hover:bg-muted/50 transition-colors cursor-pointer group border-muted",
+                              bulkEditMode && isSelected && "bg-primary/10 border-primary"
                             )}
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                            {exercise.movement_pattern && (
-                              <span>
-                                {MOVEMENT_PATTERN_LABELS[exercise.movement_pattern] || exercise.movement_pattern}
-                              </span>
-                            )}
-                            {exercise.usageCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Activity className="w-3 h-3" />
-                                {exercise.usageCount}×
-                              </span>
-                            )}
-                            {exercise.clientCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {exercise.clientCount}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+                            onClick={() => handleExerciseClick(exercise.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              {bulkEditMode && (
+                                <Checkbox
+                                  checked={isSelected}
+                                  className="mr-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onCheckedChange={() => toggleSelection(exercise.id)}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium truncate text-sm">
+                                    {exercise.name_cs || exercise.name}
+                                  </h3>
+                                  {exercise.difficulty && (
+                                    <Badge variant="outline" className="text-xs shrink-0">
+                                      {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                                  {exercise.movement_pattern && (
+                                    <span>
+                                      {MOVEMENT_PATTERN_LABELS[exercise.movement_pattern] || exercise.movement_pattern}
+                                    </span>
+                                  )}
+                                  {exercise.usageCount > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Activity className="w-3 h-3" />
+                                      {exercise.usageCount}×
+                                    </span>
+                                  )}
+                                  {exercise.clientCount > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Users className="w-3 h-3" />
+                                      {exercise.clientCount}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {!bulkEditMode && (
+                                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                              )}
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
         </Accordion>
       )}
+
+      {/* Bulk Edit Dialog */}
+      <BulkExerciseEditDialog
+        open={showBulkEditDialog}
+        onOpenChange={setShowBulkEditDialog}
+        selectedExercises={selectedExercises}
+        onComplete={handleBulkEditComplete}
+      />
     </div>
   );
 }
