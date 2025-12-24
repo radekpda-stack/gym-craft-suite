@@ -20,6 +20,9 @@ import {
   Bell,
   BarChart3,
   LucideIcon,
+  Utensils,
+  FileText,
+  PieChart,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -132,6 +135,15 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+      ],
+    },
+    {
+      label: 'Strava',
+      items: [
+        { id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Přehled stravy' },
+        { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileText, label: 'Dotazníky' },
+        { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: PieChart, label: 'Infografika' },
+        { id: 'nutrition-settings', to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
       ],
     },
     {
