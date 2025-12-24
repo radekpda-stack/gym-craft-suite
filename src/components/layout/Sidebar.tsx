@@ -21,7 +21,6 @@ import {
   LucideIcon,
   Utensils,
   FileText,
-  PieChart,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -141,9 +140,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       items: [
         { id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Přehled' },
         { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
-        { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
-        { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
-        { id: 'nutrition-settings', to: '/nutrition/settings', icon: Settings, label: 'Nastavení' },
+        { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
       ],
     },
     {
