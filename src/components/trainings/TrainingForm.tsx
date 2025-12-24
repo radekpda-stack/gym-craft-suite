@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Tag, Search, Check, AlertTriangle } from "lucide-react";
+import { Loader2, Repeat, Tag, Search, Check, AlertTriangle, AlertCircle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -43,6 +43,7 @@ import { PreviousTrainingPreview } from "./PreviousTrainingPreview";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -88,6 +89,7 @@ export function TrainingForm({
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [tagsChanged, setTagsChanged] = useState(false);
+  const [tagValidationError, setTagValidationError] = useState<string | null>(null);
   
   // Helper to format date as local datetime string
   const getLocalDateTimeString = () => {
@@ -129,6 +131,10 @@ export function TrainingForm({
   const handleTagsChange = (newTagIds: string[]) => {
     setSelectedTagIds(newTagIds);
     setTagsChanged(true);
+    // Clear validation error when tags are selected
+    if (newTagIds.length > 0) {
+      setTagValidationError(null);
+    }
   };
 
   // Filtered clients with diacritics-insensitive search
@@ -145,6 +151,13 @@ export function TrainingForm({
   const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
+    // Validate tags - require at least one
+    if (selectedTagIds.length === 0) {
+      setTagValidationError("Vyberte alespoň jeden štítek pro kategorizaci tréninku");
+      return;
+    }
+    
+    setTagValidationError(null);
     await onSubmit(data, selectedTagIds);
     form.reset(data); // Mark as clean after successful submit
     setTagsChanged(false);
@@ -431,17 +444,29 @@ export function TrainingForm({
 
         {/* Training Tags */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
+          <label className={cn(
+            "text-sm font-medium flex items-center gap-2",
+            tagValidationError && "text-destructive"
+          )}>
             <Tag className="w-4 h-4" />
-            Štítky tréninku
+            Štítky tréninku *
           </label>
           <TrainingTagsSelector
             selectedTagIds={selectedTagIds}
             onChange={handleTagsChange}
           />
-          <p className="text-xs text-muted-foreground">
-            Přidejte štítky pro kategorizaci tréninku (např. horní část, síla, mobilita)
-          </p>
+          {tagValidationError ? (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                {tagValidationError}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Vyberte alespoň jeden štítek pro kategorizaci tréninku
+            </p>
+          )}
         </div>
 
         <FormField
