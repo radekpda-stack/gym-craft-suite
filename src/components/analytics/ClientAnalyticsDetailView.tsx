@@ -19,7 +19,7 @@ interface ClientAnalyticsDetailViewProps {
 }
 
 export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDetailViewProps) {
-  const trendData = data.clientActivityTrend.map(d => ({ 
+  const trendData = (data?.clientActivityTrend ?? []).map(d => ({ 
     label: d.label, 
     value: d.sessions,
     clients: d.activeClients 
@@ -59,7 +59,7 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.activityDistribution} layout="vertical" margin={{ left: 80 }}>
+              <BarChart data={data?.activityDistribution ?? []} layout="vertical" margin={{ left: 80 }}>
                 <CartesianGrid 
                   strokeDasharray="3 3" 
                   stroke="hsl(var(--border))" 
@@ -108,7 +108,7 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
             Lifetime Value (LTV) - rozložení
           </h3>
           <div className="space-y-3">
-            {data.ltvDistribution.map(bucket => (
+            {(data?.ltvDistribution ?? []).map(bucket => (
               <div key={bucket.bucket} className="flex items-center gap-4 p-3 rounded-lg bg-muted/20">
                 <div className="flex-1">
                   <p className="font-medium">{bucket.bucket}</p>
