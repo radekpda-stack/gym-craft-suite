@@ -25,8 +25,8 @@ export function DashboardActions() {
   
   return (
     <>
-      {/* Fixed bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-3 pointer-events-none">
+      {/* Fixed bottom action bar - positioned above mobile nav */}
+      <div className="fixed bottom-28 sm:bottom-32 lg:bottom-4 left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="max-w-lg mx-auto">
           <div className="liquid-glass-strong rounded-2xl p-2 pointer-events-auto">
             <div className="flex items-center justify-around gap-2">
@@ -71,8 +71,7 @@ export function DashboardActions() {
         </div>
       </div>
       
-      {/* Spacer for fixed bottom bar */}
-      <div className="h-24" />
+      {/* Spacer for content - no longer needed as Layout handles padding */}
       
       {/* Dialogs */}
       <CreateTrainingSheet
