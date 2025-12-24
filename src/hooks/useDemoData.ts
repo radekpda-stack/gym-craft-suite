@@ -30,6 +30,16 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     created_at: demoClient.created_at,
     updated_at: demoClient.updated_at,
     user_id: 'demo-admin-0001',
+    // Extended personal data fields
+    handedness: null,
+    occupation: null,
+    sitting_hours_daily: null,
+    sports_history: null,
+    current_activities: null,
+    sleep_hours: null,
+    stress_level: null,
+    dietary_restrictions: null,
+    supplements: null,
   };
 }
 
