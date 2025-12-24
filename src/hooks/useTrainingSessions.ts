@@ -325,19 +325,8 @@ export function useCreateTrainingSession() {
             user_id: user.id,
           });
 
-        const { data: client } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", input.client_id)
-          .single();
-
-        if (client) {
-          const newBalance = (client.credit_balance || 0) - price;
-          await supabase
-            .from("clients")
-            .update({ credit_balance: newBalance })
-            .eq("id", input.client_id);
-        }
+        // Use atomic credit update to prevent race conditions
+        await applyCreditDelta(input.client_id, -price);
       }
 
       return { session: parentSession, createdCount };
@@ -451,27 +440,10 @@ export function useUpdateTrainingSession() {
             throw transactionError;
           }
 
-          // Update client's credit balance
-          const { data: client } = await supabase
-            .from("clients")
-            .select("credit_balance")
-            .eq("id", oldTraining.client_id)
-            .single();
-
-          if (client) {
-            newBalance = (client.credit_balance || 0) - price;
-            const { error: updateError } = await supabase
-              .from("clients")
-              .update({ credit_balance: newBalance })
-              .eq("id", oldTraining.client_id);
-              
-            if (updateError) {
-              console.error("Error updating client balance:", updateError);
-              throw updateError;
-            }
-            
-            creditDeducted = true;
-          }
+          // Use atomic credit update to prevent race conditions
+          const { balance } = await applyCreditDelta(oldTraining.client_id, -price);
+          newBalance = balance;
+          creditDeducted = true;
         }
         
         // Auto-sync workout entries to exercise_entries when training is completed

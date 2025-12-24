@@ -1,5 +1,6 @@
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { TodayTimelineCard } from '@/components/dashboard/TodayTimelineCard';
@@ -13,15 +14,21 @@ function DashboardContent() {
   return (
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        <DashboardHeader data={data} isLoading={isLoading} />
+        <SectionErrorBoundary section="Hlavička" compact>
+          <DashboardHeader data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
         
         {/* Full-width today's plan card */}
         <div className="space-y-4">
-          <TodayTimelineCard data={data} isLoading={isLoading} />
+          <SectionErrorBoundary section="Dnešní plán">
+            <TodayTimelineCard data={data} isLoading={isLoading} />
+          </SectionErrorBoundary>
         </div>
       </div>
       
-      <DashboardActions />
+      <SectionErrorBoundary section="Akce" compact>
+        <DashboardActions />
+      </SectionErrorBoundary>
     </div>
   );
 }
