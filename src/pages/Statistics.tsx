@@ -35,15 +35,15 @@ export default function Statistics() {
         <TabsList className="w-full grid grid-cols-3 h-auto p-1 mb-6">
           <TabsTrigger value="finance" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <DollarSign className="h-4 w-4 shrink-0" />
-            <span className="hidden xs:inline sm:inline">Finance</span>
+            <span className="hidden sm:inline">Finance</span>
           </TabsTrigger>
           <TabsTrigger value="exercises" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <Dumbbell className="h-4 w-4 shrink-0" />
-            <span className="hidden xs:inline sm:inline">Cviky</span>
+            <span className="hidden sm:inline">Cviky</span>
           </TabsTrigger>
           <TabsTrigger value="clients" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <Users className="h-4 w-4 shrink-0" />
-            <span className="hidden xs:inline sm:inline">Klienti</span>
+            <span className="hidden sm:inline">Klienti</span>
           </TabsTrigger>
         </TabsList>
 

@@ -25,6 +25,7 @@ import { CommandPalette } from '@/components/search/CommandPalette';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
+import { useToast } from '@/hooks/use-toast';
 import { useClientsAtRisk } from '@/hooks/useClientsAtRisk';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -150,6 +151,7 @@ function CapacityRing({ completed, total }: { completed: number; total: number }
 
 export function DashboardControlBar({ data, isLoading }: DashboardControlBarProps) {
   const { trackFeature } = useFeatureTracking();
+  const { toast } = useToast();
   const { data: clients = [] } = useClients();
   const { data: clientsAtRisk = [] } = useClientsAtRisk();
   const createTraining = useCreateTrainingSession();
@@ -164,8 +166,10 @@ export function DashboardControlBar({ data, isLoading }: DashboardControlBarProp
       await createTraining.mutateAsync(formData);
       setShowTrainingSheet(false);
       trackFeature('create_training', 'trainings');
+      toast({ title: 'Trénink vytvořen' });
     } catch (error) {
       console.error('Error creating training:', error);
+      toast({ title: 'Chyba při vytváření tréninku', variant: 'destructive' });
     }
   };
 
