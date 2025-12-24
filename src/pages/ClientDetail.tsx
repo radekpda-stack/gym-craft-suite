@@ -3,11 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft } from 'lucide-react';
-import { useClient, useUpdateClient, useUpdateClientFeedback } from '@/hooks/useClients';
+import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
-import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { ClientFormValues } from '@/lib/validations/client';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { ClientDetailSkeleton } from '@/components/skeletons';
@@ -19,25 +18,16 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { toast } from '@/hooks/use-toast';
 
-// Block Components
-import { ClientStatusBar } from '@/components/clients/ClientStatusBar';
-import { ClientActionsBar } from '@/components/clients/ClientActionsBar';
+// New simplified components
+import { ClientStatusHeader } from '@/components/clients/ClientStatusHeader';
+import { ClientActionHub } from '@/components/clients/ClientActionHub';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
-import { ClientHealthSnapshot } from '@/components/clients/ClientHealthSnapshot';
 import { ClientHistoryBlock } from '@/components/clients/ClientHistoryBlock';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
-import { ClientAttendanceStats } from '@/components/clients/ClientAttendanceStats';
-import { ClientTrainingCountCard } from '@/components/clients/ClientTrainingCountCard';
-import { ClientLTVCard } from '@/components/clients/ClientLTVCard';
-import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
-
 import { ClientProfileSummary } from '@/components/clients/ClientProfileSummary';
-import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
-import { CollapsibleSection } from '@/components/dashboard/CollapsibleSection';
-import { usePageTracking } from '@/hooks/useFeatureTracking';
-
-import { toast } from '@/hooks/use-toast';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -46,16 +36,13 @@ export default function ClientDetail() {
   const { data: allSessions = [] } = useTrainingSessions(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
-  const { data: transactions = [] } = useCreditTransactions(id);
   const updateClient = useUpdateClient();
-  const updateFeedback = useUpdateClientFeedback();
   const isMobile = useIsMobile();
   
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
 
-  // Cast sessions to proper type
   const clientSessions = allSessions.map(s => ({
     ...s,
     status: s.status as 'scheduled' | 'completed' | 'canceled'
@@ -69,9 +56,7 @@ export default function ClientDetail() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground">
-            Klient nenalezen
-          </h2>
+          <h2 className="text-2xl font-bold text-foreground">Klient nenalezen</h2>
           <Link to="/clients" className="text-primary mt-2 inline-block">
             Zpět na seznam klientů
           </Link>
@@ -92,27 +77,26 @@ export default function ClientDetail() {
   // Unpaid stats
   const unpaidCount = unpaidTrainings.length;
   
-  // Last training date
+  // Last and next training dates
   const lastCompletedSession = completedSessions[0];
   const lastTrainingDate = lastCompletedSession 
     ? format(new Date(lastCompletedSession.date), 'd.M.yyyy', { locale: cs })
     : undefined;
   
-  // Check feedback and nutrition status (simplified)
-  const hasFeedback = true; // Would need to check actual feedback status
-  const hasNutrition = true; // Would need to check actual nutrition status
+  const nextScheduledSession = scheduledSessions.find(s => new Date(s.date) > new Date());
+  const nextTrainingDate = nextScheduledSession
+    ? format(new Date(nextScheduledSession.date), 'd.M. HH:mm', { locale: cs })
+    : undefined;
 
   // Credit status for mobile header
   const creditStatus = getCreditStatus(creditBalance, unpaidCount > 0);
   const statusConfig = STATUS_CONFIG[creditStatus];
 
-  /** Handle client data save */
   const handleSaveClient = async (data: ClientFormValues) => {
     await updateClient.mutateAsync({ id: client.id, values: data });
   };
   
   const handleAddNote = async (note: string) => {
-    // Append note to client notes
     const currentNotes = client.notes || '';
     const newNotes = currentNotes 
       ? `${currentNotes}\n\n[${format(new Date(), 'd.M.yyyy HH:mm')}]\n${note}`
@@ -148,13 +132,15 @@ export default function ClientDetail() {
               </AvatarFallback>
             </Avatar>
             <span className="font-semibold text-foreground truncate flex-1">{client.name}</span>
-            <div className={cn(
-              'flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-bold shrink-0',
-              statusConfig.bgClass,
-              statusConfig.textClass
-            )}>
-              {formatCurrency(creditBalance)}
-            </div>
+            {client.payment_mode !== 'cash_only' && (
+              <div className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-bold shrink-0',
+                statusConfig.bgClass,
+                statusConfig.textClass
+              )}>
+                {formatCurrency(creditBalance)}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -167,76 +153,44 @@ export default function ClientDetail() {
             ]}
           />
 
-          {/* Desktop Status Bar */}
-          <ClientStatusBar
+          {/* Desktop Status Header */}
+          <ClientStatusHeader
             client={client}
             creditBalance={creditBalance}
+            lastTrainingDate={lastTrainingDate}
+            nextTrainingDate={nextTrainingDate}
             isSharedBudget={isSharedBudget}
             sharedBudgetName={sharedBudgetName}
-            lastTrainingDate={lastTrainingDate}
-            hasFeedback={hasFeedback}
-            hasNutrition={hasNutrition}
             unpaidCount={unpaidCount}
           />
         </>
       )}
 
-      {/* Quick Actions (Desktop only - mobile has FAB) */}
-      {!isMobile && (
-        <ClientActionsBar
-          client={client}
-          lastCompletedTrainingId={lastCompletedSession?.id}
-          isSharedBudget={isSharedBudget}
-          budgetGroupId={sharedBudgetInfo?.groupId}
-          onAddTraining={() => setIsTrainingDialogOpen(true)}
-          onAddNote={handleAddNote}
-        />
-      )}
+      {/* 🎯 Dominant CTA - ClientActionHub */}
+      <ClientActionHub
+        client={client}
+        creditBalance={creditBalance}
+        onAddNote={handleAddNote}
+        onAddTraining={() => setIsTrainingDialogOpen(true)}
+        onAddCredit={() => setIsCreditModalOpen(true)}
+      />
 
-      {/* 3. Client Profile Summary - Key info visible */}
+      {/* Client Profile Summary (collapsed) */}
       <ClientProfileSummary
         client={client}
         onEditClick={() => setShowClientDetails(true)}
       />
 
-      {/* 4. Client Health Snapshot */}
-      <ClientHealthSnapshot
-        clientId={client.id}
-        creditBalance={creditBalance}
-        trainerNote={client.notes?.split('\n')[0]?.substring(0, 100) || ''}
-        onSaveNote={handleAddNote}
-      />
-
-      {/* 5. Diagnostics Section */}
-      <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
-
-      {/* 6. History Block - Main content */}
+      {/* 📋 History Block (collapsed by default) */}
       <ClientHistoryBlock clientId={client.id} notes={client.notes} />
 
-      {/* 6. Statistics Section - collapsible on mobile */}
-      {isMobile ? (
-        <CollapsibleSection title="Statistiky">
-          <ClientTrainingCountCard clientId={client.id} />
-          <ClientLTVCard clientId={client.id} />
-          <ClientAttendanceStats clientId={client.id} />
-          <ClientTagAnalyticsCard clientId={client.id} />
-        </CollapsibleSection>
-      ) : (
-        <>
-          <ClientTrainingCountCard clientId={client.id} />
-          <ClientLTVCard clientId={client.id} />
-          <ClientAttendanceStats clientId={client.id} />
-          <ClientTagAnalyticsCard clientId={client.id} />
-        </>
-      )}
-
-      {/* 7. Settings Section */}
+      {/* ⚙️ Admin/Settings Section */}
       <ClientAdminBlock
         client={client}
         isSharedBudget={isSharedBudget}
         budgetGroupId={sharedBudgetInfo?.groupId}
         onArchive={handleArchive}
-        defaultExpanded={!isMobile}
+        defaultExpanded={false}
       />
 
       {/* Full Profile Dialog/Sheet */}
