@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Calendar } from 'lucide-react';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
@@ -34,6 +34,7 @@ import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
 import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
 import { ClientStickyHeader } from '@/components/clients/ClientStickyHeader';
+import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
@@ -173,7 +174,16 @@ export default function ClientDetail() {
         onAddCredit={() => setIsCreditModalOpen(true)}
       />
 
-      {/* 👤 Section 3: Personal Info */}
+      {/* 📋 Section 3: Timeline - main overview */}
+      <div className="glass rounded-2xl p-4">
+        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" />
+          Časová osa
+        </h3>
+        <ClientTimeline clientId={client.id} defaultLimit={10} />
+      </div>
+
+      {/* 👤 Section 4: Personal Info */}
       <ClientPersonalInfo client={client} />
 
       {/* 🩺 Section 4: Health & Diagnostics */}
