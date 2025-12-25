@@ -1,9 +1,10 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, Wallet, Calendar, Dumbbell, Lightbulb } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientCredit, useClientMonthlyUsage, useClientNextTraining } from '@/hooks/useClientPortalData';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +21,27 @@ export default function ClientPortalOverview() {
   const { data: credit, isLoading: creditLoading } = useClientCredit(clientId ?? undefined);
   const { data: monthlyUsage, isLoading: usageLoading } = useClientMonthlyUsage(clientId ?? undefined);
   const { data: nextTraining, isLoading: trainingLoading } = useClientNextTraining(clientId ?? undefined);
+  const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_overview');
+
+  useEffect(() => {
+    trackPageMount();
+  }, [trackPageMount]);
+
+  // Track credit view
+  useEffect(() => {
+    if (credit !== undefined) {
+      trackPortalEvent('client_portal_view_credit', { credit_balance: credit });
+    }
+  }, [credit, trackPortalEvent]);
+
+  // Track next training view  
+  useEffect(() => {
+    if (nextTraining) {
+      trackPortalEvent('client_portal_view_next_training', { 
+        training_date: nextTraining.date 
+      });
+    }
+  }, [nextTraining, trackPortalEvent]);
 
   return (
     <div className="space-y-6">

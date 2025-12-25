@@ -1,13 +1,21 @@
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { User, Mail, Phone, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ClientPortalProfile() {
   const { clientProfile, signOut } = useClientPortal();
+  const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_profile');
+
+  useEffect(() => {
+    trackPageMount();
+  }, [trackPageMount]);
 
   const handleSignOut = async () => {
+    trackPortalEvent('client_portal_logout');
     await signOut();
     toast.success('Odhlášení proběhlo úspěšně');
   };

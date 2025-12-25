@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { NavLink, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -12,23 +12,54 @@ import {
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { motion } from 'framer-motion';
+import { trackEvent } from '@/lib/analytics/trackEvent';
+import { sessionManager } from '@/lib/analytics/SessionManager';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
-  { to: '/client', icon: LayoutDashboard, label: 'Přehled' },
-  { to: '/client/progress', icon: TrendingUp, label: 'Pokrok' },
-  { to: '/client/attendance', icon: Calendar, label: 'Docházka' },
-  { to: '/client/credit', icon: Wallet, label: 'Kredit' },
-  { to: '/client/nutrition', icon: Apple, label: 'Strava' },
-  { to: '/client/profile', icon: User, label: 'Profil' },
+  { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
+  { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
+  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
+  { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
+  { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' },
+  { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
-  const { isAuthenticated, loading, clientProfile, signOut } = useClientPortal();
+  const { isAuthenticated, loading, clientProfile, clientId, signOut } = useClientPortal();
   const location = useLocation();
+  const sessionInitialized = useRef(false);
+
+  // Initialize session tracking for client portal
+  useEffect(() => {
+    if (isAuthenticated && clientId && !sessionInitialized.current) {
+      sessionInitialized.current = true;
+      sessionManager.initialize(clientId).catch(console.debug);
+    }
+  }, [isAuthenticated, clientId]);
+
+  // Track navigation
+  useEffect(() => {
+    if (!isAuthenticated || !clientId) return;
+    
+    const currentNav = navItems.find(item => 
+      location.pathname === item.to || 
+      (item.to !== '/client' && location.pathname.startsWith(item.to))
+    );
+    
+    if (currentNav) {
+      trackEvent('client_portal_navigation', 'client-portal', {
+        metadata: {
+          client_id: clientId,
+          section: currentNav.trackName,
+          path: location.pathname
+        }
+      });
+    }
+  }, [location.pathname, isAuthenticated, clientId]);
 
   if (loading) {
     return (

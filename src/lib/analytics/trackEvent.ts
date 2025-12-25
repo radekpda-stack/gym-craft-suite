@@ -21,7 +21,8 @@ export type EventCategory =
   | 'settings'
   | 'export'
   | 'reminders'
-  | 'system';
+  | 'system'
+  | 'client-portal';
 
 export interface TrackEventOptions {
   metadata?: Record<string, any>;

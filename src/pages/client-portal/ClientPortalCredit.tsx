@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientCredit, useClientTransactions, useClientMonthlyUsage } from '@/hooks/useClientPortalData';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Wallet, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -12,6 +14,20 @@ export default function ClientPortalCredit() {
   const { data: credit, isLoading: creditLoading } = useClientCredit(clientId ?? undefined);
   const { data: transactions, isLoading: txLoading } = useClientTransactions(clientId ?? undefined);
   const { data: usage } = useClientMonthlyUsage(clientId ?? undefined);
+  const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_credit');
+
+  useEffect(() => {
+    trackPageMount();
+  }, [trackPageMount]);
+
+  // Track transactions view
+  useEffect(() => {
+    if (transactions && transactions.length > 0) {
+      trackPortalEvent('client_portal_view_transactions', { 
+        transactions_count: transactions.length 
+      });
+    }
+  }, [transactions, trackPortalEvent]);
 
   return (
     <div className="space-y-6">
