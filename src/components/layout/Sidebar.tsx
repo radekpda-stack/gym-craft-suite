@@ -25,6 +25,7 @@ import {
   Image,
   FileQuestion,
   PieChart,
+  UserCircle,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -269,9 +270,15 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         ],
       },
       {
-        label: 'Záznamy',
+        label: 'Klienti',
         items: [
           { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
+          ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+        ],
+      },
+      {
+        label: 'Záznamy',
+        items: [
           { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
           { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
           ...(isModuleEnabled('nutrition') ? [{

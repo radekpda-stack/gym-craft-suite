@@ -53,6 +53,7 @@ import NutritionTemplate from "./pages/NutritionTemplate";
 import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
 import NutritionInfographics from "./pages/NutritionInfographics";
 import TrainingTemplates from "./pages/TrainingTemplates";
+import ClientPortalAdmin from "./pages/ClientPortalAdmin";
 import NotFound from "./pages/NotFound";
 
 // Client Portal Pages
@@ -155,6 +156,7 @@ const App = () => (
                           <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
                           <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
                           <Route path="/training-templates" element={<TrainingTemplates />} />
+                          <Route path="/client-portal" element={<ClientPortalAdmin />} />
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
