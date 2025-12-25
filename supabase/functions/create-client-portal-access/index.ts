@@ -114,10 +114,10 @@ Deno.serve(async (req) => {
     let isNewAccount = false;
 
     if (existingAccount?.auth_user_id) {
-      // Reset password for existing user
+      // Reset password for existing user and ensure email is confirmed
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         existingAccount.auth_user_id,
-        { password }
+        { password, email_confirm: true }
       );
 
       if (updateError) {
@@ -191,11 +191,12 @@ Deno.serve(async (req) => {
             );
           }
           
-          // Reset password for existing user
+          // Reset password for existing user and confirm email
           const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
             existingUser.id,
             { 
               password,
+              email_confirm: true,
               user_metadata: {
                 ...existingUser.user_metadata,
                 is_client: true,
