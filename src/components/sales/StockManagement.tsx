@@ -9,7 +9,8 @@ import {
   Archive,
   Wrench,
   PackagePlus,
-  Loader2
+  Loader2,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,12 @@ const CATEGORIES = [
   { value: 'other', label: 'Ostatní' },
 ];
 
+const PRODUCT_KINDS = [
+  { value: 'inventory', label: 'Skladová položka', description: 'Sleduje zásoby' },
+  { value: 'service', label: 'Služba', description: 'Nesleduje zásoby' },
+  { value: 'credit_topup', label: 'Dobití kreditu', description: 'Přičte kredit klientovi' },
+];
+
 export function StockManagement() {
   const { data: products = [], isLoading } = useProducts();
   const createProduct = useCreateProduct();
@@ -42,13 +49,15 @@ export function StockManagement() {
   const [price, setPrice] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [category, setCategory] = useState('supplement');
+  const [kind, setKind] = useState<'inventory' | 'service' | 'credit_topup'>('inventory');
+  const [creditDelta, setCreditDelta] = useState('');
   const [stockQuantity, setStockQuantity] = useState('0');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [showMargin, setShowMargin] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
   const lowStockProducts = useMemo(() => (
-    products.filter(p => p.is_active && p.stock_quantity <= p.low_stock_threshold && p.category !== 'service')
+    products.filter(p => p.is_active && p.kind === 'inventory' && p.stock_quantity <= p.low_stock_threshold)
   ), [products]);
 
   const filteredProducts = useMemo(() => {
@@ -61,6 +70,8 @@ export function StockManagement() {
     setPrice('');
     setPurchasePrice('');
     setCategory('supplement');
+    setKind('inventory');
+    setCreditDelta('');
     setStockQuantity('0');
     setLowStockThreshold('5');
     setEditingProduct(null);
@@ -68,14 +79,17 @@ export function StockManagement() {
 
   const handleCreate = async () => {
     if (!name || !price) return;
+    if (kind === 'credit_topup' && (!creditDelta || parseFloat(creditDelta) <= 0)) return;
     
     await createProduct.mutateAsync({
       name,
       price: parseFloat(price),
       purchase_price: parseFloat(purchasePrice) || 0,
       category,
-      stock_quantity: category === 'service' ? 0 : parseInt(stockQuantity) || 0,
-      low_stock_threshold: category === 'service' ? 0 : parseInt(lowStockThreshold) || 5,
+      kind,
+      credit_delta: kind === 'credit_topup' ? parseFloat(creditDelta) || 0 : 0,
+      stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
+      low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
     });
 
     resetForm();
@@ -84,6 +98,7 @@ export function StockManagement() {
 
   const handleUpdate = async () => {
     if (!editingProduct || !name || !price) return;
+    if (kind === 'credit_topup' && (!creditDelta || parseFloat(creditDelta) <= 0)) return;
 
     await updateProduct.mutateAsync({
       id: editingProduct.id,
@@ -91,8 +106,10 @@ export function StockManagement() {
       price: parseFloat(price),
       purchase_price: parseFloat(purchasePrice) || 0,
       category,
-      stock_quantity: category === 'service' ? 0 : parseInt(stockQuantity) || 0,
-      low_stock_threshold: category === 'service' ? 0 : parseInt(lowStockThreshold) || 5,
+      kind,
+      credit_delta: kind === 'credit_topup' ? parseFloat(creditDelta) || 0 : 0,
+      stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
+      low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
     });
 
     resetForm();
@@ -111,12 +128,14 @@ export function StockManagement() {
     setPrice(product.price.toString());
     setPurchasePrice(product.purchase_price?.toString() || '0');
     setCategory(product.category);
+    setKind(product.kind || 'inventory');
+    setCreditDelta(product.credit_delta?.toString() || '0');
     setStockQuantity(product.stock_quantity?.toString() || '0');
     setLowStockThreshold(product.low_stock_threshold?.toString() || '5');
   };
 
   const isLowStock = (product: Product) => 
-    product.category !== 'service' && product.stock_quantity <= product.low_stock_threshold;
+    product.kind === 'inventory' && product.stock_quantity <= product.low_stock_threshold;
 
   const calculateMarginPercent = (sellPrice: number, buyPrice: number) => {
     if (buyPrice <= 0 || sellPrice <= 0) return 0;
@@ -125,6 +144,21 @@ export function StockManagement() {
 
   const getCategoryLabel = (cat: string) => 
     CATEGORIES.find(c => c.value === cat)?.label || cat;
+
+  const getKindIcon = (productKind: string) => {
+    switch (productKind) {
+      case 'service':
+        return <Wrench className="w-5 h-5" />;
+      case 'credit_topup':
+        return <CreditCard className="w-5 h-5" />;
+      default:
+        return <Package className="w-5 h-5" />;
+    }
+  };
+
+  const getKindLabel = (productKind: string) => {
+    return PRODUCT_KINDS.find(k => k.value === productKind)?.label || productKind;
+  };
 
   if (isLoading) {
     return (
@@ -196,7 +230,25 @@ export function StockManagement() {
                   />
                 </div>
                 <div>
-                  <Label>Typ</Label>
+                  <Label>Typ položky</Label>
+                  <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRODUCT_KINDS.map((k) => (
+                        <SelectItem key={k.value} value={k.value}>
+                          <div className="flex flex-col">
+                            <span>{k.label}</span>
+                            <span className="text-xs text-muted-foreground">{k.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Kategorie</Label>
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger className="mt-2">
                       <SelectValue />
@@ -232,7 +284,22 @@ export function StockManagement() {
                     />
                   </div>
                 </div>
-                {category !== 'service' && (
+                {kind === 'credit_topup' && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <Label>Kredit k přičtení (Kč)</Label>
+                    <Input
+                      type="number"
+                      value={creditDelta}
+                      onChange={(e) => setCreditDelta(e.target.value)}
+                      placeholder="1000"
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Částka kreditu, která se přičte klientovi po nákupu
+                    </p>
+                  </div>
+                )}
+                {kind === 'inventory' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Skladem (ks)</Label>
@@ -264,7 +331,11 @@ export function StockManagement() {
                     </p>
                   </div>
                 )}
-                <Button onClick={handleCreate} disabled={createProduct.isPending} className="w-full">
+                <Button 
+                  onClick={handleCreate} 
+                  disabled={createProduct.isPending || (kind === 'credit_topup' && (!creditDelta || parseFloat(creditDelta) <= 0))} 
+                  className="w-full"
+                >
                   Vytvořit položku
                 </Button>
               </div>
@@ -307,20 +378,33 @@ export function StockManagement() {
                     className="w-20"
                     placeholder="Nákup"
                   />
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="w-28">
+                  <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+                    <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
+                      {PRODUCT_KINDS.map((k) => (
+                        <SelectItem key={k.value} value={k.value}>
+                          {k.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {category !== 'service' && (
+                {kind === 'credit_topup' && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs whitespace-nowrap">Kredit:</Label>
+                    <Input
+                      type="number"
+                      value={creditDelta}
+                      onChange={(e) => setCreditDelta(e.target.value)}
+                      className="w-24"
+                      placeholder="1000"
+                    />
+                    <span className="text-xs text-muted-foreground">Kč</span>
+                  </div>
+                )}
+                {kind === 'inventory' && (
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Label className="text-xs whitespace-nowrap">Skladem:</Label>
@@ -356,18 +440,18 @@ export function StockManagement() {
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className={cn(
                     "p-2.5 rounded-xl shrink-0",
-                    product.category === 'service' 
+                    product.kind === 'service' 
                       ? "bg-blue-500/10 text-blue-500"
-                      : isLowStock(product) && product.is_active 
-                        ? "bg-warning/20 text-warning" 
-                        : "bg-primary/10 text-primary"
+                      : product.kind === 'credit_topup'
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : isLowStock(product) && product.is_active 
+                          ? "bg-warning/20 text-warning" 
+                          : "bg-primary/10 text-primary"
                   )}>
-                    {product.category === 'service' ? (
-                      <Wrench className="w-5 h-5" />
-                    ) : isLowStock(product) && product.is_active ? (
+                    {isLowStock(product) && product.is_active ? (
                       <AlertTriangle className="w-5 h-5" />
                     ) : (
-                      <Package className="w-5 h-5" />
+                      getKindIcon(product.kind || 'inventory')
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -378,6 +462,11 @@ export function StockManagement() {
                           Archivováno
                         </Badge>
                       )}
+                      {product.kind === 'credit_topup' && (
+                        <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-xs">
+                          +{(product.credit_delta || 0).toLocaleString('cs-CZ')} Kč kredit
+                        </Badge>
+                      )}
                       {isLowStock(product) && product.is_active && (
                         <Badge variant="outline" className="text-warning border-warning/50 text-xs">
                           Nízký stav
@@ -385,8 +474,10 @@ export function StockManagement() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                      <span>{getKindLabel(product.kind || 'inventory')}</span>
+                      <span>•</span>
                       <span>{getCategoryLabel(product.category)}</span>
-                      {product.category !== 'service' && (
+                      {product.kind === 'inventory' && (
                         <>
                           <span>•</span>
                           <span className={cn(
