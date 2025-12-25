@@ -50,6 +50,7 @@ import NutritionAnalysis from "./pages/NutritionAnalysis";
 import NutritionTemplate from "./pages/NutritionTemplate";
 import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
 import NutritionInfographics from "./pages/NutritionInfographics";
+import TrainingTemplates from "./pages/TrainingTemplates";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -121,7 +122,7 @@ const App = () => (
                           <Route path="/nutrition/template" element={<NutritionTemplate />} />
                           <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
                           <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
-                          {/* <Route path="/training-plans" element={<TrainingPlans />} /> */} {/* Hidden */}
+                          <Route path="/training-templates" element={<TrainingTemplates />} />
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
