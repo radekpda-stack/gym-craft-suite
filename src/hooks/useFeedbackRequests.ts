@@ -320,3 +320,59 @@ export function useCancelFeedbackRequest() {
     },
   });
 }
+
+export function useDeleteFeedbackRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      // First delete associated training_feedback if exists
+      await supabase
+        .from('training_feedback')
+        .delete()
+        .eq('feedback_request_id', requestId);
+
+      // Then delete the feedback request
+      const { error } = await supabase
+        .from('feedback_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) throw error;
+      return requestId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedback-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['feedback-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-feedback-trainings'] });
+    },
+  });
+}
+
+export function useDeleteMultipleFeedbackRequests() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestIds: string[]) => {
+      for (const requestId of requestIds) {
+        await supabase
+          .from('training_feedback')
+          .delete()
+          .eq('feedback_request_id', requestId);
+
+        const { error } = await supabase
+          .from('feedback_requests')
+          .delete()
+          .eq('id', requestId);
+
+        if (error) throw error;
+      }
+      return requestIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedback-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['feedback-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-feedback-trainings'] });
+    },
+  });
+}

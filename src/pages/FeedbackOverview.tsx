@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, subDays, startOfDay, differenceInHours } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   MessageSquare,
@@ -19,12 +19,14 @@ import {
   Mail,
   MailOpen,
   Settings2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -36,10 +38,11 @@ import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { FeedbackDetailDialog } from '@/components/feedback/FeedbackDetailDialog';
+import { DeleteFeedbackDialog } from '@/components/feedback/DeleteFeedbackDialog';
 import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useClients } from '@/hooks/useClients';
 import { usePendingFeedbackTrainings } from '@/hooks/usePendingFeedbackTrainings';
-import { useCreateFeedbackRequest } from '@/hooks/useFeedbackRequests';
+import { useCreateFeedbackRequest, useDeleteFeedbackRequest, useDeleteMultipleFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
@@ -49,7 +52,7 @@ import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
-type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending' | 'expired';
+type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending' | 'expired' | 'unfilled';
 type TabValue = 'to_send' | 'analytics' | 'history' | 'settings';
 
 export default function FeedbackOverview() {
@@ -64,10 +67,22 @@ export default function FeedbackOverview() {
     trainingDate?: string;
   }>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [feedbackToDelete, setFeedbackToDelete] = useState<{
+    id: string;
+    clientName: string;
+    isCompleted: boolean;
+  } | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const { data: clients = [] } = useClients();
   const { data: pendingTrainings = [], isLoading: pendingLoading } = usePendingFeedbackTrainings();
   const createFeedbackRequest = useCreateFeedbackRequest();
+  const deleteFeedbackRequest = useDeleteFeedbackRequest();
+  const deleteMultipleFeedbackRequests = useDeleteMultipleFeedbackRequests();
 
   // Handle status card click
   const handleStatusClick = (status: 'to_send' | 'pending' | 'completed' | 'expired' | 'red_flags') => {
@@ -121,7 +136,7 @@ export default function FeedbackOverview() {
       // Apply status filter for requests
       if (statusFilter === 'completed') {
         requestQuery = requestQuery.eq('status', 'completed');
-      } else if (statusFilter === 'pending') {
+      } else if (statusFilter === 'pending' || statusFilter === 'unfilled') {
         requestQuery = requestQuery.eq('status', 'pending');
       } else if (statusFilter === 'expired') {
         requestQuery = requestQuery.eq('status', 'pending');
@@ -136,6 +151,9 @@ export default function FeedbackOverview() {
         filteredRequests = filteredRequests.filter(r => new Date(r.expires_at) <= now);
       } else if (statusFilter === 'pending') {
         filteredRequests = filteredRequests.filter(r => new Date(r.expires_at) > now);
+      } else if (statusFilter === 'unfilled') {
+        // Show all pending (both expired and not)
+        filteredRequests = filteredRequests.filter(r => r.status === 'pending');
       }
 
       // Get feedback details for completed requests
@@ -207,6 +225,64 @@ export default function FeedbackOverview() {
         trainingDate: item.trainingDate,
       });
       setDialogOpen(true);
+    }
+  };
+
+  // Toggle selection
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const isAllSelected = feedbackData && feedbackData.length > 0 && selectedIds.size === feedbackData.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(feedbackData?.map(item => item.request.id) || []));
+    }
+  };
+
+  // Delete handlers
+  const handleDeleteClick = (item: NonNullable<typeof feedbackData>[number]) => {
+    setFeedbackToDelete({
+      id: item.request.id,
+      clientName: item.clientName,
+      isCompleted: item.request.status === 'completed',
+    });
+    setIsBulkDelete(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.size === 0) {
+      toast.error('Vyberte feedbacky k smazání');
+      return;
+    }
+    setFeedbackToDelete(null);
+    setIsBulkDelete(true);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      if (isBulkDelete) {
+        await deleteMultipleFeedbackRequests.mutateAsync(Array.from(selectedIds));
+        toast.success(`Smazáno ${selectedIds.size} feedbacků`);
+        setSelectedIds(new Set());
+      } else if (feedbackToDelete) {
+        await deleteFeedbackRequest.mutateAsync(feedbackToDelete.id);
+        toast.success('Feedback smazán');
+      }
+      setDeleteDialogOpen(false);
+    } catch {
+      toast.error('Nepodařilo se smazat feedback');
     }
   };
 
@@ -321,6 +397,14 @@ export default function FeedbackOverview() {
     }
     return { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/20' };
   };
+
+  // Count unfilled for filter badge
+  const unfilledCount = useMemo(() => {
+    if (!feedbackData) return 0;
+    return feedbackData.filter(item => 
+      item.request.status === 'pending' || item.isExpired
+    ).length;
+  }, [feedbackData]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -515,6 +599,12 @@ export default function FeedbackOverview() {
                             Expirované
                           </span>
                         </SelectItem>
+                        <SelectItem value="unfilled">
+                          <span className="flex items-center gap-2">
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                            Nevyplněné (testovací)
+                          </span>
+                        </SelectItem>
                         <SelectItem value="red_flags">
                           <span className="flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4 text-destructive" />
@@ -538,6 +628,19 @@ export default function FeedbackOverview() {
                         ))}
                       </SelectContent>
                     </Select>
+
+                    {/* Bulk delete button */}
+                    {selectedIds.size > 0 && (
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={handleBulkDeleteClick}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Smazat vybrané ({selectedIds.size})
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -545,7 +648,19 @@ export default function FeedbackOverview() {
               {/* Feedback List */}
               <Card className="glass">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Seznam feedbacků</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Seznam feedbacků</CardTitle>
+                    {feedbackData && feedbackData.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Vybrat vše"
+                        />
+                        <span className="text-sm text-muted-foreground">Vybrat vše</span>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
@@ -561,85 +676,112 @@ export default function FeedbackOverview() {
                         const StatusIcon = statusConfig.icon;
                         
                         return (
-                          <button
+                          <div
                             key={item.request.id}
-                            onClick={() => item.feedback && openFeedbackDetail(item)}
-                            disabled={!item.feedback}
                             className={cn(
-                              'w-full flex items-center gap-4 p-4 rounded-xl text-left transition-colors',
-                              item.feedback 
-                                ? 'hover:bg-secondary/50 cursor-pointer' 
-                                : 'cursor-default opacity-70',
+                              'flex items-center gap-4 p-4 rounded-xl text-left transition-colors',
+                              selectedIds.has(item.request.id) && 'ring-2 ring-primary',
                               item.feedback?.is_red_flag && 'bg-destructive/5 border border-destructive/20',
                               !item.feedback?.is_red_flag && 'bg-secondary/30'
                             )}
                           >
-                            {/* Status Icon */}
-                            <div className={cn(
-                              'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-                              statusConfig.bg
-                            )}>
-                              <StatusIcon className={cn('w-5 h-5', statusConfig.color)} />
-                            </div>
+                            {/* Checkbox */}
+                            <Checkbox
+                              checked={selectedIds.has(item.request.id)}
+                              onCheckedChange={() => toggleSelect(item.request.id)}
+                              aria-label={`Vybrat feedback od ${item.clientName}`}
+                              className="shrink-0"
+                            />
 
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium truncate">{item.clientName}</p>
-                                {item.feedback?.is_red_flag && (
-                                  <Badge className="bg-destructive/20 text-destructive text-xs">
-                                    Red Flag
-                                  </Badge>
-                                )}
-                                {item.isExpired && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Expirováno
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>
-                                  {item.trainingDate 
-                                    ? format(new Date(item.trainingDate), 'd.M.yyyy', { locale: cs })
-                                    : 'Bez tréninku'}
-                                </span>
-                                <span>•</span>
-                                <span>
-                                  {item.request.status === 'completed' 
-                                    ? 'Vyplněno ' + format(new Date(item.request.completed_at!), 'd.M.', { locale: cs })
-                                    : item.isExpired
-                                    ? 'Odkaz vypršel'
-                                    : 'Čeká na vyplnění'}
-                                </span>
+                            {/* Clickable area */}
+                            <button
+                              onClick={() => item.feedback && openFeedbackDetail(item)}
+                              disabled={!item.feedback}
+                              className={cn(
+                                'flex-1 flex items-center gap-4 text-left',
+                                item.feedback ? 'cursor-pointer' : 'cursor-default opacity-70'
+                              )}
+                            >
+                              {/* Status Icon */}
+                              <div className={cn(
+                                'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
+                                statusConfig.bg
+                              )}>
+                                <StatusIcon className={cn('w-5 h-5', statusConfig.color)} />
                               </div>
 
-                              {/* Quick metrics for completed */}
-                              {item.feedback && (
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {item.feedback.soreness !== null && (
-                                    <span className="text-xs px-2 py-0.5 rounded bg-secondary">
-                                      Svalovka: {item.feedback.soreness}/10
-                                    </span>
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium truncate">{item.clientName}</p>
+                                  {item.feedback?.is_red_flag && (
+                                    <Badge className="bg-destructive/20 text-destructive text-xs">
+                                      Red Flag
+                                    </Badge>
                                   )}
-                                  {item.feedback.body_feel !== null && (
-                                    <span className="text-xs px-2 py-0.5 rounded bg-secondary">
-                                      Pocit: {item.feedback.body_feel}/10
-                                    </span>
-                                  )}
-                                  {item.feedback.pain !== null && item.feedback.pain >= 4 && (
-                                    <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                                      Bolest: {item.feedback.pain}/10
-                                    </span>
+                                  {item.isExpired && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Expirováno
+                                    </Badge>
                                   )}
                                 </div>
-                              )}
-                            </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <span>
+                                    {item.trainingDate 
+                                      ? format(new Date(item.trainingDate), 'd.M.yyyy', { locale: cs })
+                                      : 'Bez tréninku'}
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    {item.request.status === 'completed' 
+                                      ? 'Vyplněno ' + format(new Date(item.request.completed_at!), 'd.M.', { locale: cs })
+                                      : item.isExpired
+                                      ? 'Odkaz vypršel'
+                                      : 'Čeká na vyplnění'}
+                                  </span>
+                                </div>
 
-                            {/* Arrow */}
-                            {item.feedback && (
-                              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                            )}
-                          </button>
+                                {/* Quick metrics for completed */}
+                                {item.feedback && (
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {item.feedback.soreness !== null && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-secondary">
+                                        Svalovka: {item.feedback.soreness}/10
+                                      </span>
+                                    )}
+                                    {item.feedback.body_feel !== null && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-secondary">
+                                        Pocit: {item.feedback.body_feel}/10
+                                      </span>
+                                    )}
+                                    {item.feedback.pain !== null && item.feedback.pain >= 4 && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                                        Bolest: {item.feedback.pain}/10
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Arrow */}
+                              {item.feedback && (
+                                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                              )}
+                            </button>
+
+                            {/* Delete button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(item);
+                              }}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         );
                       })}
                     </div>
@@ -681,6 +823,19 @@ export default function FeedbackOverview() {
         }}
         clientName={selectedFeedbackMeta.clientName}
         trainingDate={selectedFeedbackMeta.trainingDate}
+      />
+
+      {/* Delete confirmation dialog */}
+      <DeleteFeedbackDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteFeedbackRequest.isPending || deleteMultipleFeedbackRequests.isPending}
+        feedbackInfo={feedbackToDelete ? {
+          clientName: feedbackToDelete.clientName,
+          isCompleted: feedbackToDelete.isCompleted,
+        } : undefined}
+        bulkCount={isBulkDelete ? selectedIds.size : undefined}
       />
     </div>
   );

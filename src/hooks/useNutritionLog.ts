@@ -260,6 +260,66 @@ export function useDeleteNutritionEntry() {
   });
 }
 
+export function useDeleteNutritionSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      // First delete all entries for this session (cascade)
+      const [foodResult, drinkResult, coffeeResult] = await Promise.all([
+        supabase.from('nutrition_food_entries').delete().eq('session_id', sessionId),
+        supabase.from('nutrition_drink_entries').delete().eq('session_id', sessionId),
+        supabase.from('nutrition_coffee_entries').delete().eq('session_id', sessionId),
+      ]);
+
+      if (foodResult.error) throw foodResult.error;
+      if (drinkResult.error) throw drinkResult.error;
+      if (coffeeResult.error) throw coffeeResult.error;
+
+      // Then delete the session
+      const { error } = await supabase
+        .from('nutrition_log_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+      return sessionId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-nutrition-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['nutrition-log-sessions'] });
+    },
+  });
+}
+
+export function useDeleteMultipleNutritionSessions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionIds: string[]) => {
+      for (const sessionId of sessionIds) {
+        await Promise.all([
+          supabase.from('nutrition_food_entries').delete().eq('session_id', sessionId),
+          supabase.from('nutrition_drink_entries').delete().eq('session_id', sessionId),
+          supabase.from('nutrition_coffee_entries').delete().eq('session_id', sessionId),
+        ]);
+
+        const { error } = await supabase
+          .from('nutrition_log_sessions')
+          .delete()
+          .eq('id', sessionId);
+
+        if (error) throw error;
+      }
+      return sessionIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-nutrition-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['nutrition-log-sessions'] });
+    },
+  });
+}
+
 export function calculateDrinkMl(entry: NutritionDrinkEntry): number {
   if (entry.amount_ml) return entry.amount_ml;
   if (entry.amount_container_type && entry.amount_container_count) {
