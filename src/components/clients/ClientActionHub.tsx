@@ -55,6 +55,8 @@ export function ClientActionHub({
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
   
   const { data: sessions = [] } = useTrainingSessions(client.id);
   const { data: feedbackData = [] } = useClientFeedback(client.id);
@@ -191,7 +193,7 @@ export function ClientActionHub({
             if (!userData.user?.id) {
               throw new Error('Uživatel není přihlášen');
             }
-            
+
             const { data, error } = await supabase
               .from('feedback_requests')
               .insert({
@@ -201,12 +203,19 @@ export function ClientActionHub({
               })
               .select('token')
               .single();
-            
+
             if (error) throw error;
-            
+
             const link = `${window.location.origin}/feedback/${data.token}`;
-            await navigator.clipboard.writeText(link);
-            toast({ title: 'Odkaz zkopírován do schránky' });
+            setGeneratedLink(link);
+            setShowLinkDialog(true);
+
+            const copied = await copyToClipboard(link);
+            if (copied) {
+              toast({ title: 'Odkaz zkopírován do schránky' });
+            } else {
+              toast({ title: 'Odkaz vytvořen – zkopírujte ručně', variant: 'destructive' });
+            }
           } catch (error) {
             console.error('Error generating feedback link:', error);
             toast({ title: 'Chyba při generování odkazu', variant: 'destructive' });
@@ -246,6 +255,34 @@ export function ClientActionHub({
         return 'bg-gradient-to-r from-warning to-warning/80 text-warning-foreground';
       default:
         return 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground';
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    // Prefer native clipboard when available; otherwise fallback.
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // fall through
+      }
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
     }
   };
 
@@ -362,6 +399,39 @@ export function ClientActionHub({
               </Button>
               <Button onClick={handleSaveNote} disabled={!noteText.trim()}>
                 Uložit
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Feedback link dialog (for iOS / clipboard limitations) */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Feedback odkaz</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Odkaz je připraven. Pokud se nezkopíroval automaticky, zkopírujte ho ručně.
+            </p>
+            <Textarea value={generatedLink ?? ''} readOnly rows={3} />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
+                Zavřít
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!generatedLink) return;
+                  const ok = await copyToClipboard(generatedLink);
+                  toast({
+                    title: ok ? 'Odkaz zkopírován' : 'Nepodařilo se zkopírovat',
+                    variant: ok ? 'default' : 'destructive',
+                  });
+                }}
+                disabled={!generatedLink}
+              >
+                Zkopírovat
               </Button>
             </div>
           </div>
