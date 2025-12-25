@@ -271,10 +271,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
         { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
         { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-      ],
-    },
-    {
-      items: [
         {
           id: 'nutrition',
           to: '/nutrition',
