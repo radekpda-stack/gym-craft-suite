@@ -113,6 +113,50 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_events: {
+        Row: {
+          action: string
+          auth_user_id: string | null
+          client_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          trainer_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          auth_user_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          trainer_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          auth_user_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          trainer_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -319,34 +363,46 @@ export type Database = {
       }
       client_accounts: {
         Row: {
+          auth_user_id: string | null
           client_id: string
           created_at: string
+          created_by_trainer_id: string | null
           id: string
           is_active: boolean
+          last_password_reset_at: string | null
           last_portal_login: string | null
           portal_settings: Json | null
+          status: string | null
           trainer_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          auth_user_id?: string | null
           client_id: string
           created_at?: string
+          created_by_trainer_id?: string | null
           id?: string
           is_active?: boolean
+          last_password_reset_at?: string | null
           last_portal_login?: string | null
           portal_settings?: Json | null
+          status?: string | null
           trainer_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          auth_user_id?: string | null
           client_id?: string
           created_at?: string
+          created_by_trainer_id?: string | null
           id?: string
           is_active?: boolean
+          last_password_reset_at?: string | null
           last_portal_login?: string | null
           portal_settings?: Json | null
+          status?: string | null
           trainer_id?: string
           updated_at?: string
           user_id?: string
@@ -2239,6 +2295,30 @@ export type Database = {
           synonyms?: string[] | null
           usage_count?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      login_attempts: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
         }
         Relationships: []
       }
@@ -4956,6 +5036,7 @@ export type Database = {
       }
     }
     Functions: {
+      clean_old_login_attempts: { Args: never; Returns: undefined }
       generate_search_name: {
         Args: { name_cs: string; name_en: string }
         Returns: string
