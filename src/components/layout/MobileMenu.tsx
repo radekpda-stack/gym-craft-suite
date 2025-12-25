@@ -20,6 +20,7 @@ import {
   FileText,
   PieChart,
   LayoutTemplate,
+  UserCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -67,9 +68,15 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         ],
       },
       {
-        label: 'Záznamy',
+        label: 'Klienti',
         items: [
           { to: '/clients', icon: Users, label: 'Klienti' },
+          ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+        ],
+      },
+      {
+        label: 'Záznamy',
+        items: [
           { to: '/records', icon: Activity, label: 'Záznamy' },
         ],
       },
