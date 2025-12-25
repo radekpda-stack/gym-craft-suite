@@ -1,14 +1,24 @@
 import { useState } from 'react';
-import { ClipboardList, UserPlus, UserCheck, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { ClipboardList, UserPlus, UserCheck, ChevronDown, ChevronUp, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { useUnassignedPreDiagnostics, PreDiagnosticForm } from '@/hooks/usePreDiagnosticForms';
+import { useUnassignedPreDiagnostics, useDeletePreDiagnostic, PreDiagnosticForm } from '@/hooks/usePreDiagnosticForms';
 import { CreateClientFromPreDiagnosticDialog } from './CreateClientFromPreDiagnosticDialog';
 import { AssignPreDiagnosticDialog } from './AssignPreDiagnosticDialog';
 import { PreDiagnosticAnswersDialog } from './PreDiagnosticAnswersDialog';
 import { Client } from '@/hooks/useClients';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface UnassignedPreDiagnosticListProps {
   clients: Client[];
@@ -16,11 +26,13 @@ interface UnassignedPreDiagnosticListProps {
 
 export function UnassignedPreDiagnosticList({ clients }: UnassignedPreDiagnosticListProps) {
   const { data: unassignedForms = [], isLoading } = useUnassignedPreDiagnostics();
+  const deletePreDiagnostic = useDeletePreDiagnostic();
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedForm, setSelectedForm] = useState<PreDiagnosticForm | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [answersDialogOpen, setAnswersDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (isLoading || unassignedForms.length === 0) {
     return null;
@@ -120,6 +132,17 @@ export function UnassignedPreDiagnosticList({ clients }: UnassignedPreDiagnostic
                   <UserPlus className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">Vytvořit klienta</span>
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setSelectedForm(form);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           ))}
@@ -146,6 +169,29 @@ export function UnassignedPreDiagnosticList({ clients }: UnassignedPreDiagnostic
             formId={selectedForm.id}
             clientName={selectedForm.client_name}
           />
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Smazat pre-diagnostiku?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Opravdu chcete smazat pre-diagnostiku od "{selectedForm.client_name || 'Neznámé jméno'}"? 
+                  Tato akce je nevratná a všechny odpovědi budou ztraceny.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    deletePreDiagnostic.mutate(selectedForm.id);
+                    setDeleteDialogOpen(false);
+                  }}
+                >
+                  Smazat
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>

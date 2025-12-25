@@ -355,3 +355,49 @@ export function useApproveSummary() {
     },
   });
 }
+
+// Delete pre-diagnostic form and its answers
+export function useDeletePreDiagnostic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (formId: string) => {
+      // First get all answer IDs for this form
+      const { data: answers } = await supabase
+        .from('pre_diagnostic_answers')
+        .select('id')
+        .eq('form_id', formId);
+
+      // Delete answer history for each answer
+      if (answers && answers.length > 0) {
+        const answerIds = answers.map(a => a.id);
+        await supabase
+          .from('pre_diagnostic_answer_history')
+          .delete()
+          .in('answer_id', answerIds);
+      }
+
+      // Delete answers
+      await supabase
+        .from('pre_diagnostic_answers')
+        .delete()
+        .eq('form_id', formId);
+
+      // Delete the form itself
+      const { error } = await supabase
+        .from('pre_diagnostic_forms')
+        .delete()
+        .eq('id', formId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pre-diagnostic-forms'] });
+      toast.success('Pre-diagnostika byla smazána');
+    },
+    onError: (error) => {
+      console.error('Error deleting pre-diagnostic:', error);
+      toast.error('Nepodařilo se smazat pre-diagnostiku');
+    },
+  });
+}
