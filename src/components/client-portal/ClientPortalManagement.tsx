@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -179,14 +179,14 @@ function EditClientDialog({ open, onOpenChange, account }: EditClientDialogProps
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Update state when account changes
-  useState(() => {
-    if (account?.client) {
+  // Update state when account changes or dialog opens
+  useEffect(() => {
+    if (open && account?.client) {
       setName(account.client.name || '');
       setEmail(account.client.email || '');
       setPhone(account.client.phone || '');
     }
-  });
+  }, [open, account]);
 
   const handleSave = async () => {
     if (!account) return;
