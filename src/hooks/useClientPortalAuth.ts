@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,10 +26,16 @@ export function useClientPortalAuth() {
   const [clientAccount, setClientAccount] = useState<ClientAccount | null>(null);
   const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clientDataLoaded, setClientDataLoaded] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const fetchingRef = useRef(false);
 
   // Fetch client account data
   const fetchClientData = useCallback(async (userId: string) => {
+    // Prevent duplicate fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    
     try {
       // Get client account
       const { data: account, error: accountError } = await supabase
@@ -55,20 +61,22 @@ export function useClientPortalAuth() {
         if (clientError) throw clientError;
         setClientProfile(client as ClientProfile);
 
-        // Update last login
-        await supabase
+        // Update last login (don't await - fire and forget)
+        supabase
           .from('client_accounts')
           .update({ last_portal_login: new Date().toISOString() })
-          .eq('id', account.id);
+          .eq('id', account.id)
+          .then(() => {});
 
-        // Log activity
-        await supabase
+        // Log activity (don't await - fire and forget)
+        supabase
           .from('client_portal_activity')
           .upsert({
             client_id: account.client_id,
             activity_date: new Date().toISOString().split('T')[0],
             activity_type: 'portal_login',
-          }, { onConflict: 'client_id,activity_date,activity_type' });
+          }, { onConflict: 'client_id,activity_date,activity_type' })
+          .then(() => {});
       } else {
         setIsClient(false);
         setClientAccount(null);
@@ -77,42 +85,61 @@ export function useClientPortalAuth() {
     } catch (error) {
       console.error('Error fetching client data:', error);
       setIsClient(false);
+    } finally {
+      setClientDataLoaded(true);
+      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
 
         if (session?.user) {
           // Defer data fetch to avoid deadlock
           setTimeout(() => {
-            fetchClientData(session.user.id);
+            if (mounted) {
+              fetchClientData(session.user.id);
+            }
           }, 0);
         } else {
           setClientAccount(null);
           setClientProfile(null);
           setIsClient(false);
+          setClientDataLoaded(true);
+          setLoading(false);
         }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
 
       if (session?.user) {
-        fetchClientData(session.user.id);
+        fetchClientData(session.user.id).then(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setClientDataLoaded(true);
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchClientData]);
 
   // Magic link sign in
@@ -141,16 +168,20 @@ export function useClientPortalAuth() {
 
   // Sign out
   const signOut = useCallback(async () => {
+    setClientDataLoaded(false);
     const { error } = await supabase.auth.signOut();
     return { error };
   }, []);
+
+  // Compute final loading state - loading until we have session info AND client data
+  const isFullyLoaded = !loading && clientDataLoaded;
 
   return {
     user,
     session,
     clientAccount,
     clientProfile,
-    loading,
+    loading: !isFullyLoaded,
     isClient,
     isAuthenticated: !!session && isClient,
     signInWithMagicLink,
