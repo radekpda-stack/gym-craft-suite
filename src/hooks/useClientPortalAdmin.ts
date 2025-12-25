@@ -31,13 +31,34 @@ export interface PortalStats {
   avgVisitsPerClient: number;
 }
 
+export interface ProgressMetricsSettings {
+  weight: boolean;
+  bodyFat: boolean;
+  trackedExercises: boolean;
+  rowing500m: boolean;
+  rowing1000m: boolean;
+  running500m: boolean;
+  running1000m: boolean;
+}
+
 export interface PortalVisibilitySettings {
   progress: boolean;
   attendance: boolean;
   credit: boolean;
   nutrition: boolean;
   profile: boolean;
+  progressMetrics: ProgressMetricsSettings;
 }
+
+const DEFAULT_PROGRESS_METRICS: ProgressMetricsSettings = {
+  weight: true,
+  bodyFat: true,
+  trackedExercises: true,
+  rowing500m: true,
+  rowing1000m: true,
+  running500m: true,
+  running1000m: true,
+};
 
 const DEFAULT_VISIBILITY: PortalVisibilitySettings = {
   progress: true,
@@ -45,6 +66,7 @@ const DEFAULT_VISIBILITY: PortalVisibilitySettings = {
   credit: true,
   nutrition: true,
   profile: true,
+  progressMetrics: DEFAULT_PROGRESS_METRICS,
 };
 
 // Fetch all clients with portal access
