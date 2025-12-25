@@ -21,6 +21,7 @@ import {
   LucideIcon,
   Utensils,
   FileText,
+  LayoutTemplate,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -123,8 +124,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       items: [
         { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
         { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
+        { id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' },
         { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
-        // { id: 'training-plans', to: '/training-plans', icon: ClipboardList, label: 'Tréninkové plány' }, // Hidden
       ],
     },
     {
