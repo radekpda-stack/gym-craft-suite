@@ -4,7 +4,7 @@ import { format, parseISO, addDays, isSameDay } from 'date-fns';
 import { cs, enUS } from 'date-fns/locale';
 import { 
   Plus, Utensils, Droplets, Coffee, Check, ChevronLeft, ChevronRight, 
-  Globe, Sparkles, ThumbsUp, Search, X, Sun, Moon, Zap, Download, Share
+  Globe, X, Download, Share, MoreVertical, Pencil, Trash2, Copy
 } from 'lucide-react';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,10 @@ const t = {
     coffee: 'Káva',
     save: 'Uložit',
     cancel: 'Zpět',
+    edit: 'Upravit',
+    delete: 'Smazat',
+    duplicate: 'Duplikovat',
+    quickWater: '+ Voda 300ml',
     // Food
     mealType: 'Typ jídla',
     breakfast: 'Snídaně',
@@ -87,14 +91,6 @@ const t = {
     coffeeEnergy: 'Energy drink',
     coffeeOther: 'Jiný',
     coffeeCount: 'Počet',
-    // Reflection
-    dayReflection: 'Jak byl dnes den?',
-    dayEasy: 'Lehký',
-    dayNormal: 'Normální',
-    dayHard: 'Náročný',
-    followedPlan: 'Držel/a ses plánu?',
-    yes: 'Ano',
-    notReally: 'Spíš ne',
     // Summary
     dayComplete: 'Den hotový',
     meals: 'jídla',
@@ -104,20 +100,15 @@ const t = {
     noEntries: 'Zatím žádné záznamy',
     tapToAdd: 'Klikni + pro přidání',
     saved: 'Hotovo, díky 👍',
+    deleted: 'Smazáno',
     justRecord: 'Je to jen záznam, ne test',
     invalidLink: 'Neplatný odkaz',
     completed: 'Log dokončen',
     loading: 'Načítám...',
-    // Empty day
-    emptyDayTitle: 'Žádné záznamy pro tento den',
-    emptyDayNoEat: 'Nejedl/a jsem',
-    emptyDayForgot: 'Zapomněl/a jsem',
     // PWA Install
     installApp: 'Přidat na plochu',
     installTitle: 'Přidat na plochu',
-    installAndroid: 'Klikni na tlačítko níže pro přidání na plochu.',
     installIOS: 'Klikni na Sdílet (Share) → Přidat na plochu (Add to Home Screen)',
-    installDone: 'Hotovo!',
     installClose: 'Zavřít',
   },
   en: {
@@ -129,6 +120,10 @@ const t = {
     coffee: 'Coffee',
     save: 'Save',
     cancel: 'Back',
+    edit: 'Edit',
+    delete: 'Delete',
+    duplicate: 'Duplicate',
+    quickWater: '+ Water 300ml',
     // Food
     mealType: 'Meal type',
     breakfast: 'Breakfast',
@@ -175,14 +170,6 @@ const t = {
     coffeeEnergy: 'Energy drink',
     coffeeOther: 'Other',
     coffeeCount: 'Count',
-    // Reflection
-    dayReflection: 'How was your day?',
-    dayEasy: 'Easy',
-    dayNormal: 'Normal',
-    dayHard: 'Hard',
-    followedPlan: 'Did you follow the plan?',
-    yes: 'Yes',
-    notReally: 'Not really',
     // Summary
     dayComplete: 'Day complete',
     meals: 'meals',
@@ -192,28 +179,30 @@ const t = {
     noEntries: 'No entries yet',
     tapToAdd: 'Tap + to add',
     saved: 'Done, thanks 👍',
+    deleted: 'Deleted',
     justRecord: 'It\'s just a record, not a test',
     invalidLink: 'Invalid link',
     completed: 'Log completed',
     loading: 'Loading...',
-    // Empty day
-    emptyDayTitle: 'No entries for this day',
-    emptyDayNoEat: 'Didn\'t eat',
-    emptyDayForgot: 'Forgot to log',
     // PWA Install
     installApp: 'Add to Home Screen',
     installTitle: 'Add to Home Screen',
-    installAndroid: 'Tap the button below to add to your home screen.',
     installIOS: 'Tap Share → Add to Home Screen',
-    installDone: 'Done!',
     installClose: 'Close',
   }
 };
 
-// Normalize text for search
-const normalizeText = (text: string): string => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-};
+// Generate UUID for idempotency
+function generateRequestId(): string {
+  return crypto.randomUUID();
+}
+
+// Format time to HH:MM (always 2 digits)
+function formatTimeHHMM(date: Date): string {
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = Math.floor(date.getMinutes() / 30) * 30;
+  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
 
 export default function PublicNutritionLogPage() {
   usePageTracking('public_nutrition_log');
@@ -228,6 +217,7 @@ export default function PublicNutritionLogPage() {
   const [coffeeEntries, setCoffeeEntries] = useState<any[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [recordType, setRecordType] = useState<RecordType>(null);
+  const [editingEntry, setEditingEntry] = useState<{ type: RecordType; entry: any } | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   
   const { isInstallable, isIOS, isStandalone, promptInstall } = usePWAInstall();
@@ -240,7 +230,7 @@ export default function PublicNutritionLogPage() {
     } else if (isInstallable) {
       const success = await promptInstall();
       if (success) {
-        toast.success(tr.installDone);
+        toast.success(language === 'cs' ? 'Hotovo!' : 'Done!');
       }
     }
   };
@@ -299,15 +289,19 @@ export default function PublicNutritionLogPage() {
     };
   }, [foodEntries, drinkEntries, coffeeEntries, selectedDate]);
 
-  const handleAddEntry = async (type: 'food' | 'drink' | 'coffee', data: any) => {
+  const handleAddEntry = async (type: 'food' | 'drink' | 'coffee', data: any, entryId?: string) => {
     if (!session || !selectedDate) return;
     try {
+      const requestId = generateRequestId();
       const response = await supabase.functions.invoke('submit-nutrition-entry', {
         body: {
           token,
           type,
+          action: entryId ? 'update' : 'create',
+          entry_id: entryId,
           entry: {
             ...data,
+            client_request_id: requestId,
             session_id: session.id,
             client_id: session.client_id,
             entry_date: format(selectedDate, 'yyyy-MM-dd'),
@@ -320,9 +314,70 @@ export default function PublicNutritionLogPage() {
       toast.success(tr.saved);
       setShowAddDialog(false);
       setRecordType(null);
+      setEditingEntry(null);
     } catch (err: any) {
       console.error('Error adding entry:', err);
       toast.error(language === 'cs' ? 'Nepodařilo se uložit' : 'Failed to save');
+    }
+  };
+
+  const handleDeleteEntry = async (type: 'food' | 'drink' | 'coffee', entryId: string) => {
+    if (!session) return;
+    try {
+      const response = await supabase.functions.invoke('submit-nutrition-entry', {
+        body: {
+          token,
+          type,
+          action: 'delete',
+          entry_id: entryId,
+          entry: {}
+        }
+      });
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      await loadSession();
+      toast.success(tr.deleted);
+    } catch (err: any) {
+      console.error('Error deleting entry:', err);
+      toast.error(language === 'cs' ? 'Nepodařilo se smazat' : 'Failed to delete');
+    }
+  };
+
+  const handleDuplicateEntry = (type: RecordType, entry: any) => {
+    // Open form with pre-filled data (without id)
+    const { id, created_at, updated_at, session_id, client_id, client_request_id, ...entryData } = entry;
+    setEditingEntry({ type, entry: { ...entryData, _isDuplicate: true } });
+    setRecordType(type);
+    setShowAddDialog(true);
+  };
+
+  const handleQuickWater = async () => {
+    if (!session || !selectedDate) return;
+    try {
+      const requestId = generateRequestId();
+      const response = await supabase.functions.invoke('submit-nutrition-entry', {
+        body: {
+          token,
+          type: 'drink',
+          action: 'create',
+          entry: {
+            client_request_id: requestId,
+            session_id: session.id,
+            client_id: session.client_id,
+            entry_date: format(selectedDate, 'yyyy-MM-dd'),
+            entry_time: formatTimeHHMM(new Date()),
+            drink_type: 'water',
+            amount_ml: 300,
+          }
+        }
+      });
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      await loadSession();
+      toast.success(tr.saved);
+    } catch (err: any) {
+      console.error('Error adding quick water:', err);
+      toast.error(language === 'cs' ? 'Nepodařilo se přidat' : 'Failed to add');
     }
   };
 
@@ -437,6 +492,18 @@ export default function PublicNutritionLogPage() {
           </p>
         )}
 
+        {/* Quick Actions */}
+        <div className="flex justify-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleQuickWater}
+            className="gap-1 text-blue-600"
+          >
+            💧 {tr.quickWater}
+          </Button>
+        </div>
+
         {/* Day Status */}
         {dayIsComplete && (
           <motion.div 
@@ -497,13 +564,46 @@ export default function PublicNutritionLogPage() {
           ) : (
             <>
               {dayEntries.food.map((entry: any) => (
-                <FoodEntryCard key={entry.id} entry={entry} language={language} />
+                <FoodEntryCard 
+                  key={entry.id} 
+                  entry={entry} 
+                  language={language}
+                  onEdit={() => {
+                    setEditingEntry({ type: 'food', entry });
+                    setRecordType('food');
+                    setShowAddDialog(true);
+                  }}
+                  onDelete={() => handleDeleteEntry('food', entry.id)}
+                  onDuplicate={() => handleDuplicateEntry('food', entry)}
+                />
               ))}
               {dayEntries.drinks.map((entry: any) => (
-                <DrinkEntryCard key={entry.id} entry={entry} language={language} />
+                <DrinkEntryCard 
+                  key={entry.id} 
+                  entry={entry} 
+                  language={language}
+                  onEdit={() => {
+                    setEditingEntry({ type: 'drink', entry });
+                    setRecordType('drink');
+                    setShowAddDialog(true);
+                  }}
+                  onDelete={() => handleDeleteEntry('drink', entry.id)}
+                  onDuplicate={() => handleDuplicateEntry('drink', entry)}
+                />
               ))}
               {dayEntries.coffee.map((entry: any) => (
-                <CoffeeEntryCard key={entry.id} entry={entry} language={language} />
+                <CoffeeEntryCard 
+                  key={entry.id} 
+                  entry={entry} 
+                  language={language}
+                  onEdit={() => {
+                    setEditingEntry({ type: 'coffee', entry });
+                    setRecordType('coffee');
+                    setShowAddDialog(true);
+                  }}
+                  onDelete={() => handleDeleteEntry('coffee', entry.id)}
+                  onDuplicate={() => handleDuplicateEntry('coffee', entry)}
+                />
               ))}
             </>
           )}
@@ -522,7 +622,10 @@ export default function PublicNutritionLogPage() {
       {/* Add Record Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => {
         setShowAddDialog(open);
-        if (!open) setRecordType(null);
+        if (!open) {
+          setRecordType(null);
+          setEditingEntry(null);
+        }
       }}>
         <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto p-0">
           <AnimatePresence mode="wait">
@@ -561,22 +664,25 @@ export default function PublicNutritionLogPage() {
             ) : recordType === 'food' ? (
               <FoodForm 
                 key="food"
-                onSave={(data) => handleAddEntry('food', data)} 
-                onBack={() => setRecordType(null)}
+                initialData={editingEntry?.type === 'food' ? editingEntry.entry : undefined}
+                onSave={(data) => handleAddEntry('food', data, editingEntry?.type === 'food' && !editingEntry.entry._isDuplicate ? editingEntry.entry.id : undefined)} 
+                onBack={() => { setRecordType(null); setEditingEntry(null); }}
                 language={language}
               />
             ) : recordType === 'drink' ? (
               <DrinkForm 
                 key="drink"
-                onSave={(data) => handleAddEntry('drink', data)} 
-                onBack={() => setRecordType(null)}
+                initialData={editingEntry?.type === 'drink' ? editingEntry.entry : undefined}
+                onSave={(data) => handleAddEntry('drink', data, editingEntry?.type === 'drink' && !editingEntry.entry._isDuplicate ? editingEntry.entry.id : undefined)} 
+                onBack={() => { setRecordType(null); setEditingEntry(null); }}
                 language={language}
               />
             ) : (
               <CoffeeForm 
                 key="coffee"
-                onSave={(data) => handleAddEntry('coffee', data)} 
-                onBack={() => setRecordType(null)}
+                initialData={editingEntry?.type === 'coffee' ? editingEntry.entry : undefined}
+                onSave={(data) => handleAddEntry('coffee', data, editingEntry?.type === 'coffee' && !editingEntry.entry._isDuplicate ? editingEntry.entry.id : undefined)} 
+                onBack={() => { setRecordType(null); setEditingEntry(null); }}
                 language={language}
               />
             )}
@@ -595,11 +701,6 @@ export default function PublicNutritionLogPage() {
               <Share className="h-8 w-8 text-primary" />
             </div>
             <p className="text-muted-foreground">{tr.installIOS}</p>
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <span className="px-2 py-1 bg-muted rounded">Share</span>
-              <span>→</span>
-              <span className="px-2 py-1 bg-muted rounded">Add to Home Screen</span>
-            </div>
           </div>
           <Button onClick={() => setShowInstallDialog(false)} className="w-full">
             {tr.installClose}
@@ -627,9 +728,47 @@ function TypeButton({ icon, label, color, onClick }: { icon: React.ReactNode; la
   );
 }
 
-// Food Entry Card
-function FoodEntryCard({ entry, language }: { entry: any; language: Language }) {
+// Entry Menu Component
+function EntryMenu({ onEdit, onDelete, onDuplicate, language }: { 
+  onEdit: () => void; 
+  onDelete: () => void; 
+  onDuplicate: () => void;
+  language: Language;
+}) {
   const tr = t[language];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil className="h-4 w-4 mr-2" />
+          {tr.edit}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onDuplicate}>
+          <Copy className="h-4 w-4 mr-2" />
+          {tr.duplicate}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onDelete} className="text-destructive">
+          <Trash2 className="h-4 w-4 mr-2" />
+          {tr.delete}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// Food Entry Card
+function FoodEntryCard({ entry, language, onEdit, onDelete, onDuplicate }: { 
+  entry: any; 
+  language: Language;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
   const qualityColors: Record<string, string> = {
     good: 'bg-green-500',
     normal: 'bg-yellow-500',
@@ -671,9 +810,7 @@ function FoodEntryCard({ entry, language }: { entry: any; language: Language }) 
             {entry.satiation && (
               <>
                 <span>•</span>
-                <span title={tr[`satiation${entry.satiation.charAt(0).toUpperCase()}${entry.satiation.slice(1).replace('_', '')}` as keyof typeof tr] || entry.satiation}>
-                  {satiationIcons[entry.satiation]}
-                </span>
+                <span>{satiationIcons[entry.satiation]}</span>
               </>
             )}
             {entry.feeling_after && (
@@ -687,13 +824,20 @@ function FoodEntryCard({ entry, language }: { entry: any; language: Language }) 
         {entry.quality && (
           <div className={cn("w-3 h-3 rounded-full", qualityColors[entry.quality])} />
         )}
+        <EntryMenu onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} language={language} />
       </CardContent>
     </Card>
   );
 }
 
 // Drink Entry Card
-function DrinkEntryCard({ entry, language }: { entry: any; language: Language }) {
+function DrinkEntryCard({ entry, language, onEdit, onDelete, onDuplicate }: { 
+  entry: any; 
+  language: Language;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
   const typeIcons: Record<string, string> = {
     water: '💧',
     sugary: '🥤',
@@ -704,59 +848,109 @@ function DrinkEntryCard({ entry, language }: { entry: any; language: Language })
   return (
     <Card>
       <CardContent className="py-3 flex items-center gap-3">
-        <div className="text-2xl">{typeIcons[entry.drink_type] || '💧'}</div>
-        <div className="flex-1">
-          <p className="font-medium">{t[language][`drink${entry.drink_type?.charAt(0).toUpperCase()}${entry.drink_type?.slice(1)}` as keyof typeof t.cs] || entry.drink_type}</p>
+        <div className="text-2xl">{typeIcons[entry.drink_type] || '🥤'}</div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{t[language][`drink${entry.drink_type.charAt(0).toUpperCase()}${entry.drink_type.slice(1)}` as keyof typeof t.cs] || entry.drink_type}</p>
           <p className="text-xs text-muted-foreground">
-            {entry.entry_time?.slice(0, 5)} • {entry.amount === 'little' ? '📉' : entry.amount === 'lots' ? '📈' : '✓'}
+            {entry.entry_time?.slice(0, 5)} • {entry.amount_ml}ml
           </p>
         </div>
+        <EntryMenu onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} language={language} />
       </CardContent>
     </Card>
   );
 }
 
 // Coffee Entry Card
-function CoffeeEntryCard({ entry, language }: { entry: any; language: Language }) {
+function CoffeeEntryCard({ entry, language, onEdit, onDelete, onDuplicate }: { 
+  entry: any; 
+  language: Language;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
+  const typeIcons: Record<string, string> = {
+    espresso: '☕',
+    cappuccino: '🥛',
+    energy: '⚡',
+    other: '📝',
+  };
+
   return (
     <Card>
       <CardContent className="py-3 flex items-center gap-3">
-        <div className="text-2xl">☕</div>
-        <div className="flex-1">
-          <p className="font-medium">{entry.coffee_type}{entry.count > 1 ? ` ×${entry.count}` : ''}</p>
+        <div className="text-2xl">{typeIcons[entry.coffee_type] || '☕'}</div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{t[language][`coffee${entry.coffee_type.charAt(0).toUpperCase()}${entry.coffee_type.slice(1)}` as keyof typeof t.cs] || entry.coffee_type}</p>
           <p className="text-xs text-muted-foreground">
-            {entry.entry_time?.slice(0, 5)}
+            {entry.entry_time?.slice(0, 5)} • {entry.count}×
           </p>
         </div>
+        <EntryMenu onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} language={language} />
       </CardContent>
     </Card>
   );
 }
 
+// Time picker with half-hour intervals - FIXED to always return HH:MM format
+function TimeSelect({ value, onChange, language }: { value: string; onChange: (v: string) => void; language: Language }) {
+  const times: string[] = [];
+  for (let h = 5; h <= 23; h++) {
+    times.push(`${h.toString().padStart(2, '0')}:00`);
+    times.push(`${h.toString().padStart(2, '0')}:30`);
+  }
+  times.push('00:00');
+
+  return (
+    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
+      {times.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={cn(
+            "px-2.5 py-1.5 text-sm rounded-lg border transition-all",
+            value === t
+              ? "border-primary bg-primary text-primary-foreground font-medium"
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // SIMPLIFIED FOOD FORM
-function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; onBack: () => void; language: Language }) {
+function FoodForm({ onSave, onBack, language, initialData }: { 
+  onSave: (data: any) => void; 
+  onBack: () => void; 
+  language: Language;
+  initialData?: any;
+}) {
   const tr = t[language];
-  const [mealType, setMealType] = useState<string>('');
-  const [time, setTime] = useState(format(new Date(), 'HH:mm'));
-  const [description, setDescription] = useState('');
-  const [portionSize, setPortionSize] = useState<'small' | 'medium' | 'large'>('medium');
-  
-  const [satiation, setSatiation] = useState<'just_right' | 'still_hungry' | 'overate' | ''>('');
-  const [feeling, setFeeling] = useState<string>('');
+  const [mealType, setMealType] = useState(initialData?.meal_type || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [portionSize, setPortionSize] = useState(initialData?.portion_size || 'medium');
+  const [satiation, setSatiation] = useState(initialData?.satiation || '');
+  const [feeling, setFeeling] = useState(initialData?.feeling_after || '');
+  const [quality, setQuality] = useState(initialData?.quality || '');
+  const [time, setTime] = useState(initialData?.entry_time?.slice(0, 5) || formatTimeHHMM(new Date()));
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!description.trim() || !mealType) return;
     setIsSaving(true);
     try {
       await onSave({
+        description,
         entry_time: time,
-        description: description.trim(),
-        meal_type: mealType,
+        meal_type: mealType || null,
         portion_mode: 'portion_size',
         portion_size: portionSize,
         satiation: satiation || null,
         feeling_after: feeling || null,
+        quality: quality || null,
       });
     } finally {
       setIsSaving(false);
@@ -777,7 +971,7 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
         </DialogTitle>
       </DialogHeader>
 
-      {/* Meal Type - Big Buttons */}
+      {/* Meal Type */}
       <div>
         <Label className="text-sm text-muted-foreground mb-2 block">{tr.mealType}</Label>
         <div className="grid grid-cols-4 gap-2">
@@ -786,19 +980,19 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
             { id: 'lunch', icon: '☀️', label: tr.lunch },
             { id: 'dinner', icon: '🌙', label: tr.dinner },
             { id: 'snack', icon: '🍿', label: tr.snack },
-          ].map((meal) => (
+          ].map((m) => (
             <button
-              key={meal.id}
-              onClick={() => setMealType(meal.id)}
+              key={m.id}
+              onClick={() => setMealType(m.id)}
               className={cn(
-                "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
-                mealType === meal.id 
+                "flex flex-col items-center p-2 rounded-xl border-2 transition-all",
+                mealType === m.id 
                   ? "border-primary bg-primary/10" 
                   : "border-border hover:border-primary/50"
               )}
             >
-              <span className="text-xl">{meal.icon}</span>
-              <span className="text-xs mt-1">{meal.label}</span>
+              <span className="text-xl">{m.icon}</span>
+              <span className="text-[10px] mt-1">{m.label}</span>
             </button>
           ))}
         </div>
@@ -810,19 +1004,18 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
         <TimeSelect value={time} onChange={setTime} language={language} />
       </div>
 
-      {/* What did you eat */}
+      {/* Description */}
       <div>
-        <Label className="text-sm text-muted-foreground">{tr.whatDidYouEat}</Label>
-        <Textarea
+        <Label className="text-sm text-muted-foreground mb-2 block">{tr.whatDidYouEat}</Label>
+        <Input
+          placeholder={tr.foodPlaceholder}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder={tr.foodPlaceholder}
-          rows={2}
-          className="mt-1"
+          className="text-base"
         />
       </div>
 
-      {/* Portion Size - 3 buttons */}
+      {/* Portion Size */}
       <div>
         <Label className="text-sm text-muted-foreground mb-2 block">{tr.portionSize}</Label>
         <div className="grid grid-cols-3 gap-2">
@@ -830,71 +1023,54 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
             { id: 'small', icon: '🥄', label: tr.portionSmall },
             { id: 'medium', icon: '🍽️', label: tr.portionMedium },
             { id: 'large', icon: '🍲', label: tr.portionLarge },
-          ].map((size) => (
+          ].map((p) => (
             <button
-              key={size.id}
-              onClick={() => setPortionSize(size.id as any)}
+              key={p.id}
+              onClick={() => setPortionSize(p.id)}
               className={cn(
                 "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
-                portionSize === size.id 
+                portionSize === p.id 
                   ? "border-primary bg-primary/10" 
                   : "border-border hover:border-primary/50"
               )}
             >
-              <span className="text-xl">{size.icon}</span>
-              <span className="text-xs mt-1">{size.label}</span>
+              <span className="text-xl">{p.icon}</span>
+              <span className="text-xs mt-1">{p.label}</span>
             </button>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground mt-1 text-center">{tr.portionHint}</p>
+        <p className="text-xs text-muted-foreground mt-2">{tr.portionHint}</p>
       </div>
 
-      {/* Satiation - NEW */}
+      {/* Satiation */}
       <div>
         <Label className="text-sm text-muted-foreground mb-2 block">{tr.satiation}</Label>
         <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => setSatiation('just_right')}
-            className={cn(
-              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
-              satiation === 'just_right' 
-                ? "border-primary bg-primary/10" 
-                : "border-border hover:border-primary/50"
-            )}
-          >
-            <span className="text-xl">✓</span>
-            <span className="text-xs mt-1">{tr.satiationJustRight}</span>
-          </button>
-          <button
-            onClick={() => setSatiation('still_hungry')}
-            className={cn(
-              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
-              satiation === 'still_hungry' 
-                ? "border-orange-500 bg-orange-500/10" 
-                : "border-border hover:border-orange-500/50"
-            )}
-          >
-            <span className="text-xl">🍽️</span>
-            <span className="text-xs mt-1">{tr.satiationStillHungry}</span>
-          </button>
-          <button
-            onClick={() => setSatiation('overate')}
-            className={cn(
-              "flex flex-col items-center p-3 rounded-xl border-2 transition-all",
-              satiation === 'overate' 
-                ? "border-red-500 bg-red-500/10" 
-                : "border-border hover:border-red-500/50"
-            )}
-          >
-            <span className="text-xl">😵</span>
-            <span className="text-xs mt-1">{tr.satiationOverate}</span>
-          </button>
+          {[
+            { id: 'just_right', icon: '✓', label: tr.satiationJustRight },
+            { id: 'still_hungry', icon: '🍽️', label: tr.satiationStillHungry },
+            { id: 'overate', icon: '😵', label: tr.satiationOverate },
+          ].map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSatiation(satiation === s.id ? '' : s.id)}
+              className={cn(
+                "flex flex-col items-center p-2.5 rounded-xl border-2 transition-all",
+                satiation === s.id 
+                  ? "border-primary bg-primary/10" 
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <span className="text-xl">{s.icon}</span>
+              <span className="text-xs mt-1">{s.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Feeling after - extended with energy */}
+      {/* Feeling After */}
       <div>
-        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter} <span className="text-xs opacity-60">({language === 'cs' ? 'nepovinné' : 'optional'})</span></Label>
+        <Label className="text-sm text-muted-foreground mb-2 block">{tr.feelingAfter}</Label>
         <div className="grid grid-cols-3 gap-2">
           {[
             { id: 'ok', icon: '😌', label: tr.feelingOk },
@@ -937,49 +1113,19 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
   );
 }
 
-// Time picker with half-hour intervals
-function TimeSelect({ value, onChange, language }: { value: string; onChange: (v: string) => void; language: Language }) {
-  const times: string[] = [];
-  for (let h = 5; h <= 23; h++) {
-    times.push(`${h.toString().padStart(2, '0')}:00`);
-    times.push(`${h.toString().padStart(2, '0')}:30`);
-  }
-  times.push('00:00');
-
-  // Find closest time slot
-  const currentHour = parseInt(value.split(':')[0]);
-  const currentMin = parseInt(value.split(':')[1]);
-  const roundedMin = currentMin < 15 ? '00' : currentMin < 45 ? '30' : '00';
-  const roundedHour = currentMin >= 45 ? (currentHour + 1) % 24 : currentHour;
-  const selectedTime = `${roundedHour.toString().padStart(2, '0')}:${roundedMin}`;
-
-  return (
-    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
-      {times.map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => onChange(t)}
-          className={cn(
-            "px-2.5 py-1.5 text-sm rounded-lg border transition-all",
-            (value === t || selectedTime === t)
-              ? "border-primary bg-primary text-primary-foreground font-medium"
-              : "border-border hover:border-primary/50"
-          )}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // SIMPLIFIED DRINK FORM
-function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; onBack: () => void; language: Language }) {
+function DrinkForm({ onSave, onBack, language, initialData }: { 
+  onSave: (data: any) => void; 
+  onBack: () => void; 
+  language: Language;
+  initialData?: any;
+}) {
   const tr = t[language];
-  const [drinkType, setDrinkType] = useState('water');
-  const [amount, setAmount] = useState<'little' | 'ok' | 'lots'>('ok');
-  const [time, setTime] = useState(format(new Date(), 'HH:mm'));
+  const [drinkType, setDrinkType] = useState(initialData?.drink_type || 'water');
+  const [amount, setAmount] = useState<'little' | 'ok' | 'lots'>(
+    initialData?.amount_ml ? (initialData.amount_ml <= 200 ? 'little' : initialData.amount_ml >= 500 ? 'lots' : 'ok') : 'ok'
+  );
+  const [time, setTime] = useState(initialData?.entry_time?.slice(0, 5) || formatTimeHHMM(new Date()));
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -988,7 +1134,6 @@ function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; 
       await onSave({
         entry_time: time,
         drink_type: drinkType,
-        // Convert amount to ml estimate for DB - don't send 'amount' field
         amount_ml: amount === 'little' ? 200 : amount === 'lots' ? 500 : 300,
       });
     } finally {
@@ -1081,11 +1226,18 @@ function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; 
 }
 
 // SIMPLIFIED COFFEE FORM
-function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void; onBack: () => void; language: Language }) {
+function CoffeeForm({ onSave, onBack, language, initialData }: { 
+  onSave: (data: any) => void; 
+  onBack: () => void; 
+  language: Language;
+  initialData?: any;
+}) {
   const tr = t[language];
-  const [coffeeType, setCoffeeType] = useState('espresso');
-  const [count, setCount] = useState<'1' | '2' | '3+'>('1');
-  const [time, setTime] = useState(format(new Date(), 'HH:mm'));
+  const [coffeeType, setCoffeeType] = useState(initialData?.coffee_type || 'espresso');
+  const [count, setCount] = useState<'1' | '2' | '3+'>(
+    initialData?.count ? (initialData.count >= 3 ? '3+' : String(initialData.count) as '1' | '2') : '1'
+  );
+  const [time, setTime] = useState(initialData?.entry_time?.slice(0, 5) || formatTimeHHMM(new Date()));
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
