@@ -4986,6 +4986,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_shared_calendar_with_me: {
+        Args: { training_owner_id: string }
+        Returns: boolean
+      }
       is_client_user: { Args: { _user_id: string }; Returns: boolean }
       normalize_text: { Args: { input_text: string }; Returns: string }
       rpc_apply_credit_delta: {
