@@ -5,7 +5,8 @@ import { PortalRecentActivity } from '@/components/client-portal/PortalRecentAct
 import { ClientAccessList } from '@/components/client-portal/ClientAccessList';
 import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
-import { LayoutDashboard, Users, Settings, Info } from 'lucide-react';
+import { ClientPortalManagement } from '@/components/client-portal/ClientPortalManagement';
+import { LayoutDashboard, Users, Settings, Info, Wrench } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -44,7 +45,7 @@ export default function ClientPortalAdmin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <LayoutDashboard className="w-4 h-4" />
             <span className="hidden sm:inline">Přehled</span>
@@ -52,6 +53,10 @@ export default function ClientPortalAdmin() {
           <TabsTrigger value="clients" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Klienti</span>
+          </TabsTrigger>
+          <TabsTrigger value="management" className="flex items-center gap-2">
+            <Wrench className="w-4 h-4" />
+            <span className="hidden sm:inline">Správa</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
@@ -69,6 +74,10 @@ export default function ClientPortalAdmin() {
 
         <TabsContent value="clients" className="mt-6">
           <ClientAccessList />
+        </TabsContent>
+
+        <TabsContent value="management" className="mt-6">
+          <ClientPortalManagement />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
