@@ -25,6 +25,10 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
     clients: d.activeClients 
   }));
 
+  const activeClientsCount = data?.activeClientsCount ?? 0;
+  const totalClientsCount = data?.totalClientsCount ?? 0;
+  const activePercentage = data?.activePercentage ?? 0;
+
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
@@ -39,10 +43,13 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
       <CardContent className="space-y-8">
         {/* Full Activity Trend */}
         <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
             Aktivita klientů v čase
           </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Počet tréninků za den ve vybraném období. Čím vyšší hodnota, tím více tréninků proběhlo.
+          </p>
           <TrendAreaChart
             data={trendData}
             height={250}
@@ -53,10 +60,13 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
 
         {/* Activity Distribution Detail */}
         <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Rozložení aktivity podle počtu tréninků
           </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Kolik klientů spadá do jednotlivých kategorií podle počtu absolvovaných tréninků ve zvoleném období.
+          </p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.activityDistribution ?? []} layout="vertical" margin={{ left: 80 }}>
@@ -103,10 +113,13 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
 
         {/* LTV Detail */}
         <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
             <Users className="w-4 h-4" />
             Lifetime Value (LTV) - rozložení
           </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Rozdělení klientů podle celkového počtu absolvovaných tréninků. Vyšší LTV = věrnější klient.
+          </p>
           <div className="space-y-3">
             {(data?.ltvDistribution ?? []).map(bucket => (
               <div key={bucket.bucket} className="flex items-center gap-4 p-3 rounded-lg bg-muted/20">
@@ -128,15 +141,15 @@ export function ClientAnalyticsDetailView({ data, onClose }: ClientAnalyticsDeta
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4 p-4 rounded-lg bg-muted/10">
           <div className="text-center">
-            <p className="text-3xl font-bold text-primary">{data.activeClientsCount}</p>
+            <p className="text-3xl font-bold text-primary">{activeClientsCount}</p>
             <p className="text-sm text-muted-foreground">aktivních</p>
           </div>
           <div className="text-center">
-            <p className="text-3xl font-bold">{data.totalClientsCount - data.activeClientsCount}</p>
+            <p className="text-3xl font-bold">{totalClientsCount - activeClientsCount}</p>
             <p className="text-sm text-muted-foreground">neaktivních</p>
           </div>
           <div className="text-center">
-            <p className="text-3xl font-bold">{data.activePercentage}%</p>
+            <p className="text-3xl font-bold">{activePercentage}%</p>
             <p className="text-sm text-muted-foreground">aktivita</p>
           </div>
         </div>
