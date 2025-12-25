@@ -64,6 +64,7 @@ import ClientPortalAttendance from "./pages/client-portal/ClientPortalAttendance
 import ClientPortalCredit from "./pages/client-portal/ClientPortalCredit";
 import ClientPortalNutrition from "./pages/client-portal/ClientPortalNutrition";
 import ClientPortalProfile from "./pages/client-portal/ClientPortalProfile";
+import ClientPortalSettings from "./pages/client-portal/ClientPortalSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +114,7 @@ const App = () => (
                         <Route path="/credit" element={<ClientPortalCredit />} />
                         <Route path="/nutrition" element={<ClientPortalNutrition />} />
                         <Route path="/profile" element={<ClientPortalProfile />} />
+                        <Route path="/settings" element={<ClientPortalSettings />} />
                       </Routes>
                     </ClientPortalLayout>
                   </ClientPortalProvider>

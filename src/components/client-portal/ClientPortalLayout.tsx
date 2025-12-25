@@ -7,7 +7,8 @@ import {
   Wallet, 
   Apple, 
   User,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
   { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' },
   { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
+  { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
