@@ -40,6 +40,7 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [showConfirmation, setShowConfirmation] = React.useState(false);
+  const confirmButtonRef = React.useRef<HTMLButtonElement>(null);
   
   const dateValue = React.useMemo(() => {
     if (!value) return undefined;
@@ -63,10 +64,24 @@ export function DateTimePicker({
     }
   }, [dateValue]);
 
+  // Scroll to confirm button when popover opens on mobile
+  React.useEffect(() => {
+    if (isOpen && confirmButtonRef.current) {
+      // Small delay to ensure popover is rendered
+      const timer = setTimeout(() => {
+        confirmButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
-      // Don't auto-update parent, wait for confirmation
+      // Scroll to confirm button after date selection on mobile
+      setTimeout(() => {
+        confirmButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
     }
   };
 
@@ -125,10 +140,12 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-auto p-0 bg-popover border-border z-[100] max-h-[70vh] overflow-auto" 
+        className="w-auto p-0 bg-popover border-border z-[100] max-h-[80vh] overflow-auto" 
         align="start"
+        side="bottom"
         sideOffset={4}
-        collisionPadding={16}
+        collisionPadding={{ top: 16, bottom: 16, left: 8, right: 8 }}
+        avoidCollisions={true}
       >
         <div className="flex flex-col sm:flex-row">
           <Calendar
@@ -195,6 +212,7 @@ export function DateTimePicker({
             </div>
             
             <Button 
+              ref={confirmButtonRef}
               size="sm" 
               className="w-full"
               onClick={handleConfirm}
