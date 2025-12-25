@@ -86,7 +86,6 @@ const drinkEntrySchema = z.object({
   amount_container_count: z.number().positive().max(100).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
   drink_item_id: z.string().uuid().optional().nullable(),
-  amount: z.enum(['little', 'ok', 'lots']).optional().nullable(),
 });
 
 const coffeeEntrySchema = z.object({
@@ -106,7 +105,6 @@ const coffeeEntrySchema = z.object({
   ]).optional().nullable(),
   milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
-  after_16: z.boolean().default(false),
 });
 
 const requestSchema = z.object({

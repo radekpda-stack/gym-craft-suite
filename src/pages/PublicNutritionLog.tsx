@@ -726,9 +726,6 @@ function CoffeeEntryCard({ entry, language }: { entry: any; language: Language }
           <p className="font-medium">{entry.coffee_type}{entry.count > 1 ? ` ×${entry.count}` : ''}</p>
           <p className="text-xs text-muted-foreground">
             {entry.entry_time?.slice(0, 5)}
-            {entry.after_16 && (
-              <span className="ml-2 text-amber-600">• {language === 'cs' ? 'po 16:00' : 'after 4PM'}</span>
-            )}
           </p>
         </div>
       </CardContent>
@@ -809,8 +806,8 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
 
       {/* Time */}
       <div>
-        <Label className="text-sm text-muted-foreground">{t.cs.mealType === tr.mealType ? 'Čas' : 'Time'}</Label>
-        <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="mt-1" />
+        <Label className="text-sm text-muted-foreground mb-2 block">{language === 'cs' ? 'Čas' : 'Time'}</Label>
+        <TimeSelect value={time} onChange={setTime} language={language} />
       </div>
 
       {/* What did you eat */}
@@ -940,6 +937,43 @@ function FoodForm({ onSave, onBack, language }: { onSave: (data: any) => void; o
   );
 }
 
+// Time picker with half-hour intervals
+function TimeSelect({ value, onChange, language }: { value: string; onChange: (v: string) => void; language: Language }) {
+  const times: string[] = [];
+  for (let h = 5; h <= 23; h++) {
+    times.push(`${h.toString().padStart(2, '0')}:00`);
+    times.push(`${h.toString().padStart(2, '0')}:30`);
+  }
+  times.push('00:00');
+
+  // Find closest time slot
+  const currentHour = parseInt(value.split(':')[0]);
+  const currentMin = parseInt(value.split(':')[1]);
+  const roundedMin = currentMin < 15 ? '00' : currentMin < 45 ? '30' : '00';
+  const roundedHour = currentMin >= 45 ? (currentHour + 1) % 24 : currentHour;
+  const selectedTime = `${roundedHour.toString().padStart(2, '0')}:${roundedMin}`;
+
+  return (
+    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
+      {times.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={cn(
+            "px-2.5 py-1.5 text-sm rounded-lg border transition-all",
+            (value === t || selectedTime === t)
+              ? "border-primary bg-primary text-primary-foreground font-medium"
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // SIMPLIFIED DRINK FORM
 function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; onBack: () => void; language: Language }) {
   const tr = t[language];
@@ -954,8 +988,7 @@ function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; 
       await onSave({
         entry_time: time,
         drink_type: drinkType,
-        amount,
-        // Convert to ml estimate for data
+        // Convert amount to ml estimate for DB - don't send 'amount' field
         amount_ml: amount === 'little' ? 200 : amount === 'lots' ? 500 : 300,
       });
     } finally {
@@ -976,6 +1009,12 @@ function DrinkForm({ onSave, onBack, language }: { onSave: (data: any) => void; 
           {tr.drink}
         </DialogTitle>
       </DialogHeader>
+
+      {/* Time */}
+      <div>
+        <Label className="text-sm text-muted-foreground mb-2 block">{language === 'cs' ? 'Čas' : 'Time'}</Label>
+        <TimeSelect value={time} onChange={setTime} language={language} />
+      </div>
 
       {/* Drink Type */}
       <div>
@@ -1047,14 +1086,7 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
   const [coffeeType, setCoffeeType] = useState('espresso');
   const [count, setCount] = useState<'1' | '2' | '3+'>('1');
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
-  const [after16, setAfter16] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Auto-detect if current time is after 16:00
-  useEffect(() => {
-    const hour = parseInt(time.split(':')[0]);
-    setAfter16(hour >= 16);
-  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -1063,7 +1095,6 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
         entry_time: time,
         coffee_type: coffeeType,
         count: count === '3+' ? 3 : parseInt(count),
-        after_16: after16,
       });
     } finally {
       setIsSaving(false);
@@ -1083,6 +1114,12 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
           {tr.coffee}
         </DialogTitle>
       </DialogHeader>
+
+      {/* Time */}
+      <div>
+        <Label className="text-sm text-muted-foreground mb-2 block">{language === 'cs' ? 'Čas' : 'Time'}</Label>
+        <TimeSelect value={time} onChange={setTime} language={language} />
+      </div>
 
       {/* Coffee Type */}
       <div>
@@ -1129,25 +1166,6 @@ function CoffeeForm({ onSave, onBack, language }: { onSave: (data: any) => void;
               {c}
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* After 16:00 checkbox */}
-      <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30">
-        <button
-          onClick={() => setAfter16(!after16)}
-          className={cn(
-            "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
-            after16 
-              ? "border-amber-600 bg-amber-600 text-white" 
-              : "border-border hover:border-amber-600/50"
-          )}
-        >
-          {after16 && <Check className="h-4 w-4" />}
-        </button>
-        <div>
-          <p className="text-sm font-medium">{language === 'cs' ? 'Po 16:00' : 'After 4 PM'}</p>
-          <p className="text-xs text-muted-foreground">{language === 'cs' ? 'Káva po 16. hodině' : 'Coffee after 4 PM'}</p>
         </div>
       </div>
 
