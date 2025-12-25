@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       });
 
     } else {
-      // Create new auth user
+      // Try to create new auth user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: client.email,
         password,
@@ -166,21 +166,66 @@ Deno.serve(async (req) => {
       if (createError) {
         console.error('User creation error:', createError);
         
-        // Check if user already exists
-        if (createError.message?.includes('already been registered')) {
+        // Check if user already exists - try to link existing user
+        if (createError.message?.includes('already been registered') || createError.code === 'email_exists') {
+          console.log('Email already exists, attempting to find and link existing user');
+          
+          // Find existing user by email
+          const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+          
+          if (listError) {
+            console.error('Error listing users:', listError);
+            return new Response(
+              JSON.stringify({ error: 'Nepodařilo se najít existujícího uživatele' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const existingUser = existingUsers.users.find(u => u.email?.toLowerCase() === client.email.toLowerCase());
+          
+          if (!existingUser) {
+            console.error('Could not find existing user by email');
+            return new Response(
+              JSON.stringify({ error: 'Email existuje, ale uživatel nebyl nalezen' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          // Reset password for existing user
+          const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            existingUser.id,
+            { 
+              password,
+              user_metadata: {
+                ...existingUser.user_metadata,
+                is_client: true,
+                client_id: client_id,
+                trainer_id: trainer.id,
+              }
+            }
+          );
+
+          if (updateError) {
+            console.error('Password update error for existing user:', updateError);
+            return new Response(
+              JSON.stringify({ error: 'Nepodařilo se aktualizovat heslo existujícího uživatele' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          authUserId = existingUser.id;
+          console.log('Linked existing auth user:', authUserId);
+          
+        } else {
           return new Response(
-            JSON.stringify({ error: 'Tento email je již registrován v systému' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Nepodařilo se vytvořit účet' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
-        return new Response(
-          JSON.stringify({ error: 'Nepodařilo se vytvořit účet' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      } else {
+        authUserId = newUser.user.id;
       }
-
-      authUserId = newUser.user.id;
+      
       isNewAccount = true;
 
       // Upsert client_accounts
@@ -189,7 +234,7 @@ Deno.serve(async (req) => {
         .upsert({
           client_id: client_id,
           trainer_id: trainer.id,
-          user_id: authUserId, // This is the client's auth user id
+          user_id: authUserId,
           auth_user_id: authUserId,
           status: 'active',
           is_active: true,
@@ -202,8 +247,6 @@ Deno.serve(async (req) => {
 
       if (upsertError) {
         console.error('Upsert error:', upsertError);
-        // Try to clean up the created auth user
-        await supabaseAdmin.auth.admin.deleteUser(authUserId);
         return new Response(
           JSON.stringify({ error: 'Nepodařilo se vytvořit účet v databázi' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
