@@ -52,7 +52,7 @@ export default function ClientPortalAttendance() {
                         {format(parseISO(session.date), 'EEEE d. MMMM', { locale: cs })}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {session.time?.slice(0, 5)} • {session.duration ?? 60} min
+                        {session.duration ?? 60} min
                       </p>
                     </div>
                   </div>

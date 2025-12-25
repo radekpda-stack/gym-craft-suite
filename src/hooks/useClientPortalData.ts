@@ -89,11 +89,10 @@ export function useClientTrainingSessions(clientId: string | undefined, weeks = 
 
       const { data, error } = await supabase
         .from('training_sessions')
-        .select('id, date, time, duration, status, notes, type')
+        .select('id, date, duration, status, notes, training_type')
         .eq('client_id', clientId)
         .gte('date', startDate)
-        .order('date', { ascending: false })
-        .order('time', { ascending: false });
+        .order('date', { ascending: false });
 
       if (error) throw error;
       return data ?? [];
@@ -112,12 +111,11 @@ export function useClientNextTraining(clientId: string | undefined) {
 
       const { data, error } = await supabase
         .from('training_sessions')
-        .select('id, date, time, duration, status, notes, type')
+        .select('id, date, duration, status, notes, training_type')
         .eq('client_id', clientId)
         .gte('date', today)
         .eq('status', 'scheduled')
         .order('date', { ascending: true })
-        .order('time', { ascending: true })
         .limit(1)
         .maybeSingle();
 
