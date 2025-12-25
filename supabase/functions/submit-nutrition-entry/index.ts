@@ -52,12 +52,16 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX_REQUESTS;
 }
 
-// Validation schemas for each entry type
+// Time format validation: HH:MM (always 2 digits)
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+// Validation schemas for each entry type - SIMPLIFIED for public form
 const foodEntrySchema = z.object({
   description: z.string().min(1, "Description required").max(500, "Description too long"),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
-  entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
-  meal_type: z.enum(['breakfast', 'snack_am', 'lunch', 'snack_pm', 'dinner', 'snack']).optional().nullable(),
+  entry_time: z.string().regex(timeRegex, "Time must be HH:MM format").optional(),
+  // Simplified to 4 types only
+  meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional().nullable(),
   portion_mode: z.enum(['grams', 'portion', 'portion_size', 'units']),
   portion_size: z.enum(['small', 'medium', 'large']).optional().nullable(),
   portion_estimate: z.enum(['palm', 'fist', 'handful', 'thumb']).optional().nullable(),
@@ -66,35 +70,30 @@ const foodEntrySchema = z.object({
   units_label: z.string().max(50).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
   photo_url: z.string().url().max(500).optional().nullable(),
-  food_item_id: z.string().uuid().optional().nullable(),
   quality: z.enum(['good', 'normal', 'poor']).optional().nullable(),
   satiation: z.enum(['just_right', 'still_hungry', 'overate']).optional().nullable(),
   feeling_after: z.enum(['ok', 'heavy', 'bloated', 'sweet', 'low_energy', 'high_energy']).optional().nullable(),
   energy_after: z.enum(['low', 'normal', 'high']).optional().nullable(),
+  client_request_id: z.string().uuid().optional(),
 });
 
 const drinkEntrySchema = z.object({
-  drink_type: z.enum([
-    'water', 'mineral', 'sparkling', 'tea', 'juice', 'cola', 'soda', 
-    'sports', 'alcohol', 'smoothie', 'milk', 'sugary', 'other'
-  ]),
+  // Simplified to 4 types for public form
+  drink_type: z.enum(['water', 'sugary', 'sports', 'alcohol']),
   drink_name: z.string().max(100).optional().nullable(),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
-  entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
+  entry_time: z.string().regex(timeRegex, "Time must be HH:MM format").optional(),
   amount_ml: z.number().int().positive().max(10000).optional().nullable(),
   amount_container_type: z.enum(['small_glass', 'large_glass', 'glass', 'mug', 'bottle', 'can']).optional().nullable(),
   amount_container_count: z.number().positive().max(100).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
-  drink_item_id: z.string().uuid().optional().nullable(),
+  client_request_id: z.string().uuid().optional(),
 });
 
 const coffeeEntrySchema = z.object({
-  coffee_type: z.enum([
-    'small_espresso', 'large_espresso', 'espresso', 'lungo', 'americano', 
-    'latte', 'cappuccino', 'flat_white', 'filter', 'instant', 'decaf', 'energy', 'other'
-  ]),
+  coffee_type: z.enum(['espresso', 'cappuccino', 'energy', 'other']),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
-  entry_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format").optional(),
+  entry_time: z.string().regex(timeRegex, "Time must be HH:MM format").optional(),
   count: z.number().int().positive().max(20).default(1),
   sugar: z.boolean().default(false),
   sugar_spoons: z.number().int().min(0).max(10).default(0),
@@ -105,11 +104,14 @@ const coffeeEntrySchema = z.object({
   ]).optional().nullable(),
   milk_type: z.enum(['cow', 'oat', 'almond', 'soy', 'coconut']).optional().nullable(),
   note: z.string().max(500).optional().nullable(),
+  client_request_id: z.string().uuid().optional(),
 });
 
 const requestSchema = z.object({
   token: z.string().uuid("Invalid token format"),
   type: z.enum(['food', 'drink', 'coffee']),
+  action: z.enum(['create', 'update', 'delete']).default('create'),
+  entry_id: z.string().uuid().optional(), // Required for update/delete
   entry: z.unknown(),
 });
 
@@ -136,7 +138,7 @@ serve(async (req) => {
 
     // Parse and validate base request
     const rawBody = await req.json();
-    console.log('Received request type:', rawBody?.type);
+    console.log('Received request:', { type: rawBody?.type, action: rawBody?.action });
     
     const baseResult = requestSchema.safeParse(rawBody);
     
@@ -156,9 +158,104 @@ serve(async (req) => {
       ));
     }
 
-    const { token, type, entry } = baseResult.data;
+    const { token, type, action, entry_id, entry } = baseResult.data;
 
-    // Validate entry based on type
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    console.log(`Verifying token: ${token.substring(0, 8)}...`);
+
+    // Verify token and get session
+    const { data: session, error: sessionError } = await supabase
+      .from('nutrition_log_sessions')
+      .select('*')
+      .eq('token', token)
+      .single();
+
+    if (sessionError || !session) {
+      console.warn(`Invalid token attempt: ${token.substring(0, 8)}...`);
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Invalid token', code: 'NOT_FOUND' }), 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
+    }
+
+    if (session.status === 'completed') {
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ error: 'Session completed', code: 'SESSION_COMPLETED' }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
+    }
+
+    const tableName = type === 'food' 
+      ? 'nutrition_food_entries' 
+      : type === 'drink' 
+        ? 'nutrition_drink_entries' 
+        : 'nutrition_coffee_entries';
+
+    // Handle DELETE action
+    if (action === 'delete') {
+      if (!entry_id) {
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'entry_id required for delete', code: 'VALIDATION_ERROR' }), 
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
+
+      // Verify entry belongs to this session
+      const { data: existing, error: findError } = await supabase
+        .from(tableName)
+        .select('id, session_id')
+        .eq('id', entry_id)
+        .eq('session_id', session.id)
+        .single();
+
+      if (findError || !existing) {
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'Entry not found', code: 'NOT_FOUND' }), 
+          {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
+
+      const { error: deleteError } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', entry_id);
+
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'Failed to delete entry', code: 'DELETE_ERROR' }), 
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
+
+      console.log(`Deleted ${type} entry ${entry_id} from session ${session.id}`);
+      return await normalizeResponseTime(startTime, new Response(
+        JSON.stringify({ success: true, deleted: true }), 
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      ));
+    }
+
+    // Validate entry based on type (for create/update)
     let validatedEntry: z.infer<typeof foodEntrySchema> | z.infer<typeof drinkEntrySchema> | z.infer<typeof coffeeEntrySchema>;
     
     switch (type) {
@@ -224,56 +321,90 @@ serve(async (req) => {
       }
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Handle UPDATE action
+    if (action === 'update') {
+      if (!entry_id) {
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'entry_id required for update', code: 'VALIDATION_ERROR' }), 
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
 
-    console.log(`Verifying token: ${token.substring(0, 8)}...`);
+      // Verify entry belongs to this session
+      const { data: existing, error: findError } = await supabase
+        .from(tableName)
+        .select('id, session_id')
+        .eq('id', entry_id)
+        .eq('session_id', session.id)
+        .single();
 
-    // Verify token and get session
-    const { data: session, error: sessionError } = await supabase
-      .from('nutrition_log_sessions')
-      .select('*')
-      .eq('token', token)
-      .single();
+      if (findError || !existing) {
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'Entry not found', code: 'NOT_FOUND' }), 
+          {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
 
-    if (sessionError || !session) {
-      console.warn(`Invalid token attempt: ${token.substring(0, 8)}...`);
+      const { data, error } = await supabase
+        .from(tableName)
+        .update(validatedEntry)
+        .eq('id', entry_id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Update error:', error);
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ error: 'Failed to update entry', code: 'UPDATE_ERROR' }), 
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
+
+      console.log(`Updated ${type} entry ${entry_id} in session ${session.id}`);
       return await normalizeResponseTime(startTime, new Response(
-        JSON.stringify({ error: 'Invalid token', code: 'NOT_FOUND' }), 
+        JSON.stringify({ success: true, entry: data, updated: true }), 
         {
-          status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       ));
     }
 
-    if (session.status === 'completed') {
-      return await normalizeResponseTime(startTime, new Response(
-        JSON.stringify({ error: 'Session completed', code: 'SESSION_COMPLETED' }), 
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      ));
+    // Handle CREATE action (default)
+    const clientRequestId = (validatedEntry as any).client_request_id;
+    
+    // Check for idempotency - if client_request_id exists, check for duplicate
+    if (clientRequestId) {
+      const { data: existingEntry } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('session_id', session.id)
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle();
+
+      if (existingEntry) {
+        console.log(`Duplicate request detected, returning existing entry ${existingEntry.id}`);
+        return await normalizeResponseTime(startTime, new Response(
+          JSON.stringify({ success: true, entry: existingEntry, duplicate: true }), 
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        ));
+      }
     }
-
-    // Insert validated entry based on type
-    const tableName = type === 'food' 
-      ? 'nutrition_food_entries' 
-      : type === 'drink' 
-        ? 'nutrition_drink_entries' 
-        : 'nutrition_coffee_entries';
-
-    // Remove food_item_id and drink_item_id from the insert if they exist (not in DB yet)
-    const entryToInsert = { ...validatedEntry };
-    delete (entryToInsert as any).food_item_id;
-    delete (entryToInsert as any).drink_item_id;
 
     const { data, error } = await supabase
       .from(tableName)
       .insert({
-        ...entryToInsert,
+        ...validatedEntry,
         session_id: session.id,
         client_id: session.client_id,
       })
@@ -281,6 +412,26 @@ serve(async (req) => {
       .single();
 
     if (error) {
+      // Check if it's a unique constraint violation (idempotency)
+      if (error.code === '23505' && clientRequestId) {
+        // Race condition - entry was created by another request
+        const { data: existingEntry } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('session_id', session.id)
+          .eq('client_request_id', clientRequestId)
+          .single();
+
+        if (existingEntry) {
+          return await normalizeResponseTime(startTime, new Response(
+            JSON.stringify({ success: true, entry: existingEntry, duplicate: true }), 
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          ));
+        }
+      }
+
       console.error('Insert error:', error);
       return await normalizeResponseTime(startTime, new Response(
         JSON.stringify({ error: 'Failed to save entry', code: 'SAVE_ERROR' }), 

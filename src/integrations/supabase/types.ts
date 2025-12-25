@@ -2659,6 +2659,7 @@ export type Database = {
         Row: {
           after_16: boolean | null
           client_id: string
+          client_request_id: string | null
           coffee_type: string
           count: number
           created_at: string
@@ -2675,6 +2676,7 @@ export type Database = {
         Insert: {
           after_16?: boolean | null
           client_id: string
+          client_request_id?: string | null
           coffee_type: string
           count?: number
           created_at?: string
@@ -2691,6 +2693,7 @@ export type Database = {
         Update: {
           after_16?: boolean | null
           client_id?: string
+          client_request_id?: string | null
           coffee_type?: string
           count?: number
           created_at?: string
@@ -2877,6 +2880,7 @@ export type Database = {
           amount_container_type: string | null
           amount_ml: number | null
           client_id: string
+          client_request_id: string | null
           created_at: string
           drink_name: string | null
           drink_type: string
@@ -2892,6 +2896,7 @@ export type Database = {
           amount_container_type?: string | null
           amount_ml?: number | null
           client_id: string
+          client_request_id?: string | null
           created_at?: string
           drink_name?: string | null
           drink_type: string
@@ -2907,6 +2912,7 @@ export type Database = {
           amount_container_type?: string | null
           amount_ml?: number | null
           client_id?: string
+          client_request_id?: string | null
           created_at?: string
           drink_name?: string | null
           drink_type?: string
@@ -2978,6 +2984,7 @@ export type Database = {
           calorie_estimate_high: number | null
           calorie_estimate_low: number | null
           client_id: string
+          client_request_id: string | null
           created_at: string
           description: string
           energy_after: string | null
@@ -3003,6 +3010,7 @@ export type Database = {
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
           client_id: string
+          client_request_id?: string | null
           created_at?: string
           description: string
           energy_after?: string | null
@@ -3028,6 +3036,7 @@ export type Database = {
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
           client_id?: string
+          client_request_id?: string | null
           created_at?: string
           description?: string
           energy_after?: string | null
