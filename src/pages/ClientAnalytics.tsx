@@ -261,17 +261,21 @@ export default function ClientAnalytics() {
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Nepodařilo se načíst data</p>
         </Card>
+      ) : !data ? (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Žádná data k zobrazení</p>
+        </Card>
       ) : (
         <div className="space-y-6">
           {!filters.comparisonMode && (
             <>
               <ClientAnalyticsMainCard 
-                data={data!} 
+                data={data} 
                 onShowDetail={() => setShowDetail(true)} 
               />
               {showDetail && (
                 <ClientAnalyticsDetailView 
-                  data={data!} 
+                  data={data} 
                   onClose={() => setShowDetail(false)} 
                 />
               )}
