@@ -1,32 +1,30 @@
 import { useState } from 'react';
 import {
+  User,
+  Globe,
+  Building2,
+  KeyRound,
+  Calendar,
+  Clock,
+  Users,
   CreditCard,
   Package,
-  Tag,
-  Dumbbell,
-  Globe,
-  MessageSquare,
-  Building2,
-  BarChart2,
-  Gauge,
-  FileBarChart2,
-  User,
   Wallet,
-  BookOpen,
-  Wrench,
-  Users,
-  Calendar,
-  Download,
-  Shield,
-  RefreshCw,
-  KeyRound,
-  ClipboardList,
+  MessageSquare,
   UtensilsCrossed,
   Stethoscope,
+  BookOpen,
+  Dumbbell,
+  Tag,
+  Wrench,
+  RefreshCw,
+  Download,
+  BarChart2,
+  Shield,
   UserCog,
 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
+import { SettingsSection } from '@/components/settings/SettingsSection';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
@@ -35,7 +33,6 @@ import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
-import { AnnualStatsExport } from '@/components/settings/AnnualStatsExport';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
 import { DataExport } from '@/components/settings/DataExport';
@@ -47,362 +44,395 @@ import { DiagnosticQuestionnaireSettings } from '@/components/settings/Diagnosti
 import { UserManagementSettings } from '@/components/settings/UserManagementSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-interface SettingsSection {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  content: React.ReactNode;
-}
-
-interface SettingsCategory {
-  id: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconColor: string;
-  sections: SettingsSection[];
-}
-
 export default function Settings() {
   usePageTracking('settings');
   const { language, setLanguage, t } = useLanguage();
-  const isMobile = useIsMobile();
   const { data: isAdmin } = useIsAdmin();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeCategory, setActiveCategory] = useState('account');
 
-  // Check if current user is the owner (radek.pda@gmail.com)
   const isOwner = user?.email === 'radek.pda@gmail.com';
 
   const categories: SettingsCategory[] = [
-    // 1. PROFIL
     {
-      id: 'profile',
-      title: language === 'cs' ? 'Profil' : 'Profile',
+      id: 'account',
+      title: language === 'cs' ? 'Účet & Identita' : 'Account & Identity',
+      description: language === 'cs' 
+        ? 'Osobní nastavení, přihlášení a firemní údaje' 
+        : 'Personal settings, login and company details',
       icon: User,
       iconColor: 'text-blue-500',
-      sections: [
-        {
-          id: 'language',
-          title: t.settings.language,
-          description: t.settings.languageDesc,
-          icon: Globe,
-          content: (
-            <div className="flex gap-3">
-              <button
-                onClick={() => setLanguage('cs')}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
-                  language === 'cs'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'glass-subtle hover:bg-secondary/50 text-foreground'
-                )}
-              >
-                <span className="text-lg">🇨🇿</span>
-                <span className="font-medium">{t.settings.languageCzech}</span>
-              </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
-                  language === 'en'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'glass-subtle hover:bg-secondary/50 text-foreground'
-                )}
-              >
-                <span className="text-lg">🇬🇧</span>
-                <span className="font-medium">{t.settings.languageEnglish}</span>
-              </button>
-            </div>
-          ),
-        },
-        {
-          id: 'company',
-          title: language === 'cs' ? 'Firemní profil' : 'Company Profile',
-          description: language === 'cs' ? 'Údaje pro hlavičku PDF výpisů' : 'Details for PDF statement headers',
-          icon: Building2,
-          content: <CompanyProfileSettings />,
-        },
-        {
-          id: 'password',
-          title: language === 'cs' ? 'Změna hesla' : 'Change Password',
-          description: language === 'cs' ? 'Změňte si přístupové heslo k účtu' : 'Change your account password',
-          icon: KeyRound,
-          content: <PasswordChangeSettings />,
-        },
-      ],
     },
-    // 2. TRÉNINKY
     {
-      id: 'training',
-      title: language === 'cs' ? 'Tréninky' : 'Trainings',
-      icon: Dumbbell,
+      id: 'operations',
+      title: language === 'cs' ? 'Provoz & Kalendář' : 'Operations & Calendar',
+      description: language === 'cs' 
+        ? 'Pracovní doba a sdílení kalendáře' 
+        : 'Working hours and calendar sharing',
+      icon: Calendar,
       iconColor: 'text-green-500',
-      sections: [
-        {
-          id: 'prices',
-          title: t.settings.prices,
-          description: t.settings.pricesDesc,
-          icon: CreditCard,
-          content: <TrainingPricesSettings />,
-        },
-        {
-          id: 'capacity',
-          title: language === 'cs' ? 'Pracovní doba (pro přehled)' : 'Working Hours (for overview)',
-          description: language === 'cs' ? 'Používá se pro přehled v kalendáři' : 'Used for calendar overview',
-          icon: Gauge,
-          content: <CapacitySettingsPanel />,
-        },
-        {
-          id: 'calendar-sharing',
-          title: language === 'cs' ? 'Sdílení kalendáře' : 'Calendar Sharing',
-          description: language === 'cs' ? 'Pozvěte jiné trenéry k zobrazení vašeho kalendáře' : 'Invite other trainers to view your calendar',
-          icon: Calendar,
-          content: <CalendarSharingSettings />,
-        },
-      ],
     },
-    // 3. KLIENTI A FINANCE
     {
-      id: 'clients',
-      title: language === 'cs' ? 'Klienti a Finance' : 'Clients & Finance',
-      icon: Users,
+      id: 'services',
+      title: language === 'cs' ? 'Služby & Ceny' : 'Services & Pricing',
+      description: language === 'cs' 
+        ? 'Ceník, balíčky a kreditové prahy' 
+        : 'Pricing, packages and credit thresholds',
+      icon: CreditCard,
       iconColor: 'text-amber-500',
-      sections: [
-        {
-          id: 'packages',
-          title: language === 'cs' ? 'Tréninkové balíčky' : 'Training Packages',
-          description: language === 'cs' ? 'Definice předplacených balíčků tréninků' : 'Define prepaid training packages',
-          icon: Package,
-          content: <PackagesManagement />,
-        },
-        {
-          id: 'credit-thresholds',
-          title: language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds',
-          description: language === 'cs' ? 'Nastavení prahů pro upozornění na nízký kredit' : 'Configure low credit alert thresholds',
-          icon: Wallet,
-          content: <CreditThresholdSettings />,
-        },
-      ],
     },
-    // 4. DOTAZNÍKY
     {
       id: 'questionnaires',
-      title: language === 'cs' ? 'Dotazníky' : 'Questionnaires',
-      icon: ClipboardList,
+      title: language === 'cs' ? 'Klientská data & Dotazníky' : 'Client Data & Questionnaires',
+      description: language === 'cs' 
+        ? 'Formuláře pro sběr dat od klientů' 
+        : 'Forms for collecting client data',
+      icon: MessageSquare,
       iconColor: 'text-cyan-500',
-      sections: [
-        {
-          id: 'feedback-settings',
-          title: language === 'cs' ? 'Feedbackový dotazník' : 'Feedback Questionnaire',
-          description: language === 'cs' ? 'Otázky a nastavení po-tréninkového feedbacku' : 'Post-training feedback questions and settings',
-          icon: MessageSquare,
-          content: <FeedbackSettings />,
-        },
-        {
-          id: 'nutrition-questionnaire',
-          title: language === 'cs' ? 'Jídelní deník' : 'Food Diary',
-          description: language === 'cs' ? 'Nastavení a texty nutričního dotazníku' : 'Nutrition questionnaire settings and texts',
-          icon: UtensilsCrossed,
-          content: <NutritionQuestionnaireSettings />,
-        },
-        {
-          id: 'diagnostic-questionnaire',
-          title: language === 'cs' ? 'Vstupní diagnostika' : 'Intake Diagnostic',
-          description: language === 'cs' ? 'Sekce a otázky vstupního dotazníku' : 'Intake questionnaire sections and questions',
-          icon: Stethoscope,
-          content: <DiagnosticQuestionnaireSettings />,
-        },
-      ],
     },
-    // 5. KNIHOVNY
     {
-      id: 'libraries',
-      title: language === 'cs' ? 'Knihovny' : 'Libraries',
+      id: 'content',
+      title: language === 'cs' ? 'Obsah & Knihovny' : 'Content & Libraries',
+      description: language === 'cs' 
+        ? 'Cviky, štítky a další obsah' 
+        : 'Exercises, tags and other content',
       icon: BookOpen,
       iconColor: 'text-purple-500',
-      sections: [
-        {
-          id: 'exercises',
-          title: t.settings.exercises,
-          description: t.settings.exercisesDesc,
-          icon: Dumbbell,
-          content: <ExercisesManagement />,
-        },
-        {
-          id: 'tags',
-          title: t.settings.tags,
-          description: t.settings.tagsDesc,
-          icon: Tag,
-          content: <TagsManagement />,
-        },
-      ],
     },
-    // 6. POKROČILÉ
     {
-      id: 'advanced',
-      title: language === 'cs' ? 'Pokročilé' : 'Advanced',
+      id: 'system',
+      title: language === 'cs' ? 'Systém & Data' : 'System & Data',
+      description: language === 'cs' 
+        ? 'Export, synchronizace a technické funkce' 
+        : 'Export, sync and technical functions',
       icon: Wrench,
       iconColor: 'text-rose-500',
-      sections: [
-        {
-          id: 'app-refresh',
-          title: language === 'cs' ? 'Obnovení aplikace' : 'App Refresh',
-          description: language === 'cs' ? 'Vynutit obnovení dat a vyčištění cache' : 'Force data refresh and cache clearing',
-          icon: RefreshCw,
-          content: <AppRefreshSettings />,
-        },
-        {
-          id: 'data-export',
-          title: language === 'cs' ? 'Export dat' : 'Data Export',
-          description: language === 'cs' ? 'Export všech dat pro analýzu nebo zálohu' : 'Export all data for analysis or backup',
-          icon: Download,
-          content: <DataExport />,
-        },
-        // Feature usage stats - only visible for admin
-        ...(isAdmin ? [{
-          id: 'feature-usage',
-          title: language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics',
-          description: language === 'cs' ? 'Analýza využívání funkcí aplikace od všech uživatelů' : 'App feature usage analytics from all users',
-          icon: BarChart2,
-          content: <FeatureUsageStats />,
-        }] : []),
-        // Admin analytics export - only visible for owner
-        ...(isOwner ? [{
-          id: 'admin-analytics',
-          title: language === 'cs' ? 'Analytický export (Admin)' : 'Analytics Export (Admin)',
-          description: language === 'cs' ? 'Anonymizovaný export využití aplikace pro AI analýzu' : 'Anonymized app usage export for AI analysis',
-          icon: Shield,
-          content: <AdminAnalyticsExport />,
-        }] : []),
-      ],
     },
-    // 7. ADMINISTRACE (only for admins)
-    ...(isAdmin ? [{
+    {
       id: 'admin',
       title: language === 'cs' ? 'Administrace' : 'Administration',
+      description: language === 'cs' 
+        ? 'Správa uživatelů a přístupů' 
+        : 'User and access management',
       icon: Shield,
       iconColor: 'text-red-500',
-      sections: [
-        {
-          id: 'user-management',
-          title: language === 'cs' ? 'Správa uživatelů' : 'User Management',
-          description: language === 'cs' ? 'Schvalování a správa přístupů uživatelů' : 'User approvals and access management',
-          icon: UserCog,
-          content: <UserManagementSettings />,
-        },
-      ],
-    }] : []),
+      badge: 'Admin',
+      hidden: !isAdmin,
+    },
   ];
 
-  const renderSection = (section: SettingsSection) => (
-    <div key={section.id} className="glass rounded-xl p-4 sm:p-5">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
-          <section.icon className="w-5 h-5" />
-        </div>
-        <div className="min-w-0">
-          <h3 className="font-semibold text-foreground">{section.title}</h3>
-          <p className="text-sm text-muted-foreground">{section.description}</p>
-        </div>
-      </div>
-      {section.content}
-    </div>
-  );
-
-  // Mobile: Accordion layout
-  if (isMobile) {
-    return (
-      <div className="space-y-4 animate-fade-in pb-24">
-        <div>
-          <h1 className="page-title">{t.settings.title}</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t.settings.subtitle}
-          </p>
-        </div>
-
-        <Accordion type="single" collapsible className="space-y-2">
-          {categories.map((category) => (
-            <AccordionItem
-              key={category.id}
-              value={category.id}
-              className="glass rounded-xl border-0 overflow-hidden"
+  const renderContent = () => {
+    switch (activeCategory) {
+      case 'account':
+        return (
+          <>
+            <SettingsSection
+              title={t.settings.language}
+              description={language === 'cs' 
+                ? 'Jazyk rozhraní aplikace' 
+                : 'Application interface language'}
+              icon={Globe}
             >
-              <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-secondary/30">
-                <div className="flex items-center gap-3">
-                  <div className={cn('p-2 rounded-lg bg-secondary/50', category.iconColor)}>
-                    <category.icon className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground">{category.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {category.sections.length} {language === 'cs' ? 'položek' : 'items'}
-                    </p>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-3 pt-2">
-                  {category.sections.map(renderSection)}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-    );
-  }
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setLanguage('cs')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
+                    language === 'cs'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'glass-subtle hover:bg-secondary/50 text-foreground'
+                  )}
+                >
+                  <span className="text-lg">🇨🇿</span>
+                  <span className="font-medium">{t.settings.languageCzech}</span>
+                </button>
+                <button
+                  onClick={() => setLanguage('en')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all',
+                    language === 'en'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'glass-subtle hover:bg-secondary/50 text-foreground'
+                  )}
+                >
+                  <span className="text-lg">🇬🇧</span>
+                  <span className="font-medium">{t.settings.languageEnglish}</span>
+                </button>
+              </div>
+            </SettingsSection>
 
-  // Desktop: Tab layout
+            <SettingsSection
+              title={language === 'cs' ? 'Firemní profil' : 'Company Profile'}
+              description={language === 'cs' 
+                ? 'Údaje zobrazené na fakturách a výpisech' 
+                : 'Details shown on invoices and statements'}
+              icon={Building2}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Změny se projeví na všech nově generovaných dokumentech' 
+                  : 'Changes will apply to all newly generated documents'
+              }}
+            >
+              <CompanyProfileSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Změna hesla' : 'Change Password'}
+              description={language === 'cs' 
+                ? 'Aktualizujte přístupové heslo k účtu' 
+                : 'Update your account password'}
+              icon={KeyRound}
+            >
+              <PasswordChangeSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'operations':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Pracovní doba' : 'Working Hours'}
+              description={language === 'cs' 
+                ? 'Používá se pro přehled vytíženosti v kalendáři' 
+                : 'Used for capacity overview in calendar'}
+              icon={Clock}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Ovlivňuje pouze vizualizaci, ne skutečné plánování' 
+                  : 'Affects visualization only, not actual scheduling'
+              }}
+            >
+              <CapacitySettingsPanel />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Sdílení kalendáře' : 'Calendar Sharing'}
+              description={language === 'cs' 
+                ? 'Pozvěte jiné trenéry k zobrazení vašeho kalendáře' 
+                : 'Invite other trainers to view your calendar'}
+              icon={Users}
+            >
+              <CalendarSharingSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'services':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Ceny tréninků' : 'Training Prices'}
+              description={language === 'cs' 
+                ? 'Základní ceny podle počtu účastníků' 
+                : 'Base prices by participant count'}
+              icon={CreditCard}
+              impact={{
+                type: 'warning',
+                message: language === 'cs' 
+                  ? 'Změny cen ovlivní pouze NOVÉ tréninky. Existující záznamy zůstanou beze změny.' 
+                  : 'Price changes affect only NEW trainings. Existing records remain unchanged.'
+              }}
+            >
+              <TrainingPricesSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Tréninkové balíčky' : 'Training Packages'}
+              description={language === 'cs' 
+                ? 'Předplacené balíčky pro klienty' 
+                : 'Prepaid packages for clients'}
+              icon={Package}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Změny se projeví při nákupu nových balíčků' 
+                  : 'Changes apply when purchasing new packages'
+              }}
+            >
+              <PackagesManagement />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds'}
+              description={language === 'cs' 
+                ? 'Upozornění na nízký kredit klienta' 
+                : 'Low credit alerts for clients'}
+              icon={Wallet}
+            >
+              <CreditThresholdSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'questionnaires':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Feedbackový dotazník' : 'Feedback Questionnaire'}
+              description={language === 'cs' 
+                ? 'Otázky zasílané klientům po tréninku' 
+                : 'Questions sent to clients after training'}
+              icon={MessageSquare}
+              impact={{
+                type: 'warning',
+                message: language === 'cs' 
+                  ? 'Změny se projeví pouze v NOVÝCH feedbackových žádostech' 
+                  : 'Changes apply only to NEW feedback requests'
+              }}
+            >
+              <FeedbackSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Jídelní deník' : 'Food Diary'}
+              description={language === 'cs' 
+                ? 'Nastavení a texty nutričního dotazníku' 
+                : 'Nutrition questionnaire settings and texts'}
+              icon={UtensilsCrossed}
+              impact={{
+                type: 'warning',
+                message: language === 'cs' 
+                  ? 'Změny se projeví v NOVÝCH kampaních. Aktivní kampaně zůstávají beze změny.' 
+                  : 'Changes apply to NEW campaigns. Active campaigns remain unchanged.'
+              }}
+            >
+              <NutritionQuestionnaireSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Vstupní diagnostika' : 'Intake Diagnostic'}
+              description={language === 'cs' 
+                ? 'Sekce a otázky vstupního dotazníku' 
+                : 'Intake questionnaire sections and questions'}
+              icon={Stethoscope}
+              impact={{
+                type: 'warning',
+                message: language === 'cs' 
+                  ? 'Změny ovlivní NOVÉ diagnostiky. Existující záznamy zůstávají.' 
+                  : 'Changes affect NEW diagnostics. Existing records remain.'
+              }}
+            >
+              <DiagnosticQuestionnaireSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'content':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
+              description={language === 'cs' 
+                ? 'Vlastní cviky a jejich kategorie' 
+                : 'Custom exercises and their categories'}
+              icon={Dumbbell}
+            >
+              <ExercisesManagement />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Štítky' : 'Tags'}
+              description={language === 'cs' 
+                ? 'Štítky pro kategorizaci klientů a tréninků' 
+                : 'Tags for categorizing clients and trainings'}
+              icon={Tag}
+            >
+              <TagsManagement />
+            </SettingsSection>
+          </>
+        );
+
+      case 'system':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Obnovení aplikace' : 'App Refresh'}
+              description={language === 'cs' 
+                ? 'Vynutit obnovení dat a vyčištění cache' 
+                : 'Force data refresh and cache clearing'}
+              icon={RefreshCw}
+            >
+              <AppRefreshSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Export dat' : 'Data Export'}
+              description={language === 'cs' 
+                ? 'Stáhněte všechna data pro zálohu nebo analýzu' 
+                : 'Download all data for backup or analysis'}
+              icon={Download}
+            >
+              <DataExport />
+            </SettingsSection>
+
+            {isAdmin && (
+              <SettingsSection
+                title={language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics'}
+                description={language === 'cs' 
+                  ? 'Analýza využívání funkcí všemi uživateli' 
+                  : 'Feature usage analytics from all users'}
+                icon={BarChart2}
+              >
+                <FeatureUsageStats />
+              </SettingsSection>
+            )}
+
+            {isOwner && (
+              <SettingsSection
+                title={language === 'cs' ? 'Analytický export' : 'Analytics Export'}
+                description={language === 'cs' 
+                  ? 'Anonymizovaný export pro AI analýzu' 
+                  : 'Anonymized export for AI analysis'}
+                icon={Shield}
+              >
+                <AdminAnalyticsExport />
+              </SettingsSection>
+            )}
+          </>
+        );
+
+      case 'admin':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Správa uživatelů' : 'User Management'}
+              description={language === 'cs' 
+                ? 'Schvalování nových uživatelů a správa přístupů' 
+                : 'Approve new users and manage access'}
+              icon={UserCog}
+              impact={{
+                type: 'warning',
+                message: language === 'cs' 
+                  ? 'Pozor: Změny přístupů se projeví okamžitě' 
+                  : 'Caution: Access changes take effect immediately'
+              }}
+            >
+              <UserManagementSettings />
+            </SettingsSection>
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl">
-      <div>
-        <h1 className="page-title-lg">{t.settings.title}</h1>
-        <p className="text-muted-foreground mt-1">
-          {t.settings.subtitle}
-        </p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full h-auto flex-wrap gap-1 p-1 bg-secondary/30 rounded-xl mb-6">
-          {categories.map((category) => (
-            <TabsTrigger
-              key={category.id}
-              value={category.id}
-              className="flex-1 min-w-[120px] gap-2 py-2.5 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
-            >
-              <category.icon className={cn('w-4 h-4', category.iconColor)} />
-              <span className="hidden lg:inline">{category.title}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {categories.map((category) => (
-          <TabsContent key={category.id} value={category.id} className="mt-0">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-6">
-                <div className={cn('p-3 rounded-xl bg-secondary/50', category.iconColor)}>
-                  <category.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground">{category.title}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {category.sections.length} {language === 'cs' ? 'nastavení v této kategorii' : 'settings in this category'}
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-4">
-                {category.sections.map(renderSection)}
-              </div>
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+    <SettingsLayout
+      categories={categories}
+      activeCategory={activeCategory}
+      onCategoryChange={setActiveCategory}
+      title={t.settings.title}
+      subtitle={t.settings.subtitle}
+    >
+      {renderContent()}
+    </SettingsLayout>
   );
 }
