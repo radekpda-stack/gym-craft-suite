@@ -83,7 +83,7 @@ export default function ClientPortalOverview() {
                     {format(parseISO(nextTraining.date), 'EEEE d. MMMM', { locale: cs })}
                   </p>
                   <p className="text-muted-foreground">
-                    {nextTraining.time?.slice(0, 5)} • {nextTraining.duration ?? 60} min
+                    {nextTraining.duration ?? 60} min
                   </p>
                 </div>
               </div>
@@ -114,8 +114,7 @@ export default function ClientPortalOverview() {
                   <div className={cn(
                     "w-12 h-12 rounded-full mx-auto flex items-center justify-center mb-2",
                     item.trend === 'up' && "bg-success/10",
-                    item.trend === 'stable' && "bg-muted",
-                    item.trend === 'down' && "bg-destructive/10"
+                    item.trend === 'stable' && "bg-muted"
                   )}>
                     <TrendIcon trend={item.trend} />
                   </div>
