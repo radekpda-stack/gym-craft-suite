@@ -164,8 +164,8 @@ async function fetchClientActivity(
     .select('id, date, duration')
     .eq('user_id', userId)
     .eq('client_id', clientId)
-    .gte('date', format(startDate, 'yyyy-MM-dd'))
-    .lte('date', format(endDate, 'yyyy-MM-dd'))
+    .gte('date', startDate.toISOString())
+    .lte('date', endDate.toISOString())
     .order('date', { ascending: true });
 
   if (error) throw error;
@@ -185,7 +185,9 @@ async function fetchClientActivity(
   const days = eachDayOfInterval({ start: startDate, end: endDate });
   const sessionsByDate = new Map<string, number>();
   sessions?.forEach(s => {
-    sessionsByDate.set(s.date, (sessionsByDate.get(s.date) || 0) + 1);
+    // Extract just the date part from timestamp
+    const dateStr = format(parseISO(s.date), 'yyyy-MM-dd');
+    sessionsByDate.set(dateStr, (sessionsByDate.get(dateStr) || 0) + 1);
   });
 
   const activityTrend = days.map(day => {
@@ -243,8 +245,8 @@ export function useClientAnalytics(filters: ClientAnalyticsFilters) {
         .from('training_sessions')
         .select('id, client_id, date')
         .eq('user_id', user.id)
-        .gte('date', format(start, 'yyyy-MM-dd'))
-        .lte('date', format(end, 'yyyy-MM-dd'));
+        .gte('date', start.toISOString())
+        .lte('date', end.toISOString());
 
       if (sessionsError) throw sessionsError;
 
@@ -287,10 +289,12 @@ export function useClientAnalytics(filters: ClientAnalyticsFilters) {
       const sessionsByDate = new Map<string, { clients: Set<string>; count: number }>();
       
       sessions?.forEach(s => {
-        const existing = sessionsByDate.get(s.date) || { clients: new Set(), count: 0 };
+        // Extract just the date part from timestamp
+        const dateStr = format(parseISO(s.date), 'yyyy-MM-dd');
+        const existing = sessionsByDate.get(dateStr) || { clients: new Set(), count: 0 };
         existing.clients.add(s.client_id);
         existing.count++;
-        sessionsByDate.set(s.date, existing);
+        sessionsByDate.set(dateStr, existing);
       });
 
       const clientActivityTrend = days.map(day => {

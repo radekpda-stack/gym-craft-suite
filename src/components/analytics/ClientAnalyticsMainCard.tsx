@@ -14,11 +14,22 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
     .filter((_, i) => i % 3 === 0)
     .map(d => ({ label: d.label, value: d.sessions }));
 
-  const distributionData = (data?.activityDistribution ?? []).map(d => ({
-    name: `${d.bucket} tréninků`,
-    value: d.count,
-    percentage: d.percentage,
-  }));
+  // Map activity distribution for donut chart - convert bucket names to readable labels
+  const bucketLabels: Record<string, string> = {
+    '0': 'Neaktivní',
+    '1-2': '1-2 tréninky',
+    '3-5': '3-5 tréninků',
+    '6-10': '6-10 tréninků',
+    '11+': '11+ tréninků',
+  };
+  
+  const distributionData = (data?.activityDistribution ?? [])
+    .filter(d => d.count > 0) // Only show buckets with clients
+    .map(d => ({
+      name: bucketLabels[d.bucket] || `${d.bucket} tréninků`,
+      value: d.count,
+      percentage: d.percentage,
+    }));
 
   const activeClientsCount = data?.activeClientsCount ?? 0;
   const totalClientsCount = data?.totalClientsCount ?? 0;
@@ -92,15 +103,21 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
               Rozložení aktivity
             </p>
             <p className="text-xs text-muted-foreground mb-3">
-              Klienti dle počtu tréninků
+              Kolik klientů má daný počet tréninků v tomto období
             </p>
-            <DistributionDonutChart
-              data={distributionData}
-              height={180}
-              innerRadius={40}
-              outerRadius={65}
-              legendLimit={4}
-            />
+            {distributionData.length > 0 ? (
+              <DistributionDonutChart
+                data={distributionData}
+                height={180}
+                innerRadius={40}
+                outerRadius={65}
+                legendLimit={5}
+              />
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
+                Žádná data k zobrazení
+              </div>
+            )}
           </div>
         </div>
 
