@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, memo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -11,9 +11,9 @@ import {
   Calendar,
   Settings,
   ChevronRight,
+  ChevronDown,
   Zap,
   LogOut,
-  // Sparkles, // Hidden - AI feature disabled
   TrendingUp,
   ShoppingBag,
   ClipboardList,
@@ -22,6 +22,9 @@ import {
   Utensils,
   FileText,
   LayoutTemplate,
+  Image,
+  FileQuestion,
+  PieChart,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -29,12 +32,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n';
 import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface NavItem {
   id: string;
   to: string;
   icon: LucideIcon;
   label: string;
+  children?: NavItem[];
 }
 
 interface NavSection {
@@ -50,10 +59,12 @@ const NavItemButton = memo(function NavItemButton({
   item, 
   isActive, 
   collapsed,
+  isChild = false,
 }: { 
   item: NavItem; 
   isActive: boolean; 
   collapsed: boolean;
+  isChild?: boolean;
 }) {
   const Icon = item.icon;
 
@@ -62,6 +73,7 @@ const NavItemButton = memo(function NavItemButton({
       to={item.to}
       className={cn(
         'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
+        isChild && !collapsed && 'pl-9',
         isActive
           ? 'bg-primary/10 text-primary'
           : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -81,6 +93,119 @@ const NavItemButton = memo(function NavItemButton({
         </span>
       )}
     </NavLink>
+  );
+});
+
+const NavItemExpandable = memo(function NavItemExpandable({
+  item,
+  collapsed,
+  isActive,
+  hasActiveChild,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  isActive: (to: string) => boolean;
+  hasActiveChild: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(hasActiveChild);
+  const Icon = item.icon;
+
+  // Auto-expand when child becomes active
+  if (hasActiveChild && !isOpen) {
+    setIsOpen(true);
+  }
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <NavLink
+            to={item.to}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
+              hasActiveChild
+                ? 'bg-primary/10 text-primary'
+                : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            )}
+          >
+            {hasActiveChild && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+            )}
+            <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
+          </NavLink>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="flex flex-col gap-1 p-2">
+          <span className="font-semibold text-xs mb-1">{item.label}</span>
+          {item.children?.map((child) => (
+            <NavLink
+              key={child.id}
+              to={child.to}
+              className={cn(
+                'flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
+                isActive(child.to)
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'hover:bg-accent'
+              )}
+            >
+              <child.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+              {child.label}
+            </NavLink>
+          ))}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
+          hasActiveChild
+            ? 'bg-primary/10 text-primary'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        )}
+      >
+        {hasActiveChild && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+        )}
+        <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
+        <span className="text-sm font-medium truncate flex-1 text-left">
+          {item.label}
+        </span>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-4 h-4 opacity-50" />
+        </motion.div>
+      </button>
+      
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-0.5 py-0.5">
+              {item.children?.map((child) => (
+                <NavItemButton
+                  key={child.id}
+                  item={child}
+                  isActive={isActive(child.to)}
+                  collapsed={collapsed}
+                  isChild
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 });
 
@@ -109,9 +234,21 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
 
-  // Define sections with items - OPTIMIZED STRUCTURE
-  const isAdminUser = user?.email === 'radek.pda@gmail.com';
-  
+  const isActive = (to: string) => {
+    return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+  };
+
+  // Check if any nutrition child is active
+  const hasActiveNutritionChild = [
+    '/nutrition',
+    '/nutrition/campaigns',
+    '/nutrition/template',
+    '/nutrition/questionnaires',
+    '/nutrition/infographics',
+    '/nutrition/analysis',
+  ].some(path => isActive(path));
+
+  // Define sections with items - consolidated Strava as expandable
   const sections: NavSection[] = [
     {
       label: 'Hlavní',
@@ -137,11 +274,21 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       ],
     },
     {
-      label: 'Strava',
       items: [
-        { id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Přehled' },
-        { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
-        { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
+        {
+          id: 'nutrition',
+          to: '/nutrition',
+          icon: Utensils,
+          label: 'Strava',
+          children: [
+            { id: 'nutrition-overview', to: '/nutrition', icon: LayoutDashboard, label: 'Přehled' },
+            { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
+            { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
+            { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
+            { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileQuestion, label: 'Dotazníky' },
+            { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: Image, label: 'Infografiky' },
+          ],
+        },
       ],
     },
     {
@@ -151,13 +298,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
       ],
     },
-    // AI section hidden for future use
-    // {
-    //   label: 'Nástroje',
-    //   items: [
-    //     { id: 'ai-assistant', to: '/ai-assistant', icon: Sparkles, label: t.nav.aiAssistant },
-    //   ],
-    // },
     {
       label: 'Systém',
       items: [
@@ -181,10 +321,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       });
       navigate('/auth', { replace: true });
     }
-  };
-
-  const isActive = (to: string) => {
-    return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   };
 
   // Notify parent about collapse state changes
@@ -256,14 +392,24 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
                 <SectionLabel label={section.label} collapsed={collapsed} />
               )}
               <div className="space-y-0.5">
-                {section.items.map((item) => (
+                {section.items.map((item) => 
+                  item.children ? (
+                    <NavItemExpandable
+                      key={item.id}
+                      item={item}
+                      collapsed={collapsed}
+                      isActive={isActive}
+                      hasActiveChild={hasActiveNutritionChild}
+                    />
+                  ) : (
                     <NavItemButton
                       key={item.id}
                       item={item}
                       isActive={isActive(item.to)}
                       collapsed={collapsed}
                     />
-                  ))}
+                  )
+                )}
               </div>
               {sectionIndex < sections.length - 1 && (
                 <Separator className="my-3 bg-sidebar-border/30" />
@@ -271,7 +417,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
             </motion.div>
           ))}
         </div>
-        
       </nav>
 
       {/* User & Controls */}
