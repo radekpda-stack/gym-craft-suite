@@ -20,6 +20,10 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
     percentage: d.percentage,
   }));
 
+  const activeClientsCount = data?.activeClientsCount ?? 0;
+  const totalClientsCount = data?.totalClientsCount ?? 0;
+  const activePercentage = data?.activePercentage ?? 0;
+
   return (
     <Card className="border-border/50 overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
@@ -35,6 +39,9 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
             <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Aktivní klient = alespoň 1 trénink ve zvoleném období
+        </p>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -42,19 +49,19 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 rounded-lg bg-muted/30">
             <p className="text-2xl font-bold text-foreground">
-              {data.activeClientsCount}
+              {activeClientsCount}
             </p>
             <p className="text-xs text-muted-foreground">Aktivních klientů</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/30">
             <p className="text-2xl font-bold text-foreground">
-              {data.totalClientsCount}
+              {totalClientsCount}
             </p>
             <p className="text-xs text-muted-foreground">Celkem klientů</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/30">
             <p className="text-2xl font-bold text-foreground">
-              {data.activePercentage}%
+              {activePercentage}%
             </p>
             <p className="text-xs text-muted-foreground">Aktivní</p>
           </div>
@@ -64,9 +71,12 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Activity Trend */}
           <div className="md:col-span-2">
-            <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
-              Trend aktivity (počet tréninků)
+              Trend aktivity
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Počet tréninků za den
             </p>
             <TrendAreaChart
               data={trendData}
@@ -77,9 +87,12 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
 
           {/* Activity Distribution */}
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Rozložení aktivity
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Klienti dle počtu tréninků
             </p>
             <DistributionDonutChart
               data={distributionData}
@@ -94,11 +107,14 @@ export function ClientAnalyticsMainCard({ data, onShowDetail }: ClientAnalyticsM
         {/* LTV Distribution */}
         {(data?.ltvDistribution ?? []).length > 0 && (
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3">
-              Rozložení podle objemu tréninků
+            <p className="text-sm font-medium text-muted-foreground mb-1">
+              Rozložení podle objemu tréninků (LTV)
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Věrnost klientů dle celkového počtu absolvovaných tréninků
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(data?.ltvDistribution ?? []).map((bucket, i) => (
+              {(data?.ltvDistribution ?? []).map((bucket) => (
                 <div 
                   key={bucket.bucket}
                   className="p-3 rounded-lg bg-muted/20 text-center"
