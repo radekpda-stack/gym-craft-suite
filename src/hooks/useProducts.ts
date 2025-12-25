@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 
+export type ProductKind = 'inventory' | 'service' | 'credit_topup';
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   purchase_price: number;
   category: string;
+  kind: ProductKind;
+  credit_delta: number;
   is_active: boolean;
   stock_quantity: number;
   low_stock_threshold: number;
@@ -22,6 +26,8 @@ export interface CreateProductInput {
   price: number;
   purchase_price?: number;
   category?: string;
+  kind?: ProductKind;
+  credit_delta?: number;
   is_active?: boolean;
   stock_quantity?: number;
   low_stock_threshold?: number;
@@ -55,6 +61,9 @@ export function useCreateProduct() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Determine kind based on category if not provided
+      const kind = input.kind || (input.category === 'service' ? 'service' : 'inventory');
+      
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -62,9 +71,11 @@ export function useCreateProduct() {
           price: input.price,
           purchase_price: input.purchase_price || 0,
           category: input.category || "supplement",
+          kind,
+          credit_delta: input.credit_delta || 0,
           is_active: input.is_active ?? true,
-          stock_quantity: input.stock_quantity ?? 0,
-          low_stock_threshold: input.low_stock_threshold ?? 5,
+          stock_quantity: kind === 'inventory' ? (input.stock_quantity ?? 0) : 0,
+          low_stock_threshold: kind === 'inventory' ? (input.low_stock_threshold ?? 5) : 0,
           user_id: user.id,
         })
         .select()

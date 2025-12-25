@@ -840,6 +840,7 @@ export type Database = {
           id: string
           is_archived: boolean
           is_favorite: boolean
+          is_system: boolean
           name: string
           notes: string | null
           occupation: string | null
@@ -850,6 +851,7 @@ export type Database = {
           sports_history: string | null
           stress_level: number | null
           supplements: string[] | null
+          system_key: string | null
           training_goals: string[] | null
           updated_at: string
           user_id: string | null
@@ -868,6 +870,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
+          is_system?: boolean
           name: string
           notes?: string | null
           occupation?: string | null
@@ -878,6 +881,7 @@ export type Database = {
           sports_history?: string | null
           stress_level?: number | null
           supplements?: string[] | null
+          system_key?: string | null
           training_goals?: string[] | null
           updated_at?: string
           user_id?: string | null
@@ -896,6 +900,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
+          is_system?: boolean
           name?: string
           notes?: string | null
           occupation?: string | null
@@ -906,6 +911,7 @@ export type Database = {
           sports_history?: string | null
           stress_level?: number | null
           supplements?: string[] | null
+          system_key?: string | null
           training_goals?: string[] | null
           updated_at?: string
           user_id?: string | null
@@ -924,6 +930,8 @@ export type Database = {
           payment_method: string | null
           product_id: string | null
           reference_id: string | null
+          sale_order_id: string | null
+          status: string
           training_session_id: string | null
           type: string
           user_id: string | null
@@ -939,6 +947,8 @@ export type Database = {
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
+          sale_order_id?: string | null
+          status?: string
           training_session_id?: string | null
           type: string
           user_id?: string | null
@@ -954,6 +964,8 @@ export type Database = {
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
+          sale_order_id?: string | null
+          status?: string
           training_session_id?: string | null
           type?: string
           user_id?: string | null
@@ -978,6 +990,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_sale_order_id_fkey"
+            columns: ["sale_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
             referencedColumns: ["id"]
           },
           {
@@ -3592,8 +3611,10 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          credit_delta: number
           id: string
           is_active: boolean
+          kind: string
           low_stock_threshold: number | null
           name: string
           price: number
@@ -3605,8 +3626,10 @@ export type Database = {
         Insert: {
           category?: string
           created_at?: string
+          credit_delta?: number
           id?: string
           is_active?: boolean
+          kind?: string
           low_stock_threshold?: number | null
           name: string
           price?: number
@@ -3618,8 +3641,10 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
+          credit_delta?: number
           id?: string
           is_active?: boolean
+          kind?: string
           low_stock_threshold?: number | null
           name?: string
           price?: number
@@ -3868,6 +3893,117 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      sales_order_items: {
+        Row: {
+          created_at: string
+          credit_delta: number
+          id: string
+          line_total: number
+          name_snapshot: string
+          order_id: string
+          product_id: string
+          product_kind: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          credit_delta?: number
+          id?: string
+          line_total: number
+          name_snapshot: string
+          order_id: string
+          product_id: string
+          product_kind: string
+          quantity: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          credit_delta?: number
+          id?: string
+          line_total?: number
+          name_snapshot?: string
+          order_id?: string
+          product_id?: string
+          product_kind?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_orders: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          group_id: string | null
+          id: string
+          idempotency_key: string
+          note: string | null
+          payment_method: string
+          payment_status: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          idempotency_key: string
+          note?: string | null
+          payment_method: string
+          payment_status?: string
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          idempotency_key?: string
+          note?: string | null
+          payment_method?: string
+          payment_status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_orders_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "client_budget_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_entries: {
         Row: {
@@ -5091,7 +5227,16 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_get_or_create_system_client: {
+        Args: { p_system_key: string; p_user_id: string }
+        Returns: string
+      }
       rpc_get_pending_payments: { Args: { p_user_id: string }; Returns: Json }
+      rpc_process_sale: { Args: { payload: Json }; Returns: Json }
+      rpc_refund_sale: {
+        Args: { p_order_id: string; p_user_id: string }
+        Returns: Json
+      }
       update_client_balance_atomic: {
         Args: { p_client_id: string; p_delta: number }
         Returns: number
