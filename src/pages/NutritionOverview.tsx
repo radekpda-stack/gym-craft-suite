@@ -204,7 +204,7 @@ export default function NutritionOverview() {
           <CardTitle>Rychlé akce</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
@@ -219,15 +219,7 @@ export default function NutritionOverview() {
               onClick={() => navigate('/nutrition/template')}
             >
               <Settings className="h-6 w-6" />
-              <span>Šablona dotazníku</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => setShowNewModal(true)}
-            >
-              <Plus className="h-6 w-6" />
-              <span>Nová kampaň</span>
+              <span>Nastavení dotazníku</span>
             </Button>
           </div>
         </CardContent>
