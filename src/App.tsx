@@ -13,8 +13,7 @@ import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
 import { UndoProvider } from "@/contexts/UndoContext";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { UndoToast } from "@/components/ui/UndoToast";
-import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
-import { ClientPortalLayout } from "@/components/client-portal/ClientPortalLayout";
+import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import DemoPage from "./pages/DemoPage";
@@ -102,24 +101,15 @@ const App = () => (
               
               {/* Client Portal Routes */}
               <Route path="/client/login" element={<ClientPortalLogin />} />
-              <Route
-                path="/client/*"
-                element={
-                  <ClientPortalProvider>
-                    <ClientPortalLayout>
-                      <Routes>
-                        <Route path="/" element={<ClientPortalOverview />} />
-                        <Route path="/progress" element={<ClientPortalProgress />} />
-                        <Route path="/attendance" element={<ClientPortalAttendance />} />
-                        <Route path="/credit" element={<ClientPortalCredit />} />
-                        <Route path="/nutrition" element={<ClientPortalNutrition />} />
-                        <Route path="/profile" element={<ClientPortalProfile />} />
-                        <Route path="/settings" element={<ClientPortalSettings />} />
-                      </Routes>
-                    </ClientPortalLayout>
-                  </ClientPortalProvider>
-                }
-              />
+              <Route path="/client" element={<ClientPortalShell />}>
+                <Route index element={<ClientPortalOverview />} />
+                <Route path="progress" element={<ClientPortalProgress />} />
+                <Route path="attendance" element={<ClientPortalAttendance />} />
+                <Route path="credit" element={<ClientPortalCredit />} />
+                <Route path="nutrition" element={<ClientPortalNutrition />} />
+                <Route path="profile" element={<ClientPortalProfile />} />
+                <Route path="settings" element={<ClientPortalSettings />} />
+              </Route>
               
               <Route
                 path="/*"

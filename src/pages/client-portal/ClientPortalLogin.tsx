@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
@@ -18,6 +18,21 @@ export default function ClientPortalLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useClientPortalAuth();
+
+  const fromPath = useMemo(() => {
+    return (location.state as { from?: Location })?.from?.pathname || '/client';
+  }, [location.state]);
+
+  const redirectedRef = useRef(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) return;
+    if (redirectedRef.current) return;
+
+    redirectedRef.current = true;
+    navigate(fromPath, { replace: true });
+  }, [authLoading, isAuthenticated, navigate, fromPath]);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,10 +56,8 @@ export default function ClientPortalLogin() {
     );
   }
 
-  // Redirect if already authenticated (only after loading is complete)
+  // If already authenticated, wait for useEffect redirect
   if (isAuthenticated) {
-    const from = (location.state as { from?: Location })?.from?.pathname || '/client';
-    navigate(from, { replace: true });
     return null;
   }
 
@@ -97,9 +110,9 @@ export default function ClientPortalLogin() {
         });
 
         toast.success('Úspěšně přihlášeno!');
-        
-        const from = (location.state as { from?: Location })?.from?.pathname || '/client';
-        navigate(from, { replace: true });
+
+        redirectedRef.current = true;
+        navigate(fromPath, { replace: true });
       }
     } catch (err) {
       console.error('Login error:', err);
