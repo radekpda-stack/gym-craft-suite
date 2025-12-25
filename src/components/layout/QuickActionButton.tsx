@@ -47,9 +47,10 @@ const quickActionsConfig: QuickAction[] = [
 export function QuickActionButton() {
   const location = useLocation();
 
-  // Calendar page already has its own context-aware "+" (with prefilled date/time).
-  // Rendering both FABs causes overlap and "divný rozměr" on mobile.
-  if (location.pathname.startsWith('/calendar')) {
+  // These pages have their own context-aware FAB.
+  // Rendering both FABs causes overlap on mobile.
+  const hiddenRoutes = ['/calendar', '/trainings', '/exercises'];
+  if (hiddenRoutes.some(route => location.pathname.startsWith(route))) {
     return null;
   }
 
