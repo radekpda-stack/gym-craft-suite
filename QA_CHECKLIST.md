@@ -104,13 +104,26 @@
 
 ---
 
-## Auditní shrnutí - Naposledy provedeno: 2024-12-25
+## Auditní shrnutí - Naposledy provedeno: 2025-12-25
 
 ### Nalezené a opravené problémy
 1. **EditClientDialog** - useState() místo useEffect() pro inicializaci polí (OPRAVENO)
 
 ### Stav aplikace
-- ✅ UI - overflow handling implementován (114+ souborů s min-w-0, 29 míst s overflow-x-auto)
-- ✅ Funkce - tlačítka mají správný disabled handling (1241 matches)
+- ✅ UI - overflow handling implementován (103+ souborů s min-w-0, 29 míst s overflow-x-auto)
+- ✅ Funkce - tlačítka mají správný disabled handling
 - ✅ Duplicity - hooky mají jednoznačné zodpovědnosti
 - ✅ Grafy - správná logika výpočtu s infoDescription/infoCalculation
+- ✅ Bezpečnost - RLS policies správně nastaveny na všech tabulkách (clients, profiles, client_media)
+- ✅ UI Stress Test Mode - přidán (src/lib/ui-stress-test.ts)
+
+### Bezpečnostní audit
+- RLS na `clients`: `auth.uid() = user_id` ✅
+- RLS na `profiles`: `auth.uid() = id` ✅
+- RLS na `client_media`: `auth.uid() = user_id` ✅
+- RLS na `credit_transactions`: `auth.uid() = user_id` ✅
+- SECURITY DEFINER funkce: všechny mají `search_path = public` ✅
+
+### UI Stress Test Mode
+Aktivace: `localStorage.setItem('ui_stress_test_mode', 'true')` + reload
+Deaktivace: `localStorage.removeItem('ui_stress_test_mode')` + reload
