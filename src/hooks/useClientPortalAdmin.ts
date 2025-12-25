@@ -9,7 +9,10 @@ export interface PortalClient {
   client_id: string;
   user_id: string;
   is_active: boolean;
+  status: string | null;
+  auth_user_id: string | null;
   last_portal_login: string | null;
+  last_password_reset_at: string | null;
   created_at: string;
   portal_settings: Record<string, boolean> | null;
   client: {
@@ -60,7 +63,10 @@ export function usePortalClients() {
           client_id,
           user_id,
           is_active,
+          status,
+          auth_user_id,
           last_portal_login,
+          last_password_reset_at,
           created_at,
           portal_settings,
           client:clients(id, name, email, phone)
@@ -292,6 +298,72 @@ export function useToggleClientAccess() {
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se změnit přístup.',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Reset client password
+export function useResetClientPassword() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('create-client-portal-access', {
+        body: { clientId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return data as { email: string; password: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Disable/Enable client portal access via edge function
+export function useDisableClientAccess() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ clientId, disable }: { clientId: string; disable: boolean }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('disable-client-portal-access', {
+        body: { clientId, disable },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return data;
+    },
+    onSuccess: (_, { disable }) => {
+      queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-stats'] });
+      toast({
+        title: disable ? 'Přístup deaktivován' : 'Přístup aktivován',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message,
         variant: 'destructive',
       });
     },
