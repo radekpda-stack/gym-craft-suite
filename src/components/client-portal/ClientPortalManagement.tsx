@@ -97,20 +97,20 @@ function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onM
   const disableAccess = useDisableClientAccess();
 
   return (
-    <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
           <span className="text-sm font-medium text-primary">
             {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
           </span>
         </div>
-        <div>
-          <p className="font-medium">{account.client?.name}</p>
-          <p className="text-sm text-muted-foreground">{account.client?.email || 'Bez emailu'}</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium truncate">{account.client?.name}</p>
+          <p className="text-sm text-muted-foreground truncate">{account.client?.email || 'Bez emailu'}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
         <Badge variant={account.is_active ? 'default' : 'secondary'}>
           {account.is_active ? 'Aktivní' : 'Neaktivní'}
         </Badge>

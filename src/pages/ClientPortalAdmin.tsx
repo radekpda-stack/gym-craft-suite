@@ -17,15 +17,15 @@ export default function ClientPortalAdmin() {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <div className="container max-w-6xl py-6 space-y-6">
+    <div className="container max-w-6xl py-4 sm:py-6 space-y-4 sm:space-y-6 px-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Klientský portál</h1>
+            <h1 className="text-xl sm:text-2xl font-bold truncate">Klientský portál</h1>
             <Tooltip>
               <TooltipTrigger>
-                <Info className="w-4 h-4 text-muted-foreground" />
+                <Info className="w-4 h-4 text-muted-foreground shrink-0" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p>
@@ -35,7 +35,7 @@ export default function ClientPortalAdmin() {
               </TooltipContent>
             </Tooltip>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Spravujte přístup klientů a sledujte jejich aktivitu
           </p>
         </div>
@@ -45,22 +45,22 @@ export default function ClientPortalAdmin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="hidden sm:inline">Přehled</span>
+        <TabsList className="grid w-full grid-cols-4 max-w-lg h-auto">
+          <TabsTrigger value="overview" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
+            <LayoutDashboard className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline text-sm">Přehled</span>
           </TabsTrigger>
-          <TabsTrigger value="clients" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Klienti</span>
+          <TabsTrigger value="clients" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline text-sm">Klienti</span>
           </TabsTrigger>
-          <TabsTrigger value="management" className="flex items-center gap-2">
-            <Wrench className="w-4 h-4" />
-            <span className="hidden sm:inline">Správa</span>
+          <TabsTrigger value="management" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
+            <Wrench className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline text-sm">Správa</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Nastavení</span>
+          <TabsTrigger value="settings" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
+            <Settings className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline text-sm">Nastavení</span>
           </TabsTrigger>
         </TabsList>
 
