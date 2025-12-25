@@ -89,9 +89,9 @@ export default function ClientPortalCredit() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Kredit & Platby</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Kredit & Platby</h1>
           <p className="text-muted-foreground text-sm">Přehled tvých financí</p>
         </div>
         <PeriodChips value={period} onChange={setPeriod} />

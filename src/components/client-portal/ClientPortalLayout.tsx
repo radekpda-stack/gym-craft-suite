@@ -20,7 +20,8 @@ interface ClientPortalLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
+// Desktop nav - all items
+const allNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
@@ -28,6 +29,15 @@ const navItems = [
   { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' },
   { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
   { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
+];
+
+// Mobile nav - only main 5 items to prevent overflow
+const mobileNavItems = [
+  { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
+  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
+  { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
+  { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
+  { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
@@ -47,7 +57,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   useEffect(() => {
     if (!isAuthenticated || !clientId) return;
     
-    const currentNav = navItems.find(item => 
+    const currentNav = allNavItems.find(item => 
       location.pathname === item.to || 
       (item.to !== '/client' && location.pathname.startsWith(item.to))
     );
@@ -113,7 +123,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </div>
         
         <nav className="flex-1 flex flex-col gap-2">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/client' && location.pathname.startsWith(item.to));
             
@@ -169,10 +179,10 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </motion.div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Only 5 items to prevent overflow */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50 md:hidden safe-area-pb">
-        <div className="flex items-center justify-around h-16">
-          {navItems.map((item) => {
+        <div className="flex items-center justify-around h-16 px-2">
+          {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/client' && location.pathname.startsWith(item.to));
             
@@ -181,21 +191,21 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all",
+                  "flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2 rounded-lg transition-all relative",
                   isActive 
                     ? "text-primary" 
                     : "text-muted-foreground"
                 )}
               >
                 <item.icon className={cn(
-                  "w-5 h-5 transition-transform",
+                  "w-5 h-5 transition-transform shrink-0",
                   isActive && "scale-110"
                 )} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-[9px] font-medium truncate max-w-full px-1">{item.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-1 w-1 h-1 rounded-full bg-primary"
+                    className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary"
                   />
                 )}
               </NavLink>

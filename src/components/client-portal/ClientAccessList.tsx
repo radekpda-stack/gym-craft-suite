@@ -135,58 +135,28 @@ export function ClientAccessList() {
               </Button>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Klient</TableHead>
-                    <TableHead>Stav</TableHead>
-                    <TableHead>Poslední přihlášení</TableHead>
-                    <TableHead>Poslední reset hesla</TableHead>
-                    <TableHead className="w-[70px]">Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clients?.map((account) => (
-                    <TableRow key={account.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-medium text-primary">
-                              {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium">{account.client?.name}</p>
-                            <p className="text-xs text-muted-foreground">{account.client?.email || 'Bez emailu'}</p>
-                          </div>
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="space-y-3 md:hidden">
+                {clients?.map((account) => (
+                  <div 
+                    key={account.id} 
+                    className="p-4 rounded-lg border bg-card"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-medium text-primary">
+                            {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{account.client?.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{account.client?.email || 'Bez emailu'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
                         {getStatusBadge(account)}
-                      </TableCell>
-                      <TableCell>
-                        {account.last_portal_login ? (
-                          <span className="text-sm">
-                            {formatDistanceToNow(new Date(account.last_portal_login), { 
-                              addSuffix: true, 
-                              locale: cs 
-                            })}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Nikdy</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {account.last_password_reset_at ? (
-                          <span className="text-sm">
-                            {format(new Date(account.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -221,12 +191,116 @@ export function ClientAccessList() {
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        Přihlášení: {account.last_portal_login ? formatDistanceToNow(new Date(account.last_portal_login), { addSuffix: true, locale: cs }) : 'Nikdy'}
+                      </span>
+                      {account.last_password_reset_at && (
+                        <span>
+                          Reset: {format(new Date(account.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Klient</TableHead>
+                      <TableHead>Stav</TableHead>
+                      <TableHead>Poslední přihlášení</TableHead>
+                      <TableHead>Poslední reset hesla</TableHead>
+                      <TableHead className="w-[70px]">Akce</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {clients?.map((account) => (
+                      <TableRow key={account.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-medium text-primary">
+                                {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{account.client?.name}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">{account.client?.email || 'Bez emailu'}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(account)}
+                        </TableCell>
+                        <TableCell>
+                          {account.last_portal_login ? (
+                            <span className="text-sm">
+                              {formatDistanceToNow(new Date(account.last_portal_login), { 
+                                addSuffix: true, 
+                                locale: cs 
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Nikdy</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {account.last_password_reset_at ? (
+                            <span className="text-sm">
+                              {format(new Date(account.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleResetPassword(account.client_id)}
+                                disabled={resetPassword.isPending}
+                              >
+                                <Key className="w-4 h-4 mr-2" />
+                                Resetovat heslo
+                              </DropdownMenuItem>
+                              {account.auth_user_id && (
+                                <DropdownMenuItem
+                                  onClick={() => handleToggleAccess(account.client_id, account.is_active)}
+                                  disabled={disableAccess.isPending}
+                                >
+                                  {account.is_active ? (
+                                    <>
+                                      <UserX className="w-4 h-4 mr-2" />
+                                      Deaktivovat
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="w-4 h-4 mr-2" />
+                                      Aktivovat
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
