@@ -22,6 +22,7 @@ import {
   Settings2,
   Zap,
   LayoutDashboard,
+  Boxes,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -42,6 +43,7 @@ import { NotificationSettings } from '@/components/settings/NotificationSettings
 import { DefaultValuesSettings } from '@/components/settings/DefaultValuesSettings';
 import { DashboardPersonalizationSettings } from '@/components/settings/DashboardPersonalizationSettings';
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
+import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -93,6 +95,15 @@ export default function Settings() {
         : 'Dashboard, quick actions and default values',
       icon: Palette,
       iconColor: 'text-purple-500',
+    },
+    {
+      id: 'modules',
+      title: language === 'cs' ? 'Moduly & Funkce' : 'Modules & Features',
+      description: language === 'cs' 
+        ? 'Zapnutí/vypnutí funkcí aplikace' 
+        : 'Enable/disable app features',
+      icon: Boxes,
+      iconColor: 'text-cyan-500',
     },
     {
       id: 'system',
@@ -313,6 +324,27 @@ export default function Settings() {
               icon={Settings2}
             >
               <DefaultValuesSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'modules':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Správa modulů' : 'Module Management'}
+              description={language === 'cs' 
+                ? 'Zapněte nebo vypněte funkce aplikace podle potřeby' 
+                : 'Enable or disable app features as needed'}
+              icon={Boxes}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Vypnuté moduly jsou skryté z navigace, data zůstávají zachována' 
+                  : 'Disabled modules are hidden from navigation, data is preserved'
+              }}
+            >
+              <ModuleSettings />
             </SettingsSection>
           </>
         );
