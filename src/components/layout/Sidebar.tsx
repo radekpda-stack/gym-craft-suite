@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useModuleSettings } from '@/hooks/useModuleSettings';
 
 interface NavItem {
   id: string;
@@ -233,6 +234,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
+  const { isModuleEnabled } = useModuleSettings();
 
   const isActive = (to: string) => {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
@@ -248,59 +250,64 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
     '/nutrition/analysis',
   ].some(path => isActive(path));
 
-  // Define sections with items - consolidated Strava as expandable
-  const sections: NavSection[] = [
-    {
-      label: 'Hlavní',
-      items: [
-        { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
-      ],
-    },
-    {
-      label: 'Plánování',
-      items: [
-        { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
-        { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
-        { id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' },
-        { id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' },
-      ],
-    },
-    {
-      label: 'Záznamy',
-      items: [
-        { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
-        { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
-        { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-        {
-          id: 'nutrition',
-          to: '/nutrition',
-          icon: Utensils,
-          label: 'Strava',
-          children: [
-            { id: 'nutrition-overview', to: '/nutrition', icon: LayoutDashboard, label: 'Přehled' },
-            { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
-            { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
-            { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
-            { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileQuestion, label: 'Dotazníky' },
-            { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: Image, label: 'Infografiky' },
-          ],
-        },
-      ],
-    },
-    {
-      label: 'Finance',
-      items: [
-        { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
-        { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
-      ],
-    },
-    {
-      label: 'Systém',
-      items: [
-        { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
-      ],
-    },
-  ];
+  // Define sections with items - filtered by module settings
+  const sections: NavSection[] = useMemo(() => {
+    const allSections: NavSection[] = [
+      {
+        label: 'Hlavní',
+        items: [
+          { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
+        ],
+      },
+      {
+        label: 'Plánování',
+        items: [
+          { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
+          { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
+          ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' }] : []),
+        ],
+      },
+      {
+        label: 'Záznamy',
+        items: [
+          { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
+          { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
+          { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+          ...(isModuleEnabled('nutrition') ? [{
+            id: 'nutrition',
+            to: '/nutrition',
+            icon: Utensils,
+            label: 'Strava',
+            children: [
+              { id: 'nutrition-overview', to: '/nutrition', icon: LayoutDashboard, label: 'Přehled' },
+              { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
+              { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
+              { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
+              { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileQuestion, label: 'Dotazníky' },
+              { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: Image, label: 'Infografiky' },
+            ],
+          }] : []),
+        ],
+      },
+      {
+        label: 'Finance',
+        items: [
+          { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
+          { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
+        ],
+      },
+      {
+        label: 'Systém',
+        items: [
+          { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
+        ],
+      },
+    ];
+
+    // Filter out sections that have no visible items
+    return allSections.filter(section => section.items.length > 0);
+  }, [t, isModuleEnabled]);
 
   const handleSignOut = async () => {
     const { error } = await signOut();

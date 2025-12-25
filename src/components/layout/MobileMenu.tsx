@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -13,22 +13,19 @@ import {
   X,
   Zap,
   MessageSquare,
-  // Sparkles, // Hidden - AI feature disabled
-  Wallet,
-  ChevronRight,
   ShoppingBag,
   ClipboardList,
-  Bell,
   LucideIcon,
   Utensils,
   FileText,
   PieChart,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-
 import { Separator } from '@/components/ui/separator';
+import { useModuleSettings } from '@/hooks/useModuleSettings';
 
 interface MobileMenuProps {
   open: boolean;
@@ -46,69 +43,67 @@ interface NavSection {
   items: NavItem[];
 }
 
-// Synchronized with Sidebar.tsx structure
-const sections: NavSection[] = [
-  {
-    label: 'Hlavní',
-    items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    ],
-  },
-  {
-    label: 'Plánování',
-    items: [
-      { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-      { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
-    ],
-  },
-  {
-    label: 'Záznamy',
-    items: [
-      { to: '/clients', icon: Users, label: 'Klienti' },
-      { to: '/records', icon: Activity, label: 'Záznamy' },
-    ],
-  },
-  {
-    label: 'Strava',
-    items: [
-      { to: '/nutrition', icon: Utensils, label: 'Přehled' },
-      { to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
-      { to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
-      { to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
-    ],
-  },
-  {
-    label: 'Finance',
-    items: [
-      { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
-    ],
-  },
-  {
-    label: 'Komunikace',
-    items: [
-      { to: '/feedback-overview', icon: MessageSquare, label: 'Feedbacky' },
-    ],
-  },
-  // AI section hidden for future use
-  // {
-  //   label: 'Nástroje',
-  //   items: [
-  //     { to: '/ai-assistant', icon: Sparkles, label: 'AI Asistent' },
-  //   ],
-  // },
-  {
-    label: 'Systém',
-    items: [
-      // Reminders removed
-      { to: '/settings', icon: Settings, label: 'Nastavení' },
-    ],
-  },
-];
-
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { isModuleEnabled } = useModuleSettings();
+
+  // Build sections based on enabled modules
+  const sections: NavSection[] = useMemo(() => {
+    const allSections: NavSection[] = [
+      {
+        label: 'Hlavní',
+        items: [
+          { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        ],
+      },
+      {
+        label: 'Plánování',
+        items: [
+          { to: '/calendar', icon: Calendar, label: 'Kalendář' },
+          { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+          ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+        ],
+      },
+      {
+        label: 'Záznamy',
+        items: [
+          { to: '/clients', icon: Users, label: 'Klienti' },
+          { to: '/records', icon: Activity, label: 'Záznamy' },
+        ],
+      },
+      ...(isModuleEnabled('nutrition') ? [{
+        label: 'Strava',
+        items: [
+          { to: '/nutrition', icon: Utensils, label: 'Přehled' },
+          { to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
+          { to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
+          { to: '/nutrition/template', icon: FileText, label: 'Šablona dotazníku' },
+        ],
+      }] : []),
+      {
+        label: 'Finance',
+        items: [
+          { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
+        ],
+      },
+      ...(isModuleEnabled('feedback') ? [{
+        label: 'Komunikace',
+        items: [
+          { to: '/feedback-overview', icon: MessageSquare, label: 'Feedbacky' },
+        ],
+      }] : []),
+      {
+        label: 'Systém',
+        items: [
+          { to: '/settings', icon: Settings, label: 'Nastavení' },
+        ],
+      },
+    ];
+
+    return allSections.filter(section => section.items.length > 0);
+  }, [isModuleEnabled]);
 
   const handleNavigation = (to: string) => {
     navigate(to);
