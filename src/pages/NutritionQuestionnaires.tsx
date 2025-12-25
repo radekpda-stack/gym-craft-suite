@@ -12,13 +12,17 @@ import {
   MoreHorizontal,
   Users,
   Calendar,
-  FileText
+  FileText,
+  Trash2,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select, 
   SelectContent, 
@@ -43,28 +47,71 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useAllNutritionSessions, NutritionSessionWithClient } from '@/hooks/useAllNutritionSessions';
-import { useUpdateNutritionLogSession, useRegenerateToken } from '@/hooks/useNutritionLog';
+import { 
+  useUpdateNutritionLogSession, 
+  useRegenerateToken,
+  useDeleteNutritionSession,
+  useDeleteMultipleNutritionSessions,
+} from '@/hooks/useNutritionLog';
+import { DeleteSessionDialog } from '@/components/nutrition/DeleteSessionDialog';
 
-type StatusFilter = 'all' | 'active' | 'completed' | 'expired';
+type StatusFilter = 'all' | 'active' | 'completed' | 'expired' | 'empty';
 
 export default function NutritionQuestionnaires() {
   const navigate = useNavigate();
   const { data: sessions, isLoading } = useAllNutritionSessions();
   const updateSession = useUpdateNutritionLogSession();
   const regenerateToken = useRegenerateToken();
+  const deleteSession = useDeleteNutritionSession();
+  const deleteMultipleSessions = useDeleteMultipleNutritionSessions();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<NutritionSessionWithClient | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
     
     return sessions.filter(session => {
       const matchesSearch = session.client_name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
+      let matchesStatus = true;
+      
+      if (statusFilter === 'empty') {
+        matchesStatus = session.entries_count === 0;
+      } else if (statusFilter !== 'all') {
+        matchesStatus = session.status === statusFilter;
+      }
+      
       return matchesSearch && matchesStatus;
     });
   }, [sessions, searchQuery, statusFilter]);
+
+  const emptySessionsCount = useMemo(() => {
+    return sessions?.filter(s => s.entries_count === 0).length || 0;
+  }, [sessions]);
+
+  const isAllSelected = filteredSessions.length > 0 && selectedIds.size === filteredSessions.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSessions.map(s => s.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
 
   const copyLink = async (token: string) => {
     const url = `${window.location.origin}/nutrition-log/${token}`;
@@ -91,6 +138,38 @@ export default function NutritionQuestionnaires() {
       toast.success('Token byl regenerován');
     } catch {
       toast.error('Nepodařilo se regenerovat token');
+    }
+  };
+
+  const handleDeleteClick = (session: NutritionSessionWithClient) => {
+    setSessionToDelete(session);
+    setIsBulkDelete(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.size === 0) {
+      toast.error('Vyberte dotazníky k smazání');
+      return;
+    }
+    setSessionToDelete(null);
+    setIsBulkDelete(true);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      if (isBulkDelete) {
+        await deleteMultipleSessions.mutateAsync(Array.from(selectedIds));
+        toast.success(`Smazáno ${selectedIds.size} dotazníků`);
+        setSelectedIds(new Set());
+      } else if (sessionToDelete) {
+        await deleteSession.mutateAsync(sessionToDelete.id);
+        toast.success('Dotazník smazán');
+      }
+      setDeleteDialogOpen(false);
+    } catch {
+      toast.error('Nepodařilo se smazat dotazník');
     }
   };
 
@@ -148,8 +227,31 @@ export default function NutritionQuestionnaires() {
                 <SelectItem value="active">Aktivní</SelectItem>
                 <SelectItem value="completed">Dokončené</SelectItem>
                 <SelectItem value="expired">Vypršelé</SelectItem>
+                <SelectItem value="empty">
+                  <span className="flex items-center gap-2">
+                    Prázdné (0 záznamů)
+                    {emptySessionsCount > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {emptySessionsCount}
+                      </Badge>
+                    )}
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Bulk actions */}
+            {selectedIds.size > 0 && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleBulkDeleteClick}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Smazat vybrané ({selectedIds.size})
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -177,6 +279,13 @@ export default function NutritionQuestionnaires() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Vybrat vše"
+                    />
+                  </TableHead>
                   <TableHead>Klient</TableHead>
                   <TableHead>Období</TableHead>
                   <TableHead>Stav</TableHead>
@@ -189,7 +298,17 @@ export default function NutritionQuestionnaires() {
               </TableHeader>
               <TableBody>
                 {filteredSessions.map((session) => (
-                  <TableRow key={session.id}>
+                  <TableRow 
+                    key={session.id}
+                    className={selectedIds.has(session.id) ? 'bg-muted/50' : ''}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(session.id)}
+                        onCheckedChange={() => toggleSelect(session.id)}
+                        aria-label={`Vybrat ${session.client_name}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <button 
                         className="font-medium hover:text-primary transition-colors flex items-center gap-2"
@@ -208,7 +327,11 @@ export default function NutritionQuestionnaires() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(session.status)}</TableCell>
-                    <TableCell className="text-center font-medium">{session.entries_count}</TableCell>
+                    <TableCell className="text-center">
+                      <span className={session.entries_count === 0 ? 'text-muted-foreground' : 'font-medium'}>
+                        {session.entries_count}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-center">{session.food_count}</TableCell>
                     <TableCell className="text-center">{session.drink_count}</TableCell>
                     <TableCell className="text-center">{session.coffee_count}</TableCell>
@@ -246,6 +369,14 @@ export default function NutritionQuestionnaires() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteClick(session)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Smazat dotazník
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -256,6 +387,19 @@ export default function NutritionQuestionnaires() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <DeleteSessionDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteSession.isPending || deleteMultipleSessions.isPending}
+        sessionInfo={sessionToDelete ? {
+          clientName: sessionToDelete.client_name,
+          entriesCount: sessionToDelete.entries_count,
+        } : undefined}
+        bulkCount={isBulkDelete ? selectedIds.size : undefined}
+      />
     </div>
   );
 }
