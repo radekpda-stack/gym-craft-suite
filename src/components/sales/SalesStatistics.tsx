@@ -11,9 +11,11 @@ import {
   CreditCard,
   Building,
   Wallet,
-  RefreshCw
+  TrendingDown,
+  DollarSign,
+  Percent
 } from 'lucide-react';
-import { format, subDays, subMonths, startOfDay, startOfMonth, isWithinInterval } from 'date-fns';
+import { format, subDays, subMonths, startOfDay, startOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -26,9 +28,13 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  BarChart,
+  Bar
 } from 'recharts';
-import { useSalesStats, useSalesTrend } from '@/hooks/useSalesOrders';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +47,13 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: 'year', label: 'Tento rok' },
 ];
 
-const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+const CHART_COLORS = [
+  'hsl(var(--primary))', 
+  'hsl(var(--chart-2))', 
+  'hsl(var(--chart-3))', 
+  'hsl(var(--chart-4))', 
+  'hsl(var(--chart-5))'
+];
 
 const PAYMENT_METHOD_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   cash: { label: 'Hotově', icon: Banknote },
@@ -50,55 +62,202 @@ const PAYMENT_METHOD_LABELS: Record<string, { label: string; icon: React.Compone
   credit: { label: 'Kreditem', icon: Wallet },
 };
 
+// Hook for combined statistics (sales_orders + credit_transactions fallback)
+function useCombinedSalesStats(period: Period) {
+  const { data: products = [] } = useProducts();
+  
+  return useQuery({
+    queryKey: ['combined_sales_stats', period],
+    queryFn: async () => {
+      const now = new Date();
+      let fromDate: Date;
+
+      switch (period) {
+        case 'today':
+          fromDate = startOfDay(now);
+          break;
+        case 'week':
+          fromDate = subDays(now, 7);
+          break;
+        case 'month':
+          fromDate = startOfMonth(now);
+          break;
+        case 'year':
+          fromDate = subMonths(now, 12);
+          break;
+      }
+
+      // Try new sales_orders first
+      const { data: orders } = await supabase
+        .from('sales_orders')
+        .select('id, total_amount, payment_method, payment_status, created_at')
+        .gte('created_at', fromDate.toISOString())
+        .eq('payment_status', 'completed');
+
+      // Get order items if we have orders
+      let orderItems: any[] = [];
+      if (orders && orders.length > 0) {
+        const { data: items } = await supabase
+          .from('sales_order_items')
+          .select('*')
+          .in('order_id', orders.map(o => o.id));
+        orderItems = items || [];
+      }
+
+      // Fallback to credit_transactions if no orders
+      let legacySales: any[] = [];
+      if (!orders || orders.length === 0) {
+        const { data: transactions } = await supabase
+          .from('credit_transactions')
+          .select('*, products(id, name, price, category)')
+          .eq('type', 'product')
+          .gte('created_at', fromDate.toISOString());
+        legacySales = transactions || [];
+      }
+
+      // Calculate stats
+      let totalRevenue = 0;
+      let totalOrders = 0;
+      const byPaymentMethod: Record<string, { count: number; revenue: number }> = {
+        cash: { count: 0, revenue: 0 },
+        card: { count: 0, revenue: 0 },
+        bank: { count: 0, revenue: 0 },
+        credit: { count: 0, revenue: 0 },
+      };
+      const productStats: Record<string, { name: string; quantity: number; revenue: number }> = {};
+      const dailyData: Record<string, { date: string; revenue: number; count: number }> = {};
+
+      if (orders && orders.length > 0) {
+        // Use new orders
+        totalOrders = orders.length;
+        orders.forEach(order => {
+          totalRevenue += order.total_amount || 0;
+          const method = order.payment_method || 'cash';
+          if (byPaymentMethod[method]) {
+            byPaymentMethod[method].count++;
+            byPaymentMethod[method].revenue += order.total_amount || 0;
+          }
+
+          // Daily aggregation
+          const dateKey = order.created_at.split('T')[0];
+          if (!dailyData[dateKey]) {
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0 };
+          }
+          dailyData[dateKey].revenue += order.total_amount || 0;
+          dailyData[dateKey].count++;
+        });
+
+        // Product stats from order items
+        orderItems.forEach(item => {
+          const key = item.product_id;
+          if (!productStats[key]) {
+            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0 };
+          }
+          productStats[key].quantity += item.quantity;
+          productStats[key].revenue += item.line_total;
+        });
+      } else if (legacySales.length > 0) {
+        // Use legacy transactions
+        totalOrders = legacySales.length;
+        legacySales.forEach(sale => {
+          const amount = Math.abs(sale.amount || 0);
+          totalRevenue += amount;
+          const method = sale.payment_method || 'credit';
+          if (byPaymentMethod[method]) {
+            byPaymentMethod[method].count++;
+            byPaymentMethod[method].revenue += amount;
+          }
+
+          // Daily aggregation
+          const dateKey = sale.created_at.split('T')[0];
+          if (!dailyData[dateKey]) {
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0 };
+          }
+          dailyData[dateKey].revenue += amount;
+          dailyData[dateKey].count++;
+
+          // Product stats
+          if (sale.product_id && sale.products) {
+            const key = sale.product_id;
+            if (!productStats[key]) {
+              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0 };
+            }
+            productStats[key].quantity++;
+            productStats[key].revenue += amount;
+          }
+        });
+      }
+
+      // Sort products by quantity (most sold first)
+      const topProducts = Object.entries(productStats)
+        .map(([id, stats]) => ({ productId: id, ...stats }))
+        .sort((a, b) => b.quantity - a.quantity);
+
+      // Sort trend data
+      const trendData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+
+      // Calculate average order value
+      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      return {
+        totalRevenue,
+        totalOrders,
+        avgOrderValue,
+        byPaymentMethod,
+        topProducts,
+        trendData,
+      };
+    },
+  });
+}
+
 export function SalesStatistics() {
   const [period, setPeriod] = useState<Period>('month');
-  
-  const periodRange = useMemo(() => {
-    const now = new Date();
-    switch (period) {
-      case 'today':
-        return { start: startOfDay(now), end: now };
-      case 'week':
-        return { start: subDays(now, 7), end: now };
-      case 'month':
-        return { start: startOfMonth(now), end: now };
-      case 'year':
-        return { start: subMonths(now, 12), end: now };
-    }
-  }, [period]);
-
-  const { data: stats, isLoading: statsLoading } = useSalesStats(period);
-  const trendPeriod = period === 'today' ? 'week' : period;
-  const { data: trendData = [], isLoading: trendLoading } = useSalesTrend(trendPeriod as 'week' | 'month' | 'year');
+  const { data: stats, isLoading } = useCombinedSalesStats(period);
 
   // Format trend data for chart
   const chartData = useMemo(() => {
-    return trendData.map(item => ({
+    if (!stats?.trendData) return [];
+    return stats.trendData.map(item => ({
       ...item,
       label: period === 'year' 
-        ? format(new Date(item.date + '-01'), 'MMM', { locale: cs })
+        ? format(new Date(item.date), 'MMM', { locale: cs })
         : format(new Date(item.date), 'd.M.', { locale: cs }),
     }));
-  }, [trendData, period]);
+  }, [stats?.trendData, period]);
 
   // Pie chart data for payment methods
   const paymentMethodPieData = useMemo(() => {
     if (!stats?.byPaymentMethod) return [];
     return Object.entries(stats.byPaymentMethod)
-      .filter(([_, data]) => (data as { revenue: number }).revenue > 0)
+      .filter(([_, data]) => data.revenue > 0)
       .map(([method, data]) => ({
         name: PAYMENT_METHOD_LABELS[method]?.label || method,
-        value: (data as { revenue: number }).revenue,
+        value: data.revenue,
+        count: data.count,
       }));
-  }, [stats]);
+  }, [stats?.byPaymentMethod]);
 
-  if (statsLoading) {
+  // Bar chart data for products
+  const productBarData = useMemo(() => {
+    if (!stats?.topProducts) return [];
+    return stats.topProducts.slice(0, 10).map(p => ({
+      name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
+      fullName: p.name,
+      quantity: p.quantity,
+      revenue: p.revenue,
+    }));
+  }, [stats?.topProducts]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  const hasData = stats && stats.totalOrders > 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -119,187 +278,296 @@ export function SalesStatistics() {
         </Select>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-xs">Tržby za období</span>
-          </div>
-          <p className="text-2xl font-bold text-primary">{formatCurrency(stats?.totalRevenue || 0)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{PERIODS.find(p => p.value === period)?.label}</p>
+      {!hasData ? (
+        <div className="glass rounded-xl p-8 text-center">
+          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Žádné prodeje</h3>
+          <p className="text-muted-foreground text-sm">
+            Za vybrané období nebyly zaznamenány žádné prodeje
+          </p>
         </div>
-
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <ShoppingCart className="w-4 h-4" />
-            <span className="text-xs">Počet prodejů</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats?.totalOrders || 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">za období</p>
-        </div>
-
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <span className="text-xs">Nejprodávanější</span>
-          </div>
-          {stats?.topProducts?.[0] ? (
-            <>
-              <p className="text-sm font-bold text-foreground truncate">{stats.topProducts[0].name}</p>
-              <p className="text-xs text-muted-foreground mt-1">{stats.topProducts[0].quantity}× prodáno</p>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">Žádná data</p>
-          )}
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Trend Chart */}
-        <div className="lg:col-span-2 glass rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium">Tržby v čase</h3>
-          </div>
-          {trendLoading ? (
-            <div className="h-[250px] flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      ) : (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-xs">Tržby celkem</span>
+              </div>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalRevenue)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{PERIODS.find(p => p.value === period)?.label}</p>
             </div>
-          ) : chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="label" 
-                  className="text-xs fill-muted-foreground" 
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  className="text-xs fill-muted-foreground"
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
-                />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="glass rounded-lg p-2 border border-border">
-                          <p className="text-sm font-medium">{formatCurrency(payload[0].value as number)}</p>
-                          <p className="text-xs text-muted-foreground">{payload[0].payload.count} prodejů</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="hsl(var(--primary))" 
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-              Žádná data za vybrané období
-            </div>
-          )}
-        </div>
 
-        {/* Payment Methods Pie Chart */}
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <CreditCard className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium">Platební metody</h3>
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <ShoppingCart className="w-4 h-4" />
+                <span className="text-xs">Počet prodejů</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{stats.totalOrders}</p>
+              <p className="text-xs text-muted-foreground mt-1">transakcí</p>
+            </div>
+
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <DollarSign className="w-4 h-4" />
+                <span className="text-xs">Průměrná hodnota</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.avgOrderValue)}</p>
+              <p className="text-xs text-muted-foreground mt-1">na prodej</p>
+            </div>
+
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <span className="text-xs">Nejprodávanější</span>
+              </div>
+              {stats.topProducts[0] ? (
+                <>
+                  <p className="text-sm font-bold text-foreground truncate">{stats.topProducts[0].name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.topProducts[0].quantity}× prodáno</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Žádná data</p>
+              )}
+            </div>
           </div>
-          {paymentMethodPieData.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={paymentMethodPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {paymentMethodPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {paymentMethodPieData.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+
+          {/* Charts Row 1 */}
+          <div className="grid lg:grid-cols-3 gap-4">
+            {/* Trend Chart */}
+            <div className="lg:col-span-2 glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Tržby v čase</h3>
+              </div>
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="label" 
+                      className="text-xs fill-muted-foreground" 
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <span className="text-xs text-muted-foreground">{entry.name}</span>
-                  </div>
-                ))}
+                    <YAxis 
+                      className="text-xs fill-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value) => value >= 1000 ? `${Math.round(value/1000)}k` : value}
+                    />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="glass rounded-lg p-2 border border-border">
+                              <p className="text-sm font-medium">{formatCurrency(payload[0].value as number)}</p>
+                              <p className="text-xs text-muted-foreground">{payload[0].payload.count} prodejů</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorRevenue)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                  Žádná data za vybrané období
+                </div>
+              )}
+            </div>
+
+            {/* Payment Methods Pie Chart */}
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Platební metody</h3>
               </div>
-            </>
-          ) : (
-            <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
-              Žádná data
+              {paymentMethodPieData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie
+                        data={paymentMethodPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {paymentMethodPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="glass rounded-lg p-2 border border-border">
+                                <p className="text-sm font-medium">{data.name}</p>
+                                <p className="text-xs">{formatCurrency(data.value)}</p>
+                                <p className="text-xs text-muted-foreground">{data.count} transakcí</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap justify-center gap-3 mt-2">
+                    {paymentMethodPieData.map((entry, index) => (
+                      <div key={entry.name} className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                        />
+                        <span className="text-xs text-muted-foreground">{entry.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
+                  Žádná data
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Products Bar Chart */}
+          {productBarData.length > 0 && (
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Prodeje podle produktu</h3>
+                <span className="text-xs text-muted-foreground">(seřazeno od nejprodávanějších)</span>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={productBarData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                  <XAxis 
+                    type="number"
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    type="category"
+                    dataKey="name"
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    width={120}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="glass rounded-lg p-2 border border-border">
+                            <p className="text-sm font-medium">{data.fullName}</p>
+                            <p className="text-xs">{data.quantity}× prodáno</p>
+                            <p className="text-xs text-muted-foreground">Tržby: {formatCurrency(data.revenue)}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="quantity" 
+                    fill="hsl(var(--primary))" 
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Top Products Table */}
-      {stats?.topProducts && stats.topProducts.length > 0 && (
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="font-medium">Top 5 položek</h3>
-          </div>
-          <div className="space-y-2">
-            {stats.topProducts.slice(0, 5).map((product, index) => (
-              <div 
-                key={product.productId} 
-                className={cn(
-                  "flex items-center justify-between p-3 rounded-lg",
-                  index === 0 ? "bg-amber-500/10" : "bg-secondary/30"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                    index === 0 ? "bg-amber-500 text-white" : "bg-secondary text-muted-foreground"
-                  )}>
-                    {index + 1}
-                  </span>
-                  <span className="font-medium">{product.name}</span>
+          {/* All Products Table - sorted by sales */}
+          {stats.topProducts.length > 0 && (
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-500" />
+                  <h3 className="font-medium">Všechny produkty</h3>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-muted-foreground">{product.quantity}×</span>
-                  <span className="font-bold">{formatCurrency(product.revenue)}</span>
-                </div>
+                <span className="text-xs text-muted-foreground">
+                  {stats.topProducts.length} položek
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {stats.topProducts.map((product, index) => {
+                  const percentage = stats.totalRevenue > 0 
+                    ? Math.round((product.revenue / stats.totalRevenue) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div 
+                      key={product.productId} 
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg",
+                        index === 0 ? "bg-amber-500/10" : 
+                        index === 1 ? "bg-slate-400/10" :
+                        index === 2 ? "bg-orange-700/10" : "bg-secondary/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                          index === 0 ? "bg-amber-500 text-white" : 
+                          index === 1 ? "bg-slate-400 text-white" :
+                          index === 2 ? "bg-orange-700 text-white" : "bg-secondary text-muted-foreground"
+                        )}>
+                          {index + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium block truncate">{product.name}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="h-1.5 bg-secondary rounded-full flex-1 max-w-[100px]">
+                              <div 
+                                className="h-full bg-primary rounded-full" 
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{percentage}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm shrink-0">
+                        <div className="text-right">
+                          <span className="text-muted-foreground block">{product.quantity}×</span>
+                        </div>
+                        <div className="text-right min-w-[80px]">
+                          <span className="font-bold">{formatCurrency(product.revenue)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
