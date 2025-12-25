@@ -273,6 +273,94 @@ export type Database = {
           },
         ]
       }
+      client_access_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_revoked: boolean
+          last_used_at: string | null
+          purpose: string
+          token: string
+          trainer_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean
+          last_used_at?: string | null
+          purpose?: string
+          token?: string
+          trainer_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean
+          last_used_at?: string | null
+          purpose?: string
+          token?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_access_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_accounts: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_portal_login: string | null
+          portal_settings: Json | null
+          trainer_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_portal_login?: string | null
+          portal_settings?: Json | null
+          trainer_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_portal_login?: string | null
+          portal_settings?: Json | null
+          trainer_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_budget_groups: {
         Row: {
           created_at: string
@@ -474,6 +562,41 @@ export type Database = {
           },
         ]
       }
+      client_portal_activity: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          client_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          activity_date?: string
+          activity_type: string
+          client_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_activity_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_recurring_schedules: {
         Row: {
           client_id: string
@@ -553,6 +676,51 @@ export type Database = {
             columns: ["tag_id"]
             isOneToOne: false
             referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_tracked_exercises: {
+        Row: {
+          client_id: string
+          created_at: string
+          display_order: number
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          trainer_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          display_order?: number
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          trainer_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          display_order?: number
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tracked_exercises_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tracked_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
             referencedColumns: ["id"]
           },
         ]
@@ -4792,6 +4960,7 @@ export type Database = {
         Args: { name_cs: string; name_en: string }
         Returns: string
       }
+      get_client_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_inherited_tags_for_session: {
         Args: { p_session_id: string }
@@ -4817,6 +4986,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_client_user: { Args: { _user_id: string }; Returns: boolean }
       normalize_text: { Args: { input_text: string }; Returns: string }
       rpc_apply_credit_delta: {
         Args: {
@@ -4836,9 +5006,18 @@ export type Database = {
         Args: { p_delta: number; p_group_id: string }
         Returns: number
       }
+      validate_client_token: {
+        Args: { _token: string }
+        Returns: {
+          client_id: string
+          purpose: string
+          trainer_id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
+      client_role: "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4967,6 +5146,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      client_role: ["client"],
     },
   },
 } as const
