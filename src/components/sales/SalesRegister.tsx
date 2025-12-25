@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { 
   ShoppingCart, 
   Plus, 
@@ -12,45 +12,45 @@ import {
   User,
   AlertTriangle,
   Check,
-  Wrench
+  Wrench,
+  Building2,
+  Coins
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Badge } from '@/components/ui/badge';
-import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
+import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
-import { useCreateTransaction, PaymentMethod } from '@/hooks/useCreditTransactions';
+import { useSalesCart } from '@/hooks/useSalesCart';
+import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
-import { toast } from 'sonner';
 import { featureTracker } from '@/hooks/useFeatureTracking';
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
+import { useQueryClient } from '@tanstack/react-query';
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'cash', label: 'Hotově', icon: Banknote },
   { value: 'credit', label: 'Kredit', icon: Wallet },
   { value: 'card', label: 'Kartou', icon: CardIcon },
+  { value: 'bank', label: 'Převod', icon: Building2 },
 ];
 
 export function SalesRegister() {
+  const queryClient = useQueryClient();
   const { data: products = [], isLoading: productsLoading } = useProducts(true);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const createTransaction = useCreateTransaction();
-  const updateProduct = useUpdateProduct();
 
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [noClient, setNoClient] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Sort clients by last activity (most recent first)
+  // Shared cart hook
+  const cart = useSalesCart({ clientId: noClient ? null : selectedClient || null });
+
+  // Sort clients by last activity
   const sortedClients = useMemo(() => {
     return [...clients].sort((a, b) => {
       const dateA = new Date(a.updated_at || a.created_at).getTime();
@@ -60,124 +60,101 @@ export function SalesRegister() {
   }, [clients]);
 
   const selectedClientData = clients.find(c => c.id === selectedClient);
-  const totalAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart(prev => {
-      return prev
-        .map(item => {
-          if (item.product.id === productId) {
-            const newQuantity = item.quantity + delta;
-            return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
-          }
-          return item;
-        })
-        .filter((item): item is CartItem => item !== null);
-    });
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  const handleNoClientToggle = () => {
+  const handleNoClientToggle = useCallback(() => {
     setNoClient(!noClient);
     if (!noClient) {
       setSelectedClient('');
     }
-  };
+  }, [noClient]);
 
-  const handleSale = async () => {
-    if (cart.length === 0) {
-      toast.error('Košík je prázdný');
+  const handleSale = useCallback(async () => {
+    if (cart.items.length === 0) {
       return;
     }
 
-    if (!noClient && !selectedClient) {
-      toast.error('Vyberte klienta nebo zvolte prodej bez klienta');
+    // Validate: credit payment requires client
+    if (paymentMethod === 'credit' && !selectedClient) {
+      return;
+    }
+
+    // Validate cart
+    if (!cart.validation.isValid) {
       return;
     }
 
     setIsProcessing(true);
     try {
-      const skipCreditUpdate = paymentMethod !== 'credit';
-      
-      // Find or create anonymous client for "no client" sales
-      let clientIdToUse = selectedClient;
-      
-      if (noClient) {
-        // Look for existing anonymous client
-        const anonymousClient = clients.find(c => c.name === 'Anonymní zákazník');
-        if (anonymousClient) {
-          clientIdToUse = anonymousClient.id;
-        } else {
-          toast.error('Systémový klient "Anonymní zákazník" nebyl nalezen. Vytvořte ho prosím v Klientech.');
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      for (const item of cart) {
-        const itemTotal = item.product.price * item.quantity;
-        await createTransaction.mutateAsync({
-          client_id: clientIdToUse,
-          amount: -itemTotal,
-          type: 'product',
-          description: `${item.product.name}${item.quantity > 1 ? ` (${item.quantity}x)` : ''}`,
-          product_id: item.product.id,
-          payment_method: paymentMethod,
-          skip_credit_update: skipCreditUpdate,
-        });
-
-        // Decrease stock for products (not services)
-        if (item.product.category !== 'service') {
-          const newStock = Math.max(0, (item.product.stock_quantity || 0) - item.quantity);
-          await updateProduct.mutateAsync({
-            id: item.product.id,
-            stock_quantity: newStock,
-          });
-        }
-      }
-
-      featureTracker.track('product_sale', 'finance', { 
-        itemCount: cart.length, 
-        totalAmount, 
+      const result = await processSale({
+        clientId: noClient ? null : selectedClient || null,
         paymentMethod,
-        anonymous: noClient 
+        items: cart.items,
       });
 
-      toast.success(`Prodej dokončen: ${formatCurrency(totalAmount)}`);
-      
-      // Reset form
-      setCart([]);
-      setSelectedClient('');
-      setNoClient(false);
-      setPaymentMethod('cash');
-    } catch (error) {
-      toast.error('Chyba při zpracování prodeje');
+      showSaleResultToast(result, cart.totalAmount);
+
+      if (result.success) {
+        featureTracker.track('product_sale', 'finance', { 
+          itemCount: cart.items.length, 
+          totalAmount: cart.totalAmount, 
+          paymentMethod,
+          anonymous: noClient 
+        });
+
+        // Reset form
+        cart.clear();
+        setSelectedClient('');
+        setNoClient(false);
+        setPaymentMethod('cash');
+
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
+        queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
+        queryClient.invalidateQueries({ queryKey: ['sales_stats'] });
+      }
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [cart, paymentMethod, selectedClient, noClient, queryClient]);
 
   const isLowStock = (product: Product) => 
-    product.category !== 'service' && product.stock_quantity <= product.low_stock_threshold;
+    product.kind === 'inventory' && product.stock_quantity <= product.low_stock_threshold;
 
-  const getItemInCart = (productId: string) => cart.find(item => item.product.id === productId);
+  const getProductIcon = (product: Product) => {
+    switch (product.kind) {
+      case 'service':
+        return <Wrench className="w-3.5 h-3.5 text-blue-500" />;
+      case 'credit_topup':
+        return <Coins className="w-3.5 h-3.5 text-amber-500" />;
+      default:
+        return <Package className="w-3.5 h-3.5 text-primary" />;
+    }
+  };
+
+  const getProductKindLabel = (product: Product) => {
+    switch (product.kind) {
+      case 'service':
+        return 'Služba';
+      case 'credit_topup':
+        return 'Dobití';
+      default:
+        return 'Produkt';
+    }
+  };
+
+  // Check if checkout is disabled
+  const checkoutDisabled = useMemo(() => {
+    if (isProcessing) return true;
+    if (cart.items.length === 0) return true;
+    if (!cart.validation.isValid) return true;
+    if (paymentMethod === 'credit' && !selectedClient) return true;
+    return false;
+  }, [isProcessing, cart.items.length, cart.validation.isValid, paymentMethod, selectedClient]);
+
+  // Check if credit topup in cart requires client
+  const hasCreditTopup = cart.items.some(item => item.product.kind === 'credit_topup');
+  const creditTopupNeedsClient = hasCreditTopup && noClient;
 
   if (productsLoading || clientsLoading) {
     return (
@@ -201,6 +178,7 @@ export function SalesRegister() {
             size="sm"
             onClick={handleNoClientToggle}
             className="gap-2"
+            disabled={hasCreditTopup}
           >
             {noClient ? <Check className="w-4 h-4" /> : null}
             Bez klienta
@@ -218,7 +196,12 @@ export function SalesRegister() {
           />
         ) : (
           <div className="p-3 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-            Prodej bude zaznamenán jako anonymní
+            Prodej bude zaznamenán bez přiřazení klientovi
+            {creditTopupNeedsClient && (
+              <p className="text-destructive mt-1 font-medium">
+                ⚠️ Dobití kreditu vyžaduje výběr klienta
+              </p>
+            )}
           </div>
         )}
 
@@ -238,6 +221,23 @@ export function SalesRegister() {
         )}
       </div>
 
+      {/* Validation Errors */}
+      {!cart.validation.isValid && cart.items.length > 0 && (
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-destructive">Nelze dokončit prodej</p>
+              <ul className="text-sm text-destructive/80 mt-1 space-y-1">
+                {cart.validation.errors.map((error, idx) => (
+                  <li key={idx}>{error.message}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Products Grid */}
       <div>
         <Label className="mb-3 block text-sm font-medium">Produkty a služby</Label>
@@ -252,33 +252,31 @@ export function SalesRegister() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {products.map((product) => {
-              const cartItem = getItemInCart(product.id);
+              const cartItem = cart.getItem(product.id);
               const inCart = !!cartItem;
               const lowStock = isLowStock(product);
-              const isService = product.category === 'service';
+              const outOfStock = product.kind === 'inventory' && (product.stock_quantity || 0) <= 0;
 
               return (
                 <button
                   key={product.id}
-                  onClick={() => addToCart(product)}
+                  onClick={() => !outOfStock && cart.addItem(product)}
+                  disabled={outOfStock}
                   className={cn(
                     "relative p-3 sm:p-4 rounded-xl text-left transition-all",
                     "hover:scale-[1.02] active:scale-[0.98]",
+                    outOfStock && "opacity-50 cursor-not-allowed",
                     inCart 
                       ? "bg-primary/20 ring-2 ring-primary" 
                       : "glass hover:bg-secondary/50",
-                    lowStock && "ring-1 ring-warning/50"
+                    lowStock && !outOfStock && "ring-1 ring-warning/50"
                   )}
                 >
                   {/* Product type badge */}
                   <div className="flex items-center gap-1.5 mb-2">
-                    {isService ? (
-                      <Wrench className="w-3.5 h-3.5 text-blue-500" />
-                    ) : (
-                      <Package className="w-3.5 h-3.5 text-primary" />
-                    )}
+                    {getProductIcon(product)}
                     <span className="text-[10px] text-muted-foreground uppercase">
-                      {isService ? 'Služba' : 'Produkt'}
+                      {getProductKindLabel(product)}
                     </span>
                   </div>
 
@@ -288,16 +286,29 @@ export function SalesRegister() {
                     {formatCurrency(product.price)}
                   </p>
 
-                  {/* Stock info */}
-                  {!isService && (
+                  {/* Credit delta for topups */}
+                  {product.kind === 'credit_topup' && product.credit_delta > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      +{formatCurrency(product.credit_delta)} kredit
+                    </p>
+                  )}
+
+                  {/* Stock info for inventory */}
+                  {product.kind === 'inventory' && (
                     <div className="flex items-center gap-1 mt-2">
-                      {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
-                      <span className={cn(
-                        "text-xs",
-                        lowStock ? "text-warning font-medium" : "text-muted-foreground"
-                      )}>
-                        {product.stock_quantity || 0} ks
-                      </span>
+                      {outOfStock ? (
+                        <span className="text-xs text-destructive font-medium">Vyprodáno</span>
+                      ) : (
+                        <>
+                          {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
+                          <span className={cn(
+                            "text-xs",
+                            lowStock ? "text-warning font-medium" : "text-muted-foreground"
+                          )}>
+                            {product.stock_quantity || 0} ks
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -315,57 +326,71 @@ export function SalesRegister() {
       </div>
 
       {/* Cart */}
-      {cart.length > 0 && (
+      {cart.items.length > 0 && (
         <div className="glass rounded-xl p-4">
           <Label className="mb-3 flex items-center gap-2 text-sm font-medium">
             <ShoppingCart className="w-4 h-4" />
-            Košík ({cart.length})
+            Košík ({cart.totalItems})
           </Label>
 
           <div className="space-y-2 mb-4">
-            {cart.map((item) => (
-              <div 
-                key={item.product.id} 
-                className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{item.product.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(item.product.price)} × {item.quantity} = {' '}
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(item.product.price * item.quantity)}
-                    </span>
-                  </p>
+            {cart.items.map((item) => {
+              const stockError = cart.validation.errors.find(
+                e => e.productId === item.product.id && e.type === 'insufficient_stock'
+              );
+
+              return (
+                <div 
+                  key={item.product.id} 
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg bg-secondary/50",
+                    stockError && "ring-1 ring-destructive/50"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{item.product.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(item.product.price)} × {item.quantity} = {' '}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(item.product.price * item.quantity)}
+                      </span>
+                    </p>
+                    {stockError && (
+                      <p className="text-xs text-destructive mt-1">
+                        Pouze {stockError.available} ks skladem
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => cart.decrementQuantity(item.product.id)}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </Button>
+                    <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => cart.incrementQuantity(item.product.id)}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => cart.removeItem(item.product.id)}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateQuantity(item.product.id, -1)}
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </Button>
-                  <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateQuantity(item.product.id, 1)}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => removeFromCart(item.product.id)}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Payment Method */}
@@ -374,38 +399,47 @@ export function SalesRegister() {
             <RadioGroup 
               value={paymentMethod} 
               onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-              className="grid grid-cols-3 gap-2"
+              className="grid grid-cols-4 gap-2"
             >
-              {PAYMENT_METHODS.map((method) => (
-                <div key={method.value}>
-                  <RadioGroupItem
-                    value={method.value}
-                    id={`payment-${method.value}`}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={`payment-${method.value}`}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all",
-                      "hover:bg-secondary/50",
-                      paymentMethod === method.value 
-                        ? "border-primary bg-primary/10" 
-                        : "border-border"
-                    )}
-                  >
-                    <method.icon className={cn(
-                      "w-5 h-5",
-                      paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    <span className={cn(
-                      "text-xs font-medium",
-                      paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      {method.label}
-                    </span>
-                  </Label>
-                </div>
-              ))}
+              {PAYMENT_METHODS.map((method) => {
+                // Credit requires client
+                const disabled = method.value === 'credit' && !selectedClient && !noClient;
+                // Credit topup cannot be paid by credit
+                const disabledForTopup = method.value === 'credit' && hasCreditTopup;
+
+                return (
+                  <div key={method.value}>
+                    <RadioGroupItem
+                      value={method.value}
+                      id={`payment-${method.value}`}
+                      className="peer sr-only"
+                      disabled={disabled || disabledForTopup}
+                    />
+                    <Label
+                      htmlFor={`payment-${method.value}`}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                        "hover:bg-secondary/50",
+                        paymentMethod === method.value 
+                          ? "border-primary bg-primary/10" 
+                          : "border-border",
+                        (disabled || disabledForTopup) && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <method.icon className={cn(
+                        "w-5 h-5",
+                        paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
+                      )} />
+                      <span className={cn(
+                        "text-xs font-medium",
+                        paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {method.label}
+                      </span>
+                    </Label>
+                  </div>
+                );
+              })}
             </RadioGroup>
           </div>
 
@@ -420,24 +454,29 @@ export function SalesRegister() {
               <p className="text-sm text-muted-foreground">Celkem:</p>
             </div>
             <p className="text-2xl sm:text-3xl font-bold text-foreground">
-              {formatCurrency(totalAmount)}
+              {formatCurrency(cart.totalAmount)}
             </p>
             {selectedClientData && paymentMethod === 'credit' && (
               <p className="text-sm text-muted-foreground mt-2">
                 Nový zůstatek:{' '}
                 <span className={cn(
                   "font-medium",
-                  ((selectedClientData.credit_balance || 0) - totalAmount) < 0 
+                  ((selectedClientData.credit_balance || 0) - cart.totalAmount) < 0 
                     ? "text-destructive" 
                     : "text-foreground"
                 )}>
-                  {formatCurrency((selectedClientData.credit_balance || 0) - totalAmount)}
+                  {formatCurrency((selectedClientData.credit_balance || 0) - cart.totalAmount)}
                 </span>
               </p>
             )}
-            {paymentMethod !== 'credit' && (
+            {paymentMethod !== 'credit' && !hasCreditTopup && (
               <p className="text-xs text-success mt-2">
                 Kredit klienta nebude ovlivněn
+              </p>
+            )}
+            {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
+              <p className="text-xs text-amber-600 mt-2">
+                Klientovi bude připsán kredit z dobíjecích položek
               </p>
             )}
           </div>
@@ -445,7 +484,7 @@ export function SalesRegister() {
           {/* Complete Sale Button */}
           <Button 
             onClick={handleSale} 
-            disabled={isProcessing || cart.length === 0 || (!noClient && !selectedClient)} 
+            disabled={checkoutDisabled} 
             className="w-full h-12 text-base gap-2"
             size="lg"
           >
