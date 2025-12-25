@@ -54,7 +54,7 @@ export interface AnnualStatsData {
   productIncome: number;
   avgMonthlyIncome: number;
   avgMonthlyIncomeCompleted: number; // Only completed months
-  pendingPayments: { count: number; amount: number };
+  pendingPayments: { count: number; amount: number; clients: Array<{ id: string; name: string; balance: number }> };
   topProducts: Array<{ name: string; count: number; revenue: number }>;
   
   // Measurements & Diagnostics
@@ -390,10 +390,20 @@ export function useAnnualStats(
       creditTransactions.forEach(t => {
         clientBalances[t.client_id] = (clientBalances[t.client_id] || 0) + t.amount;
       });
-      const pendingClients = Object.entries(clientBalances).filter(([, balance]) => balance < -50);
+      const pendingClientsEntries = Object.entries(clientBalances).filter(([, balance]) => balance < -50);
+      const pendingClientsWithDetails = pendingClientsEntries.map(([clientId, balance]) => {
+        const client = clients.find(c => c.id === clientId);
+        return {
+          id: clientId,
+          name: client?.name || 'Neznámý klient',
+          balance: balance,
+        };
+      }).sort((a, b) => a.balance - b.balance); // Most negative first
+      
       const pendingPayments = {
-        count: pendingClients.length,
-        amount: Math.abs(pendingClients.reduce((sum, [, balance]) => sum + balance, 0)),
+        count: pendingClientsEntries.length,
+        amount: Math.abs(pendingClientsEntries.reduce((sum, [, balance]) => sum + balance, 0)),
+        clients: pendingClientsWithDetails,
       };
 
       // Top products

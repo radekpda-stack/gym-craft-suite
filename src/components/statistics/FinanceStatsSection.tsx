@@ -26,6 +26,7 @@ import { TotalIncomeModal } from './modals/TotalIncomeModal';
 import { MonthlyAverageModal } from './modals/MonthlyAverageModal';
 import { TrainingIncomeModal } from './modals/TrainingIncomeModal';
 import { ProductIncomeModal } from './modals/ProductIncomeModal';
+import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 
 type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | null;
 
@@ -197,6 +198,11 @@ export function FinanceStatsSection() {
       />
       <ProductIncomeModal 
         open={activeModal === 'products'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        stats={stats}
+      />
+      <PendingPaymentsModal 
+        open={activeModal === 'pending'} 
         onOpenChange={(open) => !open && setActiveModal(null)}
         stats={stats}
       />
