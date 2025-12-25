@@ -135,7 +135,7 @@ export function useAnnualStats(
         // Clients
         supabase
           .from('clients')
-          .select('id, name, is_archived, created_at')
+          .select('id, name, is_archived, created_at, credit_balance')
           .eq('user_id', user.id),
         
         // Exercise entries
@@ -385,24 +385,19 @@ export function useAnnualStats(
         ? completedMonthsIncome.reduce((a, b) => a + b, 0) / completedMonthsIncome.length
         : avgMonthlyIncome;
 
-      // Pending payments - clients with negative balance or unpaid trainings
-      const clientBalances: Record<string, number> = {};
-      creditTransactions.forEach(t => {
-        clientBalances[t.client_id] = (clientBalances[t.client_id] || 0) + t.amount;
-      });
-      const pendingClientsEntries = Object.entries(clientBalances).filter(([, balance]) => balance < -50);
-      const pendingClientsWithDetails = pendingClientsEntries.map(([clientId, balance]) => {
-        const client = clients.find(c => c.id === clientId);
-        return {
-          id: clientId,
-          name: client?.name || 'Neznámý klient',
-          balance: balance,
-        };
-      }).sort((a, b) => a.balance - b.balance); // Most negative first
+      // Pending payments - clients with negative credit_balance
+      const pendingClientsWithDetails = clients
+        .filter(c => (c.credit_balance ?? 0) < -50)
+        .map(c => ({
+          id: c.id,
+          name: c.name,
+          balance: c.credit_balance ?? 0,
+        }))
+        .sort((a, b) => a.balance - b.balance); // Most negative first
       
       const pendingPayments = {
-        count: pendingClientsEntries.length,
-        amount: Math.abs(pendingClientsEntries.reduce((sum, [, balance]) => sum + balance, 0)),
+        count: pendingClientsWithDetails.length,
+        amount: Math.abs(pendingClientsWithDetails.reduce((sum, c) => sum + c.balance, 0)),
         clients: pendingClientsWithDetails,
       };
 
