@@ -78,7 +78,7 @@ const ActionRow = memo(function ActionRow({ task, onDismiss, onClick }: ActionRo
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-3 p-3 rounded-xl transition-all group',
+        'w-full flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl transition-all group',
         'hover:bg-secondary/50 active:scale-[0.98]',
         'border-l-4',
         status === 'error' ? 'border-l-destructive' : 
@@ -86,52 +86,40 @@ const ActionRow = memo(function ActionRow({ task, onDismiss, onClick }: ActionRo
       )}
     >
       {/* Icon */}
-      <div className={cn('p-2 rounded-lg shrink-0', config.bgClass)}>
+      <div className={cn('p-1.5 sm:p-2 rounded-lg shrink-0', config.bgClass)}>
         <Icon className={cn('w-4 h-4', config.textClass)} />
       </div>
       
-      {/* Content */}
+      {/* Content - mobile optimized */}
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground truncate">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          <span className="font-medium text-foreground text-sm sm:text-base max-w-[120px] sm:max-w-none truncate">
             {task.clientName}
           </span>
           <span className={cn(
-            'text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
+            'text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider px-1 sm:px-1.5 py-0.5 rounded whitespace-nowrap',
             config.bgClass,
             config.textClass
           )}>
             {typeConfig.label}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground truncate">
+        <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
           {task.subtitle}
           {task.detail && ` • ${task.detail}`}
         </p>
       </div>
       
-      {/* Action */}
+      {/* Action - simplified on mobile */}
       <span className={cn(
-        'text-xs font-medium px-2 py-1 rounded-lg shrink-0',
+        'text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-1 rounded-lg shrink-0 whitespace-nowrap',
         'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground',
         'transition-colors'
       )}>
         {task.actionLabel || 'Otevřít'}
       </span>
       
-      {/* Dismiss */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDismiss();
-        }}
-        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
-        title="Skrýt na 24h"
-      >
-        <X className="w-3.5 h-3.5 text-muted-foreground" />
-      </button>
-      
-      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+      <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
     </button>
   );
 });
