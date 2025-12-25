@@ -314,16 +314,17 @@ export function useResetClientPassword() {
       if (!user?.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase.functions.invoke('create-client-portal-access', {
-        body: { clientId },
+        body: { client_id: clientId },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      return data as { email: string; password: string };
+      return data as { email: string; password: string; isNewAccount: boolean; clientName: string };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clients-without-portal'] });
     },
     onError: (error: Error) => {
       toast({
@@ -345,7 +346,7 @@ export function useDisableClientAccess() {
       if (!user?.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase.functions.invoke('disable-client-portal-access', {
-        body: { clientId, disable },
+        body: { client_id: clientId, disabled: disable },
       });
 
       if (error) throw error;
