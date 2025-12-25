@@ -21,7 +21,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Badge } from '@/components/ui/badge';
-import { useProducts, Product } from '@/hooks/useProducts';
+import { Product } from '@/hooks/useProducts';
+import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCart } from '@/hooks/useSalesCart';
 import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
@@ -39,7 +40,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Compon
 
 export function SalesRegister() {
   const queryClient = useQueryClient();
-  const { data: products = [], isLoading: productsLoading } = useProducts(true);
+  const { data: products = [], isLoading: productsLoading } = useProductsSortedBySales(true);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
 
   const [selectedClient, setSelectedClient] = useState<string>('');
