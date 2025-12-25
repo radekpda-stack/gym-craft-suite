@@ -1,18 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientNutritionCampaign } from '@/hooks/useClientPortalData';
+import { useClientNutritionCampaign, useClientTodayNutrition } from '@/hooks/useClientPortalData';
+import { useQuickAddWater } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
+import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
+import { toast } from 'sonner';
 
 export default function ClientPortalNutrition() {
   const { clientId } = useClientPortal();
   const { data: campaign, isLoading } = useClientNutritionCampaign(clientId ?? undefined);
+  const { data: todayData, isLoading: todayLoading } = useClientTodayNutrition(
+    clientId ?? undefined, 
+    campaign?.id
+  );
+  const quickWater = useQuickAddWater();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
+
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
 
@@ -30,9 +41,20 @@ export default function ClientPortalNutrition() {
     }
   }, [campaign, progressPercent, trackPortalEvent]);
 
-  const handleFillDailyLog = () => {
-    trackPortalEvent('client_portal_fill_nutrition_log');
-    // TODO: Open nutrition log form
+  const handleQuickWater = async () => {
+    if (!campaign || !clientId) return;
+    
+    try {
+      await quickWater.mutateAsync({
+        sessionId: campaign.id,
+        clientId,
+        amount: 300,
+      });
+      toast.success('Voda přidána');
+      trackPortalEvent('client_portal_quick_water');
+    } catch (error) {
+      toast.error('Nepodařilo se přidat');
+    }
   };
 
   return (
@@ -84,28 +106,49 @@ export default function ClientPortalNutrition() {
                   </div>
                   <Progress value={progressPercent} className="h-2" />
                 </div>
-
-                {campaign.isActive && (
-                  <Button className="w-full" onClick={handleFillDailyLog}>
-                    Vyplnit dnešní záznam
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Quick Entry - placeholder */}
+          {/* Quick Actions */}
           {campaign.isActive && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Rychlý záznam</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Formulář pro rychlé vyplnění jídla, pití a kávy bude zde.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowAddForm(true)} 
+                className="flex-1 gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Přidat záznam
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleQuickWater}
+                disabled={quickWater.isPending}
+                className="gap-2"
+              >
+                <Droplets className="w-4 h-4" />
+                + Voda
+              </Button>
+            </div>
+          )}
+
+          {/* Add Form */}
+          {showAddForm && campaign.isActive && clientId && (
+            <FoodLogForm
+              sessionId={campaign.id}
+              clientId={clientId}
+              onClose={() => setShowAddForm(false)}
+            />
+          )}
+
+          {/* Today's Entries */}
+          {campaign.isActive && todayData && (
+            <TodayEntries
+              food={todayData.food}
+              drinks={todayData.drinks}
+              coffee={todayData.coffee}
+              isLoading={todayLoading}
+            />
           )}
         </>
       )}
