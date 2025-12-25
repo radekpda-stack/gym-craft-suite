@@ -326,7 +326,7 @@ export type Database = {
           {
             foreignKeyName: "client_budget_members_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -4818,6 +4818,16 @@ export type Database = {
         Returns: boolean
       }
       normalize_text: { Args: { input_text: string }; Returns: string }
+      rpc_apply_credit_delta: {
+        Args: {
+          p_client_id: string
+          p_delta: number
+          p_reason?: string
+          p_ref_id?: string
+        }
+        Returns: Json
+      }
+      rpc_get_pending_payments: { Args: { p_user_id: string }; Returns: Json }
       update_client_balance_atomic: {
         Args: { p_client_id: string; p_delta: number }
         Returns: number

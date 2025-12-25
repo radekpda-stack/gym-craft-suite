@@ -46,6 +46,18 @@ export interface SharedBudgetInfo {
   members: Array<{ id: string; name: string; membershipId: string }>;
 }
 
+export interface ApplyCreditDeltaResult {
+  success: boolean;
+  balance: number; // Alias for new_balance for backwards compatibility
+  entity_type: 'client' | 'group';
+  entity_id: string;
+  new_balance: number;
+  delta: number;
+  client_id: string;
+  group_id: string | null;
+  error?: string;
+}
+
 // ==================== Core Credit Utility Functions ====================
 
 /**
@@ -77,53 +89,69 @@ export async function getClientBudgetGroup(clientId: string) {
 }
 
 /**
- * Update shared budget balance atomically using SQL RPC
- * This prevents race conditions by performing a single atomic UPDATE
- */
-export async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
-  // Use atomic RPC function to prevent race conditions
-  const { data, error } = await supabase.rpc('update_shared_balance_atomic', {
-    p_group_id: groupId,
-    p_delta: delta,
-  });
-
-  if (error) throw error;
-  return data as number;
-}
-
-/**
- * Update individual client credit balance atomically using SQL RPC
- * This prevents race conditions by performing a single atomic UPDATE
- */
-export async function updateClientBalance(clientId: string, delta: number): Promise<number> {
-  // Use atomic RPC function to prevent race conditions
-  const { data, error } = await supabase.rpc('update_client_balance_atomic', {
-    p_client_id: clientId,
-    p_delta: delta,
-  });
-
-  if (error) throw error;
-  return data as number;
-}
-
-/**
- * Apply credit delta - automatically detects shared vs individual budget
+ * Apply credit delta using ATOMIC RPC function
+ * This is the ONLY way to update credit - prevents race conditions
  */
 export async function applyCreditDelta(
   clientId: string,
-  delta: number
-): Promise<{ balance: number; groupId: string | null }> {
-  const groupId = await getClientGroupId(clientId);
+  delta: number,
+  reason?: string,
+  refId?: string
+): Promise<ApplyCreditDeltaResult> {
+  const { data, error } = await supabase.rpc('rpc_apply_credit_delta', {
+    p_client_id: clientId,
+    p_delta: delta,
+    p_reason: reason ?? null,
+    p_ref_id: refId ?? null,
+  });
 
-  if (groupId) {
-    const balance = await updateSharedBalance(groupId, delta);
-    // Keep personal balance at 0 for shared-budget clients
-    await supabase.from('clients').update({ credit_balance: 0 }).eq('id', clientId);
-    return { balance, groupId };
+  if (error) throw error;
+  
+  const rawResult = data as unknown as {
+    success: boolean;
+    entity_type: 'client' | 'group';
+    entity_id: string;
+    new_balance: number;
+    delta: number;
+    client_id: string;
+    group_id: string | null;
+    error?: string;
+  };
+  
+  if (!rawResult.success) {
+    throw new Error(rawResult.error || 'Failed to apply credit delta');
   }
+  
+  return {
+    ...rawResult,
+    balance: rawResult.new_balance, // Backwards compatibility
+  };
+}
 
-  const balance = await updateClientBalance(clientId, delta);
-  return { balance, groupId: null };
+/**
+ * @deprecated Use applyCreditDelta instead - this is for backwards compatibility
+ */
+export async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
+  // Get any member of the group to use the RPC
+  const { data: anyMember } = await supabase
+    .from("client_budget_members")
+    .select("client_id")
+    .eq("group_id", groupId)
+    .limit(1)
+    .single();
+    
+  if (!anyMember) throw new Error("No members in group");
+  
+  const result = await applyCreditDelta(anyMember.client_id, delta);
+  return result.new_balance;
+}
+
+/**
+ * @deprecated Use applyCreditDelta instead - this is for backwards compatibility
+ */
+export async function updateClientBalance(clientId: string, delta: number): Promise<number> {
+  const result = await applyCreditDelta(clientId, delta);
+  return result.new_balance;
 }
 
 /**
@@ -171,8 +199,18 @@ export async function clearPersonalDebtToSharedBudget(
 
   if (updateClientError) throw updateClientError;
 
-  // Deduct the debt from shared budget
-  await updateSharedBalance(groupId, -debtAmount);
+  // Deduct the debt from shared budget using atomic RPC
+  // Note: We apply to any member of the group - the RPC will handle it
+  const { data: anyMember } = await supabase
+    .from("client_budget_members")
+    .select("client_id")
+    .eq("group_id", groupId)
+    .limit(1)
+    .single();
+    
+  if (anyMember) {
+    await applyCreditDelta(anyMember.client_id, -debtAmount, 'Převod dluhu z osobního kreditu');
+  }
 
   return debtAmount;
 }
@@ -301,6 +339,43 @@ export function useSharedBudgetTransactions(groupId?: string | null) {
   });
 }
 
+// ==================== Pending Payments Hook ====================
+
+export interface PendingPaymentsData {
+  individual: Array<{
+    id: string;
+    name: string;
+    credit_balance: number;
+    type: 'individual';
+  }>;
+  groups: Array<{
+    id: string;
+    name: string;
+    shared_balance: number;
+    type: 'group';
+    members: Array<{ id: string; name: string }>;
+  }>;
+  total_individual_amount: number;
+  total_group_amount: number;
+}
+
+export function usePendingPayments() {
+  return useQuery({
+    queryKey: ["pending_payments"],
+    queryFn: async (): Promise<PendingPaymentsData> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.rpc('rpc_get_pending_payments', {
+        p_user_id: user.id,
+      });
+
+      if (error) throw error;
+      return data as unknown as PendingPaymentsData;
+    },
+  });
+}
+
 // ==================== Mutation Hooks ====================
 
 export function useCreateTransaction() {
@@ -339,9 +414,12 @@ export function useCreateTransaction() {
       if (transactionError) throw transactionError;
 
       let newBalance: number | null = null;
+      let entityType: 'client' | 'group' = 'client';
+      
       if (!input.skip_credit_update) {
-        const { balance } = await applyCreditDelta(input.client_id, input.amount);
-        newBalance = balance;
+        const result = await applyCreditDelta(input.client_id, input.amount, input.description);
+        newBalance = result.new_balance;
+        entityType = result.entity_type;
       }
 
       return { 
@@ -350,7 +428,7 @@ export function useCreateTransaction() {
         skippedCredit: input.skip_credit_update, 
         isSharedBudget, 
         clearedDebt,
-        // Return data needed for undo
+        entityType,
         undoData: {
           transactionId: transaction.id,
           clientId: input.client_id,
@@ -365,8 +443,8 @@ export function useCreateTransaction() {
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
       
-      // Track the action
       const trackType = variables.amount > 0 ? 'credit_add' : 'credit_deduct';
       featureTracker.track(trackType, 'finance', { 
         amount: variables.amount, 
@@ -407,16 +485,17 @@ export function useDeleteTransaction() {
 
       if (deleteError) throw deleteError;
 
-      // Reverse credit change
-      await applyCreditDelta(clientId, -amount);
+      // Reverse credit change using atomic RPC
+      const result = await applyCreditDelta(clientId, -amount, 'Reversal of deleted transaction');
 
-      return { isSharedBudget: !!groupId };
+      return { isSharedBudget: !!groupId, newBalance: result.new_balance };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
       
       const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
       toast({ title: "Transakce smazána", description: `Transakce odstraněna, ${budgetType.toLowerCase()} upraven.` });
@@ -450,18 +529,21 @@ export function useUpdateTransactionPaymentMethod() {
       const wasFromCredit = oldPaymentMethod === 'credit';
       const isNowFromCredit = newPaymentMethod === 'credit';
 
+      let newBalance: number | null = null;
       if (wasFromCredit !== isNowFromCredit) {
         // If changing from credit to cash: add back; from cash to credit: deduct
         const adjustment = wasFromCredit ? -amount : amount;
-        await applyCreditDelta(clientId, adjustment);
+        const result = await applyCreditDelta(clientId, adjustment, 'Payment method change');
+        newBalance = result.new_balance;
       }
 
-      return { changed: wasFromCredit !== isNowFromCredit, isSharedBudget: !!groupId };
+      return { changed: wasFromCredit !== isNowFromCredit, isSharedBudget: !!groupId, newBalance };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
       
       const budgetType = result.isSharedBudget ? "sdílený kredit" : "kredit";
       toast({
@@ -481,12 +563,24 @@ export function useUpdateSharedBudgetBalance() {
 
   return useMutation({
     mutationFn: async ({ groupId, amount }: { groupId: string; amount: number }) => {
-      return await updateSharedBalance(groupId, amount);
+      // Get any member of the group to use the RPC
+      const { data: anyMember } = await supabase
+        .from("client_budget_members")
+        .select("client_id")
+        .eq("group_id", groupId)
+        .limit(1)
+        .single();
+        
+      if (!anyMember) throw new Error("No members in group");
+      
+      const result = await applyCreditDelta(anyMember.client_id, amount, 'Manual balance adjustment');
+      return result.new_balance;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
     },
     onError: (error) => {
       console.error("Error updating shared budget:", error);
