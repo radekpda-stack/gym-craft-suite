@@ -4,14 +4,17 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   Key, 
-  KeyRound, 
   Shield, 
   ShieldOff, 
   Clock, 
   CheckCircle2, 
   XCircle,
   RefreshCw,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +47,7 @@ interface ClientAccountInfo {
   last_password_reset_at: string | null;
   created_at: string;
   auth_user_id: string | null;
+  portal_password: string | null;
 }
 
 export function ClientPortalAccessSection({
@@ -56,13 +60,15 @@ export function ClientPortalAccessSection({
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: accountInfo, isLoading } = useQuery({
     queryKey: ['client-portal-access', clientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('client_accounts')
-        .select('id, status, last_portal_login, last_password_reset_at, created_at, auth_user_id')
+        .select('id, status, last_portal_login, last_password_reset_at, created_at, auth_user_id, portal_password')
         .eq('client_id', clientId)
         .maybeSingle();
 
@@ -144,6 +150,19 @@ export function ClientPortalAccessSection({
     }
   };
 
+  const handleCopyPassword = async () => {
+    if (!accountInfo?.portal_password) return;
+    
+    try {
+      await navigator.clipboard.writeText(accountInfo.portal_password);
+      setCopied(true);
+      toast.success('Heslo zkopírováno');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Nepodařilo se zkopírovat heslo');
+    }
+  };
+
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['client-portal-access', clientId] });
     queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
@@ -202,6 +221,34 @@ export function ClientPortalAccessSection({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
               <span className="text-sm font-medium shrink-0">Email pro login</span>
               <span className="text-sm text-muted-foreground truncate">{clientEmail}</span>
+            </div>
+          )}
+
+          {/* Password */}
+          {hasAccess && accountInfo?.portal_password && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Heslo</span>
+              <div className="flex items-center gap-2">
+                <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
+                  {showPassword ? accountInfo.portal_password : '••••••••'}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleCopyPassword}
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
             </div>
           )}
 

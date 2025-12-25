@@ -130,12 +130,13 @@ Deno.serve(async (req) => {
 
       authUserId = existingAccount.auth_user_id;
 
-      // Update last password reset timestamp
+      // Update last password reset timestamp and save the password
       await supabaseAdmin
         .from('client_accounts')
         .update({ 
           last_password_reset_at: new Date().toISOString(),
-          status: 'active' 
+          status: 'active',
+          portal_password: password
         })
         .eq('id', existingAccount.id);
 
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
       
       isNewAccount = true;
 
-      // Upsert client_accounts
+      // Upsert client_accounts with password
       const { error: upsertError } = await supabaseAdmin
         .from('client_accounts')
         .upsert({
@@ -240,6 +241,7 @@ Deno.serve(async (req) => {
           status: 'active',
           is_active: true,
           created_by_trainer_id: trainer.id,
+          portal_password: password,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
