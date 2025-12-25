@@ -10,12 +10,23 @@ import {
   Clock, 
   CheckCircle2, 
   XCircle,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreateClientAccessDialog } from './CreateClientAccessDialog';
@@ -42,7 +53,9 @@ export function ClientPortalAccessSection({
 }: ClientPortalAccessSectionProps) {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const { data: accountInfo, isLoading } = useQuery({
     queryKey: ['client-portal-access', clientId],
@@ -98,6 +111,39 @@ export function ClientPortalAccessSection({
     }
   };
 
+  const handleRemoveAccess = async () => {
+    setRemoving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'remove-client-portal-access',
+        {
+          body: { client_id: clientId },
+        }
+      );
+
+      if (error) {
+        console.error('Remove access error:', error);
+        toast.error('Nepodařilo se odebrat přístup');
+        return;
+      }
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['client-portal-access', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
+      toast.success('Přístup do portálu byl odebrán');
+      setRemoveDialogOpen(false);
+    } catch (err) {
+      console.error('Remove error:', err);
+      toast.error('Neočekávaná chyba');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['client-portal-access', clientId] });
     queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
@@ -122,7 +168,7 @@ export function ClientPortalAccessSection({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Key className="w-5 h-5" />
+            <Key className="w-5 h-5 shrink-0" />
             Klientská zóna
           </CardTitle>
           <CardDescription>
@@ -131,20 +177,20 @@ export function ClientPortalAccessSection({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Status */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Stav</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium shrink-0">Stav</span>
             {!hasAccess ? (
-              <Badge variant="outline" className="gap-1">
+              <Badge variant="outline" className="gap-1 shrink-0">
                 <XCircle className="w-3 h-3" />
                 Bez přístupu
               </Badge>
             ) : isActive ? (
-              <Badge className="gap-1 bg-success/10 text-success border-success/20">
+              <Badge className="gap-1 bg-success/10 text-success border-success/20 shrink-0">
                 <CheckCircle2 className="w-3 h-3" />
                 Aktivní
               </Badge>
             ) : (
-              <Badge variant="destructive" className="gap-1">
+              <Badge variant="destructive" className="gap-1 shrink-0">
                 <ShieldOff className="w-3 h-3" />
                 Deaktivovaný
               </Badge>
@@ -153,18 +199,18 @@ export function ClientPortalAccessSection({
 
           {/* Email */}
           {clientEmail && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Email pro login</span>
-              <span className="text-sm text-muted-foreground">{clientEmail}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Email pro login</span>
+              <span className="text-sm text-muted-foreground truncate">{clientEmail}</span>
             </div>
           )}
 
           {/* Last login */}
           {hasAccess && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Poslední přihlášení</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Poslední přihlášení</span>
               <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+                <Clock className="w-3 h-3 shrink-0" />
                 {accountInfo?.last_portal_login 
                   ? format(new Date(accountInfo.last_portal_login), 'd. M. yyyy HH:mm', { locale: cs })
                   : 'Nikdy'}
@@ -174,8 +220,8 @@ export function ClientPortalAccessSection({
 
           {/* Last password reset */}
           {hasAccess && accountInfo?.last_password_reset_at && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Poslední reset hesla</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Poslední reset hesla</span>
               <span className="text-sm text-muted-foreground">
                 {format(new Date(accountInfo.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
               </span>
@@ -206,7 +252,7 @@ export function ClientPortalAccessSection({
 
                 <Button 
                   onClick={handleToggleAccess}
-                  variant={isActive ? 'destructive' : 'default'}
+                  variant={isActive ? 'secondary' : 'default'}
                   className="w-full gap-2"
                   disabled={toggling}
                 >
@@ -222,11 +268,20 @@ export function ClientPortalAccessSection({
                     </>
                   )}
                 </Button>
+
+                <Button 
+                  onClick={() => setRemoveDialogOpen(true)}
+                  variant="destructive"
+                  className="w-full gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Odebrat přístup
+                </Button>
               </>
             )}
 
             {!clientEmail && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-destructive text-center">
                 Pro vytvoření přístupu přidejte klientovi email.
               </p>
             )}
@@ -242,6 +297,30 @@ export function ClientPortalAccessSection({
         clientEmail={clientEmail}
         onSuccess={handleSuccess}
       />
+
+      {/* Remove access confirmation dialog */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odebrat přístup do portálu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tímto zcela odeberete přístup klienta <strong>{clientName}</strong> do klientského portálu. 
+              Účet bude smazán a klient se již nebude moci přihlásit. 
+              Tuto akci nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveAccess}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? 'Odebírám...' : 'Odebrat přístup'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
