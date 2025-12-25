@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientNutritionCampaign } from '@/hooks/useClientPortalData';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Apple, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -10,8 +12,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function ClientPortalNutrition() {
   const { clientId } = useClientPortal();
   const { data: campaign, isLoading } = useClientNutritionCampaign(clientId ?? undefined);
+  const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
   const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
+
+  useEffect(() => {
+    trackPageMount();
+  }, [trackPageMount]);
+
+  // Track campaign view
+  useEffect(() => {
+    if (campaign) {
+      trackPortalEvent('client_portal_view_campaign', { 
+        is_active: campaign.isActive,
+        progress_percent: progressPercent
+      });
+    }
+  }, [campaign, progressPercent, trackPortalEvent]);
+
+  const handleFillDailyLog = () => {
+    trackPortalEvent('client_portal_fill_nutrition_log');
+    // TODO: Open nutrition log form
+  };
 
   return (
     <div className="space-y-6">
@@ -64,7 +86,7 @@ export default function ClientPortalNutrition() {
                 </div>
 
                 {campaign.isActive && (
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={handleFillDailyLog}>
                     Vyplnit dnešní záznam
                   </Button>
                 )}

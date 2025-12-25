@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientTrainingSessions } from '@/hooks/useClientPortalData';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -10,6 +12,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function ClientPortalAttendance() {
   const { clientId } = useClientPortal();
   const { data: sessions, isLoading } = useClientTrainingSessions(clientId ?? undefined);
+  const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_attendance');
+
+  useEffect(() => {
+    trackPageMount();
+  }, [trackPageMount]);
+
+  // Track when sessions are viewed
+  useEffect(() => {
+    if (sessions && sessions.length > 0) {
+      trackPortalEvent('client_portal_view_sessions', { 
+        sessions_count: sessions.length 
+      });
+    }
+  }, [sessions, trackPortalEvent]);
 
   return (
     <div className="space-y-6">
