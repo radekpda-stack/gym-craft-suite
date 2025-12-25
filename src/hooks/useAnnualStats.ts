@@ -123,6 +123,7 @@ export function useAnnualStats(
         feedbackResult,
         featureUsageResult,
         productsResult,
+        budgetMembersResult,
       ] = await Promise.all([
         // Trainings
         supabase
@@ -198,6 +199,12 @@ export function useAnnualStats(
           .from('products')
           .select('id, name')
           .eq('user_id', user.id),
+        
+        // Budget members (clients in shared budget groups)
+        supabase
+          .from('client_budget_members')
+          .select('client_id')
+          .eq('user_id', user.id),
       ]);
 
       const trainings = trainingsResult.data || [];
@@ -210,6 +217,10 @@ export function useAnnualStats(
       const feedback = feedbackResult.data || [];
       const featureUsage = featureUsageResult.data || [];
       const products = productsResult.data || [];
+      const budgetMembers = budgetMembersResult.data || [];
+      
+      // Set of client IDs that are in budget groups (they don't have individual debt)
+      const clientsInBudgetGroups = new Set(budgetMembers.map(bm => bm.client_id));
 
       // Calculate training stats
       const completedTrainings = trainings.filter(t => t.status === 'completed');
@@ -385,9 +396,9 @@ export function useAnnualStats(
         ? completedMonthsIncome.reduce((a, b) => a + b, 0) / completedMonthsIncome.length
         : avgMonthlyIncome;
 
-      // Pending payments - clients with negative credit_balance
+      // Pending payments - clients with negative credit_balance (excluding clients in budget groups)
       const pendingClientsWithDetails = clients
-        .filter(c => (c.credit_balance ?? 0) < -50)
+        .filter(c => (c.credit_balance ?? 0) < -50 && !clientsInBudgetGroups.has(c.id))
         .map(c => ({
           id: c.id,
           name: c.name,
