@@ -62,3 +62,12 @@ verify_jwt = false
 
 [functions.pre-diagnostic-form]
 verify_jwt = false
+
+[functions.create-client-portal-access]
+verify_jwt = true
+
+[functions.disable-client-portal-access]
+verify_jwt = true
+
+[functions.client-portal-login]
+verify_jwt = false
