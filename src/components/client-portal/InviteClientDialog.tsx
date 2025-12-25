@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { useClientsWithoutPortal, useInviteClient } from '@/hooks/useClientPortalAdmin';
-import { Check, Copy, Mail, Search, User } from 'lucide-react';
+import { useClientsWithoutPortal, useResetClientPassword } from '@/hooks/useClientPortalAdmin';
+import { Check, Copy, Mail, Search, User, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface InviteClientDialogProps {
@@ -21,46 +21,47 @@ interface InviteClientDialogProps {
 
 export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogProps) {
   const { data: clients, isLoading } = useClientsWithoutPortal();
-  const inviteClient = useInviteClient();
+  const createAccess = useResetClientPassword();
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [credentials, setCredentials] = useState<{ email: string; password: string; clientName: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null);
 
   const filteredClients = clients?.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleInvite = async () => {
+  const handleCreateAccess = async () => {
     if (!selectedClient) return;
 
-    const result = await inviteClient.mutateAsync(selectedClient);
-    
-    // Generate invite link
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/client/login?token=${result.token.token}`;
-    setInviteLink(link);
+    try {
+      const result = await createAccess.mutateAsync(selectedClient);
+      setCredentials({
+        email: result.email,
+        password: result.password,
+        clientName: result.clientName,
+      });
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
-  const handleCopyLink = async () => {
-    if (!inviteLink) return;
-    
-    await navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
+  const copyToClipboard = async (text: string, field: 'email' | 'password') => {
+    await navigator.clipboard.writeText(text);
+    setCopiedField(field);
     toast({
-      title: 'Odkaz zkopírován',
-      description: 'Pošlete ho klientovi emailem nebo zprávou.',
+      title: 'Zkopírováno',
+      description: field === 'email' ? 'Email zkopírován' : 'Heslo zkopírováno',
     });
-    
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const handleClose = () => {
     setSearch('');
     setSelectedClient(null);
-    setInviteLink(null);
-    setCopied(false);
+    setCredentials(null);
+    setCopiedField(null);
     onOpenChange(false);
   };
 
@@ -68,37 +69,62 @@ export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogPro
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Pozvat klienta do portálu</DialogTitle>
+          <DialogTitle>
+            {credentials ? 'Přihlašovací údaje' : 'Vytvořit přístup klientovi'}
+          </DialogTitle>
           <DialogDescription>
-            Vyberte klienta a vygenerujte pozvánkový odkaz.
+            {credentials 
+              ? 'Zkopírujte přihlašovací údaje a předejte je klientovi.'
+              : 'Vyberte klienta a vytvořte mu přístup do portálu.'}
           </DialogDescription>
         </DialogHeader>
 
-        {inviteLink ? (
+        {credentials ? (
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <p className="text-sm font-medium text-green-600 mb-2 flex items-center gap-2">
+              <p className="text-sm font-medium text-green-600 mb-1 flex items-center gap-2">
                 <Check className="w-4 h-4" />
-                Pozvánka vytvořena!
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Odkaz je platný 7 dní. Po kliknutí se klient přihlásí přes svůj email.
+                Přístup vytvořen pro: {credentials.clientName}
               </p>
             </div>
 
-            <div className="flex gap-2">
-              <Input
-                value={inviteLink}
-                readOnly
-                className="text-xs"
-              />
-              <Button onClick={handleCopyLink} variant="outline">
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </Button>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Email</label>
+                <div className="flex gap-2">
+                  <Input value={credentials.email} readOnly className="font-mono" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(credentials.email, 'email')}
+                  >
+                    {copiedField === 'email' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Heslo</label>
+                <div className="flex gap-2">
+                  <Input value={credentials.password} readOnly className="font-mono text-lg tracking-wider" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(credentials.password, 'password')}
+                  >
+                    {copiedField === 'password' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleClose}>
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ Heslo se zobrazuje pouze nyní. Po zavření dialogu ho již nebude možné zobrazit.
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleClose}>
                 Zavřít
               </Button>
             </div>
@@ -134,8 +160,10 @@ export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogPro
                     <button
                       key={client.id}
                       onClick={() => setSelectedClient(client.id)}
+                      disabled={!client.email}
                       className={cn(
                         'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
+                        !client.email && 'opacity-50 cursor-not-allowed',
                         selectedClient === client.id
                           ? 'border-primary bg-primary/5'
                           : 'hover:bg-muted/50'
@@ -171,10 +199,11 @@ export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogPro
                 Zrušit
               </Button>
               <Button
-                onClick={handleInvite}
-                disabled={!selectedClient || inviteClient.isPending}
+                onClick={handleCreateAccess}
+                disabled={!selectedClient || createAccess.isPending}
               >
-                {inviteClient.isPending ? 'Vytvářím...' : 'Vytvořit pozvánku'}
+                <Key className="w-4 h-4 mr-2" />
+                {createAccess.isPending ? 'Vytvářím...' : 'Vytvořit přístup'}
               </Button>
             </div>
           </div>
