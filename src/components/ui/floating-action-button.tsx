@@ -35,7 +35,7 @@ export function FloatingActionButton({ actions, className }: FloatingActionButto
   };
 
   return (
-    <div className={cn('fixed bottom-24 right-4 z-40 sm:bottom-6 sm:right-6', className)}>
+    <div className={cn('fixed bottom-32 right-4 z-40 sm:bottom-6 sm:right-6', className)}>
       {/* Backdrop */}
       <AnimatePresence>
         {isOpen && (
