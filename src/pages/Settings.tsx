@@ -13,8 +13,6 @@ import {
   MessageSquare,
   UtensilsCrossed,
   Stethoscope,
-  BookOpen,
-  Dumbbell,
   Tag,
   Wrench,
   RefreshCw,
@@ -22,13 +20,17 @@ import {
   BarChart2,
   Shield,
   UserCog,
+  Palette,
+  Bell,
+  Settings2,
+  Zap,
+  LayoutDashboard,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
-import { ExercisesManagement } from '@/components/settings/ExercisesManagement';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
@@ -42,6 +44,10 @@ import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSett
 import { NutritionQuestionnaireSettings } from '@/components/settings/NutritionQuestionnaireSettings';
 import { DiagnosticQuestionnaireSettings } from '@/components/settings/DiagnosticQuestionnaireSettings';
 import { UserManagementSettings } from '@/components/settings/UserManagementSettings';
+import { NotificationSettings } from '@/components/settings/NotificationSettings';
+import { DefaultValuesSettings } from '@/components/settings/DefaultValuesSettings';
+import { DashboardPersonalizationSettings } from '@/components/settings/DashboardPersonalizationSettings';
+import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -80,8 +86,8 @@ export default function Settings() {
       id: 'services',
       title: language === 'cs' ? 'Služby & Ceny' : 'Services & Pricing',
       description: language === 'cs' 
-        ? 'Ceník, balíčky a kreditové prahy' 
-        : 'Pricing, packages and credit thresholds',
+        ? 'Ceník, balíčky, štítky a kreditové prahy' 
+        : 'Pricing, packages, tags and credit thresholds',
       icon: CreditCard,
       iconColor: 'text-amber-500',
     },
@@ -95,12 +101,12 @@ export default function Settings() {
       iconColor: 'text-cyan-500',
     },
     {
-      id: 'content',
-      title: language === 'cs' ? 'Obsah & Knihovny' : 'Content & Libraries',
+      id: 'personalization',
+      title: language === 'cs' ? 'Personalizace' : 'Personalization',
       description: language === 'cs' 
-        ? 'Cviky, štítky a další obsah' 
-        : 'Exercises, tags and other content',
-      icon: BookOpen,
+        ? 'Dashboard, rychlé akce a výchozí hodnoty' 
+        : 'Dashboard, quick actions and default values',
+      icon: Palette,
       iconColor: 'text-purple-500',
     },
     {
@@ -182,6 +188,16 @@ export default function Settings() {
             </SettingsSection>
 
             <SettingsSection
+              title={language === 'cs' ? 'Notifikace' : 'Notifications'}
+              description={language === 'cs' 
+                ? 'Upozornění a připomínky' 
+                : 'Alerts and reminders'}
+              icon={Bell}
+            >
+              <NotificationSettings />
+            </SettingsSection>
+
+            <SettingsSection
               title={language === 'cs' ? 'Změna hesla' : 'Change Password'}
               description={language === 'cs' 
                 ? 'Aktualizujte přístupové heslo k účtu' 
@@ -260,6 +276,16 @@ export default function Settings() {
             </SettingsSection>
 
             <SettingsSection
+              title={language === 'cs' ? 'Štítky' : 'Tags'}
+              description={language === 'cs' 
+                ? 'Štítky pro kategorizaci klientů a tréninků' 
+                : 'Tags for categorizing clients and trainings'}
+              icon={Tag}
+            >
+              <TagsManagement />
+            </SettingsSection>
+
+            <SettingsSection
               title={language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds'}
               description={language === 'cs' 
                 ? 'Upozornění na nízký kredit klienta' 
@@ -324,27 +350,37 @@ export default function Settings() {
           </>
         );
 
-      case 'content':
+      case 'personalization':
         return (
           <>
             <SettingsSection
-              title={language === 'cs' ? 'Knihovna cviků' : 'Exercise Library'}
+              title={language === 'cs' ? 'Nastavení dashboardu' : 'Dashboard Settings'}
               description={language === 'cs' 
-                ? 'Vlastní cviky a jejich kategorie' 
-                : 'Custom exercises and their categories'}
-              icon={Dumbbell}
+                ? 'Zobrazované sekce na hlavním přehledu' 
+                : 'Sections displayed on main overview'}
+              icon={LayoutDashboard}
             >
-              <ExercisesManagement />
+              <DashboardPersonalizationSettings />
             </SettingsSection>
 
             <SettingsSection
-              title={language === 'cs' ? 'Štítky' : 'Tags'}
+              title={language === 'cs' ? 'Rychlé akce' : 'Quick Actions'}
               description={language === 'cs' 
-                ? 'Štítky pro kategorizaci klientů a tréninků' 
-                : 'Tags for categorizing clients and trainings'}
-              icon={Tag}
+                ? 'Pořadí a viditelnost rychlých akcí' 
+                : 'Order and visibility of quick actions'}
+              icon={Zap}
             >
-              <TagsManagement />
+              <QuickActionSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Výchozí hodnoty' : 'Default Values'}
+              description={language === 'cs' 
+                ? 'Přednastavené hodnoty při vytváření tréninků' 
+                : 'Preset values when creating trainings'}
+              icon={Settings2}
+            >
+              <DefaultValuesSettings />
             </SettingsSection>
           </>
         );
