@@ -17,7 +17,7 @@ const passwordSchema = z.string().min(1, 'Zadejte heslo');
 export default function ClientPortalLogin() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useClientPortalAuth();
+  const { isAuthenticated, loading: authLoading } = useClientPortalAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +25,23 @@ export default function ClientPortalLogin() {
   const [error, setError] = useState<string | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
 
-  // Redirect if already authenticated
+  // Show loading while auth state is being determined
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Ověřuji přihlášení...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Redirect if already authenticated (only after loading is complete)
   if (isAuthenticated) {
     const from = (location.state as { from?: Location })?.from?.pathname || '/client';
     navigate(from, { replace: true });
