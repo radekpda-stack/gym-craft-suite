@@ -187,12 +187,17 @@ export function ClientActionHub({
         if (dominantAction.trainingId) {
           setIsGeneratingLink(true);
           try {
+            const { data: userData } = await supabase.auth.getUser();
+            if (!userData.user?.id) {
+              throw new Error('Uživatel není přihlášen');
+            }
+            
             const { data, error } = await supabase
               .from('feedback_requests')
               .insert({
                 client_id: client.id,
                 training_session_id: dominantAction.trainingId,
-                user_id: (await supabase.auth.getUser()).data.user?.id,
+                user_id: userData.user.id,
               })
               .select('token')
               .single();
@@ -203,6 +208,7 @@ export function ClientActionHub({
             await navigator.clipboard.writeText(link);
             toast({ title: 'Odkaz zkopírován do schránky' });
           } catch (error) {
+            console.error('Error generating feedback link:', error);
             toast({ title: 'Chyba při generování odkazu', variant: 'destructive' });
           } finally {
             setIsGeneratingLink(false);
