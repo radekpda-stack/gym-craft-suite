@@ -10,9 +10,6 @@ import {
   CreditCard,
   Package,
   Wallet,
-  MessageSquare,
-  UtensilsCrossed,
-  Stethoscope,
   Tag,
   Wrench,
   RefreshCw,
@@ -31,7 +28,6 @@ import { SettingsSection } from '@/components/settings/SettingsSection';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
-import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
@@ -41,8 +37,6 @@ import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
 import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSettings';
-import { NutritionQuestionnaireSettings } from '@/components/settings/NutritionQuestionnaireSettings';
-import { DiagnosticQuestionnaireSettings } from '@/components/settings/DiagnosticQuestionnaireSettings';
 import { UserManagementSettings } from '@/components/settings/UserManagementSettings';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { DefaultValuesSettings } from '@/components/settings/DefaultValuesSettings';
@@ -90,15 +84,6 @@ export default function Settings() {
         : 'Pricing, packages, tags and credit thresholds',
       icon: CreditCard,
       iconColor: 'text-amber-500',
-    },
-    {
-      id: 'questionnaires',
-      title: language === 'cs' ? 'Klientská data & Dotazníky' : 'Client Data & Questionnaires',
-      description: language === 'cs' 
-        ? 'Formuláře pro sběr dat od klientů' 
-        : 'Forms for collecting client data',
-      icon: MessageSquare,
-      iconColor: 'text-cyan-500',
     },
     {
       id: 'personalization',
@@ -293,59 +278,6 @@ export default function Settings() {
               icon={Wallet}
             >
               <CreditThresholdSettings />
-            </SettingsSection>
-          </>
-        );
-
-      case 'questionnaires':
-        return (
-          <>
-            <SettingsSection
-              title={language === 'cs' ? 'Feedbackový dotazník' : 'Feedback Questionnaire'}
-              description={language === 'cs' 
-                ? 'Otázky zasílané klientům po tréninku' 
-                : 'Questions sent to clients after training'}
-              icon={MessageSquare}
-              impact={{
-                type: 'warning',
-                message: language === 'cs' 
-                  ? 'Změny se projeví pouze v NOVÝCH feedbackových žádostech' 
-                  : 'Changes apply only to NEW feedback requests'
-              }}
-            >
-              <FeedbackSettings />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Jídelní deník' : 'Food Diary'}
-              description={language === 'cs' 
-                ? 'Nastavení a texty nutričního dotazníku' 
-                : 'Nutrition questionnaire settings and texts'}
-              icon={UtensilsCrossed}
-              impact={{
-                type: 'warning',
-                message: language === 'cs' 
-                  ? 'Změny se projeví v NOVÝCH kampaních. Aktivní kampaně zůstávají beze změny.' 
-                  : 'Changes apply to NEW campaigns. Active campaigns remain unchanged.'
-              }}
-            >
-              <NutritionQuestionnaireSettings />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Vstupní diagnostika' : 'Intake Diagnostic'}
-              description={language === 'cs' 
-                ? 'Sekce a otázky vstupního dotazníku' 
-                : 'Intake questionnaire sections and questions'}
-              icon={Stethoscope}
-              impact={{
-                type: 'warning',
-                message: language === 'cs' 
-                  ? 'Změny ovlivní NOVÉ diagnostiky. Existující záznamy zůstávají.' 
-                  : 'Changes affect NEW diagnostics. Existing records remain.'
-              }}
-            >
-              <DiagnosticQuestionnaireSettings />
             </SettingsSection>
           </>
         );

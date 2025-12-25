@@ -18,6 +18,7 @@ import {
   XCircle,
   Mail,
   MailOpen,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,11 +45,12 @@ import { Link } from 'react-router-dom';
 import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
 import { FeedbackStatusCards } from '@/components/feedback/FeedbackStatusCards';
 import { FeedbackActivityTimeline } from '@/components/feedback/FeedbackActivityTimeline';
+import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
 type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending' | 'expired';
-type TabValue = 'to_send' | 'analytics' | 'history';
+type TabValue = 'to_send' | 'analytics' | 'history' | 'settings';
 
 export default function FeedbackOverview() {
   usePageTracking('feedback_overview');
@@ -344,7 +346,7 @@ export default function FeedbackOverview() {
         {/* Tabs - Main content */}
         <div className="lg:col-span-2 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="to_send" className="gap-2">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">K odeslání</span>
@@ -359,6 +361,10 @@ export default function FeedbackOverview() {
               <TabsTrigger value="history" className="gap-2">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">Historie</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Nastavení</span>
               </TabsTrigger>
             </TabsList>
 
@@ -643,6 +649,18 @@ export default function FeedbackOverview() {
                       <p className="text-muted-foreground">Žádné feedbacky pro vybrané období</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab: Settings */}
+            <TabsContent value="settings" className="space-y-4">
+              <Card className="glass">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Nastavení dotazníku</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FeedbackSettings />
                 </CardContent>
               </Card>
             </TabsContent>

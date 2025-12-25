@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { ClipboardList, Plus, Scale, Stethoscope } from 'lucide-react';
+import { ClipboardList, Plus, Scale, Stethoscope, Settings2 } from 'lucide-react';
 import { useRecordsFeed } from '@/hooks/useRecordsFeed';
 import { useClients, Client } from '@/hooks/useClients';
 import { useMeasurements, useCreateMeasurement, Measurement } from '@/hooks/useMeasurements';
@@ -13,11 +13,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { EditMeasurementSheet } from '@/components/measurements/EditMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { EditExtendedDiagnosticSheet } from '@/components/diagnostics/EditExtendedDiagnosticSheet';
+import { DiagnosticSettingsDialog } from '@/components/diagnostics/DiagnosticSettingsDialog';
 import { MeasurementFormValues } from '@/components/measurements/MeasurementForm';
 
 export default function Records() {
@@ -111,6 +113,15 @@ export default function Records() {
               <Stethoscope className="w-4 h-4" />
               Diagnostika
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DiagnosticSettingsDialog 
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="gap-2">
+                  <Settings2 className="w-4 h-4" />
+                  Nastavení dotazníku
+                </DropdownMenuItem>
+              }
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
