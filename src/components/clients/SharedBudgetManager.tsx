@@ -3,13 +3,15 @@
  * Allows linking clients to shared budget groups
  */
 import { useState } from 'react';
-import { Users, Link, Unlink, Plus, Loader2 } from 'lucide-react';
+import { Users, Link, Unlink, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClientAvatar } from '@/components/ui/client-avatar';
+import { toast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/formatters';
 import {
   Dialog,
   DialogContent,
@@ -51,14 +53,45 @@ export function SharedBudgetManager({
   const handleCreateGroup = async () => {
     if (!newGroupName.trim() || selectedClients.length < 2) return;
     
-    await createGroup.mutateAsync({
-      name: newGroupName,
-      clientIds: selectedClients,
-    });
+    // Check if any selected client is already in a group (shouldn't happen due to UI, but double-check)
+    const clientsInGroups = selectedClients.filter(clientId =>
+      budgetGroups.some(g => g.members.some(m => m.client_id === clientId))
+    );
     
-    setShowCreateDialog(false);
-    setNewGroupName('');
-    setSelectedClients([]);
+    if (clientsInGroups.length > 0) {
+      toast({
+        title: "Chyba",
+        description: "Některý z vybraných klientů je již v jiné skupině. Klient může být pouze v jedné skupině.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await createGroup.mutateAsync({
+        name: newGroupName,
+        clientIds: selectedClients,
+      });
+      
+      setShowCreateDialog(false);
+      setNewGroupName('');
+      setSelectedClients([]);
+    } catch (error: any) {
+      // Handle unique constraint violation
+      if (error?.message?.includes('unique') || error?.code === '23505') {
+        toast({
+          title: "Chyba",
+          description: "Klient už je členem jiné skupiny.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se vytvořit skupinu.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const toggleClientSelection = (clientId: string) => {
@@ -121,6 +154,10 @@ export function SharedBudgetManager({
               <DialogTitle>Vytvořit sdílený budget</DialogTitle>
               <DialogDescription>
                 Vyberte klienty, kteří budou sdílet společný kreditový budget.
+                <span className="block mt-1 text-warning">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  Každý klient může být pouze v jedné skupině.
+                </span>
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -160,7 +197,7 @@ export function SharedBudgetManager({
                         <div className="flex-1">
                           <span className="font-medium">{client.name}</span>
                           {isInGroup && (
-                            <span className="text-xs text-muted-foreground ml-2">
+                            <span className="text-xs text-destructive ml-2">
                               (již v jiné skupině)
                             </span>
                           )}
@@ -169,7 +206,7 @@ export function SharedBudgetManager({
                           "text-sm font-medium",
                           (client.credit_balance || 0) >= 0 ? "text-success" : "text-destructive"
                         )}>
-                          {client.credit_balance || 0} Kč
+                          {formatCurrency(client.credit_balance || 0)}
                         </span>
                       </label>
                     );
@@ -219,15 +256,17 @@ export function SharedBudgetManager({
               clients.find(c => c.id === m.client_id)
             ).filter(Boolean) as Client[];
             
-            const totalBalance = groupClients.reduce(
-              (sum, c) => sum + (c.credit_balance || 0),
-              0
-            ) / groupClients.length; // Average (they should all be same)
+            // Use the shared_balance from the group, not client balance
+            const sharedBalance = group.shared_balance || 0;
+            const isNegative = sharedBalance < 0;
 
             return (
               <div
                 key={group.id}
-                className="glass rounded-xl p-4 space-y-3"
+                className={cn(
+                  "glass rounded-xl p-4 space-y-3",
+                  isNegative && "border-destructive/50"
+                )}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -236,12 +275,18 @@ export function SharedBudgetManager({
                     <Badge variant="secondary" className="text-xs">
                       {groupClients.length} členů
                     </Badge>
+                    {isNegative && (
+                      <Badge variant="destructive" className="text-xs gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Dluh
+                      </Badge>
+                    )}
                   </div>
                   <div className={cn(
                     "text-sm font-bold",
-                    totalBalance >= 0 ? "text-success" : "text-destructive"
+                    sharedBalance >= 0 ? "text-success" : "text-destructive"
                   )}>
-                    {Math.round(totalBalance)} Kč
+                    {formatCurrency(sharedBalance)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -262,6 +307,9 @@ export function SharedBudgetManager({
                     </div>
                   ))}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Sdílený kredit • Osobní kredit členů se nepoužívá
+                </p>
               </div>
             );
           })}
