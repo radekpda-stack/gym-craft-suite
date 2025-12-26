@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreateClientAccessDialog } from './CreateClientAccessDialog';
+import { EditCredentialsDialog } from './EditCredentialsDialog';
 
 interface ClientPortalAccessSectionProps {
   clientId: string;
@@ -57,6 +59,7 @@ export function ClientPortalAccessSection({
 }: ClientPortalAccessSectionProps) {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -248,6 +251,15 @@ export function ClientPortalAccessSection({
                 >
                   {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setEditDialogOpen(true)}
+                  title="Upravit přihlašovací údaje"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           )}
@@ -344,6 +356,18 @@ export function ClientPortalAccessSection({
         clientEmail={clientEmail}
         onSuccess={handleSuccess}
       />
+
+      {hasAccess && clientEmail && (
+        <EditCredentialsDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          clientId={clientId}
+          clientName={clientName}
+          currentEmail={clientEmail}
+          currentPassword={accountInfo?.portal_password || null}
+          onSuccess={handleSuccess}
+        />
+      )}
 
       {/* Remove access confirmation dialog */}
       <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
