@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 
-const emailSchema = z.string().email('Zadejte platný email');
+const loginIdentifierSchema = z.string().min(1, 'Zadejte přihlašovací jméno');
 const passwordSchema = z.string().min(1, 'Zadejte heslo');
 
 export default function ClientPortalLogin() {
@@ -34,7 +34,7 @@ export default function ClientPortalLogin() {
     navigate(fromPath, { replace: true });
   }, [authLoading, isAuthenticated, navigate, fromPath]);
   
-  const [email, setEmail] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function ClientPortalLogin() {
     setError(null);
     
     try {
-      emailSchema.parse(email);
+      loginIdentifierSchema.parse(loginIdentifier);
       passwordSchema.parse(password);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -79,7 +79,7 @@ export default function ClientPortalLogin() {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('client-portal-login', {
-        body: { email, password }
+        body: { loginIdentifier, password }
       });
 
       if (invokeError) {
@@ -162,16 +162,16 @@ export default function ClientPortalLogin() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  Email
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  Přihlašovací jméno
                 </label>
                 <Input
-                  type="email"
-                  placeholder="vas@email.cz"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="vase_jmeno"
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
                   className="h-12"
-                  autoComplete="email"
+                  autoComplete="username"
                   disabled={loading || !!retryAfter}
                 />
               </div>

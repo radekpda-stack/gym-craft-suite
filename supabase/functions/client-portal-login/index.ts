@@ -28,11 +28,11 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    const { email, password } = await req.json();
+    const { loginIdentifier, password } = await req.json();
     
-    if (!email || !password) {
+    if (!loginIdentifier || !password) {
       return new Response(
-        JSON.stringify({ error: 'Zadejte email a heslo' }),
+        JSON.stringify({ error: 'Zadejte přihlašovací jméno a heslo' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -42,13 +42,61 @@ Deno.serve(async (req) => {
                       'unknown';
     const userAgent = req.headers.get('user-agent') || '';
 
-    // Check rate limiting
+    // First, find the client account by login_identifier to get the auth email
+    const { data: clientAccountByLogin, error: lookupError } = await supabaseAdmin
+      .from('client_accounts')
+      .select('id, client_id, trainer_id, status, auth_user_id, login_identifier')
+      .eq('login_identifier', loginIdentifier.toLowerCase())
+      .eq('is_active', true)
+      .single();
+
+    if (lookupError || !clientAccountByLogin) {
+      console.log('No client account found for login_identifier:', loginIdentifier);
+      
+      // Log failed attempt with login identifier
+      await supabaseAdmin.from('login_attempts').insert({
+        email: loginIdentifier.toLowerCase(),
+        ip_address: ipAddress,
+        success: false,
+      });
+      
+      return new Response(
+        JSON.stringify({ error: 'Neplatné přihlašovací údaje' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get the auth user's email
+    if (!clientAccountByLogin.auth_user_id) {
+      console.log('Client account has no auth_user_id:', clientAccountByLogin.id);
+      return new Response(
+        JSON.stringify({ error: 'Účet není správně nastaven. Kontaktujte trenéra.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get email from auth.users
+    const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(
+      clientAccountByLogin.auth_user_id
+    );
+
+    if (authUserError || !authUserData.user?.email) {
+      console.log('Could not find auth user:', clientAccountByLogin.auth_user_id);
+      return new Response(
+        JSON.stringify({ error: 'Účet není správně nastaven. Kontaktujte trenéra.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authEmail = authUserData.user.email;
+
+    // Check rate limiting using login identifier
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
     
     const { data: recentAttempts, error: attemptsError } = await supabaseAdmin
       .from('login_attempts')
       .select('id, created_at, success')
-      .eq('email', email.toLowerCase())
+      .eq('email', loginIdentifier.toLowerCase())
       .gte('created_at', windowStart)
       .order('created_at', { ascending: false });
 
@@ -81,27 +129,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt login
+    // Attempt login with the actual auth email
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-      email,
+      email: authEmail,
       password,
     });
 
     // Log the attempt
     await supabaseAdmin.from('login_attempts').insert({
-      email: email.toLowerCase(),
+      email: loginIdentifier.toLowerCase(),
       ip_address: ipAddress,
       success: !authError,
     });
 
     if (authError) {
-      console.log('Login failed for:', email);
+      console.log('Login failed for:', loginIdentifier);
       
       // Log audit event for failed login
       await supabaseAdmin.from('audit_events').insert({
         auth_user_id: null,
         action: 'login_failed',
-        metadata: { email: email.toLowerCase(), reason: authError.message },
+        metadata: { login_identifier: loginIdentifier.toLowerCase(), reason: authError.message },
         ip_address: ipAddress,
         user_agent: userAgent,
       });
@@ -114,24 +162,8 @@ Deno.serve(async (req) => {
 
     const user = authData.user;
 
-    // Check if user has client account and it's active
-    const { data: clientAccount, error: accountError } = await supabaseAdmin
-      .from('client_accounts')
-      .select('id, client_id, trainer_id, status')
-      .eq('auth_user_id', user.id)
-      .single();
-
-    if (accountError || !clientAccount) {
-      console.log('No client account for user:', user.id);
-      
-      // Sign out the user since they don't have client access
-      await supabaseClient.auth.signOut();
-      
-      return new Response(
-        JSON.stringify({ error: 'Tento účet nemá přístup do klientského portálu' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Use the already fetched client account
+    const clientAccount = clientAccountByLogin;
 
     if (clientAccount.status === 'disabled') {
       console.log('Disabled account attempt:', user.id);
