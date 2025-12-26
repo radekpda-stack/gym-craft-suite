@@ -102,12 +102,20 @@ export default function ClientPortalLogin() {
         return;
       }
 
-      if (data.success && data.session) {
-        // Set the session in supabase client
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
+      if (data.success) {
+        if (data.authMethod === 'supabase' && data.session) {
+          // Standard Supabase Auth - set session
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        } else if (data.authMethod === 'password_only' && data.customToken) {
+          // Password-only auth - store custom token in localStorage
+          localStorage.setItem('client_portal_token', data.customToken);
+          localStorage.setItem('client_portal_client_id', data.clientAccount.clientId);
+          localStorage.setItem('client_portal_trainer_id', data.clientAccount.trainerId);
+          localStorage.setItem('client_portal_account_id', data.clientAccount.id);
+        }
 
         toast.success('Úspěšně přihlášeno!');
 
