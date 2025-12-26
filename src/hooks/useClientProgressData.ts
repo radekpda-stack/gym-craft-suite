@@ -93,9 +93,9 @@ export function useClientCardioProgress(
       
       const { data, error } = await supabase
         .from('cardio_entries')
-        .select('date, duration_seconds, distance_meters')
+        .select('date, duration_seconds, distance_meters, is_pr')
         .eq('client_id', clientId)
-        .ilike('exercise_name', `%${exerciseName}%`)
+        .eq('exercise_name', exerciseName)
         .eq('distance_meters', distanceMeters)
         .gte('date', startDate)
         .order('date', { ascending: true });
@@ -143,7 +143,7 @@ export function useClientTrackedExercises(clientId: string | null) {
           .from('exercise_entries')
           .select('date, weight_kg, reps, sets')
           .eq('client_id', clientId)
-          .ilike('exercise_name', `%${exercise.exercise_name}%`)
+          .eq('exercise_name', exercise.exercise_name)
           .gte('date', startDate)
           .not('weight_kg', 'is', null)
           .order('date', { ascending: true });

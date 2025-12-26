@@ -133,31 +133,26 @@ export function useCardioEntries(clientId?: string) {
   };
 }
 
-// PR detection for cardio: best time for a distance OR best distance for time
+// PR detection for cardio: best time for a given distance (fixed distance cardio)
 async function checkIfCardioIsPR(entry: CreateCardioEntryInput): Promise<boolean> {
   if (!entry.distance_meters || !entry.duration_seconds) return false;
 
   const { data: existingEntries } = await supabase
     .from('cardio_entries')
-    .select('duration_seconds, distance_meters')
+    .select('duration_seconds')
     .eq('client_id', entry.client_id)
     .eq('exercise_name', entry.exercise_name)
-    .not('distance_meters', 'is', null)
-    .order('created_at', { ascending: false });
+    .eq('distance_meters', entry.distance_meters)
+    .not('duration_seconds', 'is', null)
+    .order('duration_seconds', { ascending: true })
+    .limit(1);
 
-  if (!existingEntries?.length) return true; // First entry is PR
+  // First entry for this exercise + distance is a PR
+  if (!existingEntries?.length) return true;
 
-  // Calculate pace (seconds per meter) for comparison
-  const newPace = entry.duration_seconds / entry.distance_meters;
-  
-  // Find best existing pace
-  const bestExistingPace = Math.min(
-    ...existingEntries
-      .filter(e => e.distance_meters && e.duration_seconds)
-      .map(e => e.duration_seconds! / e.distance_meters!)
-  );
-
-  return newPace < bestExistingPace;
+  // New time is better (lower) than the best existing time
+  const bestExistingTime = existingEntries[0].duration_seconds;
+  return entry.duration_seconds < bestExistingTime;
 }
 
 // Get cardio progress data for charts
