@@ -100,7 +100,7 @@ export function MetricCard({
                   />
                 </div>
                 {showProgressValue && (
-                  <p className="text-xs text-muted-foreground text-right mt-1">{clampedProgress}%</p>
+                  <p className="text-xs text-muted-foreground text-right mt-1">{Math.round(clampedProgress)}%</p>
                 )}
               </div>
             )}
@@ -160,7 +160,7 @@ export function MetricCard({
               <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}
             {hasProgress && showProgressValue && (
-              <p className="text-xs text-muted-foreground mt-1">{clampedProgress}% cíle</p>
+              <p className="text-xs text-muted-foreground mt-1">{Math.round(clampedProgress)}% cíle</p>
             )}
           </div>
         </div>
