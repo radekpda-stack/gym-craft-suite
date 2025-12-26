@@ -116,6 +116,11 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
           form.setValue('is_bodyweight', lastEntry.is_bodyweight ?? false);
           form.setValue('tempo', lastEntry.tempo);
           
+          // Pre-fill time_seconds if exists (for cardio exercises)
+          if (lastEntry.time_seconds) {
+            form.setValue('time_seconds', lastEntry.time_seconds);
+          }
+          
           // Set last weight and calculate progressive suggestion (+2.5kg)
           const lastWeight = lastEntry.weight_kg;
           const suggested = lastWeight ? lastWeight + 2.5 : null;
@@ -491,26 +496,49 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
               />
             )}
 
-            {/* Optional fields */}
+            {/* Time input with minutes:seconds format for cardio exercises */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="time_seconds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Čas (sekundy)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="—"
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const minutes = field.value ? Math.floor(field.value / 60) : '';
+                  const seconds = field.value ? field.value % 60 : '';
+                  
+                  const handleTimeChange = (min: string, sec: string) => {
+                    const minNum = parseInt(min) || 0;
+                    const secNum = Math.min(59, parseInt(sec) || 0);
+                    const totalSeconds = minNum * 60 + secNum;
+                    field.onChange(totalSeconds > 0 ? totalSeconds : null);
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Čas (min:sek)</FormLabel>
+                      <div className="flex gap-1 items-center">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="min"
+                          value={minutes}
+                          onChange={(e) => handleTimeChange(e.target.value, String(seconds || 0))}
+                          className="w-16 text-center"
+                        />
+                        <span className="text-muted-foreground">:</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={59}
+                          placeholder="sek"
+                          value={seconds}
+                          onChange={(e) => handleTimeChange(String(minutes || 0), e.target.value)}
+                          className="w-16 text-center"
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}

@@ -28,8 +28,8 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-history', exerciseId, clientId, sortBy],
     queryFn: async () => {
-      // Fetch strength entries
-      let strengthQuery = supabase
+      // Fetch exercise entries (includes both strength and time-based entries)
+      let exerciseQuery = supabase
         .from('exercise_entries')
         .select(`
           id,
@@ -37,6 +37,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           weight_kg,
           reps,
           sets,
+          time_seconds,
           notes,
           is_pr,
           client_id,
@@ -46,16 +47,16 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         .eq('exercise_id', exerciseId);
 
       if (clientId) {
-        strengthQuery = strengthQuery.eq('client_id', clientId);
+        exerciseQuery = exerciseQuery.eq('client_id', clientId);
       }
 
       if (sortBy === 'date') {
-        strengthQuery = strengthQuery.order('date', { ascending: false });
+        exerciseQuery = exerciseQuery.order('date', { ascending: false });
       } else if (sortBy === 'weight') {
-        strengthQuery = strengthQuery.order('weight_kg', { ascending: false, nullsFirst: false });
+        exerciseQuery = exerciseQuery.order('weight_kg', { ascending: false, nullsFirst: false });
       }
 
-      const { data: strengthEntries } = await strengthQuery;
+      const { data: exerciseEntries } = await exerciseQuery;
 
       // Fetch cardio entries
       let cardioQuery = supabase
@@ -83,29 +84,33 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
 
       const { data: cardioEntries } = await cardioQuery;
 
-      // Process and merge data
-      const strengthRows = (strengthEntries || []).map(entry => {
+      // Process exercise entries - can be strength OR time-based (cardio from exercise_entries)
+      const exerciseRows = (exerciseEntries || []).map(entry => {
         const weight = entry.weight_kg || 0;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
+        
+        // Check if this is a time-based entry (cardio stored in exercise_entries)
+        const hasTime = entry.time_seconds && entry.time_seconds > 0;
+        const durationMinutes = hasTime ? entry.time_seconds! / 60 : null;
 
         return {
           id: entry.id,
-          type: 'strength' as const,
+          type: hasTime ? 'cardio' as const : 'strength' as const,
           date: entry.date,
           clientId: entry.client_id,
           clientName: (entry.clients as any)?.name || 'Neznámý',
-          weight,
-          reps,
-          sets,
-          volume,
+          weight: hasTime ? null : weight,
+          reps: hasTime ? null : reps,
+          sets: hasTime ? null : sets,
+          volume: hasTime ? null : volume,
           notes: entry.notes,
           isPR: entry.is_pr,
           trainingType: entry.training_type,
-          // Cardio fields null
-          duration: null,
-          distance: null,
+          // Cardio fields from time_seconds
+          duration: durationMinutes,
+          distance: null, // Not stored in exercise_entries
           pace: null,
           watts: null,
           rpe: null,
@@ -141,7 +146,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       });
 
       // Combine and sort
-      let allRows = [...strengthRows, ...cardioRows];
+      let allRows = [...exerciseRows, ...cardioRows];
 
       if (sortBy === 'date') {
         allRows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
