@@ -8,7 +8,8 @@ import {
   Apple, 
   User,
   LogOut,
-  Settings
+  Settings,
+  Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -26,6 +27,7 @@ const allNavItems = [
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
   { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
+  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' },
   { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
   { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
@@ -35,7 +37,7 @@ const allNavItems = [
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
-  { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
+  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
 ];

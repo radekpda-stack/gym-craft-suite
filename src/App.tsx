@@ -53,6 +53,7 @@ import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
 import NutritionInfographics from "./pages/NutritionInfographics";
 import TrainingTemplates from "./pages/TrainingTemplates";
 import ClientPortalAdmin from "./pages/ClientPortalAdmin";
+import Challenges from "./pages/Challenges";
 import NotFound from "./pages/NotFound";
 
 // Client Portal Pages
@@ -64,6 +65,7 @@ import ClientPortalCredit from "./pages/client-portal/ClientPortalCredit";
 import ClientPortalNutrition from "./pages/client-portal/ClientPortalNutrition";
 import ClientPortalProfile from "./pages/client-portal/ClientPortalProfile";
 import ClientPortalSettings from "./pages/client-portal/ClientPortalSettings";
+import ClientPortalChallenges from "./pages/client-portal/ClientPortalChallenges";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +109,7 @@ const App = () => (
                 <Route path="attendance" element={<ClientPortalAttendance />} />
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
+                <Route path="challenges" element={<ClientPortalChallenges />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
               </Route>
@@ -149,6 +152,7 @@ const App = () => (
                           <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />
+                          <Route path="/challenges" element={<Challenges />} />
                           {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
