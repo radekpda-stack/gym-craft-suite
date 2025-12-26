@@ -274,30 +274,62 @@ export function useSyncToClientStats() {
 
       // For each exercise, find the best set and create/update exercise_entries
       for (const group of Object.values(exerciseGroups)) {
-        // Find best set (highest weight × reps)
-        let bestSet = group.entries[0];
-        let bestVolume = (bestSet.weight_kg || 0) * (bestSet.reps || 0);
+        // Check if this is a time-based exercise
+        const hasTimeData = group.entries.some(e => e.time_seconds && e.time_seconds > 0);
+        const isTimeBased = hasTimeData;
 
-        for (const entry of group.entries) {
-          const volume = (entry.weight_kg || 0) * (entry.reps || 0);
-          if (volume > bestVolume) {
-            bestSet = entry;
-            bestVolume = volume;
+        let bestSet = group.entries[0];
+        
+        if (isTimeBased) {
+          // For time-based: find lowest time
+          let bestTime = bestSet.time_seconds || Infinity;
+          for (const entry of group.entries) {
+            if (entry.time_seconds && entry.time_seconds > 0 && entry.time_seconds < bestTime) {
+              bestSet = entry;
+              bestTime = entry.time_seconds;
+            }
+          }
+        } else {
+          // For strength: find highest weight × reps
+          let bestVolume = (bestSet.weight_kg || 0) * (bestSet.reps || 0);
+          for (const entry of group.entries) {
+            const volume = (entry.weight_kg || 0) * (entry.reps || 0);
+            if (volume > bestVolume) {
+              bestSet = entry;
+              bestVolume = volume;
+            }
           }
         }
 
         // Check if this is a PR
-        const { data: previousBest } = await supabase
-          .from('exercise_entries')
-          .select('weight_kg, reps')
-          .eq('client_id', clientId)
-          .eq('exercise_name', group.exercise_name)
-          .eq('user_id', user.id)
-          .order('weight_kg', { ascending: false, nullsFirst: false })
-          .limit(1);
+        let isPR = false;
+        if (isTimeBased) {
+          // Time-based PR: lower is better
+          const { data: previousBest } = await supabase
+            .from('exercise_entries')
+            .select('time_seconds')
+            .eq('client_id', clientId)
+            .eq('exercise_name', group.exercise_name)
+            .not('time_seconds', 'is', null)
+            .order('time_seconds', { ascending: true })
+            .limit(1);
 
-        const isPR = !previousBest || previousBest.length === 0 || 
-          (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
+          isPR = !previousBest || previousBest.length === 0 || 
+            (bestSet.time_seconds || Infinity) < (previousBest[0].time_seconds || Infinity);
+        } else {
+          // Strength PR: higher weight is better
+          const { data: previousBest } = await supabase
+            .from('exercise_entries')
+            .select('weight_kg')
+            .eq('client_id', clientId)
+            .eq('exercise_name', group.exercise_name)
+            .not('weight_kg', 'is', null)
+            .order('weight_kg', { ascending: false })
+            .limit(1);
+
+          isPR = !previousBest || previousBest.length === 0 || 
+            (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
+        }
 
         // First delete any existing entry for this exercise in this session
         await supabase
@@ -317,6 +349,8 @@ export function useSyncToClientStats() {
             sets: group.entries.length,
             reps: bestSet.reps,
             weight_kg: bestSet.weight_kg,
+            time_seconds: bestSet.time_seconds,
+            distance_meters: bestSet.distance_meters,
             is_pr: isPR,
             date: trainingDate.split('T')[0],
             user_id: user.id,

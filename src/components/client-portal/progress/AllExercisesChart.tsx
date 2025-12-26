@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Dumbbell, TrendingUp, TrendingDown, Minus, Trophy, Search } from 'lucide-react';
+import { Dumbbell, TrendingUp, TrendingDown, Minus, Trophy, Search, Timer } from 'lucide-react';
 import { ClientExerciseProgress } from '@/hooks/useClientAllExercises';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,13 @@ import { Badge } from '@/components/ui/badge';
 interface AllExercisesChartProps {
   exercises: ClientExerciseProgress[];
   isLoading?: boolean;
+}
+
+// Format seconds to mm:ss
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
 export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartProps) {
@@ -62,21 +69,36 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm text-center py-8">
-            Zatím nemáš zapsané žádné silové cviky.
+            Zatím nemáš zapsané žádné cviky.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Calculate trend for current exercise
+  const isTimeBased = currentExercise?.isTimeBased || false;
   const data = currentExercise?.data || [];
-  const firstWeight = data[0]?.weight || 0;
-  const lastWeight = data[data.length - 1]?.weight || 0;
-  const change = lastWeight - firstWeight;
+  
+  // Calculate trend based on exercise type
+  let change = 0;
+  let trendPositive = false;
+  
+  if (isTimeBased) {
+    // For time-based: lower is better
+    const firstTime = data[0]?.timeSeconds || 0;
+    const lastTime = data[data.length - 1]?.timeSeconds || 0;
+    change = lastTime - firstTime;
+    trendPositive = change < 0; // Negative change means improvement
+  } else {
+    // For strength: higher is better
+    const firstWeight = data[0]?.weight || 0;
+    const lastWeight = data[data.length - 1]?.weight || 0;
+    change = lastWeight - firstWeight;
+    trendPositive = change > 0;
+  }
 
-  const TrendIcon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
-  const trendColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-500' : 'text-muted-foreground';
+  const TrendIcon = trendPositive ? TrendingUp : change !== 0 ? TrendingDown : Minus;
+  const trendColor = trendPositive ? 'text-green-600' : change !== 0 ? 'text-red-500' : 'text-muted-foreground';
 
   const chartData = data.map(d => ({
     date: format(parseISO(d.date), 'd. M.', { locale: cs }),
@@ -85,6 +107,10 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
     reps: d.reps,
     volume: d.volume,
     isPR: d.isPR,
+    timeSeconds: d.timeSeconds,
+    timeFormatted: d.timeSeconds ? formatTime(d.timeSeconds) : null,
+    // For charting: use weight for strength, negative time for cardio (so higher = better visually)
+    value: isTimeBased ? d.timeSeconds : d.weight,
   }));
 
   return (
@@ -125,7 +151,10 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
                     className="text-sm"
                   >
                     <div className="flex items-center justify-between gap-2 w-full">
-                      <span className="truncate">{exercise.exerciseName}</span>
+                      <span className="truncate flex items-center gap-1">
+                        {exercise.isTimeBased && <Timer className="w-3 h-3 text-muted-foreground" />}
+                        {exercise.exerciseName}
+                      </span>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {exercise.count}×
                       </span>
@@ -144,9 +173,16 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
             {/* Stats row */}
             <div className="flex items-center justify-between mb-3 text-xs">
               <div className="flex items-center gap-3">
-                <span className="text-muted-foreground">
-                  Max: <span className="font-medium text-foreground">{currentExercise.maxWeight} kg</span>
-                </span>
+                {isTimeBased ? (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Timer className="w-3 h-3" />
+                    Nejlepší: <span className="font-medium text-foreground">{currentExercise.bestTime ? formatTime(currentExercise.bestTime) : '-'}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Max: <span className="font-medium text-foreground">{currentExercise.maxWeight ?? 0} kg</span>
+                  </span>
+                )}
                 {currentExercise.prCount > 0 && (
                   <span className="flex items-center gap-1 text-yellow-600">
                     <Trophy className="w-3 h-3" />
@@ -156,7 +192,12 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
               </div>
               <div className={`flex items-center gap-1 ${trendColor}`}>
                 <TrendIcon className="w-3 h-3" />
-                <span>{change > 0 ? '+' : ''}{change.toFixed(1)} kg</span>
+                <span>
+                  {isTimeBased 
+                    ? `${change > 0 ? '+' : ''}${formatTime(Math.abs(change))}`
+                    : `${change > 0 ? '+' : ''}${change.toFixed(1)} kg`
+                  }
+                </span>
               </div>
             </div>
 
@@ -176,9 +217,10 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
                     fontSize={10} 
                     tickLine={false} 
                     axisLine={false}
-                    domain={['dataMin - 5', 'dataMax + 5']}
-                    tickFormatter={(value) => `${value} kg`}
+                    domain={isTimeBased ? ['dataMin - 5', 'dataMax + 5'] : ['dataMin - 5', 'dataMax + 5']}
+                    tickFormatter={(value) => isTimeBased ? formatTime(value) : `${value} kg`}
                     className="fill-muted-foreground"
+                    reversed={isTimeBased} // For time-based, reverse so lower (better) is at top
                   />
                   <Tooltip 
                     content={({ active, payload }) => {
@@ -188,10 +230,13 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
                           <div className="bg-popover border rounded-lg shadow-lg p-2 text-xs">
                             <p className="text-muted-foreground">{p.fullDate}</p>
                             <p className="font-semibold flex items-center gap-1">
-                              {p.weight} kg × {p.reps} rep
+                              {isTimeBased 
+                                ? p.timeFormatted
+                                : `${p.weight} kg × ${p.reps} rep`
+                              }
                               {p.isPR && <Trophy className="w-3 h-3 text-yellow-500" />}
                             </p>
-                            <p className="text-muted-foreground">Objem: {p.volume} kg</p>
+                            {!isTimeBased && <p className="text-muted-foreground">Objem: {p.volume} kg</p>}
                           </div>
                         );
                       }
@@ -200,7 +245,7 @@ export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartPro
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="weight" 
+                    dataKey="value" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
                     dot={({ cx, cy, payload }) => {

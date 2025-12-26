@@ -1958,6 +1958,7 @@ export type Database = {
           client_id: string
           created_at: string
           date: string
+          distance_meters: number | null
           exercise_id: string | null
           exercise_name: string
           id: string
@@ -1979,6 +1980,7 @@ export type Database = {
           client_id: string
           created_at?: string
           date?: string
+          distance_meters?: number | null
           exercise_id?: string | null
           exercise_name: string
           id?: string
@@ -2000,6 +2002,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           date?: string
+          distance_meters?: number | null
           exercise_id?: string | null
           exercise_name?: string
           id?: string
