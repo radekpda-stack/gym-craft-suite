@@ -33,12 +33,14 @@ const statusLabels = {
   scheduled: 'Plán',
   completed: 'Hotovo',
   awaiting_payment: 'Čeká',
+  canceled: 'Zrušeno',
 };
 
 const statusLabelsLong = {
   scheduled: 'Naplánováno',
   completed: 'Dokončeno',
   awaiting_payment: 'Čeká na platbu',
+  canceled: 'Zrušeno',
 };
 
 export default function Trainings() {
@@ -112,11 +114,11 @@ export default function Trainings() {
     return sessionList;
   };
 
-  // Separate active and canceled sessions
-  const activeSessions = useMemo(() => sessions.filter(s => s.status !== 'canceled'), [sessions]);
+  // Include all sessions in active view (including canceled for visibility)
+  const allSessionsForActiveTab = useMemo(() => sessions, [sessions]);
   const canceledSessions = useMemo(() => sessions.filter(s => s.status === 'canceled'), [sessions]);
 
-  // Time-filtered counts for toggle
+  // Time-filtered counts for toggle (exclude canceled from counts)
   const timeCounts = useMemo(() => {
     const active = sessions.filter(s => s.status !== 'canceled');
     return {
@@ -126,10 +128,10 @@ export default function Trainings() {
     };
   }, [sessions]);
 
-  // Apply time filter first
+  // Apply time filter - include all sessions (including canceled)
   const timeFilteredSessions = useMemo(() => {
-    return filterByTime(activeSessions, timeFilter);
-  }, [activeSessions, timeFilter]);
+    return filterByTime(allSessionsForActiveTab, timeFilter);
+  }, [allSessionsForActiveTab, timeFilter]);
 
   // Count of trainings awaiting payment
   const awaitingPaymentCount = useMemo(() => {
@@ -237,6 +239,12 @@ export default function Trainings() {
         (!session.payment_status || session.payment_status === 'pending');
     }
 
+    // Special filter for canceled
+    if (statusFilter === 'canceled') {
+      return matchesSearch && session.status === 'canceled';
+    }
+
+    // For other filters, include canceled sessions too (they'll be styled differently)
     const matchesStatus = !statusFilter || session.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -389,7 +397,7 @@ export default function Trainings() {
               >
                 Všechny
               </Button>
-              {(['scheduled', 'completed'] as const).map((status) => (
+              {(['scheduled', 'completed', 'canceled'] as const).map((status) => (
                 <Button
                   key={status}
                   variant={statusFilter === status ? 'default' : 'outline'}
