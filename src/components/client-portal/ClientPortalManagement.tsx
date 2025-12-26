@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +64,8 @@ import {
   Eye,
   EyeOff,
   Search,
-  MoreHorizontal
+  MoreHorizontal,
+  Trophy
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -91,9 +93,10 @@ interface ClientManagementRowProps {
   onDelete: (account: PortalClient) => void;
   onManageExercises: (account: PortalClient) => void;
   onManageGraphs: (account: PortalClient) => void;
+  onManageChallenges: (account: PortalClient) => void;
 }
 
-function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onManageGraphs }: ClientManagementRowProps) {
+function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onManageGraphs, onManageChallenges }: ClientManagementRowProps) {
   const disableAccess = useDisableClientAccess();
 
   return (
@@ -133,6 +136,10 @@ function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onM
             <DropdownMenuItem onClick={() => onManageExercises(account)}>
               <Dumbbell className="w-4 h-4 mr-2" />
               Sledované cviky
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManageChallenges(account)}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Challenges
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -482,6 +489,125 @@ function ManageExercisesDialog({ open, onOpenChange, account }: ManageExercisesD
   );
 }
 
+// Manage Challenges Dialog
+interface ManageChallengesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  account: PortalClient | null;
+}
+
+function ManageChallengesDialog({ open, onOpenChange, account }: ManageChallengesDialogProps) {
+  const [settings, setSettings] = useState({
+    allow_challenges_participation: false,
+    allow_anonymous_benchmarks: false,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch client settings when dialog opens
+  useEffect(() => {
+    if (open && account?.client_id) {
+      setIsLoading(true);
+      supabase
+        .from('clients')
+        .select('allow_challenges_participation, allow_anonymous_benchmarks')
+        .eq('id', account.client_id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setSettings({
+              allow_challenges_participation: data.allow_challenges_participation ?? false,
+              allow_anonymous_benchmarks: data.allow_anonymous_benchmarks ?? false,
+            });
+          }
+          setIsLoading(false);
+        });
+    }
+  }, [open, account?.client_id]);
+
+  const handleToggle = async (key: 'allow_challenges_participation' | 'allow_anonymous_benchmarks', value: boolean) => {
+    if (!account?.client_id) return;
+    
+    setIsSaving(true);
+    const { error } = await supabase
+      .from('clients')
+      .update({ [key]: value })
+      .eq('id', account.client_id);
+
+    if (error) {
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+    } else {
+      setSettings(prev => ({ ...prev, [key]: value }));
+      toast({ title: 'Nastavení uloženo' });
+    }
+    setIsSaving(false);
+  };
+
+  if (!account) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5" />
+            Nastavení Challenges
+          </DialogTitle>
+          <DialogDescription>
+            Nastavte účast {account.client?.name} v challenges a benchmarcích
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-3 py-4">
+            {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+        ) : (
+          <div className="space-y-4 py-4">
+            <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">Účast v Challenges</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Klient může soutěžit v challenges a vidět leaderboard
+                </p>
+              </div>
+              <Switch
+                checked={settings.allow_challenges_participation}
+                onCheckedChange={(checked) => handleToggle('allow_challenges_participation', checked)}
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">Anonymní benchmarky</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Klient vidí porovnání s ostatními (anonymizované)
+                </p>
+              </div>
+              <Switch
+                checked={settings.allow_anonymous_benchmarks}
+                onCheckedChange={(checked) => handleToggle('allow_anonymous_benchmarks', checked)}
+                disabled={isSaving}
+              />
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>Hotovo</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Delete Confirmation Dialog
 interface DeleteClientDialogProps {
   open: boolean;
@@ -525,6 +651,7 @@ export function ClientPortalManagement() {
   const [editAccount, setEditAccount] = useState<PortalClient | null>(null);
   const [graphsAccount, setGraphsAccount] = useState<PortalClient | null>(null);
   const [exercisesAccount, setExercisesAccount] = useState<PortalClient | null>(null);
+  const [challengesAccount, setChallengesAccount] = useState<PortalClient | null>(null);
   const [deleteAccount, setDeleteAccount] = useState<PortalClient | null>(null);
 
   const handleDeleteConfirm = async () => {
@@ -580,6 +707,7 @@ export function ClientPortalManagement() {
                   onDelete={setDeleteAccount}
                   onManageExercises={setExercisesAccount}
                   onManageGraphs={setGraphsAccount}
+                  onManageChallenges={setChallengesAccount}
                 />
               ))}
             </div>
@@ -604,6 +732,12 @@ export function ClientPortalManagement() {
         open={!!exercisesAccount}
         onOpenChange={(open) => !open && setExercisesAccount(null)}
         account={exercisesAccount}
+      />
+      
+      <ManageChallengesDialog
+        open={!!challengesAccount}
+        onOpenChange={(open) => !open && setChallengesAccount(null)}
+        account={challengesAccount}
       />
       
       <DeleteClientDialog
