@@ -58,6 +58,7 @@ export const TrainingCard = memo(function TrainingCard({
   const isScheduled = session.status === 'scheduled';
   const isInProgress = session.status === 'in_progress';
   const isCompleted = session.status === 'completed';
+  const isCanceled = session.status === 'canceled';
   const isAwaitingPayment =
     session.status === 'completed' &&
     (!session.payment_status || session.payment_status === 'pending');
@@ -67,6 +68,7 @@ export const TrainingCard = memo(function TrainingCard({
       className={cn(
         'glass rounded-xl border-l-4 transition-all duration-200 hover:glow',
         borderColor,
+        isCanceled && 'opacity-60',
         className
       )}
     >
@@ -81,7 +83,10 @@ export const TrainingCard = memo(function TrainingCard({
               </span>
               
               {/* Client name */}
-              <span className="font-semibold text-foreground truncate">
+              <span className={cn(
+                "font-semibold text-foreground truncate",
+                isCanceled && "line-through text-muted-foreground"
+              )}>
                 {client?.name || 'Klient'}
               </span>
               
