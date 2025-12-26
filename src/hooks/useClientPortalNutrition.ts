@@ -204,3 +204,155 @@ export function useQuickAddWater() {
     },
   });
 }
+
+export function useUpdateFoodEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      entryId,
+      sessionId, 
+      clientId, 
+      entry,
+    }: { 
+      entryId: string;
+      sessionId: string; 
+      clientId: string; 
+      entry: Partial<FoodEntryInput>;
+    }) => {
+      const { data, error } = await supabase
+        .from('nutrition_food_entries')
+        .update({
+          description: entry.description,
+          meal_type: entry.meal_type,
+          portion_size: entry.portion_size,
+          quality: entry.quality,
+          satiation: entry.satiation,
+          feeling_after: entry.feeling_after,
+          note: entry.note,
+        })
+        .eq('id', entryId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { sessionId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
+    },
+  });
+}
+
+export function useUpdateDrinkEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      entryId,
+      sessionId, 
+      clientId, 
+      entry,
+    }: { 
+      entryId: string;
+      sessionId: string; 
+      clientId: string; 
+      entry: Partial<DrinkEntryInput>;
+    }) => {
+      const { data, error } = await supabase
+        .from('nutrition_drink_entries')
+        .update({
+          drink_type: entry.drink_type,
+          drink_name: entry.drink_name,
+          amount_ml: entry.amount_ml,
+          note: entry.note,
+        })
+        .eq('id', entryId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { sessionId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['nutrition-drink-entries', sessionId] });
+    },
+  });
+}
+
+export function useUpdateCoffeeEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      entryId,
+      sessionId, 
+      clientId, 
+      entry,
+    }: { 
+      entryId: string;
+      sessionId: string; 
+      clientId: string; 
+      entry: Partial<CoffeeEntryInput>;
+    }) => {
+      const { data, error } = await supabase
+        .from('nutrition_coffee_entries')
+        .update({
+          coffee_type: entry.coffee_type,
+          count: entry.count,
+          sugar: entry.sugar,
+          sugar_spoons: entry.sugar_spoons,
+          milk: entry.milk,
+          note: entry.note,
+        })
+        .eq('id', entryId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { sessionId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['nutrition-coffee-entries', sessionId] });
+    },
+  });
+}
+
+export function useDeleteNutritionEntryPortal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      type,
+      entryId,
+      sessionId, 
+      clientId,
+    }: { 
+      type: 'food' | 'drink' | 'coffee';
+      entryId: string;
+      sessionId: string; 
+      clientId: string;
+    }) => {
+      const table = type === 'food' 
+        ? 'nutrition_food_entries' 
+        : type === 'drink' 
+          ? 'nutrition_drink_entries' 
+          : 'nutrition_coffee_entries';
+
+      const { error } = await supabase.from(table).delete().eq('id', entryId);
+      if (error) throw error;
+      return { type, sessionId, clientId };
+    },
+    onSuccess: ({ type, sessionId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: [`nutrition-${type}-entries`, sessionId] });
+    },
+  });
+}

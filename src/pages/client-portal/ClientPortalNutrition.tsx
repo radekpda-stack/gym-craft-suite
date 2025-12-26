@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientNutritionCampaign, useClientTodayNutrition } from '@/hooks/useClientPortalData';
-import { useQuickAddWater } from '@/hooks/useClientPortalNutrition';
+import { useQuickAddWater, useDeleteNutritionEntryPortal } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
@@ -11,7 +11,13 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
+import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
 import { toast } from 'sonner';
+
+type EditingEntry = {
+  type: 'food' | 'drink' | 'coffee';
+  entry: any;
+} | null;
 
 export default function ClientPortalNutrition() {
   const { clientId } = useClientPortal();
@@ -21,9 +27,11 @@ export default function ClientPortalNutrition() {
     campaign?.id
   );
   const quickWater = useQuickAddWater();
+  const deleteEntry = useDeleteNutritionEntryPortal();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
 
   const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
 
@@ -54,6 +62,23 @@ export default function ClientPortalNutrition() {
       trackPortalEvent('client_portal_quick_water');
     } catch (error) {
       toast.error('Nepodařilo se přidat');
+    }
+  };
+
+  const handleDeleteEntry = async (type: 'food' | 'drink' | 'coffee', entryId: string) => {
+    if (!campaign || !clientId) return;
+    
+    try {
+      await deleteEntry.mutateAsync({
+        type,
+        entryId,
+        sessionId: campaign.id,
+        clientId,
+      });
+      toast.success('Záznam smazán');
+      trackPortalEvent('client_portal_delete_entry', { type });
+    } catch (error) {
+      toast.error('Nepodařilo se smazat');
     }
   };
 
@@ -148,6 +173,24 @@ export default function ClientPortalNutrition() {
               drinks={todayData.drinks}
               coffee={todayData.coffee}
               isLoading={todayLoading}
+              onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
+              onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
+              onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}
+              onDeleteFood={(id) => handleDeleteEntry('food', id)}
+              onDeleteDrink={(id) => handleDeleteEntry('drink', id)}
+              onDeleteCoffee={(id) => handleDeleteEntry('coffee', id)}
+            />
+          )}
+
+          {/* Edit Dialog */}
+          {editingEntry && campaign && clientId && (
+            <EditEntryDialog
+              open={!!editingEntry}
+              onOpenChange={(open) => !open && setEditingEntry(null)}
+              type={editingEntry.type}
+              entry={editingEntry.entry}
+              sessionId={campaign.id}
+              clientId={clientId}
             />
           )}
         </>
