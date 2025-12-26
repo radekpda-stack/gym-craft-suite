@@ -272,8 +272,8 @@ Deno.serve(async (req) => {
         user_agent: userAgent,
       });
 
-      // Generate a simple custom token (client_id + timestamp + random)
-      const customToken = btoa(`${clientAccountByLogin.client_id}:${Date.now()}:${crypto.randomUUID()}`);
+      // Generate a UUID token (matches DB/RPC expectations)
+      const customToken = crypto.randomUUID();
 
       // Store the token in client_access_tokens table for validation
       const { error: tokenInsertError } = await supabaseAdmin.from('client_access_tokens').insert({
