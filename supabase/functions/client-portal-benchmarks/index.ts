@@ -17,9 +17,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { action, clientId, trainerId, exerciseName, metricType, groupKey, challengeId, minGroupSize } = await req.json();
+    const body = await req.json();
+    const { action, clientId, trainerId, exerciseName, metricType, groupKey, challengeId, minGroupSize, score_primary, score_secondary, note, video_url } = body;
 
-    console.log(`[Benchmarks] Action: ${action}, ClientId: ${clientId}, Exercise: ${exerciseName}`);
+    console.log(`[Benchmarks] Action: ${action}, ClientId: ${clientId}, ChallengeId: ${challengeId}, Exercise: ${exerciseName}`);
 
     // Validate client has opt-in for benchmarks
     if (action === 'get_benchmark' || action === 'get_leaderboard') {
@@ -179,8 +180,7 @@ serve(async (req) => {
     }
 
     if (action === 'submit_challenge') {
-      const { score_primary, score_secondary, note, video_url } = await req.json();
-
+      // score_primary, score_secondary, note, video_url are already extracted from body above
       // Validate client can participate
       const { data: client } = await supabase
         .from('clients')
