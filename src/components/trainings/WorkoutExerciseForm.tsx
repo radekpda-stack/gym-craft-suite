@@ -167,12 +167,14 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   };
 
   const handleSubmit = () => {
-    const exerciseName = selectedExercise?.name || customExerciseName;
-    if (!exerciseName.trim()) return;
+    // Enforce exercise_id - no custom exercises allowed
+    if (!selectedExercise) {
+      return;
+    }
 
     onAdd({
-      exercise_id: selectedExercise?.id || null,
-      exercise_name: exerciseName,
+      exercise_id: selectedExercise.id,
+      exercise_name: selectedExercise.name_cs || selectedExercise.name, // Snapshot for display
       sets: sets.filter(s => hasValidData(s)),
       default_unit: measurementUnit,
     });
@@ -193,8 +195,8 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     }
   };
 
-  const isValid = (selectedExercise || customExerciseName.trim()) && 
-    sets.some(s => hasValidData(s));
+  // Only valid if exercise is selected from database (no custom exercises)
+  const isValid = selectedExercise && sets.some(s => hasValidData(s));
 
   return (
     <div className="glass rounded-xl p-4 sm:p-5 space-y-4 animate-fade-in">
@@ -243,17 +245,9 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                 <CommandEmpty>
                   <div className="p-2 text-center text-sm">
                     <p className="text-muted-foreground">Cvik nenalezen</p>
-                    <Button
-                      variant="link"
-                      className="mt-1"
-                      onClick={() => {
-                        setCustomExerciseName(searchQuery);
-                        setSelectedExercise(null);
-                        setSearchOpen(false);
-                      }}
-                    >
-                      Použít "{searchQuery}" jako vlastní cvik
-                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Zkuste hledat jiným názvem nebo přidejte cvik do databáze
+                    </p>
                   </div>
                 </CommandEmpty>
                 <CommandGroup>
@@ -278,15 +272,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
           </PopoverContent>
         </Popover>
 
-        {/* Custom exercise name input */}
-        {!selectedExercise && (
-          <Input
-            placeholder="Nebo zadejte vlastní název cviku..."
-            value={customExerciseName}
-            onChange={(e) => setCustomExerciseName(e.target.value)}
-            className="bg-secondary border-border"
-          />
-        )}
+        {/* Note: Custom exercises no longer allowed - exercise_id is required */}
       </div>
 
       {/* Muscle groups display */}
