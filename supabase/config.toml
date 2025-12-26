@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.remove-client-portal-access]
 verify_jwt = true
+
+[functions.client-portal-benchmarks]
+verify_jwt = false
