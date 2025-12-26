@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Client for regular auth operations
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
@@ -42,18 +41,17 @@ Deno.serve(async (req) => {
                       'unknown';
     const userAgent = req.headers.get('user-agent') || '';
 
-    // First, find the client account by login_identifier
-    const { data: clientAccountByLogin, error: lookupError } = await supabaseAdmin
+    // Find the client account by login_identifier
+    const { data: clientAccount, error: lookupError } = await supabaseAdmin
       .from('client_accounts')
-      .select('id, client_id, trainer_id, status, auth_user_id, login_identifier, portal_password')
+      .select('id, client_id, trainer_id, user_id, status, auth_user_id, login_identifier, portal_password')
       .eq('login_identifier', loginIdentifier.toLowerCase())
       .eq('is_active', true)
       .single();
 
-    if (lookupError || !clientAccountByLogin) {
+    if (lookupError || !clientAccount) {
       console.log('No client account found for login_identifier:', loginIdentifier);
       
-      // Log failed attempt with login identifier
       await supabaseAdmin.from('login_attempts').insert({
         email: loginIdentifier.toLowerCase(),
         ip_address: ipAddress,
@@ -66,14 +64,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if account is disabled first
-    if (clientAccountByLogin.status === 'disabled') {
-      console.log('Disabled account attempt:', clientAccountByLogin.id);
+    // Check if account is disabled
+    if (clientAccount.status === 'disabled') {
+      console.log('Disabled account attempt:', clientAccount.id);
       
       await supabaseAdmin.from('audit_events').insert({
-        trainer_id: clientAccountByLogin.trainer_id,
-        client_id: clientAccountByLogin.client_id,
-        auth_user_id: clientAccountByLogin.auth_user_id,
+        trainer_id: clientAccount.trainer_id,
+        client_id: clientAccount.client_id,
+        auth_user_id: clientAccount.auth_user_id,
         action: 'login_blocked_disabled',
         metadata: {},
         ip_address: ipAddress,
@@ -89,21 +87,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check rate limiting using login identifier
+    // Check rate limiting
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
     
-    const { data: recentAttempts, error: attemptsError } = await supabaseAdmin
+    const { data: recentAttempts } = await supabaseAdmin
       .from('login_attempts')
       .select('id, created_at, success')
       .eq('email', loginIdentifier.toLowerCase())
       .gte('created_at', windowStart)
       .order('created_at', { ascending: false });
 
-    if (attemptsError) {
-      console.error('Rate limit check error:', attemptsError);
-    }
-
-    // Count failed attempts
     const failedAttempts = (recentAttempts || []).filter(a => !a.success).length;
 
     if (failedAttempts >= RATE_LIMIT_MAX_ATTEMPTS) {
@@ -127,121 +120,53 @@ Deno.serve(async (req) => {
       }
     }
 
-    // HYBRID LOGIN: Check if we have auth_user_id (Supabase Auth) or need password-only auth
-    if (clientAccountByLogin.auth_user_id) {
-      // ===== SUPABASE AUTH LOGIN =====
-      const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(
-        clientAccountByLogin.auth_user_id
-      );
+    // ===== UNIFIED AUTH: Always end up with Supabase session =====
+    
+    let authEmail: string;
+    let authUserId: string | null = clientAccount.auth_user_id;
+
+    if (authUserId) {
+      // Client already has auth user - get their email
+      const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(authUserId);
 
       if (authUserError || !authUserData.user?.email) {
-        console.log('Could not find auth user:', clientAccountByLogin.auth_user_id);
+        console.log('Could not find auth user:', authUserId);
         return new Response(
           JSON.stringify({ error: 'Účet není správně nastaven. Kontaktujte trenéra.' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      const authEmail = authUserData.user.email;
-
-      // Attempt login with the actual auth email
-      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-        email: authEmail,
-        password,
-      });
-
-      // Log the attempt
-      await supabaseAdmin.from('login_attempts').insert({
-        email: loginIdentifier.toLowerCase(),
-        ip_address: ipAddress,
-        success: !authError,
-      });
-
-      if (authError) {
-        console.log('Login failed for:', loginIdentifier);
-        
-        await supabaseAdmin.from('audit_events').insert({
-          auth_user_id: null,
-          action: 'login_failed',
-          metadata: { login_identifier: loginIdentifier.toLowerCase(), reason: authError.message },
-          ip_address: ipAddress,
-          user_agent: userAgent,
-        });
-
-        return new Response(
-          JSON.stringify({ error: 'Neplatné přihlašovací údaje' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Update last login timestamp
-      await supabaseAdmin
-        .from('client_accounts')
-        .update({ 
-          last_portal_login: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', clientAccountByLogin.id);
-
-      // Log successful login
-      await supabaseAdmin.from('audit_events').insert({
-        trainer_id: clientAccountByLogin.trainer_id,
-        client_id: clientAccountByLogin.client_id,
-        auth_user_id: authData.user.id,
-        action: 'login_success',
-        metadata: { method: 'supabase_auth' },
-        ip_address: ipAddress,
-        user_agent: userAgent,
-      });
-
-      console.log('Successful Supabase Auth login for client:', clientAccountByLogin.client_id);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          authMethod: 'supabase',
-          session: authData.session,
-          user: {
-            id: authData.user.id,
-            email: authData.user.email,
-            clientId: clientAccountByLogin.client_id,
-          }
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      authEmail = authUserData.user.email;
+      console.log('Using existing auth user:', authUserId);
 
     } else {
-      // ===== PASSWORD-ONLY LOGIN (for bulk-created accounts without auth) =====
-      console.log('Using password-only auth for client:', clientAccountByLogin.client_id);
+      // No auth user - verify password first, then create auth user
+      console.log('No auth_user_id for client:', clientAccount.client_id);
 
-      // Check if portal_password exists
-      if (!clientAccountByLogin.portal_password) {
-        console.log('No portal_password set for account:', clientAccountByLogin.id);
+      if (!clientAccount.portal_password) {
+        console.log('No portal_password set for account:', clientAccount.id);
         return new Response(
           JSON.stringify({ error: 'Účet není správně nastaven. Kontaktujte trenéra.' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Compare passwords (case-sensitive)
-      const isPasswordValid = password === clientAccountByLogin.portal_password;
-
-      // Log the attempt
-      await supabaseAdmin.from('login_attempts').insert({
-        email: loginIdentifier.toLowerCase(),
-        ip_address: ipAddress,
-        success: isPasswordValid,
-      });
-
-      if (!isPasswordValid) {
+      // Verify password before creating auth user
+      if (password !== clientAccount.portal_password) {
         console.log('Password mismatch for:', loginIdentifier);
         
+        await supabaseAdmin.from('login_attempts').insert({
+          email: loginIdentifier.toLowerCase(),
+          ip_address: ipAddress,
+          success: false,
+        });
+
         await supabaseAdmin.from('audit_events').insert({
           auth_user_id: null,
-          client_id: clientAccountByLogin.client_id,
-          trainer_id: clientAccountByLogin.trainer_id,
+          client_id: clientAccount.client_id,
+          trainer_id: clientAccount.trainer_id,
           action: 'login_failed',
-          metadata: { login_identifier: loginIdentifier.toLowerCase(), reason: 'password_mismatch', method: 'password_only' },
+          metadata: { login_identifier: loginIdentifier.toLowerCase(), reason: 'password_mismatch' },
           ip_address: ipAddress,
           user_agent: userAgent,
         });
@@ -252,63 +177,134 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update last login timestamp
-      await supabaseAdmin
+      // Password correct - create Supabase Auth user
+      authEmail = `client_${clientAccount.client_id}@portal.local`;
+      
+      console.log('Creating new auth user for client:', clientAccount.client_id, 'with email:', authEmail);
+
+      const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+        email: authEmail,
+        password: password,
+        email_confirm: true, // Auto-confirm
+        user_metadata: {
+          client_id: clientAccount.client_id,
+          trainer_id: clientAccount.trainer_id,
+          is_client_portal_user: true,
+        }
+      });
+
+      if (createAuthError) {
+        // If user already exists with this email, try to get them
+        if (createAuthError.message?.includes('already been registered')) {
+          console.log('Auth user already exists, fetching by email');
+          const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = existingUsers?.users?.find(u => u.email === authEmail);
+          
+          if (existingUser) {
+            authUserId = existingUser.id;
+            // Update password to match current
+            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password: password });
+          } else {
+            console.error('Failed to find existing auth user');
+            return new Response(
+              JSON.stringify({ error: 'Chyba při nastavení účtu. Kontaktujte trenéra.' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          console.error('Failed to create auth user:', createAuthError);
+          return new Response(
+            JSON.stringify({ error: 'Chyba při vytváření účtu. Kontaktujte trenéra.' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        authUserId = newAuthUser.user.id;
+      }
+
+      // Update client_accounts with the new auth_user_id
+      const { error: updateError } = await supabaseAdmin
         .from('client_accounts')
         .update({ 
-          last_portal_login: new Date().toISOString(),
+          auth_user_id: authUserId,
+          user_id: authUserId, // Also set user_id for RLS compatibility
           updated_at: new Date().toISOString()
         })
-        .eq('id', clientAccountByLogin.id);
+        .eq('id', clientAccount.id);
 
-      // Log successful login
+      if (updateError) {
+        console.error('Failed to update client_accounts with auth_user_id:', updateError);
+      } else {
+        console.log('Successfully linked auth user', authUserId, 'to client account', clientAccount.id);
+      }
+    }
+
+    // Now sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+      email: authEmail,
+      password,
+    });
+
+    // Log the attempt
+    await supabaseAdmin.from('login_attempts').insert({
+      email: loginIdentifier.toLowerCase(),
+      ip_address: ipAddress,
+      success: !authError,
+    });
+
+    if (authError) {
+      console.log('Login failed for:', loginIdentifier, 'error:', authError.message);
+      
       await supabaseAdmin.from('audit_events').insert({
-        trainer_id: clientAccountByLogin.trainer_id,
-        client_id: clientAccountByLogin.client_id,
-        auth_user_id: null,
-        action: 'login_success',
-        metadata: { method: 'password_only' },
+        auth_user_id: authUserId,
+        client_id: clientAccount.client_id,
+        trainer_id: clientAccount.trainer_id,
+        action: 'login_failed',
+        metadata: { login_identifier: loginIdentifier.toLowerCase(), reason: authError.message },
         ip_address: ipAddress,
         user_agent: userAgent,
       });
 
-      // Generate a UUID token (matches DB/RPC expectations)
-      const customToken = crypto.randomUUID();
-
-      // Store the token in client_access_tokens table for validation
-      const { error: tokenInsertError } = await supabaseAdmin.from('client_access_tokens').insert({
-        client_id: clientAccountByLogin.client_id,
-        trainer_id: clientAccountByLogin.trainer_id,
-        token: customToken,
-        purpose: 'portal_session',
-        is_revoked: false,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-      });
-
-      if (tokenInsertError) {
-        console.error('Failed to store portal session token:', tokenInsertError);
-        return new Response(
-          JSON.stringify({ error: 'Nepodařilo se vytvořit relaci. Zkuste to prosím znovu.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log('Successful password-only login for client:', clientAccountByLogin.client_id);
-
       return new Response(
-        JSON.stringify({
-          success: true,
-          authMethod: 'password_only',
-          customToken: customToken,
-          clientAccount: {
-            id: clientAccountByLogin.id,
-            clientId: clientAccountByLogin.client_id,
-            trainerId: clientAccountByLogin.trainer_id,
-          }
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Neplatné přihlašovací údaje' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Update last login timestamp
+    await supabaseAdmin
+      .from('client_accounts')
+      .update({ 
+        last_portal_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', clientAccount.id);
+
+    // Log successful login
+    await supabaseAdmin.from('audit_events').insert({
+      trainer_id: clientAccount.trainer_id,
+      client_id: clientAccount.client_id,
+      auth_user_id: authData.user.id,
+      action: 'login_success',
+      metadata: { method: 'supabase_auth', auto_created: !clientAccount.auth_user_id },
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    });
+
+    console.log('Successful login for client:', clientAccount.client_id);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        session: authData.session,
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+          clientId: clientAccount.client_id,
+        }
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Unexpected error:', error);
