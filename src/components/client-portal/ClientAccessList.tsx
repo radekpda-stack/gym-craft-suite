@@ -31,6 +31,7 @@ import { cs } from 'date-fns/locale';
 import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus } from 'lucide-react';
 import { InviteClientDialog } from './InviteClientDialog';
 import { toast } from '@/hooks/use-toast';
+import { BulkCreatePortalsButton } from './BulkCreatePortalsButton';
 
 export function ClientAccessList() {
   const { data: clients, isLoading } = usePortalClients();
@@ -107,7 +108,8 @@ export function ClientAccessList() {
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      <BulkCreatePortalsButton />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -351,6 +353,6 @@ export function ClientAccessList() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
