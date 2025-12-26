@@ -5,19 +5,24 @@ import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientNutritionCampaign, useClientTodayNutrition } from '@/hooks/useClientPortalData';
 import { useQuickAddWater, useDeleteNutritionEntryPortal } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets } from 'lucide-react';
+import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, Coffee, UtensilsCrossed } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
 import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
+import { NutritionDailySummary } from '@/components/client-portal/nutrition/NutritionDailySummary';
+import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { toast } from 'sonner';
+import { startOfDay, parseISO, isSameDay } from 'date-fns';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
   entry: any;
 } | null;
+
+type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | null;
 
 export default function ClientPortalNutrition() {
   const { clientId } = useClientPortal();
@@ -32,6 +37,8 @@ export default function ClientPortalNutrition() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [prefilledMealType, setPrefilledMealType] = useState<MealType>(null);
 
   const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
 
@@ -39,7 +46,6 @@ export default function ClientPortalNutrition() {
     trackPageMount();
   }, [trackPageMount]);
 
-  // Track campaign view
   useEffect(() => {
     if (campaign) {
       trackPortalEvent('client_portal_view_campaign', { 
@@ -58,7 +64,7 @@ export default function ClientPortalNutrition() {
         clientId,
         amount: 300,
       });
-      toast.success('Voda přidána');
+      toast.success('Voda přidána (+300 ml)');
       trackPortalEvent('client_portal_quick_water');
     } catch (error) {
       toast.error('Nepodařilo se přidat');
@@ -82,6 +88,19 @@ export default function ClientPortalNutrition() {
     }
   };
 
+  const handleQuickMeal = (mealType: MealType) => {
+    setPrefilledMealType(mealType);
+    setShowAddForm(true);
+  };
+
+  // Calculate water from drinks
+  const waterMl = todayData?.drinks
+    ?.filter(d => d.drink_type?.toLowerCase().includes('voda') || d.drink_type?.toLowerCase().includes('water'))
+    .reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0;
+
+  // Get completed days - we'll track this from activity (simplified approach)
+  const completedDays: Date[] = [];
+
   return (
     <div className="space-y-6">
       <div>
@@ -98,9 +117,12 @@ export default function ClientPortalNutrition() {
               <Apple className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold mb-2">Nemáš aktivní nutriční kampaň</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mb-4">
               Kontaktuj svého trenéra pro nastavení sledování stravy.
             </p>
+            <Button variant="outline" size="sm">
+              Kontaktovat trenéra
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -135,25 +157,78 @@ export default function ClientPortalNutrition() {
             </CardContent>
           </Card>
 
+          {/* Week Strip Navigation */}
+          {campaign.isActive && (
+            <WeekStrip
+              currentDate={selectedDate}
+              completedDays={completedDays}
+              onDaySelect={setSelectedDate}
+            />
+          )}
+
+          {/* Daily Summary */}
+          {campaign.isActive && todayData && (
+            <NutritionDailySummary
+              foodCount={todayData.food?.length || 0}
+              drinkCount={todayData.drinks?.length || 0}
+              coffeeCount={todayData.coffee?.length || 0}
+              waterMl={waterMl}
+              campaignProgress={campaign.daysCompleted}
+              campaignTotal={campaign.totalDays}
+            />
+          )}
+
           {/* Quick Actions */}
           {campaign.isActive && (
-            <div className="flex gap-2">
+            <div className="space-y-3">
               <Button 
                 onClick={() => setShowAddForm(true)} 
-                className="flex-1 gap-2"
+                className="w-full gap-2"
+                size="lg"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Přidat záznam
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleQuickWater}
-                disabled={quickWater.isPending}
-                className="gap-2"
-              >
-                <Droplets className="w-4 h-4" />
-                + Voda
-              </Button>
+              
+              <div className="grid grid-cols-4 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('breakfast')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Snídaně</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('lunch')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Oběd</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('dinner')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Večeře</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleQuickWater}
+                  disabled={quickWater.isPending}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <Droplets className="w-4 h-4" />
+                  <span className="text-xs">+300ml</span>
+                </Button>
+              </div>
             </div>
           )}
 
@@ -162,7 +237,10 @@ export default function ClientPortalNutrition() {
             <FoodLogForm
               sessionId={campaign.id}
               clientId={clientId}
-              onClose={() => setShowAddForm(false)}
+              onClose={() => {
+                setShowAddForm(false);
+                setPrefilledMealType(null);
+              }}
             />
           )}
 

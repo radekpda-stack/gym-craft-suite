@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Clock, Play, Send, ChevronRight, Medal, Award } from 'lucide-react';
+import { Trophy, Clock, Play, Send, ChevronRight, Medal, Award, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,9 @@ import {
   useClientPrivacySettings 
 } from '@/hooks/useClientPortalBenchmarks';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
+import { useClientChallengeHistory } from '@/hooks/useClientChallengeHistory';
+import { ChallengeHistory } from '@/components/client-portal/challenges/ChallengeHistory';
+import { AchievementsBadges } from '@/components/client-portal/challenges/AchievementsBadges';
 import { format, isAfter, isBefore, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -31,6 +34,7 @@ export default function ClientPortalChallenges() {
 
   const { data, isLoading } = useClientActiveChallenges();
   const { data: privacySettings } = useClientPrivacySettings();
+  const { data: historyData, isLoading: historyLoading } = useClientChallengeHistory();
   const submitResult = useSubmitChallengeResult();
 
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
@@ -133,14 +137,32 @@ export default function ClientPortalChallenges() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Výzvy</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Trophy className="h-6 w-6 text-amber-500" />
+            Výzvy
+          </h1>
           <p className="text-muted-foreground">Zapoj se do aktuálních výzev</p>
         </div>
+        
         <Card className="text-center py-12">
           <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Momentálně nejsou žádné aktivní výzvy</p>
-          <p className="text-sm text-muted-foreground mt-2">Tvůj trenér brzy vyhlásí novou výzvu!</p>
+          <p className="font-medium mb-2">Momentálně nejsou žádné aktivní výzvy</p>
+          <p className="text-sm text-muted-foreground">Tvůj trenér brzy vyhlásí novou výzvu!</p>
         </Card>
+
+        {/* History & Achievements even when no active challenges */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <ChallengeHistory 
+            completedChallenges={historyData?.completedChallenges || []}
+            isLoading={historyLoading}
+          />
+          <AchievementsBadges
+            achievements={historyData?.achievements || []}
+            streakCount={historyData?.streakCount || 0}
+            prCount={historyData?.prCount || 0}
+            isLoading={historyLoading}
+          />
+        </div>
       </div>
     );
   }
@@ -304,9 +326,31 @@ export default function ClientPortalChallenges() {
                 </p>
               </div>
             )}
+
+            {/* Participation count */}
+            {(participantCounts[selectedChallengeData.id] || 0) > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2">
+                <Users className="w-4 h-4" />
+                <span>{participantCounts[selectedChallengeData.id]} účastníků</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* History & Achievements */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <ChallengeHistory 
+          completedChallenges={historyData?.completedChallenges || []}
+          isLoading={historyLoading}
+        />
+        <AchievementsBadges
+          achievements={historyData?.achievements || []}
+          streakCount={historyData?.streakCount || 0}
+          prCount={historyData?.prCount || 0}
+          isLoading={historyLoading}
+        />
+      </div>
 
       {/* Submit Dialog */}
       <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>

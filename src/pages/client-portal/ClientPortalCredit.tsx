@@ -91,8 +91,8 @@ export default function ClientPortalCredit() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">Kredit & Platby</h1>
-          <p className="text-muted-foreground text-sm">Přehled tvých financí</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Kredit</h1>
+          <p className="text-muted-foreground text-sm">Přehled tvého kreditu</p>
         </div>
         <PeriodChips value={period} onChange={setPeriod} />
       </div>
@@ -187,9 +187,12 @@ export default function ClientPortalCredit() {
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
                   <Wallet className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground">Zatím nemáš žádné transakce</p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="font-medium mb-2">Zatím nemáš žádné transakce</p>
+                <p className="text-sm text-muted-foreground mb-4">
                   Zde uvidíš historii všech pohybů na kreditu
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Pro informace o kreditu kontaktuj svého trenéra
                 </p>
               </div>
             ) : (
