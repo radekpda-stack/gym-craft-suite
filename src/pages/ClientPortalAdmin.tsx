@@ -5,8 +5,8 @@ import { PortalRecentActivity } from '@/components/client-portal/PortalRecentAct
 import { ClientAccessList } from '@/components/client-portal/ClientAccessList';
 import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
-import { ClientPortalManagement } from '@/components/client-portal/ClientPortalManagement';
-import { LayoutDashboard, Users, Settings, Info, Wrench } from 'lucide-react';
+import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
+import { LayoutDashboard, Users, Settings, Info } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -45,7 +45,7 @@ export default function ClientPortalAdmin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-lg h-auto">
+        <TabsList className="grid w-full grid-cols-3 max-w-md h-auto">
           <TabsTrigger value="overview" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <LayoutDashboard className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline text-sm">Přehled</span>
@@ -53,10 +53,6 @@ export default function ClientPortalAdmin() {
           <TabsTrigger value="clients" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <Users className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline text-sm">Klienti</span>
-          </TabsTrigger>
-          <TabsTrigger value="management" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
-            <Wrench className="w-4 h-4 shrink-0" />
-            <span className="hidden sm:inline text-sm">Správa</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <Settings className="w-4 h-4 shrink-0" />
@@ -76,14 +72,14 @@ export default function ClientPortalAdmin() {
           <ClientAccessList />
         </TabsContent>
 
-        <TabsContent value="management" className="mt-6">
-          <ClientPortalManagement />
-        </TabsContent>
-
-        <TabsContent value="settings" className="mt-6">
+        <TabsContent value="settings" className="mt-6 space-y-6">
+          {/* Global visibility settings */}
           <div className="max-w-2xl">
             <PortalVisibilitySettings />
           </div>
+          
+          {/* Per-client settings */}
+          <ClientPortalSettingsPage />
         </TabsContent>
       </Tabs>
     </div>
