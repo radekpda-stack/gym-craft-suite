@@ -151,30 +151,46 @@ export function useClientPortalAuth() {
     
     // Check for password-only auth first (stored in localStorage)
     const storedToken = localStorage.getItem('client_portal_token');
-    const storedClientId = localStorage.getItem('client_portal_client_id');
-    
-    if (storedToken && storedClientId) {
+
+    if (storedToken) {
       // Validate token and load client data
       supabase
         .rpc('validate_client_token', { _token: storedToken })
         .then(({ data, error }) => {
           if (!mounted) return;
-          
+
           if (error || !data || data.length === 0) {
             // Token invalid, clear it
             clearPasswordOnlyAuth();
             setLoading(false);
             setClientDataLoaded(true);
-          } else {
-            // Token valid, load client data
-            fetchPasswordOnlyClientData(storedClientId).then(() => {
-              if (mounted) setLoading(false);
-            });
+            return;
           }
+
+          const validatedClientId = data[0]?.client_id as string | undefined;
+          const validatedTrainerId = data[0]?.trainer_id as string | undefined;
+
+          if (!validatedClientId) {
+            clearPasswordOnlyAuth();
+            setLoading(false);
+            setClientDataLoaded(true);
+            return;
+          }
+
+          // Keep local storage in sync
+          localStorage.setItem('client_portal_client_id', validatedClientId);
+          if (validatedTrainerId) localStorage.setItem('client_portal_trainer_id', validatedTrainerId);
+
+          // Token valid, load client data
+          fetchPasswordOnlyClientData(validatedClientId).then(() => {
+            if (mounted) setLoading(false);
+          });
         });
-      
+
       // Don't set up Supabase Auth listener if using password-only auth
-      return () => { mounted = false; };
+      return () => {
+        mounted = false;
+      };
     }
     
     // Set up Supabase auth state listener
