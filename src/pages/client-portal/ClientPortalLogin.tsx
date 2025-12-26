@@ -102,29 +102,21 @@ export default function ClientPortalLogin() {
         return;
       }
 
-      if (data.success) {
-        if (data.authMethod === 'supabase' && data.session) {
-          // Standard Supabase Auth - set session
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-        } else if (data.authMethod === 'password_only' && data.customToken) {
-          // Password-only auth - store custom token in localStorage
-          localStorage.setItem('client_portal_token', data.customToken);
-          localStorage.setItem('client_portal_client_id', data.clientAccount.clientId);
-          localStorage.setItem('client_portal_trainer_id', data.clientAccount.trainerId);
-          localStorage.setItem('client_portal_account_id', data.clientAccount.id);
-        }
+      if (data.success && data.session) {
+        // Set the Supabase session
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
 
-        toast.success('Úspěšně přihlášeno!');
-
-        // Force page reload to reinitialize auth state for password-only auth
-        if (data.authMethod === 'password_only') {
-          window.location.href = fromPath;
+        if (setSessionError) {
+          console.error('Failed to set session:', setSessionError);
+          setError('Chyba při nastavení relace');
+          setLoading(false);
           return;
         }
 
+        toast.success('Úspěšně přihlášeno!');
         redirectedRef.current = true;
         navigate(fromPath, { replace: true });
       }

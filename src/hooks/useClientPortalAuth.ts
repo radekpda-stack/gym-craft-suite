@@ -28,21 +28,19 @@ export function useClientPortalAuth() {
   const [loading, setLoading] = useState(true);
   const [clientDataLoaded, setClientDataLoaded] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [isPasswordOnlyAuth, setIsPasswordOnlyAuth] = useState(false);
   const fetchingRef = useRef(false);
 
-  // Fetch client account data for Supabase Auth users
+  // Fetch client account data for authenticated users
   const fetchClientData = useCallback(async (userId: string) => {
-    // Prevent duplicate fetches
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     
     try {
-      // Get client account
+      // Get client account by user_id (or auth_user_id)
       const { data: account, error: accountError } = await supabase
         .from('client_accounts')
         .select('*')
-        .eq('user_id', userId)
+        .or(`user_id.eq.${userId},auth_user_id.eq.${userId}`)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -62,14 +60,14 @@ export function useClientPortalAuth() {
         if (clientError) throw clientError;
         setClientProfile(client as ClientProfile);
 
-        // Update last login (don't await - fire and forget)
+        // Update last login (fire and forget)
         supabase
           .from('client_accounts')
           .update({ last_portal_login: new Date().toISOString() })
           .eq('id', account.id)
           .then(() => {});
 
-        // Log activity (don't await - fire and forget)
+        // Log activity (fire and forget)
         supabase
           .from('client_portal_activity')
           .upsert({
@@ -92,106 +90,14 @@ export function useClientPortalAuth() {
     }
   }, []);
 
-  // Fetch data for password-only auth using custom token
-  const fetchPasswordOnlyClientData = useCallback(async (clientId: string) => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
+  useEffect(() => {
+    let mounted = true;
 
-    try {
-      // Get client account by client_id
-      const { data: account, error: accountError } = await supabase
-        .from('client_accounts')
-        .select('*')
-        .eq('client_id', clientId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (accountError) throw accountError;
-
-      if (account) {
-        setClientAccount(account as ClientAccount);
-        setIsClient(true);
-        setIsPasswordOnlyAuth(true);
-
-        // Get client profile
-        const { data: client, error: clientError } = await supabase
-          .from('clients')
-          .select('id, name, email, phone, credit_balance')
-          .eq('id', clientId)
-          .single();
-
-        if (clientError) throw clientError;
-        setClientProfile(client as ClientProfile);
-      } else {
-        clearPasswordOnlyAuth();
-      }
-    } catch (error) {
-      console.error('Error fetching password-only client data:', error);
-      clearPasswordOnlyAuth();
-    } finally {
-      setClientDataLoaded(true);
-      fetchingRef.current = false;
-    }
-  }, []);
-
-  // Clear password-only auth data
-  const clearPasswordOnlyAuth = useCallback(() => {
+    // Clear any legacy password-only tokens on mount
     localStorage.removeItem('client_portal_token');
     localStorage.removeItem('client_portal_client_id');
     localStorage.removeItem('client_portal_trainer_id');
     localStorage.removeItem('client_portal_account_id');
-    setIsClient(false);
-    setIsPasswordOnlyAuth(false);
-    setClientAccount(null);
-    setClientProfile(null);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    
-    // Check for password-only auth first (stored in localStorage)
-    const storedToken = localStorage.getItem('client_portal_token');
-
-    if (storedToken) {
-      // Validate token and load client data
-      supabase
-        .rpc('validate_client_token', { _token: storedToken })
-        .then(({ data, error }) => {
-          if (!mounted) return;
-
-          if (error || !data || data.length === 0) {
-            // Token invalid, clear it
-            clearPasswordOnlyAuth();
-            setLoading(false);
-            setClientDataLoaded(true);
-            return;
-          }
-
-          const validatedClientId = data[0]?.client_id as string | undefined;
-          const validatedTrainerId = data[0]?.trainer_id as string | undefined;
-
-          if (!validatedClientId) {
-            clearPasswordOnlyAuth();
-            setLoading(false);
-            setClientDataLoaded(true);
-            return;
-          }
-
-          // Keep local storage in sync
-          localStorage.setItem('client_portal_client_id', validatedClientId);
-          if (validatedTrainerId) localStorage.setItem('client_portal_trainer_id', validatedTrainerId);
-
-          // Token valid, load client data
-          fetchPasswordOnlyClientData(validatedClientId).then(() => {
-            if (mounted) setLoading(false);
-          });
-        });
-
-      // Don't set up Supabase Auth listener if using password-only auth
-      return () => {
-        mounted = false;
-      };
-    }
     
     // Set up Supabase auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -239,7 +145,7 @@ export function useClientPortalAuth() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchClientData, fetchPasswordOnlyClientData, clearPasswordOnlyAuth]);
+  }, [fetchClientData]);
 
   // Magic link sign in
   const signInWithMagicLink = useCallback(async (email: string) => {
@@ -255,7 +161,7 @@ export function useClientPortalAuth() {
     return { error };
   }, []);
 
-  // Standard sign in (fallback)
+  // Standard sign in
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -265,22 +171,14 @@ export function useClientPortalAuth() {
     return { data, error };
   }, []);
 
-  // Sign out - handles both auth methods
+  // Sign out
   const signOut = useCallback(async () => {
     setClientDataLoaded(false);
-    
-    // Clear password-only auth
-    if (isPasswordOnlyAuth) {
-      clearPasswordOnlyAuth();
-      return { error: null };
-    }
-    
-    // Sign out from Supabase Auth
     const { error } = await supabase.auth.signOut();
     return { error };
-  }, [isPasswordOnlyAuth, clearPasswordOnlyAuth]);
+  }, []);
 
-  // Compute final loading state - loading until we have session info AND client data
+  // Loading until we have session info AND client data
   const isFullyLoaded = !loading && clientDataLoaded;
 
   return {
@@ -290,15 +188,14 @@ export function useClientPortalAuth() {
     clientProfile,
     loading: !isFullyLoaded,
     isClient,
-    isPasswordOnlyAuth,
-    isAuthenticated: (!!session && isClient) || (isPasswordOnlyAuth && isClient),
+    isAuthenticated: !!session && isClient,
     signInWithMagicLink,
     signIn,
     signOut,
   };
 }
 
-// Hook to validate token-based access
+// Hook to validate token-based access (for external links)
 export function useTokenAccess(token: string | undefined) {
   const [clientId, setClientId] = useState<string | null>(null);
   const [trainerId, setTrainerId] = useState<string | null>(null);
