@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Send,
   Clock,
+  UserCog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,6 +34,7 @@ interface ClientActionHubProps {
   onAddNote?: (note: string) => void;
   onAddTraining?: () => void;
   onAddCredit?: () => void;
+  onEditClient?: () => void;
 }
 
 interface DominantAction {
@@ -50,6 +52,7 @@ export function ClientActionHub({
   onAddNote,
   onAddTraining,
   onAddCredit,
+  onEditClient,
 }: ClientActionHubProps) {
   const navigate = useNavigate();
   const [showNoteDialog, setShowNoteDialog] = useState(false);
@@ -326,7 +329,7 @@ export function ClientActionHub({
           Rychlé akce
         </p>
         
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <Button
             variant="outline"
             onClick={onAddTraining}
@@ -373,6 +376,15 @@ export function ClientActionHub({
               <span className="text-[11px]">Kredit</span>
             </Button>
           )}
+          
+          <Button
+            variant="outline"
+            onClick={onEditClient}
+            className="flex flex-col items-center gap-1.5 h-auto py-3 px-2"
+          >
+            <UserCog className="w-5 h-5 text-primary" />
+            <span className="text-[11px]">Upravit</span>
+          </Button>
         </div>
       </div>
       
