@@ -603,6 +603,41 @@ export type Database = {
           },
         ]
       }
+      client_achievements: {
+        Row: {
+          achievement_data: Json | null
+          achievement_type: string
+          client_id: string
+          created_at: string
+          earned_at: string
+          id: string
+        }
+        Insert: {
+          achievement_data?: Json | null
+          achievement_type: string
+          client_id: string
+          created_at?: string
+          earned_at?: string
+          id?: string
+        }
+        Update: {
+          achievement_data?: Json | null
+          achievement_type?: string
+          client_id?: string
+          created_at?: string
+          earned_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_achievements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_budget_groups: {
         Row: {
           created_at: string
@@ -834,6 +869,62 @@ export type Database = {
             foreignKeyName: "client_portal_activity_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_preferences: {
+        Row: {
+          client_id: string
+          created_at: string
+          distance_unit: string | null
+          id: string
+          notify_campaign_reminder: boolean | null
+          notify_low_credit: boolean | null
+          notify_new_challenge: boolean | null
+          notify_water_reminder: boolean | null
+          onboarding_completed: boolean | null
+          onboarding_steps_done: Json | null
+          time_format: string | null
+          updated_at: string
+          weight_unit: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          distance_unit?: string | null
+          id?: string
+          notify_campaign_reminder?: boolean | null
+          notify_low_credit?: boolean | null
+          notify_new_challenge?: boolean | null
+          notify_water_reminder?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_steps_done?: Json | null
+          time_format?: string | null
+          updated_at?: string
+          weight_unit?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          distance_unit?: string | null
+          id?: string
+          notify_campaign_reminder?: boolean | null
+          notify_low_credit?: boolean | null
+          notify_new_challenge?: boolean | null
+          notify_water_reminder?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_steps_done?: Json | null
+          time_format?: string | null
+          updated_at?: string
+          weight_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
