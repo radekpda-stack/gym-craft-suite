@@ -24,6 +24,7 @@ import {
   LayoutDashboard,
   Boxes,
   Dumbbell,
+  Trophy,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -46,6 +47,7 @@ import { DashboardPersonalizationSettings } from '@/components/settings/Dashboar
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
+import { ComparisonSettings } from '@/components/settings/ComparisonSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -427,6 +429,16 @@ export default function Settings() {
               icon={Dumbbell}
             >
               <ExercisesManagementSection />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Srovnání & Výzvy' : 'Comparisons & Challenges'}
+              description={language === 'cs' 
+                ? 'Nastavení benchmarků a leaderboardů pro klienty' 
+                : 'Benchmark and leaderboard settings for clients'}
+              icon={Trophy}
+            >
+              <ComparisonSettings />
             </SettingsSection>
           </>
         );
