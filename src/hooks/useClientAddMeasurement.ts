@@ -85,6 +85,16 @@ export function useClientAddCardio() {
         .single();
 
       if (error) throw error;
+
+      // Auto-submit to matching active challenges
+      await autoSubmitToChallenge(
+        clientId,
+        input.exercise_name,
+        input.distance_meters,
+        input.duration_seconds,
+        input.notes
+      );
+
       return data;
     },
     onSuccess: () => {
@@ -92,6 +102,7 @@ export function useClientAddCardio() {
       queryClient.invalidateQueries({ queryKey: ['client-cardio-progress', clientId] });
       queryClient.invalidateQueries({ queryKey: ['cardio-entries', clientId] });
       queryClient.invalidateQueries({ queryKey: ['cardio-stats', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-active-challenges'] });
     },
   });
 }
@@ -121,4 +132,122 @@ async function checkIfCardioIsPR(
   // New time is better (lower) than the best existing time
   const bestExistingTime = existingEntries[0].duration_seconds;
   return durationSeconds < bestExistingTime;
+}
+
+// Auto-submit cardio result to matching active challenges
+async function autoSubmitToChallenge(
+  clientId: string,
+  exerciseName: string,
+  distanceMeters: number,
+  durationSeconds: number,
+  notes?: string
+): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    
+    // Find active challenges that match this exercise type
+    // Look for challenges with "row" or "veslo" in title for rowing, etc.
+    const exerciseKeywords = getExerciseKeywords(exerciseName);
+    
+    const { data: challenges } = await supabase
+      .from('challenges')
+      .select('id, title, scoring_type, primary_metric, allow_multiple_attempts')
+      .eq('status', 'published')
+      .lte('start_at', now)
+      .gte('end_at', now);
+
+    if (!challenges?.length) return;
+
+    // Find matching challenge based on exercise name and distance
+    const matchingChallenge = challenges.find(c => {
+      const titleLower = c.title.toLowerCase();
+      // Check if title contains exercise keyword and distance
+      const hasExercise = exerciseKeywords.some(kw => titleLower.includes(kw));
+      const hasDistance = titleLower.includes(String(distanceMeters)) || 
+                          titleLower.includes(`${distanceMeters / 1000}k`) ||
+                          titleLower.includes(`${distanceMeters}m`);
+      return hasExercise && (hasDistance || distanceMeters === 500); // Default 500m for rowing
+    });
+
+    if (!matchingChallenge) return;
+
+    // Check if client already has a submission for this challenge
+    const { data: existingSubmission } = await supabase
+      .from('challenge_submissions')
+      .select('id, score_primary')
+      .eq('challenge_id', matchingChallenge.id)
+      .eq('client_id', clientId)
+      .order('score_primary', { ascending: true })
+      .limit(1);
+
+    const isTimeBased = matchingChallenge.scoring_type === 'time_lower_better';
+    const newScore = durationSeconds;
+
+    // If no existing submission, create one
+    if (!existingSubmission?.length) {
+      await supabase
+        .from('challenge_submissions')
+        .insert({
+          challenge_id: matchingChallenge.id,
+          client_id: clientId,
+          score_primary: newScore,
+          note: notes || null,
+          status: 'approved',
+          submitted_at: now,
+        });
+      console.log('Created new challenge submission for', matchingChallenge.title);
+      return;
+    }
+
+    // If better score (or multiple attempts allowed), update/insert
+    const existingScore = existingSubmission[0].score_primary;
+    const isBetter = isTimeBased ? newScore < existingScore : newScore > existingScore;
+
+    if (isBetter) {
+      if (matchingChallenge.allow_multiple_attempts) {
+        // Insert new submission (multiple attempts allowed)
+        await supabase
+          .from('challenge_submissions')
+          .insert({
+            challenge_id: matchingChallenge.id,
+            client_id: clientId,
+            score_primary: newScore,
+            note: notes || null,
+            status: 'approved',
+            submitted_at: now,
+          });
+      } else {
+        // Update existing submission
+        await supabase
+          .from('challenge_submissions')
+          .update({
+            score_primary: newScore,
+            note: notes || null,
+            submitted_at: now,
+          })
+          .eq('id', existingSubmission[0].id);
+      }
+      console.log('Updated challenge submission with better score for', matchingChallenge.title);
+    }
+  } catch (error) {
+    console.error('Failed to auto-submit to challenge:', error);
+    // Don't throw - this is a secondary action
+  }
+}
+
+// Get keywords to match exercise names to challenge titles
+function getExerciseKeywords(exerciseName: string): string[] {
+  const name = exerciseName.toLowerCase();
+  
+  if (name.includes('veslo') || name.includes('row') || name.includes('erg')) {
+    return ['row', 'veslo', 'erg', 'rowing'];
+  }
+  if (name.includes('běh') || name.includes('run')) {
+    return ['run', 'běh', 'running'];
+  }
+  if (name.includes('bike') || name.includes('kolo')) {
+    return ['bike', 'kolo', 'cycling'];
+  }
+  
+  return [name];
 }
