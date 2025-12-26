@@ -119,6 +119,12 @@ export default function ClientPortalLogin() {
 
         toast.success('Úspěšně přihlášeno!');
 
+        // Force page reload to reinitialize auth state for password-only auth
+        if (data.authMethod === 'password_only') {
+          window.location.href = fromPath;
+          return;
+        }
+
         redirectedRef.current = true;
         navigate(fromPath, { replace: true });
       }
