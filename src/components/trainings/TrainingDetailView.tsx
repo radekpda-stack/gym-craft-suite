@@ -39,7 +39,7 @@ import { RatingDisplay, RatingInput } from '@/components/ui/rating-input';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
-import { PreviousTrainingCard } from '@/components/trainings/PreviousTrainingCard';
+import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
@@ -47,7 +47,7 @@ import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
-import { usePreviousTraining } from '@/hooks/usePreviousTraining';
+
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import {
@@ -150,7 +150,7 @@ export function TrainingDetailView({
   const changePaymentMethod = useChangePaymentMethod();
   const { data: settings } = useAppSettings();
   const { data: feedbackRequests = [] } = useFeedbackRequests();
-  const { data: previousTraining } = usePreviousTraining(training.client_id, training.date);
+  
   const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 800, "2": 1000, "3": 1200 };
   
   // Get feedback request for this training
@@ -522,9 +522,9 @@ export function TrainingDetailView({
           </div>
         </div>
 
-        {/* Previous Training Card - Show for scheduled trainings */}
-        {training.status === 'scheduled' && previousTraining && (
-          <PreviousTrainingCard training={previousTraining} />
+        {/* Previous Training Preview - Show history of previous training */}
+        {training.status === 'scheduled' && (
+          <PreviousTrainingPreview clientId={training.client_id} />
         )}
         {training.status === 'completed' && (
           <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
