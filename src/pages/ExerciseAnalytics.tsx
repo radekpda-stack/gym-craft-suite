@@ -55,6 +55,7 @@ import { HistoryComparisonView } from '@/components/analytics/HistoryComparisonV
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+// Force rebuild
 
 const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: 'month', label: 'Tento měsíc' },
