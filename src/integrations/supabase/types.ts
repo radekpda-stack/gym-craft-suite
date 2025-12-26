@@ -550,6 +550,7 @@ export type Database = {
           client_id: string
           created_at: string
           created_by_trainer_id: string | null
+          credit_history_start_at: string | null
           id: string
           is_active: boolean
           last_password_reset_at: string | null
@@ -566,6 +567,7 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by_trainer_id?: string | null
+          credit_history_start_at?: string | null
           id?: string
           is_active?: boolean
           last_password_reset_at?: string | null
@@ -582,6 +584,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by_trainer_id?: string | null
+          credit_history_start_at?: string | null
           id?: string
           is_active?: boolean
           last_password_reset_at?: string | null
@@ -5561,6 +5564,10 @@ export type Database = {
       }
     }
     Functions: {
+      bulk_create_client_portals: {
+        Args: { p_trainer_id: string }
+        Returns: Json
+      }
       calculate_exercise_benchmark: {
         Args: {
           p_client_id: string

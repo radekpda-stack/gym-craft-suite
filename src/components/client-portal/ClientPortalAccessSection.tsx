@@ -50,6 +50,7 @@ interface ClientAccountInfo {
   created_at: string;
   auth_user_id: string | null;
   portal_password: string | null;
+  credit_history_start_at: string | null;
 }
 
 export function ClientPortalAccessSection({
@@ -71,7 +72,7 @@ export function ClientPortalAccessSection({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('client_accounts')
-        .select('id, status, last_portal_login, last_password_reset_at, created_at, auth_user_id, portal_password')
+        .select('id, status, last_portal_login, last_password_reset_at, created_at, auth_user_id, portal_password, credit_history_start_at')
         .eq('client_id', clientId)
         .maybeSingle();
 
@@ -283,6 +284,16 @@ export function ClientPortalAccessSection({
               <span className="text-sm font-medium shrink-0">Poslední reset hesla</span>
               <span className="text-sm text-muted-foreground">
                 {format(new Date(accountInfo.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
+              </span>
+            </div>
+          )}
+
+          {/* Credit history start date */}
+          {hasAccess && accountInfo?.credit_history_start_at && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Historie kreditu od</span>
+              <span className="text-sm text-muted-foreground">
+                {format(new Date(accountInfo.credit_history_start_at), 'd. M. yyyy', { locale: cs })}
               </span>
             </div>
           )}
