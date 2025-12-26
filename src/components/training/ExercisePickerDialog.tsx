@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useExercises } from '@/hooks/useExercises';
+import { useState, useMemo } from 'react';
+import { useExerciseSearch, searchExercises } from '@/hooks/useExerciseAliases';
 import {
   Dialog,
   DialogContent,
@@ -24,24 +24,29 @@ export function ExercisePickerDialog({
   onSelect,
 }: ExercisePickerDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { exercises = [], isLoading } = useExercises();
+  const { data: exerciseIndex = [], isLoading } = useExerciseSearch();
 
-  const filteredExercises = exercises.filter((ex) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      ex.name.toLowerCase().includes(searchLower) ||
-      ex.name_cs?.toLowerCase().includes(searchLower) ||
-      ex.category?.toLowerCase().includes(searchLower) ||
-      ex.muscle_groups?.some((mg) => mg.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredExercises = useMemo(() => {
+    if (!searchQuery.trim()) return exerciseIndex.slice(0, 50);
+    return searchExercises(exerciseIndex, searchQuery).slice(0, 50);
+  }, [exerciseIndex, searchQuery]);
 
-  const handleSelect = (exercise: typeof exercises[0]) => {
+  const handleSelect = (exercise: typeof exerciseIndex[0]) => {
     onSelect({
       id: exercise.id,
       name: exercise.name_cs || exercise.name,
     });
     setSearchQuery('');
+  };
+
+  // Check if match came via alias
+  const getMatchedAlias = (exercise: typeof exerciseIndex[0]) => {
+    if (!searchQuery.trim()) return null;
+    const query = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const name = (exercise.name_cs || exercise.name).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (name.includes(query)) return null;
+    const matchedAlias = exercise.aliases.find(a => a.normalized.includes(query));
+    return matchedAlias?.name || null;
   };
 
   return (
@@ -74,35 +79,38 @@ export function ExercisePickerDialog({
             </div>
           ) : (
             <div className="space-y-1">
-              {filteredExercises.slice(0, 50).map((exercise) => (
-                <Button
-                  key={exercise.id}
-                  variant="ghost"
-                  className="w-full justify-start h-auto py-3 px-3"
-                  onClick={() => handleSelect(exercise)}
-                >
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">
-                      {exercise.name_cs || exercise.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {exercise.category && (
-                        <Badge variant="secondary" className="text-xs">
-                          {exercise.category}
-                        </Badge>
-                      )}
-                      {exercise.muscle_groups?.slice(0, 2).map((mg) => (
-                        <Badge key={mg} variant="outline" className="text-xs">
-                          {mg}
-                        </Badge>
-                      ))}
+              {filteredExercises.map((exercise) => {
+                const matchedAlias = getMatchedAlias(exercise);
+                return (
+                  <Button
+                    key={exercise.id}
+                    variant="ghost"
+                    className="w-full justify-start h-auto py-3 px-3"
+                    onClick={() => handleSelect(exercise)}
+                  >
+                    <div className="flex-1 text-left">
+                      <p className="font-medium">
+                        {exercise.name_cs || exercise.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {exercise.category && (
+                          <Badge variant="secondary" className="text-xs">
+                            {exercise.category}
+                          </Badge>
+                        )}
+                        {matchedAlias && (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            alias: {matchedAlias}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Button>
-              ))}
-              {filteredExercises.length > 50 && (
+                  </Button>
+                );
+              })}
+              {exerciseIndex.length > 50 && filteredExercises.length >= 50 && (
                 <p className="text-center text-sm text-muted-foreground py-2">
-                  Zobrazeno 50 z {filteredExercises.length} výsledků. Upřesněte hledání.
+                  Zobrazeno 50 z {exerciseIndex.length} výsledků. Upřesněte hledání.
                 </p>
               )}
             </div>

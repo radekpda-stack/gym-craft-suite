@@ -23,6 +23,7 @@ import {
   Zap,
   LayoutDashboard,
   Boxes,
+  Dumbbell,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -44,6 +45,7 @@ import { DefaultValuesSettings } from '@/components/settings/DefaultValuesSettin
 import { DashboardPersonalizationSettings } from '@/components/settings/DashboardPersonalizationSettings';
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
+import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -415,6 +417,16 @@ export default function Settings() {
               }}
             >
               <UserManagementSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Správa cviků' : 'Exercises Management'}
+              description={language === 'cs' 
+                ? 'Duplicity, aliasy a nepřiřazené záznamy' 
+                : 'Duplicates, aliases and unmatched entries'}
+              icon={Dumbbell}
+            >
+              <ExercisesManagementSection />
             </SettingsSection>
           </>
         );
