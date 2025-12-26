@@ -31,6 +31,13 @@ import {
 import { GroupedWorkoutEntry, WorkoutEntry } from '@/hooks/useWorkoutEntries';
 import { cn } from '@/lib/utils';
 
+// Format seconds to mm:ss
+function formatTimeDisplay(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 interface WorkoutExerciseListProps {
   groupedEntries: GroupedWorkoutEntry[];
   onUpdateSet: (entryId: string, updates: Partial<WorkoutEntry>) => void;
@@ -252,7 +259,7 @@ export function WorkoutExerciseList({
                             )}
                           </span>
                           <span className="font-medium">
-                            {set.reps ?? set.time_seconds ? `${set.time_seconds}s` : '-'}
+                            {set.reps ? set.reps : set.time_seconds ? formatTimeDisplay(set.time_seconds) : '-'}
                           </span>
                           <span className="text-muted-foreground">
                             {set.rpe ? `@${set.rpe}` : '-'}

@@ -29,7 +29,16 @@ interface ProgressListProps {
 }
 
 /**
- * Calculate true PRs - only the best (highest weight) for each exercise per client
+ * Format seconds to mm:ss format
+ */
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+/**
+ * Calculate true PRs - best weight (higher) OR best time (lower) for each exercise per client
  */
 function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
   const prIds = new Set<string>();
@@ -38,7 +47,8 @@ function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
   const exerciseGroups = new Map<string, ExerciseEntryWithClient[]>();
   
   entries.forEach(entry => {
-    if (!entry.weight_kg) return; // Skip entries without weight
+    // Skip entries without weight or time
+    if (!entry.weight_kg && !entry.time_seconds) return;
     
     const key = `${entry.client_id}-${entry.exercise_name}`;
     if (!exerciseGroups.has(key)) {
@@ -47,16 +57,34 @@ function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
     exerciseGroups.get(key)!.push(entry);
   });
   
-  // For each group, find the entry with highest weight
+  // For each group, find the PR entry
   exerciseGroups.forEach(groupEntries => {
-    const maxWeight = Math.max(...groupEntries.map(e => e.weight_kg || 0));
-    // Find the FIRST entry with max weight (oldest PR counts)
-    const prEntry = groupEntries
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .find(e => e.weight_kg === maxWeight);
+    // Check if this is a time-based exercise (has time_seconds entries)
+    const hasTimeEntries = groupEntries.some(e => e.time_seconds && e.time_seconds > 0);
+    const hasWeightEntries = groupEntries.some(e => e.weight_kg && e.weight_kg > 0);
     
-    if (prEntry) {
-      prIds.add(prEntry.id);
+    if (hasTimeEntries && !hasWeightEntries) {
+      // Time-based exercise: lower time is better
+      const entriesWithTime = groupEntries.filter(e => e.time_seconds && e.time_seconds > 0);
+      const minTime = Math.min(...entriesWithTime.map(e => e.time_seconds!));
+      const prEntry = entriesWithTime
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .find(e => e.time_seconds === minTime);
+      
+      if (prEntry) {
+        prIds.add(prEntry.id);
+      }
+    } else if (hasWeightEntries) {
+      // Weight-based exercise: higher weight is better
+      const entriesWithWeight = groupEntries.filter(e => e.weight_kg && e.weight_kg > 0);
+      const maxWeight = Math.max(...entriesWithWeight.map(e => e.weight_kg!));
+      const prEntry = entriesWithWeight
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .find(e => e.weight_kg === maxWeight);
+      
+      if (prEntry) {
+        prIds.add(prEntry.id);
+      }
     }
   });
   
@@ -142,7 +170,7 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                           {entry.time_seconds && (
                             <span className="flex items-center gap-1 text-muted-foreground">
                               <Clock className="w-3 h-3" />
-                              {entry.time_seconds}s
+                              {formatTime(entry.time_seconds)}
                             </span>
                           )}
                           {entry.tempo && (
