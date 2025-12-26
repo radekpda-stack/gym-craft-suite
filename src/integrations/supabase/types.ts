@@ -1632,6 +1632,41 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_aliases: {
+        Row: {
+          alias_name: string
+          alias_normalized: string
+          created_at: string | null
+          exercise_id: string
+          id: string
+          language: string | null
+        }
+        Insert: {
+          alias_name: string
+          alias_normalized: string
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          language?: string | null
+        }
+        Update: {
+          alias_name?: string
+          alias_normalized?: string
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          language?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_aliases_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_entries: {
         Row: {
           client_id: string
