@@ -57,21 +57,40 @@ export function useExerciseEntries(clientId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Check if this is a PR
-      const { data: existingEntries } = await supabase
-        .from('exercise_entries')
-        .select('weight_kg, reps')
-        .eq('client_id', entry.client_id)
-        .eq('exercise_name', entry.exercise_name)
-        .order('weight_kg', { ascending: false })
-        .limit(1);
+      let isPR = false;
+      
+      // Check if this is a time-based PR (lower is better - for cardio)
+      if (entry.time_seconds && entry.time_seconds > 0) {
+        const { data: existingEntries } = await supabase
+          .from('exercise_entries')
+          .select('time_seconds')
+          .eq('client_id', entry.client_id)
+          .eq('exercise_name', entry.exercise_name)
+          .not('time_seconds', 'is', null)
+          .order('time_seconds', { ascending: true })
+          .limit(1);
 
-      const isPR = entry.weight_kg && (!existingEntries?.length || 
-        (existingEntries[0].weight_kg !== null && entry.weight_kg > existingEntries[0].weight_kg));
+        isPR = !existingEntries?.length || 
+          (existingEntries[0].time_seconds !== null && entry.time_seconds < existingEntries[0].time_seconds);
+      }
+      // Check if this is a weight-based PR (higher is better - for strength)
+      else if (entry.weight_kg && entry.weight_kg > 0) {
+        const { data: existingEntries } = await supabase
+          .from('exercise_entries')
+          .select('weight_kg')
+          .eq('client_id', entry.client_id)
+          .eq('exercise_name', entry.exercise_name)
+          .not('weight_kg', 'is', null)
+          .order('weight_kg', { ascending: false })
+          .limit(1);
+
+        isPR = !existingEntries?.length || 
+          (existingEntries[0].weight_kg !== null && entry.weight_kg > existingEntries[0].weight_kg);
+      }
 
       const { data, error } = await supabase
         .from('exercise_entries')
-        .insert({ ...entry, user_id: user.id, is_pr: isPR || false })
+        .insert({ ...entry, user_id: user.id, is_pr: isPR })
         .select()
         .single();
 
@@ -80,6 +99,7 @@ export function useExerciseEntries(clientId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
       toast({ title: 'Záznam přidán', description: 'Tréninkový záznam byl uložen.' });
     },
     onError: () => {
