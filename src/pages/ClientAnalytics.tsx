@@ -122,23 +122,24 @@ export default function ClientAnalytics() {
   }, [filters, selectedClientNames]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
           <Button 
             variant="ghost" 
             size="icon"
             onClick={() => navigate('/clients')}
+            className="shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="w-6 h-6 text-primary" />
-              Analytika klientů
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+              <span className="truncate">Analytika klientů</span>
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1 truncate">
               Aktivita, retence a dlouhodobé trendy
             </p>
           </div>
@@ -164,19 +165,21 @@ export default function ClientAnalytics() {
 
       {/* Filters Bar */}
       <Card className="border-border/50">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <PeriodToggle 
-              value={filters.periodType} 
-              onChange={(v) => updateFilter('periodType', v)} 
-            />
+        <CardContent className="py-3 sm:py-4">
+          <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+              <PeriodToggle 
+                value={filters.periodType} 
+                onChange={(v) => updateFilter('periodType', v)} 
+              />
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="min-w-40">
-                  <Users className="w-4 h-4 mr-2" />
-                  {selectedClientNames}
-                  <ChevronDown className="w-4 h-4 ml-2" />
+                <Button variant="outline" size="sm" className="w-full sm:w-auto sm:min-w-40">
+                  <Users className="w-4 h-4 mr-2 shrink-0" />
+                  <span className="truncate">{selectedClientNames}</span>
+                  <ChevronDown className="w-4 h-4 ml-2 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64 max-h-80 overflow-auto">
@@ -197,7 +200,7 @@ export default function ClientAnalytics() {
                     )}
                   >
                     <div className={cn(
-                      'w-4 h-4 rounded border flex items-center justify-center',
+                      'w-4 h-4 rounded border flex items-center justify-center shrink-0',
                       filters.clientIds?.includes(client.id) 
                         ? 'bg-primary border-primary' 
                         : 'border-muted-foreground'
@@ -206,13 +209,13 @@ export default function ClientAnalytics() {
                         <span className="text-primary-foreground text-xs">✓</span>
                       )}
                     </div>
-                    {client.name}
+                    <span className="truncate">{client.name}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="ml-auto">
+            <div className="sm:ml-auto overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
               <ComparisonModeToggle
                 value={filters.comparisonMode}
                 onChange={(v) => updateFilter('comparisonMode', v)}
