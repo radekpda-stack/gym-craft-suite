@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { subDays, format, eachDayOfInterval, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
+import { subDays, format, eachWeekOfInterval, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export type AnalyticsPeriod = 7 | 30 | 90 | 'custom';
 export type ComparisonMode = 'client' | 'all';
+export type LoadDistributionMode = 'high-level' | 'detail';
 
 interface VolumeDataPoint {
   date: string;
@@ -14,7 +15,7 @@ interface VolumeDataPoint {
   volumeComparison?: number;
 }
 
-interface LoadDistributionItem {
+export interface LoadDistributionItem {
   group: string;
   label: string;
   value: number;
@@ -41,17 +42,43 @@ export interface ExerciseAnalyticsNewData {
   volumeTimeline: VolumeDataPoint[];
   totalVolume: number;
   loadDistribution: LoadDistributionItem[];
+  loadDistributionDetail: LoadDistributionItem[];
   movementPatterns: MovementPatternItem[];
   movementPatternsCoverage: number;
   movementPatternsTotalEntries: number;
   topExercises: TopExercise[];
 }
 
-const MUSCLE_GROUP_LABELS: Record<string, string> = {
-  upper: 'Horní tělo',
-  lower: 'Dolní tělo',
+// High-level body part labels
+const BODY_PART_LABELS: Record<string, string> = {
+  upper: 'Horní část',
+  lower: 'Dolní část',
   core: 'Core',
   other: 'Ostatní',
+};
+
+// Detailed muscle group labels (Czech)
+const MUSCLE_GROUP_LABELS: Record<string, string> = {
+  quadriceps: 'Quadriceps',
+  hamstrings: 'Hamstringy',
+  gluteus_maximus: 'Gluteus max.',
+  gluteus_medius: 'Gluteus med.',
+  calves: 'Lýtka',
+  adductors: 'Adduktory',
+  abductors: 'Abduktory',
+  back_vertical_pull: 'Záda vert.',
+  back_horizontal_pull: 'Záda horiz.',
+  shoulders_front: 'Ramena přední',
+  shoulders_middle: 'Ramena střed',
+  shoulders_rear: 'Ramena zadní',
+  triceps: 'Triceps',
+  biceps: 'Biceps',
+  serratus_anterior: 'Serratus',
+  core_anti_extension: 'Core anti-ext',
+  core_anti_rotation: 'Core anti-rot',
+  core_rotation: 'Core rotace',
+  core_lateral: 'Core lat. stab.',
+  erector_spinae: 'Erector spinae',
 };
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
@@ -113,18 +140,6 @@ function getMovementPatternWithFallback(pattern: string | null | undefined, cate
   if (pattern) return pattern;
   if (!category) return null;
   return CATEGORY_TO_MOVEMENT_PATTERN[category] || null;
-}
-
-// Map categories to muscle groups
-function getCategoryMuscleGroup(category: string): string {
-  const upper = ['Hrudník', 'Záda', 'Ramena', 'Biceps', 'Triceps', 'Chest', 'Back', 'Shoulders'];
-  const lower = ['Nohy', 'Stehna', 'Lýtka', 'Hýždě', 'Legs', 'Glutes', 'Quadriceps', 'Hamstrings'];
-  const core = ['Břicho', 'Core', 'Abs'];
-  
-  if (upper.some(u => category.toLowerCase().includes(u.toLowerCase()))) return 'upper';
-  if (lower.some(l => category.toLowerCase().includes(l.toLowerCase()))) return 'lower';
-  if (core.some(c => category.toLowerCase().includes(c.toLowerCase()))) return 'core';
-  return 'other';
 }
 
 export function useExerciseAnalyticsNew(
@@ -238,36 +253,107 @@ export function useExerciseAnalyticsNew(
         return sum + (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 0);
       }, 0) || 0;
 
-      // Load distribution by muscle group
-      const muscleGroups = { upper: 0, lower: 0, core: 0, other: 0 };
-      const muscleGroupsAll = { upper: 0, lower: 0, core: 0, other: 0 };
+      // Fetch body part categories for exercise_ids from entries
+      const exerciseIds = [...new Set((entries || []).map(e => e.exercise_id).filter(Boolean) as string[])];
+      const allExerciseIds = [...new Set((allEntries || []).map(e => e.exercise_id).filter(Boolean) as string[])];
+      
+      // Fetch exercise -> body part mapping from view
+      const { data: exerciseBodyParts } = await supabase
+        .from('exercise_body_part_categories')
+        .select('*')
+        .in('exercise_id', [...new Set([...exerciseIds, ...allExerciseIds])]);
+
+      // Fetch detailed muscle groups for exercises
+      const { data: exerciseMuscleGroups } = await supabase
+        .from('exercise_muscle_groups')
+        .select('exercise_id, role, muscle_group:muscle_groups(id, name, name_cz)')
+        .in('exercise_id', [...new Set([...exerciseIds, ...allExerciseIds])]);
+
+      // Create maps
+      const exerciseToBodyParts = new Map<string, Set<string>>();
+      exerciseBodyParts?.forEach(ebp => {
+        if (!exerciseToBodyParts.has(ebp.exercise_id)) {
+          exerciseToBodyParts.set(ebp.exercise_id, new Set());
+        }
+        exerciseToBodyParts.get(ebp.exercise_id)!.add(ebp.body_part_key);
+      });
+
+      const exerciseToMuscleGroups = new Map<string, string[]>();
+      exerciseMuscleGroups?.forEach((emg: any) => {
+        if (!exerciseToMuscleGroups.has(emg.exercise_id)) {
+          exerciseToMuscleGroups.set(emg.exercise_id, []);
+        }
+        if (emg.muscle_group?.name) {
+          exerciseToMuscleGroups.get(emg.exercise_id)!.push(emg.muscle_group.name);
+        }
+      });
+
+      // High-level load distribution (upper/lower/core)
+      const bodyPartVolumes: Record<string, number> = { upper: 0, lower: 0, core: 0, other: 0 };
+      const bodyPartVolumesAll: Record<string, number> = { upper: 0, lower: 0, core: 0, other: 0 };
 
       entries?.forEach(e => {
-        const exercise = e.exercises as any;
-        const category = exercise?.category || 'Ostatní';
-        const group = getCategoryMuscleGroup(category);
         const volume = (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 1);
-        muscleGroups[group as keyof typeof muscleGroups] += volume;
+        const bodyParts = exerciseToBodyParts.get(e.exercise_id || '') || new Set(['other']);
+        const partCount = bodyParts.size || 1;
+        bodyParts.forEach(bp => {
+          bodyPartVolumes[bp] = (bodyPartVolumes[bp] || 0) + volume / partCount;
+        });
       });
 
       allEntries?.forEach(e => {
-        const exercise = e.exercises as any;
-        const category = exercise?.category || 'Ostatní';
-        const group = getCategoryMuscleGroup(category);
         const volume = (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 1);
-        muscleGroupsAll[group as keyof typeof muscleGroupsAll] += volume;
+        const bodyParts = exerciseToBodyParts.get(e.exercise_id || '') || new Set(['other']);
+        const partCount = bodyParts.size || 1;
+        bodyParts.forEach(bp => {
+          bodyPartVolumesAll[bp] = (bodyPartVolumesAll[bp] || 0) + volume / partCount;
+        });
       });
 
-      // Calculate total volume for percentage calculation
-      const totalMuscleVolume = Object.values(muscleGroups).reduce((sum, v) => sum + v, 0) || 1;
-      const totalMuscleVolumeAll = Object.values(muscleGroupsAll).reduce((sum, v) => sum + v, 0) || 1;
+      const totalBodyPartVolume = Object.values(bodyPartVolumes).reduce((sum, v) => sum + v, 0) || 1;
+      const totalBodyPartVolumeAll = Object.values(bodyPartVolumesAll).reduce((sum, v) => sum + v, 0) || 1;
 
-      const loadDistribution: LoadDistributionItem[] = ['lower', 'upper', 'core', 'other'].map(group => ({
+      const loadDistribution: LoadDistributionItem[] = ['lower', 'upper', 'core'].map(group => ({
         group,
-        label: MUSCLE_GROUP_LABELS[group],
-        value: Math.round((muscleGroups[group as keyof typeof muscleGroups] / totalMuscleVolume) * 100),
-        comparisonValue: Math.round((muscleGroupsAll[group as keyof typeof muscleGroupsAll] / totalMuscleVolumeAll) * 100),
+        label: BODY_PART_LABELS[group],
+        value: Math.round((bodyPartVolumes[group] / totalBodyPartVolume) * 100),
+        comparisonValue: Math.round((bodyPartVolumesAll[group] / totalBodyPartVolumeAll) * 100),
       }));
+
+      // Detail load distribution (by muscle group)
+      const muscleGroupVolumes: Record<string, number> = {};
+      const muscleGroupVolumesAll: Record<string, number> = {};
+
+      entries?.forEach(e => {
+        const volume = (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 1);
+        const muscles = exerciseToMuscleGroups.get(e.exercise_id || '') || [];
+        const muscleCount = muscles.length || 1;
+        muscles.forEach(mg => {
+          muscleGroupVolumes[mg] = (muscleGroupVolumes[mg] || 0) + volume / muscleCount;
+        });
+      });
+
+      allEntries?.forEach(e => {
+        const volume = (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 1);
+        const muscles = exerciseToMuscleGroups.get(e.exercise_id || '') || [];
+        const muscleCount = muscles.length || 1;
+        muscles.forEach(mg => {
+          muscleGroupVolumesAll[mg] = (muscleGroupVolumesAll[mg] || 0) + volume / muscleCount;
+        });
+      });
+
+      const totalMuscleVolume = Object.values(muscleGroupVolumes).reduce((sum, v) => sum + v, 0) || 1;
+      const totalMuscleVolumeAll = Object.values(muscleGroupVolumesAll).reduce((sum, v) => sum + v, 0) || 1;
+
+      const loadDistributionDetail: LoadDistributionItem[] = Object.entries(muscleGroupVolumes)
+        .map(([group, volume]) => ({
+          group,
+          label: MUSCLE_GROUP_LABELS[group] || group,
+          value: Math.round((volume / totalMuscleVolume) * 100),
+          comparisonValue: Math.round(((muscleGroupVolumesAll[group] || 0) / totalMuscleVolumeAll) * 100),
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
 
       // Movement patterns (consolidated) with fallback mapping
       const patternCounts = new Map<string, number>();
@@ -341,6 +427,7 @@ export function useExerciseAnalyticsNew(
         volumeTimeline,
         totalVolume,
         loadDistribution,
+        loadDistributionDetail,
         movementPatterns,
         movementPatternsCoverage: coverage,
         movementPatternsTotalEntries: totalEntries,
