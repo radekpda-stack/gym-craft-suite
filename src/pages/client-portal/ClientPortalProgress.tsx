@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { 
@@ -14,27 +14,33 @@ import {
   CardioProgressChart, 
   TrackedExercisesChart 
 } from '@/components/client-portal/progress';
+import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
+import { AddMeasurementDialog } from '@/components/client-portal/progress/AddMeasurementDialog';
+import { AddCardioTimeDialog } from '@/components/client-portal/progress/AddCardioTimeDialog';
+import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
 import { Bike, PersonStanding } from 'lucide-react';
 
 export default function ClientPortalProgress() {
   const { clientAccount, clientId } = useClientPortal();
   const { trackPageMount } = useClientPortalPageTracking('client_portal_progress');
+  const [period, setPeriod] = useState<Period>(90);
 
   const trainerId = clientAccount?.trainer_id || null;
+  const months = period === 'all' ? 24 : Math.ceil(period / 30);
 
   // Fetch visibility settings
   const { data: visibilitySettings, isLoading: settingsLoading } = useClientPortalProgressSettings(trainerId);
 
-  // Fetch progress data
-  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId);
-  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId);
+  // Fetch progress data with period
+  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId, months);
+  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId, months);
   const { data: trackedExercises, isLoading: exercisesLoading } = useClientTrackedExercises(clientId);
   
   // Cardio data
-  const { data: rowing500Data, isLoading: rowing500Loading } = useClientCardioProgress(clientId, 'veslo', 500);
-  const { data: rowing1000Data, isLoading: rowing1000Loading } = useClientCardioProgress(clientId, 'veslo', 1000);
-  const { data: running500Data, isLoading: running500Loading } = useClientCardioProgress(clientId, 'běh', 500);
-  const { data: running1000Data, isLoading: running1000Loading } = useClientCardioProgress(clientId, 'běh', 1000);
+  const { data: rowing500Data, isLoading: rowing500Loading } = useClientCardioProgress(clientId, 'veslo', 500, months);
+  const { data: rowing1000Data, isLoading: rowing1000Loading } = useClientCardioProgress(clientId, 'veslo', 1000, months);
+  const { data: running500Data, isLoading: running500Loading } = useClientCardioProgress(clientId, 'běh', 500, months);
+  const { data: running1000Data, isLoading: running1000Loading } = useClientCardioProgress(clientId, 'běh', 1000, months);
 
   useEffect(() => {
     trackPageMount();
@@ -92,13 +98,30 @@ export default function ClientPortalProgress() {
     );
   }
 
+  const isDataLoading = weightLoading || bodyFatLoading || exercisesLoading;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Pokrok</h1>
-        <p className="text-muted-foreground">Sleduj své zlepšení</p>
+      {/* Header with period filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Pokrok</h1>
+          <p className="text-muted-foreground">Sleduj své zlepšení</p>
+        </div>
+        <PeriodFilter value={period} onChange={setPeriod} />
       </div>
 
+      {/* Summary cards */}
+      {(showWeight || showBodyFat || showExercises) && (
+        <ProgressSummaryCards
+          weightData={weightData || []}
+          bodyFatData={bodyFatData || []}
+          trackedExercises={trackedExercises || []}
+          isLoading={isDataLoading}
+        />
+      )}
+
+      {/* Weight & Body Fat Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         {showWeight && (
           <WeightChart data={weightData || []} isLoading={weightLoading} />
@@ -109,6 +132,7 @@ export default function ClientPortalProgress() {
         )}
       </div>
 
+      {/* Tracked Exercises */}
       {showExercises && (
         <TrackedExercisesChart 
           exercises={trackedExercises || []} 
@@ -116,9 +140,13 @@ export default function ClientPortalProgress() {
         />
       )}
 
+      {/* Cardio Section */}
       {(showRowing500 || showRowing1000 || showRunning500 || showRunning1000) && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Kardio</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Kardio</h2>
+            <AddCardioTimeDialog />
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             {showRowing500 && (
               <CardioProgressChart 
