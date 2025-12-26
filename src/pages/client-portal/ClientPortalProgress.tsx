@@ -5,14 +5,14 @@ import {
   useClientWeightProgress, 
   useClientBodyFatProgress, 
   useClientCardioProgress,
-  useClientTrackedExercises,
   useClientPortalProgressSettings 
 } from '@/hooks/useClientProgressData';
+import { useClientAllExercises } from '@/hooks/useClientAllExercises';
 import { 
   WeightChart, 
   BodyFatChart, 
   CardioProgressChart, 
-  TrackedExercisesChart 
+  AllExercisesChart 
 } from '@/components/client-portal/progress';
 import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
 import { AddMeasurementDialog } from '@/components/client-portal/progress/AddMeasurementDialog';
@@ -34,7 +34,7 @@ export default function ClientPortalProgress() {
   // Fetch progress data with period
   const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId, months);
   const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId, months);
-  const { data: trackedExercises, isLoading: exercisesLoading } = useClientTrackedExercises(clientId);
+  const { data: allExercises, isLoading: exercisesLoading } = useClientAllExercises(clientId, months);
   
   // Cardio data
   const { data: rowing500Data, isLoading: rowing500Loading } = useClientCardioProgress(clientId, 'veslo', 500, months);
@@ -100,6 +100,18 @@ export default function ClientPortalProgress() {
 
   const isDataLoading = weightLoading || bodyFatLoading || exercisesLoading;
 
+  // Transform exercises for summary cards (compatible format)
+  const exercisesForSummary = (allExercises || []).map(e => ({
+    exerciseName: e.exerciseName,
+    exerciseId: null,
+    data: e.data.map(d => ({
+      date: d.date,
+      weight: d.weight,
+      reps: d.reps,
+      volume: d.volume,
+    })),
+  }));
+
   return (
     <div className="space-y-6">
       {/* Header with period filter */}
@@ -116,7 +128,7 @@ export default function ClientPortalProgress() {
         <ProgressSummaryCards
           weightData={weightData || []}
           bodyFatData={bodyFatData || []}
-          trackedExercises={trackedExercises || []}
+          trackedExercises={exercisesForSummary}
           isLoading={isDataLoading}
         />
       )}
@@ -132,10 +144,10 @@ export default function ClientPortalProgress() {
         )}
       </div>
 
-      {/* Tracked Exercises */}
+      {/* All Exercises Chart */}
       {showExercises && (
-        <TrackedExercisesChart 
-          exercises={trackedExercises || []} 
+        <AllExercisesChart 
+          exercises={allExercises || []} 
           isLoading={exercisesLoading} 
         />
       )}
