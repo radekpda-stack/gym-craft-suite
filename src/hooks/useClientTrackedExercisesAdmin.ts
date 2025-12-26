@@ -131,6 +131,7 @@ export interface ClientPortalSettings {
     running500m?: boolean;
     running1000m?: boolean;
   };
+  comparisonDisplayMode?: 'percentile_only' | 'leaderboard_only' | 'both';
 }
 
 export function useClientPortalSettings(clientId: string | undefined) {

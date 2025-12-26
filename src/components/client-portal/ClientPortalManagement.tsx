@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -65,7 +66,9 @@ import {
   EyeOff,
   Search,
   MoreHorizontal,
-  Trophy
+  Trophy,
+  BarChart3,
+  UserCircle
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -87,16 +90,27 @@ const PROGRESS_METRICS = [
   { key: 'running1000m', label: 'Běh 1000m', icon: PersonStanding },
 ] as const;
 
+const COMPARISON_DISPLAY_MODES = [
+  { value: 'percentile_only', label: 'Pouze percentil' },
+  { value: 'leaderboard_only', label: 'Pouze leaderboard' },
+  { value: 'both', label: 'Percentil i leaderboard' },
+] as const;
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Muž' },
+  { value: 'female', label: 'Žena' },
+  { value: 'unspecified', label: 'Nespecifikováno' },
+] as const;
+
 interface ClientManagementRowProps {
   account: PortalClient;
   onEdit: (account: PortalClient) => void;
   onDelete: (account: PortalClient) => void;
   onManageExercises: (account: PortalClient) => void;
-  onManageGraphs: (account: PortalClient) => void;
-  onManageChallenges: (account: PortalClient) => void;
+  onManagePortalSettings: (account: PortalClient) => void;
 }
 
-function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onManageGraphs, onManageChallenges }: ClientManagementRowProps) {
+function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onManagePortalSettings }: ClientManagementRowProps) {
   const disableAccess = useDisableClientAccess();
 
   return (
@@ -129,17 +143,13 @@ function ClientManagementRow({ account, onEdit, onDelete, onManageExercises, onM
               <Edit className="w-4 h-4 mr-2" />
               Upravit profil
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onManageGraphs(account)}>
-              <Eye className="w-4 h-4 mr-2" />
-              Nastavení grafů
+            <DropdownMenuItem onClick={() => onManagePortalSettings(account)}>
+              <Settings className="w-4 h-4 mr-2" />
+              Nastavení portálu
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onManageExercises(account)}>
               <Dumbbell className="w-4 h-4 mr-2" />
               Sledované cviky
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onManageChallenges(account)}>
-              <Trophy className="w-4 h-4 mr-2" />
-              Challenges
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -258,18 +268,56 @@ function EditClientDialog({ open, onOpenChange, account }: EditClientDialogProps
   );
 }
 
-// Manage Graphs Dialog  
-interface ManageGraphsDialogProps {
+// Unified Client Portal Settings Dialog
+interface ClientPortalSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account: PortalClient | null;
 }
 
-function ManageGraphsDialog({ open, onOpenChange, account }: ManageGraphsDialogProps) {
-  const { data: settings, isLoading } = useClientPortalSettings(account?.client_id);
-  const updateSettings = useUpdateClientPortalSettings();
+function ClientPortalSettingsDialog({ open, onOpenChange, account }: ClientPortalSettingsDialogProps) {
+  const { data: portalSettings, isLoading: isLoadingPortalSettings } = useClientPortalSettings(account?.client_id);
+  const updatePortalSettings = useUpdateClientPortalSettings();
+  
+  const [clientSettings, setClientSettings] = useState({
+    allow_challenges_participation: false,
+    allow_anonymous_benchmarks: false,
+    gender: 'unspecified' as string,
+  });
+  const [comparisonDisplayMode, setComparisonDisplayMode] = useState('both');
+  const [isLoadingClient, setIsLoadingClient] = useState(true);
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
-  const currentMetrics = settings?.progressMetrics || {
+  // Fetch client settings when dialog opens
+  useEffect(() => {
+    if (open && account?.client_id) {
+      setIsLoadingClient(true);
+      supabase
+        .from('clients')
+        .select('allow_challenges_participation, allow_anonymous_benchmarks, gender')
+        .eq('id', account.client_id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setClientSettings({
+              allow_challenges_participation: data.allow_challenges_participation ?? false,
+              allow_anonymous_benchmarks: data.allow_anonymous_benchmarks ?? false,
+              gender: data.gender || 'unspecified',
+            });
+          }
+          setIsLoadingClient(false);
+        });
+    }
+  }, [open, account?.client_id]);
+
+  // Update comparison display mode from portal settings
+  useEffect(() => {
+    if (portalSettings?.comparisonDisplayMode) {
+      setComparisonDisplayMode(portalSettings.comparisonDisplayMode);
+    }
+  }, [portalSettings]);
+
+  const currentMetrics = portalSettings?.progressMetrics || {
     weight: true,
     bodyFat: true,
     trackedExercises: true,
@@ -279,13 +327,13 @@ function ManageGraphsDialog({ open, onOpenChange, account }: ManageGraphsDialogP
     running1000m: true,
   };
 
-  const handleToggle = (key: string) => {
+  const handleMetricToggle = (key: string) => {
     if (!account) return;
     
-    updateSettings.mutate({
+    updatePortalSettings.mutate({
       clientId: account.client_id,
       settings: {
-        ...settings,
+        ...portalSettings,
         progressMetrics: {
           ...currentMetrics,
           [key]: !currentMetrics[key as keyof typeof currentMetrics],
@@ -294,49 +342,230 @@ function ManageGraphsDialog({ open, onOpenChange, account }: ManageGraphsDialogP
     });
   };
 
+  const handleComparisonDisplayModeChange = (value: string) => {
+    if (!account) return;
+    setComparisonDisplayMode(value);
+    
+    updatePortalSettings.mutate({
+      clientId: account.client_id,
+      settings: {
+        ...portalSettings,
+        comparisonDisplayMode: value as 'percentile_only' | 'leaderboard_only' | 'both',
+      },
+    });
+  };
+
+  const handleClientSettingToggle = async (key: 'allow_challenges_participation' | 'allow_anonymous_benchmarks', value: boolean) => {
+    if (!account?.client_id) return;
+    
+    setIsSavingClient(true);
+    const { error } = await supabase
+      .from('clients')
+      .update({ [key]: value })
+      .eq('id', account.client_id);
+
+    if (error) {
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+    } else {
+      setClientSettings(prev => ({ ...prev, [key]: value }));
+      toast({ title: 'Nastavení uloženo' });
+    }
+    setIsSavingClient(false);
+  };
+
+  const handleGenderChange = async (value: string) => {
+    if (!account?.client_id) return;
+    
+    setIsSavingClient(true);
+    const { error } = await supabase
+      .from('clients')
+      .update({ gender: value === 'unspecified' ? null : value })
+      .eq('id', account.client_id);
+
+    if (error) {
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+    } else {
+      setClientSettings(prev => ({ ...prev, gender: value }));
+      toast({ title: 'Pohlaví uloženo' });
+    }
+    setIsSavingClient(false);
+  };
+
   if (!account) return null;
+
+  const isLoading = isLoadingClient || isLoadingPortalSettings;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Nastavení grafů</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Nastavení portálu
+          </DialogTitle>
           <DialogDescription>
-            Vyberte, které grafy uvidí {account.client?.name} v portálu
+            Nastavení klientského portálu pro {account.client?.name}
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="space-y-3 py-4">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
-          </div>
-        ) : (
-          <div className="space-y-2 py-4">
-            {PROGRESS_METRICS.map(metric => {
-              const Icon = metric.icon;
-              const isEnabled = currentMetrics[metric.key as keyof typeof currentMetrics] ?? true;
-              
-              return (
-                <div 
-                  key={metric.key}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{metric.label}</span>
-                  </div>
-                  <Switch
-                    checked={isEnabled}
-                    onCheckedChange={() => handleToggle(metric.key)}
-                    disabled={updateSettings.isPending}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <Tabs defaultValue="graphs" className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="graphs" className="flex items-center gap-1.5">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Grafy</span>
+            </TabsTrigger>
+            <TabsTrigger value="challenges" className="flex items-center gap-1.5">
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline">Challenges</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-1.5">
+              <UserCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Profil</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <DialogFooter>
+          <ScrollArea className="flex-1 mt-4">
+            <TabsContent value="graphs" className="mt-0 space-y-2">
+              <p className="text-sm text-muted-foreground mb-4">
+                Vyberte, které grafy uvidí klient v sekci Pokrok
+              </p>
+              
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {PROGRESS_METRICS.map(metric => {
+                    const Icon = metric.icon;
+                    const isEnabled = currentMetrics[metric.key as keyof typeof currentMetrics] ?? true;
+                    
+                    return (
+                      <div 
+                        key={metric.key}
+                        className="flex items-center justify-between p-3 rounded-lg border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{metric.label}</span>
+                        </div>
+                        <Switch
+                          checked={isEnabled}
+                          onCheckedChange={() => handleMetricToggle(metric.key)}
+                          disabled={updatePortalSettings.isPending}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="challenges" className="mt-0 space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Nastavení účasti v challenges a zobrazení porovnání
+              </p>
+              
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Účast v Challenges</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Klient může soutěžit v challenges a vidět leaderboard
+                      </p>
+                    </div>
+                    <Switch
+                      checked={clientSettings.allow_challenges_participation}
+                      onCheckedChange={(checked) => handleClientSettingToggle('allow_challenges_participation', checked)}
+                      disabled={isSavingClient}
+                    />
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Anonymní benchmarky</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Klient vidí porovnání s ostatními (anonymizované)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={clientSettings.allow_anonymous_benchmarks}
+                      onCheckedChange={(checked) => handleClientSettingToggle('allow_anonymous_benchmarks', checked)}
+                      disabled={isSavingClient}
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-lg border space-y-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">Zobrazení porovnání</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Jak se klientovi zobrazí výsledky srovnání
+                    </p>
+                    <Select value={comparisonDisplayMode} onValueChange={handleComparisonDisplayModeChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COMPARISON_DISPLAY_MODES.map(mode => (
+                          <SelectItem key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="profile" className="mt-0 space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Nastavení profilu pro správné zařazení do porovnávacích skupin (k-anonymita)
+              </p>
+              
+              {isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (
+                <div className="p-4 rounded-lg border space-y-3">
+                  <div className="flex items-center gap-2">
+                    <UserCircle className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">Pohlaví</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Používá se pro zařazení do správné skupiny při anonymním porovnání
+                  </p>
+                  <Select value={clientSettings.gender} onValueChange={handleGenderChange} disabled={isSavingClient}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+
+        <DialogFooter className="mt-4">
           <Button onClick={() => onOpenChange(false)}>Hotovo</Button>
         </DialogFooter>
       </DialogContent>
@@ -489,125 +718,6 @@ function ManageExercisesDialog({ open, onOpenChange, account }: ManageExercisesD
   );
 }
 
-// Manage Challenges Dialog
-interface ManageChallengesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  account: PortalClient | null;
-}
-
-function ManageChallengesDialog({ open, onOpenChange, account }: ManageChallengesDialogProps) {
-  const [settings, setSettings] = useState({
-    allow_challenges_participation: false,
-    allow_anonymous_benchmarks: false,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Fetch client settings when dialog opens
-  useEffect(() => {
-    if (open && account?.client_id) {
-      setIsLoading(true);
-      supabase
-        .from('clients')
-        .select('allow_challenges_participation, allow_anonymous_benchmarks')
-        .eq('id', account.client_id)
-        .single()
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setSettings({
-              allow_challenges_participation: data.allow_challenges_participation ?? false,
-              allow_anonymous_benchmarks: data.allow_anonymous_benchmarks ?? false,
-            });
-          }
-          setIsLoading(false);
-        });
-    }
-  }, [open, account?.client_id]);
-
-  const handleToggle = async (key: 'allow_challenges_participation' | 'allow_anonymous_benchmarks', value: boolean) => {
-    if (!account?.client_id) return;
-    
-    setIsSaving(true);
-    const { error } = await supabase
-      .from('clients')
-      .update({ [key]: value })
-      .eq('id', account.client_id);
-
-    if (error) {
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
-    } else {
-      setSettings(prev => ({ ...prev, [key]: value }));
-      toast({ title: 'Nastavení uloženo' });
-    }
-    setIsSaving(false);
-  };
-
-  if (!account) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            Nastavení Challenges
-          </DialogTitle>
-          <DialogDescription>
-            Nastavte účast {account.client?.name} v challenges a benchmarcích
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="space-y-3 py-4">
-            {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-          </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">Účast v Challenges</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Klient může soutěžit v challenges a vidět leaderboard
-                </p>
-              </div>
-              <Switch
-                checked={settings.allow_challenges_participation}
-                onCheckedChange={(checked) => handleToggle('allow_challenges_participation', checked)}
-                disabled={isSaving}
-              />
-            </div>
-
-            <div className="flex items-start justify-between gap-4 p-4 rounded-lg border">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">Anonymní benchmarky</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Klient vidí porovnání s ostatními (anonymizované)
-                </p>
-              </div>
-              <Switch
-                checked={settings.allow_anonymous_benchmarks}
-                onCheckedChange={(checked) => handleToggle('allow_anonymous_benchmarks', checked)}
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Hotovo</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // Delete Confirmation Dialog
 interface DeleteClientDialogProps {
   open: boolean;
@@ -649,9 +759,8 @@ export function ClientPortalManagement() {
   const disableAccess = useDisableClientAccess();
   
   const [editAccount, setEditAccount] = useState<PortalClient | null>(null);
-  const [graphsAccount, setGraphsAccount] = useState<PortalClient | null>(null);
+  const [portalSettingsAccount, setPortalSettingsAccount] = useState<PortalClient | null>(null);
   const [exercisesAccount, setExercisesAccount] = useState<PortalClient | null>(null);
-  const [challengesAccount, setChallengesAccount] = useState<PortalClient | null>(null);
   const [deleteAccount, setDeleteAccount] = useState<PortalClient | null>(null);
 
   const handleDeleteConfirm = async () => {
@@ -706,8 +815,7 @@ export function ClientPortalManagement() {
                   onEdit={setEditAccount}
                   onDelete={setDeleteAccount}
                   onManageExercises={setExercisesAccount}
-                  onManageGraphs={setGraphsAccount}
-                  onManageChallenges={setChallengesAccount}
+                  onManagePortalSettings={setPortalSettingsAccount}
                 />
               ))}
             </div>
@@ -722,22 +830,16 @@ export function ClientPortalManagement() {
         account={editAccount}
       />
       
-      <ManageGraphsDialog
-        open={!!graphsAccount}
-        onOpenChange={(open) => !open && setGraphsAccount(null)}
-        account={graphsAccount}
+      <ClientPortalSettingsDialog
+        open={!!portalSettingsAccount}
+        onOpenChange={(open) => !open && setPortalSettingsAccount(null)}
+        account={portalSettingsAccount}
       />
       
       <ManageExercisesDialog
         open={!!exercisesAccount}
         onOpenChange={(open) => !open && setExercisesAccount(null)}
         account={exercisesAccount}
-      />
-      
-      <ManageChallengesDialog
-        open={!!challengesAccount}
-        onOpenChange={(open) => !open && setChallengesAccount(null)}
-        account={challengesAccount}
       />
       
       <DeleteClientDialog
