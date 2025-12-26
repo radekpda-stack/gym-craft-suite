@@ -4,15 +4,20 @@ import { ExerciseDuplicateTool } from './ExerciseDuplicateTool';
 import { ExerciseAliasManagerPage } from './ExerciseAliasManagerPage';
 import { UnmatchedEntriesManager } from './UnmatchedEntriesManager';
 import { MuscleGroupReportSection } from './MuscleGroupReportSection';
-import { Link2, AlertTriangle, Merge, LayoutGrid } from 'lucide-react';
+import { ExercisesQASection } from './ExercisesQASection';
+import { Link2, AlertTriangle, Merge, LayoutGrid, BarChart3 } from 'lucide-react';
 
 export function ExercisesManagementSection() {
-  const [activeTab, setActiveTab] = useState('duplicates');
+  const [activeTab, setActiveTab] = useState('qa');
 
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="qa" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">QA</span>
+          </TabsTrigger>
           <TabsTrigger value="duplicates" className="flex items-center gap-2">
             <Merge className="w-4 h-4" />
             <span className="hidden sm:inline">Duplicity</span>
@@ -30,6 +35,10 @@ export function ExercisesManagementSection() {
             <span className="hidden sm:inline">Partie</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="qa" className="mt-4">
+          <ExercisesQASection />
+        </TabsContent>
 
         <TabsContent value="duplicates" className="mt-4">
           <ExerciseDuplicateTool />
