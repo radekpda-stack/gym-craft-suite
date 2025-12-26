@@ -344,6 +344,162 @@ export type Database = {
           },
         ]
       }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+          pseudonym: string
+        }
+        Insert: {
+          challenge_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          pseudonym: string
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          pseudonym?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_submissions: {
+        Row: {
+          challenge_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+          note: string | null
+          score_primary: number
+          score_secondary: number | null
+          status: string
+          submitted_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          challenge_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          score_primary: number
+          score_secondary?: number | null
+          status?: string
+          submitted_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          score_primary?: number
+          score_secondary?: number | null
+          status?: string
+          submitted_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_submissions_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          allow_multiple_attempts: boolean | null
+          created_at: string | null
+          created_by_user_id: string
+          description: string | null
+          end_at: string
+          id: string
+          instructions: string | null
+          primary_metric: string
+          published_to_portal_clients: boolean | null
+          requires_video: boolean | null
+          scoring_type: string
+          secondary_metric: string | null
+          start_at: string
+          status: string
+          title: string
+          unit_label: string | null
+          updated_at: string | null
+          vod_url: string | null
+        }
+        Insert: {
+          allow_multiple_attempts?: boolean | null
+          created_at?: string | null
+          created_by_user_id: string
+          description?: string | null
+          end_at: string
+          id?: string
+          instructions?: string | null
+          primary_metric?: string
+          published_to_portal_clients?: boolean | null
+          requires_video?: boolean | null
+          scoring_type?: string
+          secondary_metric?: string | null
+          start_at: string
+          status?: string
+          title: string
+          unit_label?: string | null
+          updated_at?: string | null
+          vod_url?: string | null
+        }
+        Update: {
+          allow_multiple_attempts?: boolean | null
+          created_at?: string | null
+          created_by_user_id?: string
+          description?: string | null
+          end_at?: string
+          id?: string
+          instructions?: string | null
+          primary_metric?: string
+          published_to_portal_clients?: boolean | null
+          requires_video?: boolean | null
+          scoring_type?: string
+          secondary_metric?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          unit_label?: string | null
+          updated_at?: string | null
+          vod_url?: string | null
+        }
+        Relationships: []
+      }
       client_access_tokens: {
         Row: {
           client_id: string
@@ -857,6 +1013,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          allow_anonymous_benchmarks: boolean | null
+          allow_challenges_participation: boolean | null
           birth_date: string | null
           created_at: string
           credit_balance: number | null
@@ -887,6 +1045,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          allow_anonymous_benchmarks?: boolean | null
+          allow_challenges_participation?: boolean | null
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
@@ -917,6 +1077,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          allow_anonymous_benchmarks?: boolean | null
+          allow_challenges_participation?: boolean | null
           birth_date?: string | null
           created_at?: string
           credit_balance?: number | null
@@ -5308,16 +5470,39 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_exercise_benchmark: {
+        Args: {
+          p_client_id: string
+          p_exercise_name: string
+          p_group_key?: string
+          p_metric_type?: string
+          p_min_group_size?: number
+          p_trainer_id: string
+        }
+        Returns: Json
+      }
       clean_old_login_attempts: { Args: never; Returns: undefined }
       generate_search_name: {
         Args: { name_cs: string; name_en: string }
         Returns: string
+      }
+      get_challenge_leaderboard: {
+        Args: {
+          p_challenge_id: string
+          p_client_id: string
+          p_min_group_size?: number
+        }
+        Returns: Json
       }
       get_client_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_inherited_tags_for_session: {
         Args: { p_session_id: string }
         Returns: string[]
+      }
+      get_or_create_challenge_pseudonym: {
+        Args: { p_challenge_id: string; p_client_id: string }
+        Returns: string
       }
       get_training_session_all_tags: {
         Args: { p_session_id: string }
