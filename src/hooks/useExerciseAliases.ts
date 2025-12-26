@@ -26,6 +26,44 @@ export function normalizeTextForSearch(text: string): string {
 }
 
 /**
+ * Blacklisted aliases that are too generic
+ */
+const BLACKLISTED_ALIASES = new Set([
+  'stroj', 'kondicni stroj', 'kondice', 'cardio', 'kardio',
+  'trenink', 'silovy', 'posilovani', 'mobilita', 'plyometrie',
+  'intenzita', 'lehky', 'stredni', 'tezky', 'regenerace',
+  'beh', 'sila', 'cviceni', 'cvik', 'exercise', 'workout',
+  'training', 'sport', 'fitness', 'gym', 'posilovna',
+]);
+
+/**
+ * Validate alias - returns error message if invalid, null if valid
+ */
+export function validateAlias(aliasName: string): string | null {
+  const normalized = normalizeTextForSearch(aliasName);
+  
+  // Too short
+  if (normalized.length < 3) {
+    return 'Alias musí mít alespoň 3 znaky';
+  }
+  
+  // Blacklisted
+  if (BLACKLISTED_ALIASES.has(normalized)) {
+    return 'Alias je příliš obecný, použij konkrétní název (např. "jump rope", ne "kondice")';
+  }
+  
+  // Single generic word check
+  if (normalized.split(' ').length === 1 && normalized.length < 5) {
+    // Very short single words are suspicious
+    if (BLACKLISTED_ALIASES.has(normalized)) {
+      return 'Alias je příliš obecný';
+    }
+  }
+  
+  return null; // Valid
+}
+
+/**
  * Hook for managing exercise aliases
  */
 export function useExerciseAliases(exerciseId: string | null) {
@@ -53,6 +91,12 @@ export function useExerciseAliases(exerciseId: string | null) {
       aliasName: string; 
       language?: string 
     }) => {
+      // Validate alias first
+      const validationError = validateAlias(aliasName);
+      if (validationError) {
+        throw new Error(validationError);
+      }
+      
       const normalized = normalizeTextForSearch(aliasName);
       
       const { data, error } = await supabase
