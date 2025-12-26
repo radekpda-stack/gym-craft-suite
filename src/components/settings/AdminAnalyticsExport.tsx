@@ -121,7 +121,7 @@ export function AdminAnalyticsExport() {
     try {
       const { start, end } = getDateRange();
       const files: { name: string; content: string }[] = [];
-      const totalSteps = 7;
+      const totalSteps = 9; // Increased for client portal data
 
       // 1. Fetch feature_usage data
       setProgress({ step: `${t.processing} feature_usage...`, current: 1, total: totalSteps });
@@ -321,8 +321,97 @@ export function AdminAnalyticsExport() {
         content: convertToCSV(frictionData),
       });
 
-      // 6. Metadata
-      setProgress({ step: `${t.processing} metadata...`, current: 6, total: totalSteps });
+      // 6. Client Portal Activity Data
+      setProgress({ step: `${t.processing} client_portal_activity...`, current: 6, total: totalSteps });
+      
+      const { data: portalActivityData, error: portalError } = await supabase
+        .from('client_portal_activity')
+        .select(`
+          id,
+          client_id,
+          activity_type,
+          activity_date,
+          metadata,
+          created_at
+        `)
+        .gte('activity_date', start)
+        .lte('activity_date', end)
+        .order('created_at', { ascending: false });
+
+      if (portalError) throw portalError;
+
+      // Anonymize client IDs
+      const anonymizedPortalActivity = (portalActivityData || []).map(row => ({
+        ...row,
+        client_id: hashUserId(row.client_id),
+        metadata: row.metadata ? JSON.parse(JSON.stringify(row.metadata)) : {},
+      }));
+
+      files.push({
+        name: 'client_portal_activity.csv',
+        content: convertToCSV(anonymizedPortalActivity),
+      });
+
+      // 7. Client Portal Summary
+      setProgress({ step: `${t.processing} portal_summary...`, current: 7, total: totalSteps });
+      
+      const uniqueClients = new Set(portalActivityData?.map(r => r.client_id) || []);
+      const activityTypeCount: Record<string, number> = {};
+      const dailyPortalUsage: Record<string, number> = {};
+      const clientActivityCount: Record<string, number> = {};
+      
+      (portalActivityData || []).forEach(row => {
+        activityTypeCount[row.activity_type] = (activityTypeCount[row.activity_type] || 0) + 1;
+        dailyPortalUsage[row.activity_date] = (dailyPortalUsage[row.activity_date] || 0) + 1;
+        clientActivityCount[row.client_id] = (clientActivityCount[row.client_id] || 0) + 1;
+      });
+
+      const sortedActivityTypes = Object.entries(activityTypeCount).sort((a, b) => b[1] - a[1]);
+      const portalDays = Object.keys(dailyPortalUsage).length || 1;
+      
+      // Calculate most active clients (anonymized)
+      const sortedClients = Object.entries(clientActivityCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([clientId, count]) => ({
+          client_hash: hashUserId(clientId),
+          activity_count: count,
+        }));
+
+      // Calculate page views vs actions
+      const pageViews = (portalActivityData || []).filter(r => r.activity_type.includes('page_view')).length;
+      const actions = (portalActivityData || []).filter(r => !r.activity_type.includes('page_view')).length;
+
+      const portalSummary = {
+        active_clients: uniqueClients.size,
+        total_portal_events: portalActivityData?.length || 0,
+        average_daily_events: Math.round((portalActivityData?.length || 0) / portalDays),
+        page_views: pageViews,
+        actions: actions,
+        engagement_ratio: pageViews > 0 ? Math.round((actions / pageViews) * 100) / 100 : 0,
+        most_used_features: sortedActivityTypes.slice(0, 15).map(([name, count]) => ({ 
+          activity_type: name, 
+          count,
+          percentage: Math.round((count / (portalActivityData?.length || 1)) * 100)
+        })),
+        least_used_features: sortedActivityTypes.slice(-10).reverse().map(([name, count]) => ({ 
+          activity_type: name, 
+          count 
+        })),
+        most_active_clients: sortedClients,
+        daily_usage_trend: Object.entries(dailyPortalUsage)
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([date, count]) => ({ date, count })),
+        date_range: { start, end },
+      };
+
+      files.push({
+        name: 'client_portal_summary.json',
+        content: JSON.stringify(portalSummary, null, 2),
+      });
+
+      // 8. Metadata
+      setProgress({ step: `${t.processing} metadata...`, current: 8, total: totalSteps });
       
       const metadata = {
         app_version: '1.0.0',
