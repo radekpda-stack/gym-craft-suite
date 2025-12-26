@@ -78,30 +78,30 @@ function NextTrainingHighlight({ item, onClick }: { item: ScheduleItem; onClick:
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-4 p-4 rounded-xl',
+        'w-full flex items-center gap-3 p-4 rounded-xl',
         'bg-gradient-to-r from-primary/10 to-primary/5',
         'border border-primary/20',
         'hover:from-primary/15 hover:to-primary/10 transition-all',
-        'group'
+        'group min-w-0'
       )}
     >
-      <div className="p-3 rounded-xl bg-primary/20">
+      <div className="p-3 rounded-xl bg-primary/20 shrink-0">
         <Play className="w-5 h-5 text-primary" />
       </div>
       
-      <div className="flex-1 text-left">
+      <div className="flex-1 min-w-0 text-left">
         <p className="text-xs text-primary/70 font-medium uppercase tracking-wider">
           Příští trénink
         </p>
-        <p className="text-lg font-semibold text-foreground">
+        <p className="text-base font-semibold text-foreground truncate">
           {item.clientName}
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground truncate">
           {item.time} • {getTimeLabel()}
         </p>
       </div>
       
-      <Button size="sm" className="shrink-0 group-hover:bg-primary/90">
+      <Button size="sm" className="shrink-0 group-hover:bg-primary/90 whitespace-nowrap">
         Otevřít
         <ChevronRight className="w-4 h-4 ml-1" />
       </Button>

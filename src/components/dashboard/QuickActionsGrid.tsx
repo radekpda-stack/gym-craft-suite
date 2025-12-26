@@ -82,14 +82,14 @@ export function QuickActionsGrid() {
   return (
     <>
       <div className="glass rounded-2xl p-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
           {actions.map(action => (
             <Button
               key={action.id}
               variant={action.primary ? 'default' : 'ghost'}
               onClick={action.onClick}
               className={`
-                flex flex-col items-center gap-1.5 h-auto py-3 px-2
+                flex flex-col items-center justify-center gap-1 h-auto py-2.5 px-1.5 min-w-0
                 ${action.primary 
                   ? 'bg-primary hover:bg-primary/90' 
                   : 'hover:bg-secondary/50'
@@ -97,7 +97,7 @@ export function QuickActionsGrid() {
               `}
             >
               <div className={`
-                p-2 rounded-xl
+                p-2 rounded-xl shrink-0
                 ${action.primary 
                   ? 'bg-primary-foreground/20' 
                   : 'bg-secondary/50'
@@ -105,7 +105,7 @@ export function QuickActionsGrid() {
               `}>
                 {action.icon}
               </div>
-              <span className="text-[11px] font-medium">
+              <span className="text-[10px] sm:text-[11px] font-medium leading-tight text-center truncate w-full px-0.5">
                 {action.label}
               </span>
             </Button>
