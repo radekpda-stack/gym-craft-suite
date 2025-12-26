@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { LayoutGrid } from 'lucide-react';
 import { AnalyticsCard } from './AnalyticsCard';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface LoadDistributionItem {
   group: string;
@@ -11,12 +13,16 @@ interface LoadDistributionItem {
 
 interface LoadDistributionCardProps {
   data: LoadDistributionItem[];
+  detailData?: LoadDistributionItem[];
   isLoading?: boolean;
   helpText?: string;
 }
 
-export function LoadDistributionCard({ data, isLoading, helpText }: LoadDistributionCardProps) {
-  const isEmpty = !data || data.length === 0 || data.every(d => d.value === 0 && d.comparisonValue === 0);
+export function LoadDistributionCard({ data, detailData, isLoading, helpText }: LoadDistributionCardProps) {
+  const [mode, setMode] = useState<'high-level' | 'detail'>('high-level');
+  
+  const displayData = mode === 'detail' && detailData?.length ? detailData : data;
+  const isEmpty = !displayData || displayData.length === 0 || displayData.every(d => d.value === 0 && d.comparisonValue === 0);
 
   const legend = (
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -31,20 +37,29 @@ export function LoadDistributionCard({ data, isLoading, helpText }: LoadDistribu
     </div>
   );
 
+  const modeToggle = detailData && detailData.length > 0 ? (
+    <Tabs value={mode} onValueChange={(v) => setMode(v as 'high-level' | 'detail')} className="h-7">
+      <TabsList className="h-7">
+        <TabsTrigger value="high-level" className="text-xs px-2 h-6">High-level</TabsTrigger>
+        <TabsTrigger value="detail" className="text-xs px-2 h-6">Detail</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  ) : null;
+
   return (
     <AnalyticsCard
       title="Rozložení zátěže"
       icon={LayoutGrid}
       isLoading={isLoading}
       isEmpty={isEmpty}
-      actions={legend}
+      actions={<div className="flex items-center gap-2">{modeToggle}{legend}</div>}
       helpText={helpText}
     >
-      <div className="h-[180px]">
+      <div className={mode === 'detail' ? "h-[280px]" : "h-[180px]"}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
-            data={data}
+            data={displayData}
             margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
             barCategoryGap="20%"
           >
@@ -61,8 +76,8 @@ export function LoadDistributionCard({ data, isLoading, helpText }: LoadDistribu
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-              width={70}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              width={mode === 'detail' ? 90 : 70}
             />
             <Tooltip
               content={({ active, payload }) => {

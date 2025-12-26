@@ -193,6 +193,33 @@ export type Database = {
         }
         Relationships: []
       }
+      body_part_categories: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          key: string
+          name_cs: string
+          name_en: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order: number
+          id?: string
+          key: string
+          name_cs: string
+          name_en: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          key?: string
+          name_cs?: string
+          name_en?: string
+        }
+        Relationships: []
+      }
       calendar_shares: {
         Row: {
           created_at: string
@@ -2624,6 +2651,49 @@ export type Database = {
             foreignKeyName: "muscle_group_aliases_muscle_group_id_fkey"
             columns: ["muscle_group_id"]
             isOneToOne: false
+            referencedRelation: "muscle_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      muscle_group_to_body_part: {
+        Row: {
+          body_part_category_id: string
+          created_at: string | null
+          id: string
+          muscle_group_id: string
+        }
+        Insert: {
+          body_part_category_id: string
+          created_at?: string | null
+          id?: string
+          muscle_group_id: string
+        }
+        Update: {
+          body_part_category_id?: string
+          created_at?: string | null
+          id?: string
+          muscle_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "muscle_group_to_body_part_body_part_category_id_fkey"
+            columns: ["body_part_category_id"]
+            isOneToOne: false
+            referencedRelation: "body_part_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "muscle_group_to_body_part_body_part_category_id_fkey"
+            columns: ["body_part_category_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_body_part_categories"
+            referencedColumns: ["body_part_category_id"]
+          },
+          {
+            foreignKeyName: "muscle_group_to_body_part_muscle_group_id_fkey"
+            columns: ["muscle_group_id"]
+            isOneToOne: true
             referencedRelation: "muscle_groups"
             referencedColumns: ["id"]
           },
@@ -5216,6 +5286,25 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      exercise_body_part_categories: {
+        Row: {
+          body_part_category_id: string | null
+          body_part_key: string | null
+          body_part_name_cs: string | null
+          body_part_name_en: string | null
+          display_order: number | null
+          exercise_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscle_groups_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

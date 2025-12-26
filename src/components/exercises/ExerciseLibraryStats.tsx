@@ -55,6 +55,7 @@ export function ExerciseLibraryStats() {
         <AnalyticsGridItem>
           <LoadDistributionCard
             data={data?.loadDistribution || []}
+            detailData={data?.loadDistributionDetail || []}
             isLoading={isLoading}
             helpText={HELP_TEXTS.loadDistribution}
           />
