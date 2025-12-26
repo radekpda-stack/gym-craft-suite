@@ -403,7 +403,8 @@ export function useExerciseAnalytics(filters: AnalyticsFilters) {
         const exercise = entry.exercises as any;
         const category = exercise?.category || 'Ostatní';
         const pattern = exercise?.movement_pattern;
-        const exerciseId = entry.exercise_id || entry.exercise_name;
+        // IMPORTANT: Only aggregate by exercise_id, never fall back to exercise_name
+        const exerciseId = entry.exercise_id;
         const volume = (entry.sets || 1) * (entry.reps || 1) * (entry.weight_kg || 0);
 
         totalVolume += volume;
@@ -419,6 +420,7 @@ export function useExerciseAnalytics(filters: AnalyticsFilters) {
           patternMap.set(pattern, (patternMap.get(pattern) || 0) + 1);
         }
 
+        // Only count entries that have exercise_id - legacy entries without ID are excluded
         if (exerciseId) {
           const existing = exerciseUsage.get(exerciseId) || { 
             name: entry.exercise_name, 

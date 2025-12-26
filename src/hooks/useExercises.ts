@@ -115,12 +115,26 @@ export function normalizeText(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 // Generate slug from text
 export function generateSlug(text: string): string {
   return normalizeText(text).replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// Check if exercise with same normalized name exists
+async function checkExerciseExists(searchName: string): Promise<{ exists: boolean; existingId?: string }> {
+  const { data } = await supabase
+    .from('exercises')
+    .select('id')
+    .eq('search_name', searchName)
+    .eq('is_archived', false)
+    .maybeSingle();
+  
+  return { exists: !!data, existingId: data?.id };
 }
 
 export function useExercises() {
@@ -149,7 +163,13 @@ export function useExercises() {
       
       const name = exercise.name_cs || exercise.name || '';
       const slug = generateSlug(name);
-      const searchName = normalizeText(`${name} ${exercise.name_en || ''}`);
+      const searchName = slug; // Use slug as search_name for uniqueness
+      
+      // Check if exercise with same name already exists
+      const { exists, existingId } = await checkExerciseExists(searchName);
+      if (exists) {
+        throw new Error(`Cvik "${name}" již existuje (ID: ${existingId})`);
+      }
       
       const { data, error } = await supabase
         .from('exercises')
@@ -185,14 +205,33 @@ export function useExercises() {
         .single();
 
       if (error) throw error;
+      
+      // Automatically create an alias for the new exercise
+      await supabase
+        .from('exercise_aliases')
+        .insert({
+          exercise_id: data.id,
+          alias_name: name,
+          alias_normalized: normalizeText(name),
+          language: 'cs',
+        })
+        .select()
+        .maybeSingle(); // Ignore conflict
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-aliases'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-search-index'] });
       toast({ title: 'Cvik přidán', description: 'Nový cvik byl úspěšně vytvořen.' });
     },
-    onError: () => {
-      toast({ title: 'Chyba', description: 'Nepodařilo se přidat cvik.', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Chyba', 
+        description: error.message || 'Nepodařilo se přidat cvik.', 
+        variant: 'destructive' 
+      });
     },
   });
 
@@ -201,9 +240,18 @@ export function useExercises() {
       const name = updates.name_cs || updates.name;
       const extraUpdates: Partial<Exercise> = {};
       
+      // Get current exercise to check for name change
+      let oldName: string | null = null;
       if (name) {
+        const { data: current } = await supabase
+          .from('exercises')
+          .select('name_cs, name')
+          .eq('id', id)
+          .single();
+        oldName = current?.name_cs || current?.name || null;
+        
         extraUpdates.slug = generateSlug(name);
-        extraUpdates.search_name = normalizeText(`${name} ${updates.name_en || ''}`);
+        extraUpdates.search_name = generateSlug(name);
         extraUpdates.name = name;
       }
       
@@ -215,10 +263,27 @@ export function useExercises() {
         .single();
 
       if (error) throw error;
+      
+      // If name changed, save old name as alias
+      if (oldName && name && oldName !== name) {
+        await supabase
+          .from('exercise_aliases')
+          .insert({
+            exercise_id: id,
+            alias_name: oldName,
+            alias_normalized: normalizeText(oldName),
+            language: 'cs',
+          })
+          .select()
+          .maybeSingle(); // Ignore conflict
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-aliases'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-search-index'] });
       toast({ title: 'Cvik aktualizován', description: 'Změny byly uloženy.' });
     },
     onError: () => {
