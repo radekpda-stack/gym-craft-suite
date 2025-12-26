@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause } from 'lucide-react';
+import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import {
 import { useChallenges, useUpdateChallenge, useDeleteChallenge, Challenge } from '@/hooks/useChallenges';
 import { ChallengeEditor } from '@/components/challenges/ChallengeEditor';
 import { ChallengeSubmissionsView } from '@/components/challenges/ChallengeSubmissionsView';
+import { useSeedChallenges } from '@/hooks/useSeedChallenges';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -22,6 +23,7 @@ export default function Challenges() {
   const { data: challenges, isLoading } = useChallenges();
   const updateChallenge = useUpdateChallenge();
   const deleteChallenge = useDeleteChallenge();
+  const seedChallenges = useSeedChallenges();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
@@ -196,10 +198,22 @@ export default function Challenges() {
           </h1>
           <p className="text-muted-foreground">Správa challenge pro klienty v portálu</p>
         </div>
-        <Button onClick={() => { setEditingChallenge(null); setEditorOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nová výzva
-        </Button>
+        <div className="flex gap-2">
+          {challenges?.length === 0 && (
+            <Button 
+              variant="outline" 
+              onClick={() => seedChallenges.mutate()}
+              disabled={seedChallenges.isPending}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {seedChallenges.isPending ? 'Vytvářím...' : 'Vzorové výzvy'}
+            </Button>
+          )}
+          <Button onClick={() => { setEditingChallenge(null); setEditorOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nová výzva
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="published">
