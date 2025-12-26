@@ -101,7 +101,7 @@ export function useClientAttendanceStats(clientId: string | undefined, period: P
 }
 
 // =====================================================
-// CREDIT STATS (period-based)
+// CREDIT STATS (period-based with credit_history_start_at filter)
 // =====================================================
 
 export interface CreditStats {
@@ -109,6 +109,7 @@ export interface CreditStats {
   spentInPeriod: number;
   addedInPeriod: number;
   netChange: number;
+  creditHistoryStartAt: string | null;
   lastTransaction: {
     date: string;
     amount: number;
@@ -135,12 +136,13 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
           spentInPeriod: 0,
           addedInPeriod: 0,
           netChange: 0,
+          creditHistoryStartAt: null,
           lastTransaction: null,
           transactions: [],
         };
       }
 
-      // Get current balance
+      // Get current balance (always shown, no filter)
       const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('credit_balance')
@@ -151,17 +153,34 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
 
       const balance = client?.credit_balance ?? 0;
 
-      // Get transactions for period
+      // Get credit_history_start_at from client_accounts
+      const { data: accountData } = await supabase
+        .from('client_accounts')
+        .select('credit_history_start_at')
+        .eq('client_id', clientId)
+        .maybeSingle();
+
+      const creditHistoryStartAt = accountData?.credit_history_start_at ?? null;
+
+      // Get transactions for period with credit_history_start_at filter
       const today = startOfDay(new Date());
       const periodDays = period === 'all' ? 365 * 5 : period;
       const startDate = format(subDays(today, periodDays), 'yyyy-MM-dd');
 
-      const { data: transactions, error: txError } = await supabase
+      // Build query with credit_history_start_at filter
+      let query = supabase
         .from('credit_transactions')
         .select('id, amount, type, description, payment_method, created_at')
         .eq('client_id', clientId)
         .gte('created_at', startDate)
         .order('created_at', { ascending: false });
+
+      // Apply credit_history_start_at filter if exists
+      if (creditHistoryStartAt) {
+        query = query.gte('created_at', creditHistoryStartAt);
+      }
+
+      const { data: transactions, error: txError } = await query;
 
       if (txError) throw txError;
 
@@ -191,6 +210,7 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
         spentInPeriod,
         addedInPeriod,
         netChange,
+        creditHistoryStartAt,
         lastTransaction,
         transactions: txList,
       };
