@@ -276,13 +276,22 @@ Deno.serve(async (req) => {
       const customToken = btoa(`${clientAccountByLogin.client_id}:${Date.now()}:${crypto.randomUUID()}`);
 
       // Store the token in client_access_tokens table for validation
-      await supabaseAdmin.from('client_access_tokens').insert({
+      const { error: tokenInsertError } = await supabaseAdmin.from('client_access_tokens').insert({
         client_id: clientAccountByLogin.client_id,
         trainer_id: clientAccountByLogin.trainer_id,
         token: customToken,
         purpose: 'portal_session',
+        is_revoked: false,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
       });
+
+      if (tokenInsertError) {
+        console.error('Failed to store portal session token:', tokenInsertError);
+        return new Response(
+          JSON.stringify({ error: 'Nepodařilo se vytvořit relaci. Zkuste to prosím znovu.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       console.log('Successful password-only login for client:', clientAccountByLogin.client_id);
 
