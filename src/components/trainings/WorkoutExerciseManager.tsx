@@ -35,7 +35,15 @@ export function WorkoutExerciseManager({
   const handleAddExercise = async (data: {
     exercise_id: string | null;
     exercise_name: string;
-    sets: { weight_kg: number | null; reps: number | null; rpe: number | null }[];
+    sets: { 
+      weight_kg: number | null; 
+      reps: number | null; 
+      rpe: number | null;
+      time_seconds?: number | null;
+      distance_meters?: number | null;
+      avg_watts?: number | null;
+      calories?: number | null;
+    }[];
   }) => {
     try {
       // Create entries for each set
@@ -48,6 +56,10 @@ export function WorkoutExerciseManager({
           weight_kg: data.sets[i].weight_kg,
           reps: data.sets[i].reps,
           rpe: data.sets[i].rpe,
+          time_seconds: data.sets[i].time_seconds,
+          distance_meters: data.sets[i].distance_meters,
+          watts: data.sets[i].avg_watts,
+          calories: data.sets[i].calories,
         });
       }
 
@@ -100,6 +112,10 @@ export function WorkoutExerciseManager({
         weight_kg: lastSet?.weight_kg || null,
         reps: lastSet?.reps || null,
         rpe: null,
+        time_seconds: lastSet?.time_seconds || null,
+        distance_meters: lastSet?.distance_meters || null,
+        watts: lastSet?.watts || null,
+        calories: lastSet?.calories || null,
       });
     } catch (error) {
       console.error('Error adding set:', error);
