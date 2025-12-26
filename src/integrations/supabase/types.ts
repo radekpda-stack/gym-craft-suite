@@ -555,6 +555,7 @@ export type Database = {
           is_active: boolean
           last_password_reset_at: string | null
           last_portal_login: string | null
+          login_identifier: string | null
           portal_password: string | null
           portal_settings: Json | null
           status: string | null
@@ -572,6 +573,7 @@ export type Database = {
           is_active?: boolean
           last_password_reset_at?: string | null
           last_portal_login?: string | null
+          login_identifier?: string | null
           portal_password?: string | null
           portal_settings?: Json | null
           status?: string | null
@@ -589,6 +591,7 @@ export type Database = {
           is_active?: boolean
           last_password_reset_at?: string | null
           last_portal_login?: string | null
+          login_identifier?: string | null
           portal_password?: string | null
           portal_settings?: Json | null
           status?: string | null
