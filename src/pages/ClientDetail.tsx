@@ -172,6 +172,7 @@ export default function ClientDetail() {
         onAddNote={handleAddNote}
         onAddTraining={() => setIsTrainingDialogOpen(true)}
         onAddCredit={() => setIsCreditModalOpen(true)}
+        onEditClient={() => setShowClientDetails(true)}
       />
 
       {/* 📋 Section 3: Timeline - main overview */}
@@ -184,7 +185,7 @@ export default function ClientDetail() {
       </div>
 
       {/* 👤 Section 4: Personal Info */}
-      <ClientPersonalInfo client={client} />
+      <ClientPersonalInfo client={client} onEdit={() => setShowClientDetails(true)} />
 
       {/* 🩺 Section 4: Health & Diagnostics */}
       <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />

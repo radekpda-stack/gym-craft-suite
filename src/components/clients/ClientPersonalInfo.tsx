@@ -19,12 +19,13 @@ import {
   Utensils,
   Pill,
   ChevronDown,
-  ChevronUp,
   Hand,
   Clock,
+  Edit2,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Client } from '@/hooks/useClients';
@@ -33,6 +34,7 @@ import { differenceInYears } from 'date-fns';
 interface ClientPersonalInfoProps {
   client: Client;
   defaultOpen?: boolean;
+  onEdit?: () => void;
 }
 
 interface PersonalData {
@@ -105,7 +107,7 @@ function getHandednessLabel(handedness: string | null | undefined): string {
   return labels[handedness] || handedness;
 }
 
-export function ClientPersonalInfo({ client, defaultOpen = false }: ClientPersonalInfoProps) {
+export function ClientPersonalInfo({ client, defaultOpen = false, onEdit }: ClientPersonalInfoProps) {
   const { data: diagnosticData } = useClientDiagnosticData(client.id);
 
   // Merge data from client and diagnostic_assessments
@@ -166,20 +168,32 @@ export function ClientPersonalInfo({ client, defaultOpen = false }: ClientPerson
 
   return (
     <Collapsible defaultOpen={defaultOpen}>
-      <CollapsibleTrigger asChild>
-        <button className="w-full glass rounded-xl p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-          <div className="flex items-center gap-3">
-            <User className="w-5 h-5 text-primary" />
-            <span className="font-semibold text-foreground">Osobní údaje</span>
-            {personalData.occupation && (
-              <Badge variant="secondary" className="text-xs">
-                {personalData.occupation}
-              </Badge>
-            )}
-          </div>
-          <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-        </button>
-      </CollapsibleTrigger>
+      <div className="flex items-center gap-2">
+        <CollapsibleTrigger asChild>
+          <button className="flex-1 glass rounded-xl p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-3">
+              <User className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-foreground">Osobní údaje</span>
+              {personalData.occupation && (
+                <Badge variant="secondary" className="text-xs">
+                  {personalData.occupation}
+                </Badge>
+              )}
+            </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </button>
+        </CollapsibleTrigger>
+        {onEdit && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onEdit}
+            className="shrink-0 h-12 w-12 rounded-xl"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
 
       <CollapsibleContent>
         <div className="glass rounded-xl p-4 mt-2 space-y-4">
