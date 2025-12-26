@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Dumbbell,
   ArrowDownLeft,
-  ArrowUpRight,
+  CalendarClock,
   AlertCircle
 } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
@@ -23,7 +23,7 @@ import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-
+import { toVocative } from '@/lib/czechVocative';
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
   { value: 30, label: '30 dní' },
@@ -95,7 +95,7 @@ export default function ClientPortalOverview() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold truncate">
-            Ahoj, {clientProfile?.name?.split(' ')[0] ?? 'Klient'}!
+            Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
           </h1>
           <p className="text-muted-foreground text-sm">Tvůj sportovní přehled</p>
         </div>
@@ -267,27 +267,29 @@ export default function ClientPortalOverview() {
                     <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center",
-                        item.type === 'training' ? "bg-success/10" : "bg-primary/10"
+                        item.type === 'training' ? "bg-success/10" : 
+                        item.type === 'upcoming_training' ? "bg-blue-500/10" : 
+                        "bg-success/10"
                       )}>
                         {item.type === 'training' ? (
                           <Dumbbell className="w-4 h-4 text-success" />
-                        ) : item.value?.startsWith('+') ? (
-                          <ArrowDownLeft className="w-4 h-4 text-success" />
+                        ) : item.type === 'upcoming_training' ? (
+                          <CalendarClock className="w-4 h-4 text-blue-500" />
                         ) : (
-                          <ArrowUpRight className="w-4 h-4 text-primary" />
+                          <ArrowDownLeft className="w-4 h-4 text-success" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.label}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(parseISO(item.date), { addSuffix: true, locale: cs })}
+                          {item.type === 'upcoming_training' 
+                            ? format(parseISO(item.date), 'd. MMMM', { locale: cs })
+                            : formatDistanceToNow(parseISO(item.date), { addSuffix: true, locale: cs })
+                          }
                         </p>
                       </div>
                       {item.value && (
-                        <p className={cn(
-                          "text-sm font-medium",
-                          item.value.startsWith('+') ? "text-success" : "text-foreground"
-                        )}>
+                        <p className="text-sm font-medium text-success">
                           {item.value}
                         </p>
                       )}

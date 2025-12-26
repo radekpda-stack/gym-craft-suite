@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { subDays, format, differenceInWeeks, parseISO, startOfDay } from 'date-fns';
+import { subDays, format, differenceInWeeks, parseISO, startOfDay, addDays } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 export type PeriodDays = 7 | 30 | 90 | 'all';
 
@@ -221,11 +222,12 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
 
 // =====================================================
 // RECENT ACTIVITY (combined for dashboard)
+// Shows: completed trainings, upcoming trainings, credit payments (only additions)
 // =====================================================
 
 export interface ActivityItem {
   id: string;
-  type: 'training' | 'credit';
+  type: 'training' | 'upcoming_training' | 'credit';
   date: string;
   label: string;
   value?: string;
@@ -237,8 +239,11 @@ export function useClientRecentActivity(clientId: string | undefined, limit = 5)
     queryFn: async (): Promise<ActivityItem[]> => {
       if (!clientId) return [];
 
-      // Fetch recent trainings
-      const { data: trainings } = await supabase
+      const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
+      const futureLimit = format(addDays(new Date(), 30), 'yyyy-MM-dd'); // Next 30 days
+
+      // Fetch recent completed trainings
+      const { data: completedTrainings } = await supabase
         .from('training_sessions')
         .select('id, date, training_type, status')
         .eq('client_id', clientId)
@@ -246,39 +251,68 @@ export function useClientRecentActivity(clientId: string | undefined, limit = 5)
         .order('date', { ascending: false })
         .limit(limit);
 
-      // Fetch recent transactions
+      // Fetch upcoming scheduled trainings
+      const { data: upcomingTrainings } = await supabase
+        .from('training_sessions')
+        .select('id, date, training_type, status')
+        .eq('client_id', clientId)
+        .eq('status', 'scheduled')
+        .gte('date', today)
+        .lte('date', futureLimit)
+        .order('date', { ascending: true })
+        .limit(3); // Max 3 upcoming
+
+      // Fetch only credit additions (payments), not deductions
       const { data: transactions } = await supabase
         .from('credit_transactions')
         .select('id, amount, type, description, created_at')
         .eq('client_id', clientId)
+        .eq('type', 'credit') // Only credit additions (payments)
+        .gt('amount', 0) // Positive amounts only
         .order('created_at', { ascending: false })
         .limit(limit);
 
       const activities: ActivityItem[] = [];
 
-      (trainings ?? []).forEach(t => {
+      // Add completed trainings
+      (completedTrainings ?? []).forEach(t => {
         activities.push({
           id: `training-${t.id}`,
           type: 'training',
           date: t.date,
-          label: t.training_type || 'Trénink',
+          label: t.training_type ? `Trénink – ${t.training_type}` : 'Trénink',
         });
       });
 
+      // Add upcoming trainings
+      (upcomingTrainings ?? []).forEach(t => {
+        activities.push({
+          id: `upcoming-${t.id}`,
+          type: 'upcoming_training',
+          date: t.date,
+          label: 'Naplánovaný trénink',
+        });
+      });
+
+      // Add credit payments
       (transactions ?? []).forEach(t => {
         activities.push({
           id: `credit-${t.id}`,
           type: 'credit',
           date: t.created_at,
-          label: t.description || t.type,
-          value: `${t.amount > 0 ? '+' : ''}${t.amount.toLocaleString('cs-CZ')} Kč`,
+          label: 'Platba kreditu',
+          value: `+${t.amount.toLocaleString('cs-CZ')} Kč`,
         });
       });
 
-      // Sort by date and limit
-      return activities
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, limit);
+      // Sort: upcoming first (by date asc), then rest by date desc
+      const upcoming = activities.filter(a => a.type === 'upcoming_training')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      const past = activities.filter(a => a.type !== 'upcoming_training')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      return [...upcoming, ...past].slice(0, limit);
     },
     enabled: !!clientId,
   });
