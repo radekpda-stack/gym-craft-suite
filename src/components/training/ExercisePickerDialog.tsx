@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useExerciseSearch, searchExercises } from '@/hooks/useExerciseAliases';
+import { useExerciseBodyPartCategories, useBodyPartCategories, BODY_PART_LABELS, BODY_PART_COLORS } from '@/hooks/useBodyPartCategories';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Dumbbell } from 'lucide-react';
+import { Search, Loader2, Dumbbell, Filter } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ExercisePickerDialogProps {
   open: boolean;
@@ -24,12 +26,29 @@ export function ExercisePickerDialog({
   onSelect,
 }: ExercisePickerDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBodyParts, setSelectedBodyParts] = useState<string[]>([]);
   const { data: exerciseIndex = [], isLoading } = useExerciseSearch();
+  const { categories: bodyPartCategories } = useBodyPartCategories();
+  
+  // Get all exercise IDs for body part lookup
+  const exerciseIds = useMemo(() => exerciseIndex.map(e => e.id), [exerciseIndex]);
+  const { exerciseMatchesFilter, getExerciseBodyParts } = useExerciseBodyPartCategories(exerciseIds);
 
   const filteredExercises = useMemo(() => {
-    if (!searchQuery.trim()) return exerciseIndex.slice(0, 50);
-    return searchExercises(exerciseIndex, searchQuery).slice(0, 50);
-  }, [exerciseIndex, searchQuery]);
+    let results = exerciseIndex;
+    
+    // Apply text search
+    if (searchQuery.trim()) {
+      results = searchExercises(results, searchQuery);
+    }
+    
+    // Apply body part filter
+    if (selectedBodyParts.length > 0) {
+      results = results.filter(ex => exerciseMatchesFilter(ex.id, selectedBodyParts));
+    }
+    
+    return results.slice(0, 50);
+  }, [exerciseIndex, searchQuery, selectedBodyParts, exerciseMatchesFilter]);
 
   const handleSelect = (exercise: typeof exerciseIndex[0]) => {
     onSelect({
@@ -37,6 +56,13 @@ export function ExercisePickerDialog({
       name: exercise.name_cs || exercise.name,
     });
     setSearchQuery('');
+    setSelectedBodyParts([]);
+  };
+
+  const toggleBodyPart = (key: string) => {
+    setSelectedBodyParts(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
   };
 
   // Check if match came via alias
@@ -56,15 +82,46 @@ export function ExercisePickerDialog({
           <DialogTitle>Vybrat cvik</DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Hledat cviky..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            autoFocus
-          />
+        <div className="space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Hledat cviky..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              autoFocus
+            />
+          </div>
+
+          {/* Body Part Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            {bodyPartCategories.map((bp) => (
+              <Badge
+                key={bp.key}
+                variant={selectedBodyParts.includes(bp.key) ? 'default' : 'outline'}
+                className={cn(
+                  "cursor-pointer transition-colors",
+                  selectedBodyParts.includes(bp.key) && BODY_PART_COLORS[bp.key]
+                )}
+                onClick={() => toggleBodyPart(bp.key)}
+              >
+                {bp.name_cs}
+              </Badge>
+            ))}
+            {selectedBodyParts.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6"
+                onClick={() => setSelectedBodyParts([])}
+              >
+                Zrušit filtr
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[400px] pr-4">
@@ -81,6 +138,7 @@ export function ExercisePickerDialog({
             <div className="space-y-1">
               {filteredExercises.map((exercise) => {
                 const matchedAlias = getMatchedAlias(exercise);
+                const bodyParts = getExerciseBodyParts(exercise.id);
                 return (
                   <Button
                     key={exercise.id}
@@ -98,6 +156,15 @@ export function ExercisePickerDialog({
                             {exercise.category}
                           </Badge>
                         )}
+                        {bodyParts.map(bp => (
+                          <Badge 
+                            key={bp} 
+                            variant="outline" 
+                            className={cn("text-xs", BODY_PART_COLORS[bp])}
+                          >
+                            {BODY_PART_LABELS[bp]}
+                          </Badge>
+                        ))}
                         {matchedAlias && (
                           <Badge variant="outline" className="text-xs text-muted-foreground">
                             alias: {matchedAlias}
