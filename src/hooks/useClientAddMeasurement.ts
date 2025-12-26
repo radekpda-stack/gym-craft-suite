@@ -61,6 +61,14 @@ export function useClientAddCardio() {
         throw new Error('Missing client or trainer ID');
       }
 
+      // Check if this is a PR (best time for this distance)
+      const isPR = await checkIfCardioIsPR(
+        clientId,
+        input.exercise_name,
+        input.distance_meters,
+        input.duration_seconds
+      );
+
       const { data, error } = await supabase
         .from('cardio_entries')
         .insert({
@@ -71,6 +79,7 @@ export function useClientAddCardio() {
           duration_seconds: input.duration_seconds,
           distance_meters: input.distance_meters,
           notes: input.notes || null,
+          is_pr: isPR,
         })
         .select()
         .single();
@@ -81,6 +90,35 @@ export function useClientAddCardio() {
     onSuccess: () => {
       // Invalidate cardio progress queries
       queryClient.invalidateQueries({ queryKey: ['client-cardio-progress', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['cardio-entries', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['cardio-stats', clientId] });
     },
   });
+}
+
+// PR detection for cardio: best time for a given distance
+async function checkIfCardioIsPR(
+  clientId: string,
+  exerciseName: string,
+  distanceMeters: number,
+  durationSeconds: number
+): Promise<boolean> {
+  if (!distanceMeters || !durationSeconds) return false;
+
+  const { data: existingEntries } = await supabase
+    .from('cardio_entries')
+    .select('duration_seconds')
+    .eq('client_id', clientId)
+    .eq('exercise_name', exerciseName)
+    .eq('distance_meters', distanceMeters)
+    .not('duration_seconds', 'is', null)
+    .order('duration_seconds', { ascending: true })
+    .limit(1);
+
+  // First entry for this distance is a PR
+  if (!existingEntries?.length) return true;
+
+  // New time is better (lower) than the best existing time
+  const bestExistingTime = existingEntries[0].duration_seconds;
+  return durationSeconds < bestExistingTime;
 }
