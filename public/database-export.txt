@@ -1,0 +1,373 @@
+===========================================
+DATABÁZE CVIKŮ, TAGŮ A PARTIÍ
+Export: 2025-12-26
+===========================================
+
+================
+CVIKY (EXERCISES)
+================
+Aktivní cviky v databázi:
+
+1. Běh - 1000m
+   ID: 07f0cef7-20e9-4a0a-be4c-6c6d3d48af29
+   Kategorie: Kardio
+   Partie: calves, hamstrings, quadriceps
+   Vybavení: treadmill
+   Jednotka: cardio_machine
+
+2. Běh - 5000m
+   ID: 116611dc-72e9-4608-9377-91c9ad609d10
+   Kategorie: Kardio
+   Partie: calves, hamstrings, quadriceps
+   Vybavení: treadmill
+   Jednotka: cardio_machine
+
+3. Běh - Chůze/Incline
+   ID: ac4ac76e-1602-4914-aa67-c20425ea368a
+   Kategorie: Kardio
+   Partie: calves, glutes, quadriceps
+   Vybavení: treadmill
+   Jednotka: cardio_machine
+
+4. Běh - Intervaly
+   ID: 647fa071-a55d-4386-b8b5-22cf078fb76d
+   Kategorie: Kardio
+   Partie: calves, hamstrings, quadriceps
+   Vybavení: treadmill
+   Jednotka: cardio_machine
+
+5. Bench Press
+   ID: 18d65c24-72bc-4051-b08a-e4e2b8470b52
+   Kategorie: Horní tělo
+   Partie: chest, shoulders, triceps
+   Vybavení: barbell, bench
+   Jednotka: reps
+
+6. Bench Press s jednoručkami
+   ID: 80a76dca-5722-4a5a-a2b4-bcced1ad3322
+   Kategorie: Horní tělo
+   Partie: chest, shoulders, triceps
+   Vybavení: dumbbells, bench
+   Jednotka: reps
+
+7. Bicep Curl
+   ID: de96ae82-1c1f-4c3c-b5ef-d00a098395ca
+   Kategorie: Horní tělo
+   Partie: biceps
+   Vybavení: dumbbells, barbell, cables
+   Jednotka: reps
+
+8. Bicepsový zdvih
+   ID: 92c936a0-1b68-4dfc-ab23-2721ec0384ec
+   Kategorie: Paže
+   Partie: biceps
+   Vybavení: Jednoručky
+   Jednotka: reps
+
+9. Bulharský dřep
+   ID: 4a4f0acb-ebbf-4a06-ac2b-598db1d76a7b
+   Kategorie: Dolní tělo
+   Partie: balance, glutes, quadriceps
+   Vybavení: dumbbells, bench
+   Jednotka: reps
+
+10. Cable Row
+    ID: 02576fef-913a-4154-a2ad-a4e5c08cc045
+    Kategorie: Horní tělo
+    Partie: biceps, lats, rhomboids
+    Vybavení: cable machine
+    Jednotka: reps
+
+11. Dřep (Back Squat)
+    ID: 50b4fce5-2bce-4cd2-b6c8-1cdb1b193b53
+    Kategorie: Dolní tělo
+    Partie: glutes, hamstrings, quadriceps
+    Vybavení: barbell, rack
+    Jednotka: reps
+
+12. Dřep s činkou
+    ID: 69a56074-9464-404d-8e32-a7d12c48b59c
+    Kategorie: Nohy
+    Partie: glutes, quadriceps
+    Vybavení: Činka
+    Jednotka: reps
+
+13. Face Pull
+    ID: 64db1484-0c24-43fc-b1fe-76f93328169f
+    Kategorie: Horní tělo
+    Partie: rear delts, rhomboids
+    Vybavení: cable machine, bands
+    Jednotka: reps
+
+14. Farmer Walk
+    ID: dbab9253-1f49-409c-b39c-cf5a8208e33e
+    Kategorie: Core
+    Partie: core, grip, traps
+    Vybavení: kettlebells, dumbbells
+    Jednotka: reps
+
+15. Goblet dřep
+    ID: e1fe0114-7542-4b71-a91b-812e2a059a6e
+    Kategorie: Dolní tělo
+    Partie: core, glutes, quadriceps
+    Vybavení: kettlebell, dumbbell
+    Jednotka: reps
+
+16. Half-Kneeling Landmine Press
+    ID: 53ca0dcd-1f90-4ec0-bcb5-a1c048df518d
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+17. Hip Thrust
+    ID: 7d6ce428-a846-40df-9637-04e81c507e1b
+    Kategorie: Dolní tělo
+    Partie: glutes, hamstrings
+    Vybavení: barbell, bench
+    Jednotka: reps
+
+18. Jednoramenný přítah
+    ID: 0afb9f0b-eadb-4d1f-8c20-230b85cb6131
+    Kategorie: Horní tělo
+    Partie: biceps, lats, rhomboids
+    Vybavení: dumbbell, bench
+    Jednotka: reps
+
+19. Klik na bradlech (Dips)
+    ID: 899852b3-5828-4bf8-83ba-08e496168620
+    Kategorie: Horní tělo
+    Partie: chest, shoulders, triceps
+    Vybavení: dip bars
+    Jednotka: reps
+
+20. Kliky
+    ID: a57f0a00-8877-480d-bc8d-826780c6d647
+    Kategorie: Horní tělo
+    Partie: chest, core, triceps
+    Vybavení: bodyweight
+    Jednotka: reps
+
+21. Landmine Deadlift
+    ID: 8289a3aa-8a1f-4bce-8a5d-e8b1e9a02a71
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+22. Landmine Press
+    ID: f522313b-941a-4295-a472-473363bc6467
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+23. Landmine Rotation
+    ID: d1b455eb-34f0-448c-97c1-333497623a16
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+24. Landmine Row
+    ID: edb21f6d-27c7-40c7-83a3-f0ee325213f6
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+25. Landmine Squat
+    ID: 0e79b29b-8396-4dff-8b7d-2c9e97b7f753
+    Kategorie: Síla
+    Partie: (neuvedeno)
+    Vybavení: (neuvedeno)
+    Jednotka: reps
+
+26. Lat Pulldown
+    ID: c647ac2e-33c6-4d38-84c1-61c1b3317ea1
+    Kategorie: Horní tělo
+    Partie: biceps, lats
+    Vybavení: cable machine
+    Jednotka: reps
+
+27. Leg Curl
+    ID: dae2d111-19e2-4fa4-91e0-938...
+    Kategorie: Dolní tělo
+    Partie: hamstrings
+    Vybavení: leg curl machine
+    Jednotka: reps
+
+28. Leg Press
+    ID: 0cf2a5d6-9e2f-4d87-9877-02e926f6f56e
+    Kategorie: Dolní tělo
+    Partie: glutes, quadriceps
+    Vybavení: leg press machine
+    Jednotka: reps
+
+29. Mrtvý tah (Deadlift)
+    ID: 15c178b6-d93a-4d47-8138-fd4f228191ea
+    Kategorie: Dolní tělo
+    Partie: glutes, hamstrings, lower back
+    Vybavení: barbell
+    Jednotka: reps
+
+30. Overhead Press
+    ID: (z dat)
+    Kategorie: Horní tělo
+    Partie: shoulders, triceps
+    Vybavení: barbell, dumbbells
+    Jednotka: reps
+
+31. Plank
+    ID: e70e202b-56d8-4130-998f-506ce428099b (archivován - sloučen)
+    Kategorie: Core
+    Partie: core, shoulders
+    Jednotka: seconds
+
+32. Přední dřep (Front Squat)
+    ID: 407da261-ebc8-4d5b-af4d-b641c3d60795
+    Kategorie: Dolní tělo
+    Partie: core, quadriceps
+    Vybavení: barbell, rack
+    Jednotka: reps
+
+33. Přítahy na hrazdě
+    ID: 2c8a182f-5783-4660-9e3b-0b7fe85de2b5
+    Kategorie: Horní tělo
+    Partie: biceps, lats
+    Vybavení: pull-up bar
+    Jednotka: reps
+
+34. Push Press
+    ID: 487a825b-0770-4f5f-bad4-298096536c5c
+    Kategorie: Horní tělo
+    Partie: shoulders, triceps
+    Vybavení: barbell
+    Jednotka: reps
+
+35. Rumunský mrtvý tah
+    ID: 0cf7d1d8-f3c4-49a1-886d-21b8ab84f829
+    Kategorie: Dolní tělo
+    Partie: glutes, hamstrings
+    Vybavení: barbell, dumbbells
+    Jednotka: reps
+
+36. SkiErg - 1000m
+    ID: 31fde5d8-4f31-4419-9a5b-c4f222e25d97
+    Kategorie: Kardio
+    Vybavení: skierg
+    Jednotka: cardio_machine
+
+37. SkiErg - 2000m
+    ID: 2867c02d-4d91-4c7e-b966-8088e6750ea6
+    Kategorie: Kardio
+    Vybavení: skierg
+    Jednotka: cardio_machine
+
+38. Sumo mrtvý tah
+    ID: 6aef1243-77ac-41a7-888b-83922d831d14
+    Kategorie: Dolní tělo
+    Partie: glutes, hamstrings, adductors
+    Vybavení: barbell
+    Jednotka: reps
+
+39. Tricepsové kliky
+    ID: 4cc889eb-10e4-43bf-92ca-36c23721df71
+    Kategorie: Horní tělo
+    Partie: triceps
+    Vybavení: bench
+    Jednotka: reps
+
+40. Veslo - Intervaly
+    ID: 6ea11e70-9652-4fe0-bd29-bbb7...
+    Kategorie: Kardio
+    Vybavení: rowing machine
+    Jednotka: cardio_machine
+
+41. Výpad
+    ID: 4ce72684-af6f-41cf-8f6b-67cb96bc1b8d
+    Kategorie: Dolní tělo
+    Partie: glutes, quadriceps
+    Vybavení: bodyweight, dumbbells
+    Jednotka: reps
+
+================
+TAGY (TAGS)
+================
+
+ČÁST TĚLA (body_part):
+- Core (id: 269de143-7273-48e8-a923-b3e1579ab3ae) - systémový
+- Dolní část (id: d5f602c0-1711-435e-84d7-6c2863a753a7)
+- Horní část (id: 05427be9-cf51-4d10-a5be-749626fdbec2)
+- Hyzdě (id: d8b79e9d-6831-4a6a-888b-9de24c2795eb)
+- Lýtka (id: 303c89c1-6c3e-4774-bec1-95e9f9f2a720)
+- Přední stehna (id: abe3b223-cbf2-4529-ade0-a87bd11f41c6)
+- Ramena (id: 53f2aece-4b41-4c1a-a21d-d574ea269e5f)
+- Šikmé břišní svalstvo (id: 2715cf01-9f3b-4318-929e-2a3c454952cb)
+- Střed těla (id: 72d6af4d-345b-46d2-8a22-c456bbdbaa8f)
+- Zadní stehna (id: 68d721df-e6ad-4022-8562-f966a283a7a3)
+
+ZAMĚŘENÍ (focus):
+- Kardio (id: 5324e966-80c7-42e6-a92a-7f79d0c13407)
+- Kondice (id: 3502c588-67b3-47f7-86d0-acdb6a878719)
+- Mobilita (id: 7a7787aa-e22f-46c7-b7b0-6469707f6894)
+- Plyometrie (id: 03821a9b-eee7-4b94-aef5-1919e1c27aa2)
+- Síla (id: 141ed4ba-bfa0-4ac6-ae13-fcfc8e5ff446)
+
+INTENZITA (intensity):
+- Lehký (id: 26ec391d-6960-434d-a35a-c8e670fe5ba0) - systémový
+- Střední (id: 39c215a4-f9f4-4459-9a03-8c85ffea0270) - systémový
+- Těžký (id: 07bca63f-5acc-4e29-8d14-f47371dcc69a) - systémový
+- Regenerace (id: 43817c86-c01b-4288-b181-eee827888083)
+
+================
+SVALOVÉ PARTIE (MUSCLE_GROUPS)
+================
+
+DOLNÍ KONČETINY:
+- Quadriceps (id: 58ff11e8-e65a-4475-9bd7-603eb8989c3e) - strana relevantní
+- Hamstringy (id: afeeb9df-d281-451d-9b51-b93898533b54) - strana relevantní
+- Gluteus maximus (id: e3e8c5ac-3150-4b39-a623-2ea6e047abad)
+- Gluteus medius (id: 5b6b30d5-f6b6-4629-841e-41a730767dc5) - strana relevantní
+- Lýtka (id: c1c5ba46-62f4-470e-8e96-483edd7fd311) - strana relevantní
+- Adduktory (id: 6e1c5a8e-5283-4a67-b658-fa47de0c4b75) - strana relevantní
+- Abduktory (id: bfa25b48-d55f-48c5-8754-67fc8332ce69) - strana relevantní
+
+TRUP:
+- Core – anti-extension (id: 2635d87c-64e9-45d8-8e96-e711469232e9)
+- Core – anti-rotace (id: be36ce12-bc6a-4db9-98d6-e5d58a9b7648)
+- Core – rotace (id: 44de7b80-c8fe-422f-ba78-8f7de39a8111)
+- Core – laterální stabilita (id: fd98c36b-1f68-4914-9af9-f88ce6af4787) - strana relevantní
+- Erector spinae (id: 1bf4ce0b-0587-4374-ac09-f884c9bc6b11) - strana relevantní
+
+HORNÍ KONČETINY:
+- Záda – vertikální tah (id: a5c4b239-fbae-4886-a8d7-fafa2581f69f)
+- Záda – horizontální tah (id: 39c1cee5-6226-4f75-b4ed-e3cf19c3e6ef)
+- Ramena – přední (id: 6e2663c7-da39-4c0b-9146-156d0a372b6c) - strana relevantní
+- Ramena – střední (id: dca86f02-3cfa-49b4-91a2-ad8d3cd5dba7) - strana relevantní
+- Ramena – zadní (id: b9ed6f91-ff88-49e1-83fe-40b6c29bfa08) - strana relevantní
+- Triceps (id: beae2c9d-8fec-4de1-a7c7-3969b5866dd6) - strana relevantní
+- Biceps (id: 8154b3a1-cafc-4653-85fb-e7b55cf4a5a6) - strana relevantní
+- Serratus anterior (id: 87e82b58-368c-4749-8e9d-260863974876) - strana relevantní
+
+================
+ALIASY (EXERCISE_ALIASES)
+================
+Příklady automaticky vytvořených aliasů:
+
+- Bench Press → bench press (normalized)
+- Dřep (Back Squat) → drep back squat
+- Běh - 1000m → beh 1000m
+- Přítahy na hrazdě → pritahy na hrazde
+- Rumunský mrtvý tah → rumunsky mrtvy tah
+- Bulharský dřep → bulharsky drep
+- Face Pull → face pull
+- Hip Thrust → hip thrust
+- Jednoramenný přítah → jednoramenny pritah
+- Kliky → kliky
+
+(Aliasy slouží pro vyhledávání bez diakritiky)
+
+===========================================
+KONEC EXPORTU
+===========================================
