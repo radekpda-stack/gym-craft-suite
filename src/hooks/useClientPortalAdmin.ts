@@ -15,6 +15,8 @@ export interface PortalClient {
   last_password_reset_at: string | null;
   created_at: string;
   portal_settings: Record<string, boolean> | null;
+  login_identifier: string | null;
+  portal_password: string | null;
   client: {
     id: string;
     name: string;
@@ -91,6 +93,8 @@ export function usePortalClients() {
           last_password_reset_at,
           created_at,
           portal_settings,
+          login_identifier,
+          portal_password,
           client:clients(id, name, email, phone)
         `)
         .eq('trainer_id', user.id)
@@ -462,6 +466,52 @@ export function useUpdatePortalVisibility() {
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se uložit nastavení.',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Update client portal credentials (login identifier / password)
+export function useUpdateClientCredentials() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      clientId,
+      newLoginIdentifier,
+      newPassword,
+    }: {
+      clientId: string;
+      newLoginIdentifier?: string;
+      newPassword?: string;
+    }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('update-client-portal-credentials', {
+        body: {
+          client_id: clientId,
+          new_login_identifier: newLoginIdentifier,
+          new_password: newPassword,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return data as { success: boolean; login_identifier?: string; password?: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portal-clients'] });
+      toast({
+        title: 'Údaje aktualizovány',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message,
         variant: 'destructive',
       });
     },

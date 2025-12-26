@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -23,12 +24,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { usePortalClients, useResetClientPassword, useDisableClientAccess } from '@/hooks/useClientPortalAdmin';
+import { Label } from '@/components/ui/label';
+import { usePortalClients, useResetClientPassword, useDisableClientAccess, useUpdateClientCredentials } from '@/hooks/useClientPortalAdmin';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus } from 'lucide-react';
+import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil } from 'lucide-react';
 import { InviteClientDialog } from './InviteClientDialog';
 import { toast } from '@/hooks/use-toast';
 import { BulkCreatePortalsButton } from './BulkCreatePortalsButton';
@@ -37,6 +40,7 @@ export function ClientAccessList() {
   const { data: clients, isLoading } = usePortalClients();
   const resetPassword = useResetClientPassword();
   const disableAccess = useDisableClientAccess();
+  const updateCredentials = useUpdateClientCredentials();
   
   const [inviteOpen, setInviteOpen] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; email: string; password: string }>({
@@ -44,7 +48,25 @@ export function ClientAccessList() {
     email: '',
     password: '',
   });
-  const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  
+  // Edit credentials dialog
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean;
+    clientId: string;
+    clientName: string;
+    loginIdentifier: string;
+    newLoginIdentifier: string;
+    newPassword: string;
+  }>({
+    open: false,
+    clientId: '',
+    clientName: '',
+    loginIdentifier: '',
+    newLoginIdentifier: '',
+    newPassword: '',
+  });
 
   const handleResetPassword = async (clientId: string) => {
     try {
@@ -63,14 +85,65 @@ export function ClientAccessList() {
     await disableAccess.mutateAsync({ clientId, disable: currentlyActive });
   };
 
-  const copyToClipboard = async (text: string, field: 'email' | 'password') => {
+  const copyToClipboard = async (text: string, fieldId: string) => {
     await navigator.clipboard.writeText(text);
-    setCopiedField(field);
+    setCopiedField(fieldId);
     setTimeout(() => setCopiedField(null), 2000);
     toast({
       title: 'Zkopírováno',
-      description: field === 'email' ? 'Email zkopírován' : 'Heslo zkopírováno',
     });
+  };
+
+  const togglePasswordVisibility = (accountId: string) => {
+    setVisiblePasswords(prev => {
+      const next = new Set(prev);
+      if (next.has(accountId)) {
+        next.delete(accountId);
+      } else {
+        next.add(accountId);
+      }
+      return next;
+    });
+  };
+
+  const openEditDialog = (account: {
+    client_id: string;
+    client?: { name: string } | null;
+    login_identifier: string | null;
+  }) => {
+    setEditDialog({
+      open: true,
+      clientId: account.client_id,
+      clientName: account.client?.name || '',
+      loginIdentifier: account.login_identifier || '',
+      newLoginIdentifier: account.login_identifier || '',
+      newPassword: '',
+    });
+  };
+
+  const handleSaveCredentials = async () => {
+    const changes: { clientId: string; newLoginIdentifier?: string; newPassword?: string } = {
+      clientId: editDialog.clientId,
+    };
+
+    if (editDialog.newLoginIdentifier !== editDialog.loginIdentifier) {
+      changes.newLoginIdentifier = editDialog.newLoginIdentifier;
+    }
+    if (editDialog.newPassword) {
+      changes.newPassword = editDialog.newPassword;
+    }
+
+    if (!changes.newLoginIdentifier && !changes.newPassword) {
+      setEditDialog(prev => ({ ...prev, open: false }));
+      return;
+    }
+
+    try {
+      await updateCredentials.mutateAsync(changes);
+      setEditDialog(prev => ({ ...prev, open: false }));
+    } catch (error) {
+      // Error handled by hook
+    }
   };
 
   const getStatusBadge = (account: { is_active: boolean; auth_user_id: string | null }) => {
@@ -166,6 +239,10 @@ export function ClientAccessList() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(account)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Upravit údaje
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleResetPassword(account.client_id)}
                               disabled={resetPassword.isPending}
@@ -195,6 +272,53 @@ export function ClientAccessList() {
                         </DropdownMenu>
                       </div>
                     </div>
+                    {/* Credentials section */}
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Přihlášení:</span>
+                        <div className="flex items-center gap-1">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{account.login_identifier || '-'}</code>
+                          {account.login_identifier && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => copyToClipboard(account.login_identifier!, `login-${account.id}`)}
+                            >
+                              {copiedField === `login-${account.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Heslo:</span>
+                        <div className="flex items-center gap-1">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                            {visiblePasswords.has(account.id) ? (account.portal_password || '-') : '••••••••'}
+                          </code>
+                          {account.portal_password && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(account.id)}
+                              >
+                                {visiblePasswords.has(account.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(account.portal_password!, `pass-${account.id}`)}
+                              >
+                                {copiedField === `pass-${account.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="mt-3 pt-3 border-t flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>
                         Přihlášení: {account.last_portal_login ? formatDistanceToNow(new Date(account.last_portal_login), { addSuffix: true, locale: cs }) : 'Nikdy'}
@@ -215,9 +339,10 @@ export function ClientAccessList() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Klient</TableHead>
+                      <TableHead>Přihlašovací jméno</TableHead>
+                      <TableHead>Heslo</TableHead>
                       <TableHead>Stav</TableHead>
                       <TableHead>Poslední přihlášení</TableHead>
-                      <TableHead>Poslední reset hesla</TableHead>
                       <TableHead className="w-[70px]">Akce</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -238,6 +363,48 @@ export function ClientAccessList() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{account.login_identifier || '-'}</code>
+                            {account.login_identifier && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(account.login_identifier!, `login-${account.id}`)}
+                              >
+                                {copiedField === `login-${account.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono min-w-[70px]">
+                              {visiblePasswords.has(account.id) ? (account.portal_password || '-') : '••••••••'}
+                            </code>
+                            {account.portal_password && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => togglePasswordVisibility(account.id)}
+                                >
+                                  {visiblePasswords.has(account.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => copyToClipboard(account.portal_password!, `pass-${account.id}`)}
+                                >
+                                  {copiedField === `pass-${account.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           {getStatusBadge(account)}
                         </TableCell>
                         <TableCell>
@@ -253,15 +420,6 @@ export function ClientAccessList() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {account.last_password_reset_at ? (
-                            <span className="text-sm">
-                              {format(new Date(account.last_password_reset_at), 'd. M. yyyy', { locale: cs })}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -269,6 +427,10 @@ export function ClientAccessList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditDialog(account)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Upravit údaje
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleResetPassword(account.client_id)}
                                 disabled={resetPassword.isPending}
@@ -276,6 +438,7 @@ export function ClientAccessList() {
                                 <Key className="w-4 h-4 mr-2" />
                                 Resetovat heslo
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               {account.auth_user_id && (
                                 <DropdownMenuItem
                                   onClick={() => handleToggleAccess(account.client_id, account.is_active)}
@@ -326,9 +489,9 @@ export function ClientAccessList() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => copyToClipboard(passwordDialog.email, 'email')}
+                  onClick={() => copyToClipboard(passwordDialog.email, 'reset-email')}
                 >
-                  {copiedField === 'email' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiedField === 'reset-email' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -339,9 +502,9 @@ export function ClientAccessList() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => copyToClipboard(passwordDialog.password, 'password')}
+                  onClick={() => copyToClipboard(passwordDialog.password, 'reset-password')}
                 >
-                  {copiedField === 'password' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiedField === 'reset-password' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -351,6 +514,47 @@ export function ClientAccessList() {
               </p>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Credentials Dialog */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upravit přihlašovací údaje</DialogTitle>
+            <DialogDescription>
+              Změňte přihlašovací jméno nebo heslo pro klienta {editDialog.clientName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-identifier">Přihlašovací jméno</Label>
+              <Input
+                id="login-identifier"
+                value={editDialog.newLoginIdentifier}
+                onChange={(e) => setEditDialog(prev => ({ ...prev, newLoginIdentifier: e.target.value }))}
+                placeholder="Email nebo uživatelské jméno"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nové heslo (ponechte prázdné pro zachování)</Label>
+              <Input
+                id="new-password"
+                type="text"
+                value={editDialog.newPassword}
+                onChange={(e) => setEditDialog(prev => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="Nové heslo"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setEditDialog(prev => ({ ...prev, open: false }))}>
+              Zrušit
+            </Button>
+            <Button onClick={handleSaveCredentials} disabled={updateCredentials.isPending}>
+              {updateCredentials.isPending ? 'Ukládám...' : 'Uložit'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
