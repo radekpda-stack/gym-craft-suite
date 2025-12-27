@@ -89,7 +89,7 @@ export function TrainingForm({
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [tagsChanged, setTagsChanged] = useState(false);
-  const [tagValidationError, setTagValidationError] = useState<string | null>(null);
+  
   
   // Helper to format date as local datetime string
   const getLocalDateTimeString = () => {
@@ -131,10 +131,6 @@ export function TrainingForm({
   const handleTagsChange = (newTagIds: string[]) => {
     setSelectedTagIds(newTagIds);
     setTagsChanged(true);
-    // Clear validation error when tags are selected
-    if (newTagIds.length > 0) {
-      setTagValidationError(null);
-    }
   };
 
   // Filtered clients with diacritics-insensitive search
@@ -151,13 +147,6 @@ export function TrainingForm({
   const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
-    // Validate tags - require at least one
-    if (selectedTagIds.length === 0) {
-      setTagValidationError("Vyberte alespoň jeden štítek pro kategorizaci tréninku");
-      return;
-    }
-    
-    setTagValidationError(null);
     await onSubmit(data, selectedTagIds);
     form.reset(data); // Mark as clean after successful submit
     setTagsChanged(false);
@@ -444,29 +433,17 @@ export function TrainingForm({
 
         {/* Training Tags */}
         <div className="space-y-2">
-          <label className={cn(
-            "text-sm font-medium flex items-center gap-2",
-            tagValidationError && "text-destructive"
-          )}>
+          <label className="text-sm font-medium flex items-center gap-2">
             <Tag className="w-4 h-4" />
-            Štítky tréninku *
+            Štítky tréninku
           </label>
           <TrainingTagsSelector
             selectedTagIds={selectedTagIds}
             onChange={handleTagsChange}
           />
-          {tagValidationError ? (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                {tagValidationError}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Vyberte alespoň jeden štítek pro kategorizaci tréninku
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            Volitelně přidejte štítky pro kategorizaci tréninku
+          </p>
         </div>
 
         <FormField
