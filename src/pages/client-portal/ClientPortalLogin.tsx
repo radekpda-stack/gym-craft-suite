@@ -86,13 +86,34 @@ export default function ClientPortalLogin() {
       });
 
       if (invokeError) {
-        console.error('Login invoke error:', invokeError);
-        setError('Nepodařilo se připojit k serveru');
+        // Supabase returns invokeError for non-2xx responses too (e.g., 401), not only for network failures.
+        const status = (invokeError as any)?.context?.status as number | undefined;
+
+        let payload: any = null;
+        try {
+          payload = await (invokeError as any)?.context?.json?.();
+        } catch {
+          // ignore JSON parse issues
+        }
+
+        if (payload?.code === 'RATE_LIMITED') {
+          setRetryAfter(payload.retryAfterMinutes);
+          setError(payload.error);
+        } else if (payload?.code === 'ACCOUNT_DISABLED') {
+          setError(payload.error);
+        } else if (payload?.error) {
+          setError(payload.error);
+        } else if (status === 401) {
+          setError('Neplatné přihlašovací údaje');
+        } else {
+          setError('Nepodařilo se připojit k serveru');
+        }
+
         setLoading(false);
         return;
       }
 
-      if (data.error) {
+      if (data?.error) {
         if (data.code === 'RATE_LIMITED') {
           setRetryAfter(data.retryAfterMinutes);
           setError(data.error);
@@ -105,7 +126,7 @@ export default function ClientPortalLogin() {
         return;
       }
 
-      if (data.success && data.session) {
+      if (data?.success && data.session) {
         // Set the Supabase session
         const { error: setSessionError } = await supabase.auth.setSession({
           access_token: data.session.access_token,
