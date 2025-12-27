@@ -78,8 +78,11 @@ export default function ClientPortalLogin() {
     setLoading(true);
 
     try {
+      const trimmedIdentifier = loginIdentifier.trim();
+      const trimmedPassword = password.trim();
+      
       const { data, error: invokeError } = await supabase.functions.invoke('client-portal-login', {
-        body: { loginIdentifier, password }
+        body: { loginIdentifier: trimmedIdentifier, password: trimmedPassword }
       });
 
       if (invokeError) {
