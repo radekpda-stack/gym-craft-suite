@@ -27,7 +27,9 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    const { loginIdentifier, password } = await req.json();
+    const rawBody = await req.json();
+    const loginIdentifier = (rawBody.loginIdentifier || '').trim();
+    const password = (rawBody.password || '').trim();
     
     if (!loginIdentifier || !password) {
       return new Response(
