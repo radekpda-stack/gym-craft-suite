@@ -98,6 +98,22 @@ function getSittingHours(activityType: string): number | null {
   }
 }
 
+// Helper to map work type to occupation description
+function mapWorkType(workType: string): string | null {
+  switch (workType) {
+    case 'sedentary':
+      return 'sedavé zaměstnání';
+    case 'combined':
+      return 'kombinované zaměstnání';
+    case 'active':
+      return 'aktivní zaměstnání';
+    case 'physical':
+      return 'fyzicky náročné zaměstnání';
+    default:
+      return null;
+  }
+}
+
 // Helper to build comprehensive client notes from answers
 function buildNotes(answers: Record<string, any>): string {
   const parts: string[] = [];
@@ -326,26 +342,51 @@ serve(async (req) => {
 
         let clientId = form.client_id;
 
-        // Build comprehensive client data from answers
+        // Build comprehensive client data from answers (support both old and new format)
         const healthRestrictions = buildHealthRestrictions(answers);
         const trainingGoals = buildTrainingGoals(answers);
         const notes = buildNotes(answers);
-        const sittingHours = answers.sitting_hours_daily || getSittingHours(answers.daily_activity_type);
+        
+        // Support both old sitting_hours_daily and new sitting_hours + work_type
+        const sittingHours = answers.sitting_hours ?? answers.sitting_hours_daily ?? getSittingHours(answers.daily_activity_type) ?? getSittingHours(answers.work_type);
+        
+        // Map work_type to occupation if provided
+        const occupation = answers.occupation || mapWorkType(answers.work_type) || answers.daily_activity_type;
+        
+        // Support both birth_date and birth_year
+        let birthDate = answers.birth_date;
+        if (!birthDate && answers.birth_year) {
+          birthDate = `${answers.birth_year}-01-01`;
+        }
+
+        // Build health notes from pain + health_notes
+        let combinedHealthRestrictions = healthRestrictions;
+        if (answers.has_pain && answers.pain_areas?.length > 0) {
+          const painInfo = `Aktuální bolest: ${answers.pain_areas.join(', ')}${answers.pain_note ? ` - ${answers.pain_note}` : ''}`;
+          combinedHealthRestrictions = combinedHealthRestrictions 
+            ? `${combinedHealthRestrictions}\n${painInfo}` 
+            : painInfo;
+        }
+        if (answers.health_notes) {
+          combinedHealthRestrictions = combinedHealthRestrictions 
+            ? `${combinedHealthRestrictions}\n${answers.health_notes}` 
+            : answers.health_notes;
+        }
 
         // Client data to save
         const clientData: Record<string, any> = {
-          birth_date: answers.birth_date || null,
+          birth_date: birthDate || null,
           gender: answers.gender || null,
-          occupation: answers.occupation || answers.daily_activity_type || null,
+          occupation: occupation || null,
           sitting_hours_daily: sittingHours,
           current_activities: Array.isArray(answers.current_activities) 
             ? answers.current_activities 
             : answers.current_activities ? [answers.current_activities] : null,
-          sleep_hours: answers.sleep_hours || answers.sleep_hours_avg || null,
+          sleep_hours: answers.sleep_hours || (answers.sleep_hours_avg ? parseFloat(answers.sleep_hours_avg) : null),
           sports_history: answers.exercise_experience || answers.sports_history || null,
           stress_level: answers.stress_level || null,
-          health_restrictions: healthRestrictions || null,
-          training_goals: trainingGoals.length > 0 ? trainingGoals : null,
+          health_restrictions: combinedHealthRestrictions || null,
+          training_goals: trainingGoals.length > 0 ? trainingGoals : (answers.main_goal ? [answers.main_goal] : null),
           notes: notes || null,
           handedness: answers.handedness || null,
           dietary_restrictions: Array.isArray(answers.dietary_restrictions)

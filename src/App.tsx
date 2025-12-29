@@ -37,6 +37,7 @@ import PRHistory from "./pages/PRHistory";
 import AppUsageStats from "./pages/AppUsageStats";
 import Statistics from "./pages/Statistics";
 import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
+import ClientIntakePage from "./pages/ClientIntakePage";
 import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
 import ExerciseAnalytics from "./pages/ExerciseAnalytics";
@@ -98,6 +99,7 @@ const App = () => (
               <Route path="/feedback/:token" element={<FeedbackPage />} />
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
               <Route path="/pre-diagnostic/:token" element={<PreDiagnosticFormPage />} />
+              <Route path="/intake/:token" element={<ClientIntakePage />} />
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               
