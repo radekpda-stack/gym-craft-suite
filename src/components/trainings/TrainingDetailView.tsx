@@ -47,6 +47,7 @@ import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
+import { ClientProfilePanel } from '@/components/trainings/ClientProfilePanel';
 
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -312,6 +313,9 @@ export function TrainingDetailView({
           )}
         </div>
       </div>
+
+      {/* Client Profile Panel - show restrictions/alerts */}
+      {client && <ClientProfilePanel client={client} />}
 
       {/* Quick Info Cards - 2 columns on mobile */}
       <Form {...form}>
