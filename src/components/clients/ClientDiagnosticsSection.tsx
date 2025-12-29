@@ -17,6 +17,7 @@ import {
   Check,
   Clock,
   CheckCircle2,
+  ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,8 +33,9 @@ import { JOINT_OPTIONS, MUSCLE_OPTIONS } from '@/hooks/useDiagnostics';
 import { useDiagnosticAssessments, DiagnosticWithAssessment } from '@/hooks/useDiagnosticAssessments';
 import { DiagnosticDetailSheet } from '@/components/diagnostics/DiagnosticDetailSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
+import { TrainerDiagnosticSheet } from '@/components/pre-diagnostic/TrainerDiagnosticSheet';
 import { useClients } from '@/hooks/useClients';
-import { useClientPreDiagnostic, useCreateClientPreDiagnostic } from '@/hooks/usePreDiagnosticForms';
+import { useClientPreDiagnostic, useCreateClientPreDiagnostic, PreDiagnosticForm } from '@/hooks/usePreDiagnosticForms';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -78,11 +80,12 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
   const [preDiagDialogOpen, setPreDiagDialogOpen] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [trainerDiagOpen, setTrainerDiagOpen] = useState(false);
 
   const handleSendPreDiagnostic = async () => {
     try {
       const result = await createPreDiagnostic.mutateAsync(clientId);
-      const link = `${window.location.origin}/prediagnostic/${result.token}`;
+      const link = `${window.location.origin}/pre-diagnostic/${result.token}`;
       setGeneratedLink(link);
       setPreDiagDialogOpen(true);
     } catch (error) {
@@ -196,12 +199,16 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
             <p className="text-xl font-bold text-warning">{recentIssues}</p>
             <p className="text-[10px] text-muted-foreground">Problémy</p>
           </div>
-          <div className={cn(
-            'p-3 rounded-xl text-center border',
-            preDiagStatus === 'completed' && 'bg-success/10 border-success/20',
-            preDiagStatus === 'pending' && 'bg-warning/10 border-warning/20',
-            preDiagStatus === 'none' && 'bg-secondary/50 border-border/50'
-          )}>
+          <button 
+            onClick={() => preDiagStatus === 'completed' && existingPreDiagnostic && setTrainerDiagOpen(true)}
+            disabled={preDiagStatus === 'none'}
+            className={cn(
+              'p-3 rounded-xl text-center border transition-colors',
+              preDiagStatus === 'completed' && 'bg-success/10 border-success/20 hover:bg-success/20 cursor-pointer',
+              preDiagStatus === 'pending' && 'bg-warning/10 border-warning/20',
+              preDiagStatus === 'none' && 'bg-secondary/50 border-border/50'
+            )}
+          >
             <div className="flex items-center justify-center">
               {preDiagStatus === 'completed' && <CheckCircle2 className="w-5 h-5 text-success" />}
               {preDiagStatus === 'pending' && <Clock className="w-5 h-5 text-warning" />}
@@ -212,7 +219,7 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
               {preDiagStatus === 'pending' && 'Čeká'}
               {preDiagStatus === 'none' && 'Formulář'}
             </p>
-          </div>
+          </button>
         </div>
 
         {/* Diagnostics List */}
@@ -346,6 +353,14 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trainer Diagnostic Sheet */}
+      <TrainerDiagnosticSheet
+        open={trainerDiagOpen}
+        onOpenChange={setTrainerDiagOpen}
+        form={existingPreDiagnostic || null}
+        clientName={clientName}
+      />
     </>
   );
 }
