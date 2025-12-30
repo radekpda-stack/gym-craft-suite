@@ -27,6 +27,7 @@ import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPersonalInfo } from '@/components/clients/ClientPersonalInfo';
 import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
+import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
 import { ClientMeasurementsCard } from '@/components/clients/ClientMeasurementsCard';
 import { ClientNutritionCard } from '@/components/clients/ClientNutritionCard';
 import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
@@ -188,6 +189,7 @@ export default function ClientDetail() {
       <ClientPersonalInfo client={client} onEdit={() => setShowClientDetails(true)} />
 
       {/* 🩺 Section 4: Health & Diagnostics */}
+      <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
       <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
       <ClientMeasurementsCard clientId={client.id} />
 
