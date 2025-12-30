@@ -18,29 +18,38 @@ interface AddCardioInput {
 }
 
 export function useClientAddMeasurement() {
-  const { clientId, clientAccount } = useClientPortal();
+  const { clientId, user } = useClientPortal();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: AddMeasurementInput) => {
-      if (!clientId || !clientAccount?.trainer_id) {
-        throw new Error('Missing client or trainer ID');
+      if (!clientId) {
+        throw new Error('Nejste přihlášen jako klient');
       }
+
+      // Normalize number input (support comma as decimal separator)
+      const normalizeNumber = (val?: number): number | null => {
+        if (val === undefined || val === null) return null;
+        return val;
+      };
 
       const { data, error } = await supabase
         .from('measurements')
         .insert({
           client_id: clientId,
-          user_id: clientAccount.trainer_id,
+          user_id: user?.id || null, // Use client's auth user ID for RLS
           date: input.date,
-          weight: input.weight || null,
-          body_fat_percentage: input.body_fat_percentage || null,
+          weight: normalizeNumber(input.weight),
+          body_fat_percentage: normalizeNumber(input.body_fat_percentage),
           notes: input.notes || null,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Measurement insert error:', error);
+        throw new Error(error.message || 'Nepodařilo se uložit měření');
+      }
       return data;
     },
     onSuccess: () => {
@@ -52,13 +61,13 @@ export function useClientAddMeasurement() {
 }
 
 export function useClientAddCardio() {
-  const { clientId, clientAccount } = useClientPortal();
+  const { clientId, user } = useClientPortal();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: AddCardioInput) => {
-      if (!clientId || !clientAccount?.trainer_id) {
-        throw new Error('Missing client or trainer ID');
+      if (!clientId) {
+        throw new Error('Nejste přihlášen jako klient');
       }
 
       // Check if this is a PR (best time for this distance)
@@ -73,7 +82,7 @@ export function useClientAddCardio() {
         .from('cardio_entries')
         .insert({
           client_id: clientId,
-          user_id: clientAccount.trainer_id,
+          user_id: user?.id || null, // Use client's auth user ID for RLS
           date: input.date,
           exercise_name: input.exercise_name,
           duration_seconds: input.duration_seconds,
@@ -84,7 +93,10 @@ export function useClientAddCardio() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Cardio entry insert error:', error);
+        throw new Error(error.message || 'Nepodařilo se uložit kardio záznam');
+      }
 
       // Auto-submit to matching active challenges
       await autoSubmitToChallenge(
