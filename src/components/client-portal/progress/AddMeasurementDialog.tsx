@@ -38,9 +38,12 @@ export function AddMeasurementDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const numValue = parseFloat(value);
+    // Normalize: support comma as decimal separator
+    const normalizedValue = value.replace(',', '.');
+    const numValue = parseFloat(normalizedValue);
+    
     if (isNaN(numValue) || numValue <= 0) {
-      toast.error('Zadej platnou hodnotu');
+      toast.error('Zadej platnou hodnotu (např. 75.5 nebo 75,5)');
       return;
     }
 
@@ -57,7 +60,9 @@ export function AddMeasurementDialog({
       setValue('');
       setNotes('');
     } catch (error) {
-      toast.error('Nepodařilo se přidat měření');
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      console.error('Measurement save error:', error);
+      toast.error(`Nepodařilo se přidat měření: ${errorMessage}`);
     }
   };
 
