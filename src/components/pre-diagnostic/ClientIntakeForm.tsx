@@ -224,11 +224,9 @@ export function ClientIntakeForm({
 
   const canGoNext = () => {
     const step = STEPS[currentStep];
-    if (step.id === 'about' && isNewClient) {
+    // Validace pro krok "O vás" - jméno, email, telefon a rok narození jsou vždy povinné
+    if (step.id === 'about') {
       return !!(formData.name && formData.email && formData.phone && formData.birth_year);
-    }
-    if (step.id === 'about' && !isNewClient) {
-      return !!(formData.birth_year);
     }
     if (step.id === 'lifestyle') {
       return !!(formData.work_type && formData.movement_frequency && formData.sleep_hours);
@@ -257,44 +255,42 @@ export function ClientIntakeForm({
   // Render About step
   const renderAboutStep = () => (
     <div className="space-y-5">
-      {/* Identifikace - pro nové klienty */}
-      {isNewClient && (
-        <div className="space-y-4">
+      {/* Identifikace - VŽDY zobrazeno */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Jméno a příjmení *</Label>
+          <Input
+            id="name"
+            value={formData.name || ''}
+            onChange={(e) => updateField('name', e.target.value)}
+            placeholder="Jan Novák"
+            className="bg-secondary/50"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Jméno a příjmení *</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
-              id="name"
-              value={formData.name || ''}
-              onChange={(e) => updateField('name', e.target.value)}
-              placeholder="Jan Novák"
+              id="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => updateField('email', e.target.value)}
+              placeholder="jan@email.cz"
               className="bg-secondary/50"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => updateField('email', e.target.value)}
-                placeholder="jan@email.cz"
-                className="bg-secondary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon *</Label>
-              <Input
-                id="phone"
-                value={formData.phone || ''}
-                onChange={(e) => updateField('phone', e.target.value)}
-                placeholder="+420 777 123 456"
-                className="bg-secondary/50"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefon *</Label>
+            <Input
+              id="phone"
+              value={formData.phone || ''}
+              onChange={(e) => updateField('phone', e.target.value)}
+              placeholder="+420 777 123 456"
+              className="bg-secondary/50"
+            />
           </div>
         </div>
-      )}
+      </div>
 
       {/* Základní údaje */}
       <div className="grid grid-cols-2 gap-4">
