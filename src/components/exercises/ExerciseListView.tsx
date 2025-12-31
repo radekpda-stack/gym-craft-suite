@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, CheckSquare, Square } from 'lucide-react';
+import { 
+  Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
+  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown 
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +16,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
 import { BulkExerciseEditDialog } from '@/components/exercises/BulkExerciseEditDialog';
+import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
+import { ExerciseContextMenu } from '@/components/exercises/ExerciseContextMenu';
+import { format, subDays } from 'date-fns';
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   squat: 'Dřep',
@@ -44,6 +55,13 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   advanced: 'Expert',
 };
 
+const SORT_OPTIONS = [
+  { value: 'alphabetical', label: 'Abecedně' },
+  { value: 'most_used', label: 'Nejpoužívanější' },
+  { value: 'most_clients', label: 'Nejvíce klientů' },
+  { value: 'most_prs', label: 'Nejvíce PR' },
+] as const;
+
 interface Exercise {
   id: string;
   name: string;
@@ -53,6 +71,8 @@ interface Exercise {
   difficulty?: string;
   usageCount: number;
   clientCount: number;
+  is_archived?: boolean;
+  is_time_based?: boolean;
 }
 
 interface ExerciseListViewProps {
@@ -67,18 +87,28 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [patternFilter, setPatternFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('alphabetical');
   const [showFilters, setShowFilters] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   
   // Bulk edit mode
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
 
-  // Get unique categories
+  // Edit/Duplicate dialogs
+  const [editExercise, setEditExercise] = useState<Exercise | null>(null);
+  const [duplicateExercise, setDuplicateExercise] = useState<Exercise | null>(null);
+
+  // Separate active and archived exercises
+  const activeExercises = useMemo(() => exercises.filter(e => !e.is_archived), [exercises]);
+  const archivedExercises = useMemo(() => exercises.filter(e => e.is_archived), [exercises]);
+
+  // Get unique categories (only from active)
   const categories = useMemo(() => {
-    const cats = new Set(exercises.map((e) => e.category));
+    const cats = new Set(activeExercises.map((e) => e.category));
     return Array.from(cats).sort();
-  }, [exercises]);
+  }, [activeExercises]);
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -93,7 +123,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const filteredExercises = useMemo(() => {
     const normalizedQuery = normalizeText(searchQuery);
     
-    return exercises.filter((exercise) => {
+    return activeExercises.filter((exercise) => {
       if (normalizedQuery) {
         const name = normalizeText(exercise.name_cs || exercise.name);
         if (!name.includes(normalizedQuery)) return false;
@@ -103,18 +133,49 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
       if (difficultyFilter !== 'all' && exercise.difficulty !== difficultyFilter) return false;
       return true;
     });
-  }, [exercises, searchQuery, categoryFilter, patternFilter, difficultyFilter]);
+  }, [activeExercises, searchQuery, categoryFilter, patternFilter, difficultyFilter]);
+
+  // Sort exercises
+  const sortedExercises = useMemo(() => {
+    const sorted = [...filteredExercises];
+    switch (sortBy) {
+      case 'most_used':
+        sorted.sort((a, b) => b.usageCount - a.usageCount);
+        break;
+      case 'most_clients':
+        sorted.sort((a, b) => b.clientCount - a.clientCount);
+        break;
+      case 'alphabetical':
+      default:
+        sorted.sort((a, b) => (a.name_cs || a.name).localeCompare(b.name_cs || b.name, 'cs'));
+        break;
+    }
+    return sorted;
+  }, [filteredExercises, sortBy]);
 
   // Group by category
   const groupedExercises = useMemo(() => {
-    const groups: Record<string, typeof filteredExercises> = {};
-    filteredExercises.forEach((exercise) => {
+    const groups: Record<string, typeof sortedExercises> = {};
+    sortedExercises.forEach((exercise) => {
       const cat = exercise.category || 'Ostatní';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(exercise);
     });
     return groups;
-  }, [filteredExercises]);
+  }, [sortedExercises]);
+
+  // Calculate category stats
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { totalUsage: number; totalClients: number; hasPR: boolean }> = {};
+    Object.entries(groupedExercises).forEach(([category, exs]) => {
+      stats[category] = {
+        totalUsage: exs.reduce((sum, e) => sum + e.usageCount, 0),
+        totalClients: new Set(exs.flatMap(e => Array(e.clientCount).fill(e.id))).size, // Approximate
+        hasPR: exs.some(e => e.usageCount > 0), // Simplified - assume PR exists if used
+      };
+    });
+    return stats;
+  }, [groupedExercises]);
 
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
@@ -239,47 +300,65 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
           )}
         </div>
 
+        {/* Filters Panel */}
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-muted/30 rounded-lg">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kategorie" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny kategorie</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všechny kategorie</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={patternFilter} onValueChange={setPatternFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pohybový vzorec" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny vzorce</SelectItem>
-                {MOVEMENT_PATTERNS.map((pattern) => (
-                  <SelectItem key={pattern} value={pattern}>
-                    {MOVEMENT_PATTERN_LABELS[pattern] || pattern}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={patternFilter} onValueChange={setPatternFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pohybový vzorec" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všechny vzorce</SelectItem>
+                  {MOVEMENT_PATTERNS.map((pattern) => (
+                    <SelectItem key={pattern} value={pattern}>
+                      {MOVEMENT_PATTERN_LABELS[pattern] || pattern}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Obtížnost" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny obtížnosti</SelectItem>
-                {DIFFICULTIES.map((diff) => (
-                  <SelectItem key={diff} value={diff}>
-                    {DIFFICULTY_LABELS[diff] || diff}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Obtížnost" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všechny obtížnosti</SelectItem>
+                  {DIFFICULTIES.map((diff) => (
+                    <SelectItem key={diff} value={diff}>
+                      {DIFFICULTY_LABELS[diff] || diff}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-2">
+              <SortAsc className="w-4 h-4 text-muted-foreground" />
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Řazení" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
       </div>
@@ -300,6 +379,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
             .sort(([a], [b]) => a.localeCompare(b, 'cs'))
             .map(([category, categoryExercises]) => {
               const selectedInCategory = categoryExercises.filter((e) => selectedIds.has(e.id)).length;
+              const stats = categoryStats[category];
               
               return (
                 <AccordionItem 
@@ -308,19 +388,30 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                   className="border rounded-lg px-4 bg-card"
                 >
                   <AccordionTrigger className="hover:no-underline py-3">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3 flex-1 flex-wrap">
                       <span className="w-2 h-2 rounded-full bg-primary" />
                       <span className="font-semibold text-base">{category}</span>
                       <Badge variant="secondary" className="text-xs">
                         {categoryExercises.length}
                       </Badge>
+                      
+                      {/* Category stats */}
+                      {stats && stats.totalUsage > 0 && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Activity className="w-3 h-3" />
+                          {stats.totalUsage}× použito
+                        </span>
+                      )}
+                      {stats && stats.totalUsage === 0 && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Bez dat
+                        </Badge>
+                      )}
+
                       {bulkEditMode && selectedInCategory > 0 && (
                         <Badge variant="default" className="text-xs">
                           {selectedInCategory} vybráno
                         </Badge>
-                      )}
-                      {!bulkEditMode && categoryExercises.some(e => e.usageCount > 0) && (
-                        <Activity className="w-3.5 h-3.5 text-green-500" />
                       )}
                     </div>
                     {bulkEditMode && (
@@ -372,6 +463,9 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                   <h3 className="font-medium truncate text-sm">
                                     {exercise.name_cs || exercise.name}
                                   </h3>
+                                  {exercise.is_time_based && (
+                                    <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  )}
                                   {exercise.difficulty && (
                                     <Badge variant="outline" className="text-xs shrink-0">
                                       {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
@@ -399,7 +493,14 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                 </div>
                               </div>
                               {!bulkEditMode && (
-                                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                <div className="flex items-center gap-1">
+                                  <ExerciseContextMenu
+                                    exercise={exercise as any}
+                                    onEdit={() => setEditExercise(exercise as any)}
+                                    onDuplicate={() => setDuplicateExercise(exercise as any)}
+                                  />
+                                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                </div>
                               )}
                             </div>
                           </Card>
@@ -413,6 +514,49 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
         </Accordion>
       )}
 
+      {/* Archived Exercises Section */}
+      {archivedExercises.length > 0 && (
+        <Collapsible open={showArchived} onOpenChange={setShowArchived}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground mt-4">
+              <div className="flex items-center gap-2">
+                <Archive className="w-4 h-4" />
+                <span>Archivované cviky ({archivedExercises.length})</span>
+              </div>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showArchived && "rotate-180")} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-2">
+            {archivedExercises.map((exercise) => (
+              <Card
+                key={exercise.id}
+                className="p-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => navigate(`/exercises/${exercise.id}`)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate text-sm">
+                        {exercise.name_cs || exercise.name}
+                      </h3>
+                      <Badge variant="secondary" className="text-xs">
+                        Archivováno
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{exercise.category}</p>
+                  </div>
+                  <ExerciseContextMenu
+                    exercise={exercise as any}
+                    onEdit={() => setEditExercise(exercise as any)}
+                    onDuplicate={() => setDuplicateExercise(exercise as any)}
+                  />
+                </div>
+              </Card>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Bulk Edit Dialog */}
       <BulkExerciseEditDialog
         open={showBulkEditDialog}
@@ -420,6 +564,25 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
         selectedExercises={selectedExercises}
         onComplete={handleBulkEditComplete}
       />
+
+      {/* Edit Exercise Dialog */}
+      {editExercise && (
+        <ExerciseFormDialog
+          open={!!editExercise}
+          onOpenChange={(open) => !open && setEditExercise(null)}
+          exercise={editExercise as any}
+        />
+      )}
+
+      {/* Duplicate Exercise Dialog */}
+      {duplicateExercise && (
+        <ExerciseFormDialog
+          open={!!duplicateExercise}
+          onOpenChange={(open) => !open && setDuplicateExercise(null)}
+          exercise={duplicateExercise as any}
+          onDuplicate
+        />
+      )}
     </div>
   );
 }
