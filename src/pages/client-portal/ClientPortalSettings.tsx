@@ -14,6 +14,7 @@ import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
 import { ClientPortalLayout } from '@/components/client-portal/ClientPortalLayout';
 import { useClientPrivacySettings, useUpdateClientPrivacySettings } from '@/hooks/useClientPortalBenchmarks';
 import { useClientPreferences } from '@/hooks/useClientPreferences';
+import { ClientProfileSection } from '@/components/client-portal/ClientProfileSection';
 
 export default function ClientPortalSettings() {
   const { user } = useClientPortalAuth();
@@ -89,6 +90,9 @@ export default function ClientPortalSettings() {
           </h1>
           <p className="text-muted-foreground mt-1">Správa vašeho účtu</p>
         </motion.div>
+
+        {/* My Profile */}
+        <ClientProfileSection />
 
         {/* Privacy & Benchmarks */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

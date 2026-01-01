@@ -12,7 +12,8 @@ export type NotificationType =
   | 'feedback_received'
   | 'feedback_red_flag'
   | 'feedback_trend_alert'
-  | 'client_anniversary';
+  | 'client_anniversary'
+  | 'client_profile_updated';
 
 export interface Notification {
   id: string;

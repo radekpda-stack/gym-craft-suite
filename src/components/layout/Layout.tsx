@@ -9,6 +9,7 @@ import { CommandPalette, useCommandPalette } from '@/components/search/CommandPa
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 // ReminderNotifier removed
 import { useClientAnniversaryNotifier } from '@/hooks/useClientAnniversaries';
+import { useClientBirthdayNotifier } from '@/hooks/useClientBirthdayNotifier';
 import { useAppShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
@@ -27,6 +28,8 @@ export function Layout({ children }: LayoutProps) {
   // Anniversary notifier - checks for client anniversaries
   useClientAnniversaryNotifier();
 
+  // Birthday notifier - checks for client birthdays
+  useClientBirthdayNotifier();
   // Keyboard shortcuts
   useAppShortcuts({
     onSearch: () => setCommandOpen(true),
