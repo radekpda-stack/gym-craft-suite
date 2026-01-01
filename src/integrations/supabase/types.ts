@@ -6632,6 +6632,45 @@ export type Database = {
           },
         ]
       }
+      vw_client_cardio_progress: {
+        Row: {
+          avg_heart_rate: number | null
+          avg_watts: number | null
+          client_id: string | null
+          created_at: string | null
+          date: string | null
+          distance_meters: number | null
+          duration_seconds: number | null
+          exercise_id: string | null
+          exercise_name: string | null
+          id: string | null
+          is_personal_record: boolean | null
+          max_heart_rate: number | null
+          max_watts: number | null
+          notes: string | null
+          rpe: number | null
+          source: string | null
+        }
+        Relationships: []
+      }
+      vw_client_exercise_progress: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          date: string | null
+          duration_seconds: number | null
+          exercise_id: string | null
+          exercise_name: string | null
+          id: string | null
+          is_personal_record: boolean | null
+          notes: string | null
+          reps: number | null
+          sets: number | null
+          source: string | null
+          weight_kg: number | null
+        }
+        Relationships: []
+      }
       vw_client_ledger_balances: {
         Row: {
           client_id: string | null
