@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.reject-feedback-form]
 verify_jwt = false
+
+[functions.recalculate-badges]
+verify_jwt = true
