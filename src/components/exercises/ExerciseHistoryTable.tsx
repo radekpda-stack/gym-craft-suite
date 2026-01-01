@@ -61,6 +61,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           reps,
           sets,
           time_seconds,
+          time_ms,
           notes,
           is_pr,
           client_id,
@@ -71,6 +72,8 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           avg_speed_kmh,
           rpe,
           distance_meters,
+          level,
+          resistance,
           clients(id, name)
         `)
         .eq('exercise_id', exerciseId);
@@ -107,6 +110,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
         const timeSeconds = entry.time_seconds;
+        const timeMs = (entry as any).time_ms;
         
         // Determine entry type
         const hasTime = timeSeconds && timeSeconds > 0;
@@ -133,10 +137,13 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           sets: hasWeight ? sets : null,
           volume: hasWeight ? volume : null,
           timeSeconds: hasTime ? timeSeconds : null,
+          timeMs: hasTime ? timeMs : null,
           notes: entry.notes,
           isPR: entry.is_pr,
           trainingType: entry.training_type,
           rpe: (entry as any).rpe,
+          level: (entry as any).level,
+          resistance: (entry as any).resistance,
           performanceDisplay,
         };
       });
@@ -215,8 +222,9 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   <>
                     <TableHead className="text-right">Čas</TableHead>
                     <TableHead className="text-right">Tempo/Výkon</TableHead>
+                    <TableHead className="text-center w-[70px]">Lvl/Mag</TableHead>
                     <TableHead className="text-center w-[50px]">RPE</TableHead>
-                    <TableHead className="max-w-[150px]">Poznámka</TableHead>
+                    <TableHead className="max-w-[120px]">Poznámka</TableHead>
                   </>
                 ) : (
                   <>
@@ -249,12 +257,21 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   {isTimeBased ? (
                     <>
                       <TableCell className="text-right font-medium">
-                        {row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
+                        {row.timeMs ? formatTimeDisplay(row.timeSeconds || 0, row.timeMs) : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         {row.performanceDisplay?.value 
                           ? `${row.performanceDisplay.value}${row.performanceDisplay.unit ? ` ${row.performanceDisplay.unit}` : ''}`
                           : '-'}
+                      </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground">
+                        {row.level || row.resistance ? (
+                          <span>
+                            {row.level ? `L${row.level}` : ''}
+                            {row.level && row.resistance ? '/' : ''}
+                            {row.resistance ? `M${row.resistance}` : ''}
+                          </span>
+                        ) : '-'}
                       </TableCell>
                       <TableCell className="text-center">
                         {row.rpe ? (
@@ -263,7 +280,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                           </Badge>
                         ) : <span className="text-muted-foreground">-</span>}
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate text-muted-foreground text-sm">
+                      <TableCell className="max-w-[120px] truncate text-muted-foreground text-sm">
                         {row.notes || '-'}
                       </TableCell>
                     </>

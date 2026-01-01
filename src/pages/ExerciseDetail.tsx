@@ -15,6 +15,12 @@ import { ExerciseDetailOverview } from '@/components/exercises/ExerciseDetailOve
 import { QuickLogDialog } from '@/components/exercises/QuickLogDialog';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
+// Quick time formatter for stats bar
+function formatQuickTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 export default function ExerciseDetail() {
   usePageTracking('exercise_detail');
   const { id } = useParams<{ id: string }>();
@@ -27,11 +33,25 @@ export default function ExerciseDetail() {
 
   const exercise = exercises.find((e) => e.id === id);
   
-  // Determine exercise type
-  const exerciseType: 'strength' | 'cardio' | 'mixed' = 
-    exercise?.category?.toLowerCase().includes('kardio') || exercise?.category?.toLowerCase().includes('cardio')
-      ? 'cardio'
-      : 'strength';
+  // Determine exercise type - use is_time_based as primary indicator, then category
+  const exerciseType: 'strength' | 'cardio' | 'mixed' = (() => {
+    if (!exercise) return 'strength';
+    // Explicit is_time_based flag takes priority
+    if ((exercise as any).is_time_based) return 'cardio';
+    // Category-based detection
+    const category = exercise.category?.toLowerCase() || '';
+    if (category.includes('kardio') || category.includes('cardio') || 
+        category.includes('veslo') || category.includes('rower') ||
+        category.includes('skierg') || category.includes('skillup') ||
+        category.includes('běh') || category.includes('run') ||
+        category.includes('conditioning')) {
+      return 'cardio';
+    }
+    return 'strength';
+  })();
+  
+  // Use stats.isTimeBased for UI decisions (more accurate)
+  const isTimeBased = stats?.isTimeBased || exerciseType === 'cardio';
 
   if (!exercise) {
     return (
@@ -76,7 +96,7 @@ export default function ExerciseDetail() {
         <ExerciseClientToggle value={selectedClientId} onChange={setSelectedClientId} />
       </div>
 
-      {/* Quick Stats Bar */}
+      {/* Quick Stats Bar - dynamic based on exercise type */}
       <div className="grid grid-cols-3 gap-3 text-center">
         <Card className="p-3">
           <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
@@ -94,11 +114,23 @@ export default function ExerciseDetail() {
         </Card>
         <Card className="p-3">
           <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
-            <Dumbbell className="w-3.5 h-3.5" />
-            <span className="text-xs">Max</span>
+            {isTimeBased ? (
+              <>
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span className="text-xs">Nejlepší čas</span>
+              </>
+            ) : (
+              <>
+                <Dumbbell className="w-3.5 h-3.5" />
+                <span className="text-xs">Max</span>
+              </>
+            )}
           </div>
           <p className="text-lg font-bold">
-            {stats?.globalMaxWeight ? `${stats.globalMaxWeight} kg` : '-'}
+            {isTimeBased 
+              ? (stats?.bestTime ? formatQuickTime(stats.bestTime) : '-')
+              : (stats?.globalMaxWeight ? `${stats.globalMaxWeight} kg` : '-')
+            }
           </p>
         </Card>
       </div>
