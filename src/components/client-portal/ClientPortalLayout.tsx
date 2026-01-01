@@ -16,6 +16,7 @@ import { useClientNutritionCampaign } from '@/hooks/useClientPortalData';
 import { motion } from 'framer-motion';
 import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
+import { ClientNotificationCenter } from './ClientNotificationCenter';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -123,12 +124,15 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
               <p className="text-sm font-medium">{clientProfile?.name ?? 'Klient'}</p>
             </div>
           </div>
-          <button 
-            onClick={() => signOut()}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <ClientNotificationCenter />
+            <button 
+              onClick={() => signOut()}
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
