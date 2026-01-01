@@ -16,31 +16,16 @@ export function useMyProfile() {
     queryFn: async (): Promise<MyProfileData | null> => {
       if (!user?.id) return null;
 
-      // Find the client record that belongs to the current trainer
+      // Find the client record that belongs to the current user (trainer's own client profile)
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, user_id')
         .eq('user_id', user.id)
-        .eq('is_system', false)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
-        // Try to find by name pattern "Trenér" for admin accounts
-        const { data: trainerClient, error: trainerError } = await supabase
-          .from('clients')
-          .select('id, name, user_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (trainerError || !trainerClient) {
-          return null;
-        }
-
-        return {
-          clientId: trainerClient.id,
-          trainerId: user.id,
-          clientName: trainerClient.name,
-        };
+        console.error('Error fetching my profile:', error);
+        return null;
       }
 
       return {
