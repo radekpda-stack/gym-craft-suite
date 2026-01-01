@@ -81,7 +81,8 @@ export function useLastTraining(clientId: string | undefined) {
           const existing = acc.find(
             (g) =>
               g.exercise_name === entry.exercise_name &&
-              g.exercise_id === entry.exercise_id
+              g.exercise_id === entry.exercise_id &&
+              g.participant_client_id === (entry as any).participant_client_id
           );
           if (existing) {
             existing.sets.push(mappedEntry);
@@ -90,6 +91,7 @@ export function useLastTraining(clientId: string | undefined) {
               exercise_id: entry.exercise_id,
               exercise_name: entry.exercise_name,
               sets: [mappedEntry],
+              participant_client_id: (entry as any).participant_client_id ?? null,
             });
           }
           return acc;

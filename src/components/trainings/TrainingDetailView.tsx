@@ -8,7 +8,7 @@
  * 4. Previous training as collapsible
  * 5. Single optional note with toggle
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useForm } from 'react-hook-form';
@@ -39,13 +39,14 @@ import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseMa
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
 import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
-import { Client } from '@/hooks/useClients';
+import { Client, useClients } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
 import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { ClientProfilePanel } from '@/components/trainings/ClientProfilePanel';
+import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,6 +142,28 @@ export function TrainingDetailView({
   const changePaymentMethod = useChangePaymentMethod();
   const { data: settings } = useAppSettings();
   const { data: feedbackRequests = [] } = useFeedbackRequests();
+  const { data: allClients = [] } = useClients();
+  
+  // Get training participants (for group trainings)
+  const { data: trainingParticipants = [] } = useTrainingParticipants(training.id);
+  
+  // Build participants list: if we have training_participants, use them; otherwise use primary client
+  const participants = useMemo(() => {
+    if (trainingParticipants.length > 0) {
+      return trainingParticipants.map(tp => {
+        const clientData = allClients.find(c => c.id === tp.client_id);
+        return {
+          client_id: tp.client_id,
+          name: clientData?.name || 'Neznámý klient',
+        };
+      });
+    }
+    // Default to primary client if no participants
+    if (client) {
+      return [{ client_id: client.id, name: client.name }];
+    }
+    return [{ client_id: training.client_id, name: 'Primární klient' }];
+  }, [trainingParticipants, allClients, client, training.client_id]);
   
   const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 800, "2": 1000, "3": 1200 };
   
@@ -416,6 +439,7 @@ export function TrainingDetailView({
           clientId={training.client_id}
           trainingDate={training.date}
           trainingStatus={training.status}
+          participants={participants}
         />
       </div>
 

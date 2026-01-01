@@ -14,6 +14,8 @@ export interface WorkoutEntry {
   notes: string | null;
   created_at: string;
   user_id: string | null;
+  // Participant tracking for group trainings
+  participant_client_id: string | null;
   // Time fields - use time_ms for precision, time_seconds for legacy
   time_seconds: number | null;
   time_ms?: number | null;
@@ -40,6 +42,8 @@ export interface WorkoutEntryInput {
   reps?: number | null;
   rpe?: number | null;
   notes?: string | null;
+  // Participant tracking for group trainings
+  participant_client_id?: string | null;
   // New fields
   time_seconds?: number | null;
   distance_meters?: number | null;
@@ -62,6 +66,14 @@ export interface GroupedWorkoutEntry {
   exercise_id: string | null;
   exercise_name: string;
   sets: WorkoutEntry[];
+  participant_client_id: string | null;
+}
+
+// Grouped by participant (for group trainings)
+export interface ParticipantGroupedEntries {
+  participant_client_id: string | null;
+  participant_name?: string;
+  exercises: GroupedWorkoutEntry[];
 }
 
 /**
@@ -99,10 +111,12 @@ export function useWorkoutEntries(trainingSessionId?: string) {
     enabled: !!trainingSessionId,
   });
 
-  // Group entries by exercise
+  // Group entries by exercise AND participant
   const groupedEntries: GroupedWorkoutEntry[] = entries.reduce((acc, entry) => {
     const existing = acc.find(
-      g => g.exercise_name === entry.exercise_name && g.exercise_id === entry.exercise_id
+      g => g.exercise_name === entry.exercise_name && 
+           g.exercise_id === entry.exercise_id &&
+           g.participant_client_id === entry.participant_client_id
     );
     if (existing) {
       existing.sets.push(entry);
@@ -111,6 +125,7 @@ export function useWorkoutEntries(trainingSessionId?: string) {
         exercise_id: entry.exercise_id,
         exercise_name: entry.exercise_name,
         sets: [entry],
+        participant_client_id: entry.participant_client_id,
       });
     }
     return acc;

@@ -1,16 +1,23 @@
 import { useState } from 'react';
-import { Plus, Dumbbell, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, Dumbbell, RefreshCw, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkoutEntries, useSyncToClientStats, WorkoutEntry } from '@/hooks/useWorkoutEntries';
 import { WorkoutExerciseForm } from './WorkoutExerciseForm';
 import { WorkoutExerciseList } from './WorkoutExerciseList';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+export interface Participant {
+  client_id: string;
+  name: string;
+}
 
 interface WorkoutExerciseManagerProps {
   trainingSessionId: string;
   clientId: string;
   trainingDate: string;
   trainingStatus: string;
+  participants?: Participant[];
 }
 
 export function WorkoutExerciseManager({
@@ -18,9 +25,11 @@ export function WorkoutExerciseManager({
   clientId,
   trainingDate,
   trainingStatus,
+  participants = [],
 }: WorkoutExerciseManagerProps) {
   const { toast } = useToast();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
   const {
     groupedEntries,
     isLoading,
@@ -31,6 +40,22 @@ export function WorkoutExerciseManager({
   } = useWorkoutEntries(trainingSessionId);
 
   const syncToClientStats = useSyncToClientStats();
+  
+  // Check if this is a group training (more than 1 participant)
+  const isGroupTraining = participants.length > 1;
+  
+  // Get the current participant for adding exercises
+  const currentParticipantId = isGroupTraining ? activeParticipantId : (participants[0]?.client_id || clientId);
+  const currentParticipantName = participants.find(p => p.client_id === currentParticipantId)?.name || 'Klient';
+
+  // Filter entries by participant for display
+  const getEntriesForParticipant = (participantId: string | null) => {
+    if (!participantId) return groupedEntries;
+    return groupedEntries.filter(g => 
+      g.participant_client_id === participantId || 
+      (!g.participant_client_id && participantId === (participants[0]?.client_id || clientId))
+    );
+  };
 
   const handleAddExercise = async (data: {
     exercise_id: string | null;
@@ -46,7 +71,7 @@ export function WorkoutExerciseManager({
     }[];
   }) => {
     try {
-      // Create entries for each set
+      // Create entries for each set with participant_client_id for group trainings
       for (let i = 0; i < data.sets.length; i++) {
         await createEntry.mutateAsync({
           training_session_id: trainingSessionId,
@@ -60,6 +85,8 @@ export function WorkoutExerciseManager({
           distance_meters: data.sets[i].distance_meters,
           watts: data.sets[i].avg_watts,
           calories: data.sets[i].calories,
+          // Add participant_client_id for group trainings
+          participant_client_id: isGroupTraining ? currentParticipantId : null,
         });
       }
 
@@ -97,11 +124,13 @@ export function WorkoutExerciseManager({
     }
   };
 
-  const handleAddSet = async (exerciseName: string, exerciseId: string | null) => {
+  const handleAddSet = async (exerciseName: string, exerciseId: string | null, participantClientId?: string | null) => {
     try {
-      // Get last set values for this exercise
+      // Get last set values for this exercise (and participant if applicable)
       const exerciseGroup = groupedEntries.find(
-        g => g.exercise_name === exerciseName && g.exercise_id === exerciseId
+        g => g.exercise_name === exerciseName && 
+             g.exercise_id === exerciseId &&
+             (isGroupTraining ? g.participant_client_id === participantClientId : true)
       );
       const lastSet = exerciseGroup?.sets[exerciseGroup.sets.length - 1];
 
@@ -116,6 +145,7 @@ export function WorkoutExerciseManager({
         distance_meters: lastSet?.distance_meters || null,
         watts: lastSet?.watts || null,
         calories: lastSet?.calories || null,
+        participant_client_id: participantClientId || null,
       });
     } catch (error) {
       console.error('Error adding set:', error);
@@ -149,6 +179,12 @@ export function WorkoutExerciseManager({
         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Dumbbell className="w-5 h-5 text-primary" />
           Cviky ({groupedEntries.length})
+          {isGroupTraining && (
+            <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              {participants.length} účastníků
+            </span>
+          )}
         </h3>
         <div className="flex gap-2">
           {trainingStatus === 'completed' && groupedEntries.length > 0 && (
@@ -166,6 +202,72 @@ export function WorkoutExerciseManager({
               Sync statistiky
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* Group training: Tabs for each participant */}
+      {isGroupTraining ? (
+        <Tabs 
+          value={activeParticipantId || participants[0]?.client_id || ''} 
+          onValueChange={setActiveParticipantId}
+          className="w-full"
+        >
+          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/50 p-1">
+            {participants.map((p) => (
+              <TabsTrigger 
+                key={p.client_id} 
+                value={p.client_id}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {p.name}
+                <span className="ml-1 text-xs opacity-70">
+                  ({getEntriesForParticipant(p.client_id).length})
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          {participants.map((p) => (
+            <TabsContent key={p.client_id} value={p.client_id} className="mt-4 space-y-4">
+              {/* Add button for this participant */}
+              {!showAddForm && (
+                <Button
+                  onClick={() => {
+                    setActiveParticipantId(p.client_id);
+                    setShowAddForm(true);
+                  }}
+                  size="sm"
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Přidat cvik pro {p.name}
+                </Button>
+              )}
+              
+              {/* Add Form - only show when this tab is active */}
+              {showAddForm && activeParticipantId === p.client_id && (
+                <WorkoutExerciseForm
+                  onAdd={handleAddExercise}
+                  onCancel={() => setShowAddForm(false)}
+                  isLoading={createEntry.isPending}
+                />
+              )}
+              
+              {/* Exercises for this participant */}
+              <WorkoutExerciseList
+                groupedEntries={getEntriesForParticipant(p.client_id)}
+                onUpdateSet={handleUpdateSet}
+                onDeleteSet={handleDeleteSet}
+                onDeleteExercise={handleDeleteExercise}
+                onAddSet={(name, id) => handleAddSet(name, id, p.client_id)}
+                participantName={p.name}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        <>
+          {/* Single participant: Original layout */}
           {!showAddForm && (
             <Button
               onClick={() => setShowAddForm(true)}
@@ -175,26 +277,26 @@ export function WorkoutExerciseManager({
               Přidat cvik
             </Button>
           )}
-        </div>
-      </div>
+          
+          {/* Add Exercise Form */}
+          {showAddForm && (
+            <WorkoutExerciseForm
+              onAdd={handleAddExercise}
+              onCancel={() => setShowAddForm(false)}
+              isLoading={createEntry.isPending}
+            />
+          )}
 
-      {/* Add Exercise Form */}
-      {showAddForm && (
-        <WorkoutExerciseForm
-          onAdd={handleAddExercise}
-          onCancel={() => setShowAddForm(false)}
-          isLoading={createEntry.isPending}
-        />
+          {/* Exercise List */}
+          <WorkoutExerciseList
+            groupedEntries={groupedEntries}
+            onUpdateSet={handleUpdateSet}
+            onDeleteSet={handleDeleteSet}
+            onDeleteExercise={handleDeleteExercise}
+            onAddSet={(name, id) => handleAddSet(name, id, null)}
+          />
+        </>
       )}
-
-      {/* Exercise List */}
-      <WorkoutExerciseList
-        groupedEntries={groupedEntries}
-        onUpdateSet={handleUpdateSet}
-        onDeleteSet={handleDeleteSet}
-        onDeleteExercise={handleDeleteExercise}
-        onAddSet={handleAddSet}
-      />
 
       {/* Stats Summary */}
       {groupedEntries.length > 0 && (

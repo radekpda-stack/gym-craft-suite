@@ -44,6 +44,7 @@ interface WorkoutExerciseListProps {
   onDeleteSet: (entryId: string) => void;
   onDeleteExercise: (exerciseName: string, exerciseId: string | null) => void;
   onAddSet: (exerciseName: string, exerciseId: string | null) => void;
+  participantName?: string;
 }
 
 interface EditingSet {
@@ -59,6 +60,7 @@ export function WorkoutExerciseList({
   onDeleteSet,
   onDeleteExercise,
   onAddSet,
+  participantName,
 }: WorkoutExerciseListProps) {
   const [openExercises, setOpenExercises] = useState<string[]>([]);
   const [editingSet, setEditingSet] = useState<EditingSet | null>(null);

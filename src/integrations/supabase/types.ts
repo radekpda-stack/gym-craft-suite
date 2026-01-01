@@ -6370,6 +6370,7 @@ export type Database = {
           id: string
           is_pr: boolean | null
           notes: string | null
+          participant_client_id: string | null
           reps: number | null
           rpe: number | null
           set_number: number
@@ -6389,6 +6390,7 @@ export type Database = {
           id?: string
           is_pr?: boolean | null
           notes?: string | null
+          participant_client_id?: string | null
           reps?: number | null
           rpe?: number | null
           set_number?: number
@@ -6408,6 +6410,7 @@ export type Database = {
           id?: string
           is_pr?: boolean | null
           notes?: string | null
+          participant_client_id?: string | null
           reps?: number | null
           rpe?: number | null
           set_number?: number
@@ -6425,6 +6428,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exercises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_entries_participant_client_id_fkey"
+            columns: ["participant_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_entries_participant_client_id_fkey"
+            columns: ["participant_client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "workout_entries_training_session_id_fkey"
