@@ -1,4 +1,5 @@
-import { Client, TrainingSession, Exercise, Measurement, CalendarEvent, Joint, MuscleGroup, TrainerStats } from '@/types';
+// Using legacy types for mock data (old ERD format)
+import { Client, TrainingSession, Exercise, Measurement, CalendarEvent, Joint, MuscleGroup, TrainerStats } from '@/types/index-legacy';
 
 export const mockClients: Client[] = [
   {
