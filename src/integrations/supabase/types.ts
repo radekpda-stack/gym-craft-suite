@@ -155,6 +155,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       audit_log: {
@@ -329,6 +336,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cardio_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "cardio_entries_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
@@ -380,6 +394,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -434,6 +455,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -542,6 +570,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_access_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_accounts: {
@@ -607,6 +642,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_achievements: {
@@ -641,6 +683,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_achievements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -702,11 +751,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_budget_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_budget_members_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "client_budget_groups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_budget_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vw_group_ledger_balances"
+            referencedColumns: ["group_id"]
           },
         ]
       }
@@ -769,6 +832,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_media_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_media_diagnostic_id_fkey"
@@ -837,6 +907,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_packages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_packages_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
@@ -877,6 +954,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_activity_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -934,6 +1018,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_recurring_schedules: {
@@ -981,6 +1072,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_recurring_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_tags: {
@@ -1009,6 +1107,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_tags_tag_id_fkey"
@@ -1054,6 +1159,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tracked_exercises_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_tracked_exercises_exercise_id_fkey"
@@ -1105,6 +1217,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_training_phases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -1268,11 +1387,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "credit_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "credit_transactions_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "client_budget_groups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vw_group_ledger_balances"
+            referencedColumns: ["group_id"]
           },
           {
             foreignKeyName: "credit_transactions_product_id_fkey"
@@ -1744,6 +1877,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "diagnostic_assessments_v2_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "diagnostic_assessments_v2_diagnostic_id_fkey"
             columns: ["diagnostic_id"]
             isOneToOne: false
@@ -1889,6 +2029,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "diagnostics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       equipment: {
@@ -2027,6 +2174,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "exercise_entries_exercise_id_fkey"
@@ -2561,6 +2715,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "feedback_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "feedback_requests_training_session_id_fkey"
             columns: ["training_session_id"]
             isOneToOne: false
@@ -2749,6 +2910,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "measurements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       message_log: {
@@ -2804,6 +2972,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -2872,6 +3047,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mobility_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "mobility_entries_exercise_id_fkey"
@@ -3042,6 +3224,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       nutrition_coffee_entries: {
@@ -3103,6 +3292,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_coffee_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "nutrition_coffee_entries_session_id_fkey"
@@ -3207,6 +3403,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "nutrition_daily_analysis_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "nutrition_daily_analysis_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -3253,6 +3456,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_day_status_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "nutrition_day_status_session_id_fkey"
@@ -3319,6 +3529,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_drink_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "nutrition_drink_entries_session_id_fkey"
@@ -3456,6 +3673,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "nutrition_food_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "nutrition_food_entries_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -3554,6 +3778,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "nutrition_log_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       nutrition_weekly_summary: {
@@ -3621,6 +3852,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_weekly_summary_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "nutrition_weekly_summary_session_id_fkey"
@@ -3975,6 +4213,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pre_diagnostic_forms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       products: {
@@ -4220,6 +4465,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "red_flag_resolutions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "red_flag_resolutions_feedback_id_fkey"
             columns: ["feedback_id"]
             isOneToOne: false
@@ -4367,11 +4619,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "sales_orders_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "client_budget_groups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_orders_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vw_group_ledger_balances"
+            referencedColumns: ["group_id"]
           },
         ]
       }
@@ -4439,6 +4705,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "skill_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "skill_entries_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
@@ -4504,6 +4777,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stat_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "stat_events_session_id_fkey"
@@ -4707,6 +4987,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "training_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "training_feedback_feedback_request_id_fkey"
             columns: ["feedback_request_id"]
             isOneToOne: false
@@ -4795,6 +5082,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "training_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "training_participants_training_session_id_fkey"
             columns: ["training_session_id"]
             isOneToOne: false
@@ -4862,6 +5156,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -5035,6 +5336,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "training_sessions_parent_session_id_fkey"
@@ -5454,6 +5762,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "training_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       analytics_client_ltv: {
@@ -5474,6 +5789,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       analytics_exercise_volume_daily: {
@@ -5491,6 +5813,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -5510,6 +5839,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       analytics_muscle_group_distribution: {
@@ -5527,6 +5863,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -5567,6 +5910,28 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vw_client_ledger_balances: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          discrepancy: number | null
+          is_group_member: boolean | null
+          ledger_balance: number | null
+          stored_balance: number | null
+        }
+        Relationships: []
+      }
+      vw_group_ledger_balances: {
+        Row: {
+          discrepancy: number | null
+          group_id: string | null
+          group_name: string | null
+          ledger_balance: number | null
+          member_count: number | null
+          stored_balance: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {
@@ -5641,6 +6006,26 @@ export type Database = {
           p_reason?: string
           p_ref_id?: string
         }
+        Returns: Json
+      }
+      rpc_audit_all_balances: {
+        Args: never
+        Returns: {
+          discrepancy: number
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          ledger_balance: number
+          needs_fix: boolean
+          stored_balance: number
+        }[]
+      }
+      rpc_fix_balance_discrepancy: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
+      rpc_get_effective_balance: {
+        Args: { p_client_id: string }
         Returns: Json
       }
       rpc_get_or_create_system_client: {

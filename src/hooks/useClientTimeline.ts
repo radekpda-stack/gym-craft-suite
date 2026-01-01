@@ -45,7 +45,7 @@ export function useClientTimeline(clientId: string | undefined, options?: Timeli
         dateFilter = cutoffDate.toISOString();
       }
 
-      // Fetch trainings
+      // Fetch trainings where client is the PAYER (client_id)
       let trainingsQuery = supabase
         .from('training_sessions')
         .select('id, date, status, notes, duration')
@@ -59,7 +59,10 @@ export function useClientTimeline(clientId: string | undefined, options?: Timeli
       
       const { data: trainings } = await trainingsQuery;
 
+      const trainingIds = new Set<string>();
+
       trainings?.forEach(t => {
+        trainingIds.add(t.id);
         const statusMap: Record<string, TimelineEventType> = {
           completed: 'training_completed',
           scheduled: 'training_scheduled',
@@ -72,8 +75,41 @@ export function useClientTimeline(clientId: string | undefined, options?: Timeli
           title: t.status === 'completed' ? 'Trénink dokončen' : 
                  t.status === 'cancelled' ? 'Trénink zrušen' : 'Trénink naplánován',
           description: t.notes || undefined,
-          metadata: { duration: t.duration },
+          metadata: { duration: t.duration, role: 'payer' },
           relatedId: t.id,
+        });
+      });
+
+      // Fetch trainings where client is a PARTICIPANT (but not payer)
+      let participationsQuery = supabase
+        .from('training_participants')
+        .select('training_session_id, training_sessions(id, date, status, notes, duration, clients(name))')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(options?.limit || 50);
+      
+      const { data: participations } = await participationsQuery;
+
+      participations?.forEach(p => {
+        const session = p.training_sessions as any;
+        if (!session || trainingIds.has(session.id)) return; // Skip if already added as payer
+        
+        if (dateFilter && new Date(session.date) < new Date(dateFilter)) return;
+        
+        const statusMap: Record<string, TimelineEventType> = {
+          completed: 'training_completed',
+          scheduled: 'training_scheduled',
+          cancelled: 'training_cancelled',
+        };
+        events.push({
+          id: `training-participant-${session.id}`,
+          type: statusMap[session.status] || 'training_scheduled',
+          date: session.date,
+          title: session.status === 'completed' ? 'Trénink dokončen' : 
+                 session.status === 'cancelled' ? 'Trénink zrušen' : 'Trénink naplánován',
+          description: session.clients?.name ? `Hradí: ${session.clients.name}` : (session.notes || undefined),
+          metadata: { duration: session.duration, role: 'participant' },
+          relatedId: session.id,
         });
       });
 
