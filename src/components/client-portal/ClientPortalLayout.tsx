@@ -9,7 +9,8 @@ import {
   LogOut,
   Settings,
   Trophy,
-  BookOpen
+  BookOpen,
+  Award
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -28,9 +29,9 @@ const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
-  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
+  { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
+  { to: '/client/leaderboard', icon: Trophy, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
-  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
 ];
 
 // Conditional nav item
@@ -43,8 +44,8 @@ const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastav
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
-  { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
-  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+  { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
+  { to: '/client/leaderboard', icon: Trophy, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
 ];
 

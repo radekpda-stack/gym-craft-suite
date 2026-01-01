@@ -71,6 +71,8 @@ const ClientPortalProfile = lazy(() => import("./pages/client-portal/ClientPorta
 const ClientPortalSettings = lazy(() => import("./pages/client-portal/ClientPortalSettings"));
 const ClientPortalChallenges = lazy(() => import("./pages/client-portal/ClientPortalChallenges"));
 const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/ClientPortalWorkoutDiary"));
+const ClientPortalBadges = lazy(() => import("./pages/client-portal/ClientPortalBadges"));
+const ClientPortalLeaderboard = lazy(() => import("./pages/client-portal/ClientPortalLeaderboard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -123,6 +125,8 @@ const App = () => (
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
                 <Route path="challenges" element={<ClientPortalChallenges />} />
+                <Route path="badges" element={<ClientPortalBadges />} />
+                <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
               </Route>
@@ -136,6 +140,8 @@ const App = () => (
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
                 <Route path="challenges" element={<ClientPortalChallenges />} />
+                <Route path="badges" element={<ClientPortalBadges />} />
+                <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
               </Route>
