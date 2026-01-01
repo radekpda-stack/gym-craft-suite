@@ -984,6 +984,63 @@ export type Database = {
           },
         ]
       }
+      client_portal_notifications: {
+        Row: {
+          action_completed: boolean
+          action_url: string | null
+          client_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          message: string | null
+          metadata: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          action_completed?: boolean
+          action_url?: string | null
+          client_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          metadata?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          action_completed?: boolean
+          action_url?: string | null
+          client_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_preferences: {
         Row: {
           client_id: string

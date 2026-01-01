@@ -29,6 +29,7 @@ import { toVocative } from '@/lib/czechVocative';
 import { LatestProgressWidget } from '@/components/client-portal/dashboard/LatestProgressWidget';
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
+import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -117,6 +118,9 @@ export default function ClientPortalOverview() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Feedback Section - shows when feedback is available (24h+ after training) */}
+      <ClientPortalFeedbackSection />
 
       {/* NEW WIDGETS - Priority Order */}
       {/* 1. Latest PR (user's #1 priority) */}
