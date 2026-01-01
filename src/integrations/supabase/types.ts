@@ -263,6 +263,7 @@ export type Database = {
           created_at: string
           date: string
           distance_meters: number | null
+          duration_ms: number | null
           duration_seconds: number
           exercise_id: string | null
           exercise_name: string
@@ -287,6 +288,7 @@ export type Database = {
           created_at?: string
           date?: string
           distance_meters?: number | null
+          duration_ms?: number | null
           duration_seconds: number
           exercise_id?: string | null
           exercise_name: string
@@ -311,6 +313,7 @@ export type Database = {
           created_at?: string
           date?: string
           distance_meters?: number | null
+          duration_ms?: number | null
           duration_seconds?: number
           exercise_id?: string | null
           exercise_name?: string
@@ -2136,6 +2139,7 @@ export type Database = {
           sets: number
           strokes: number | null
           tempo: string | null
+          time_ms: number | null
           time_seconds: number | null
           training_phase: string | null
           training_session_id: string | null
@@ -2176,6 +2180,7 @@ export type Database = {
           sets?: number
           strokes?: number | null
           tempo?: string | null
+          time_ms?: number | null
           time_seconds?: number | null
           training_phase?: string | null
           training_session_id?: string | null
@@ -2216,6 +2221,7 @@ export type Database = {
           sets?: number
           strokes?: number | null
           tempo?: string | null
+          time_ms?: number | null
           time_seconds?: number | null
           training_phase?: string | null
           training_session_id?: string | null
@@ -4876,6 +4882,7 @@ export type Database = {
           client_id: string
           created_at: string
           date: string
+          duration_ms: number | null
           duration_seconds: number | null
           exercise_id: string | null
           exercise_name: string
@@ -4894,6 +4901,7 @@ export type Database = {
           client_id: string
           created_at?: string
           date?: string
+          duration_ms?: number | null
           duration_seconds?: number | null
           exercise_id?: string | null
           exercise_name: string
@@ -4912,6 +4920,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           date?: string
+          duration_ms?: number | null
           duration_seconds?: number | null
           exercise_id?: string | null
           exercise_name?: string
@@ -5841,6 +5850,7 @@ export type Database = {
           sort_order: number | null
           template_id: string
           tempo: string | null
+          time_ms: number | null
           time_seconds: number | null
         }
         Insert: {
@@ -5859,6 +5869,7 @@ export type Database = {
           sort_order?: number | null
           template_id: string
           tempo?: string | null
+          time_ms?: number | null
           time_seconds?: number | null
         }
         Update: {
@@ -5877,6 +5888,7 @@ export type Database = {
           sort_order?: number | null
           template_id?: string
           tempo?: string | null
+          time_ms?: number | null
           time_seconds?: number | null
         }
         Relationships: [
@@ -6098,6 +6110,7 @@ export type Database = {
           reps: number | null
           rpe: number | null
           set_number: number
+          time_ms: number | null
           time_seconds: number | null
           training_session_id: string
           user_id: string | null
@@ -6116,6 +6129,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           set_number?: number
+          time_ms?: number | null
           time_seconds?: number | null
           training_session_id: string
           user_id?: string | null
@@ -6134,6 +6148,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           set_number?: number
+          time_ms?: number | null
           time_seconds?: number | null
           training_session_id?: string
           user_id?: string | null

@@ -60,9 +60,15 @@ export function CardioProgressChart({ data, title, icon: Icon = Timer, isLoading
   const trendColor = change < 0 ? 'text-green-600' : change > 0 ? 'text-red-500' : 'text-muted-foreground';
 
   const formatTime = (seconds: number) => {
+    // Support centiseconds if present
+    const totalMs = seconds * 1000;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const hasDecimals = secs % 1 !== 0;
+    if (hasDecimals) {
+      return `${mins}:${secs.toFixed(2).padStart(5, '0')}`;
+    }
+    return `${mins}:${Math.floor(secs).toString().padStart(2, '0')}`;
   };
 
   const chartData = data.map(d => ({

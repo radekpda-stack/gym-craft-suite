@@ -14,17 +14,18 @@ export interface WorkoutEntry {
   notes: string | null;
   created_at: string;
   user_id: string | null;
-  // New fields for different measurement types
+  // Time fields - use time_ms for precision, time_seconds for legacy
   time_seconds: number | null;
+  time_ms?: number | null;
   distance_meters: number | null;
   calories: number | null;
   watts: number | null;
   is_pr: boolean;
-  // Cardio machine specific fields
-  heart_rate_zone: number | null;
-  avg_heart_rate: number | null;
-  max_heart_rate: number | null;
-  pace_per_500m: number | null;
+  // Optional cardio fields (may not exist in DB response)
+  heart_rate_zone?: number | null;
+  avg_heart_rate?: number | null;
+  max_heart_rate?: number | null;
+  pace_per_500m?: number | null;
 }
 
 export interface WorkoutEntryInput {
@@ -74,7 +75,14 @@ export function useWorkoutEntries(trainingSessionId?: string) {
         .order('set_number', { ascending: true });
 
       if (error) throw error;
-      return data as WorkoutEntry[];
+      // Map DB response to WorkoutEntry, providing defaults for optional fields
+      return (data || []).map(entry => ({
+        ...entry,
+        heart_rate_zone: (entry as any).heart_rate_zone ?? null,
+        avg_heart_rate: (entry as any).avg_heart_rate ?? null,
+        max_heart_rate: (entry as any).max_heart_rate ?? null,
+        pace_per_500m: (entry as any).pace_per_500m ?? null,
+      })) as WorkoutEntry[];
     },
     enabled: !!trainingSessionId,
   });
