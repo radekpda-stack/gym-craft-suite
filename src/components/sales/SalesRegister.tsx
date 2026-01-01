@@ -1,9 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { 
   ShoppingCart, 
-  Plus, 
-  Minus, 
-  X, 
   Loader2, 
   Package, 
   Banknote, 
@@ -14,18 +11,24 @@ import {
   Check,
   Wrench,
   Building2,
-  Coins
+  Coins,
+  ArrowUpDown,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/hooks/useProducts';
 import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
-import { useSalesCart } from '@/hooks/useSalesCart';
-import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
+import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
+import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
+import { CartItemRow } from './CartItemRow';
+import { CartSummary } from './CartSummary';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -38,6 +41,17 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Compon
   { value: 'bank', label: 'Převod', icon: Building2 },
 ];
 
+type SortOption = 'best_selling' | 'least_selling' | 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'best_selling', label: 'Nejprodávanější' },
+  { value: 'least_selling', label: 'Nejméně prodávané' },
+  { value: 'name_asc', label: 'Název A-Z' },
+  { value: 'name_desc', label: 'Název Z-A' },
+  { value: 'price_asc', label: 'Cena ↑' },
+  { value: 'price_desc', label: 'Cena ↓' },
+];
+
 export function SalesRegister() {
   const queryClient = useQueryClient();
   const { data: products = [], isLoading: productsLoading } = useProductsSortedBySales(true);
@@ -47,9 +61,62 @@ export function SalesRegister() {
   const [noClient, setNoClient] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<SortOption>('best_selling');
+  const [outOfStockLast, setOutOfStockLast] = useState(true);
+  const [hideOutOfStock, setHideOutOfStock] = useState(false);
 
-  // Shared cart hook
-  const cart = useSalesCart({ clientId: noClient ? null : selectedClient || null });
+  // New cart hook with discount support
+  const cart = useSalesCartWithDiscount({ clientId: noClient ? null : selectedClient || null });
+
+  // Sort and filter products
+  const sortedProducts = useMemo(() => {
+    let result = [...products];
+
+    // Filter out of stock if enabled
+    if (hideOutOfStock) {
+      result = result.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
+    }
+
+    // Sort based on option
+    const compareFn = (a: Product, b: Product): number => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name, 'cs');
+        case 'name_desc':
+          return b.name.localeCompare(a.name, 'cs');
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'least_selling':
+          // Reverse of default (best selling)
+          return a.name.localeCompare(b.name, 'cs');
+        case 'best_selling':
+        default:
+          // Already sorted by sales from hook
+          return 0;
+      }
+    };
+
+    if (sortBy !== 'best_selling') {
+      result.sort(compareFn);
+    }
+
+    if (sortBy === 'least_selling') {
+      result.reverse();
+    }
+
+    // Move out of stock to end if enabled
+    if (outOfStockLast) {
+      const inStock = result.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
+      const outOfStock = result.filter(p => p.kind === 'inventory' && (p.stock_quantity || 0) <= 0);
+      result = [...inStock, ...outOfStock];
+    }
+
+    return result;
+  }, [products, sortBy, outOfStockLast, hideOutOfStock]);
 
   // Sort clients by last activity
   const sortedClients = useMemo(() => {
@@ -70,35 +137,38 @@ export function SalesRegister() {
   }, [noClient]);
 
   const handleSale = useCallback(async () => {
-    if (cart.items.length === 0) {
-      return;
-    }
+    if (cart.isEmpty) return;
 
     // Validate: credit payment requires client
-    if (paymentMethod === 'credit' && !selectedClient) {
-      return;
-    }
+    if (paymentMethod === 'credit' && !selectedClient) return;
 
     // Validate cart
-    if (!cart.validation.isValid) {
-      return;
-    }
+    if (!cart.validation.isValid) return;
 
     setIsProcessing(true);
     try {
-      const result = await processSale({
+      const result = await processSaleWithDiscount({
         clientId: noClient ? null : selectedClient || null,
         paymentMethod,
         items: cart.items,
+        orderDiscount: cart.orderDiscount,
+        itemDiscounts: cart.itemsWithTotals
+          .filter(item => item.lineDiscount && item.product.kind === 'inventory')
+          .map(item => ({
+            productId: item.product.id,
+            type: item.lineDiscount!.type,
+            value: item.lineDiscount!.value,
+          })),
       });
 
-      showSaleResultToast(result, cart.totalAmount);
+      showSaleResultToast(result, cart.totals.totalAfterDiscount);
 
       if (result.success) {
         featureTracker.track('product_sale', 'finance', { 
           itemCount: cart.items.length, 
-          totalAmount: cart.totalAmount, 
+          totalAmount: cart.totals.totalAfterDiscount, 
           paymentMethod,
+          hasDiscount: cart.totals.totalDiscount > 0,
           anonymous: noClient 
         });
 
@@ -110,6 +180,7 @@ export function SalesRegister() {
 
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['products_sorted_by_sales'] });
         queryClient.invalidateQueries({ queryKey: ['clients'] });
         queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
         queryClient.invalidateQueries({ queryKey: ['sales_stats'] });
@@ -147,11 +218,11 @@ export function SalesRegister() {
   // Check if checkout is disabled
   const checkoutDisabled = useMemo(() => {
     if (isProcessing) return true;
-    if (cart.items.length === 0) return true;
+    if (cart.isEmpty) return true;
     if (!cart.validation.isValid) return true;
     if (paymentMethod === 'credit' && !selectedClient) return true;
     return false;
-  }, [isProcessing, cart.items.length, cart.validation.isValid, paymentMethod, selectedClient]);
+  }, [isProcessing, cart.isEmpty, cart.validation.isValid, paymentMethod, selectedClient]);
 
   // Check if credit topup in cart requires client
   const hasCreditTopup = cart.items.some(item => item.product.kind === 'credit_topup');
@@ -223,7 +294,7 @@ export function SalesRegister() {
       </div>
 
       {/* Validation Errors */}
-      {!cart.validation.isValid && cart.items.length > 0 && (
+      {!cart.validation.isValid && !cart.isEmpty && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
@@ -239,10 +310,49 @@ export function SalesRegister() {
         </div>
       )}
 
-      {/* Products Grid */}
+      {/* Products Grid with Sorting */}
       <div>
-        <Label className="mb-3 block text-sm font-medium">Produkty a služby</Label>
-        {products.length === 0 ? (
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <Label className="text-sm font-medium">Produkty a služby</Label>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="out-of-stock-last"
+                checked={outOfStockLast}
+                onCheckedChange={setOutOfStockLast}
+              />
+              <Label htmlFor="out-of-stock-last" className="text-xs cursor-pointer">
+                Vyprodané na konec
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Switch
+                id="hide-out-of-stock"
+                checked={hideOutOfStock}
+                onCheckedChange={setHideOutOfStock}
+              />
+              <Label htmlFor="hide-out-of-stock" className="text-xs cursor-pointer">
+                Skrýt vyprodané
+              </Label>
+            </div>
+          </div>
+        </div>
+        
+        {sortedProducts.length === 0 ? (
           <div className="glass rounded-xl p-8 text-center">
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">Žádné produkty</p>
@@ -252,7 +362,7 @@ export function SalesRegister() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            {products.map((product) => {
+            {sortedProducts.map((product) => {
               const cartItem = cart.getItem(product.id);
               const inCart = !!cartItem;
               const lowStock = isLowStock(product);
@@ -327,69 +437,35 @@ export function SalesRegister() {
       </div>
 
       {/* Cart */}
-      {cart.items.length > 0 && (
+      {!cart.isEmpty && (
         <div className="glass rounded-xl p-4">
           <Label className="mb-3 flex items-center gap-2 text-sm font-medium">
             <ShoppingCart className="w-4 h-4" />
-            Košík ({cart.totalItems})
+            Košík ({cart.totals.itemCount})
           </Label>
 
           <div className="space-y-2 mb-4">
-            {cart.items.map((item) => {
+            {cart.itemsWithTotals.map((item) => {
               const stockError = cart.validation.errors.find(
-                e => e.productId === item.product.id && e.type === 'insufficient_stock'
+                e => e.productId === item.product.id && e.type === 'stock'
               );
 
               return (
-                <div 
-                  key={item.product.id} 
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-lg bg-secondary/50",
-                    stockError && "ring-1 ring-destructive/50"
-                  )}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(item.product.price)} × {item.quantity} = {' '}
-                      <span className="font-medium text-foreground">
-                        {formatCurrency(item.product.price * item.quantity)}
-                      </span>
-                    </p>
-                    {stockError && (
-                      <p className="text-xs text-destructive mt-1">
-                        Pouze {stockError.available} ks skladem
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => cart.decrementQuantity(item.product.id)}
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </Button>
-                    <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => cart.incrementQuantity(item.product.id)}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => cart.removeItem(item.product.id)}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
+                <CartItemRow
+                  key={item.product.id}
+                  product={item.product}
+                  quantity={item.quantity}
+                  lineTotal={item.lineTotal}
+                  lineDiscount={item.lineDiscount}
+                  lineDiscountAmount={item.lineDiscountAmount}
+                  lineTotalAfterDiscount={item.lineTotalAfterDiscount}
+                  onQuantityChange={(qty) => cart.setQuantityDirect(item.product.id, qty)}
+                  onIncrement={(amt) => cart.incrementQuantity(item.product.id, amt)}
+                  onDecrement={() => cart.decrementQuantity(item.product.id)}
+                  onRemove={() => cart.removeItem(item.product.id)}
+                  onLineDiscountChange={(discount) => cart.setLineDiscount(item.product.id, discount)}
+                  stockIssue={!!stockError}
+                />
               );
             })}
           </div>
@@ -444,43 +520,28 @@ export function SalesRegister() {
             </RadioGroup>
           </div>
 
-          {/* Total */}
-          <div className={cn(
-            "p-4 rounded-xl border mb-4",
-            paymentMethod === 'credit' 
-              ? "bg-primary/10 border-primary/20" 
-              : "bg-success/10 border-success/20"
-          )}>
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm text-muted-foreground">Celkem:</p>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-foreground">
-              {formatCurrency(cart.totalAmount)}
-            </p>
-            {selectedClientData && paymentMethod === 'credit' && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Nový zůstatek:{' '}
-                <span className={cn(
-                  "font-medium",
-                  ((selectedClientData.credit_balance || 0) - cart.totalAmount) < 0 
-                    ? "text-destructive" 
-                    : "text-foreground"
-                )}>
-                  {formatCurrency((selectedClientData.credit_balance || 0) - cart.totalAmount)}
-                </span>
-              </p>
-            )}
-            {paymentMethod !== 'credit' && !hasCreditTopup && (
-              <p className="text-xs text-success mt-2">
-                Kredit klienta nebude ovlivněn
-              </p>
-            )}
-            {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
-              <p className="text-xs text-amber-600 mt-2">
-                Klientovi bude připsán kredit z dobíjecích položek
-              </p>
-            )}
+          {/* Cart Summary with Discounts */}
+          <div className="mb-4">
+            <CartSummary
+              totals={cart.totals}
+              orderDiscount={cart.orderDiscount}
+              onOrderDiscountChange={cart.setOrderDiscount}
+              clientCreditBalance={selectedClientData?.credit_balance}
+              isPayingWithCredit={paymentMethod === 'credit'}
+            />
           </div>
+
+          {/* Credit info for non-credit payments */}
+          {paymentMethod !== 'credit' && !hasCreditTopup && selectedClientData && (
+            <p className="text-xs text-success mb-4">
+              Kredit klienta nebude ovlivněn
+            </p>
+          )}
+          {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
+            <p className="text-xs text-amber-600 mb-4">
+              Klientovi bude připsán kredit z dobíjecích položek
+            </p>
+          )}
 
           {/* Complete Sale Button */}
           <Button 

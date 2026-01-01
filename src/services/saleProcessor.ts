@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/hooks/useSalesCart';
+import { CartItemWithDiscount, CartDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { toast } from 'sonner';
 
 export type PaymentMethod = 'cash' | 'card' | 'bank' | 'credit';
@@ -12,10 +13,27 @@ export interface ProcessSaleInput {
   note?: string;
 }
 
+export interface ProcessSaleWithDiscountInput {
+  clientId?: string | null;
+  groupId?: string | null;
+  paymentMethod: PaymentMethod;
+  items: CartItemWithDiscount[];
+  orderDiscount?: CartDiscount | null;
+  itemDiscounts?: Array<{
+    productId: string;
+    type: 'percent' | 'fixed';
+    value: number;
+  }>;
+  note?: string;
+}
+
 export interface ProcessSaleResult {
   success: boolean;
   orderId?: string;
   totalAmount?: number;
+  productsSubtotal?: number;
+  servicesSubtotal?: number;
+  totalDiscount?: number;
   creditDelta?: number;
   idempotent?: boolean;
   error?: string;
@@ -37,7 +55,89 @@ function generateIdempotencyKey(): string {
 }
 
 /**
- * Process a sale atomically via RPC
+ * Process a sale with discount support atomically via RPC
+ * All-or-nothing: either entire sale succeeds or nothing changes
+ */
+export async function processSaleWithDiscount(input: ProcessSaleWithDiscountInput): Promise<ProcessSaleResult> {
+  const { clientId, groupId, paymentMethod, items, orderDiscount, itemDiscounts, note } = input;
+
+  // Validate input
+  if (items.length === 0) {
+    return { success: false, error: 'Košík je prázdný' };
+  }
+
+  if (paymentMethod === 'credit' && !clientId && !groupId) {
+    return { success: false, error: 'Platba kreditem vyžaduje výběr klienta' };
+  }
+
+  // Check for credit topup without client
+  const hasCreditTopup = items.some(item => item.product.kind === 'credit_topup');
+  if (hasCreditTopup && !clientId) {
+    return { success: false, error: 'Dobití kreditu vyžaduje výběr klienta' };
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Uživatel není přihlášen' };
+  }
+
+  // Prepare payload with discount support
+  const payload = {
+    user_id: user.id,
+    client_id: clientId || null,
+    group_id: groupId || null,
+    payment_method: paymentMethod,
+    idempotency_key: generateIdempotencyKey(),
+    items: items.map(item => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+    })),
+    order_discount: orderDiscount ? {
+      type: orderDiscount.type,
+      value: orderDiscount.value,
+    } : null,
+    item_discounts: itemDiscounts || [],
+    note: note || null,
+  };
+
+  try {
+    const { data, error } = await supabase.rpc('rpc_process_sale', { 
+      payload: payload as any 
+    });
+
+    if (error) {
+      console.error('Sale processing error:', error);
+      return { success: false, error: error.message };
+    }
+
+    const result = data as any;
+    
+    if (!result.success) {
+      return { success: false, error: result.error || 'Neznámá chyba při zpracování prodeje' };
+    }
+
+    return {
+      success: true,
+      orderId: result.order_id,
+      totalAmount: result.total_amount,
+      productsSubtotal: result.products_subtotal,
+      servicesSubtotal: result.services_subtotal,
+      totalDiscount: result.total_discount,
+      creditDelta: result.credit_delta,
+      idempotent: result.idempotent,
+    };
+  } catch (err) {
+    console.error('Sale processing exception:', err);
+    return { 
+      success: false, 
+      error: err instanceof Error ? err.message : 'Chyba při zpracování prodeje' 
+    };
+  }
+}
+
+/**
+ * Process a sale atomically via RPC (legacy without discount)
  * All-or-nothing: either entire sale succeeds or nothing changes
  */
 export async function processSale(input: ProcessSaleInput): Promise<ProcessSaleResult> {
@@ -181,17 +281,17 @@ export async function getSystemClient(systemKey: string = 'anonymous_customer'):
  */
 export function showSaleResultToast(result: ProcessSaleResult, totalAmount: number) {
   if (result.success) {
-    const message = result.idempotent 
+    let message = result.idempotent 
       ? 'Prodej již byl zaznamenán'
       : `Prodej dokončen: ${totalAmount.toLocaleString('cs-CZ')} Kč`;
     
-    if (result.creditDelta && result.creditDelta > 0) {
-      toast.success(message, {
-        description: `Kredit navýšen o ${result.creditDelta.toLocaleString('cs-CZ')} Kč`,
-      });
-    } else {
-      toast.success(message);
-    }
+    const description = result.totalDiscount && result.totalDiscount > 0
+      ? `Sleva: ${result.totalDiscount.toLocaleString('cs-CZ')} Kč${result.creditDelta && result.creditDelta > 0 ? ` • Kredit +${result.creditDelta.toLocaleString('cs-CZ')} Kč` : ''}`
+      : result.creditDelta && result.creditDelta > 0
+        ? `Kredit navýšen o ${result.creditDelta.toLocaleString('cs-CZ')} Kč`
+        : undefined;
+
+    toast.success(message, { description });
   } else {
     toast.error('Chyba při zpracování prodeje', {
       description: result.error,
