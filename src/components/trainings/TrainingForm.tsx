@@ -5,7 +5,9 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Tag, Search, Check, AlertTriangle, AlertCircle } from "lucide-react";
+import { Loader2, Repeat, Tag, Search, Check, AlertTriangle } from "lucide-react";
+import { TrainingTypeSelector } from "./TrainingTypeSelector";
+import { TrainingType } from "@/hooks/useTrainingProgress";
 import {
   Form,
   FormControl,
@@ -53,6 +55,7 @@ const trainingFormSchema = z.object({
   notes: z.string().optional(),
   subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "in_progress", "completed", "canceled"]),
+  training_type: z.enum(["strength", "conditioning", "hiit", "cardio", "running", "mobility", "flexibility", "regeneration", "functional", "diagnostic", "other"]).optional().nullable(),
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),
@@ -112,6 +115,7 @@ export function TrainingForm({
       notes: defaultValues?.notes || "",
       subjective_rating: defaultValues?.subjective_rating || null,
       status: defaultValues?.status || "scheduled",
+      training_type: defaultValues?.training_type || null,
       is_recurring: false,
       recurrence_type: null,
       recurrence_count: 4,
@@ -302,7 +306,24 @@ export function TrainingForm({
                   <SelectItem value="completed">Dokončeno</SelectItem>
                   <SelectItem value="canceled">Zrušeno</SelectItem>
                 </SelectContent>
-          </Select>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="training_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Typ tréninku</FormLabel>
+              <FormControl>
+                <TrainingTypeSelector
+                  value={field.value}
+                  onChange={(value) => field.onChange(value as TrainingType)}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

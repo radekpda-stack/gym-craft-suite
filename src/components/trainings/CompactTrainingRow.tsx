@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { TrainingTypeBadge } from './TrainingTypeSelector';
 import { MoreHorizontal, Play, Check, Clock, X } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -164,9 +165,7 @@ export const CompactTrainingRow = memo(function CompactTrainingRow({
                 {client?.name || 'Neznámý klient'}
               </span>
               {session.training_type && (
-                <span className="text-xs text-muted-foreground truncate block">
-                  {session.training_type}
-                </span>
+                <TrainingTypeBadge type={session.training_type} />
               )}
             </div>
           </div>

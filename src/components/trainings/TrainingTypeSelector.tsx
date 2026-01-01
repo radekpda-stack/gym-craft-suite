@@ -1,6 +1,18 @@
 import { TRAINING_TYPES, TrainingType } from '@/hooks/useTrainingProgress';
 import { cn } from '@/lib/utils';
-import { Dumbbell, Activity, PersonStanding, Leaf, MoreHorizontal } from 'lucide-react';
+import { 
+  Dumbbell, 
+  Activity, 
+  PersonStanding, 
+  Leaf, 
+  MoreHorizontal,
+  Zap,
+  Heart,
+  Move,
+  Expand,
+  Target,
+  ClipboardCheck
+} from 'lucide-react';
 
 interface TrainingTypeSelectorProps {
   value?: string | null;
@@ -11,8 +23,14 @@ interface TrainingTypeSelectorProps {
 const typeIcons: Record<TrainingType, React.ComponentType<{ className?: string }>> = {
   strength: Dumbbell,
   conditioning: Activity,
+  hiit: Zap,
+  cardio: Heart,
   running: PersonStanding,
+  mobility: Move,
+  flexibility: Expand,
   regeneration: Leaf,
+  functional: Target,
+  diagnostic: ClipboardCheck,
   other: MoreHorizontal,
 };
 

@@ -52,6 +52,7 @@ export function EditTrainingSheet({
               notes: training.notes,
               subjective_rating: training.subjective_rating,
               status: training.status,
+              training_type: training.training_type as any,
             }}
             defaultTagIds={defaultTagIds}
             submitLabel="Uložit změny"
