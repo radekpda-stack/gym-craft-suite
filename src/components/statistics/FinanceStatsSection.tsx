@@ -8,6 +8,9 @@ import { MonthlyProgressCard } from './MonthlyProgressCard';
 import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
 import { TopPayingClientsCard } from './TopPayingClientsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
+import { TrainingDurationCard } from './TrainingDurationCard';
+import { CancellationStatsCard } from './CancellationStatsCard';
+import { TrainingsByHourCard } from './TrainingsByHourCard';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
@@ -175,6 +178,13 @@ export function FinanceStatsSection() {
         <RevenueBreakdownCard />
         <AverageTrainingPriceCard />
         <TopPayingClientsCard />
+      </div>
+
+      {/* Training Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <TrainingDurationCard />
+        <CancellationStatsCard stats={stats} />
+        <TrainingsByHourCard />
       </div>
 
       {/* Year Comparison */}
