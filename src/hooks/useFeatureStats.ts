@@ -57,6 +57,14 @@ export const ALL_FEATURES = [
   { name: 'page_view_public_feedback', category: 'navigation', label: 'Veřejný feedback' },
   { name: 'page_view_auth', category: 'navigation', label: 'Přihlášení' },
   { name: 'page_view_not_found', category: 'navigation', label: '404 stránka' },
+  { name: 'page_view_my_profile', category: 'navigation', label: 'Můj profil' },
+  { name: 'page_view_statistics', category: 'navigation', label: 'Statistiky' },
+  { name: 'page_view_challenges', category: 'navigation', label: 'Výzvy' },
+  { name: 'page_view_exercises', category: 'navigation', label: 'Cviky' },
+  { name: 'page_view_exercise_detail', category: 'navigation', label: 'Detail cviku' },
+  { name: 'page_view_nutrition_campaigns', category: 'navigation', label: 'Nutriční kampaně' },
+  { name: 'page_view_nutrition_overview', category: 'navigation', label: 'Přehled stravy' },
+  { name: 'page_view_client_portal_admin', category: 'navigation', label: 'Admin klientské zóny' },
   // Calendar
   { name: 'calendar_day_view', category: 'calendar', label: 'Denní pohled kalendáře' },
   { name: 'calendar_week_view', category: 'calendar', label: 'Týdenní pohled kalendáře' },
@@ -155,6 +163,8 @@ export const ALL_FEATURES = [
   { name: 'settings_feedback', category: 'settings', label: 'Nastavení feedbacku' },
   { name: 'settings_quick_actions', category: 'settings', label: 'Nastavení rychlých akcí' },
   { name: 'settings_nutrition', category: 'settings', label: 'Nastavení stravy' },
+  { name: 'settings_modules', category: 'settings', label: 'Nastavení modulů' },
+  { name: 'settings_theme', category: 'settings', label: 'Nastavení vzhledu' },
   // Reminders
   { name: 'reminder_create', category: 'reminders', label: 'Vytvoření připomínky' },
   { name: 'reminder_complete', category: 'reminders', label: 'Dokončení připomínky' },
@@ -164,6 +174,67 @@ export const ALL_FEATURES = [
   { name: 'annual_stats_export', category: 'export', label: 'Export ročních statistik' },
   { name: 'dashboard_kpi_detail', category: 'navigation', label: 'Detail KPI na dashboardu' },
   { name: 'analytics_export', category: 'export', label: 'Analytický export' },
+  
+  // === CLIENT PORTAL - Page Views ===
+  { name: 'page_view_client_portal_overview', category: 'client-portal', label: 'Portál - Přehled' },
+  { name: 'page_view_client_portal_progress', category: 'client-portal', label: 'Portál - Progres' },
+  { name: 'page_view_client_portal_attendance', category: 'client-portal', label: 'Portál - Docházka' },
+  { name: 'page_view_client_portal_credit', category: 'client-portal', label: 'Portál - Kredit' },
+  { name: 'page_view_client_portal_nutrition', category: 'client-portal', label: 'Portál - Strava' },
+  { name: 'page_view_client_portal_settings', category: 'client-portal', label: 'Portál - Nastavení' },
+  { name: 'page_view_client_portal_challenges', category: 'client-portal', label: 'Portál - Výzvy' },
+  { name: 'page_view_client_portal_leaderboard', category: 'client-portal', label: 'Portál - Žebříček' },
+  { name: 'page_view_client_portal_badges', category: 'client-portal', label: 'Portál - Odznaky' },
+  { name: 'page_view_client_portal_workout_diary', category: 'client-portal', label: 'Portál - Deník tréninků' },
+  
+  // === CLIENT PORTAL - Actions ===
+  { name: 'client_portal_login', category: 'client-portal', label: 'Portál - Přihlášení' },
+  { name: 'client_portal_logout', category: 'client-portal', label: 'Portál - Odhlášení' },
+  { name: 'client_portal_overview_viewed', category: 'client-portal', label: 'Portál - Zobrazení přehledu' },
+  { name: 'client_portal_progress_viewed', category: 'client-portal', label: 'Portál - Zobrazení progresu' },
+  { name: 'client_portal_attendance_viewed', category: 'client-portal', label: 'Portál - Zobrazení docházky' },
+  { name: 'client_portal_credit_viewed', category: 'client-portal', label: 'Portál - Zobrazení kreditu' },
+  { name: 'client_portal_nutrition_viewed', category: 'client-portal', label: 'Portál - Zobrazení stravy' },
+  { name: 'client_portal_challenges_viewed', category: 'client-portal', label: 'Portál - Zobrazení výzev' },
+  { name: 'client_portal_leaderboard_viewed', category: 'client-portal', label: 'Portál - Zobrazení žebříčku' },
+  { name: 'client_portal_badges_viewed', category: 'client-portal', label: 'Portál - Zobrazení odznaků' },
+  { name: 'client_portal_workout_diary_viewed', category: 'client-portal', label: 'Portál - Zobrazení deníku' },
+  
+  // === CLIENT PORTAL - Nutrition Actions ===
+  { name: 'portal_nutrition_add_food', category: 'client-portal', label: 'Portál - Přidání jídla' },
+  { name: 'portal_nutrition_add_water', category: 'client-portal', label: 'Portál - Přidání vody' },
+  { name: 'portal_nutrition_edit_entry', category: 'client-portal', label: 'Portál - Úprava záznamu stravy' },
+  { name: 'portal_nutrition_delete_entry', category: 'client-portal', label: 'Portál - Smazání záznamu stravy' },
+  
+  // === CLIENT PORTAL - Challenge Actions ===
+  { name: 'portal_challenge_join', category: 'client-portal', label: 'Portál - Přihlášení do výzvy' },
+  { name: 'portal_challenge_submit', category: 'client-portal', label: 'Portál - Odeslání výsledku výzvy' },
+  { name: 'portal_challenge_view_detail', category: 'client-portal', label: 'Portál - Detail výzvy' },
+  
+  // === CLIENT PORTAL - Workout Diary Actions ===
+  { name: 'portal_workout_log_create', category: 'client-portal', label: 'Portál - Vytvoření záznamu tréninku' },
+  { name: 'portal_workout_log_edit', category: 'client-portal', label: 'Portál - Úprava záznamu tréninku' },
+  { name: 'portal_workout_confirm', category: 'client-portal', label: 'Portál - Potvrzení tréninku' },
+  
+  // === CLIENT PORTAL - Progress Actions ===
+  { name: 'portal_progress_add_measurement', category: 'client-portal', label: 'Portál - Přidání měření' },
+  { name: 'portal_progress_view_chart', category: 'client-portal', label: 'Portál - Zobrazení grafu progresu' },
+  { name: 'portal_progress_view_pr', category: 'client-portal', label: 'Portál - Zobrazení PR' },
+  
+  // === CLIENT PORTAL - Feedback Actions ===
+  { name: 'portal_feedback_submit', category: 'client-portal', label: 'Portál - Odeslání feedbacku' },
+  { name: 'portal_feedback_skip', category: 'client-portal', label: 'Portál - Přeskočení feedbacku' },
+  
+  // === CLIENT PORTAL - Settings Actions ===
+  { name: 'portal_settings_change_password', category: 'client-portal', label: 'Portál - Změna hesla' },
+  { name: 'portal_settings_update_profile', category: 'client-portal', label: 'Portál - Aktualizace profilu' },
+  { name: 'portal_settings_toggle_leaderboard', category: 'client-portal', label: 'Portál - Nastavení žebříčku' },
+  { name: 'portal_settings_toggle_notifications', category: 'client-portal', label: 'Portál - Nastavení notifikací' },
+  
+  // === CLIENT PORTAL - Gamification ===
+  { name: 'portal_badge_earned', category: 'client-portal', label: 'Portál - Získání odznaku' },
+  { name: 'portal_xp_earned', category: 'client-portal', label: 'Portál - Získání XP' },
+  { name: 'portal_level_up', category: 'client-portal', label: 'Portál - Level up' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -185,6 +256,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   export: 'Export',
   reminders: 'Připomínky',
   system: 'Systém',
+  'client-portal': 'Klientská zóna',
 };
 
 function getPeriodStartDate(period: StatsPeriod): Date | null {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFeatureStats, ALL_FEATURES, CATEGORY_LABELS, StatsPeriod, useClearFeatureStats } from '@/hooks/useFeatureStats';
+import { useClientPortalAnalyticsStats, useInactivePortalClients, PortalStatsPeriod } from '@/hooks/useClientPortalAnalyticsStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -252,8 +253,9 @@ export function FeatureUsageStats() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
+          <TabsTrigger value="portal">Klientská zóna</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="details">Detail</TabsTrigger>
           <TabsTrigger value="unused">Nepoužívané</TabsTrigger>
