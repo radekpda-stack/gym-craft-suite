@@ -5271,15 +5271,19 @@ export type Database = {
           comment: string | null
           created_at: string
           difficulty: number | null
+          doms_level: number | null
           energy_level: string
           energy_rating: number | null
+          enjoyment_level: number | null
           fatigue_level: number
           feedback_request_id: string | null
+          feedback_type: string | null
           fun: number | null
           goal_relevance: string
           id: string
           is_processed: boolean | null
           is_red_flag: boolean | null
+          limiting_factor: string | null
           mood_rating: number
           muscle_soreness: string[] | null
           muscle_soreness_comment: string | null
@@ -5287,7 +5291,9 @@ export type Database = {
           pain_area: string | null
           pain_area_intensities: Json | null
           pain_area_other: string | null
+          pain_timing: string | null
           pain_type: string | null
+          readiness_level: number | null
           red_flag_reasons: string[] | null
           rpe_rating: number
           session_fit: number | null
@@ -5309,15 +5315,19 @@ export type Database = {
           comment?: string | null
           created_at?: string
           difficulty?: number | null
+          doms_level?: number | null
           energy_level: string
           energy_rating?: number | null
+          enjoyment_level?: number | null
           fatigue_level: number
           feedback_request_id?: string | null
+          feedback_type?: string | null
           fun?: number | null
           goal_relevance: string
           id?: string
           is_processed?: boolean | null
           is_red_flag?: boolean | null
+          limiting_factor?: string | null
           mood_rating: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
@@ -5325,7 +5335,9 @@ export type Database = {
           pain_area?: string | null
           pain_area_intensities?: Json | null
           pain_area_other?: string | null
+          pain_timing?: string | null
           pain_type?: string | null
+          readiness_level?: number | null
           red_flag_reasons?: string[] | null
           rpe_rating: number
           session_fit?: number | null
@@ -5347,15 +5359,19 @@ export type Database = {
           comment?: string | null
           created_at?: string
           difficulty?: number | null
+          doms_level?: number | null
           energy_level?: string
           energy_rating?: number | null
+          enjoyment_level?: number | null
           fatigue_level?: number
           feedback_request_id?: string | null
+          feedback_type?: string | null
           fun?: number | null
           goal_relevance?: string
           id?: string
           is_processed?: boolean | null
           is_red_flag?: boolean | null
+          limiting_factor?: string | null
           mood_rating?: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
@@ -5363,7 +5379,9 @@ export type Database = {
           pain_area?: string | null
           pain_area_intensities?: Json | null
           pain_area_other?: string | null
+          pain_timing?: string | null
           pain_type?: string | null
+          readiness_level?: number | null
           red_flag_reasons?: string[] | null
           rpe_rating?: number
           session_fit?: number | null
@@ -5637,6 +5655,7 @@ export type Database = {
           subjective_difficulty: number | null
           subjective_rating: number | null
           total_volume: number | null
+          trainer_internal_note: string | null
           trainer_problems: string | null
           trainer_recommendations: string | null
           trainer_went_well: string | null
@@ -5679,6 +5698,7 @@ export type Database = {
           subjective_difficulty?: number | null
           subjective_rating?: number | null
           total_volume?: number | null
+          trainer_internal_note?: string | null
           trainer_problems?: string | null
           trainer_recommendations?: string | null
           trainer_went_well?: string | null
@@ -5721,6 +5741,7 @@ export type Database = {
           subjective_difficulty?: number | null
           subjective_rating?: number | null
           total_volume?: number | null
+          trainer_internal_note?: string | null
           trainer_problems?: string | null
           trainer_recommendations?: string | null
           trainer_went_well?: string | null
