@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type ThemeId = 'nike' | 'arctic-pro' | 'light-minimal';
+export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal';
 
 export interface Theme {
   id: ThemeId;
@@ -18,12 +18,24 @@ export interface Theme {
 export const themes: Theme[] = [
   {
     id: 'nike',
-    name: 'Nike',
-    nameCs: 'Nike',
+    name: 'Nike Orange',
+    nameCs: 'Nike Oranžová',
     description: 'Bold dark theme with warm orange accents',
     descriptionCs: 'Tmavý vzhled s teplými oranžovými akcenty',
     preview: {
       primary: '#f97316',
+      background: '#0a0a0a',
+      card: '#171717',
+    },
+  },
+  {
+    id: 'nike-volt',
+    name: 'Nike Volt',
+    nameCs: 'Nike Volt',
+    description: 'Electric dark theme with neon green accents',
+    descriptionCs: 'Elektrický tmavý vzhled s neonově zelenými akcenty',
+    preview: {
+      primary: '#CCFF00',
       background: '#0a0a0a',
       card: '#171717',
     },
@@ -38,6 +50,18 @@ export const themes: Theme[] = [
       primary: '#00D4FF',
       background: '#0A0F14',
       card: '#0D1419',
+    },
+  },
+  {
+    id: 'frost-minimal',
+    name: 'Frost Minimal',
+    nameCs: 'Frost Minimal',
+    description: 'Elegant light theme with icy blue accents',
+    descriptionCs: 'Elegantní světlý vzhled s ledově modrými akcenty',
+    preview: {
+      primary: '#0EA5E9',
+      background: '#F0F9FF',
+      card: '#FFFFFF',
     },
   },
   {
@@ -77,7 +101,7 @@ export function useTheme() {
     root.classList.add(`theme-${themeId}`);
     
     // Handle dark/light mode
-    if (themeId === 'light-minimal') {
+    if (themeId === 'light-minimal' || themeId === 'frost-minimal') {
       root.classList.remove('dark');
       root.classList.add('light');
     } else {
