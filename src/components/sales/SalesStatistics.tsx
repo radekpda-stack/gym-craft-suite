@@ -94,12 +94,12 @@ function useCombinedSalesStats(period: Period) {
         .gte('created_at', fromDate.toISOString())
         .eq('payment_status', 'completed');
 
-      // Get order items if we have orders
+      // Get order items if we have orders - include product for purchase_price
       let orderItems: any[] = [];
       if (orders && orders.length > 0) {
         const { data: items } = await supabase
           .from('sales_order_items')
-          .select('*')
+          .select('*, products(purchase_price)')
           .in('order_id', orders.map(o => o.id));
         orderItems = items || [];
       }
@@ -109,7 +109,7 @@ function useCombinedSalesStats(period: Period) {
       if (!orders || orders.length === 0) {
         const { data: transactions } = await supabase
           .from('credit_transactions')
-          .select('*, products(id, name, price, category)')
+          .select('*, products(id, name, price, category, purchase_price)')
           .eq('type', 'product')
           .gte('created_at', fromDate.toISOString());
         legacySales = transactions || [];
@@ -117,6 +117,7 @@ function useCombinedSalesStats(period: Period) {
 
       // Calculate stats
       let totalRevenue = 0;
+      let totalCosts = 0;
       let totalOrders = 0;
       const byPaymentMethod: Record<string, { count: number; revenue: number }> = {
         cash: { count: 0, revenue: 0 },
@@ -124,8 +125,8 @@ function useCombinedSalesStats(period: Period) {
         bank: { count: 0, revenue: 0 },
         credit: { count: 0, revenue: 0 },
       };
-      const productStats: Record<string, { name: string; quantity: number; revenue: number }> = {};
-      const dailyData: Record<string, { date: string; revenue: number; count: number }> = {};
+      const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number }> = {};
+      const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number }> = {};
 
       if (orders && orders.length > 0) {
         // Use new orders
@@ -138,59 +139,87 @@ function useCombinedSalesStats(period: Period) {
             byPaymentMethod[method].revenue += order.total_amount || 0;
           }
 
-          // Daily aggregation
+          // Daily aggregation - profit calculated later
           const dateKey = order.created_at.split('T')[0];
           if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0 };
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0 };
           }
           dailyData[dateKey].revenue += order.total_amount || 0;
           dailyData[dateKey].count++;
         });
 
-        // Product stats from order items
+        // Product stats from order items - include costs
         orderItems.forEach(item => {
           const key = item.product_id;
+          const purchasePrice = item.products?.purchase_price || 0;
+          const itemCost = purchasePrice * item.quantity;
+          totalCosts += itemCost;
+
           if (!productStats[key]) {
-            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0 };
+            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0, costs: 0 };
           }
           productStats[key].quantity += item.quantity;
           productStats[key].revenue += item.line_total;
+          productStats[key].costs += itemCost;
+
+          // Add profit to daily data
+          const order = orders.find(o => o.id === item.order_id);
+          if (order) {
+            const dateKey = order.created_at.split('T')[0];
+            if (dailyData[dateKey]) {
+              dailyData[dateKey].profit += item.line_total - itemCost;
+            }
+          }
         });
       } else if (legacySales.length > 0) {
         // Use legacy transactions
         totalOrders = legacySales.length;
         legacySales.forEach(sale => {
           const amount = Math.abs(sale.amount || 0);
+          const purchasePrice = sale.products?.purchase_price || 0;
           totalRevenue += amount;
+          totalCosts += purchasePrice;
+          
           const method = sale.payment_method || 'credit';
           if (byPaymentMethod[method]) {
             byPaymentMethod[method].count++;
             byPaymentMethod[method].revenue += amount;
           }
 
-          // Daily aggregation
+          // Daily aggregation with profit
           const dateKey = sale.created_at.split('T')[0];
           if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0 };
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0 };
           }
           dailyData[dateKey].revenue += amount;
           dailyData[dateKey].count++;
+          dailyData[dateKey].profit += amount - purchasePrice;
 
-          // Product stats
+          // Product stats with costs
           if (sale.product_id && sale.products) {
             const key = sale.product_id;
             if (!productStats[key]) {
-              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0 };
+              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0, costs: 0 };
             }
             productStats[key].quantity++;
             productStats[key].revenue += amount;
+            productStats[key].costs += purchasePrice;
           }
         });
       }
 
+      // Calculate profit and margin
+      const totalProfit = totalRevenue - totalCosts;
+      const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
       // Sort products by quantity (most sold first)
       const topProducts = Object.entries(productStats)
-        .map(([id, stats]) => ({ productId: id, ...stats }))
+        .map(([id, stats]) => ({ 
+          productId: id, 
+          ...stats,
+          profit: stats.revenue - stats.costs,
+          margin: stats.revenue > 0 ? ((stats.revenue - stats.costs) / stats.revenue) * 100 : 0
+        }))
         .sort((a, b) => b.quantity - a.quantity);
 
       // Sort trend data
@@ -198,11 +227,16 @@ function useCombinedSalesStats(period: Period) {
 
       // Calculate average order value
       const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const avgProfit = totalOrders > 0 ? totalProfit / totalOrders : 0;
 
       return {
         totalRevenue,
+        totalCosts,
+        totalProfit,
+        profitMargin,
         totalOrders,
         avgOrderValue,
+        avgProfit,
         byPaymentMethod,
         topProducts,
         trendData,
@@ -289,7 +323,8 @@ export function SalesStatistics() {
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Tržby */}
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <TrendingUp className="w-4 h-4" />
@@ -299,6 +334,34 @@ export function SalesStatistics() {
               <p className="text-xs text-muted-foreground mt-1">{PERIODS.find(p => p.value === period)?.label}</p>
             </div>
 
+            {/* Náklady */}
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <TrendingDown className="w-4 h-4" />
+                <span className="text-xs">Náklady</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalCosts)}</p>
+              <p className="text-xs text-muted-foreground mt-1">nákupní ceny</p>
+            </div>
+
+            {/* Čistý zisk */}
+            <div className="glass rounded-xl p-4 border border-emerald-500/30 bg-emerald-500/5">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2">
+                <Banknote className="w-4 h-4" />
+                <span className="text-xs font-medium">Čistý zisk</span>
+              </div>
+              <p className={cn(
+                "text-2xl font-bold",
+                stats.totalProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+              )}>
+                {formatCurrency(stats.totalProfit)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                marže {stats.profitMargin.toFixed(1)}%
+              </p>
+            </div>
+
+            {/* Počet prodejů */}
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <ShoppingCart className="w-4 h-4" />
@@ -308,15 +371,17 @@ export function SalesStatistics() {
               <p className="text-xs text-muted-foreground mt-1">transakcí</p>
             </div>
 
+            {/* Průměrný zisk */}
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <DollarSign className="w-4 h-4" />
-                <span className="text-xs">Průměrná hodnota</span>
+                <Percent className="w-4 h-4" />
+                <span className="text-xs">Průměrný zisk</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.avgOrderValue)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.avgProfit)}</p>
               <p className="text-xs text-muted-foreground mt-1">na prodej</p>
             </div>
 
+            {/* Nejprodávanější */}
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
