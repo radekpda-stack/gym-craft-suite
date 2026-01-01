@@ -11,13 +11,10 @@ import { ClientDetailSkeleton } from '@/components/skeletons';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { ClientDetailView } from '@/components/clients/ClientDetailView';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatters';
-import { STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
+import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 
 // New components
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
@@ -51,6 +48,7 @@ export default function ClientDetail() {
   const { data: feedbackData = [] } = useClientFeedback(id);
   const { data: creditTransactions = [] } = useCreditTransactions(id);
   const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
+  const { data: portalAccess } = useClientPortalAccess(id);
   const updateClient = useUpdateClient();
   const isMobile = useIsMobile();
   
@@ -91,12 +89,11 @@ export default function ClientDetail() {
   // Unpaid stats
   const unpaidCount = unpaidTrainings.length;
 
-  // Credit status for mobile header
-  const creditStatus = getCreditStatus(creditBalance, unpaidCount > 0);
-  const statusConfig = STATUS_CONFIG[creditStatus];
-
-  // Client zone info (simplified - no account data yet)
-  const clientZoneInfo = null;
+  // Client zone info from portal access
+  const clientZoneInfo = portalAccess ? {
+    isActive: portalAccess.status === 'active' && !!portalAccess.auth_user_id,
+    lastLogin: portalAccess.last_portal_login,
+  } : null;
 
   // All transactions (personal + group if shared)
   const allTransactions = isSharedBudget 
