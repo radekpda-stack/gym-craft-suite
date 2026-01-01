@@ -28,7 +28,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
-import { TimePickerSelect } from '@/components/ui/time-picker-select';
+import { TimeInputSimple } from '@/components/ui/time-input-simple';
 import { useClients } from '@/hooks/useClients';
 import { useExercises } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
@@ -341,47 +341,50 @@ export function QuickLogDialog({
             {(isTimeBased || isCardio || showCardioMetrics) ? (
               /* Time-based / Cardio */
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="time_ms"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          <Timer className="w-3 h-3" />
-                          Čas (M:SS.CC) *
-                        </FormLabel>
-                        <FormControl>
-                          <TimePickerSelect
-                            value={field.value}
-                            onChange={field.onChange}
-                            maxMinutes={9}
-                            showCentiseconds={true}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="distance_meters"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Vzdálenost (m)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="500"
-                            value={field.value ?? ''}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {/* Time input - full width for better mobile UX */}
+                <FormField
+                  control={form.control}
+                  name="time_ms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Timer className="w-3 h-3" />
+                        Čas *
+                      </FormLabel>
+                      <FormControl>
+                        <TimeInputSimple
+                          value={field.value}
+                          onChange={field.onChange}
+                          maxMinutes={59}
+                          showCentiseconds={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Distance */}
+                <FormField
+                  control={form.control}
+                  name="distance_meters"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vzdálenost (m)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="500"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          className="h-11"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* RPE Slider */}
                 <FormField
