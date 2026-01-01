@@ -74,6 +74,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         items: [
           { to: '/clients', icon: Users, label: 'Klienti' },
           ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+          { to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
         ],
       },
       {
