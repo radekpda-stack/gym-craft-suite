@@ -5,7 +5,6 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
@@ -17,31 +16,20 @@ import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags, useAllTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
-import { SwipeableTrainingCard } from '@/components/trainings/SwipeableTrainingCard';
+import { CompactTrainingRow } from '@/components/trainings/CompactTrainingRow';
 import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
+import { HorizontalChipScroller } from '@/components/ui/HorizontalChipScroller';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { useTrainingsPageState, TimeFilter } from '@/hooks/useTrainingsPageState';
 
-const statusLabels = {
-  scheduled: 'Plán',
-  completed: 'Hotovo',
-  awaiting_payment: 'Čeká',
-  canceled: 'Zrušeno',
-};
-
-const statusLabelsLong = {
-  scheduled: 'Naplánováno',
-  completed: 'Dokončeno',
-  awaiting_payment: 'Čeká na platbu',
-  canceled: 'Zrušeno',
-};
+type StatusFilter = 'all' | 'scheduled' | 'completed' | 'canceled' | 'awaiting_payment';
 
 export default function Trainings() {
   usePageTracking('trainings');
@@ -53,9 +41,9 @@ export default function Trainings() {
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: typeof sessions[0] | null }>({ open: false, session: null });
 
   // Persistent page state
-  const { timeFilter, statusFilter, activeTab, setTimeFilter, setStatusFilter, setActiveTab } = useTrainingsPageState();
+  const { timeFilter, statusFilter, setTimeFilter, setStatusFilter } = useTrainingsPageState();
 
-  // FAB Actions
+  // FAB Actions - Only on mobile
   const fabActions: FABAction[] = [
     {
       id: 'new-training',
@@ -114,11 +102,7 @@ export default function Trainings() {
     return sessionList;
   };
 
-  // Include all sessions in active view (including canceled for visibility)
-  const allSessionsForActiveTab = useMemo(() => sessions, [sessions]);
-  const canceledSessions = useMemo(() => sessions.filter(s => s.status === 'canceled'), [sessions]);
-
-  // Time-filtered counts for toggle (exclude canceled from counts)
+  // Time-filtered counts
   const timeCounts = useMemo(() => {
     const active = sessions.filter(s => s.status !== 'canceled');
     return {
@@ -128,16 +112,21 @@ export default function Trainings() {
     };
   }, [sessions]);
 
-  // Apply time filter - include all sessions (including canceled)
+  // Apply time filter
   const timeFilteredSessions = useMemo(() => {
-    return filterByTime(allSessionsForActiveTab, timeFilter);
-  }, [allSessionsForActiveTab, timeFilter]);
+    return filterByTime(sessions, timeFilter);
+  }, [sessions, timeFilter]);
 
-  // Count of trainings awaiting payment
-  const awaitingPaymentCount = useMemo(() => {
-    return timeFilteredSessions.filter(
-      s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')
-    ).length;
+  // Status counts for chips
+  const statusCounts = useMemo(() => {
+    const filtered = timeFilteredSessions;
+    return {
+      all: filtered.length,
+      scheduled: filtered.filter(s => s.status === 'scheduled').length,
+      completed: filtered.filter(s => s.status === 'completed').length,
+      canceled: filtered.filter(s => s.status === 'canceled').length,
+      awaiting_payment: filtered.filter(s => s.status === 'completed' && (!s.payment_status || s.payment_status === 'pending')).length,
+    };
   }, [timeFilteredSessions]);
 
   const handleCompleteTraining = async (sessionId: string) => {
@@ -150,6 +139,19 @@ export default function Trainings() {
       toast({ title: 'Trénink dokončen' });
     } catch (error) {
       toast({ title: 'Chyba při dokončování', variant: 'destructive' });
+    }
+  };
+
+  const handleStartTraining = async (sessionId: string) => {
+    try {
+      await updateTraining.mutateAsync({
+        id: sessionId,
+        input: { status: 'in_progress' },
+        trainingPrices,
+      });
+      toast({ title: 'Trénink zahájen' });
+    } catch (error) {
+      toast({ title: 'Chyba při zahajování', variant: 'destructive' });
     }
   };
 
@@ -226,33 +228,24 @@ export default function Trainings() {
     });
   };
 
-  const filteredActiveSessions = timeFilteredSessions.filter((session) => {
+  // Apply status filter
+  const filteredSessions = timeFilteredSessions.filter((session) => {
     const client = clients.find((c) => c.id === session.client_id);
     const matchesSearch =
       client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Special filter for awaiting payment
+    if (statusFilter === 'all' || !statusFilter) {
+      return matchesSearch;
+    }
+
     if (statusFilter === 'awaiting_payment') {
       return matchesSearch && 
         session.status === 'completed' && 
         (!session.payment_status || session.payment_status === 'pending');
     }
 
-    // Special filter for canceled
-    if (statusFilter === 'canceled') {
-      return matchesSearch && session.status === 'canceled';
-    }
-
-    // For other filters, include canceled sessions too (they'll be styled differently)
-    const matchesStatus = !statusFilter || session.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const filteredCanceledSessions = canceledSessions.filter((session) => {
-    const client = clients.find((c) => c.id === session.client_id);
-    return client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && session.status === statusFilter;
   });
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
@@ -315,19 +308,29 @@ export default function Trainings() {
     }
   };
 
+  // Status chip options
+  const statusChipOptions = [
+    { value: 'all', label: 'Všechny', count: statusCounts.all },
+    { value: 'scheduled', label: 'Plán', count: statusCounts.scheduled },
+    { value: 'completed', label: 'Hotovo', count: statusCounts.completed },
+    { value: 'awaiting_payment', label: 'Čeká', count: statusCounts.awaiting_payment },
+    { value: 'canceled', label: 'Zrušeno', count: statusCounts.canceled },
+  ];
+
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start sm:items-center justify-between gap-4">
+    <div className="space-y-4 animate-fade-in">
+      {/* Header - No top-right button on desktop, FAB handles mobile */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
             Tréninky
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground">
             {sessions.length} celkem
           </p>
         </div>
 
+        {/* Desktop only - hidden on mobile where FAB is used */}
         <Button className="gap-2 hidden sm:flex" onClick={() => setIsCreateSheetOpen(true)}>
           <Plus className="w-4 h-4" />
           Nový trénink
@@ -351,187 +354,68 @@ export default function Trainings() {
         defaultValues={duplicateDefaults}
       />
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-11">
-          <TabsTrigger value="active" className="gap-2">
-            <Dumbbell className="w-4 h-4" />
-            Aktivní
-            {timeFilteredSessions.length > 0 && (
-              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full">
-                {timeFilteredSessions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="canceled" className="gap-2">
-            <XCircle className="w-4 h-4" />
-            Zrušené
-            {canceledSessions.length > 0 && (
-              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full">
-                {canceledSessions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Search + Status Filter Chips */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Hledat..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 bg-card border-border"
+          />
+        </div>
 
-        <TabsContent value="active" className="mt-4 space-y-4">
-          {/* Search and Status Filters */}
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Hledat..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
+        {/* Horizontal Chip Scroller for status */}
+        <HorizontalChipScroller
+          options={statusChipOptions}
+          value={statusFilter || 'all'}
+          onChange={(val) => setStatusFilter(val === 'all' ? null : val as any)}
+        />
+      </div>
+
+      {/* Sessions List - Compact Rows */}
+      {isLoading ? (
+        <TrainingListSkeleton />
+      ) : (
+        <div className="space-y-1 bg-card rounded-lg border border-border overflow-hidden">
+          {filteredSessions.map((session) => {
+            const client = clients.find((c) => c.id === session.client_id);
+
+            return (
+              <CompactTrainingRow
+                key={session.id}
+                session={session}
+                client={client}
+                onStart={() => handleStartTraining(session.id)}
+                onComplete={() => handleCompleteTraining(session.id)}
+                onCancel={() => handleOpenCancelDialog(session.id)}
+                onDuplicate={() => handleDuplicateTraining(session.id)}
               />
-            </div>
+            );
+          })}
+        </div>
+      )}
 
-            {/* Status filter pills */}
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-              <Button
-                variant={statusFilter === null ? 'default' : 'outline'}
-                onClick={() => setStatusFilter(null)}
-                className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
-                size="sm"
+      {!isLoading && filteredSessions.length === 0 && (
+        <div className="rounded-lg border border-border p-8">
+          <EmptyState
+            icon={Dumbbell}
+            title={timeFilteredSessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
+            description={timeFilteredSessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
+            size="lg"
+            action={timeFilteredSessions.length === 0 ? (
+              <Button 
+                className="gap-2"
+                onClick={() => setIsCreateSheetOpen(true)}
               >
-                Všechny
+                <Plus className="w-4 h-4" />
+                Nový trénink
               </Button>
-              {(['scheduled', 'completed', 'canceled'] as const).map((status) => (
-                <Button
-                  key={status}
-                  variant={statusFilter === status ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter(status)}
-                  className="rounded-full h-9 px-4 flex-shrink-0 touch-target"
-                  size="sm"
-                >
-                  <span className="sm:hidden">{statusLabels[status]}</span>
-                  <span className="hidden sm:inline">{statusLabelsLong[status]}</span>
-                </Button>
-              ))}
-              <Button
-                variant={statusFilter === 'awaiting_payment' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('awaiting_payment')}
-                className="rounded-full h-9 px-4 flex-shrink-0 touch-target gap-2"
-                size="sm"
-              >
-                <span className="sm:hidden">{statusLabels.awaiting_payment}</span>
-                <span className="hidden sm:inline">{statusLabelsLong.awaiting_payment}</span>
-                {awaitingPaymentCount > 0 && (
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full",
-                      statusFilter === 'awaiting_payment' 
-                        ? "bg-background/20 text-foreground" 
-                        : "bg-warning/20 text-warning"
-                    )}
-                  >
-                    {awaitingPaymentCount}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Sessions List with new TrainingCard */}
-          {isLoading ? (
-            <TrainingListSkeleton />
-          ) : (
-            <div className="space-y-3">
-              {filteredActiveSessions.map((session, index) => {
-                const client = clients.find((c) => c.id === session.client_id);
-
-                return (
-                  <div
-                    key={session.id}
-                    className="animate-slide-up"
-                    style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
-                  >
-                    <SwipeableTrainingCard
-                      session={session}
-                      client={client}
-                      tags={sessionTagsMap[session.id]}
-                      onComplete={() => handleCompleteTraining(session.id)}
-                      onCancel={() => handleOpenCancelDialog(session.id)}
-                      onPay={() => handleOpenPayment(session.id, client?.name || 'Klient')}
-                      onDuplicate={() => handleDuplicateTraining(session.id)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {!isLoading && filteredActiveSessions.length === 0 && (
-            <div className="glass rounded-2xl p-8 sm:p-12">
-              <EmptyState
-                icon={Dumbbell}
-                title={timeFilteredSessions.length === 0 ? "Zatím žádné tréninky" : "Nic nenalezeno"}
-                description={timeFilteredSessions.length === 0 ? "Vytvořte první trénink" : "Upravte vyhledávání nebo filtry"}
-                size="lg"
-                action={timeFilteredSessions.length === 0 ? (
-                  <Button 
-                    className="gap-2"
-                    onClick={() => setIsCreateSheetOpen(true)}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nový trénink
-                  </Button>
-                ) : undefined}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="canceled" className="mt-4 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Hledat..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-12 bg-secondary border-border rounded-xl text-base"
-            />
-          </div>
-
-          {isLoading ? (
-            <TrainingListSkeleton />
-          ) : (
-            <div className="space-y-3">
-              {filteredCanceledSessions.map((session, index) => {
-                const client = clients.find((c) => c.id === session.client_id);
-
-                return (
-                  <div
-                    key={session.id}
-                    className="animate-slide-up"
-                    style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
-                  >
-                    <SwipeableTrainingCard
-                      session={session}
-                      client={client}
-                      tags={sessionTagsMap[session.id]}
-                      onDuplicate={() => handleDuplicateTraining(session.id)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {!isLoading && filteredCanceledSessions.length === 0 && (
-            <div className="glass rounded-2xl p-8 sm:p-12">
-              <EmptyState
-                icon={XCircle}
-                title="Žádné zrušené tréninky"
-                description="Zatím jste nezrušili žádný trénink"
-                size="lg"
-              />
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            ) : undefined}
+          />
+        </div>
+      )}
 
       {/* Quick Payment Dialog */}
       {paymentDialog && (
