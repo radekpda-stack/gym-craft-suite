@@ -17,6 +17,7 @@ import {
 import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
 import { AddMeasurementDialog } from '@/components/client-portal/progress/AddMeasurementDialog';
 import { AddCardioTimeDialog } from '@/components/client-portal/progress/AddCardioTimeDialog';
+import { ReportPerformanceDialog } from '@/components/client-portal/progress/ReportPerformanceDialog';
 import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
 import { Bike, PersonStanding } from 'lucide-react';
 
@@ -155,9 +156,12 @@ export default function ClientPortalProgress() {
       {/* Cardio Section */}
       {(showRowing500 || showRowing1000 || showRunning500 || showRunning1000) && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-lg font-semibold">Kardio</h2>
-            <AddCardioTimeDialog />
+            <div className="flex items-center gap-2">
+              <ReportPerformanceDialog />
+              <AddCardioTimeDialog />
+            </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {showRowing500 && (
