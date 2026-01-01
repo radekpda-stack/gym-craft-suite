@@ -457,40 +457,61 @@ export type Database = {
       }
       challenge_submissions: {
         Row: {
+          awarded_at: string | null
           challenge_id: string
           client_id: string
+          confirmed_by: string | null
           created_at: string | null
           id: string
+          is_winner: boolean | null
           note: string | null
+          result_display: string | null
+          result_value: number | null
           score_primary: number
           score_secondary: number | null
           status: string
           submitted_at: string | null
           video_url: string | null
+          winner_rank: number | null
+          xp_awarded: number | null
         }
         Insert: {
+          awarded_at?: string | null
           challenge_id: string
           client_id: string
+          confirmed_by?: string | null
           created_at?: string | null
           id?: string
+          is_winner?: boolean | null
           note?: string | null
+          result_display?: string | null
+          result_value?: number | null
           score_primary: number
           score_secondary?: number | null
           status?: string
           submitted_at?: string | null
           video_url?: string | null
+          winner_rank?: number | null
+          xp_awarded?: number | null
         }
         Update: {
+          awarded_at?: string | null
           challenge_id?: string
           client_id?: string
+          confirmed_by?: string | null
           created_at?: string | null
           id?: string
+          is_winner?: boolean | null
           note?: string | null
+          result_display?: string | null
+          result_value?: number | null
           score_primary?: number
           score_secondary?: number | null
           status?: string
           submitted_at?: string | null
           video_url?: string | null
+          winner_rank?: number | null
+          xp_awarded?: number | null
         }
         Relationships: [
           {
@@ -530,11 +551,13 @@ export type Database = {
           instructions: string | null
           primary_metric: string
           published_to_portal_clients: boolean | null
+          ranking_mode: string | null
           requires_video: boolean | null
           scoring_type: string
           secondary_metric: string | null
           start_at: string
           status: string
+          tie_breaker: string | null
           title: string
           unit_label: string | null
           updated_at: string | null
@@ -553,11 +576,13 @@ export type Database = {
           instructions?: string | null
           primary_metric?: string
           published_to_portal_clients?: boolean | null
+          ranking_mode?: string | null
           requires_video?: boolean | null
           scoring_type?: string
           secondary_metric?: string | null
           start_at: string
           status?: string
+          tie_breaker?: string | null
           title: string
           unit_label?: string | null
           updated_at?: string | null
@@ -576,11 +601,13 @@ export type Database = {
           instructions?: string | null
           primary_metric?: string
           published_to_portal_clients?: boolean | null
+          ranking_mode?: string | null
           requires_video?: boolean | null
           scoring_type?: string
           secondary_metric?: string | null
           start_at?: string
           status?: string
+          tie_breaker?: string | null
           title?: string
           unit_label?: string | null
           updated_at?: string | null
@@ -1307,6 +1334,67 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_prs: {
+        Row: {
+          achieved_at: string
+          best_display: string
+          best_value: number
+          client_id: string
+          created_at: string | null
+          id: string
+          pr_definition_id: string
+          source_id: string | null
+          source_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          achieved_at: string
+          best_display: string
+          best_value: number
+          client_id: string
+          created_at?: string | null
+          id?: string
+          pr_definition_id: string
+          source_id?: string | null
+          source_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          achieved_at?: string
+          best_display?: string
+          best_value?: number
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          pr_definition_id?: string
+          source_id?: string | null
+          source_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_prs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_prs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_prs_pr_definition_id_fkey"
+            columns: ["pr_definition_id"]
+            isOneToOne: false
+            referencedRelation: "pr_definitions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4745,6 +4833,103 @@ export type Database = {
           },
         ]
       }
+      pr_definitions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          direction: string
+          id: string
+          is_active: boolean | null
+          metric_type: string
+          name: string
+          scope: string | null
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          direction: string
+          id: string
+          is_active?: boolean | null
+          metric_type: string
+          name: string
+          scope?: string | null
+          unit: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          direction?: string
+          id?: string
+          is_active?: boolean | null
+          metric_type?: string
+          name?: string
+          scope?: string | null
+          unit?: string
+        }
+        Relationships: []
+      }
+      pr_history: {
+        Row: {
+          achieved_at: string
+          client_id: string
+          created_at: string | null
+          display: string
+          id: string
+          pr_definition_id: string
+          source_id: string | null
+          source_type: string
+          value: number
+          xp_awarded: number | null
+        }
+        Insert: {
+          achieved_at: string
+          client_id: string
+          created_at?: string | null
+          display: string
+          id?: string
+          pr_definition_id: string
+          source_id?: string | null
+          source_type: string
+          value: number
+          xp_awarded?: number | null
+        }
+        Update: {
+          achieved_at?: string
+          client_id?: string
+          created_at?: string | null
+          display?: string
+          id?: string
+          pr_definition_id?: string
+          source_id?: string | null
+          source_type?: string
+          value?: number
+          xp_awarded?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pr_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pr_history_pr_definition_id_fkey"
+            columns: ["pr_definition_id"]
+            isOneToOne: false
+            referencedRelation: "pr_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pre_diagnostic_answer_history: {
         Row: {
           answer_id: string
@@ -6655,6 +6840,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "training_sessions"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      xp_events: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          source_id: string | null
+          source_type: string
+          xp_amount: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_id?: string | null
+          source_type: string
+          xp_amount: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_id?: string | null
+          source_type?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xp_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xp_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
