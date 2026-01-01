@@ -200,6 +200,54 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_definitions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          end_at: string | null
+          icon_key: string
+          id: string
+          is_active: boolean | null
+          name: string
+          rarity: string
+          rule_type: string
+          rule_value: Json
+          start_at: string | null
+          style: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          end_at?: string | null
+          icon_key: string
+          id: string
+          is_active?: boolean | null
+          name: string
+          rarity: string
+          rule_type: string
+          rule_value?: Json
+          start_at?: string | null
+          style?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          end_at?: string | null
+          icon_key?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          rarity?: string
+          rule_type?: string
+          rule_value?: Json
+          start_at?: string | null
+          style?: string | null
+        }
+        Relationships: []
+      }
       body_part_categories: {
         Row: {
           created_at: string | null
@@ -713,6 +761,61 @@ export type Database = {
           },
         ]
       }
+      client_badges: {
+        Row: {
+          badge_id: string
+          client_id: string
+          created_at: string | null
+          earned_at: string | null
+          id: string
+          progress_current: number | null
+          progress_target: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          badge_id: string
+          client_id: string
+          created_at?: string | null
+          earned_at?: string | null
+          id?: string
+          progress_current?: number | null
+          progress_target?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          badge_id?: string
+          client_id?: string
+          created_at?: string | null
+          earned_at?: string | null
+          id?: string
+          progress_current?: number | null
+          progress_target?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badge_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_badges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_badges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_budget_groups: {
         Row: {
           created_at: string
@@ -790,6 +893,109 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_group_ledger_balances"
             referencedColumns: ["group_id"]
+          },
+        ]
+      }
+      client_confirmed_workouts: {
+        Row: {
+          client_id: string
+          confirmed_by: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          performed_at: string
+          performed_date: string
+          training_session_id: string | null
+          workout_type: string | null
+          xp: number
+        }
+        Insert: {
+          client_id: string
+          confirmed_by?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          performed_at: string
+          performed_date: string
+          training_session_id?: string | null
+          workout_type?: string | null
+          xp?: number
+        }
+        Update: {
+          client_id?: string
+          confirmed_by?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_date?: string
+          training_session_id?: string | null
+          workout_type?: string | null
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_confirmed_workouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_confirmed_workouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_confirmed_workouts_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_leaderboard_settings: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          leaderboard_nickname: string | null
+          leaderboard_visible: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          leaderboard_nickname?: string | null
+          leaderboard_visible?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          leaderboard_nickname?: string | null
+          leaderboard_visible?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_leaderboard_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_leaderboard_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
