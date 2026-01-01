@@ -15,6 +15,11 @@ export interface LatestPR {
   distance_meters?: number;
 }
 
+// Type for exercise join from Supabase
+interface ExerciseJoin {
+  name: string;
+}
+
 export function useClientLatestProgress() {
   const { clientId } = useClientPortal();
 
@@ -60,7 +65,7 @@ export function useClientLatestProgress() {
       const cardioDate = cardioPR?.date ? new Date(cardioPR.date) : new Date(0);
 
       if (strengthDate >= cardioDate && strengthPR) {
-        const exerciseName = (strengthPR.exercises as any)?.name || 'Cvik';
+        const exerciseName = (strengthPR.exercises as ExerciseJoin | null)?.name || 'Cvik';
         return {
           id: strengthPR.id,
           exerciseName,
@@ -132,7 +137,7 @@ export function useClientRecentPRs(limit = 3) {
 
       // Add strength PRs
       (strengthPRs ?? []).forEach(pr => {
-        const exerciseName = (pr.exercises as any)?.name || 'Cvik';
+        const exerciseName = (pr.exercises as ExerciseJoin | null)?.name || 'Cvik';
         results.push({
           id: pr.id,
           exerciseName,
