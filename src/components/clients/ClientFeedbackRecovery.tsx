@@ -181,7 +181,7 @@ export function ClientFeedbackRecovery({
       return {
         pain: f.pain,
         body_feel: f.body_feel,
-        energy: fb.energy ?? f.fatigue,
+        energy: fb.energy ?? null,
         rpe_rating: f.rpe_rating,
         session_fit: fb.session_fit,
         doms_level: fb.doms_level,
