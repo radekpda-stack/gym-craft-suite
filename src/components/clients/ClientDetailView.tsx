@@ -24,6 +24,15 @@ import {
   Star,
   CalendarDays,
   User,
+  Hand,
+  Briefcase,
+  Activity,
+  Moon,
+  Heart,
+  Dumbbell,
+  History,
+  Pill,
+  Apple,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +76,55 @@ const SUGGESTED_GOALS = [
   'Rehabilitace',
   'Obecná fitness',
 ];
+
+/** Labels for current activities */
+const ACTIVITY_LABELS: Record<string, string> = {
+  running: 'Běh',
+  cycling: 'Cyklistika',
+  swimming: 'Plavání',
+  yoga: 'Jóga',
+  hiking: 'Turistika',
+  team_sports: 'Kolektivní sporty',
+  martial_arts: 'Bojové sporty',
+  dancing: 'Tanec',
+  gym: 'Posilovna',
+  other: 'Jiné',
+};
+
+/** Labels for supplements */
+const SUPPLEMENT_LABELS: Record<string, string> = {
+  protein: 'Protein',
+  creatine: 'Kreatin',
+  vitamins: 'Vitamíny',
+  omega3: 'Omega-3',
+  magnesium: 'Hořčík',
+  collagen: 'Kolagen',
+  bcaa: 'BCAA',
+  caffeine: 'Kofein',
+};
+
+/** Labels for dietary restrictions */
+const DIETARY_RESTRICTION_LABELS: Record<string, string> = {
+  vegetarian: 'Vegetarián',
+  vegan: 'Vegan',
+  gluten_free: 'Bezlepková dieta',
+  lactose_free: 'Bez laktózy',
+  low_carb: 'Nízkosacharidová',
+  keto: 'Keto',
+  allergies: 'Alergie',
+};
+
+function getActivityLabel(value: string): string {
+  return ACTIVITY_LABELS[value] || value;
+}
+
+function getSupplementLabel(value: string): string {
+  return SUPPLEMENT_LABELS[value] || value;
+}
+
+function getDietaryRestrictionLabel(value: string): string {
+  return DIETARY_RESTRICTION_LABELS[value] || value;
+}
 
 /**
  * Returns appropriate color class based on credit balance
@@ -555,6 +613,145 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
           </div>
         </div>
 
+        {/* Extended Client Info - Lifestyle & Activities Section */}
+        <div className="glass rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            Životní styl a aktivity
+          </h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Handedness */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Hand className="w-4 h-4" />
+                Dominantní ruka
+              </div>
+              <p className="font-medium text-foreground">
+                {client.handedness === 'right' ? 'Pravák' : 
+                 client.handedness === 'left' ? 'Levák' : 
+                 client.handedness === 'ambidextrous' ? 'Obouruký' : '—'}
+              </p>
+            </div>
+
+            {/* Occupation */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Briefcase className="w-4 h-4" />
+                Typ práce
+              </div>
+              <p className="font-medium text-foreground">
+                {client.occupation === 'sedentary' ? 'Sedavá' : 
+                 client.occupation === 'mixed' ? 'Kombinovaná' : 
+                 client.occupation === 'active' ? 'Aktivní' : '—'}
+              </p>
+            </div>
+
+            {/* Sitting Hours */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Activity className="w-4 h-4" />
+                Hodiny vsedě denně
+              </div>
+              <p className="font-medium text-foreground">
+                {client.sitting_hours_daily != null ? `${client.sitting_hours_daily}h` : '—'}
+              </p>
+            </div>
+
+            {/* Sleep Hours */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Moon className="w-4 h-4" />
+                Průměrný spánek
+              </div>
+              <p className="font-medium text-foreground">
+                {client.sleep_hours != null ? `${client.sleep_hours}h` : '—'}
+              </p>
+            </div>
+
+            {/* Stress Level */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Heart className="w-4 h-4" />
+                Úroveň stresu
+              </div>
+              <p className="font-medium text-foreground">
+                {client.stress_level != null ? `${client.stress_level}/10` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Sports History */}
+          {client.sports_history && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <History className="w-4 h-4" />
+                Sportovní historie
+              </div>
+              <p className="text-foreground whitespace-pre-wrap">{client.sports_history}</p>
+            </div>
+          )}
+
+          {/* Current Activities */}
+          {client.current_activities && client.current_activities.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Dumbbell className="w-4 h-4" />
+                Aktuální aktivity
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {client.current_activities.map((activity) => (
+                  <span
+                    key={activity}
+                    className="px-3 py-1.5 rounded-xl bg-secondary text-foreground text-sm font-medium"
+                  >
+                    {getActivityLabel(activity)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Supplements */}
+          {client.supplements && client.supplements.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Pill className="w-4 h-4" />
+                Doplňky stravy
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {client.supplements.map((supplement) => (
+                  <span
+                    key={supplement}
+                    className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-sm font-medium"
+                  >
+                    {getSupplementLabel(supplement)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dietary Restrictions */}
+          {client.dietary_restrictions && client.dietary_restrictions.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Apple className="w-4 h-4" />
+                Stravovací omezení
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {client.dietary_restrictions.map((restriction) => (
+                  <span
+                    key={restriction}
+                    className="px-3 py-1.5 rounded-xl bg-warning/10 text-warning text-sm font-medium"
+                  >
+                    {getDietaryRestrictionLabel(restriction)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         {/* Notes Section */}
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-foreground mb-3">Poznámky</h3>
