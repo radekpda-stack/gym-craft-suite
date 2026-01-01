@@ -101,7 +101,7 @@ export function CreateClientAccessDialog({
   const handleCopyMessage = async () => {
     if (!credentials) return;
     
-    const portalUrl = `${window.location.origin}/zona/login`;
+    const portalUrl = `${window.location.origin}/login?mode=client`;
     const message = `Dobrý den,
 
 vaše přihlašovací údaje do klientského portálu:
@@ -110,6 +110,7 @@ Email: ${credentials.email}
 Heslo: ${credentials.password}
 
 Přihlaste se na: ${portalUrl}
+Na přihlašovací stránce vyberte záložku "Jsem klient".
 
 Po přihlášení si můžete heslo změnit v nastavení.
 
@@ -123,7 +124,7 @@ Váš trenér`;
   };
 
   const handleOpenPortal = () => {
-    window.open(`${window.location.origin}/zona/login`, '_blank');
+    window.open(`${window.location.origin}/login?mode=client`, '_blank');
   };
 
   const handleClose = () => {

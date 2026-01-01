@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/lib/i18n";
@@ -18,7 +18,7 @@ import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell"
 import { PageLoader } from "@/components/PageLoader";
 
 // Eagerly loaded (critical path)
-import Auth from "./pages/Auth";
+import UnifiedLogin from "./pages/UnifiedLogin";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages - Main app
@@ -62,7 +62,6 @@ const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const Challenges = lazy(() => import("./pages/Challenges"));
 
 // Lazy loaded pages - Client Portal
-const ClientPortalLogin = lazy(() => import("./pages/client-portal/ClientPortalLogin"));
 const ClientPortalOverview = lazy(() => import("./pages/client-portal/ClientPortalOverview"));
 const ClientPortalProgress = lazy(() => import("./pages/client-portal/ClientPortalProgress"));
 const ClientPortalAttendance = lazy(() => import("./pages/client-portal/ClientPortalAttendance"));
@@ -98,7 +97,13 @@ const App = () => (
             <DemoProvider>
             <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
+              {/* Unified login page */}
+              <Route path="/login" element={<UnifiedLogin />} />
+              {/* Legacy redirects */}
+              <Route path="/auth" element={<Navigate to="/login" replace />} />
+              <Route path="/zona/login" element={<Navigate to="/login?mode=client" replace />} />
+              <Route path="/client/login" element={<Navigate to="/login?mode=client" replace />} />
+              
               <Route path="/waiting-for-approval" element={<WaitingForApproval />} />
               {/* Public feedback routes (no auth) */}
               <Route path="/feedback" element={<FeedbackPage />} />
@@ -110,7 +115,6 @@ const App = () => (
               <Route path="/demo/*" element={<DemoPage />} />
               
               {/* Client Portal Routes - Short URL /zona */}
-              <Route path="/zona/login" element={<ClientPortalLogin />} />
               <Route path="/zona" element={<ClientPortalShell />}>
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
@@ -123,8 +127,7 @@ const App = () => (
                 <Route path="settings" element={<ClientPortalSettings />} />
               </Route>
               
-              {/* Legacy Client Portal Routes - Redirect to /zona */}
-              <Route path="/client/login" element={<ClientPortalLogin />} />
+              {/* Legacy Client Portal Routes */}
               <Route path="/client" element={<ClientPortalShell />}>
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
