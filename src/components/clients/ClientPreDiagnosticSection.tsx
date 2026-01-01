@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { formatDate } from '@/lib/formatters';
 import {
   ClipboardList,
   Send,
@@ -290,7 +291,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
             {/* Form completion info */}
             {preDiagnostic?.completed_at && (
               <p className="text-sm text-muted-foreground mb-4">
-                Vyplněno: {format(new Date(preDiagnostic.completed_at), 'd. MMMM yyyy v HH:mm', { locale: cs })}
+                Vyplněno: {formatDate(preDiagnostic.completed_at, 'dateTimeVerbose')}
               </p>
             )}
 
@@ -410,7 +411,7 @@ export function ClientPreDiagnosticSection({ clientId, clientName }: ClientPreDi
                 Formulář byl odeslán a čeká na vyplnění klientem.
                 {preDiagnostic.expires_at && (
                   <span className="block mt-1">
-                    Platnost do: {format(new Date(preDiagnostic.expires_at), 'd. MMMM yyyy', { locale: cs })}
+                    Platnost do: {formatDate(preDiagnostic.expires_at, 'long')}
                   </span>
                 )}
               </p>

@@ -43,7 +43,7 @@ export function formatNumber(value: number | null | undefined, decimals = 0): st
   });
 }
 
-export type DateFormatType = 'short' | 'long' | 'time' | 'timeOnly' | 'dayMonth' | 'monthYear';
+export type DateFormatType = 'short' | 'long' | 'time' | 'timeOnly' | 'dayMonth' | 'monthYear' | 'dateTimeVerbose';
 
 const DATE_FORMATS: Record<DateFormatType, string> = {
   short: 'd. M. yyyy',
@@ -52,6 +52,7 @@ const DATE_FORMATS: Record<DateFormatType, string> = {
   timeOnly: 'HH:mm',
   dayMonth: 'd. M.',
   monthYear: 'LLLL yyyy',
+  dateTimeVerbose: "d. MMMM yyyy 'v' HH:mm", // Properly escaped literal 'v'
 };
 
 /**
@@ -64,9 +65,37 @@ export function formatDate(
   formatType: DateFormatType = 'short'
 ): string {
   if (!date) return '-';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '-';
-  return dateFnsFormat(d, DATE_FORMATS[formatType], { locale: cs });
+  try {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '-';
+    return dateFnsFormat(d, DATE_FORMATS[formatType], { locale: cs });
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return '-';
+  }
+}
+
+/**
+ * Bezpečné formátování datumu s vlastním formátem
+ * DŮLEŽITÉ: Literály jako 'v' musí být escapované: "'v'" 
+ * @param date - Datum k formátování
+ * @param customFormat - Vlastní formátovací řetězec
+ * @param fallback - Fallback hodnota při chybě (default '-')
+ */
+export function formatDateSafe(
+  date: Date | string | null | undefined,
+  customFormat: string,
+  fallback: string = '-'
+): string {
+  if (!date) return fallback;
+  try {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return fallback;
+    return dateFnsFormat(d, customFormat, { locale: cs });
+  } catch (error) {
+    console.error('Date formatting error:', error, { date, format: customFormat });
+    return fallback;
+  }
 }
 
 /**
