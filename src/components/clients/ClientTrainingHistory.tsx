@@ -156,14 +156,14 @@ export function ClientTrainingHistory({
 
   if (isLoading) {
     return (
-      <div className="glass rounded-xl p-6 flex items-center justify-center">
+      <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="bg-card border border-border rounded-2xl p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-foreground">
           <Calendar className="w-5 h-5 text-primary" />

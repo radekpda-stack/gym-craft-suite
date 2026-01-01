@@ -107,7 +107,7 @@ export function ClientQuickCards({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {/* CARD A: Trainings */}
-      <div className="glass rounded-xl p-4">
+      <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="w-4 h-4" />
@@ -169,7 +169,7 @@ export function ClientQuickCards({
       </div>
 
       {/* CARD B: Credit */}
-      <div className="glass rounded-xl p-4">
+      <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <CreditCard className="w-4 h-4" />
@@ -216,7 +216,7 @@ export function ClientQuickCards({
       </div>
 
       {/* CARD C: Client Zone */}
-      <div className="glass rounded-xl p-4">
+      <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Shield className="w-4 h-4" />
