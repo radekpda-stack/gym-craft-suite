@@ -86,6 +86,15 @@ export function FeatureUsageStats() {
     successRate
   } = useFeatureStats(period);
   const clearStats = useClearFeatureStats();
+  
+  // Portal analytics
+  const { 
+    data: portalStats, 
+    isLoading: portalLoading 
+  } = useClientPortalAnalyticsStats(period as PortalStatsPeriod);
+  const { 
+    data: inactiveClients = [] 
+  } = useInactivePortalClients(period as PortalStatsPeriod);
 
   const getDeviceIcon = (device: string) => {
     switch (device) {
@@ -396,6 +405,298 @@ export function FeatureUsageStats() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* CLIENT PORTAL TAB */}
+        <TabsContent value="portal" className="space-y-6">
+          {portalLoading ? (
+            <div className="space-y-4">
+              <div className="h-32 bg-muted animate-pulse rounded-xl" />
+              <div className="h-64 bg-muted animate-pulse rounded-xl" />
+            </div>
+          ) : portalStats ? (
+            <>
+              {/* Portal Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Activity className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Celkem aktivit</span>
+                    </div>
+                    <div className="text-2xl font-bold">{portalStats.totalActivities}</div>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Aktivních klientů</span>
+                    </div>
+                    <div className="text-2xl font-bold">{portalStats.uniqueClients}</div>
+                    <p className="text-xs text-muted-foreground">z {portalStats.totalPortalClients}</p>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-muted-foreground">Aktivita</span>
+                    </div>
+                    <div className="text-2xl font-bold">{portalStats.activeClientsPercent}%</div>
+                    <p className="text-xs text-muted-foreground">klientů bylo aktivních</p>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Ø na klienta</span>
+                    </div>
+                    <div className="text-2xl font-bold">{portalStats.averageActivitiesPerClient}</div>
+                    <p className="text-xs text-muted-foreground">akcí průměrně</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Portal Activity Trend */}
+              <Card className="glass">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Aktivita v klientské zóně</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={portalStats.dailyActivity}>
+                        <defs>
+                          <linearGradient id="colorPortal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={(value) => format(new Date(value), 'd.M.', { locale: cs })}
+                          fontSize={12}
+                          stroke="hsl(var(--muted-foreground))"
+                        />
+                        <YAxis 
+                          fontSize={12}
+                          stroke="hsl(var(--muted-foreground))"
+                          allowDecimals={false}
+                        />
+                        <Tooltip 
+                          labelFormatter={(value) => format(new Date(value), 'd. MMMM yyyy', { locale: cs })}
+                          formatter={(value: number, name: string) => [
+                            value, 
+                            name === 'count' ? 'Akcí' : 'Unikátních klientů'
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="count" 
+                          stroke="hsl(var(--chart-3))" 
+                          fillOpacity={1}
+                          fill="url(#colorPortal)"
+                          name="count"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="uniqueClients" 
+                          stroke="hsl(var(--chart-2))" 
+                          fillOpacity={0.3}
+                          fill="hsl(var(--chart-2))"
+                          name="uniqueClients"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Most Used Pages + Top Clients */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      Nejnavštěvovanější stránky
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[250px]">
+                      <div className="space-y-2">
+                        {portalStats.mostActivePages.length > 0 ? (
+                          portalStats.mostActivePages.map((page, i) => (
+                            <div 
+                              key={page.page}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-5">{i + 1}.</span>
+                                <span className="text-sm">{page.label}</span>
+                              </div>
+                              <Badge variant="secondary">{page.count}×</Badge>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Zatím žádná data
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      Nejaktivnější klienti
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[250px]">
+                      <div className="space-y-2">
+                        {portalStats.activityByClient.slice(0, 10).length > 0 ? (
+                          portalStats.activityByClient.slice(0, 10).map((client, i) => (
+                            <div 
+                              key={client.clientId}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-5">{i + 1}.</span>
+                                <span className="text-sm font-medium">{client.clientName}</span>
+                              </div>
+                              <Badge variant="secondary">{client.count} akcí</Badge>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Zatím žádná data
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Inactive Clients + Least Used Features */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="glass border-amber-500/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      Neaktivní klienti s přístupem
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[200px]">
+                      <div className="space-y-2">
+                        {inactiveClients.length > 0 ? (
+                          inactiveClients.map((client) => (
+                            <div 
+                              key={client.clientId}
+                              className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10"
+                            >
+                              <div>
+                                <p className="text-sm font-medium">{client.clientName}</p>
+                                {client.lastLogin && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Poslední přihlášení: {format(new Date(client.lastLogin), 'd.M.yyyy', { locale: cs })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex items-center justify-center py-8 gap-2 text-green-500">
+                            <CheckCircle2 className="h-5 w-5" />
+                            <span className="text-sm">Všichni klienti jsou aktivní!</span>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                      Nejméně používané funkce
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[200px]">
+                      <div className="space-y-2">
+                        {portalStats.leastUsedFeatures.length > 0 ? (
+                          portalStats.leastUsedFeatures.map((feature) => (
+                            <div 
+                              key={feature.feature}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            >
+                              <span className="text-sm">{feature.label}</span>
+                              <Badge variant="outline">{feature.count}×</Badge>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Zatím žádná data o akcích
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* All Activity Types */}
+              <Card className="glass">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Všechny typy aktivit</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-2">
+                      {portalStats.activityByType.map((activity) => (
+                        <div 
+                          key={activity.type}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <span className="text-sm">{activity.label}</span>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="h-2 rounded-full bg-primary"
+                              style={{ 
+                                width: `${Math.min(100, (activity.count / Math.max(1, portalStats.activityByType[0]?.count || 1)) * 100)}px` 
+                              }}
+                            />
+                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                              {activity.count}×
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card className="glass">
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">Zatím nejsou k dispozici žádná data o klientské zóně.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-6">
