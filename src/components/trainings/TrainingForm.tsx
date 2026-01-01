@@ -1,11 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Search, Check, ChevronDown } from "lucide-react";
+import { Loader2, Repeat, Search, Check, ChevronDown, X, UserPlus } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -46,6 +46,7 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
+  additional_client_ids: z.array(z.string()).optional(),
   date: z.string().min(1, "Zadejte datum"),
   duration: z.number().min(15, "Minimálně 15 minut").max(300, "Maximálně 300 minut"),
   participant_count: z.number().min(1, "Minimálně 1 účastník").max(5, "Maximálně 5 účastníků"),
@@ -83,8 +84,9 @@ export function TrainingForm({
 }: TrainingFormProps) {
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [additionalClientSearch, setAdditionalClientSearch] = useState("");
+  const [additionalClientPopoverOpen, setAdditionalClientPopoverOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  
   
   // Helper to format date as local datetime string
   const getLocalDateTimeString = () => {
@@ -101,6 +103,7 @@ export function TrainingForm({
     resolver: zodResolver(trainingFormSchema),
     defaultValues: {
       client_id: defaultValues?.client_id || "",
+      additional_client_ids: defaultValues?.additional_client_ids || [],
       date: defaultValues?.date || getLocalDateTimeString(),
       duration: defaultValues?.duration || 60,
       participant_count: defaultValues?.participant_count || 1,
@@ -117,6 +120,10 @@ export function TrainingForm({
   const isDirty = form.formState.isDirty;
   useUnsavedChanges(isDirty);
 
+  const participantCount = form.watch("participant_count");
+  const primaryClientId = form.watch("client_id");
+  const additionalClientIds = form.watch("additional_client_ids") || [];
+
   // Filtered clients with diacritics-insensitive search
   const filteredClients = useMemo(() => {
     if (!clientSearch) return clients.filter(c => !c.is_archived);
@@ -126,9 +133,39 @@ export function TrainingForm({
       .filter(c => removeDiacritics(c.name).includes(searchNorm));
   }, [clients, clientSearch]);
 
-  const selectedClient = clients.find(c => c.id === form.watch("client_id"));
+  // Filtered clients for additional participants (exclude primary and already selected)
+  const filteredAdditionalClients = useMemo(() => {
+    const excludeIds = [primaryClientId, ...additionalClientIds].filter(Boolean);
+    let filtered = clients.filter(c => !c.is_archived && !excludeIds.includes(c.id));
+    
+    if (additionalClientSearch) {
+      const searchNorm = removeDiacritics(additionalClientSearch);
+      filtered = filtered.filter(c => removeDiacritics(c.name).includes(searchNorm));
+    }
+    return filtered;
+  }, [clients, additionalClientSearch, primaryClientId, additionalClientIds]);
+
+  const selectedClient = clients.find(c => c.id === primaryClientId);
+  const selectedAdditionalClients = clients.filter(c => additionalClientIds.includes(c.id));
 
   const isRecurring = form.watch("is_recurring");
+
+  // Calculate how many additional clients can be added
+  const maxAdditionalClients = Math.max(0, participantCount - 1);
+  const canAddMore = additionalClientIds.length < maxAdditionalClients;
+
+  const handleAddAdditionalClient = (clientId: string) => {
+    if (!canAddMore) return;
+    const current = form.getValues("additional_client_ids") || [];
+    form.setValue("additional_client_ids", [...current, clientId], { shouldDirty: true });
+    setAdditionalClientSearch("");
+    setAdditionalClientPopoverOpen(false);
+  };
+
+  const handleRemoveAdditionalClient = (clientId: string) => {
+    const current = form.getValues("additional_client_ids") || [];
+    form.setValue("additional_client_ids", current.filter(id => id !== clientId), { shouldDirty: true });
+  };
 
   const handleSubmit = async (data: TrainingFormValues) => {
     await onSubmit(data, []);
@@ -229,7 +266,15 @@ export function TrainingForm({
               <FormItem>
                 <FormLabel>Počet osob</FormLabel>
                 <Select 
-                  onValueChange={(v) => field.onChange(parseInt(v))} 
+                  onValueChange={(v) => {
+                    const newCount = parseInt(v);
+                    field.onChange(newCount);
+                    // Trim additional clients if new count is lower
+                    const currentAdditional = form.getValues("additional_client_ids") || [];
+                    if (currentAdditional.length > newCount - 1) {
+                      form.setValue("additional_client_ids", currentAdditional.slice(0, newCount - 1));
+                    }
+                  }} 
                   value={field.value?.toString()}
                 >
                   <FormControl>
@@ -250,6 +295,78 @@ export function TrainingForm({
             )}
           />
         </div>
+
+        {/* Additional Participants Section */}
+        {participantCount > 1 && (
+          <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <UserPlus className="w-4 h-4" />
+              <span>Další účastníci ({additionalClientIds.length}/{maxAdditionalClients})</span>
+            </div>
+            
+            {/* Selected additional clients */}
+            {selectedAdditionalClients.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedAdditionalClients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm"
+                  >
+                    <span>{client.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAdditionalClient(client.id)}
+                      className="hover:bg-primary/20 rounded-full p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add more clients */}
+            {canAddMore && (
+              <Popover open={additionalClientPopoverOpen} onOpenChange={setAdditionalClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start bg-secondary border-border text-muted-foreground"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Přidat klienta...
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Hledat klienta..." 
+                      value={additionalClientSearch}
+                      onValueChange={setAdditionalClientSearch}
+                      className="h-10"
+                    />
+                    <CommandList>
+                      <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
+                      <CommandGroup className="max-h-60 overflow-auto">
+                        {filteredAdditionalClients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.id}
+                            onSelect={() => handleAddAdditionalClient(client.id)}
+                          >
+                            {client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+        )}
 
         <FormField
           control={form.control}
