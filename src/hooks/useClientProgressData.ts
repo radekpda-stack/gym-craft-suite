@@ -90,8 +90,10 @@ export function useClientCardioProgress(
       if (!clientId) return [];
       
       const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
+      const results: CardioDataPoint[] = [];
       
-      const { data, error } = await supabase
+      // 1. Try cardio_entries table first (dedicated cardio tracking)
+      const { data: cardioData, error: cardioError } = await supabase
         .from('cardio_entries')
         .select('date, duration_seconds, distance_meters, is_pr')
         .eq('client_id', clientId)
@@ -100,19 +102,67 @@ export function useClientCardioProgress(
         .gte('date', startDate)
         .order('date', { ascending: true });
       
-      if (error) throw error;
+      if (!cardioError && cardioData) {
+        cardioData.forEach(entry => {
+          const totalSeconds = entry.duration_seconds;
+          const minutes = Math.floor(totalSeconds / 60);
+          const seconds = totalSeconds % 60;
+          
+          results.push({
+            date: entry.date,
+            timeSeconds: totalSeconds,
+            pace: `${minutes}:${seconds.toString().padStart(2, '0')}`,
+          });
+        });
+      }
       
-      return (data || []).map(entry => {
-        const totalSeconds = entry.duration_seconds;
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        
-        return {
-          date: entry.date,
-          timeSeconds: totalSeconds,
-          pace: `${minutes}:${seconds.toString().padStart(2, '0')}`,
-        };
-      }) as CardioDataPoint[];
+      // 2. Also check exercise_entries for cardio exercises with time data
+      // Build pattern to match various naming conventions (e.g., "Veslo - 500m", "veslo 500m", etc.)
+      const patterns = [
+        `${exerciseName} - ${distanceMeters}m`,
+        `${exerciseName} ${distanceMeters}m`,
+        `${exerciseName.charAt(0).toUpperCase() + exerciseName.slice(1)} - ${distanceMeters}m`,
+        `${exerciseName.charAt(0).toUpperCase() + exerciseName.slice(1)} ${distanceMeters}m`,
+      ];
+      
+      const { data: exerciseData, error: exerciseError } = await supabase
+        .from('exercise_entries')
+        .select('date, time_seconds, exercise_name')
+        .eq('client_id', clientId)
+        .not('time_seconds', 'is', null)
+        .gte('date', startDate)
+        .order('date', { ascending: true });
+      
+      if (!exerciseError && exerciseData) {
+        exerciseData.forEach(entry => {
+          // Check if exercise name matches any pattern
+          const nameMatch = patterns.some(pattern => 
+            entry.exercise_name.toLowerCase() === pattern.toLowerCase()
+          ) || entry.exercise_name.toLowerCase().includes(exerciseName.toLowerCase()) && 
+               entry.exercise_name.includes(String(distanceMeters));
+          
+          if (nameMatch && entry.time_seconds) {
+            // Check if we already have this date from cardio_entries
+            const existingEntry = results.find(r => r.date === entry.date);
+            if (!existingEntry) {
+              const totalSeconds = entry.time_seconds;
+              const minutes = Math.floor(totalSeconds / 60);
+              const seconds = totalSeconds % 60;
+              
+              results.push({
+                date: entry.date,
+                timeSeconds: totalSeconds,
+                pace: `${minutes}:${seconds.toString().padStart(2, '0')}`,
+              });
+            }
+          }
+        });
+      }
+      
+      // Sort by date
+      results.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      return results;
     },
     enabled: !!clientId,
   });
