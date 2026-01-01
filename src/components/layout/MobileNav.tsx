@@ -14,7 +14,7 @@ const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
   { to: '/clients', icon: Users, label: 'Klienti' },
-  { to: '/trainings', icon: ClipboardList, label: 'Tréninky' },
+  { to: '/my-profile', icon: Users, label: 'Profil' },
 ];
 
 export function MobileNav() {
