@@ -61,16 +61,19 @@ interface SidebarProps {
 
 const NavItemButton = memo(function NavItemButton({ 
   item, 
-  isActive, 
   collapsed,
   isChild = false,
 }: { 
   item: NavItem; 
-  isActive: boolean; 
   collapsed: boolean;
   isChild?: boolean;
 }) {
   const Icon = item.icon;
+  const location = useLocation();
+  
+  // Determine if this item is active
+  const isActive = location.pathname === item.to || 
+    (item.to !== '/' && location.pathname.startsWith(item.to + '/'));
 
   return (
     <NavLink
@@ -200,7 +203,6 @@ const NavItemExpandable = memo(function NavItemExpandable({
                 <NavItemButton
                   key={child.id}
                   item={child}
-                  isActive={isActive(child.to)}
                   collapsed={collapsed}
                   isChild
                 />
@@ -419,7 +421,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
                     <NavItemButton
                       key={item.id}
                       item={item}
-                      isActive={isActive(item.to)}
                       collapsed={collapsed}
                     />
                   )
