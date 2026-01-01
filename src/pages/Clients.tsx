@@ -536,6 +536,11 @@ export default function Clients() {
           {filteredClients.map((client) => {
             const clientTags = clientTagsMap[client.id] || [];
             const nextTraining = scheduleData?.nextTrainings.get(client.id);
+            
+            // Check if client is in a budget group
+            const budgetGroup = budgetGroups.find(g => 
+              g.members.some(m => m.client_id === client.id)
+            );
 
             return (
               <CompactClientRow
@@ -543,6 +548,8 @@ export default function Clients() {
                 client={client}
                 tags={clientTags}
                 nextTraining={nextTraining ? { date: nextTraining.date } : null}
+                groupBalance={budgetGroup?.shared_balance}
+                isInGroup={!!budgetGroup}
                 onNewTraining={() => navigate(`/calendar?action=new-training&clientId=${client.id}`)}
                 onAddCredit={() => setCreditClient(client)}
                 onEdit={() => setEditingClient(client)}
