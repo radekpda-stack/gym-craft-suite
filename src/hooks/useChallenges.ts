@@ -22,6 +22,9 @@ export interface Challenge {
   created_by_user_id: string;
   created_at: string;
   updated_at: string;
+  // New fields for universal metrics
+  ranking_mode: 'top1' | 'top3';
+  tie_breaker: 'earliest_submission' | 'coach_confirmed_first' | 'same_rank';
 }
 
 export interface ChallengeSubmission {
@@ -34,6 +37,14 @@ export interface ChallengeSubmission {
   note: string | null;
   video_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  // New fields for winner tracking
+  result_value: number | null;
+  result_display: string | null;
+  confirmed_by: 'coach' | 'client';
+  is_winner: boolean;
+  winner_rank: number | null;
+  awarded_at: string | null;
+  xp_awarded: number;
 }
 
 export function useChallenges() {
@@ -97,6 +108,8 @@ export function useCreateChallenge() {
         requires_video: challenge.requires_video ?? false,
         published_to_portal_clients: challenge.published_to_portal_clients ?? true,
         created_by_user_id: user!.id,
+        ranking_mode: challenge.ranking_mode || 'top3',
+        tie_breaker: challenge.tie_breaker || 'earliest_submission',
       };
 
       const { data, error } = await supabase

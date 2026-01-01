@@ -48,6 +48,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
   const [unitLabel, setUnitLabel] = useState('');
   const [allowMultiple, setAllowMultiple] = useState(true);
   const [requiresVideo, setRequiresVideo] = useState(false);
+  const [rankingMode, setRankingMode] = useState<string>('top3');
+  const [tieBreaker, setTieBreaker] = useState<string>('earliest_submission');
 
   useEffect(() => {
     if (challenge) {
@@ -62,6 +64,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setUnitLabel(challenge.unit_label || '');
       setAllowMultiple(challenge.allow_multiple_attempts);
       setRequiresVideo(challenge.requires_video);
+      setRankingMode(challenge.ranking_mode || 'top3');
+      setTieBreaker(challenge.tie_breaker || 'earliest_submission');
     } else {
       // Reset form
       setTitle('');
@@ -75,6 +79,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setUnitLabel('');
       setAllowMultiple(true);
       setRequiresVideo(false);
+      setRankingMode('top3');
+      setTieBreaker('earliest_submission');
     }
   }, [challenge, open]);
 
@@ -91,6 +97,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       unit_label: unitLabel || null,
       allow_multiple_attempts: allowMultiple,
       requires_video: requiresVideo,
+      ranking_mode: rankingMode as Challenge['ranking_mode'],
+      tie_breaker: tieBreaker as Challenge['tie_breaker'],
     };
 
     if (challenge) {
@@ -240,6 +248,36 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
                 <SelectContent>
                   <SelectItem value="value_higher_better">Vyšší = lepší</SelectItem>
                   <SelectItem value="time_lower_better">Nižší = lepší (čas)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Ranking Options */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Ocenění vítězů</Label>
+              <Select value={rankingMode} onValueChange={setRankingMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="top1">Pouze 1. místo</SelectItem>
+                  <SelectItem value="top3">Top 3 (1.-3. místo)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Při shodném výsledku</Label>
+              <Select value={tieBreaker} onValueChange={setTieBreaker}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="earliest_submission">Dřívější odeslání vyhrává</SelectItem>
+                  <SelectItem value="coach_confirmed_first">Priorita pro coach-confirmed</SelectItem>
+                  <SelectItem value="same_rank">Sdílené umístění</SelectItem>
                 </SelectContent>
               </Select>
             </div>
