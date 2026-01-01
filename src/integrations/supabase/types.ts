@@ -6293,6 +6293,49 @@ export type Database = {
           },
         ]
       }
+      training_session_participants: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          training_session_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          training_session_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          training_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_session_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_session_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "training_session_participants_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_session_tags: {
         Row: {
           created_at: string

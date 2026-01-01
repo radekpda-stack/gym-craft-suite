@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
 import { useAddTrainingSessionTags, useAllTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
+import { useAddTrainingSessionParticipants } from '@/hooks/useTrainingSessionParticipants';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { CompactTrainingRow } from '@/components/trainings/CompactTrainingRow';
@@ -75,6 +76,7 @@ export default function Trainings() {
   const cancelTraining = useCancelTrainingSession();
   const trainingPrices = useTrainingPrices();
   const addTrainingTags = useAddTrainingSessionTags();
+  const addTrainingParticipants = useAddTrainingSessionParticipants();
   const { data: sessionTagsMap = {} } = useAllTrainingSessionTags();
 
   // Filter sessions by time period
@@ -285,11 +287,23 @@ export default function Trainings() {
         trainingPrices,
       });
       
-      if (tagIds.length > 0 && result?.session?.id) {
-        await addTrainingTags.mutateAsync({
-          trainingSessionId: result.session.id,
-          tagIds,
-        });
+      if (result?.session?.id) {
+        // Save tags if any
+        if (tagIds.length > 0) {
+          await addTrainingTags.mutateAsync({
+            trainingSessionId: result.session.id,
+            tagIds,
+          });
+        }
+        
+        // Save additional participants if any
+        const additionalClientIds = data.additional_client_ids || [];
+        if (additionalClientIds.length > 0) {
+          await addTrainingParticipants.mutateAsync({
+            trainingSessionId: result.session.id,
+            clientIds: additionalClientIds,
+          });
+        }
       }
       
       setIsCreateSheetOpen(false);

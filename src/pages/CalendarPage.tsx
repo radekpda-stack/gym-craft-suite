@@ -12,6 +12,7 @@ import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet'
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { useAddTrainingSessionParticipants } from '@/hooks/useTrainingSessionParticipants';
 import { AgendaItem } from '@/components/calendar/AgendaItem';
 import { SharedTrainingBlock } from '@/components/calendar/SharedTrainingBlock';
 import { ExternalEventBlock } from '@/components/calendar/ExternalEventBlock';
@@ -99,6 +100,7 @@ export default function CalendarPage() {
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
   const cancelTraining = useCancelTrainingSession();
+  const addTrainingParticipants = useAddTrainingSessionParticipants();
   const { data: settings } = useAppSettings();
   const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
 
@@ -149,7 +151,7 @@ export default function CalendarPage() {
   };
 
   const handleCreateTraining = async (data: TrainingFormValues) => {
-    await createTraining.mutateAsync({
+    const result = await createTraining.mutateAsync({
       client_id: data.client_id,
       date: data.date,
       duration: data.duration,
@@ -158,6 +160,16 @@ export default function CalendarPage() {
       status: data.status,
       trainingPrices,
     });
+    
+    // Save additional participants if any
+    const additionalClientIds = data.additional_client_ids || [];
+    if (additionalClientIds.length > 0 && result?.session?.id) {
+      await addTrainingParticipants.mutateAsync({
+        trainingSessionId: result.session.id,
+        clientIds: additionalClientIds,
+      });
+    }
+    
     setIsCreateOpen(false);
     setSelectedDateTime(null);
   };
