@@ -4652,7 +4652,11 @@ export type Database = {
           created_at: string
           credit_delta: number
           id: string
+          line_discount_amount: number | null
+          line_discount_type: string | null
+          line_discount_value: number | null
           line_total: number
+          line_total_after_discount: number | null
           name_snapshot: string
           order_id: string
           product_id: string
@@ -4664,7 +4668,11 @@ export type Database = {
           created_at?: string
           credit_delta?: number
           id?: string
+          line_discount_amount?: number | null
+          line_discount_type?: string | null
+          line_discount_value?: number | null
           line_total: number
+          line_total_after_discount?: number | null
           name_snapshot: string
           order_id: string
           product_id: string
@@ -4676,7 +4684,11 @@ export type Database = {
           created_at?: string
           credit_delta?: number
           id?: string
+          line_discount_amount?: number | null
+          line_discount_type?: string | null
+          line_discount_value?: number | null
           line_total?: number
+          line_total_after_discount?: number | null
           name_snapshot?: string
           order_id?: string
           product_id?: string
@@ -4709,9 +4721,15 @@ export type Database = {
           id: string
           idempotency_key: string
           note: string | null
+          order_discount_amount: number | null
+          order_discount_type: string | null
+          order_discount_value: number | null
           payment_method: string
           payment_status: string
+          products_subtotal: number | null
+          services_subtotal: number | null
           total_amount: number
+          total_discount: number | null
           updated_at: string
           user_id: string
         }
@@ -4722,9 +4740,15 @@ export type Database = {
           id?: string
           idempotency_key: string
           note?: string | null
+          order_discount_amount?: number | null
+          order_discount_type?: string | null
+          order_discount_value?: number | null
           payment_method: string
           payment_status?: string
+          products_subtotal?: number | null
+          services_subtotal?: number | null
           total_amount: number
+          total_discount?: number | null
           updated_at?: string
           user_id: string
         }
@@ -4735,9 +4759,15 @@ export type Database = {
           id?: string
           idempotency_key?: string
           note?: string | null
+          order_discount_amount?: number | null
+          order_discount_type?: string | null
+          order_discount_value?: number | null
           payment_method?: string
           payment_status?: string
+          products_subtotal?: number | null
+          services_subtotal?: number | null
           total_amount?: number
+          total_discount?: number | null
           updated_at?: string
           user_id?: string
         }
