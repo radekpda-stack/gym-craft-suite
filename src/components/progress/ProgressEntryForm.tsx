@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import {
   Sheet,
   SheetContent,
@@ -275,20 +276,15 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Klient *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte klienta" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <ClientSearchSelect
+                      clients={clients}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Vyhledat klienta..."
+                      filterArchived
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

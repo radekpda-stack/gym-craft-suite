@@ -21,6 +21,10 @@ interface ClientSearchSelectProps {
   showCreditBalance?: boolean;
   filterArchived?: boolean;
   className?: string;
+  /** Adds "All clients" option at the top - returns empty string when selected */
+  allowAll?: boolean;
+  /** Label for "All clients" option (default: "Všichni klienti") */
+  allLabel?: string;
 }
 
 function removeDiacritics(str: string): string {
@@ -36,11 +40,14 @@ export function ClientSearchSelect({
   showCreditBalance = false,
   filterArchived = true,
   className,
+  allowAll = false,
+  allLabel = "Všichni klienti",
 }: ClientSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const selectedClient = clients.find(c => c.id === value);
+  const selectedClient = value ? clients.find(c => c.id === value) : null;
+  const isAllSelected = allowAll && !value;
 
   const filteredClients = useMemo(() => {
     let result = filterArchived 
@@ -61,6 +68,12 @@ export function ClientSearchSelect({
     setSearchQuery('');
   };
 
+  const handleSelectAll = () => {
+    onValueChange('');
+    setOpen(false);
+    setSearchQuery('');
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -71,7 +84,9 @@ export function ClientSearchSelect({
           disabled={disabled}
           className={cn("w-full justify-between font-normal h-10 sm:h-9", className)}
         >
-          {selectedClient ? (
+          {isAllSelected ? (
+            <span className="text-foreground">{allLabel}</span>
+          ) : selectedClient ? (
             <div className="flex items-center justify-between w-full gap-2 overflow-hidden">
               <span className="truncate">{selectedClient.name}</span>
               {showCreditBalance && selectedClient.credit_balance !== undefined && (
@@ -99,6 +114,23 @@ export function ClientSearchSelect({
           <CommandList>
             <CommandEmpty>Klient nenalezen.</CommandEmpty>
             <CommandGroup>
+              {allowAll && (
+                <CommandItem
+                  value="__all__"
+                  onSelect={handleSelectAll}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Check
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        isAllSelected ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span className="truncate">{allLabel}</span>
+                  </div>
+                </CommandItem>
+              )}
               {filteredClients.map((client) => (
                 <CommandItem
                   key={client.id}
