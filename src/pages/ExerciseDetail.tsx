@@ -26,7 +26,7 @@ export default function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { exercises } = useExercises();
+  const { exercises, isLoading: exercisesLoading } = useExercises();
   const { data: stats, isLoading: statsLoading } = useExerciseStats(id || null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [quickLogOpen, setQuickLogOpen] = useState(false);
@@ -52,6 +52,21 @@ export default function ExerciseDetail() {
   
   // Use stats.isTimeBased for UI decisions (more accurate)
   const isTimeBased = stats?.isTimeBased || exerciseType === 'cardio';
+
+  // Show loading state while exercises are being fetched
+  if (exercisesLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <Button variant="ghost" onClick={() => navigate('/exercises')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Zpět na cviky
+        </Button>
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   if (!exercise) {
     return (
