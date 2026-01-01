@@ -14,6 +14,7 @@ export interface WorkoutExercise {
   rpe?: number | null;
   notes?: string | null;
   sort_order: number;
+  is_personal_record?: boolean;
 }
 
 export interface WorkoutLog {
@@ -22,6 +23,12 @@ export interface WorkoutLog {
   trainer_id: string;
   date: string;
   notes?: string | null;
+  workout_type?: string | null;
+  duration_minutes?: number | null;
+  energy_before?: number | null;
+  energy_after?: number | null;
+  trainer_comment?: string | null;
+  trainer_commented_at?: string | null;
   created_at: string;
   updated_at: string;
   exercises?: WorkoutExercise[];
@@ -33,6 +40,10 @@ export interface CreateWorkoutLogInput {
   trainer_id: string;
   date: string;
   notes?: string;
+  workout_type?: string;
+  duration_minutes?: number;
+  energy_before?: number;
+  energy_after?: number;
   exercises: Omit<WorkoutExercise, 'id'>[];
 }
 
@@ -100,6 +111,10 @@ export function useCreateWorkoutLog() {
           trainer_id: input.trainer_id,
           date: input.date,
           notes: input.notes,
+          workout_type: input.workout_type,
+          duration_minutes: input.duration_minutes,
+          energy_before: input.energy_before,
+          energy_after: input.energy_after,
         })
         .select()
         .single();
@@ -165,6 +180,34 @@ export function useDeleteWorkoutLog() {
     onError: (error) => {
       console.error('Error deleting workout log:', error);
       toast.error('Nepodařilo se smazat záznam');
+    },
+  });
+}
+
+// Hook for adding trainer comment
+export function useAddTrainerComment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ logId, comment }: { logId: string; comment: string }) => {
+      const { error } = await supabase
+        .from('client_workout_logs')
+        .update({
+          trainer_comment: comment,
+          trainer_commented_at: new Date().toISOString(),
+        })
+        .eq('id', logId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-client-workout-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['client-workout-logs'] });
+      toast.success('Komentář byl přidán');
+    },
+    onError: (error) => {
+      console.error('Error adding trainer comment:', error);
+      toast.error('Nepodařilo se přidat komentář');
     },
   });
 }

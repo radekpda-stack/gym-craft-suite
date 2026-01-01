@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,20 +21,26 @@ import { cs } from 'date-fns/locale';
 import { 
   Plus, 
   Dumbbell, 
-  Calendar, 
   Trash2, 
   ChevronDown, 
   ChevronUp,
   Clock,
   Target,
   MessageSquare,
-  X
+  X,
+  Trophy,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WorkoutTypeSelector, getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
+import { EnergyRating, getEnergyEmoji } from '@/components/client-portal/workout-diary/EnergyRating';
+import { ExerciseAutocomplete } from '@/components/client-portal/workout-diary/ExerciseAutocomplete';
+import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/WorkoutStatsCard';
 
 interface ExerciseInput {
   exercise_name: string;
+  exercise_id?: string;
   sets: string;
   reps: string;
   weight_kg: string;
@@ -54,7 +60,7 @@ const emptyExercise: ExerciseInput = {
 };
 
 export default function ClientPortalWorkoutDiary() {
-  const { clientId, clientProfile, clientAccount } = useClientPortal();
+  const { clientId, clientAccount } = useClientPortal();
   const { data: logs, isLoading } = useClientWorkoutLogs(clientId);
   const createLog = useCreateWorkoutLog();
   const deleteLog = useDeleteWorkoutLog();
@@ -62,6 +68,10 @@ export default function ClientPortalWorkoutDiary() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workoutDate, setWorkoutDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [workoutType, setWorkoutType] = useState<string | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState('');
+  const [energyBefore, setEnergyBefore] = useState<number | null>(null);
+  const [energyAfter, setEnergyAfter] = useState<number | null>(null);
   const [workoutNotes, setWorkoutNotes] = useState('');
   const [exercises, setExercises] = useState<ExerciseInput[]>([{ ...emptyExercise }]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
@@ -92,6 +102,12 @@ export default function ClientPortalWorkoutDiary() {
     ));
   };
 
+  const updateExerciseName = (index: number, name: string, exerciseId?: string) => {
+    setExercises(prev => prev.map((ex, i) => 
+      i === index ? { ...ex, exercise_name: name, exercise_id: exerciseId } : ex
+    ));
+  };
+
   const handleSaveWorkout = async () => {
     if (!clientId || !clientAccount?.trainer_id) return;
 
@@ -99,6 +115,7 @@ export default function ClientPortalWorkoutDiary() {
       .filter(ex => ex.exercise_name.trim())
       .map((ex, idx) => ({
         exercise_name: ex.exercise_name.trim(),
+        exercise_id: ex.exercise_id || null,
         sets: ex.sets ? parseInt(ex.sets) : null,
         reps: ex.reps ? parseInt(ex.reps) : null,
         weight_kg: ex.weight_kg ? parseFloat(ex.weight_kg) : null,
@@ -117,14 +134,22 @@ export default function ClientPortalWorkoutDiary() {
       trainer_id: clientAccount.trainer_id,
       date: workoutDate,
       notes: workoutNotes || undefined,
+      workout_type: workoutType || undefined,
+      duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
+      energy_before: energyBefore || undefined,
+      energy_after: energyAfter || undefined,
       exercises: validExercises,
     });
 
-    trackPortalEvent('workout_logged', { exercise_count: validExercises.length });
+    trackPortalEvent('workout_logged', { exercise_count: validExercises.length, workout_type: workoutType });
 
     // Reset form
     setDialogOpen(false);
     setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
+    setWorkoutType(null);
+    setDurationMinutes('');
+    setEnergyBefore(null);
+    setEnergyAfter(null);
     setWorkoutNotes('');
     setExercises([{ ...emptyExercise }]);
   };
@@ -151,7 +176,7 @@ export default function ClientPortalWorkoutDiary() {
         <div>
           <h1 className="text-2xl font-bold">Tréninkový deník</h1>
           <p className="text-muted-foreground text-sm">
-            Zaznamenávejte své tréninky mimo fitko
+            Zaznamenávejte své tréninky a sledujte progres
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
@@ -159,6 +184,11 @@ export default function ClientPortalWorkoutDiary() {
           Přidat trénink
         </Button>
       </div>
+
+      {/* Stats Card */}
+      {logs && logs.length > 0 && (
+        <WorkoutStatsCard logs={logs} weeklyGoal={4} />
+      )}
 
       {/* Workout Logs */}
       {logs?.length === 0 ? (
@@ -181,6 +211,8 @@ export default function ClientPortalWorkoutDiary() {
             const isExpanded = expandedLogs.has(log.id);
             const exerciseCount = log.exercises?.length || 0;
             const totalSets = log.exercises?.reduce((sum, ex) => sum + (ex.sets || 0), 0) || 0;
+            const WorkoutIcon = getWorkoutTypeIcon(log.workout_type);
+            const hasPR = log.exercises?.some(ex => ex.is_personal_record);
 
             return (
               <motion.div
@@ -195,19 +227,41 @@ export default function ClientPortalWorkoutDiary() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Dumbbell className="w-5 h-5 text-primary" />
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center",
+                          getWorkoutTypeColor(log.workout_type)
+                        )}>
+                          <WorkoutIcon className="w-5 h-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">
                               {format(parseISO(log.date), 'EEEE d. MMMM', { locale: cs })}
                             </span>
+                            {hasPR && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Trophy className="w-3 h-3" /> PR
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{exerciseCount} cviků</span>
+                            <span>{getWorkoutTypeLabel(log.workout_type)}</span>
                             <span>•</span>
-                            <span>{totalSets} sérií</span>
+                            <span>{exerciseCount} cviků</span>
+                            {log.duration_minutes && (
+                              <>
+                                <span>•</span>
+                                <span>{log.duration_minutes} min</span>
+                              </>
+                            )}
+                            {(log.energy_before || log.energy_after) && (
+                              <>
+                                <span>•</span>
+                                <span>
+                                  {getEnergyEmoji(log.energy_before)}→{getEnergyEmoji(log.energy_after)}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -251,10 +305,18 @@ export default function ClientPortalWorkoutDiary() {
                           {log.exercises?.map((ex, idx) => (
                             <div
                               key={ex.id || idx}
-                              className="p-3 bg-secondary/30 rounded-lg"
+                              className={cn(
+                                "p-3 rounded-lg",
+                                ex.is_personal_record ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30"
+                              )}
                             >
                               <div className="flex items-center justify-between mb-2">
-                                <span className="font-medium">{ex.exercise_name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{ex.exercise_name}</span>
+                                  {ex.is_personal_record && (
+                                    <Trophy className="w-4 h-4 text-yellow-500" />
+                                  )}
+                                </div>
                                 {ex.rpe && (
                                   <Badge variant="outline" className="text-xs">
                                     RPE {ex.rpe}
@@ -290,6 +352,17 @@ export default function ClientPortalWorkoutDiary() {
                               )}
                             </div>
                           ))}
+
+                          {/* Trainer comment */}
+                          {log.trainer_comment && (
+                            <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm">
+                              <User className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                              <div>
+                                <div className="font-medium text-primary mb-1">Komentář trenéra</div>
+                                <span>{log.trainer_comment}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -312,14 +385,46 @@ export default function ClientPortalWorkoutDiary() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Date */}
+            {/* Workout Type */}
             <div className="space-y-2">
-              <Label htmlFor="workout-date">Datum</Label>
-              <Input
-                id="workout-date"
-                type="date"
-                value={workoutDate}
-                onChange={(e) => setWorkoutDate(e.target.value)}
+              <Label>Typ tréninku</Label>
+              <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
+            </div>
+
+            {/* Date and Duration */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="workout-date">Datum</Label>
+                <Input
+                  id="workout-date"
+                  type="date"
+                  value={workoutDate}
+                  onChange={(e) => setWorkoutDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="workout-duration">Délka (min)</Label>
+                <Input
+                  id="workout-duration"
+                  type="number"
+                  placeholder="60"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Energy before/after */}
+            <div className="grid grid-cols-2 gap-4">
+              <EnergyRating 
+                value={energyBefore} 
+                onChange={setEnergyBefore}
+                label="Energie před"
+              />
+              <EnergyRating 
+                value={energyAfter} 
+                onChange={setEnergyAfter}
+                label="Pocit po"
               />
             </div>
 
@@ -339,10 +444,9 @@ export default function ClientPortalWorkoutDiary() {
                     </Button>
                   )}
 
-                  <Input
-                    placeholder="Název cviku *"
+                  <ExerciseAutocomplete
                     value={ex.exercise_name}
-                    onChange={(e) => updateExercise(idx, 'exercise_name', e.target.value)}
+                    onChange={(name, exerciseId) => updateExerciseName(idx, name, exerciseId)}
                   />
 
                   <div className="grid grid-cols-3 gap-2">

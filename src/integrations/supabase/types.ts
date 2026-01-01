@@ -1312,6 +1312,7 @@ export type Database = {
           exercise_id: string | null
           exercise_name: string
           id: string
+          is_personal_record: boolean | null
           notes: string | null
           reps: number | null
           rpe: number | null
@@ -1327,6 +1328,7 @@ export type Database = {
           exercise_id?: string | null
           exercise_name: string
           id?: string
+          is_personal_record?: boolean | null
           notes?: string | null
           reps?: number | null
           rpe?: number | null
@@ -1342,6 +1344,7 @@ export type Database = {
           exercise_id?: string | null
           exercise_name?: string
           id?: string
+          is_personal_record?: boolean | null
           notes?: string | null
           reps?: number | null
           rpe?: number | null
@@ -1372,28 +1375,46 @@ export type Database = {
           client_id: string
           created_at: string
           date: string
+          duration_minutes: number | null
+          energy_after: number | null
+          energy_before: number | null
           id: string
           notes: string | null
+          trainer_comment: string | null
+          trainer_commented_at: string | null
           trainer_id: string
           updated_at: string
+          workout_type: string | null
         }
         Insert: {
           client_id: string
           created_at?: string
           date?: string
+          duration_minutes?: number | null
+          energy_after?: number | null
+          energy_before?: number | null
           id?: string
           notes?: string | null
+          trainer_comment?: string | null
+          trainer_commented_at?: string | null
           trainer_id: string
           updated_at?: string
+          workout_type?: string | null
         }
         Update: {
           client_id?: string
           created_at?: string
           date?: string
+          duration_minutes?: number | null
+          energy_after?: number | null
+          energy_before?: number | null
           id?: string
           notes?: string | null
+          trainer_comment?: string | null
+          trainer_commented_at?: string | null
           trainer_id?: string
           updated_at?: string
+          workout_type?: string | null
         }
         Relationships: [
           {
@@ -1405,6 +1426,54 @@ export type Database = {
           },
           {
             foreignKeyName: "client_workout_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_workout_templates: {
+        Row: {
+          client_id: string
+          created_at: string
+          exercises: Json
+          id: string
+          name: string
+          trainer_id: string
+          updated_at: string
+          workout_type: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name: string
+          trainer_id: string
+          updated_at?: string
+          workout_type?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name?: string
+          trainer_id?: string
+          updated_at?: string
+          workout_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_workout_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_workout_templates_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
