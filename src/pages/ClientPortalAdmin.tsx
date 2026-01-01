@@ -7,18 +7,53 @@ import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisib
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
 import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
 import { ClientWorkoutLogsOverview } from '@/components/client-portal/ClientWorkoutLogsOverview';
-import { LayoutDashboard, Users, Settings, Info, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { LayoutDashboard, Users, Settings, Info, BookOpen, Copy, Check } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 export default function ClientPortalAdmin() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [copied, setCopied] = useState(false);
+
+  const loginUrl = `${window.location.origin}/zona/login`;
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(loginUrl);
+    setCopied(true);
+    toast.success('Odkaz zkopírován');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="container max-w-6xl py-4 sm:py-6 space-y-4 sm:space-y-6 px-4">
+      {/* Quick copy link */}
+      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+        <code className="text-sm flex-1 truncate text-muted-foreground">{loginUrl}</code>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopyLink}
+          className="shrink-0 gap-1.5"
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4 text-green-500" />
+              <span className="hidden sm:inline">Zkopírováno</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              <span className="hidden sm:inline">Kopírovat odkaz</span>
+            </>
+          )}
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
