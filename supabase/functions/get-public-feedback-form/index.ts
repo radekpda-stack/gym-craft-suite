@@ -106,14 +106,13 @@ serve(async (req) => {
 
     console.log(`Fetching feedback form for token: ${token}`);
 
-    // Find the feedback request by token with trainer profile
+    // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
       .from("feedback_requests")
       .select(`
         *,
         clients(name, gender),
-        training_sessions(date, notes),
-        profiles:user_id(full_name)
+        training_sessions(date, notes)
       `)
       .eq("token", token)
       .maybeSingle();
@@ -191,8 +190,17 @@ serve(async (req) => {
 
     console.log(`Loaded feedback settings for user ${request.user_id}:`, feedbackSettings?.feedback_questions ? 'custom config' : 'default config');
 
-    // Get trainer name from profiles table
-    const trainerName = (request as any).profiles?.full_name || null;
+    // Get trainer name from profiles table (separate query to avoid join issues)
+    let trainerName = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", request.user_id)
+      .maybeSingle();
+    
+    if (profile) {
+      trainerName = profile.full_name;
+    }
 
     // Return form data with trainer info
     return new Response(
