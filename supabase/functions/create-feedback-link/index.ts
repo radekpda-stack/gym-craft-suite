@@ -156,7 +156,8 @@ serve(async (req) => {
     const expirationHours = settings?.value?.link_expiry_hours || 72;
     const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000).toISOString();
 
-    // Create new feedback request
+    // Create new feedback request with link_url
+    const linkUrl = `${resolvedBaseUrl}/feedback`;
     const { data: newRequest, error: createError } = await supabase
       .from("feedback_requests")
       .insert({
@@ -167,6 +168,7 @@ serve(async (req) => {
         status: "pending",
         send_channel: send_channel || null,
         is_link_generated: true,
+        link_url: linkUrl, // Store base URL for reference
       })
       .select("id, token, expires_at")
       .single();
@@ -175,6 +177,18 @@ serve(async (req) => {
       console.error("Error creating feedback request:", createError);
       throw new Error("Chyba při vytváření odkazu");
     }
+
+    // Log CREATED event
+    await supabase
+      .from("feedback_event_log")
+      .insert({
+        feedback_request_id: newRequest.id,
+        event_type: "CREATED",
+        meta: {
+          send_channel: send_channel || null,
+          base_url: resolvedBaseUrl,
+        },
+      });
 
     console.log(`Feedback link created: ${newRequest.token}`);
 

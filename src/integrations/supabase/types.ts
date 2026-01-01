@@ -2773,6 +2773,38 @@ export type Database = {
           },
         ]
       }
+      feedback_event_log: {
+        Row: {
+          created_at: string
+          event_type: string
+          feedback_request_id: string
+          id: string
+          meta: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          feedback_request_id: string
+          id?: string
+          meta?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          feedback_request_id?: string
+          id?: string
+          meta?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_event_log_feedback_request_id_fkey"
+            columns: ["feedback_request_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_requests: {
         Row: {
           client_id: string
@@ -2784,10 +2816,14 @@ export type Database = {
           is_link_generated: boolean | null
           last_reminder_at: string | null
           link_copied_at: string | null
+          link_url: string | null
           opened_at: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
           reminder_count: number | null
           send_channel: string | null
           sent_at: string | null
+          sent_to: string | null
           status: string
           token: string
           trainer_signature: string | null
@@ -2805,10 +2841,14 @@ export type Database = {
           is_link_generated?: boolean | null
           last_reminder_at?: string | null
           link_copied_at?: string | null
+          link_url?: string | null
           opened_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
           reminder_count?: number | null
           send_channel?: string | null
           sent_at?: string | null
+          sent_to?: string | null
           status?: string
           token?: string
           trainer_signature?: string | null
@@ -2826,10 +2866,14 @@ export type Database = {
           is_link_generated?: boolean | null
           last_reminder_at?: string | null
           link_copied_at?: string | null
+          link_url?: string | null
           opened_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
           reminder_count?: number | null
           send_channel?: string | null
           sent_at?: string | null
+          sent_to?: string | null
           status?: string
           token?: string
           trainer_signature?: string | null

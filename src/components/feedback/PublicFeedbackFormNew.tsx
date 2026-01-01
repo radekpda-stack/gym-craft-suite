@@ -10,6 +10,8 @@ import {
   CheckCircle,
   HelpCircle,
   ChevronDown,
+  User,
+  XCircle,
 } from 'lucide-react';
 import { BodyPainSelector, PainSelection } from './BodyPainSelector';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PublicFeedbackFormNewProps {
   token: string;
@@ -70,11 +82,12 @@ interface FormData {
   clientGender: 'male' | 'female' | null;
   trainingDate: string | null;
   trainingNotes: string | null;
+  trainerName: string | null;
   expiresAt: string;
   questionsConfig: FeedbackQuestionsConfig | null;
 }
 
-type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed';
+type FormStatus = 'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'expired' | 'completed' | 'rejected';
 
 // Mandatory questions that are always visible (Master Prompt requirement)
 const MANDATORY_QUESTION_IDS = ['soreness', 'pain', 'energy', 'difficulty'];
@@ -132,6 +145,8 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   const [sleepHours, setSleepHours] = useState<number>(7.5);
   const [note, setNote] = useState('');
   const [showOptional, setShowOptional] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   
   // Timing for form completion
   const formOpenTime = useRef<number>(Date.now());
@@ -189,6 +204,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         setStatus('completed');
         return;
       }
+
+      if (result?.code === 'REJECTED') {
+        setStatus('rejected');
+        return;
+      }
       
       if (result?.error) {
         console.error('Form error:', result.error, result.code);
@@ -221,6 +241,38 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Handle pain selections change from BodyPainSelector
   const handlePainSelectionsChange = (selections: PainSelection[]) => {
     setPainSelections(selections);
+  };
+
+  // Handle rejection - "Tohle nejsem já"
+  const handleReject = async () => {
+    setIsRejecting(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('reject-feedback-form', {
+        body: { token },
+      });
+
+      if (error) {
+        console.error('Error rejecting form:', error);
+        setErrorMessage('Chyba při odmítání formuláře');
+        setStatus('error');
+        return;
+      }
+
+      if (result?.error) {
+        setErrorMessage(result.error);
+        setStatus('error');
+        return;
+      }
+
+      setStatus('rejected');
+    } catch (error) {
+      console.error('Error rejecting form:', error);
+      setErrorMessage('Chyba při odmítání formuláře');
+      setStatus('error');
+    } finally {
+      setIsRejecting(false);
+      setShowRejectConfirm(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -445,6 +497,23 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     );
   }
 
+  // Rejected state
+  if (status === 'rejected') {
+    return (
+      <div className="public-page flex items-center justify-center p-4">
+        <Card className="public-card max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <XCircle className="w-12 h-12 mx-auto mb-4 text-warning" />
+            <h2 className="text-xl font-semibold mb-2">Děkujeme za upozornění</h2>
+            <p className="text-muted-foreground">
+              Formulář byl označen jako nesprávně doručený. Váš trenér bude informován.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Success state
   if (status === 'success') {
     return (
@@ -496,17 +565,51 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               </p>
             </div>
 
-            {/* Training date */}
-            {formData?.trainingDate && (
-              <div className="p-3 rounded-lg bg-secondary/50 border text-sm text-center">
-                <span className="text-muted-foreground">Trénink:</span>{' '}
-                <span className="font-medium">
-                  {format(new Date(formData.trainingDate), 'd.M.yyyy HH:mm', { locale: cs })}
+            {/* Client and Training Info - Double-check header */}
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+              <div className="flex items-center gap-2 justify-center">
+                <User className="w-4 h-4 text-primary" />
+                <span className="font-semibold text-foreground">
+                  Feedback pro: {formData?.clientName || 'Klient'}
                 </span>
               </div>
-            )}
+              {formData?.trainingDate && (
+                <p className="text-sm text-center text-muted-foreground">
+                  Trénink: {format(new Date(formData.trainingDate), "EEEE d. MMMM yyyy 'v' HH:mm", { locale: cs })}
+                </p>
+              )}
+              {formData?.trainerName && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Trenér: {formData.trainerName}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Reject confirmation dialog */}
+        <AlertDialog open={showRejectConfirm} onOpenChange={setShowRejectConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tohle nejste vy?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Pokud jste obdrželi tento formulář omylem nebo patří někomu jinému, 
+                dejte nám vědět. Váš trenér bude informován.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isRejecting}>Zrušit</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleReject} 
+                disabled={isRejecting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isRejecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Ano, nejsem to já
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* MANDATORY Questions - Always visible */}
         <div className="space-y-4">
@@ -728,10 +831,19 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           )}
         </Button>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          Vaše odpovědi jsou důvěrné a pomohou zlepšit váš trénink.
-        </p>
+        {/* Footer with reject option */}
+        <div className="text-center mt-4 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Vaše odpovědi jsou důvěrné a pomohou zlepšit váš trénink.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowRejectConfirm(true)}
+            className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+          >
+            Tohle nejsem já / špatný příjemce
+          </button>
+        </div>
       </div>
     </div>
   );

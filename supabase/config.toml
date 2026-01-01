@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.client-portal-benchmarks]
 verify_jwt = false
+
+[functions.reject-feedback-form]
+verify_jwt = false

@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const inputSchema = z.object({
   token: z.string().uuid(),
-  send_channel: z.enum(["sms", "whatsapp", "other"]).optional(),
+  send_channel: z.enum(["sms", "whatsapp", "imessage", "email", "manual", "other"]).optional(),
+  sent_to: z.string().max(200).optional(), // phone or email
 });
 
 serve(async (req) => {
@@ -52,7 +53,7 @@ serve(async (req) => {
       );
     }
 
-    const { token: feedbackToken, send_channel } = parseResult.data;
+    const { token: feedbackToken, send_channel, sent_to } = parseResult.data;
 
     // Update the feedback request
     const { data, error } = await supabase
@@ -60,16 +61,31 @@ serve(async (req) => {
       .update({ 
         sent_at: new Date().toISOString(),
         send_channel: send_channel || null,
+        sent_to: sent_to || null,
       })
       .eq("token", feedbackToken)
       .eq("user_id", user.id)
-      .select()
+      .select("id")
       .single();
 
     if (error) {
       console.error("Error updating feedback request:", error);
       throw new Error("Chyba při aktualizaci");
     }
+
+    // Log SENT event
+    await supabase
+      .from("feedback_event_log")
+      .insert({
+        feedback_request_id: data.id,
+        event_type: "SENT",
+        meta: {
+          send_channel: send_channel || null,
+          sent_to: sent_to || null,
+        },
+      });
+
+    console.log(`Feedback marked as sent: ${data.id}`);
 
     return new Response(
       JSON.stringify({ success: true, data }),
