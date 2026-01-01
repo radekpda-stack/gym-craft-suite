@@ -1,5 +1,8 @@
-// Main analytics exports
+// Core analytics exports
+export * from './core/tracker';
+export * from './core/types';
 export { sessionManager, getDeviceType, getBrowser, getOS } from './SessionManager';
-export { trackEvent, startTimedEvent, EVENT_SCHEMA_VERSION } from './trackEvent';
-export type { EventCategory, FeatureCategory, TrackEventOptions } from './trackEvent';
-export { trackPageView, getPageNameFromRoute, endCurrentPageView } from './trackPageView';
+export { EVENT_SCHEMA_VERSION, updateReferrerRoute, getReferrerRoute } from './core/enrichment';
+
+// Legacy compatibility
+export { track as trackEvent, startTimedAction as startTimedEvent } from './core/tracker';

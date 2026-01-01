@@ -2731,40 +2731,61 @@ export type Database = {
       }
       feature_usage: {
         Row: {
+          active_duration_ms: number | null
           created_at: string
           duration_ms: number | null
+          entity_id: string | null
+          entity_type: string | null
+          error_code: string | null
           error_message: string | null
+          event_id: string | null
           feature_category: string
           feature_name: string
           id: string
           metadata: Json | null
+          retry_count: number | null
           session_id: string | null
           success: boolean | null
           user_id: string
+          visibility_interruptions: number | null
         }
         Insert: {
+          active_duration_ms?: number | null
           created_at?: string
           duration_ms?: number | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
           error_message?: string | null
+          event_id?: string | null
           feature_category: string
           feature_name: string
           id?: string
           metadata?: Json | null
+          retry_count?: number | null
           session_id?: string | null
           success?: boolean | null
           user_id: string
+          visibility_interruptions?: number | null
         }
         Update: {
+          active_duration_ms?: number | null
           created_at?: string
           duration_ms?: number | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
           error_message?: string | null
+          event_id?: string | null
           feature_category?: string
           feature_name?: string
           id?: string
           metadata?: Json | null
+          retry_count?: number | null
           session_id?: string | null
           success?: boolean | null
           user_id?: string
+          visibility_interruptions?: number | null
         }
         Relationships: [
           {
@@ -6467,6 +6488,26 @@ export type Database = {
       update_shared_balance_atomic: {
         Args: { p_delta: number; p_group_id: string }
         Returns: number
+      }
+      upsert_analytics_event: {
+        Args: {
+          p_active_duration_ms?: number
+          p_duration_ms?: number
+          p_entity_id?: string
+          p_entity_type?: string
+          p_error_code?: string
+          p_error_message?: string
+          p_event_id: string
+          p_feature_category: string
+          p_feature_name: string
+          p_metadata?: Json
+          p_retry_count?: number
+          p_session_id?: string
+          p_success?: boolean
+          p_user_id: string
+          p_visibility_interruptions?: number
+        }
+        Returns: string
       }
       validate_client_token: {
         Args: { _token: string }
