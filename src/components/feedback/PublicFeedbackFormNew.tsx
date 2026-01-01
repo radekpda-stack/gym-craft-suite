@@ -102,7 +102,7 @@ const DEFAULT_HELP_TEXTS: Record<string, string> = {
   energy: 'Vaše celková úroveň energie během dne - zda se cítíte unavený, ospalý nebo naopak plný síly a elánu.',
   pain: 'Ostrá, bodavá nebo tupá bolest v kloubech, šlachách nebo svalech - NE běžná svalová bolest po tréninku. Pokud máte bolest, vyberte kde.',
   session_fit: 'Hodnotí, jak dobře trénink odpovídal vaší aktuální kondici, náladě a očekávání. Byl přiměřený, nebo příliš lehký/těžký?',
-  difficulty: '1-3: rezerva, mohl/a bych pokračovat | 4-6: náročné, ale kontrolované | 7-8: na hraně, ke konci těžké | 9-10: maximum/přepálené',
+  difficulty: 'RPE (Rate of Perceived Exertion) = jak náročný byl trénink celkově na konci. 1-3: lehké, mohl/a bych pokračovat | 4-6: náročné, ale kontrolované | 7-8: na hraně, ke konci těžké | 9-10: maximum/přepálené',
   fun: 'Jak moc vás trénink bavil? Cítili jste motivaci a radost z pohybu, nebo to bylo spíše utrpení?',
 };
 
@@ -409,24 +409,29 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               <span>{question.maxLabel}</span>
             </div>
             
-            {/* Difficulty scale anchoring */}
+            {/* Difficulty (RPE) description and scale anchoring */}
             {question.id === 'difficulty' && (
-              <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground mt-2 border-t pt-2">
-                <div className="text-center">
-                  <span className="font-medium">1-3</span>
-                  <p>rezerva</p>
-                </div>
-                <div className="text-center">
-                  <span className="font-medium">4-6</span>
-                  <p>kontrola</p>
-                </div>
-                <div className="text-center">
-                  <span className="font-medium">7-8</span>
-                  <p>na hraně</p>
-                </div>
-                <div className="text-center">
-                  <span className="font-medium">9-10</span>
-                  <p>maximum</p>
+              <div className="space-y-2 mt-2 border-t pt-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  Hodnotíš celkovou náročnost na konci tréninku (RPE = jak těžké to bylo).
+                </p>
+                <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
+                  <div className="text-center">
+                    <span className="font-medium text-green-500">1-3</span>
+                    <p>rezerva</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-medium text-yellow-500">4-6</span>
+                    <p>kontrola</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-medium text-orange-500">7-8</span>
+                    <p>na hraně</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-medium text-red-500">9-10</span>
+                    <p>maximum</p>
+                  </div>
                 </div>
               </div>
             )}
