@@ -27,15 +27,11 @@ export function DashboardSettings({ layout }: DashboardSettingsProps) {
   };
 
   const sections = [
-    { key: 'showIncomeChart' as const, label: 'Graf příjmů (30 dní)' },
-    { key: 'showMonthlyChart' as const, label: 'Měsíční přehled' },
-    { key: 'showSalesChart' as const, label: 'Statistiky prodejů' },
-    { key: 'showTrainingTrend' as const, label: 'Trend tréninků (12 měsíců)' },
-    { key: 'showTrainingStats' as const, label: 'Statistiky tréninků' },
-    { key: 'showTopClients' as const, label: 'Nejčastější klienti' },
-    { key: 'showClientCredits' as const, label: 'Přehled kreditů' },
-    { key: 'showProductBreakdown' as const, label: 'Prodej produktů' },
+    { key: 'showCareerMilestone' as const, label: 'Kariérní statistiky' },
+    { key: 'showTodayPlan' as const, label: 'Dnešní plán' },
+    { key: 'showPendingApprovals' as const, label: 'Čekající schválení' },
     { key: 'showQuickActions' as const, label: 'Rychlé akce' },
+    { key: 'showActionBlock' as const, label: 'Akční blok' },
   ];
 
   return (

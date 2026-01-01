@@ -6,10 +6,8 @@ import {
   KeyRound,
   Calendar,
   Clock,
-  Users,
   CreditCard,
   Package,
-  Wallet,
   Tag,
   Wrench,
   RefreshCw,
@@ -24,7 +22,6 @@ import {
   LayoutDashboard,
   Boxes,
   Dumbbell,
-  Trophy,
   Paintbrush,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
@@ -35,8 +32,6 @@ import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
-import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
-import { CalendarSharingSettings } from '@/components/settings/CalendarSharingSettings';
 import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
@@ -48,7 +43,6 @@ import { DashboardPersonalizationSettings } from '@/components/settings/Dashboar
 import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
-import { ComparisonSettings } from '@/components/settings/ComparisonSettings';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -77,10 +71,10 @@ export default function Settings() {
     },
     {
       id: 'operations',
-      title: language === 'cs' ? 'Provoz & Kalendář' : 'Operations & Calendar',
+      title: language === 'cs' ? 'Provoz' : 'Operations',
       description: language === 'cs' 
-        ? 'Pracovní doba a sdílení kalendáře' 
-        : 'Working hours and calendar sharing',
+        ? 'Pracovní doba a kapacita' 
+        : 'Working hours and capacity',
       icon: Calendar,
       iconColor: 'text-green-500',
     },
@@ -88,8 +82,8 @@ export default function Settings() {
       id: 'services',
       title: language === 'cs' ? 'Služby & Ceny' : 'Services & Pricing',
       description: language === 'cs' 
-        ? 'Ceník, balíčky, štítky a kreditové prahy' 
-        : 'Pricing, packages, tags and credit thresholds',
+        ? 'Ceník, balíčky a štítky' 
+        : 'Pricing, packages and tags',
       icon: CreditCard,
       iconColor: 'text-amber-500',
     },
@@ -97,8 +91,8 @@ export default function Settings() {
       id: 'personalization',
       title: language === 'cs' ? 'Personalizace' : 'Personalization',
       description: language === 'cs' 
-        ? 'Dashboard, rychlé akce a výchozí hodnoty' 
-        : 'Dashboard, quick actions and default values',
+        ? 'Vzhled, dashboard a výchozí hodnoty' 
+        : 'Appearance, dashboard and default values',
       icon: Palette,
       iconColor: 'text-purple-500',
     },
@@ -113,10 +107,10 @@ export default function Settings() {
     },
     {
       id: 'system',
-      title: language === 'cs' ? 'Systém & Data' : 'System & Data',
+      title: language === 'cs' ? 'Systém' : 'System',
       description: language === 'cs' 
-        ? 'Export, synchronizace a technické funkce' 
-        : 'Export, sync and technical functions',
+        ? 'Export dat a technické funkce' 
+        : 'Data export and technical functions',
       icon: Wrench,
       iconColor: 'text-rose-500',
     },
@@ -124,8 +118,8 @@ export default function Settings() {
       id: 'admin',
       title: language === 'cs' ? 'Administrace' : 'Administration',
       description: language === 'cs' 
-        ? 'Správa uživatelů a přístupů' 
-        : 'User and access management',
+        ? 'Správa uživatelů a cviků' 
+        : 'User and exercise management',
       icon: Shield,
       iconColor: 'text-red-500',
       badge: 'Admin',
@@ -229,16 +223,6 @@ export default function Settings() {
             >
               <CapacitySettingsPanel />
             </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Sdílení kalendáře' : 'Calendar Sharing'}
-              description={language === 'cs' 
-                ? 'Pozvěte jiné trenéry k zobrazení vašeho kalendáře' 
-                : 'Invite other trainers to view your calendar'}
-              icon={Users}
-            >
-              <CalendarSharingSettings />
-            </SettingsSection>
           </>
         );
 
@@ -285,16 +269,6 @@ export default function Settings() {
               icon={Tag}
             >
               <TagsManagement />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Prahy kreditu' : 'Credit Thresholds'}
-              description={language === 'cs' 
-                ? 'Upozornění na nízký kredit klienta' 
-                : 'Low credit alerts for clients'}
-              icon={Wallet}
-            >
-              <CreditThresholdSettings />
             </SettingsSection>
           </>
         );
@@ -441,16 +415,6 @@ export default function Settings() {
               icon={Dumbbell}
             >
               <ExercisesManagementSection />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Srovnání & Výzvy' : 'Comparisons & Challenges'}
-              description={language === 'cs' 
-                ? 'Nastavení benchmarků a leaderboardů pro klienty' 
-                : 'Benchmark and leaderboard settings for clients'}
-              icon={Trophy}
-            >
-              <ComparisonSettings />
             </SettingsSection>
           </>
         );

@@ -79,6 +79,7 @@ export const themes: Theme[] = [
 ];
 
 const THEME_STORAGE_KEY = 'app-theme';
+const VALID_THEME_IDS = themes.map(t => t.id);
 
 // Apply theme immediately (can be called outside React)
 function applyThemeToDOM(themeId: ThemeId) {
@@ -103,11 +104,15 @@ function applyThemeToDOM(themeId: ThemeId) {
 // Initialize theme immediately on module load (before React renders)
 function initializeTheme(): ThemeId {
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored && themes.find(t => t.id === stored)) {
-      const themeId = stored as ThemeId;
-      applyThemeToDOM(themeId);
-      return themeId;
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored && VALID_THEME_IDS.includes(stored as ThemeId)) {
+        const themeId = stored as ThemeId;
+        applyThemeToDOM(themeId);
+        return themeId;
+      }
+    } catch (e) {
+      console.warn('Failed to read theme from localStorage:', e);
     }
   }
   // Default theme
@@ -122,9 +127,27 @@ export function useTheme() {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
 
   const setTheme = useCallback((themeId: ThemeId) => {
+    if (!VALID_THEME_IDS.includes(themeId)) {
+      console.warn('Invalid theme ID:', themeId);
+      return;
+    }
     setCurrentTheme(themeId);
-    localStorage.setItem(THEME_STORAGE_KEY, themeId);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themeId);
+    } catch (e) {
+      console.warn('Failed to save theme to localStorage:', e);
+    }
     applyThemeToDOM(themeId);
+  }, []);
+
+  const resetTheme = useCallback(() => {
+    try {
+      localStorage.removeItem(THEME_STORAGE_KEY);
+    } catch (e) {
+      console.warn('Failed to remove theme from localStorage:', e);
+    }
+    setCurrentTheme('arctic-pro');
+    applyThemeToDOM('arctic-pro');
   }, []);
 
   // Re-apply theme when component mounts (in case of hydration mismatch)
@@ -135,6 +158,7 @@ export function useTheme() {
   return {
     currentTheme,
     setTheme,
+    resetTheme,
     themes,
     currentThemeData: themes.find(t => t.id === currentTheme),
   };

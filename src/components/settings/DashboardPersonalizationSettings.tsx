@@ -5,17 +5,11 @@ import { useDashboardLayout, useUpdateSetting, DashboardLayout } from '@/hooks/u
 import { useLanguage } from '@/lib/i18n';
 
 const DASHBOARD_SECTIONS = [
-  { key: 'showIncomeChart', labelCs: 'Graf příjmů', labelEn: 'Income chart' },
-  { key: 'showMonthlyChart', labelCs: 'Měsíční přehled', labelEn: 'Monthly overview' },
-  { key: 'showClientCredits', labelCs: 'Kredity klientů', labelEn: 'Client credits' },
-  { key: 'showProductBreakdown', labelCs: 'Rozložení produktů', labelEn: 'Product breakdown' },
-  { key: 'showTaxCalculator', labelCs: 'Daňová kalkulačka', labelEn: 'Tax calculator' },
+  { key: 'showCareerMilestone', labelCs: 'Kariérní statistiky', labelEn: 'Career milestone' },
+  { key: 'showTodayPlan', labelCs: 'Dnešní plán', labelEn: 'Today\'s plan' },
+  { key: 'showPendingApprovals', labelCs: 'Čekající schválení', labelEn: 'Pending approvals' },
   { key: 'showQuickActions', labelCs: 'Rychlé akce', labelEn: 'Quick actions' },
-  { key: 'showTrainingTrend', labelCs: 'Trend tréninků', labelEn: 'Training trend' },
-  { key: 'showTrainingStats', labelCs: 'Statistiky tréninků', labelEn: 'Training stats' },
-  { key: 'showTopClients', labelCs: 'Top klienti', labelEn: 'Top clients' },
-  { key: 'showProfitChart', labelCs: 'Graf zisku', labelEn: 'Profit chart' },
-  { key: 'showSalesChart', labelCs: 'Graf prodejů', labelEn: 'Sales chart' },
+  { key: 'showActionBlock', labelCs: 'Akční blok', labelEn: 'Action block' },
 ] as const;
 
 export function DashboardPersonalizationSettings() {
