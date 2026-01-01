@@ -513,7 +513,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Magnet (1-3)</Label>
+                        <Label className="text-xs">Magnet (0-3)</Label>
                         <Select
                           value={set.resistance?.toString() || ''}
                           onValueChange={(value) => handleSetChange(index, 'resistance', value)}
@@ -522,6 +522,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                             <SelectValue placeholder="-" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="0">0</SelectItem>
                             <SelectItem value="1">1</SelectItem>
                             <SelectItem value="2">2</SelectItem>
                             <SelectItem value="3">3</SelectItem>

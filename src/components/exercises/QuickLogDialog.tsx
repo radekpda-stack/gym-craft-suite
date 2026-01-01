@@ -587,13 +587,13 @@ export function QuickLogDialog({
                           name="resistance"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Odpor (1-3)</FormLabel>
+                              <FormLabel>Odpor (0-3)</FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
-                                  min={1}
+                                  min={0}
                                   max={3}
-                                  placeholder="2"
+                                  placeholder="-"
                                   value={field.value ?? ''}
                                   onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                                 />
