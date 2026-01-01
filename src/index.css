@@ -148,6 +148,8 @@
     --shadow-lg: 0 8px 24px -4px hsl(0 0% 0% / 0.6);
   }
 
+  /* ========================================
+     ARCTIC PRO THEME - Cool dark with cyan
      ======================================== */
   .theme-arctic-pro {
     --background: 210 27% 6%;
@@ -326,11 +328,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted/50 rounded-full;
+    background-color: hsl(var(--muted) / 0.5);
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/30;
+    background-color: hsl(var(--muted-foreground) / 0.3);
   }
 }
 
@@ -472,7 +475,8 @@
   }
 
   .jm-btn-secondary:hover {
-    @apply border-primary/30 bg-card;
+    @apply bg-card;
+    border-color: hsl(var(--primary) / 0.3);
   }
 
   .jm-btn-ghost {
@@ -488,13 +492,20 @@
      ======================================== */
 
   .jm-input {
-    @apply w-full bg-card/50 border-0 border-b border-border/50 rounded-t-lg px-3 py-3;
-    @apply text-foreground placeholder:text-muted-foreground;
+    @apply w-full border-0 border-b rounded-t-lg px-3 py-3;
+    @apply text-foreground;
     @apply focus:outline-none focus:border-primary transition-colors duration-150;
+    background-color: hsl(var(--card) / 0.5);
+    border-color: hsl(var(--border) / 0.5);
+  }
+  
+  .jm-input::placeholder {
+    color: hsl(var(--muted-foreground));
   }
 
   .jm-input-error {
-    @apply border-destructive/50 focus:border-destructive;
+    @apply focus:border-destructive;
+    border-color: hsl(var(--destructive) / 0.5);
   }
 
   /* ========================================
@@ -666,12 +677,13 @@
      ======================================== */
 
   .icon-btn {
-    @apply p-2 rounded-xl transition-all duration-150;
-    @apply bg-muted/30 text-muted-foreground;
+    @apply p-2 rounded-xl transition-all duration-150 text-muted-foreground;
+    background-color: hsl(var(--muted) / 0.3);
   }
 
   .icon-btn:hover {
-    @apply bg-muted/60 text-foreground;
+    @apply text-foreground;
+    background-color: hsl(var(--muted) / 0.6);
   }
 
   /* ========================================
@@ -790,16 +802,18 @@
   }
 
   .glass-hover:hover {
-    @apply bg-muted/30;
+    background-color: hsl(var(--muted) / 0.3);
   }
 
   /* Timeline item for calendar */
   .timeline-item {
-    @apply relative flex items-center gap-3 p-3;
-    @apply bg-card/60 border border-border/30 rounded-xl;
+    @apply relative flex items-center gap-3 p-3 rounded-xl;
+    background-color: hsl(var(--card) / 0.6);
+    border: 1px solid hsl(var(--border) / 0.3);
   }
 
   .timeline-item:hover {
-    @apply bg-card border-border/50;
+    @apply bg-card;
+    border-color: hsl(var(--border) / 0.5);
   }
 }
