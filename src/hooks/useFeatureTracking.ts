@@ -1,16 +1,26 @@
+/**
+ * Analytics Hooks
+ * 
+ * React hooks for analytics tracking.
+ * Provides convenient wrappers around the core analytics functions.
+ */
+
 import { useCallback, useEffect, useRef } from 'react';
-import { trackEvent, startTimedEvent, trackPageView } from '@/lib/analytics';
-import type { EventCategory } from '@/lib/analytics';
+import { 
+  track, 
+  trackPageView, 
+  trackError, 
+  trackMetric,
+  startTimedAction,
+  endCurrentPageView
+} from '@/lib/analytics';
+import type { EventCategory, TrackOptions, ErrorCode } from '@/lib/analytics';
 
-// Re-export types for backwards compatibility
-export type FeatureCategory = EventCategory;
+// Re-export types
+export type { EventCategory as FeatureCategory };
 
-interface TrackOptions {
-  metadata?: Record<string, any>;
+interface UseTrackOptions extends Omit<TrackOptions, 'debounceMs'> {
   debounceMs?: number;
-  duration_ms?: number;
-  success?: boolean;
-  error_message?: string;
 }
 
 /**
@@ -19,23 +29,17 @@ interface TrackOptions {
 export function useFeatureTracking() {
   const trackFeature = useCallback(async (
     featureName: string,
-    category: FeatureCategory,
-    options?: TrackOptions
+    category: EventCategory,
+    options?: UseTrackOptions
   ) => {
-    await trackEvent(featureName, category, {
-      metadata: options?.metadata,
-      duration_ms: options?.duration_ms,
-      success: options?.success,
-      error_message: options?.error_message,
-      debounceMs: options?.debounceMs,
-    });
+    await track(featureName, category, options);
   }, []);
 
   return { trackFeature };
 }
 
 /**
- * Hook for automatic page view tracking with duration
+ * Hook for automatic page view tracking with active duration
  */
 export function usePageTracking(pageName: string) {
   const tracked = useRef(false);
@@ -45,20 +49,74 @@ export function usePageTracking(pageName: string) {
       tracked.current = true;
       trackPageView(pageName);
     }
+    
+    // Cleanup on unmount
+    return () => {
+      // Page leave is handled by next trackPageView call
+    };
   }, [pageName]);
 }
 
 /**
+ * Hook for tracking timed operations
+ */
+export function useTimedTracking() {
+  const startTiming = useCallback((
+    actionName: string,
+    category: EventCategory,
+    metadata?: Record<string, any>
+  ) => {
+    return startTimedAction(actionName, category, metadata);
+  }, []);
+
+  return { startTiming };
+}
+
+/**
+ * Hook for tracking errors in operations
+ */
+export function useErrorTracking() {
+  const trackOperationError = useCallback(async (
+    operation: string,
+    category: EventCategory,
+    error: Error | string,
+    errorCode?: ErrorCode,
+    metadata?: Record<string, any>
+  ) => {
+    await trackError(operation, category, error, errorCode, metadata);
+  }, []);
+
+  return { trackOperationError };
+}
+
+/**
+ * Hook for tracking metrics (PRs, progress, etc.)
+ */
+export function useMetricTracking() {
+  const trackMetricValue = useCallback(async (
+    metricName: string,
+    category: EventCategory,
+    value: number,
+    metadata?: Record<string, any>
+  ) => {
+    await trackMetric(metricName, category, value, metadata);
+  }, []);
+
+  return { trackMetricValue };
+}
+
+/**
  * Singleton for tracking outside of React components
+ * (backwards compatible with existing featureTracker usage)
  */
 export const featureTracker = {
   async track(
     featureName: string, 
-    category: FeatureCategory, 
+    category: EventCategory, 
     metadata?: Record<string, any>,
     options?: { success?: boolean; error_message?: string; duration_ms?: number }
   ) {
-    await trackEvent(featureName, category, {
+    await track(featureName, category, {
       metadata,
       duration_ms: options?.duration_ms,
       success: options?.success,
@@ -66,7 +124,17 @@ export const featureTracker = {
     });
   },
 
-  startTiming(featureName: string, category: FeatureCategory, metadata?: Record<string, any>) {
-    return startTimedEvent(featureName, category, metadata);
+  startTiming(featureName: string, category: EventCategory, metadata?: Record<string, any>) {
+    return startTimedAction(featureName, category, metadata);
+  },
+  
+  async trackError(
+    operation: string,
+    category: EventCategory,
+    error: Error | string,
+    errorCode?: ErrorCode,
+    metadata?: Record<string, any>
+  ) {
+    await trackError(operation, category, error, errorCode, metadata);
   }
 };
