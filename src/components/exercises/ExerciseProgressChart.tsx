@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, AreaChart, Area } from 'recharts';
-import { TrendingUp, Loader2, Activity, Timer } from 'lucide-react';
+import { TrendingUp, Loader2, Activity, Timer, Zap } from 'lucide-react';
 import { format, subDays, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -57,7 +57,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       // Fetch all data from exercise_entries (includes both strength and time-based)
       let query = supabase
         .from('exercise_entries')
-        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, clients(name)')
+        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, avg_watts, max_watts, pace_sec_per_500m, clients(name)')
         .eq('exercise_id', exerciseId)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date');
@@ -75,6 +75,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
         const timeSeconds = entry.time_seconds;
+        const avgWatts = (entry as any).avg_watts || 0;
+        const pace500m = (entry as any).pace_sec_per_500m || 0;
         
         // Brzycki formula for 1RM estimate
         const estimated1RM = reps > 0 && reps < 15 && weight > 0 
@@ -89,6 +91,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           estimated1RM,
           timeSeconds,
           timeFormatted: timeSeconds ? formatTimeDisplay(timeSeconds) : null,
+          avgWatts,
+          pace500m,
           clientName: (entry.clients as any)?.name,
           isPR: entry.is_pr,
         };
@@ -97,12 +101,15 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       // Separate strength and time data
       const strengthData = processedData.filter(d => d.weight > 0);
       const timeData = processedData.filter(d => d.timeSeconds && d.timeSeconds > 0);
+      const wattsData = processedData.filter(d => d.avgWatts > 0);
 
       return {
         strengthData,
         timeData,
+        wattsData,
         hasStrength: strengthData.length > 0,
         hasTime: timeData.length > 0,
+        hasWatts: wattsData.length > 0,
         isTimeBased,
       };
     },
@@ -119,7 +126,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     );
   }
 
-  const hasData = data?.hasStrength || data?.hasTime;
+  const hasData = data?.hasStrength || data?.hasTime || data?.hasWatts;
 
   if (!hasData) {
     return (
@@ -227,6 +234,71 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                         );
                       }
                       return <circle cx={cx} cy={cy} r={3} fill={COLORS[0]} />;
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Watts/Power chart (for cardio exercises) */}
+      {data?.hasWatts && (
+        <Card className="analytics-chart">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Zap className="h-5 w-5 text-warning" />
+                Výkon × datum
+              </CardTitle>
+              <StatInfoTooltip
+                title="Vývoj výkonu"
+                description="Graf zobrazuje vývoj průměrného výkonu ve wattech."
+                calculation="Každý bod představuje průměrný výkon při daném tréninku."
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.wattsData}>
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis 
+                    tick={{ fontSize: 11 }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tickFormatter={(v) => `${v} W`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number) => [`${value} W`, 'Výkon']}
+                    labelFormatter={(label) => `Datum: ${label}`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="avgWatts" 
+                    stroke="hsl(var(--warning))" 
+                    strokeWidth={2} 
+                    dot={(props) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.isPR) {
+                        return (
+                          <circle 
+                            cx={cx} 
+                            cy={cy} 
+                            r={6} 
+                            fill="hsl(var(--warning))" 
+                            stroke="hsl(var(--background))" 
+                            strokeWidth={2}
+                          />
+                        );
+                      }
+                      return <circle cx={cx} cy={cy} r={3} fill="hsl(var(--warning))" />;
                     }}
                   />
                 </LineChart>
