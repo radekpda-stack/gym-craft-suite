@@ -77,23 +77,35 @@ function buildTrainingGoals(answers: Record<string, any>): string[] {
 
 // Helper to map daily activity type to sitting hours
 function getSittingHours(activityType: string): number | null {
-  switch (activityType) {
+  if (!activityType) return null;
+  
+  switch (activityType.toLowerCase()) {
     case 'sedentary':
     case 'sedavé':
+    case 'sedave':
       return 8;
     case 'light':
     case 'lehká':
+    case 'lehka':
       return 6;
     case 'moderate':
     case 'středně aktivní':
-      return 4;
+    case 'stredne aktivni':
+    case 'combined':
+    case 'kombinované':
+    case 'kombinovane':
+      return 5; // Combined work = mix of sitting and standing
     case 'active':
     case 'aktivní':
-      return 2;
+    case 'aktivni':
+      return 3;
+    case 'physical':
     case 'very_active':
     case 'velmi aktivní':
+    case 'velmi aktivni':
       return 1;
     default:
+      console.log(`Unknown activity type for sitting hours: ${activityType}`);
       return null;
   }
 }
@@ -353,11 +365,26 @@ serve(async (req) => {
         // Map work_type to occupation if provided
         const occupation = answers.occupation || mapWorkType(answers.work_type) || answers.daily_activity_type;
         
-        // Support both birth_date and birth_year
+        // Support both birth_date and birth_year (and age conversion)
         let birthDate = answers.birth_date;
         if (!birthDate && answers.birth_year) {
           birthDate = `${answers.birth_year}-01-01`;
         }
+        // If only age is provided, calculate approximate birth year
+        if (!birthDate && answers.age) {
+          const age = parseInt(answers.age);
+          if (!isNaN(age) && age > 0 && age < 120) {
+            const birthYear = new Date().getFullYear() - age;
+            birthDate = `${birthYear}-01-01`;
+            console.log(`Calculated birth_date from age ${age}: ${birthDate}`);
+          }
+        }
+        console.log("Birth date mapping:", { 
+          raw_birth_date: answers.birth_date, 
+          birth_year: answers.birth_year, 
+          age: answers.age,
+          resolved: birthDate 
+        });
 
         // Build health notes from pain + health_notes
         let combinedHealthRestrictions = healthRestrictions;

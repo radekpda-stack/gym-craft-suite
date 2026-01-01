@@ -356,6 +356,42 @@ export function useClientNutritionHistory(clientId: string | undefined, sessionI
   });
 }
 
+// Hook to get all days with nutrition entries (for WeekStrip)
+export function useClientNutritionCompletedDays(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-portal-nutrition-completed-days', sessionId],
+    queryFn: async () => {
+      if (!sessionId) return [];
+
+      // Get unique dates from all entry types
+      const [foodResult, drinkResult, coffeeResult] = await Promise.all([
+        supabase
+          .from('nutrition_food_entries')
+          .select('entry_date')
+          .eq('session_id', sessionId),
+        supabase
+          .from('nutrition_drink_entries')
+          .select('entry_date')
+          .eq('session_id', sessionId),
+        supabase
+          .from('nutrition_coffee_entries')
+          .select('entry_date')
+          .eq('session_id', sessionId),
+      ]);
+
+      // Collect all unique dates
+      const allDates = new Set<string>();
+      (foodResult.data ?? []).forEach(e => allDates.add(e.entry_date));
+      (drinkResult.data ?? []).forEach(e => allDates.add(e.entry_date));
+      (coffeeResult.data ?? []).forEach(e => allDates.add(e.entry_date));
+
+      // Convert to Date objects
+      return Array.from(allDates).map(dateStr => parseISO(dateStr));
+    },
+    enabled: !!sessionId,
+  });
+}
+
 // =====================================================
 // PACKAGES
 // =====================================================

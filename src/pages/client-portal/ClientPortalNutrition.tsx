@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientNutritionCampaign, useClientTodayNutrition } from '@/hooks/useClientPortalData';
+import { useClientNutritionCampaign, useClientTodayNutrition, useClientNutritionCompletedDays } from '@/hooks/useClientPortalData';
 import { useQuickAddWater, useDeleteNutritionEntryPortal } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, Coffee, UtensilsCrossed } from 'lucide-react';
+import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, UtensilsCrossed } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,7 +15,6 @@ import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryD
 import { NutritionDailySummary } from '@/components/client-portal/nutrition/NutritionDailySummary';
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { toast } from 'sonner';
-import { startOfDay, parseISO, isSameDay } from 'date-fns';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
@@ -31,6 +30,7 @@ export default function ClientPortalNutrition() {
     clientId ?? undefined, 
     campaign?.id
   );
+  const { data: completedDays = [] } = useClientNutritionCompletedDays(campaign?.id);
   const quickWater = useQuickAddWater();
   const deleteEntry = useDeleteNutritionEntryPortal();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
@@ -97,9 +97,6 @@ export default function ClientPortalNutrition() {
   const waterMl = todayData?.drinks
     ?.filter(d => d.drink_type?.toLowerCase().includes('voda') || d.drink_type?.toLowerCase().includes('water'))
     .reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0;
-
-  // Get completed days - we'll track this from activity (simplified approach)
-  const completedDays: Date[] = [];
 
   return (
     <div className="space-y-6">
