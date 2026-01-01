@@ -7,6 +7,7 @@ import { ActionBlock } from '@/components/dashboard/ActionBlock';
 import { TodayPlanCompact } from '@/components/dashboard/TodayPlanCompact';
 import { QuickActionsGrid } from '@/components/dashboard/QuickActionsGrid';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
+import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 
 function DashboardContent() {
   usePageTracking('dashboard');
@@ -24,6 +25,11 @@ function DashboardContent() {
         {/* 🔴 Action Block - clients needing attention */}
         <SectionErrorBoundary section="Akční blok">
           <ActionBlock data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
+
+        {/* ⏳ Pending Performance Approvals */}
+        <SectionErrorBoundary section="Čekající schválení" compact>
+          <PendingPerformancesCard />
         </SectionErrorBoundary>
         
         {/* 📅 Today's Plan - compact timeline */}
