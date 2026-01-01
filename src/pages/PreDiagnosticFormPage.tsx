@@ -127,13 +127,19 @@ export default function PreDiagnosticFormPage() {
         
         // Pre-fill from client data if exists
         if (result.form.client) {
+          const client = result.form.client;
           setFormData(prev => ({
             ...prev,
-            name: result.form.client.name,
-            email: result.form.client.email,
-            phone: result.form.client.phone,
-            gender: result.form.client.gender,
-            birth_date: result.form.client.birth_date,
+            // Basic info
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            gender: client.gender,
+            birth_date: client.birth_date,
+            // Extended data for pre-filling
+            current_activities: client.current_activities || [],
+            sleep_hours_avg: client.sleep_hours?.toString(),
+            health_notes: client.health_restrictions,
           }));
         }
       } catch (error) {

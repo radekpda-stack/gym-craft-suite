@@ -111,17 +111,28 @@ function getSittingHours(activityType: string): number | null {
 }
 
 // Helper to map work type to occupation description
-function mapWorkType(workType: string): string | null {
-  switch (workType) {
+function mapWorkType(workType: string | undefined | null): string | null {
+  if (!workType) return null;
+  
+  switch (workType.toLowerCase()) {
     case 'sedentary':
+    case 'sedavé':
+    case 'sedave':
       return 'sedavé zaměstnání';
     case 'combined':
+    case 'kombinované':
+    case 'kombinovane':
       return 'kombinované zaměstnání';
     case 'active':
+    case 'aktivní':
+    case 'aktivni':
       return 'aktivní zaměstnání';
     case 'physical':
+    case 'fyzicky náročné':
+    case 'fyzicky narocne':
       return 'fyzicky náročné zaměstnání';
     default:
+      console.log(`Unknown work type for occupation: ${workType}`);
       return null;
   }
 }
@@ -194,7 +205,9 @@ serve(async (req) => {
             occupation,
             health_restrictions,
             training_goals,
-            notes
+            notes,
+            current_activities,
+            sleep_hours
           )
         `)
         .eq("token", token)
@@ -362,8 +375,15 @@ serve(async (req) => {
         // Support both old sitting_hours_daily and new sitting_hours + work_type
         const sittingHours = answers.sitting_hours ?? answers.sitting_hours_daily ?? getSittingHours(answers.daily_activity_type) ?? getSittingHours(answers.work_type);
         
-        // Map work_type to occupation if provided
-        const occupation = answers.occupation || mapWorkType(answers.work_type) || answers.daily_activity_type;
+        // Map work_type to occupation if provided (call mapWorkType for both work_type and daily_activity_type)
+        const occupation = answers.occupation || mapWorkType(answers.work_type) || mapWorkType(answers.daily_activity_type) || answers.daily_activity_type;
+        
+        console.log("Activity mapping:", { 
+          daily_activity_type: answers.daily_activity_type,
+          work_type: answers.work_type,
+          calculated_sitting_hours: sittingHours,
+          calculated_occupation: occupation 
+        });
         
         // Support both birth_date and birth_year (and age conversion)
         let birthDate = answers.birth_date;
