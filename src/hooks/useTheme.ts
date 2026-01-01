@@ -80,46 +80,57 @@ export const themes: Theme[] = [
 
 const THEME_STORAGE_KEY = 'app-theme';
 
-export function useTheme() {
-  const [currentTheme, setCurrentTheme] = useState<ThemeId>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored && themes.find(t => t.id === stored)) {
-        return stored as ThemeId;
-      }
-    }
-    return 'arctic-pro';
-  });
+// Apply theme immediately (can be called outside React)
+function applyThemeToDOM(themeId: ThemeId) {
+  const root = document.documentElement;
+  
+  // Remove all theme classes
+  themes.forEach(t => root.classList.remove(`theme-${t.id}`));
+  
+  // Add new theme class
+  root.classList.add(`theme-${themeId}`);
+  
+  // Handle dark/light mode
+  if (themeId === 'light-minimal' || themeId === 'frost-minimal') {
+    root.classList.remove('dark');
+    root.classList.add('light');
+  } else {
+    root.classList.remove('light');
+    root.classList.add('dark');
+  }
+}
 
-  const applyTheme = useCallback((themeId: ThemeId) => {
-    const root = document.documentElement;
-    
-    // Remove all theme classes
-    themes.forEach(t => root.classList.remove(`theme-${t.id}`));
-    
-    // Add new theme class
-    root.classList.add(`theme-${themeId}`);
-    
-    // Handle dark/light mode
-    if (themeId === 'light-minimal' || themeId === 'frost-minimal') {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
+// Initialize theme immediately on module load (before React renders)
+function initializeTheme(): ThemeId {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored && themes.find(t => t.id === stored)) {
+      const themeId = stored as ThemeId;
+      applyThemeToDOM(themeId);
+      return themeId;
     }
-  }, []);
+  }
+  // Default theme
+  applyThemeToDOM('arctic-pro');
+  return 'arctic-pro';
+}
+
+// Initialize on module load
+const initialTheme = initializeTheme();
+
+export function useTheme() {
+  const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
 
   const setTheme = useCallback((themeId: ThemeId) => {
     setCurrentTheme(themeId);
     localStorage.setItem(THEME_STORAGE_KEY, themeId);
-    applyTheme(themeId);
-  }, [applyTheme]);
+    applyThemeToDOM(themeId);
+  }, []);
 
-  // Apply theme on mount and changes
+  // Re-apply theme when component mounts (in case of hydration mismatch)
   useEffect(() => {
-    applyTheme(currentTheme);
-  }, [currentTheme, applyTheme]);
+    applyThemeToDOM(currentTheme);
+  }, [currentTheme]);
 
   return {
     currentTheme,
