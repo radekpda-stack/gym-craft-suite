@@ -2,18 +2,17 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
   ClipboardList,
   Users,
-  Calendar,
+  ShoppingCart,
   MoreHorizontal,
 } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
 
 const mainNavItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Domů' },
-  { to: '/calendar', icon: Calendar, label: 'Kalendář' },
+  { to: '/trainings', icon: ClipboardList, label: 'Tréninky' },
   { to: '/clients', icon: Users, label: 'Klienti' },
+  { to: '/sales', icon: ShoppingCart, label: 'Prodeje' },
 ];
 
 export function MobileNav() {
