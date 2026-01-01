@@ -106,13 +106,14 @@ serve(async (req) => {
 
     console.log(`Fetching feedback form for token: ${token}`);
 
-    // Find the feedback request by token
+    // Find the feedback request by token with trainer profile
     const { data: request, error: requestError } = await supabase
       .from("feedback_requests")
       .select(`
         *,
         clients(name, gender),
-        training_sessions(date, notes)
+        training_sessions(date, notes),
+        profiles:user_id(full_name)
       `)
       .eq("token", token)
       .maybeSingle();
@@ -137,6 +138,14 @@ serve(async (req) => {
       );
     }
 
+    // Check if rejected
+    if (request.rejected_at) {
+      return new Response(
+        JSON.stringify({ error: "Tento formulář byl označen jako nesprávně doručený", code: "REJECTED" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Check expiration
     if (new Date(request.expires_at) < new Date()) {
       // Update status to expired
@@ -151,12 +160,25 @@ serve(async (req) => {
       );
     }
 
-    // Track opened_at if not already set (first open)
+    // Track opened_at if not already set (first open) and log event
     if (!request.opened_at) {
       await supabase
         .from("feedback_requests")
         .update({ opened_at: new Date().toISOString() })
         .eq("id", request.id);
+      
+      // Log OPENED event
+      await supabase
+        .from("feedback_event_log")
+        .insert({
+          feedback_request_id: request.id,
+          event_type: "OPENED",
+          meta: {
+            ip_hash: clientIP.split(".").slice(0, 2).join(".") + ".x.x",
+            user_agent: req.headers.get("user-agent")?.substring(0, 200) || null,
+          },
+        });
+      
       console.log(`Marked feedback request ${request.id} as opened`);
     }
 
@@ -169,7 +191,10 @@ serve(async (req) => {
 
     console.log(`Loaded feedback settings for user ${request.user_id}:`, feedbackSettings?.feedback_questions ? 'custom config' : 'default config');
 
-    // Return form data
+    // Get trainer name from profiles table
+    const trainerName = (request as any).profiles?.full_name || null;
+
+    // Return form data with trainer info
     return new Response(
       JSON.stringify({
         success: true,
@@ -178,6 +203,7 @@ serve(async (req) => {
           clientGender: request.clients?.gender || null,
           trainingDate: request.training_sessions?.date || null,
           trainingNotes: request.training_sessions?.notes || null,
+          trainerName: trainerName,
           expiresAt: request.expires_at,
           questionsConfig: feedbackSettings?.feedback_questions || null,
         },

@@ -159,6 +159,14 @@ serve(async (req) => {
       );
     }
 
+    // Check if rejected
+    if (request.rejected_at) {
+      return new Response(
+        JSON.stringify({ error: "Tento formulář byl označen jako nesprávně doručený", code: "REJECTED" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Check expiration
     if (new Date(request.expires_at) < new Date()) {
       await supabase
@@ -290,6 +298,19 @@ serve(async (req) => {
         completed_at: new Date().toISOString() 
       })
       .eq("id", request.id);
+
+    // Log SUBMITTED event
+    await supabase
+      .from("feedback_event_log")
+      .insert({
+        feedback_request_id: request.id,
+        event_type: "SUBMITTED",
+        meta: {
+          feedback_id: feedback.id,
+          is_red_flag: isRedFlag,
+          ip_hash: clientIP.split(".").slice(0, 2).join(".") + ".x.x",
+        },
+      });
 
     // Create notification for trainer with feedback preview
     const painTypeLabel = pain_type === 'muscle' ? 'sval' : pain_type === 'joint' ? 'kloub' : pain_type === 'tendon' ? 'šlacha' : null;
