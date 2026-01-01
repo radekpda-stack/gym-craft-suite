@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Loader2, Repeat, Search, Check, ChevronDown } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
-import { TrainingType } from "@/hooks/useTrainingProgress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Form,
@@ -52,7 +51,7 @@ const trainingFormSchema = z.object({
   participant_count: z.number().min(1, "Minimálně 1 účastník").max(5, "Maximálně 5 účastníků"),
   notes: z.string().optional(),
   status: z.enum(["scheduled", "in_progress", "completed", "canceled"]),
-  training_type: z.enum(["strength", "conditioning", "hiit", "cardio", "running", "mobility", "flexibility", "regeneration", "functional", "diagnostic", "other"]).optional().nullable(),
+  training_type: z.string().optional().nullable(),
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),
@@ -301,7 +300,7 @@ export function TrainingForm({
               <FormControl>
                 <TrainingTypeSelector
                   value={field.value}
-                  onChange={(value) => field.onChange(value as TrainingType)}
+                  onChange={(value) => field.onChange(value)}
                 />
               </FormControl>
               <FormMessage />
