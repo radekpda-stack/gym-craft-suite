@@ -3,16 +3,14 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
-  Dumbbell,
   Loader2,
   CheckCircle,
   XCircle,
-  Users,
-  MessageSquare,
+  ClipboardList,
   ThumbsUp,
   ThumbsDown,
+  MessageSquare,
   AlertTriangle,
-  ClipboardList,
 } from 'lucide-react';
 import { TrainingDetailSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
@@ -21,6 +19,7 @@ import { RatingInput } from '@/components/ui/rating-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { QuickActionsSection } from '@/components/trainings/QuickActionsSection';
 import {
   useTrainingSession,
   useUpdateTrainingSession,
@@ -447,37 +446,32 @@ export default function TrainingDetail() {
         onFieldUpdate={handleFieldUpdate}
       />
 
-      {/* Action Buttons - Only for scheduled trainings */}
+      {/* Quick Actions - Only for scheduled trainings */}
       {training.status === 'scheduled' && (
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Změna stavu tréninku</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Označte trénink jako dokončený nebo změňte jeho stav na zrušený.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <div className="flex flex-col gap-1">
-              <Button
-                className="gap-2"
-                onClick={openCompleteDialog}
-              >
-                <CheckCircle className="w-4 h-4" />
-                Dokončit trénink
-              </Button>
-              <span className="text-xs text-muted-foreground ml-1">Odečte kredit a zaznamená platbu</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Button
-                variant="outline"
-                className="gap-2 text-warning border-warning hover:bg-warning/10"
-                onClick={openCancelDialog}
-              >
-                <XCircle className="w-4 h-4" />
-                Zrušit trénink
-              </Button>
-              <span className="text-xs text-muted-foreground ml-1">Změní status, volitelně odečte kredit</span>
-            </div>
-          </div>
-        </div>
+        <QuickActionsSection
+          trainingId={training.id}
+          trainingDate={training.date}
+          trainingPrice={getTrainingPrice(training.participant_count || 1, trainingPrices)}
+          clientName={client?.name || 'Klient'}
+          onComplete={openCompleteDialog}
+          onCancelWithCredit={() => {
+            setCancelDeductCredit(true);
+            handleCancel();
+          }}
+          onCancelNoCredit={() => {
+            setCancelDeductCredit(false);
+            handleCancel();
+          }}
+          onReschedule={async (newDate) => {
+            await updateTraining.mutateAsync({
+              id: training.id,
+              input: { date: newDate.toISOString() },
+            });
+          }}
+          isCompleting={completeTraining.isPending || saveParticipants.isPending}
+          isCanceling={cancelTraining.isPending}
+          isRescheduling={updateTraining.isPending}
+        />
       )}
 
       {/* Complete Training Dialog */}
@@ -691,75 +685,7 @@ export default function TrainingDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Training Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Zrušit trénink</DialogTitle>
-            <DialogDescription>
-              Opravdu chcete zrušit tento trénink?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-4 rounded-lg bg-secondary/50 border">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Počet účastníků:</span>
-                <span className="font-medium">{training.participant_count || 1}</span>
-              </div>
-              {cancelDeductCredit && (
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm text-muted-foreground">Cena za trénink:</span>
-                  <span className="text-lg font-bold text-destructive">{getCancelPrice()} Kč</span>
-                </div>
-              )}
-              {differenceInHours(new Date(training.date), new Date()) < 24 && (
-                <div className="mt-3 p-2 rounded bg-warning/10 text-warning text-sm">
-                  ⚠️ Pozdní zrušení (méně než 24h před tréninkem)
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
-              <div>
-                <Label htmlFor="deduct-credit" className="font-medium">Odečíst kredit</Label>
-                <p className="text-sm text-muted-foreground">
-                  {cancelDeductCredit 
-                    ? `Bude odečteno ${getCancelPrice()} Kč z kreditu klienta`
-                    : "Kredit klienta zůstane beze změny"
-                  }
-                </p>
-              </div>
-              <Switch
-                id="deduct-credit"
-                checked={cancelDeductCredit}
-                onCheckedChange={setCancelDeductCredit}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-              Zpět
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleCancel} 
-              disabled={cancelTraining.isPending}
-            >
-              {cancelTraining.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ruším...
-                </>
-              ) : (
-                <>
-                  <XCircle className="w-4 h-4 mr-2" />
-                  {cancelDeductCredit ? "Zrušit a odečíst kredit" : "Zrušit bez odečtení"}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Cancel Training Dialog - Kept for legacy, Quick Actions handles this now */}
     </div>
   );
 }
