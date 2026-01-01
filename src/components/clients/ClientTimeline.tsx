@@ -19,6 +19,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +28,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { HorizontalChipScroller } from '@/components/ui/HorizontalChipScroller';
 import { cn } from '@/lib/utils';
 import { useClientTimeline, TimelineEvent, TimelineEventType } from '@/hooks/useClientTimeline';
 import { useRedFlagResolutions, useResolveRedFlag } from '@/hooks/useRedFlagResolutions';
@@ -37,7 +47,8 @@ interface ClientTimelineProps {
   showFilters?: boolean;
 }
 
-type FilterType = TimelineEventType | 'all' | 'red_flags' | 'last_14_days';
+type PeriodFilter = '7' | '14' | '30' | 'all';
+type ContentFilter = 'all' | TimelineEventType;
 
 const EVENT_CONFIG: Record<TimelineEventType, {
   icon: typeof Dumbbell;
@@ -121,12 +132,14 @@ function groupEventsByDate(events: TimelineEvent[]): Record<string, TimelineEven
 
 export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true }: ClientTimelineProps) {
   const [limit, setLimit] = useState(defaultLimit);
-  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
+  const [showRedFlagsOnly, setShowRedFlagsOnly] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   
-  const daysBack = filterType === 'last_14_days' ? 14 : undefined;
+  const daysBack = periodFilter !== 'all' ? parseInt(periodFilter) : undefined;
   const { data: events = [], isLoading } = useClientTimeline(clientId, { limit: 100, daysBack });
   const { data: resolutions = [] } = useRedFlagResolutions(clientId);
   const resolveRedFlag = useResolveRedFlag();
@@ -135,10 +148,11 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
   const resolvedFeedbackIds = new Set(resolutions.map(r => r.feedback_id));
 
   const filteredEvents = events.filter(event => {
-    if (filterType === 'last_14_days') return true; // Already filtered by daysBack
-    if (filterType === 'all') return true;
-    if (filterType === 'red_flags') return event.isRedFlag;
-    return event.type === filterType;
+    // Red flags filter
+    if (showRedFlagsOnly && !event.isRedFlag) return false;
+    // Content type filter
+    if (contentFilter !== 'all' && event.type !== contentFilter) return false;
+    return true;
   }).slice(0, limit);
 
   const groupedEvents = groupEventsByDate(filteredEvents);
@@ -164,6 +178,16 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
       }
     });
   };
+
+  // Content filter chip options
+  const contentChipOptions = [
+    { value: 'all', label: 'Vše' },
+    { value: 'training_completed', label: 'Tréninky' },
+    { value: 'feedback_received', label: 'Feedback' },
+    { value: 'measurement', label: 'Měření' },
+    { value: 'diagnostic', label: 'Diagnostiky' },
+    { value: 'media_uploaded', label: 'Média' },
+  ];
 
   if (isLoading) {
     return (
@@ -192,74 +216,42 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
+      {/* Filters - Redesigned */}
       {showFilters && (
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={filterType === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('all')}
-            className="h-7 text-xs"
-          >
-            Vše
-          </Button>
-          <Button
-            variant={filterType === 'last_14_days' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('last_14_days')}
-            className="h-7 text-xs"
-          >
-            14 dní
-          </Button>
-          <Button
-            variant={filterType === 'red_flags' ? 'destructive' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('red_flags')}
-            className="h-7 text-xs gap-1"
-          >
-            <AlertTriangle className="w-3 h-3" />
-            Red flags
-          </Button>
-          <Button
-            variant={filterType === 'training_completed' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('training_completed')}
-            className="h-7 text-xs"
-          >
-            Tréninky
-          </Button>
-          <Button
-            variant={filterType === 'feedback_received' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('feedback_received')}
-            className="h-7 text-xs"
-          >
-            Feedback
-          </Button>
-          <Button
-            variant={filterType === 'measurement' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('measurement')}
-            className="h-7 text-xs"
-          >
-            Měření
-          </Button>
-          <Button
-            variant={filterType === 'diagnostic' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('diagnostic')}
-            className="h-7 text-xs"
-          >
-            Diagnostiky
-          </Button>
-          <Button
-            variant={filterType === 'media_uploaded' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('media_uploaded')}
-            className="h-7 text-xs"
-          >
-            Média
-          </Button>
+        <div className="space-y-3">
+          {/* Row 1: Period dropdown + Red flags toggle */}
+          <div className="flex items-center gap-3">
+            <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 dní</SelectItem>
+                <SelectItem value="14">14 dní</SelectItem>
+                <SelectItem value="30">30 dní</SelectItem>
+                <SelectItem value="all">Vše</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Switch
+                id="red-flags"
+                checked={showRedFlagsOnly}
+                onCheckedChange={setShowRedFlagsOnly}
+              />
+              <Label htmlFor="red-flags" className="text-xs flex items-center gap-1 cursor-pointer">
+                <AlertTriangle className="w-3 h-3 text-destructive" />
+                Red flags
+              </Label>
+            </div>
+          </div>
+
+          {/* Row 2: Content type chips */}
+          <HorizontalChipScroller
+            options={contentChipOptions}
+            value={contentFilter}
+            onChange={(v) => setContentFilter(v as ContentFilter)}
+          />
         </div>
       )}
 

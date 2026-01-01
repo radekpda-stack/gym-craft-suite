@@ -15,13 +15,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { Client } from '@/hooks/useClients';
-import { Tag } from '@/hooks/useTags';
-import { format, formatDistanceToNow, isToday, isTomorrow, parseISO } from 'date-fns';
+import { formatDistanceToNow, isToday, isTomorrow, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
+
+// Simple tag type for display purposes
+interface SimpleTag {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface CompactClientRowProps {
   client: Client;
-  tags?: Tag[];
+  tags?: SimpleTag[];
   nextTraining?: { date: string; time?: string } | null;
   onNewTraining?: () => void;
   onAddCredit?: () => void;
