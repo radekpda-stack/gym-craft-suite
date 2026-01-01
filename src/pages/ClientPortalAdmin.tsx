@@ -7,6 +7,7 @@ import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisib
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
 import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
 import { ClientWorkoutLogsOverview } from '@/components/client-portal/ClientWorkoutLogsOverview';
+import { QRCodeDisplay } from '@/components/client-portal/QRCodeDisplay';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, Users, Settings, Info, BookOpen, Copy, Check } from 'lucide-react';
 import {
@@ -52,6 +53,7 @@ export default function ClientPortalAdmin() {
             </>
           )}
         </Button>
+        <QRCodeDisplay url={loginUrl} />
       </div>
 
       {/* Header */}
