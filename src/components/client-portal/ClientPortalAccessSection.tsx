@@ -15,7 +15,8 @@ import {
   EyeOff,
   Copy,
   Check,
-  Pencil
+  Pencil,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -295,6 +296,22 @@ export function ClientPortalAccessSection({
               <span className="text-sm text-muted-foreground">
                 {format(new Date(accountInfo.credit_history_start_at), 'd. M. yyyy', { locale: cs })}
               </span>
+            </div>
+          )}
+
+          {/* Portal login link */}
+          {hasAccess && isActive && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-sm font-medium shrink-0">Odkaz pro přihlášení</span>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-sm text-primary gap-1"
+                onClick={() => window.open(`${window.location.origin}/zona/login`, '_blank')}
+              >
+                <ExternalLink className="w-3 h-3" />
+                Otevřít přihlášení
+              </Button>
             </div>
           )}
 

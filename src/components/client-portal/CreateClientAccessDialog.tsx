@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Key, AlertTriangle, Mail, Lock } from 'lucide-react';
+import { Copy, Check, Key, AlertTriangle, Mail, Lock, ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -101,6 +101,7 @@ export function CreateClientAccessDialog({
   const handleCopyMessage = async () => {
     if (!credentials) return;
     
+    const portalUrl = `${window.location.origin}/zona/login`;
     const message = `Dobrý den,
 
 vaše přihlašovací údaje do klientského portálu:
@@ -108,7 +109,7 @@ vaše přihlašovací údaje do klientského portálu:
 Email: ${credentials.email}
 Heslo: ${credentials.password}
 
-Přihlaste se na: ${window.location.origin}/zona/login
+Přihlaste se na: ${portalUrl}
 
 Po přihlášení si můžete heslo změnit v nastavení.
 
@@ -119,6 +120,10 @@ Váš trenér`;
     setCopiedMessage(true);
     toast.success('Zpráva zkopírována');
     setTimeout(() => setCopiedMessage(false), 2000);
+  };
+
+  const handleOpenPortal = () => {
+    window.open(`${window.location.origin}/zona/login`, '_blank');
   };
 
   const handleClose = () => {
@@ -244,6 +249,15 @@ Váš trenér`;
                   <Copy className="w-4 h-4" />
                 )}
                 Kopírovat zprávu pro klienta
+              </Button>
+
+              <Button
+                onClick={handleOpenPortal}
+                variant="outline"
+                className="w-full gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Otevřít přihlašovací stránku
               </Button>
             </div>
 
