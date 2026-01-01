@@ -120,51 +120,54 @@ export const CompactClientRow = memo(function CompactClientRow({
         }}
         className="relative bg-card"
       >
-        <Link
-          to={`/clients/${client.id}`}
-          className={cn(
-            'flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors',
-            'min-h-[56px]'
-          )}
-        >
-          {/* Avatar */}
-          <Avatar className="h-10 w-10 flex-shrink-0">
-            <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
-              {getInitials(client.name)}
-            </AvatarFallback>
-          </Avatar>
+        <div className={cn(
+          'flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors',
+          'min-h-[56px]'
+        )}>
+          {/* Clickable area - navigates to client detail */}
+          <Link
+            to={`/clients/${client.id}`}
+            className="flex items-center gap-3 flex-1 min-w-0"
+          >
+            {/* Avatar */}
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+                {getInitials(client.name)}
+              </AvatarFallback>
+            </Avatar>
 
-          {/* Name + Tag */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-foreground truncate">
-                {client.name}
-              </span>
-              {client.is_favorite && (
-                <Star className="w-3.5 h-3.5 text-warning fill-warning flex-shrink-0" />
+            {/* Name + Tag */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground truncate">
+                  {client.name}
+                </span>
+                {client.is_favorite && (
+                  <Star className="w-3.5 h-3.5 text-warning fill-warning flex-shrink-0" />
+                )}
+              </div>
+              {firstTag && (
+                <Badge variant="outline" className="mt-0.5 text-[10px] px-1.5 py-0">
+                  {firstTag.name}
+                </Badge>
               )}
             </div>
-            {firstTag && (
-              <Badge variant="outline" className="mt-0.5 text-[10px] px-1.5 py-0">
-                {firstTag.name}
-              </Badge>
-            )}
-          </div>
 
-          {/* Indicators */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <CreditStatusBadge balance={client.credit_balance} />
-            
-            {nextTraining && (
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {formatNextTraining(nextTraining.date, nextTraining.time)}
-              </span>
-            )}
-          </div>
+            {/* Indicators */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <CreditStatusBadge balance={client.credit_balance} />
+              
+              {nextTraining && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatNextTraining(nextTraining.date, nextTraining.time)}
+                </span>
+              )}
+            </div>
+          </Link>
 
-          {/* Overflow menu */}
+          {/* Overflow menu - outside of Link to prevent navigation */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+            <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </Button>
@@ -198,7 +201,7 @@ export const CompactClientRow = memo(function CompactClientRow({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        </Link>
+        </div>
       </div>
     </div>
   );
