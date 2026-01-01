@@ -45,6 +45,9 @@ interface SetData {
   max_heart_rate: number | null;
   pace_per_500m: number | null;
   pace_per_500m_ms: number | null; // High-precision pace in milliseconds
+  // Rower/SkiErg specific fields
+  level: number | null; // Difficulty level 1-10
+  resistance: number | null; // Magnetic resistance 1-3
 }
 
 interface ExerciseFormData {
@@ -77,7 +80,19 @@ const DEFAULT_SET: SetData = {
   max_heart_rate: null,
   pace_per_500m: null,
   pace_per_500m_ms: null,
+  level: null,
+  resistance: null,
 };
+
+// Detect if exercise is a rower or skierg type
+function isRowerOrSkierg(exercise: Exercise | null): boolean {
+  if (!exercise) return false;
+  const name = (exercise.name_cs || exercise.name || '').toLowerCase();
+  const category = (exercise.category || '').toLowerCase();
+  return name.includes('veslo') || name.includes('rower') || name.includes('rowing') ||
+         name.includes('skierg') || name.includes('skillup') || name.includes('skyark') ||
+         category.includes('veslo') || category.includes('ski');
+}
 
 export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerciseFormProps) {
   const { exercises, isLoading: exercisesLoading } = useExercises();
@@ -477,6 +492,44 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                       />
                     </div>
                   </div>
+                  
+                  {/* Row 3: Level and Resistance (for rower/skierg) */}
+                  {isRowerOrSkierg(selectedExercise) && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Obtížnost (1-10)</Label>
+                        <Select
+                          value={set.level?.toString() || ''}
+                          onValueChange={(value) => handleSetChange(index, 'level', value)}
+                        >
+                          <SelectTrigger className="bg-background border-border h-9">
+                            <SelectValue placeholder="-" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1,2,3,4,5,6,7,8,9,10].map(v => (
+                              <SelectItem key={v} value={v.toString()}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Magnet (1-3)</Label>
+                        <Select
+                          value={set.resistance?.toString() || ''}
+                          onValueChange={(value) => handleSetChange(index, 'resistance', value)}
+                        >
+                          <SelectTrigger className="bg-background border-border h-9">
+                            <SelectValue placeholder="-" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1</SelectItem>
+                            <SelectItem value="2">2</SelectItem>
+                            <SelectItem value="3">3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* Standard set layout */

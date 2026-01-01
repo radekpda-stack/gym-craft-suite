@@ -26,6 +26,10 @@ export interface WorkoutEntry {
   avg_heart_rate?: number | null;
   max_heart_rate?: number | null;
   pace_per_500m?: number | null;
+  pace_per_500m_ms?: number | null;
+  // Rower/SkiErg specific
+  level?: number | null;
+  resistance?: number | null;
 }
 
 export interface WorkoutEntryInput {
@@ -47,6 +51,11 @@ export interface WorkoutEntryInput {
   avg_heart_rate?: number | null;
   max_heart_rate?: number | null;
   pace_per_500m?: number | null;
+  pace_per_500m_ms?: number | null;
+  time_ms?: number | null;
+  // Rower/SkiErg specific
+  level?: number | null;
+  resistance?: number | null;
 }
 
 export interface GroupedWorkoutEntry {
@@ -82,6 +91,9 @@ export function useWorkoutEntries(trainingSessionId?: string) {
         avg_heart_rate: (entry as any).avg_heart_rate ?? null,
         max_heart_rate: (entry as any).max_heart_rate ?? null,
         pace_per_500m: (entry as any).pace_per_500m ?? null,
+        pace_per_500m_ms: (entry as any).pace_per_500m_ms ?? null,
+        level: (entry as any).level ?? null,
+        resistance: (entry as any).resistance ?? null,
       })) as WorkoutEntry[];
     },
     enabled: !!trainingSessionId,
@@ -358,12 +370,16 @@ export function useSyncToClientStats() {
             reps: bestSet.reps,
             weight_kg: bestSet.weight_kg,
             time_seconds: bestSet.time_seconds,
+            time_ms: (bestSet as any).time_ms,
             distance_meters: bestSet.distance_meters,
             is_pr: isPR,
             date: trainingDate.split('T')[0],
             user_id: user.id,
             notes: bestSet.notes || '',
             training_session_id: trainingSessionId,
+            avg_watts: (bestSet as any).watts,
+            level: (bestSet as any).level,
+            resistance: (bestSet as any).resistance,
           });
 
         if (insertError) {
