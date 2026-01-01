@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { differenceInHours, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { MessageSquare, Copy, Check, Clock, Bell, Link2 } from 'lucide-react';
+import { MessageSquare, Copy, Check, Clock, Bell, Link2, Share2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,12 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { FeedbackSummaryCard } from './FeedbackSummaryCard';
 import { InviteStatusBadge } from './InviteStatusBadge';
+import { ShareConfirmSheet } from './ShareConfirmSheet';
 import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 
 interface TrainingFeedbackSectionProps {
@@ -55,9 +59,12 @@ export function TrainingFeedbackSection({
   feedbackData,
   feedbackRequest,
 }: TrainingFeedbackSectionProps) {
+  const navigate = useNavigate();
   const { trackFeature } = useFeatureTracking();
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [isMarkedSent, setIsMarkedSent] = useState(!!feedbackRequest?.sent_at);
 
   const attemptedAutoGenerate = useRef(false);
 
@@ -199,6 +206,34 @@ export function TrainingFeedbackSection({
     }
   };
 
+  // Toggle sent status manually
+  const handleToggleSent = async () => {
+    if (!linkData) return;
+
+    if (isMarkedSent) {
+      // Undo - mark as not sent (can't truly undo in DB, just local state for UX)
+      setIsMarkedSent(false);
+      toast.info('Stav "Odesláno" zrušen (lokálně)');
+    } else {
+      try {
+        const { error } = await supabase.functions.invoke('mark-feedback-sent', {
+          body: { token: linkData.token, send_channel: 'manual' },
+        });
+        if (error) throw error;
+        setIsMarkedSent(true);
+        toast.success('Označeno jako odesláno');
+      } catch (error) {
+        console.error('Error marking sent:', error);
+        toast.error('Nepodařilo se označit jako odesláno');
+      }
+    }
+  };
+
+  // Open client card
+  const handleOpenClientCard = () => {
+    navigate(`/clients/${clientId}`);
+  };
+
   // Don't show for non-completed trainings
   if (trainingStatus !== 'completed') {
     return null;
@@ -268,14 +303,47 @@ export function TrainingFeedbackSection({
           <>
             {linkData ? (
               <div className="space-y-3">
+                {/* Primary action - Share with confirmation */}
+                <Button
+                  onClick={() => setShowShareSheet(true)}
+                  className="w-full"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Sdílet odkaz
+                </Button>
+
+                {/* Quick copy button */}
                 <Button
                   variant={copied ? 'default' : 'outline'}
                   onClick={handleCopyLink}
                   className={cn('w-full', copied && 'bg-green-600 hover:bg-green-700')}
                 >
                   {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                  {copied ? 'Zkopírováno!' : 'Kopírovat odkaz'}
+                  {copied ? 'Zkopírováno!' : 'Rychle kopírovat'}
                 </Button>
+
+                {/* Sent toggle */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="sent-toggle" className="text-sm cursor-pointer">
+                      Označit jako odesláno
+                    </Label>
+                    {isMarkedSent && (
+                      <button
+                        onClick={handleToggleSent}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        <RotateCcw className="w-3 h-3 inline mr-1" />
+                        vrátit
+                      </button>
+                    )}
+                  </div>
+                  <Switch
+                    id="sent-toggle"
+                    checked={isMarkedSent}
+                    onCheckedChange={handleToggleSent}
+                  />
+                </div>
 
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
@@ -296,6 +364,24 @@ export function TrainingFeedbackSection({
                     )}
                   </Button>
                 )}
+
+                {/* Share Confirm Sheet */}
+                <ShareConfirmSheet
+                  open={showShareSheet}
+                  onOpenChange={setShowShareSheet}
+                  clientName={clientName}
+                  trainingDate={trainingDate}
+                  linkUrl={linkData.url}
+                  linkToken={linkData.token}
+                  onLinkCopied={() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  onLinkSent={() => {
+                    setIsMarkedSent(true);
+                  }}
+                  onOpenClientCard={handleOpenClientCard}
+                />
               </div>
             ) : (
               <div className="text-center py-4 text-muted-foreground text-sm space-y-3">
