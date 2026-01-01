@@ -28,6 +28,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
+import { TimePickerSelect } from '@/components/ui/time-picker-select';
 import { useClients } from '@/hooks/useClients';
 import { useExercises } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
@@ -41,7 +42,7 @@ const formSchema = z.object({
   weight_kg: z.number().nullable(),
   reps: z.number().nullable(),
   sets: z.number().min(1).default(1),
-  time_seconds: z.number().nullable(),
+  time_ms: z.number().nullable(),
   notes: z.string().optional(),
   // Extended metrics
   distance_meters: z.number().nullable().optional(),
@@ -92,7 +93,7 @@ export function QuickLogDialog({
       weight_kg: null,
       reps: null,
       sets: 1,
-      time_seconds: null,
+      time_ms: null,
       notes: '',
       distance_meters: null,
       avg_watts: null,
@@ -131,7 +132,7 @@ export function QuickLogDialog({
         weight_kg: null,
         reps: null,
         sets: 1,
-        time_seconds: null,
+        time_ms: null,
         notes: '',
         distance_meters: defaultDistance,
         avg_watts: null,
@@ -172,11 +173,14 @@ export function QuickLogDialog({
       let pace500m = data.pace_sec_per_500m;
       let paceKm = data.pace_sec_per_km;
       
-      if (data.time_seconds && data.distance_meters && !pace500m && !paceKm) {
+      // Convert ms to seconds for pace calculation and storage
+      const timeSeconds = data.time_ms ? Math.round(data.time_ms / 1000) : null;
+      
+      if (data.time_ms && data.distance_meters && !pace500m && !paceKm) {
         if (exerciseCategory === 'rower' || exerciseCategory === 'skierg') {
-          pace500m = (data.time_seconds / data.distance_meters) * 500;
+          pace500m = (data.time_ms / 1000 / data.distance_meters) * 500;
         } else if (exerciseCategory === 'treadmill') {
-          paceKm = (data.time_seconds / data.distance_meters) * 1000;
+          paceKm = (data.time_ms / 1000 / data.distance_meters) * 1000;
         }
       }
       
@@ -188,7 +192,8 @@ export function QuickLogDialog({
         weight_kg: data.weight_kg,
         reps: data.reps,
         sets: data.sets,
-        time_seconds: data.time_seconds,
+        time_seconds: timeSeconds,
+        time_ms: data.time_ms,
         is_bodyweight: exercise?.is_bodyweight || false,
         tempo: null,
         notes: data.notes || null,
@@ -214,25 +219,6 @@ export function QuickLogDialog({
       setIsSubmitting(false);
     }
   };
-
-  // Parse time input (mm:ss or just seconds)
-  const parseTimeInput = (value: string): number | null => {
-    if (!value) return null;
-    if (value.includes(':')) {
-      const [mins, secs] = value.split(':').map(Number);
-      return (mins * 60) + (secs || 0);
-    }
-    return parseInt(value, 10) || null;
-  };
-
-  // Format seconds to mm:ss
-  const formatTime = (seconds: number | null): string => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -358,18 +344,19 @@ export function QuickLogDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="time_seconds"
+                    name="time_ms"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1">
                           <Timer className="w-3 h-3" />
-                          Čas (mm:ss) *
+                          Čas (M:SS.CC) *
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="3:45"
-                            value={formatTime(field.value)}
-                            onChange={(e) => field.onChange(parseTimeInput(e.target.value))}
+                          <TimePickerSelect
+                            value={field.value}
+                            onChange={field.onChange}
+                            maxMinutes={9}
+                            showCentiseconds={true}
                           />
                         </FormControl>
                         <FormMessage />

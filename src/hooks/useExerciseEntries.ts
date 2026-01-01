@@ -82,6 +82,7 @@ export function useExerciseEntries(clientId?: string) {
     weight_kg: number | null;
     is_bodyweight: boolean;
     time_seconds: number | null;
+    time_ms?: number | null;
     tempo: string | null;
     notes: string | null;
     is_pr: boolean;
