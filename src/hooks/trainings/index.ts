@@ -3,6 +3,7 @@
  */
 
 export { useTrainingSessions, useTrainingSession, useCreateTrainingSession, useUpdateTrainingSession, useDeleteTrainingSession, useCancelTrainingSession, useCompleteTrainingSession } from '../useTrainingSessions';
+export { useCompleteTrainingAtomic } from '../useCompleteTrainingAtomic';
 export { useTrainingFeedback } from '../useTrainingFeedback';
 export { useTrainingFeedbackStatus } from '../useTrainingFeedbackStatus';
 export { useTrainingParticipants } from '../useTrainingParticipants';

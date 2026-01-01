@@ -86,6 +86,48 @@ export type Database = {
         }
         Relationships: []
       }
+      app_errors: {
+        Row: {
+          created_at: string | null
+          endpoint: string | null
+          error_type: string
+          id: string
+          message: string
+          payload_json: Json | null
+          role: string | null
+          screen: string | null
+          session_id: string | null
+          stack: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint?: string | null
+          error_type: string
+          id?: string
+          message: string
+          payload_json?: Json | null
+          role?: string | null
+          screen?: string | null
+          session_id?: string | null
+          stack?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string | null
+          error_type?: string
+          id?: string
+          message?: string
+          payload_json?: Json | null
+          role?: string | null
+          screen?: string | null
+          session_id?: string | null
+          stack?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null
@@ -5557,6 +5599,59 @@ export type Database = {
           },
         ]
       }
+      session_completion_log: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          participant_count: number
+          participants: Json
+          payment_method: string
+          status: string | null
+          total_price: number
+          trainer_id: string
+          training_session_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          participant_count: number
+          participants: Json
+          payment_method: string
+          status?: string | null
+          total_price: number
+          trainer_id: string
+          training_session_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          participant_count?: number
+          participants?: Json
+          payment_method?: string
+          status?: string | null
+          total_price?: number
+          trainer_id?: string
+          training_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_completion_log_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skill_entries: {
         Row: {
           attempts: number | null
@@ -7303,6 +7398,20 @@ export type Database = {
           needs_fix: boolean
           stored_balance: number
         }[]
+      }
+      rpc_complete_training_session: {
+        Args: {
+          p_idempotency_key: string
+          p_notes?: string
+          p_participants: Json
+          p_payment_method: string
+          p_session_id: string
+          p_subjective_rating?: number
+          p_total_price: number
+          p_trainer_id: string
+          p_trainer_summary?: Json
+        }
+        Returns: Json
       }
       rpc_fix_balance_discrepancy: {
         Args: { p_entity_id: string; p_entity_type: string }
