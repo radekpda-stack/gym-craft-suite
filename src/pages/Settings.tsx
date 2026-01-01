@@ -25,6 +25,7 @@ import {
   Boxes,
   Dumbbell,
   Trophy,
+  Paintbrush,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -48,6 +49,7 @@ import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ComparisonSettings } from '@/components/settings/ComparisonSettings';
+import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -300,6 +302,16 @@ export default function Settings() {
       case 'personalization':
         return (
           <>
+            <SettingsSection
+              title={language === 'cs' ? 'Vzhled aplikace' : 'App Appearance'}
+              description={language === 'cs' 
+                ? 'Zvolte barevné schéma, které vám vyhovuje' 
+                : 'Choose a color scheme that suits you'}
+              icon={Paintbrush}
+            >
+              <ThemeSettings />
+            </SettingsSection>
+
             <SettingsSection
               title={language === 'cs' ? 'Nastavení dashboardu' : 'Dashboard Settings'}
               description={language === 'cs' 

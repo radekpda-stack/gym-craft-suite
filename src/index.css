@@ -5,63 +5,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 @layer base {
+  /* ========================================
+     DEFAULT THEME (Arctic Pro)
+     Applied when no theme class is present
+     ======================================== */
   :root {
-    /* ========================================
-       ARCTIC PRO DESIGN SYSTEM
-       Premium, elegantní, technický
-       Cyan akcenty, noise textura, hranatá tlačítka
-       ======================================== */
-
     /* Background layers - Deep arctic dark */
-    --background: 210 27% 6%;           /* #0A0F14 - App background */
-    --foreground: 195 30% 94%;          /* #E8F4F8 - Ice white text */
-
-    --card: 210 33% 9%;                 /* #101820 - Surface/Card */
-    --card-foreground: 195 30% 94%;     /* #E8F4F8 */
-
-    --popover: 210 28% 12%;             /* #151D27 - Elevated surface */
+    --background: 210 27% 6%;
+    --foreground: 195 30% 94%;
+    --card: 210 33% 9%;
+    --card-foreground: 195 30% 94%;
+    --popover: 210 28% 12%;
     --popover-foreground: 195 30% 94%;
-
-    /* Primary Accent - Cyan #00D4FF */
     --primary: 190 100% 50%;
     --primary-foreground: 210 27% 6%;
-
-    /* Secondary - Surface variant */
-    --secondary: 210 28% 12%;           /* #151D27 */
+    --secondary: 210 28% 12%;
     --secondary-foreground: 195 30% 94%;
-
-    /* Muted - Hints, dividers */
-    --muted: 210 24% 16%;               /* #1E2832 - Border/Divider */
-    --muted-foreground: 200 15% 50%;    /* #5A7080 - Hint text */
-
-    /* Accent - Sky blue #0EA5E9 */
+    --muted: 210 24% 16%;
+    --muted-foreground: 200 15% 50%;
     --accent: 199 89% 48%;
     --accent-foreground: 210 27% 6%;
-
-    /* Status colors - harmonized */
-    --destructive: 0 84% 60%;           /* #EF4444 */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --success: 160 84% 39%;             /* #10B981 - Emerald */
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%;              /* #F59E0B - Amber */
+    --warning: 38 92% 50%;
     --warning-foreground: 210 27% 6%;
-
-    /* Unified Status Colors */
     --status-ok: 160 84% 39%;
     --status-warning: 38 92% 50%;
     --status-error: 0 84% 60%;
-
-    /* Borders and inputs */
-    --border: 210 24% 16%;              /* #1E2832 */
+    --border: 210 24% 16%;
     --input: 210 33% 9%;
     --ring: 190 100% 50%;
-
-    /* Angular radius - 4px base */
     --radius: 0.25rem;
-
-    /* Sidebar */
     --sidebar-background: 210 27% 6%;
     --sidebar-foreground: 195 30% 94%;
     --sidebar-primary: 190 100% 50%;
@@ -70,16 +46,153 @@
     --sidebar-accent-foreground: 195 30% 94%;
     --sidebar-border: 210 24% 16%;
     --sidebar-ring: 190 100% 50%;
-
-    /* Text hierarchy */
-    --text-primary: 195 30% 94%;        /* #E8F4F8 - Ice white */
-    --text-secondary: 200 20% 72%;      /* #9CB3C0 - Muted cyan-gray */
-    --text-muted: 200 15% 50%;          /* #5A7080 */
-
-    /* Shadows - with cyan glow */
+    --text-primary: 195 30% 94%;
+    --text-secondary: 200 20% 72%;
+    --text-muted: 200 15% 50%;
     --shadow-sm: 0 1px 2px 0 hsl(210 27% 6% / 0.4);
     --shadow-md: 0 2px 8px -2px hsl(210 27% 6% / 0.5);
     --shadow-lg: 0 4px 16px -4px hsl(210 27% 6% / 0.6);
+  }
+
+  /* ========================================
+     NIKE THEME - Bold dark with warm orange
+     ======================================== */
+  .theme-nike {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 24 85% 48%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 2%;
+    --status-ok: 160 84% 39%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
+    --border: 0 0% 18%;
+    --input: 0 0% 9%;
+    --ring: 24 95% 53%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 0 0% 9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 24 95% 53%;
+    --text-primary: 0 0% 98%;
+    --text-secondary: 0 0% 72%;
+    --text-muted: 0 0% 50%;
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.5);
+    --shadow-lg: 0 8px 24px -4px hsl(0 0% 0% / 0.6);
+  }
+
+  /* ========================================
+     ARCTIC PRO THEME - Cool dark with cyan
+     ======================================== */
+  .theme-arctic-pro {
+    --background: 210 27% 6%;
+    --foreground: 195 30% 94%;
+    --card: 210 33% 9%;
+    --card-foreground: 195 30% 94%;
+    --popover: 210 28% 12%;
+    --popover-foreground: 195 30% 94%;
+    --primary: 190 100% 50%;
+    --primary-foreground: 210 27% 6%;
+    --secondary: 210 28% 12%;
+    --secondary-foreground: 195 30% 94%;
+    --muted: 210 24% 16%;
+    --muted-foreground: 200 15% 50%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 210 27% 6%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 27% 6%;
+    --status-ok: 160 84% 39%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
+    --border: 210 24% 16%;
+    --input: 210 33% 9%;
+    --ring: 190 100% 50%;
+    --radius: 0.25rem;
+    --sidebar-background: 210 27% 6%;
+    --sidebar-foreground: 195 30% 94%;
+    --sidebar-primary: 190 100% 50%;
+    --sidebar-primary-foreground: 210 27% 6%;
+    --sidebar-accent: 210 33% 9%;
+    --sidebar-accent-foreground: 195 30% 94%;
+    --sidebar-border: 210 24% 16%;
+    --sidebar-ring: 190 100% 50%;
+    --text-primary: 195 30% 94%;
+    --text-secondary: 200 20% 72%;
+    --text-muted: 200 15% 50%;
+    --shadow-sm: 0 1px 2px 0 hsl(210 27% 6% / 0.4);
+    --shadow-md: 0 2px 8px -2px hsl(210 27% 6% / 0.5);
+    --shadow-lg: 0 4px 16px -4px hsl(210 27% 6% / 0.6);
+  }
+
+  /* ========================================
+     LIGHT MINIMAL THEME - Clean with blue
+     ======================================== */
+  .theme-light-minimal {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 93%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+    --status-ok: 160 84% 39%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
+    --text-primary: 222 47% 11%;
+    --text-secondary: 215 16% 47%;
+    --text-muted: 215 16% 60%;
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1);
   }
 }
 
