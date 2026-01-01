@@ -392,7 +392,7 @@ export default function ClientPortalWorkoutDiary() {
             </div>
 
             {/* Date and Duration */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="workout-date">Datum</Label>
                 <Input
