@@ -69,18 +69,27 @@ export function useLastTraining(clientId: string | undefined) {
       // Group entries by exercise
       const exercises: GroupedWorkoutEntry[] = (entries || []).reduce(
         (acc, entry) => {
+          // Map DB entry to WorkoutEntry with optional field defaults
+          const mappedEntry: WorkoutEntry = {
+            ...entry,
+            heart_rate_zone: (entry as any).heart_rate_zone ?? null,
+            avg_heart_rate: (entry as any).avg_heart_rate ?? null,
+            max_heart_rate: (entry as any).max_heart_rate ?? null,
+            pace_per_500m: (entry as any).pace_per_500m ?? null,
+          };
+          
           const existing = acc.find(
             (g) =>
               g.exercise_name === entry.exercise_name &&
               g.exercise_id === entry.exercise_id
           );
           if (existing) {
-            existing.sets.push(entry as WorkoutEntry);
+            existing.sets.push(mappedEntry);
           } else {
             acc.push({
               exercise_id: entry.exercise_id,
               exercise_name: entry.exercise_name,
-              sets: [entry as WorkoutEntry],
+              sets: [mappedEntry],
             });
           }
           return acc;

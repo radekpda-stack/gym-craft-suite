@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { detectExerciseMetricCategory, getPerformanceDisplay, getRpeBgColor } from '@/lib/exerciseMetrics';
+import { formatTimeMs, getTimeMs } from '@/lib/timeUtils';
 
 interface ExerciseHistoryTableProps {
   exerciseId: string;
@@ -22,10 +23,13 @@ interface ExerciseHistoryTableProps {
 
 const PAGE_SIZE = 15;
 
-function formatTimeDisplay(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+function formatTimeDisplay(seconds: number, ms?: number | null): string {
+  // Prefer ms for precision display
+  if (ms !== null && ms !== undefined) {
+    return formatTimeMs(ms);
+  }
+  // Fallback to seconds
+  return formatTimeMs(seconds * 1000);
 }
 
 export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: ExerciseHistoryTableProps) {

@@ -27,13 +27,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useExercises, Exercise } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
-import { parseTime, formatTime, parsePace, formatPace } from '@/lib/timeUtils';
+import { parseTimeToMs, formatTimeMs, parsePaceToMs, formatPaceMs, msToSeconds } from '@/lib/timeUtils';
 
 interface SetData {
   weight_kg: number | null;
   reps: number | null;
   rpe: number | null;
   time_seconds: number | null;
+  time_ms: number | null; // High-precision time in milliseconds
   distance_meters: number | null;
   calories: number | null;
   watts: number | null;
@@ -43,6 +44,7 @@ interface SetData {
   avg_heart_rate: number | null;
   max_heart_rate: number | null;
   pace_per_500m: number | null;
+  pace_per_500m_ms: number | null; // High-precision pace in milliseconds
 }
 
 interface ExerciseFormData {
@@ -65,6 +67,7 @@ const DEFAULT_SET: SetData = {
   reps: null, 
   rpe: null,
   time_seconds: null,
+  time_ms: null,
   distance_meters: null,
   calories: null,
   watts: null,
@@ -73,6 +76,7 @@ const DEFAULT_SET: SetData = {
   avg_heart_rate: null,
   max_heart_rate: null,
   pace_per_500m: null,
+  pace_per_500m_ms: null,
 };
 
 export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerciseFormProps) {
@@ -147,10 +151,14 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     newTimeInputs[index] = value;
     setTimeInputs(newTimeInputs);
     
-    // Parse and set the time_seconds value
-    const seconds = parseTime(value);
+    // Parse and set both time_ms (precision) and time_seconds (legacy)
+    const ms = parseTimeToMs(value);
     const newSets = [...sets];
-    newSets[index] = { ...newSets[index], time_seconds: seconds };
+    newSets[index] = { 
+      ...newSets[index], 
+      time_ms: ms,
+      time_seconds: ms !== null ? msToSeconds(ms) : null 
+    };
     setSets(newSets);
   };
 
@@ -159,10 +167,14 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     newPaceInputs[index] = value;
     setPaceInputs(newPaceInputs);
     
-    // Parse and set the pace_per_500m value
-    const seconds = parsePace(value);
+    // Parse and set both pace_per_500m_ms (precision) and pace_per_500m (legacy)
+    const ms = parsePaceToMs(value);
     const newSets = [...sets];
-    newSets[index] = { ...newSets[index], pace_per_500m: seconds };
+    newSets[index] = { 
+      ...newSets[index], 
+      pace_per_500m_ms: ms,
+      pace_per_500m: ms !== null ? msToSeconds(ms) : null 
+    };
     setSets(newSets);
   };
 
@@ -514,11 +526,13 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                         className="bg-secondary border-border h-9"
                       />
                       <Input
-                        type="number"
-                        placeholder="0"
-                        value={set.time_seconds ?? ''}
-                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0:00"
+                        value={timeInputs[index] || ''}
+                        onChange={(e) => handleTimeInputChange(index, e.target.value)}
                         className="bg-secondary border-border h-9"
+                        title="Formát: mm:ss nebo mm:ss.SS"
                       />
                       <Input
                         type="number"
@@ -542,11 +556,13 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                         className="bg-secondary border-border h-9"
                       />
                       <Input
-                        type="number"
-                        placeholder="0"
-                        value={set.time_seconds ?? ''}
-                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0:00"
+                        value={timeInputs[index] || ''}
+                        onChange={(e) => handleTimeInputChange(index, e.target.value)}
                         className="bg-secondary border-border h-9"
+                        title="Formát: mm:ss nebo mm:ss.SS"
                       />
                       <Input
                         type="number"
@@ -570,11 +586,13 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                         className="bg-secondary border-border h-9"
                       />
                       <Input
-                        type="number"
-                        placeholder="0"
-                        value={set.time_seconds ?? ''}
-                        onChange={(e) => handleSetChange(index, 'time_seconds', e.target.value)}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0:00"
+                        value={timeInputs[index] || ''}
+                        onChange={(e) => handleTimeInputChange(index, e.target.value)}
                         className="bg-secondary border-border h-9"
+                        title="Formát: mm:ss nebo mm:ss.SS"
                       />
                       <Input
                         type="number"
