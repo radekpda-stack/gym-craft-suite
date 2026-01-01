@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ChevronLeft, Calendar } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance, useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
 import { ClientFormValues } from '@/lib/validations/client';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { ClientDetailSkeleton } from '@/components/skeletons';
@@ -19,13 +19,15 @@ import { STATUS_CONFIG, getCreditStatus } from '@/lib/statusUtils';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
 
-// Client card components
-import { ClientStatusBlock } from '@/components/clients/ClientStatusBlock';
-import { ClientActionHub } from '@/components/clients/ClientActionHub';
-import { ClientHistoryCollapsed } from '@/components/clients/ClientHistoryCollapsed';
+// New components
+import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
+import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
+import { ClientTrainingHistory } from '@/components/clients/ClientTrainingHistory';
+import { ClientCreditHistory } from '@/components/clients/ClientCreditHistory';
+import { ClientSecondaryAccordions, SECTION_ICONS } from '@/components/clients/ClientSecondaryAccordions';
+
+// Existing components for accordion sections
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
-import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
-import { ClientPersonalInfo } from '@/components/clients/ClientPersonalInfo';
 import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
 import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
 import { ClientMeasurementsCard } from '@/components/clients/ClientMeasurementsCard';
@@ -34,8 +36,8 @@ import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
 import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
 import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
-import { ClientStickyHeader } from '@/components/clients/ClientStickyHeader';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
+import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
@@ -47,14 +49,19 @@ export default function ClientDetail() {
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
   const { data: sessions = [] } = useTrainingSessions(id);
   const { data: feedbackData = [] } = useClientFeedback(id);
+  const { data: creditTransactions = [] } = useCreditTransactions(id);
+  const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
   const updateClient = useUpdateClient();
   const isMobile = useIsMobile();
   
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
+  
+  // Ref for scrolling to admin section
+  const adminSectionRef = useRef<HTMLDivElement>(null);
 
-  // Derived data for sticky header
+  // Derived data
   const lastCompletedSession = sessions.find((s: any) => s.status === 'completed');
   const lastFeedback = feedbackData[0];
   const hasRedFlag = feedbackData.some(f => f.is_red_flag);
@@ -88,6 +95,14 @@ export default function ClientDetail() {
   const creditStatus = getCreditStatus(creditBalance, unpaidCount > 0);
   const statusConfig = STATUS_CONFIG[creditStatus];
 
+  // Client zone info (simplified - no account data yet)
+  const clientZoneInfo = null;
+
+  // All transactions (personal + group if shared)
+  const allTransactions = isSharedBudget 
+    ? [...creditTransactions, ...sharedTransactions]
+    : creditTransactions;
+
   const handleAddNote = async (note: string) => {
     const currentNotes = client.notes || '';
     const newNotes = currentNotes 
@@ -113,46 +128,91 @@ export default function ClientDetail() {
     await updateClient.mutateAsync({ id: client.id, values: data });
   };
 
+  const handleUpdateTrainingStartDate = async (date: string | null) => {
+    await updateClient.mutateAsync({ 
+      id: client.id, 
+      values: { training_start_date: date } as any 
+    });
+    toast({ title: 'Datum aktualizováno' });
+  };
+
+  const scrollToAdminSection = () => {
+    adminSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Build accordion sections
+  const accordionSections = [
+    {
+      id: 'notes',
+      icon: SECTION_ICONS.notes,
+      title: 'Poznámka trenéra',
+      children: <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />,
+    },
+    {
+      id: 'measurements',
+      icon: SECTION_ICONS.measurements,
+      title: 'Měření',
+      children: <ClientMeasurementsCard clientId={client.id} />,
+    },
+    {
+      id: 'diagnostics',
+      icon: SECTION_ICONS.diagnostics,
+      title: 'Diagnostika',
+      children: (
+        <>
+          <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
+          <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
+        </>
+      ),
+    },
+    {
+      id: 'feedback',
+      icon: SECTION_ICONS.feedback,
+      title: 'Feedback',
+      badge: feedbackData.length || undefined,
+      children: (
+        <ClientFeedbackCard 
+          clientId={client.id} 
+          clientName={client.name}
+          lastCompletedTrainingId={lastCompletedSession?.id}
+        />
+      ),
+    },
+    {
+      id: 'nutrition',
+      icon: SECTION_ICONS.challenges,
+      title: 'Výživa & Výzvy',
+      children: <ClientNutritionCard clientId={client.id} clientName={client.name} />,
+    },
+    {
+      id: 'media',
+      icon: SECTION_ICONS.media,
+      title: 'Média & Fotky',
+      children: <ClientMediaGallery clientId={client.id} />,
+    },
+    {
+      id: 'finance',
+      icon: SECTION_ICONS.finance,
+      title: 'Finance',
+      children: (
+        <ClientFinanceCard
+          clientId={client.id}
+          creditBalance={creditBalance}
+          isSharedBudget={isSharedBudget}
+          budgetGroupName={sharedBudgetInfo?.groupName}
+        />
+      ),
+    },
+    {
+      id: 'timeline',
+      icon: SECTION_ICONS.timeline,
+      title: 'Časová osa',
+      children: <ClientTimeline clientId={client.id} defaultLimit={20} />,
+    },
+  ];
+
   return (
     <div className="space-y-4 animate-fade-in pb-24 sm:pb-4">
-      {/* Desktop Sticky Header (shows on scroll) */}
-      {!isMobile && (
-        <ClientStickyHeader
-          client={client}
-          creditBalance={creditBalance}
-          unpaidCount={unpaidCount}
-          lastTrainingDate={lastCompletedSession?.date}
-          lastFeedbackDate={lastFeedback?.training_date}
-          hasRedFlag={hasRedFlag}
-        />
-      )}
-
-      {/* Mobile compact header */}
-      {isMobile && (
-        <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-lg border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <Link to="/clients" className="p-2 -ml-2 rounded-full hover:bg-secondary/50">
-              <ChevronLeft className="w-5 h-5" />
-            </Link>
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                {client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="font-semibold text-foreground truncate flex-1">{client.name}</span>
-            {client.payment_mode !== 'cash_only' && (
-              <div className={cn(
-                'flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-bold shrink-0',
-                statusConfig.bgClass,
-                statusConfig.textClass
-              )}>
-                {formatCurrency(creditBalance)}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Desktop Breadcrumbs */}
       {!isMobile && (
         <PageBreadcrumbs
@@ -163,67 +223,56 @@ export default function ClientDetail() {
         />
       )}
 
-      {/* 🔴 Section 1: Immediate Status Block with contact info */}
-      <ClientStatusBlock client={client} creditBalance={creditBalance} />
-
-      {/* 🔵 Section 2: Dominant CTA + Quick Actions */}
-      <ClientActionHub
-        client={client}
-        creditBalance={creditBalance}
-        onAddNote={handleAddNote}
-        onAddTraining={() => setIsTrainingDialogOpen(true)}
-        onAddCredit={() => setIsCreditModalOpen(true)}
-        onEditClient={() => setShowClientDetails(true)}
+      {/* SECTION 1: Sticky Header with contact + birth year + chodí od */}
+      <ClientHeaderCompact 
+        client={client} 
+        onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
       />
 
-      {/* 📋 Section 3: Timeline - main overview */}
-      <div className="glass rounded-2xl p-4">
-        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-primary" />
-          Časová osa
-        </h3>
-        <ClientTimeline clientId={client.id} defaultLimit={10} />
-      </div>
-
-      {/* 👤 Section 4: Personal Info */}
-      <ClientPersonalInfo client={client} onEdit={() => setShowClientDetails(true)} />
-
-      {/* 🩺 Section 4: Health & Diagnostics */}
-      <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
-      <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
-      <ClientMeasurementsCard clientId={client.id} />
-
-      {/* 📆 Section 5: Training History & Feedback */}
-      <ClientHistoryCollapsed clientId={client.id} notes={client.notes} />
-      <div data-section="feedback">
-        <ClientFeedbackCard 
-          clientId={client.id} 
-          clientName={client.name}
-          lastCompletedTrainingId={sessions.find((s: any) => s.status === 'completed')?.id}
-        />
-      </div>
-      <ClientNutritionCard clientId={client.id} clientName={client.name} />
-
-      {/* 📝 Section 6: Notes & Media */}
-      <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
-      <ClientMediaGallery clientId={client.id} />
-
-      {/* 💰 Section 7: Finance */}
-      <ClientFinanceCard
+      {/* SECTION 2: 3 Quick Cards - Trainings, Credit, Client Zone */}
+      <ClientQuickCards
         clientId={client.id}
+        clientName={client.name}
+        sessions={sessions}
         creditBalance={creditBalance}
+        isSharedBudget={isSharedBudget}
+        budgetGroupName={sharedBudgetInfo?.groupName}
+        budgetMemberCount={sharedBudgetInfo?.members?.length}
+        clientZone={clientZoneInfo}
+        onAddTraining={() => setIsTrainingDialogOpen(true)}
+        onAddCredit={() => setIsCreditModalOpen(true)}
+        onScrollToClientZone={scrollToAdminSection}
+      />
+
+      {/* SECTION 3: Training History (Primary) */}
+      <ClientTrainingHistory
+        clientId={client.id}
+        sessions={sessions}
         isSharedBudget={isSharedBudget}
         budgetGroupName={sharedBudgetInfo?.groupName}
       />
 
-      {/* ⚙️ Admin/Settings Section */}
-      <ClientAdminBlock
-        client={client}
+      {/* SECTION 4: Credit History (Primary) */}
+      <ClientCreditHistory
+        clientId={client.id}
+        transactions={allTransactions as any}
         isSharedBudget={isSharedBudget}
-        budgetGroupId={sharedBudgetInfo?.groupId}
-        onArchive={handleArchive}
-        defaultExpanded={false}
+        budgetGroupName={sharedBudgetInfo?.groupName}
       />
+
+      {/* SECTION 5: Secondary sections in Accordions */}
+      <ClientSecondaryAccordions sections={accordionSections} />
+
+      {/* SECTION 6: Admin Section (Klientská zóna) */}
+      <div ref={adminSectionRef}>
+        <ClientAdminBlock
+          client={client}
+          isSharedBudget={isSharedBudget}
+          budgetGroupId={sharedBudgetInfo?.groupId}
+          onArchive={handleArchive}
+          defaultExpanded={false}
+        />
+      </div>
 
       {/* Full Profile Dialog/Sheet */}
       {showClientDetails && (
