@@ -36,6 +36,7 @@ import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
 import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
+import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
@@ -244,6 +245,9 @@ export default function ClientDetail() {
         onAddCredit={() => setIsCreditModalOpen(true)}
         onScrollToClientZone={scrollToAdminSection}
       />
+
+      {/* SECTION 2.5: Personal Records */}
+      <ClientPRsCard clientId={client.id} />
 
       {/* SECTION 3: Training History (Primary) */}
       <ClientTrainingHistory
