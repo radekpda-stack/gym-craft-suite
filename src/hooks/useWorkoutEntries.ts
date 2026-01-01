@@ -293,21 +293,25 @@ export function useSyncToClientStats() {
       if (fetchError) throw fetchError;
       if (!workoutEntries || workoutEntries.length === 0) return;
 
-      // Group by exercise
+      // Group by exercise AND participant_client_id
+      // This ensures each participant's exercises are synced to their own stats
       const exerciseGroups = workoutEntries.reduce((acc, entry) => {
-        const key = `${entry.exercise_name}|${entry.exercise_id || 'null'}`;
+        // Use participant_client_id if set, otherwise fall back to main clientId
+        const targetClientId = entry.participant_client_id || clientId;
+        const key = `${entry.exercise_name}|${entry.exercise_id || 'null'}|${targetClientId}`;
         if (!acc[key]) {
           acc[key] = {
             exercise_id: entry.exercise_id,
             exercise_name: entry.exercise_name,
+            target_client_id: targetClientId,
             entries: [],
           };
         }
         acc[key].entries.push(entry as WorkoutEntry);
         return acc;
-      }, {} as Record<string, { exercise_id: string | null; exercise_name: string; entries: WorkoutEntry[] }>);
+      }, {} as Record<string, { exercise_id: string | null; exercise_name: string; target_client_id: string; entries: WorkoutEntry[] }>);
 
-      // For each exercise, find the best set and create/update exercise_entries
+      // For each exercise group (per participant), find the best set and create/update exercise_entries
       for (const group of Object.values(exerciseGroups)) {
         // Check if this is a time-based exercise
         const hasTimeData = group.entries.some(e => e.time_seconds && e.time_seconds > 0);
@@ -336,14 +340,14 @@ export function useSyncToClientStats() {
           }
         }
 
-        // Check if this is a PR
+        // Check if this is a PR - use target_client_id for correct comparison
         let isPR = false;
         if (isTimeBased) {
           // Time-based PR: lower is better
           const { data: previousBest } = await supabase
             .from('exercise_entries')
             .select('time_seconds')
-            .eq('client_id', clientId)
+            .eq('client_id', group.target_client_id)
             .eq('exercise_name', group.exercise_name)
             .not('time_seconds', 'is', null)
             .order('time_seconds', { ascending: true })
@@ -356,7 +360,7 @@ export function useSyncToClientStats() {
           const { data: previousBest } = await supabase
             .from('exercise_entries')
             .select('weight_kg')
-            .eq('client_id', clientId)
+            .eq('client_id', group.target_client_id)
             .eq('exercise_name', group.exercise_name)
             .not('weight_kg', 'is', null)
             .order('weight_kg', { ascending: false })
@@ -366,19 +370,21 @@ export function useSyncToClientStats() {
             (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
         }
 
-        // First delete any existing entry for this exercise in this session
+        // First delete any existing entry for this exercise in this session for this client
         await supabase
           .from('exercise_entries')
           .delete()
           .eq('training_session_id', trainingSessionId)
           .eq('exercise_name', group.exercise_name)
+          .eq('client_id', group.target_client_id)
           .eq('user_id', user.id);
 
         // Create exercise entry for client stats with training_session_id
+        // Uses target_client_id to sync to correct participant
         const { error: insertError } = await supabase
           .from('exercise_entries')
           .insert({
-            client_id: clientId,
+            client_id: group.target_client_id,
             exercise_id: group.exercise_id,
             exercise_name: group.exercise_name,
             sets: group.entries.length,
@@ -406,14 +412,14 @@ export function useSyncToClientStats() {
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
       toast({
         title: 'Statistiky aktualizovány',
-        description: 'Data byla synchronizována s profilem klienta.',
+        description: 'Data byla synchronizována s profily klientů.',
       });
     },
     onError: (error) => {
       console.error('Sync error:', error);
       toast({
         title: 'Chyba synchronizace',
-        description: 'Nepodařilo se synchronizovat data s profilem klienta.',
+        description: 'Nepodařilo se synchronizovat data s profily klientů.',
         variant: 'destructive',
       });
     },
