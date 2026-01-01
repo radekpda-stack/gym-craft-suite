@@ -9,24 +9,22 @@ export interface MyProfileData {
 }
 
 export function useMyProfile() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return useQuery({
     queryKey: ['my-profile', user?.id],
     queryFn: async (): Promise<MyProfileData | null> => {
       if (!user?.id) return null;
 
-      // Find the client record that belongs to the current user (trainer's own client profile)
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, user_id')
+        .select('id, name')
         .eq('user_id', user.id)
+        .eq('is_self_profile', true)
         .maybeSingle();
 
-      if (error || !data) {
-        console.error('Error fetching my profile:', error);
-        return null;
-      }
+      if (error) throw error;
+      if (!data) return null;
 
       return {
         clientId: data.id,
@@ -34,6 +32,6 @@ export function useMyProfile() {
         clientName: data.name,
       };
     },
-    enabled: !!user?.id,
+    enabled: !loading && !!user?.id,
   });
 }

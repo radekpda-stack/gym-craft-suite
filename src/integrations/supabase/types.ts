@@ -1792,6 +1792,7 @@ export type Database = {
           id: string
           is_archived: boolean
           is_favorite: boolean
+          is_self_profile: boolean
           is_system: boolean
           name: string
           notes: string | null
@@ -1825,6 +1826,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
+          is_self_profile?: boolean
           is_system?: boolean
           name: string
           notes?: string | null
@@ -1858,6 +1860,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_favorite?: boolean
+          is_self_profile?: boolean
           is_system?: boolean
           name?: string
           notes?: string | null
