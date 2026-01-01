@@ -27,6 +27,7 @@ import {
   PieChart,
   UserCircle,
   Trophy,
+  ClipboardCheck,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -283,6 +284,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
           { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+          ...(isModuleEnabled('tests') ? [{ id: 'tests', to: '/tests', icon: ClipboardCheck, label: 'Testy' }] : []),
           ...(isModuleEnabled('nutrition') ? [{
             id: 'nutrition',
             to: '/nutrition',
