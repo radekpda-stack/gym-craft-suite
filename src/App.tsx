@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,61 +15,62 @@ import { UndoProvider } from "@/contexts/UndoContext";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { UndoToast } from "@/components/ui/UndoToast";
 import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
-import Index from "./pages/Index";
+import { PageLoader } from "@/components/PageLoader";
+
+// Eagerly loaded (critical path)
 import Auth from "./pages/Auth";
-import DemoPage from "./pages/DemoPage";
-import WaitingForApproval from "./pages/WaitingForApproval";
-import UserApprovals from "./pages/admin/UserApprovals";
-import Clients from "./pages/Clients";
-import ClientDetail from "./pages/ClientDetail";
-import Trainings from "./pages/Trainings";
-import TrainingDetail from "./pages/TrainingDetail";
-import Records from "./pages/Records";
-import CalendarPage from "./pages/CalendarPage";
-import CanceledTrainings from "./pages/CanceledTrainings";
-import Settings from "./pages/Settings";
-// import AIAssistant from "./pages/AIAssistant"; // Hidden - AI feature disabled
-import FeedbackPage from "./pages/FeedbackPage";
-import FeedbackOverview from "./pages/FeedbackOverview";
-import PublicNutritionLog from "./pages/PublicNutritionLog";
-import Sales from "./pages/Sales";
-import PRHistory from "./pages/PRHistory";
-// Reminders feature removed
-import AppUsageStats from "./pages/AppUsageStats";
-import Statistics from "./pages/Statistics";
-import PreDiagnosticFormPage from "./pages/PreDiagnosticFormPage";
-import ClientIntakePage from "./pages/ClientIntakePage";
-import Exercises from "./pages/Exercises";
-import ExerciseDetail from "./pages/ExerciseDetail";
-import ExerciseAnalytics from "./pages/ExerciseAnalytics";
-import ClientAnalytics from "./pages/ClientAnalytics";
-import Tests from "./pages/Tests";
-import TestDetail from "./pages/TestDetail";
-import FinanceAnalytics from "./pages/FinanceAnalytics";
-// import TrainingPlans from "./pages/TrainingPlans"; // Hidden
-// import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
-import NutritionOverview from "./pages/NutritionOverview";
-import NutritionCampaigns from "./pages/NutritionCampaigns";
-import NutritionCampaignDetail from "./pages/NutritionCampaignDetail";
-import NutritionAnalysis from "./pages/NutritionAnalysis";
-import NutritionTemplate from "./pages/NutritionTemplate";
-import NutritionQuestionnaires from "./pages/NutritionQuestionnaires";
-import NutritionInfographics from "./pages/NutritionInfographics";
-import TrainingTemplates from "./pages/TrainingTemplates";
-import ClientPortalAdmin from "./pages/ClientPortalAdmin";
-import Challenges from "./pages/Challenges";
 import NotFound from "./pages/NotFound";
 
-// Client Portal Pages
-import ClientPortalLogin from "./pages/client-portal/ClientPortalLogin";
-import ClientPortalOverview from "./pages/client-portal/ClientPortalOverview";
-import ClientPortalProgress from "./pages/client-portal/ClientPortalProgress";
-import ClientPortalAttendance from "./pages/client-portal/ClientPortalAttendance";
-import ClientPortalCredit from "./pages/client-portal/ClientPortalCredit";
-import ClientPortalNutrition from "./pages/client-portal/ClientPortalNutrition";
-import ClientPortalProfile from "./pages/client-portal/ClientPortalProfile";
-import ClientPortalSettings from "./pages/client-portal/ClientPortalSettings";
-import ClientPortalChallenges from "./pages/client-portal/ClientPortalChallenges";
+// Lazy loaded pages - Main app
+const Index = lazy(() => import("./pages/Index"));
+const DemoPage = lazy(() => import("./pages/DemoPage"));
+const WaitingForApproval = lazy(() => import("./pages/WaitingForApproval"));
+const UserApprovals = lazy(() => import("./pages/admin/UserApprovals"));
+const Clients = lazy(() => import("./pages/Clients"));
+const ClientDetail = lazy(() => import("./pages/ClientDetail"));
+const Trainings = lazy(() => import("./pages/Trainings"));
+const TrainingDetail = lazy(() => import("./pages/TrainingDetail"));
+const Records = lazy(() => import("./pages/Records"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const CanceledTrainings = lazy(() => import("./pages/CanceledTrainings"));
+const Settings = lazy(() => import("./pages/Settings"));
+const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
+const FeedbackOverview = lazy(() => import("./pages/FeedbackOverview"));
+const PublicNutritionLog = lazy(() => import("./pages/PublicNutritionLog"));
+const Sales = lazy(() => import("./pages/Sales"));
+const PRHistory = lazy(() => import("./pages/PRHistory"));
+const AppUsageStats = lazy(() => import("./pages/AppUsageStats"));
+const Statistics = lazy(() => import("./pages/Statistics"));
+const PreDiagnosticFormPage = lazy(() => import("./pages/PreDiagnosticFormPage"));
+const ClientIntakePage = lazy(() => import("./pages/ClientIntakePage"));
+const Exercises = lazy(() => import("./pages/Exercises"));
+const ExerciseDetail = lazy(() => import("./pages/ExerciseDetail"));
+const ExerciseAnalytics = lazy(() => import("./pages/ExerciseAnalytics"));
+const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
+const Tests = lazy(() => import("./pages/Tests"));
+const TestDetail = lazy(() => import("./pages/TestDetail"));
+const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
+const NutritionOverview = lazy(() => import("./pages/NutritionOverview"));
+const NutritionCampaigns = lazy(() => import("./pages/NutritionCampaigns"));
+const NutritionCampaignDetail = lazy(() => import("./pages/NutritionCampaignDetail"));
+const NutritionAnalysis = lazy(() => import("./pages/NutritionAnalysis"));
+const NutritionTemplate = lazy(() => import("./pages/NutritionTemplate"));
+const NutritionQuestionnaires = lazy(() => import("./pages/NutritionQuestionnaires"));
+const NutritionInfographics = lazy(() => import("./pages/NutritionInfographics"));
+const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
+const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
+const Challenges = lazy(() => import("./pages/Challenges"));
+
+// Lazy loaded pages - Client Portal
+const ClientPortalLogin = lazy(() => import("./pages/client-portal/ClientPortalLogin"));
+const ClientPortalOverview = lazy(() => import("./pages/client-portal/ClientPortalOverview"));
+const ClientPortalProgress = lazy(() => import("./pages/client-portal/ClientPortalProgress"));
+const ClientPortalAttendance = lazy(() => import("./pages/client-portal/ClientPortalAttendance"));
+const ClientPortalCredit = lazy(() => import("./pages/client-portal/ClientPortalCredit"));
+const ClientPortalNutrition = lazy(() => import("./pages/client-portal/ClientPortalNutrition"));
+const ClientPortalProfile = lazy(() => import("./pages/client-portal/ClientPortalProfile"));
+const ClientPortalSettings = lazy(() => import("./pages/client-portal/ClientPortalSettings"));
+const ClientPortalChallenges = lazy(() => import("./pages/client-portal/ClientPortalChallenges"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +95,7 @@ const App = () => (
             <UndoToast />
           <BrowserRouter>
             <DemoProvider>
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/waiting-for-approval" element={<WaitingForApproval />} />
@@ -135,11 +138,9 @@ const App = () => (
                           <Route path="/calendar" element={<CalendarPage />} />
                           <Route path="/canceled" element={<CanceledTrainings />} />
                           <Route path="/settings" element={<Settings />} />
-                          {/* <Route path="/ai-assistant" element={<AIAssistant />} /> */} {/* Hidden - AI feature disabled */}
                           <Route path="/feedback-overview" element={<FeedbackOverview />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/pr-history" element={<PRHistory />} />
-                          {/* Reminders route removed */}
                           <Route path="/app-usage" element={<AppUsageStats />} />
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/statistics/analytics" element={<FinanceAnalytics />} />
@@ -159,7 +160,6 @@ const App = () => (
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />
                           <Route path="/challenges" element={<Challenges />} />
-                          {/* <Route path="/training-plans/:id" element={<TrainingPlanDetail />} /> */} {/* Hidden */}
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
@@ -170,6 +170,7 @@ const App = () => (
                 }
               />
             </Routes>
+            </Suspense>
             </DemoProvider>
           </BrowserRouter>
           </TooltipProvider>
