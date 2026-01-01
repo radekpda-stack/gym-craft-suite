@@ -1304,6 +1304,114 @@ export type Database = {
           },
         ]
       }
+      client_workout_exercises: {
+        Row: {
+          created_at: string
+          distance_meters: number | null
+          duration_seconds: number | null
+          exercise_id: string | null
+          exercise_name: string
+          id: string
+          notes: string | null
+          reps: number | null
+          rpe: number | null
+          sets: number | null
+          sort_order: number
+          weight_kg: number | null
+          workout_log_id: string
+        }
+        Insert: {
+          created_at?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name: string
+          id?: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          sets?: number | null
+          sort_order?: number
+          weight_kg?: number | null
+          workout_log_id: string
+        }
+        Update: {
+          created_at?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          exercise_name?: string
+          id?: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          sets?: number | null
+          sort_order?: number
+          weight_kg?: number | null
+          workout_log_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_workout_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_workout_exercises_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "client_workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_workout_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_workout_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_workout_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           allow_anonymous_benchmarks: boolean | null
@@ -6507,6 +6615,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_client_id_for_portal_user: { Args: never; Returns: string }
       get_client_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_inherited_tags_for_session: {

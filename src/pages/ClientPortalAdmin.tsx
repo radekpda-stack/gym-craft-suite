@@ -6,7 +6,8 @@ import { ClientAccessList } from '@/components/client-portal/ClientAccessList';
 import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
 import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
-import { LayoutDashboard, Users, Settings, Info } from 'lucide-react';
+import { ClientWorkoutLogsOverview } from '@/components/client-portal/ClientWorkoutLogsOverview';
+import { LayoutDashboard, Users, Settings, Info, BookOpen } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -45,7 +46,7 @@ export default function ClientPortalAdmin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-md h-auto">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg h-auto">
           <TabsTrigger value="overview" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <LayoutDashboard className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline text-sm">Přehled</span>
@@ -53,6 +54,10 @@ export default function ClientPortalAdmin() {
           <TabsTrigger value="clients" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <Users className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline text-sm">Klienti</span>
+          </TabsTrigger>
+          <TabsTrigger value="diaries" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline text-sm">Deníky</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
             <Settings className="w-4 h-4 shrink-0" />
@@ -71,6 +76,10 @@ export default function ClientPortalAdmin() {
 
         <TabsContent value="clients" className="mt-6">
           <ClientAccessList />
+        </TabsContent>
+
+        <TabsContent value="diaries" className="mt-6">
+          <ClientWorkoutLogsOverview />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6 space-y-6">

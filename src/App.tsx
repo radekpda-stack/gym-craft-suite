@@ -71,6 +71,7 @@ const ClientPortalNutrition = lazy(() => import("./pages/client-portal/ClientPor
 const ClientPortalProfile = lazy(() => import("./pages/client-portal/ClientPortalProfile"));
 const ClientPortalSettings = lazy(() => import("./pages/client-portal/ClientPortalSettings"));
 const ClientPortalChallenges = lazy(() => import("./pages/client-portal/ClientPortalChallenges"));
+const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/ClientPortalWorkoutDiary"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +114,7 @@ const App = () => (
               <Route path="/client" element={<ClientPortalShell />}>
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
+                <Route path="diary" element={<ClientPortalWorkoutDiary />} />
                 <Route path="attendance" element={<ClientPortalAttendance />} />
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />

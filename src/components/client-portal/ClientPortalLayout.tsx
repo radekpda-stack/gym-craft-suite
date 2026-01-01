@@ -8,7 +8,8 @@ import {
   Apple, 
   LogOut,
   Settings,
-  Trophy
+  Trophy,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -26,6 +27,7 @@ interface ClientPortalLayoutProps {
 const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
+  { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
   { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
   { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
@@ -40,10 +42,10 @@ const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastav
 // Mobile nav - core items only (5 items to prevent overflow)
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
+  { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
-  { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
+  { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
