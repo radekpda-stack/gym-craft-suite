@@ -31,7 +31,7 @@ import { Label } from '@/components/ui/label';
 import { usePortalClients, useResetClientPassword, useDisableClientAccess, useUpdateClientCredentials } from '@/hooks/useClientPortalAdmin';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil } from 'lucide-react';
+import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil, Search, X } from 'lucide-react';
 import { InviteClientDialog } from './InviteClientDialog';
 import { toast } from '@/hooks/use-toast';
 import { BulkCreatePortalsButton } from './BulkCreatePortalsButton';
@@ -43,6 +43,7 @@ export function ClientAccessList() {
   const updateCredentials = useUpdateClientCredentials();
   
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; email: string; password: string }>({
     open: false,
     email: '',
@@ -66,6 +67,17 @@ export function ClientAccessList() {
     loginIdentifier: '',
     newLoginIdentifier: '',
     newPassword: '',
+  });
+
+  // Filter clients based on search query
+  const filteredClients = clients?.filter(account => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      account.client?.name?.toLowerCase().includes(query) ||
+      account.client?.email?.toLowerCase().includes(query) ||
+      account.login_identifier?.toLowerCase().includes(query)
+    );
   });
 
   const handleResetPassword = async (clientId: string) => {
@@ -184,19 +196,42 @@ export function ClientAccessList() {
     <div className="space-y-4">
       <BulkCreatePortalsButton />
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>Klienti s přístupem</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {clients?.length || 0} klientů s přístupem do portálu
+              {filteredClients?.length || 0} z {clients?.length || 0} klientů
             </p>
           </div>
-          <Button onClick={() => setInviteOpen(true)}>
+          <Button onClick={() => setInviteOpen(true)} className="shrink-0">
             <Plus className="w-4 h-4 mr-2" />
             Přidat klienta
           </Button>
         </CardHeader>
         <CardContent>
+          {/* Search Input */}
+          {(clients?.length || 0) > 0 && (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Hledat klienta podle jména, emailu nebo přihlášení..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          )}
+          
           {clients?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -209,13 +244,26 @@ export function ClientAccessList() {
                 Pozvat prvního klienta
               </Button>
             </div>
+          ) : filteredClients?.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Search className="w-10 h-10 mx-auto mb-3 opacity-50" />
+              <p>Žádní klienti neodpovídají hledání „{searchQuery}"</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="mt-3"
+                onClick={() => setSearchQuery('')}
+              >
+                Zrušit filtr
+              </Button>
+            </div>
           ) : (
             <>
               {/* Mobile: Card Layout */}
               <div className="space-y-3 md:hidden">
-                {clients?.map((account) => (
+                {filteredClients?.map((account) => (
                   <div 
-                    key={account.id} 
+                    key={account.id}
                     className="p-4 rounded-lg border bg-card"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -347,7 +395,7 @@ export function ClientAccessList() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients?.map((account) => (
+                    {filteredClients?.map((account) => (
                       <TableRow key={account.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
