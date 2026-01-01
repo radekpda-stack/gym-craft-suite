@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMyProfile } from '@/hooks/useMyProfile';
+import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User, Trophy, TrendingUp, Flame, Award, BarChart3, BookOpen } from 'lucide-react';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
@@ -12,10 +13,11 @@ import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutD
 import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
 
 export default function MyProfile() {
+  const { loading: authLoading } = useAuth();
   const { data: profile, isLoading } = useMyProfile();
   const [activeTab, setActiveTab] = useState('overview');
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-8 w-48" />
