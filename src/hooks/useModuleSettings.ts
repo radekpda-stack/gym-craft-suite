@@ -7,6 +7,7 @@ export interface ModuleSettings {
   diagnostics: boolean;
   training_templates: boolean;
   pr_history: boolean;
+  tests: boolean;
 }
 
 const DEFAULT_MODULES: ModuleSettings = {
@@ -16,6 +17,7 @@ const DEFAULT_MODULES: ModuleSettings = {
   diagnostics: true,
   training_templates: true,
   pr_history: true,
+  tests: true,
 };
 
 export function useModuleSettings() {

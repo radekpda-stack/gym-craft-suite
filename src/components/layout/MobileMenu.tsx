@@ -21,6 +21,8 @@ import {
   PieChart,
   LayoutTemplate,
   UserCircle,
+  ClipboardCheck,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -77,7 +79,9 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       {
         label: 'Záznamy',
         items: [
+          { to: '/exercises', icon: Target, label: 'Cviky' },
           { to: '/records', icon: Activity, label: 'Záznamy' },
+          ...(isModuleEnabled('tests') ? [{ to: '/tests', icon: ClipboardCheck, label: 'Testy' }] : []),
         ],
       },
       ...(isModuleEnabled('nutrition') ? [{

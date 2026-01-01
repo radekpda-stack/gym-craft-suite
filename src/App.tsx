@@ -42,6 +42,8 @@ import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
 import ExerciseAnalytics from "./pages/ExerciseAnalytics";
 import ClientAnalytics from "./pages/ClientAnalytics";
+import Tests from "./pages/Tests";
+import TestDetail from "./pages/TestDetail";
 import FinanceAnalytics from "./pages/FinanceAnalytics";
 // import TrainingPlans from "./pages/TrainingPlans"; // Hidden
 // import TrainingPlanDetail from "./pages/TrainingPlanDetail"; // Hidden
@@ -145,6 +147,8 @@ const App = () => (
                           <Route path="/exercises" element={<Exercises />} />
                           <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
+                          <Route path="/tests" element={<Tests />} />
+                          <Route path="/tests/:id" element={<TestDetail />} />
                           <Route path="/nutrition" element={<NutritionOverview />} />
                           <Route path="/nutrition/campaigns" element={<NutritionCampaigns />} />
                           <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />

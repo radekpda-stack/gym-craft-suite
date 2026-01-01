@@ -91,7 +91,9 @@ export function useCreateTestSession() {
 
       const parsedPrevious = (previousSessions || []).map(s => ({
         ...s,
-        machine_settings_json: typeof s.machine_settings_json === 'object' ? s.machine_settings_json as MachineSettings : null
+        machine_settings_json: typeof s.machine_settings_json === 'object' && s.machine_settings_json !== null 
+          ? s.machine_settings_json as unknown as MachineSettings 
+          : null
       })) as unknown as TestSession[];
 
       const { isComparable, reason } = evaluateComparability(input, parsedPrevious, definition.comparability_rules_json);
