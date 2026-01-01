@@ -33,6 +33,7 @@ import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
 import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
 import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
+import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
@@ -165,14 +166,17 @@ export default function ClientDetail() {
     {
       id: 'feedback',
       icon: SECTION_ICONS.feedback,
-      title: 'Feedback',
+      title: 'Feedback & Recovery',
       badge: feedbackData.length || undefined,
       children: (
-        <ClientFeedbackCard 
-          clientId={client.id} 
-          clientName={client.name}
-          lastCompletedTrainingId={lastCompletedSession?.id}
-        />
+        <div className="space-y-4">
+          <ClientFeedbackRecovery clientId={client.id} />
+          <ClientFeedbackCard 
+            clientId={client.id} 
+            clientName={client.name}
+            lastCompletedTrainingId={lastCompletedSession?.id}
+          />
+        </div>
       ),
     },
     {

@@ -48,6 +48,7 @@ import { Link } from 'react-router-dom';
 import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
 import { FeedbackStatusCards } from '@/components/feedback/FeedbackStatusCards';
 import { FeedbackActivityTimeline } from '@/components/feedback/FeedbackActivityTimeline';
+import { FeedbackAttentionInbox } from '@/components/feedback/FeedbackAttentionInbox';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
@@ -422,8 +423,9 @@ export default function FeedbackOverview() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Timeline - Side panel */}
-        <div className="lg:col-span-1 order-2 lg:order-1">
+        {/* Attention Inbox - Side panel */}
+        <div className="lg:col-span-1 order-2 lg:order-1 space-y-4">
+          <FeedbackAttentionInbox limit={8} />
           <FeedbackActivityTimeline />
         </div>
 

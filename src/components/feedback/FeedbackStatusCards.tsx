@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { responseRate, safeMedian, formatMetric } from '@/lib/feedbackCalculations';
 
 interface FeedbackStatusCardsProps {
   onStatusClick?: (status: 'to_send' | 'pending' | 'completed' | 'expired' | 'red_flags') => void;
@@ -102,29 +103,31 @@ export function FeedbackStatusCards({
         redFlagsCount = count || 0;
       }
 
-      // Calculate average waiting hours for pending (since sent_at)
+      // Calculate median waiting hours for pending (since sent_at) - more robust than average
       let avgWaitingHours: number | null = null;
       if (pending.length > 0) {
-        const totalHours = pending.reduce((sum, r) => {
+        const waitingHours = pending.map(r => {
           const sentAt = r.sent_at ? new Date(r.sent_at) : new Date(r.created_at);
-          return sum + differenceInHours(now, sentAt);
-        }, 0);
-        avgWaitingHours = Math.round(totalHours / pending.length);
+          return differenceInHours(now, sentAt);
+        });
+        avgWaitingHours = safeMedian(waitingHours);
       }
 
-      // Calculate average completion time (for completed requests)
+      // Calculate median completion time (for completed requests) - more robust than average
       let avgCompletionHours: number | null = null;
       const completedWithDates = completed.filter(r => r.sent_at && r.completed_at);
       if (completedWithDates.length > 0) {
-        const totalHours = completedWithDates.reduce((sum, r) => {
-          return sum + differenceInHours(new Date(r.completed_at!), new Date(r.sent_at!));
-        }, 0);
-        avgCompletionHours = Math.round(totalHours / completedWithDates.length);
+        const completionHours = completedWithDates.map(r => 
+          differenceInHours(new Date(r.completed_at!), new Date(r.sent_at!))
+        );
+        avgCompletionHours = safeMedian(completionHours);
       }
 
-      // Response rate: completed / (completed + expired) - only closed cases
-      const closedCases = completed.length + expired.length;
-      const responseRate = closedCases > 0 ? Math.round((completed.length / closedCases) * 100) : 0;
+      // Response rate using safe calculation: completed / sent_total (never > 100%)
+      // sent_total = all requests that were actually sent (sent_at IS NOT NULL)
+      const sentTotal = (requests || []).filter(r => r.sent_at !== null).length;
+      const completedCount = completed.length;
+      const calculatedResponseRate = responseRate(completedCount, sentTotal);
 
       const total = toSend.length + pending.length + completed.length + expired.length;
 
@@ -135,9 +138,9 @@ export function FeedbackStatusCards({
         expired: expired.length,
         redFlags: redFlagsCount,
         total,
-        responseRate,
-        avgWaitingHours,
-        avgCompletionHours,
+        responseRate: calculatedResponseRate,
+        avgWaitingHours: avgWaitingHours !== null ? Math.round(avgWaitingHours) : null,
+        avgCompletionHours: avgCompletionHours !== null ? Math.round(avgCompletionHours) : null,
       };
     },
     refetchInterval: 60000, // Refresh every minute
@@ -159,7 +162,9 @@ export function FeedbackStatusCards({
       icon: Clock,
       label: 'Čekající',
       value: stats?.pending ?? 0,
-      sublabel: stats?.avgWaitingHours ? `prům. čekání ${stats.avgWaitingHours}h` : 'odesláno, čeká na vyplnění',
+      sublabel: stats?.avgWaitingHours != null 
+        ? `medián čekání ${formatMetric(stats.avgWaitingHours, { decimals: 0, suffix: 'h' })}`
+        : 'odesláno, čeká na vyplnění',
       color: 'text-amber-500',
       bgColor: 'bg-amber-500/10',
       hoverRing: 'hover:ring-amber-500/50',
@@ -169,7 +174,9 @@ export function FeedbackStatusCards({
       icon: CheckCircle2,
       label: 'Vyplněno',
       value: stats?.completed ?? 0,
-      sublabel: stats?.avgCompletionHours ? `prům. za ${stats.avgCompletionHours}h` : 'klient vyplnil',
+      sublabel: stats?.avgCompletionHours != null 
+        ? `medián za ${formatMetric(stats.avgCompletionHours, { decimals: 0, suffix: 'h' })}`
+        : 'klient vyplnil',
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-500/10',
       hoverRing: 'hover:ring-emerald-500/50',
@@ -249,7 +256,7 @@ export function FeedbackStatusCards({
             </div>
             <Progress value={stats.responseRate} className="h-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              {stats.completed} vyplněno / ({stats.completed} + {stats.expired} expirováno) = uzavřené případy
+              {stats.completed} vyplněno z {stats.completed + stats.expired + stats.pending} odeslaných
             </p>
           </CardContent>
         </Card>
