@@ -1,42 +1,52 @@
 import { cn } from '@/lib/utils';
+import { Users } from 'lucide-react';
 
 interface CreditStatusBadgeProps {
   balance: number | null | undefined;
+  groupBalance?: number | null;
+  isGroup?: boolean;
   className?: string;
-  showAmount?: boolean;
 }
 
-export function CreditStatusBadge({ balance, className, showAmount = false }: CreditStatusBadgeProps) {
-  const numBalance = balance ?? 0;
+export function CreditStatusBadge({ 
+  balance, 
+  groupBalance,
+  isGroup = false,
+  className 
+}: CreditStatusBadgeProps) {
+  // Use group balance if client is in a group, otherwise use individual balance
+  const displayBalance = isGroup ? (groupBalance ?? 0) : (balance ?? 0);
+  const numBalance = displayBalance;
   
   const status = numBalance > 500 ? 'ok' : numBalance > 0 ? 'low' : 'zero';
   
   const config = {
     ok: {
-      label: 'OK',
       bgClass: 'bg-success/15 text-success',
     },
     low: {
-      label: 'Low',
       bgClass: 'bg-warning/15 text-warning',
     },
     zero: {
-      label: 'Zero',
       bgClass: 'bg-destructive/15 text-destructive',
     },
   };
   
-  const { label, bgClass } = config[status];
+  const { bgClass } = config[status];
+  
+  // Format amount
+  const formattedAmount = numBalance.toLocaleString('cs-CZ');
   
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide',
         bgClass,
         className
       )}
     >
-      {showAmount ? `${numBalance.toLocaleString('cs-CZ')} Kč` : label}
+      {isGroup && <Users className="w-3 h-3" />}
+      {formattedAmount} Kč
     </span>
   );
 }

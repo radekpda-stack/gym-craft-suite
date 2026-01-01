@@ -29,6 +29,8 @@ interface CompactClientRowProps {
   client: Client;
   tags?: SimpleTag[];
   nextTraining?: { date: string; time?: string } | null;
+  groupBalance?: number | null;
+  isInGroup?: boolean;
   onNewTraining?: () => void;
   onAddCredit?: () => void;
   onEdit?: () => void;
@@ -63,6 +65,8 @@ export const CompactClientRow = memo(function CompactClientRow({
   client,
   tags = [],
   nextTraining,
+  groupBalance,
+  isInGroup = false,
   onNewTraining,
   onAddCredit,
   onEdit,
@@ -155,7 +159,11 @@ export const CompactClientRow = memo(function CompactClientRow({
 
             {/* Indicators */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <CreditStatusBadge balance={client.credit_balance} />
+              <CreditStatusBadge 
+                balance={client.credit_balance} 
+                groupBalance={groupBalance}
+                isGroup={isInGroup}
+              />
               
               {nextTraining && (
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
