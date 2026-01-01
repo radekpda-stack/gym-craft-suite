@@ -35,7 +35,9 @@ interface DailyActiveUsers {
 
 // Define all trackable features for comparison
 export const ALL_FEATURES = [
-  // Navigation
+  // ==============================
+  // NAVIGATION - Page Views
+  // ==============================
   { name: 'page_view_dashboard', category: 'navigation', label: 'Dashboard' },
   { name: 'page_view_clients', category: 'navigation', label: 'Klienti' },
   { name: 'page_view_trainings', category: 'navigation', label: 'Tréninky' },
@@ -65,13 +67,25 @@ export const ALL_FEATURES = [
   { name: 'page_view_nutrition_campaigns', category: 'navigation', label: 'Nutriční kampaně' },
   { name: 'page_view_nutrition_overview', category: 'navigation', label: 'Přehled stravy' },
   { name: 'page_view_client_portal_admin', category: 'navigation', label: 'Admin klientské zóny' },
-  // Calendar
+  { name: 'page_view_analytics', category: 'navigation', label: 'Analytika' },
+  { name: 'page_view_app_usage_stats', category: 'navigation', label: 'Statistika využívání' },
+  { name: 'page_view_business_analytics', category: 'navigation', label: 'Byznys analytika' },
+  { name: 'page_view_capacity_stats', category: 'navigation', label: 'Statistiky kapacity' },
+  
+  // ==============================
+  // CALENDAR
+  // ==============================
   { name: 'calendar_day_view', category: 'calendar', label: 'Denní pohled kalendáře' },
   { name: 'calendar_week_view', category: 'calendar', label: 'Týdenní pohled kalendáře' },
   { name: 'calendar_month_view', category: 'calendar', label: 'Měsíční pohled kalendáře' },
   { name: 'calendar_quick_create', category: 'calendar', label: 'Rychlé vytvoření z kalendáře' },
   { name: 'calendar_quick_payment', category: 'calendar', label: 'Rychlá platba z kalendáře' },
-  // Clients
+  { name: 'calendar_drag_drop', category: 'calendar', label: 'Přesun tréninku v kalendáři' },
+  { name: 'calendar_recurring_create', category: 'calendar', label: 'Vytvoření pravidelného tréninku' },
+  
+  // ==============================
+  // CLIENTS
+  // ==============================
   { name: 'client_create', category: 'clients', label: 'Vytvoření klienta' },
   { name: 'client_update', category: 'clients', label: 'Úprava klienta' },
   { name: 'client_delete', category: 'clients', label: 'Smazání klienta' },
@@ -82,7 +96,19 @@ export const ALL_FEATURES = [
   { name: 'client_export', category: 'export', label: 'Export klientů' },
   { name: 'client_shared_budget', category: 'clients', label: 'Sdílený rozpočet' },
   { name: 'client_recurring_schedule', category: 'clients', label: 'Pravidelný rozvrh klienta' },
-  // Trainings
+  { name: 'client_tag_add', category: 'clients', label: 'Přidání tagu ke klientovi' },
+  { name: 'client_tag_remove', category: 'clients', label: 'Odebrání tagu od klienta' },
+  { name: 'client_portal_access_create', category: 'clients', label: 'Vytvoření přístupu do portálu' },
+  { name: 'client_portal_access_revoke', category: 'clients', label: 'Zrušení přístupu do portálu' },
+  { name: 'context_menu_add_training', category: 'clients', label: 'Kontext menu - přidat trénink' },
+  { name: 'context_menu_add_credit', category: 'clients', label: 'Kontext menu - přidat kredit' },
+  { name: 'context_menu_add_measurement', category: 'clients', label: 'Kontext menu - přidat měření' },
+  { name: 'context_menu_add_progress', category: 'clients', label: 'Kontext menu - přidat progres' },
+  { name: 'context_menu_add_note', category: 'clients', label: 'Kontext menu - přidat poznámku' },
+  
+  // ==============================
+  // TRAININGS
+  // ==============================
   { name: 'training_create', category: 'trainings', label: 'Vytvoření tréninku' },
   { name: 'training_update', category: 'trainings', label: 'Úprava tréninku' },
   { name: 'training_complete', category: 'trainings', label: 'Dokončení tréninku' },
@@ -91,56 +117,109 @@ export const ALL_FEATURES = [
   { name: 'training_duplicate', category: 'trainings', label: 'Duplikace tréninku' },
   { name: 'training_payment_change', category: 'trainings', label: 'Změna platby tréninku' },
   { name: 'training_add_exercise', category: 'trainings', label: 'Přidání cviku do tréninku' },
-  // Training Plans
+  { name: 'training_batch_create', category: 'trainings', label: 'Hromadné vytvoření tréninků' },
+  { name: 'training_note_add', category: 'trainings', label: 'Přidání poznámky k tréninku' },
+  { name: 'training_cardio_add', category: 'trainings', label: 'Přidání kardia k tréninku' },
+  
+  // ==============================
+  // TRAINING PLANS
+  // ==============================
   { name: 'plan_create', category: 'plans', label: 'Vytvoření plánu' },
   { name: 'plan_generate', category: 'plans', label: 'Generování plánu' },
   { name: 'plan_view', category: 'plans', label: 'Zobrazení plánu' },
   { name: 'plan_delete', category: 'plans', label: 'Smazání plánu' },
-  // Measurements
+  { name: 'plan_duplicate', category: 'plans', label: 'Duplikace plánu' },
+  { name: 'plan_share', category: 'plans', label: 'Sdílení plánu' },
+  { name: 'plan_pdf_export', category: 'plans', label: 'Export plánu do PDF' },
+  
+  // ==============================
+  // MEASUREMENTS
+  // ==============================
   { name: 'measurement_create', category: 'measurements', label: 'Nové měření' },
   { name: 'measurement_update', category: 'measurements', label: 'Úprava měření' },
   { name: 'measurement_delete', category: 'measurements', label: 'Smazání měření' },
   { name: 'measurement_import_pdf', category: 'measurements', label: 'Import měření (PDF)' },
   { name: 'measurement_import_image', category: 'measurements', label: 'Import měření (foto)' },
   { name: 'measurement_export', category: 'export', label: 'Export měření' },
-  // Diagnostics
+  { name: 'measurement_chart_view', category: 'measurements', label: 'Zobrazení grafu měření' },
+  
+  // ==============================
+  // DIAGNOSTICS
+  // ==============================
   { name: 'diagnostic_create', category: 'diagnostics', label: 'Nová diagnostika' },
   { name: 'diagnostic_update', category: 'diagnostics', label: 'Úprava diagnostiky' },
   { name: 'diagnostic_delete', category: 'diagnostics', label: 'Smazání diagnostiky' },
   { name: 'diagnostic_ai_analysis', category: 'diagnostics', label: 'AI analýza diagnostiky' },
   { name: 'diagnostic_view', category: 'diagnostics', label: 'Zobrazení diagnostiky' },
-  // Finance
+  { name: 'diagnostic_photo_add', category: 'diagnostics', label: 'Přidání foto k diagnostice' },
+  { name: 'diagnostic_video_add', category: 'diagnostics', label: 'Přidání videa k diagnostice' },
+  
+  // ==============================
+  // FINANCE
+  // ==============================
   { name: 'credit_add', category: 'finance', label: 'Přidání kreditu' },
   { name: 'credit_deduct', category: 'finance', label: 'Odečtení kreditu' },
   { name: 'product_sale', category: 'finance', label: 'Prodej produktu' },
   { name: 'product_create', category: 'finance', label: 'Vytvoření produktu' },
+  { name: 'product_update', category: 'finance', label: 'Úprava produktu' },
+  { name: 'product_delete', category: 'finance', label: 'Smazání produktu' },
   { name: 'quick_credit', category: 'finance', label: 'Rychlý kredit' },
   { name: 'credit_statement_export', category: 'finance', label: 'Export výpisu kreditu' },
   { name: 'unpaid_training_pay', category: 'finance', label: 'Uhrazení nezaplaceného tréninku' },
   { name: 'product_stock_receive', category: 'finance', label: 'Příjem zboží na sklad' },
-  // Media
+  { name: 'package_create', category: 'finance', label: 'Vytvoření balíčku tréninků' },
+  { name: 'package_assign', category: 'finance', label: 'Přiřazení balíčku klientovi' },
+  { name: 'income_chart_view', category: 'finance', label: 'Zobrazení grafu příjmů' },
+  
+  // ==============================
+  // MEDIA
+  // ==============================
   { name: 'photo_upload', category: 'media', label: 'Nahrání fotky' },
   { name: 'photo_compare', category: 'media', label: 'Porovnání fotek' },
   { name: 'voice_record', category: 'media', label: 'Hlasová poznámka' },
-  // Search & UI
+  { name: 'video_upload', category: 'media', label: 'Nahrání videa' },
+  { name: 'media_delete', category: 'media', label: 'Smazání média' },
+  { name: 'media_gallery_view', category: 'media', label: 'Zobrazení galerie' },
+  
+  // ==============================
+  // SEARCH & UI
+  // ==============================
   { name: 'search_open', category: 'search', label: 'Vyhledávání' },
   { name: 'search_open_keyboard', category: 'search', label: 'Vyhledávání (klávesnice)' },
   { name: 'search_result_select', category: 'search', label: 'Výběr výsledku vyhledávání' },
   { name: 'quick_action_menu', category: 'search', label: 'Rychlé akce (FAB)' },
   { name: 'context_menu_client', category: 'search', label: 'Kontextové menu klienta' },
   { name: 'context_menu_training', category: 'search', label: 'Kontextové menu tréninku' },
+  { name: 'fab_open', category: 'navigation', label: 'FAB otevření' },
+  { name: 'fab_action_training', category: 'navigation', label: 'FAB - nový trénink' },
+  { name: 'fab_action_client', category: 'navigation', label: 'FAB - nový klient' },
+  { name: 'fab_action_credit', category: 'navigation', label: 'FAB - přidat kredit' },
+  { name: 'fab_action_sale', category: 'navigation', label: 'FAB - nový prodej' },
+  
+  // ==============================
   // AI
+  // ==============================
   { name: 'ai_chat', category: 'ai', label: 'AI Chat' },
+  { name: 'ai_chat_message', category: 'ai', label: 'AI Chat zpráva' },
   { name: 'ai_operator', category: 'ai', label: 'AI Operátor' },
   { name: 'ai_nutrition_analysis', category: 'ai', label: 'AI analýza stravy' },
-  // Feedback
+  { name: 'ai_plan_generate', category: 'ai', label: 'AI generování plánu' },
+  { name: 'ai_diagnostic_analysis', category: 'ai', label: 'AI analýza diagnostiky' },
+  
+  // ==============================
+  // FEEDBACK
+  // ==============================
   { name: 'feedback_link_copy', category: 'feedback', label: 'Kopírování odkazu na feedback' },
   { name: 'feedback_link_generate', category: 'feedback', label: 'Generování odkazu na feedback' },
   { name: 'feedback_message_create', category: 'feedback', label: 'Vytvoření zprávy pro feedback' },
   { name: 'feedback_submit', category: 'feedback', label: 'Vyplnění feedbacku' },
   { name: 'feedback_view', category: 'feedback', label: 'Zobrazení feedbacku' },
   { name: 'feedback_test_email', category: 'feedback', label: 'Test email feedbacku' },
-  // Nutrition Logging
+  { name: 'feedback_reminder_send', category: 'feedback', label: 'Odeslání připomínky feedbacku' },
+  
+  // ==============================
+  // NUTRITION
+  // ==============================
   { name: 'nutrition_session_create', category: 'nutrition', label: 'Nová nutriční session' },
   { name: 'nutrition_food_add', category: 'nutrition', label: 'Přidání jídla' },
   { name: 'nutrition_drink_add', category: 'nutrition', label: 'Přidání pití' },
@@ -149,11 +228,47 @@ export const ALL_FEATURES = [
   { name: 'nutrition_qr_generate', category: 'nutrition', label: 'Generování QR kódu stravy' },
   { name: 'nutrition_export', category: 'nutrition', label: 'Export stravy' },
   { name: 'nutrition_analysis_view', category: 'nutrition', label: 'Zobrazení analýzy stravy' },
-  // Progress & PR
+  { name: 'nutrition_campaign_create', category: 'nutrition', label: 'Vytvoření nutriční kampaně' },
+  { name: 'nutrition_campaign_start', category: 'nutrition', label: 'Spuštění nutriční kampaně' },
+  { name: 'nutrition_campaign_end', category: 'nutrition', label: 'Ukončení nutriční kampaně' },
+  
+  // ==============================
+  // CHALLENGES (Výzvy)
+  // ==============================
+  { name: 'challenge_create', category: 'challenges', label: 'Vytvoření výzvy' },
+  { name: 'challenge_update', category: 'challenges', label: 'Úprava výzvy' },
+  { name: 'challenge_delete', category: 'challenges', label: 'Smazání výzvy' },
+  { name: 'challenge_publish', category: 'challenges', label: 'Publikování výzvy' },
+  { name: 'challenge_close', category: 'challenges', label: 'Ukončení výzvy' },
+  { name: 'challenge_view_leaderboard', category: 'challenges', label: 'Zobrazení žebříčku výzvy' },
+  { name: 'challenge_submission_approve', category: 'challenges', label: 'Schválení výsledku výzvy' },
+  { name: 'challenge_submission_reject', category: 'challenges', label: 'Zamítnutí výsledku výzvy' },
+  { name: 'challenge_winner_announce', category: 'challenges', label: 'Vyhlášení vítěze výzvy' },
+  
+  // ==============================
+  // EXERCISES (Cviky)
+  // ==============================
+  { name: 'exercise_create', category: 'exercises', label: 'Vytvoření cviku' },
+  { name: 'exercise_update', category: 'exercises', label: 'Úprava cviku' },
+  { name: 'exercise_delete', category: 'exercises', label: 'Smazání cviku' },
+  { name: 'exercise_video_add', category: 'exercises', label: 'Přidání videa ke cviku' },
+  { name: 'exercise_search', category: 'exercises', label: 'Vyhledávání cviku' },
+  { name: 'exercise_filter', category: 'exercises', label: 'Filtrování cviků' },
+  
+  // ==============================
+  // PROGRESS & PR
+  // ==============================
   { name: 'progress_entry_create', category: 'progress', label: 'Nový záznam progrese' },
+  { name: 'progress_entry_update', category: 'progress', label: 'Úprava záznamu progrese' },
+  { name: 'progress_entry_delete', category: 'progress', label: 'Smazání záznamu progrese' },
   { name: 'pr_view', category: 'progress', label: 'Zobrazení PR' },
   { name: 'pr_history_export', category: 'export', label: 'Export historie PR' },
-  // Settings
+  { name: 'pr_new_achieved', category: 'progress', label: 'Nové PR dosaženo' },
+  { name: 'progress_chart_view', category: 'progress', label: 'Zobrazení grafu progrese' },
+  
+  // ==============================
+  // SETTINGS
+  // ==============================
   { name: 'settings_prices', category: 'settings', label: 'Nastavení cen' },
   { name: 'settings_products', category: 'settings', label: 'Správa produktů' },
   { name: 'settings_exercises', category: 'settings', label: 'Správa cviků' },
@@ -165,17 +280,49 @@ export const ALL_FEATURES = [
   { name: 'settings_nutrition', category: 'settings', label: 'Nastavení stravy' },
   { name: 'settings_modules', category: 'settings', label: 'Nastavení modulů' },
   { name: 'settings_theme', category: 'settings', label: 'Nastavení vzhledu' },
-  // Reminders
+  { name: 'settings_badges', category: 'settings', label: 'Nastavení odznaků' },
+  { name: 'settings_gamification', category: 'settings', label: 'Nastavení gamifikace' },
+  { name: 'settings_client_portal', category: 'settings', label: 'Nastavení klientského portálu' },
+  { name: 'settings_calendar_share', category: 'settings', label: 'Sdílení kalendáře' },
+  { name: 'settings_data_export', category: 'settings', label: 'Export dat' },
+  
+  // ==============================
+  // REMINDERS
+  // ==============================
   { name: 'reminder_create', category: 'reminders', label: 'Vytvoření připomínky' },
   { name: 'reminder_complete', category: 'reminders', label: 'Dokončení připomínky' },
   { name: 'reminder_delete', category: 'reminders', label: 'Smazání připomínky' },
   { name: 'reminder_update', category: 'reminders', label: 'Úprava připomínky' },
-  // Export
+  { name: 'reminder_snooze', category: 'reminders', label: 'Odložení připomínky' },
+  
+  // ==============================
+  // EXPORT
+  // ==============================
   { name: 'annual_stats_export', category: 'export', label: 'Export ročních statistik' },
   { name: 'dashboard_kpi_detail', category: 'navigation', label: 'Detail KPI na dashboardu' },
   { name: 'analytics_export', category: 'export', label: 'Analytický export' },
+  { name: 'export_transactions_csv', category: 'export', label: 'Export transakcí (CSV)' },
+  { name: 'export_transactions_pdf', category: 'export', label: 'Export transakcí (PDF)' },
+  { name: 'export_financial_summary_csv', category: 'export', label: 'Export finančního přehledu (CSV)' },
+  { name: 'export_financial_summary_pdf', category: 'export', label: 'Export finančního přehledu (PDF)' },
+  { name: 'export_measurements_pdf', category: 'export', label: 'Export měření (PDF)' },
+  { name: 'export_progress_csv', category: 'export', label: 'Export progrese (CSV)' },
+  { name: 'export_progress_pdf', category: 'export', label: 'Export progrese (PDF)' },
+  { name: 'data_export_full', category: 'export', label: 'Kompletní export dat' },
   
-  // === CLIENT PORTAL - Page Views ===
+  // ==============================
+  // BADGES & GAMIFICATION
+  // ==============================
+  { name: 'badge_definition_create', category: 'gamification', label: 'Vytvoření odznaku' },
+  { name: 'badge_definition_update', category: 'gamification', label: 'Úprava odznaku' },
+  { name: 'badge_definition_delete', category: 'gamification', label: 'Smazání odznaku' },
+  { name: 'badge_award_manual', category: 'gamification', label: 'Ruční udělení odznaku' },
+  { name: 'xp_settings_update', category: 'gamification', label: 'Úprava XP nastavení' },
+  { name: 'leaderboard_view', category: 'gamification', label: 'Zobrazení žebříčku' },
+  
+  // ==============================
+  // CLIENT PORTAL - Page Views
+  // ==============================
   { name: 'page_view_client_portal_overview', category: 'client-portal', label: 'Portál - Přehled' },
   { name: 'page_view_client_portal_progress', category: 'client-portal', label: 'Portál - Progres' },
   { name: 'page_view_client_portal_attendance', category: 'client-portal', label: 'Portál - Docházka' },
@@ -186,8 +333,12 @@ export const ALL_FEATURES = [
   { name: 'page_view_client_portal_leaderboard', category: 'client-portal', label: 'Portál - Žebříček' },
   { name: 'page_view_client_portal_badges', category: 'client-portal', label: 'Portál - Odznaky' },
   { name: 'page_view_client_portal_workout_diary', category: 'client-portal', label: 'Portál - Deník tréninků' },
+  { name: 'page_view_client_portal_measurements', category: 'client-portal', label: 'Portál - Měření' },
+  { name: 'page_view_client_portal_plans', category: 'client-portal', label: 'Portál - Tréninkové plány' },
   
-  // === CLIENT PORTAL - Actions ===
+  // ==============================
+  // CLIENT PORTAL - Actions
+  // ==============================
   { name: 'client_portal_login', category: 'client-portal', label: 'Portál - Přihlášení' },
   { name: 'client_portal_logout', category: 'client-portal', label: 'Portál - Odhlášení' },
   { name: 'client_portal_overview_viewed', category: 'client-portal', label: 'Portál - Zobrazení přehledu' },
@@ -200,41 +351,75 @@ export const ALL_FEATURES = [
   { name: 'client_portal_badges_viewed', category: 'client-portal', label: 'Portál - Zobrazení odznaků' },
   { name: 'client_portal_workout_diary_viewed', category: 'client-portal', label: 'Portál - Zobrazení deníku' },
   
-  // === CLIENT PORTAL - Nutrition Actions ===
+  // ==============================
+  // CLIENT PORTAL - Nutrition Actions
+  // ==============================
   { name: 'portal_nutrition_add_food', category: 'client-portal', label: 'Portál - Přidání jídla' },
   { name: 'portal_nutrition_add_water', category: 'client-portal', label: 'Portál - Přidání vody' },
   { name: 'portal_nutrition_edit_entry', category: 'client-portal', label: 'Portál - Úprava záznamu stravy' },
   { name: 'portal_nutrition_delete_entry', category: 'client-portal', label: 'Portál - Smazání záznamu stravy' },
+  { name: 'portal_nutrition_photo_upload', category: 'client-portal', label: 'Portál - Nahrání foto jídla' },
   
-  // === CLIENT PORTAL - Challenge Actions ===
+  // ==============================
+  // CLIENT PORTAL - Challenge Actions
+  // ==============================
   { name: 'portal_challenge_join', category: 'client-portal', label: 'Portál - Přihlášení do výzvy' },
   { name: 'portal_challenge_submit', category: 'client-portal', label: 'Portál - Odeslání výsledku výzvy' },
   { name: 'portal_challenge_view_detail', category: 'client-portal', label: 'Portál - Detail výzvy' },
+  { name: 'portal_challenge_video_upload', category: 'client-portal', label: 'Portál - Nahrání videa výzvy' },
   
-  // === CLIENT PORTAL - Workout Diary Actions ===
+  // ==============================
+  // CLIENT PORTAL - Workout Diary Actions
+  // ==============================
   { name: 'portal_workout_log_create', category: 'client-portal', label: 'Portál - Vytvoření záznamu tréninku' },
   { name: 'portal_workout_log_edit', category: 'client-portal', label: 'Portál - Úprava záznamu tréninku' },
+  { name: 'portal_workout_log_delete', category: 'client-portal', label: 'Portál - Smazání záznamu tréninku' },
   { name: 'portal_workout_confirm', category: 'client-portal', label: 'Portál - Potvrzení tréninku' },
+  { name: 'portal_workout_exercise_add', category: 'client-portal', label: 'Portál - Přidání cviku' },
+  { name: 'portal_workout_from_template', category: 'client-portal', label: 'Portál - Trénink ze šablony' },
   
-  // === CLIENT PORTAL - Progress Actions ===
+  // ==============================
+  // CLIENT PORTAL - Progress Actions
+  // ==============================
   { name: 'portal_progress_add_measurement', category: 'client-portal', label: 'Portál - Přidání měření' },
   { name: 'portal_progress_view_chart', category: 'client-portal', label: 'Portál - Zobrazení grafu progresu' },
   { name: 'portal_progress_view_pr', category: 'client-portal', label: 'Portál - Zobrazení PR' },
+  { name: 'portal_progress_photo_upload', category: 'client-portal', label: 'Portál - Nahrání foto progrese' },
   
-  // === CLIENT PORTAL - Feedback Actions ===
+  // ==============================
+  // CLIENT PORTAL - Feedback Actions
+  // ==============================
   { name: 'portal_feedback_submit', category: 'client-portal', label: 'Portál - Odeslání feedbacku' },
   { name: 'portal_feedback_skip', category: 'client-portal', label: 'Portál - Přeskočení feedbacku' },
+  { name: 'portal_feedback_view_history', category: 'client-portal', label: 'Portál - Historie feedbacků' },
   
-  // === CLIENT PORTAL - Settings Actions ===
+  // ==============================
+  // CLIENT PORTAL - Settings Actions
+  // ==============================
   { name: 'portal_settings_change_password', category: 'client-portal', label: 'Portál - Změna hesla' },
   { name: 'portal_settings_update_profile', category: 'client-portal', label: 'Portál - Aktualizace profilu' },
   { name: 'portal_settings_toggle_leaderboard', category: 'client-portal', label: 'Portál - Nastavení žebříčku' },
   { name: 'portal_settings_toggle_notifications', category: 'client-portal', label: 'Portál - Nastavení notifikací' },
+  { name: 'portal_settings_unit_change', category: 'client-portal', label: 'Portál - Změna jednotek' },
   
-  // === CLIENT PORTAL - Gamification ===
+  // ==============================
+  // CLIENT PORTAL - Gamification
+  // ==============================
   { name: 'portal_badge_earned', category: 'client-portal', label: 'Portál - Získání odznaku' },
+  { name: 'portal_badge_viewed', category: 'client-portal', label: 'Portál - Zobrazení odznaku' },
   { name: 'portal_xp_earned', category: 'client-portal', label: 'Portál - Získání XP' },
   { name: 'portal_level_up', category: 'client-portal', label: 'Portál - Level up' },
+  { name: 'portal_streak_achieved', category: 'client-portal', label: 'Portál - Streak dosažen' },
+  { name: 'portal_achievement_unlocked', category: 'client-portal', label: 'Portál - Odemčení achievementu' },
+  
+  // ==============================
+  // SYSTEM
+  // ==============================
+  { name: 'app_install_prompt', category: 'system', label: 'Výzva k instalaci PWA' },
+  { name: 'app_installed', category: 'system', label: 'Aplikace nainstalována' },
+  { name: 'notification_permission_granted', category: 'system', label: 'Povolení notifikací' },
+  { name: 'offline_mode_activated', category: 'system', label: 'Offline režim aktivován' },
+  { name: 'error_boundary_triggered', category: 'system', label: 'Error boundary spuštěn' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -256,6 +441,9 @@ export const CATEGORY_LABELS: Record<string, string> = {
   export: 'Export',
   reminders: 'Připomínky',
   system: 'Systém',
+  challenges: 'Výzvy',
+  exercises: 'Cviky',
+  gamification: 'Gamifikace',
   'client-portal': 'Klientská zóna',
 };
 

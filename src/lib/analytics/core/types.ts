@@ -24,6 +24,9 @@ export type EventCategory =
   | 'export'
   | 'reminders'
   | 'system'
+  | 'challenges'
+  | 'exercises'
+  | 'gamification'
   | 'client-portal';
 
 export type ErrorCode = 
