@@ -262,6 +262,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         label: 'Hlavní',
         items: [
           { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
+          { id: 'my-profile', to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
         ],
       },
       {

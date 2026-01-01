@@ -60,6 +60,7 @@ const NutritionInfographics = lazy(() => import("./pages/NutritionInfographics")
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const Challenges = lazy(() => import("./pages/Challenges"));
+const MyProfile = lazy(() => import("./pages/MyProfile"));
 
 // Lazy loaded pages - Client Portal
 const ClientPortalOverview = lazy(() => import("./pages/client-portal/ClientPortalOverview"));
@@ -185,6 +186,7 @@ const App = () => (
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />
                           <Route path="/challenges" element={<Challenges />} />
+                          <Route path="/my-profile" element={<MyProfile />} />
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

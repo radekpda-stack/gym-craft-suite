@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
+  UserCircle,
   Users,
   Dumbbell,
   Activity,
@@ -20,7 +21,6 @@ import {
   FileText,
   PieChart,
   LayoutTemplate,
-  UserCircle,
   ClipboardCheck,
   Target,
 } from 'lucide-react';
