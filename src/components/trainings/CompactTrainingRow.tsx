@@ -177,21 +177,6 @@ export const CompactTrainingRow = memo(function CompactTrainingRow({
             {statusConfig.label}
           </Badge>
 
-          {/* Primary action button */}
-          {primaryAction && (
-            <Button
-              size="sm"
-              variant="default"
-              className="flex-shrink-0 gap-1.5 h-8"
-              onClick={(e) => {
-                e.preventDefault();
-                primaryAction.onClick();
-              }}
-            >
-              <primaryAction.icon className="w-3.5 h-3.5" />
-              {primaryAction.label}
-            </Button>
-          )}
 
           {/* Overflow menu */}
           <DropdownMenu>
