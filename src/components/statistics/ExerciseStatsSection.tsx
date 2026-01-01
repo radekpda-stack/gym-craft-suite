@@ -8,6 +8,8 @@ import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
 import { ExerciseBodyPartCard } from './ExerciseBodyPartCard';
 import { RecordWeightsCard } from './RecordWeightsCard';
 import { StrengthProgressCard } from './StrengthProgressCard';
+import { IntensityStatsCard } from './IntensityStatsCard';
+import { TrainingTypesCard } from './TrainingTypesCard';
 import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
 import { Trophy, Zap, Loader2, Dumbbell, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -152,6 +154,12 @@ export function ExerciseStatsSection() {
         <TopExercisesCard />
         <ExerciseBodyPartCard />
         <RecordWeightsCard />
+      </div>
+
+      {/* Intensity and Training Types */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <IntensityStatsCard />
+        <TrainingTypesCard />
       </div>
 
       {/* Strength Progress */}

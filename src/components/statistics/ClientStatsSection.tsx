@@ -7,6 +7,9 @@ import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard'
 import { ClientActivityCard } from './ClientActivityCard';
 import { ClientAcquisitionCard } from './ClientAcquisitionCard';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
+import { ClientFeedbackCard } from './ClientFeedbackCard';
+import { MeasurementsCard } from './MeasurementsCard';
+import { ClientTagsCard } from './ClientTagsCard';
 import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
 import { Users, UserPlus, UserCheck, AlertTriangle, Loader2, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -128,6 +131,13 @@ export function ClientStatsSection() {
         <ClientRetentionCard />
         <ClientActivityCard />
         <ClientAcquisitionCard />
+      </div>
+
+      {/* Feedback and Measurements */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <ClientFeedbackCard stats={stats} />
+        <MeasurementsCard stats={stats} />
+        <ClientTagsCard />
       </div>
 
       {/* LTV Ranking */}
