@@ -5,9 +5,10 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Tag, Search, Check, AlertTriangle } from "lucide-react";
+import { Loader2, Repeat, Search, Check, ChevronDown } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
 import { TrainingType } from "@/hooks/useTrainingProgress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Form,
   FormControl,
@@ -38,14 +39,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { RatingInput } from "@/components/ui/rating-input";
 import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
-import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { PreviousTrainingPreview } from "./PreviousTrainingPreview";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -53,13 +51,11 @@ const trainingFormSchema = z.object({
   duration: z.number().min(15, "Minimálně 15 minut").max(300, "Maximálně 300 minut"),
   participant_count: z.number().min(1, "Minimálně 1 účastník").max(5, "Maximálně 5 účastníků"),
   notes: z.string().optional(),
-  subjective_rating: z.number().min(1).max(10).optional().nullable(),
   status: z.enum(["scheduled", "in_progress", "completed", "canceled"]),
   training_type: z.enum(["strength", "conditioning", "hiit", "cardio", "running", "mobility", "flexibility", "regeneration", "functional", "diagnostic", "other"]).optional().nullable(),
   is_recurring: z.boolean().optional(),
   recurrence_type: z.enum(["weekly", "biweekly", "monthly"]).optional().nullable(),
   recurrence_count: z.number().min(1).max(52).optional(),
-  is_high_intensity_test: z.boolean().optional(), // Master Prompt: red flag brake
 });
 
 export type TrainingFormValues = z.infer<typeof trainingFormSchema>;
@@ -69,7 +65,6 @@ interface TrainingFormProps {
   isLoading?: boolean;
   clients: Client[];
   defaultValues?: Partial<TrainingFormValues>;
-  defaultTagIds?: string[];
   submitLabel?: string;
   showRecurrence?: boolean;
 }
@@ -84,14 +79,12 @@ export function TrainingForm({
   isLoading,
   clients,
   defaultValues,
-  defaultTagIds = [],
   submitLabel = "Vytvořit trénink",
   showRecurrence = true,
 }: TrainingFormProps) {
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
-  const [tagsChanged, setTagsChanged] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   
   
   // Helper to format date as local datetime string
@@ -113,29 +106,17 @@ export function TrainingForm({
       duration: defaultValues?.duration || 60,
       participant_count: defaultValues?.participant_count || 1,
       notes: defaultValues?.notes || "",
-      subjective_rating: defaultValues?.subjective_rating || null,
       status: defaultValues?.status || "scheduled",
       training_type: defaultValues?.training_type || null,
       is_recurring: false,
       recurrence_type: null,
       recurrence_count: 4,
-      is_high_intensity_test: defaultValues?.is_high_intensity_test || false,
     },
   });
 
-  // Track unsaved changes (form dirty state + tags changed)
-  const isDirty = form.formState.isDirty || tagsChanged;
+  // Track unsaved changes (form dirty state)
+  const isDirty = form.formState.isDirty;
   useUnsavedChanges(isDirty);
-
-  useEffect(() => {
-    setSelectedTagIds(defaultTagIds);
-  }, [defaultTagIds]);
-
-  // Track tag changes
-  const handleTagsChange = (newTagIds: string[]) => {
-    setSelectedTagIds(newTagIds);
-    setTagsChanged(true);
-  };
 
   // Filtered clients with diacritics-insensitive search
   const filteredClients = useMemo(() => {
@@ -151,9 +132,8 @@ export function TrainingForm({
   const isRecurring = form.watch("is_recurring");
 
   const handleSubmit = async (data: TrainingFormValues) => {
-    await onSubmit(data, selectedTagIds);
+    await onSubmit(data, []);
     form.reset(data); // Mark as clean after successful submit
-    setTagsChanged(false);
   };
 
   return (
@@ -329,31 +309,6 @@ export function TrainingForm({
           )}
         />
 
-        {/* High Intensity Test Toggle - Master Prompt: Red Flag Brake */}
-        <FormField
-          control={form.control}
-          name="is_high_intensity_test"
-          render={({ field }) => (
-            <FormItem className="flex items-center justify-between p-4 rounded-xl bg-warning/5 border border-warning/20">
-              <div className="space-y-0.5">
-                <FormLabel className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
-                  Vědomě vyšší zátěž / testovací trénink
-                </FormLabel>
-                <FormDescription className="text-xs">
-                  Red flags z feedbacku nebudou vyhodnoceny
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
         {/* Recurrence Settings */}
         {showRecurrence && form.watch("status") === "scheduled" && (
           <div className="space-y-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
@@ -434,56 +389,40 @@ export function TrainingForm({
           </div>
         )}
 
-        <FormField
-          control={form.control}
-          name="subjective_rating"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Hodnocení tréninku (1-10)</FormLabel>
-              <FormControl>
-                <RatingInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  max={10}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Training Tags */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Tag className="w-4 h-4" />
-            Štítky tréninku
-          </label>
-          <TrainingTagsSelector
-            selectedTagIds={selectedTagIds}
-            onChange={handleTagsChange}
-          />
-          <p className="text-xs text-muted-foreground">
-            Volitelně přidejte štítky pro kategorizaci tréninku
-          </p>
-        </div>
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Poznámky</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Poznámky k tréninku - popište průběh, cviky, pokroky..."
-                  className="bg-secondary border-border min-h-[120px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Notes - Collapsible */}
+        <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+          <CollapsibleTrigger asChild>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              className="w-full justify-between px-0 hover:bg-transparent"
+            >
+              <span className="text-sm font-medium">Poznámky</span>
+              <ChevronDown className={cn(
+                "w-4 h-4 transition-transform",
+                notesOpen && "rotate-180"
+              )} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Poznámky k tréninku - popište průběh, cviky, pokroky..."
+                      className="bg-secondary border-border min-h-[120px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CollapsibleContent>
+        </Collapsible>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (

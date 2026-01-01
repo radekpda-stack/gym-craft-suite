@@ -278,7 +278,6 @@ export default function Trainings() {
         date: new Date(data.date).toISOString(),
         duration: data.duration,
         notes: data.notes,
-        subjective_rating: data.subjective_rating || undefined,
         status: data.status,
         participant_count: data.participant_count,
         recurrence_type,

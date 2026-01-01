@@ -50,11 +50,9 @@ export function EditTrainingSheet({
               duration: training.duration,
               participant_count: training.participant_count || 1,
               notes: training.notes,
-              subjective_rating: training.subjective_rating,
               status: training.status,
               training_type: training.training_type as any,
             }}
-            defaultTagIds={defaultTagIds}
             submitLabel="Uložit změny"
             showRecurrence={false}
           />

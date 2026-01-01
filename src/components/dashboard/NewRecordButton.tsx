@@ -31,7 +31,6 @@ export function NewRecordButton() {
       date: new Date(data.date).toISOString(),
       duration: data.duration,
       notes: data.notes,
-      subjective_rating: data.subjective_rating || undefined,
       status: data.status,
     });
     setIsTrainingOpen(false);

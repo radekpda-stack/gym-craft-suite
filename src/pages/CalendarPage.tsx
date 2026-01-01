@@ -155,7 +155,6 @@ export default function CalendarPage() {
       duration: data.duration,
       participant_count: data.participant_count,
       notes: data.notes,
-      subjective_rating: data.subjective_rating ?? undefined,
       status: data.status,
       trainingPrices,
     });
