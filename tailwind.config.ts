@@ -82,19 +82,21 @@ export default {
         "status-error": "hsl(var(--status-error))",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        xl: "0.875rem",    /* 14px */
-        "2xl": "1rem",     /* 16px */
-        "3xl": "1.25rem",  /* 20px */
+        lg: "0.5rem",      /* 8px - Angular */
+        md: "0.375rem",    /* 6px */
+        sm: "0.25rem",     /* 4px */
+        xl: "0.5rem",      /* 8px */
+        "2xl": "0.75rem",  /* 12px */
+        "3xl": "1rem",     /* 16px */
       },
       boxShadow: {
-        'sm': '0 1px 2px 0 hsl(220 20% 4% / 0.4)',
-        'md': '0 2px 8px -2px hsl(220 20% 4% / 0.5)',
-        'lg': '0 4px 16px -4px hsl(220 20% 4% / 0.6)',
-        'glow': '0 0 24px hsl(47 100% 65% / 0.25)',
-        'glow-sm': '0 0 12px hsl(47 100% 65% / 0.2)',
+        'sm': '0 1px 2px 0 hsl(210 27% 6% / 0.4)',
+        'md': '0 2px 8px -2px hsl(210 27% 6% / 0.5)',
+        'lg': '0 4px 16px -4px hsl(210 27% 6% / 0.6)',
+        'glow': '0 0 24px hsl(190 100% 50% / 0.25)',
+        'glow-sm': '0 0 12px hsl(190 100% 50% / 0.2)',
+        'glow-cyan': '0 0 20px hsl(190 100% 50% / 0.25)',
+        'glow-cyan-lg': '0 0 30px hsl(190 100% 50% / 0.35)',
       },
       keyframes: {
         "accordion-down": {

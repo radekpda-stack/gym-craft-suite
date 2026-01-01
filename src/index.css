@@ -7,79 +7,79 @@
 @layer base {
   :root {
     /* ========================================
-       JUSTMOVE DESIGN SYSTEM v1
-       Klidný, precizní, sportovní
-       Dark-first, data-first, minimum efektů
+       ARCTIC PRO DESIGN SYSTEM
+       Premium, elegantní, technický
+       Cyan akcenty, noise textura, hranatá tlačítka
        ======================================== */
 
-    /* Background layers */
-    --background: 220 20% 4%;           /* #0B0D10 - App background */
-    --foreground: 214 32% 93%;          /* #EAEFF5 - Primary text */
+    /* Background layers - Deep arctic dark */
+    --background: 210 27% 6%;           /* #0A0F14 - App background */
+    --foreground: 195 30% 94%;          /* #E8F4F8 - Ice white text */
 
-    --card: 216 18% 9%;                 /* #12161C - Surface/Card */
-    --card-foreground: 214 32% 93%;     /* #EAEFF5 */
+    --card: 210 33% 9%;                 /* #101820 - Surface/Card */
+    --card-foreground: 195 30% 94%;     /* #E8F4F8 */
 
-    --popover: 215 16% 11%;             /* #171C23 - Elevated surface */
-    --popover-foreground: 214 32% 93%;
+    --popover: 210 28% 12%;             /* #151D27 - Elevated surface */
+    --popover-foreground: 195 30% 94%;
 
-    /* Primary Accent - Sportovní žlutá #FFD84D */
-    --primary: 47 100% 65%;
-    --primary-foreground: 220 20% 4%;
+    /* Primary Accent - Cyan #00D4FF */
+    --primary: 190 100% 50%;
+    --primary-foreground: 210 27% 6%;
 
     /* Secondary - Surface variant */
-    --secondary: 215 16% 11%;           /* #171C23 */
-    --secondary-foreground: 214 32% 93%;
+    --secondary: 210 28% 12%;           /* #151D27 */
+    --secondary-foreground: 195 30% 94%;
 
     /* Muted - Hints, dividers */
-    --muted: 214 14% 15%;               /* #1F2630 - Border/Divider */
-    --muted-foreground: 213 12% 55%;    /* #6F7A88 - Hint text */
+    --muted: 210 24% 16%;               /* #1E2832 - Border/Divider */
+    --muted-foreground: 200 15% 50%;    /* #5A7080 - Hint text */
 
-    /* Accent - Secondary blue #4DA3FF */
-    --accent: 212 100% 65%;
-    --accent-foreground: 220 20% 4%;
+    /* Accent - Sky blue #0EA5E9 */
+    --accent: 199 89% 48%;
+    --accent-foreground: 210 27% 6%;
 
-    /* Status colors */
-    --destructive: 0 72% 67%;           /* #FF5A5A */
+    /* Status colors - harmonized */
+    --destructive: 0 84% 60%;           /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 100% 65%;            /* #4DFF88 */
-    --success-foreground: 220 20% 4%;
+    --success: 160 84% 39%;             /* #10B981 - Emerald */
+    --success-foreground: 0 0% 100%;
 
-    --warning: 35 100% 65%;             /* #FFB84D */
-    --warning-foreground: 220 20% 4%;
+    --warning: 38 92% 50%;              /* #F59E0B - Amber */
+    --warning-foreground: 210 27% 6%;
 
     /* Unified Status Colors */
-    --status-ok: 145 100% 65%;
-    --status-warning: 35 100% 65%;
-    --status-error: 0 72% 67%;
+    --status-ok: 160 84% 39%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
 
     /* Borders and inputs */
-    --border: 214 14% 15%;              /* #1F2630 */
-    --input: 216 18% 9%;
-    --ring: 47 100% 65%;
+    --border: 210 24% 16%;              /* #1E2832 */
+    --input: 210 33% 9%;
+    --ring: 190 100% 50%;
 
-    /* Modern radius - 14-16px */
-    --radius: 0.875rem;
+    /* Angular radius - 4px base */
+    --radius: 0.25rem;
 
     /* Sidebar */
-    --sidebar-background: 220 20% 4%;
-    --sidebar-foreground: 214 32% 93%;
-    --sidebar-primary: 47 100% 65%;
-    --sidebar-primary-foreground: 220 20% 4%;
-    --sidebar-accent: 216 18% 9%;
-    --sidebar-accent-foreground: 214 32% 93%;
-    --sidebar-border: 214 14% 15%;
-    --sidebar-ring: 47 100% 65%;
+    --sidebar-background: 210 27% 6%;
+    --sidebar-foreground: 195 30% 94%;
+    --sidebar-primary: 190 100% 50%;
+    --sidebar-primary-foreground: 210 27% 6%;
+    --sidebar-accent: 210 33% 9%;
+    --sidebar-accent-foreground: 195 30% 94%;
+    --sidebar-border: 210 24% 16%;
+    --sidebar-ring: 190 100% 50%;
 
     /* Text hierarchy */
-    --text-primary: 214 32% 93%;        /* #EAEFF5 */
-    --text-secondary: 213 14% 68%;      /* #A7B0BC */
-    --text-muted: 213 12% 55%;          /* #6F7A88 */
+    --text-primary: 195 30% 94%;        /* #E8F4F8 - Ice white */
+    --text-secondary: 200 20% 72%;      /* #9CB3C0 - Muted cyan-gray */
+    --text-muted: 200 15% 50%;          /* #5A7080 */
 
-    /* Shadows - velmi jemné nebo žádné */
-    --shadow-sm: 0 1px 2px 0 hsl(220 20% 4% / 0.4);
-    --shadow-md: 0 2px 8px -2px hsl(220 20% 4% / 0.5);
-    --shadow-lg: 0 4px 16px -4px hsl(220 20% 4% / 0.6);
+    /* Shadows - with cyan glow */
+    --shadow-sm: 0 1px 2px 0 hsl(210 27% 6% / 0.4);
+    --shadow-md: 0 2px 8px -2px hsl(210 27% 6% / 0.5);
+    --shadow-lg: 0 4px 16px -4px hsl(210 27% 6% / 0.6);
   }
 }
 
@@ -97,6 +97,17 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-weight: 400;
     letter-spacing: -0.01em;
+  }
+
+  /* Arctic Pro Noise Texture Overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 9999;
   }
 
   /* Custom scrollbar - subtle */
@@ -198,14 +209,14 @@
      KOMPONENTY
      ======================================== */
 
-  /* Karta - radius 14-16px, jemný stín */
+  /* Karta - Arctic Pro angular 8px */
   .jm-card {
-    @apply bg-card rounded-[14px] sm:rounded-[16px] overflow-hidden;
+    @apply bg-card rounded-lg overflow-hidden border border-border;
     box-shadow: var(--shadow-sm);
   }
 
   .jm-card-elevated {
-    @apply bg-popover rounded-[14px] sm:rounded-[16px] overflow-hidden;
+    @apply bg-popover rounded-lg overflow-hidden border border-border;
     box-shadow: var(--shadow-md);
   }
 
@@ -233,28 +244,30 @@
   }
 
   /* ========================================
-     BUTTONS - 44px mobile, 40px desktop
+     BUTTONS - Arctic Pro angular style
      ======================================== */
 
   .jm-btn {
-    @apply inline-flex items-center justify-center font-medium rounded-[12px] transition-all duration-150;
+    @apply inline-flex items-center justify-center font-medium rounded transition-all duration-150;
     @apply min-h-[44px] px-4 sm:min-h-[40px];
   }
 
   .jm-btn-primary {
     @apply jm-btn bg-primary text-primary-foreground;
+    box-shadow: 0 0 20px hsl(190 100% 50% / 0.3);
   }
 
   .jm-btn-primary:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.1);
+    box-shadow: 0 0 30px hsl(190 100% 50% / 0.4);
   }
 
   .jm-btn-secondary {
-    @apply jm-btn border border-border bg-transparent text-foreground;
+    @apply jm-btn border border-border bg-card text-foreground;
   }
 
   .jm-btn-secondary:hover {
-    @apply bg-muted/50;
+    @apply border-primary/30 bg-card;
   }
 
   .jm-btn-ghost {
@@ -262,7 +275,7 @@
   }
 
   .jm-btn-ghost:hover {
-    @apply bg-muted/50;
+    @apply bg-card text-primary;
   }
 
   /* ========================================
@@ -477,7 +490,7 @@
      ======================================== */
 
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(47 100% 75%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(199 89% 60%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -548,7 +561,15 @@
   }
 
   .glow {
-    box-shadow: 0 0 24px hsl(var(--primary) / 0.25);
+    box-shadow: 0 0 24px hsl(190 100% 50% / 0.25);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(190 100% 50% / 0.25);
+  }
+
+  .glow-cyan-sm {
+    box-shadow: 0 0 10px hsl(190 100% 50% / 0.2);
   }
 
   .glass-strong {

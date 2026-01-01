@@ -5,23 +5,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97] select-none",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 select-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl border border-primary/20",
+        default: "bg-primary text-primary-foreground hover:brightness-110 shadow-glow-cyan hover:shadow-glow-cyan-lg border border-primary/20",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg border border-destructive/20",
-        outline: "border-2 border-border bg-background hover:bg-secondary hover:text-foreground hover:border-primary/50",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border",
-        ghost: "hover:bg-secondary hover:text-foreground",
+        outline: "border border-primary/50 bg-transparent text-primary hover:bg-primary/10 hover:border-primary",
+        secondary: "bg-card text-foreground hover:border-primary/30 border border-border",
+        ghost: "hover:bg-card hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
-        accent: "bg-gradient-to-r from-primary to-warning text-primary-foreground shadow-lg hover:shadow-xl border border-primary/30",
+        accent: "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-glow-cyan hover:shadow-glow-cyan-lg border border-primary/30",
       },
       size: {
         default: "h-10 px-5 py-2",
-        xs: "h-7 rounded-md px-3 text-xs",
-        sm: "h-9 rounded-md px-4",
-        lg: "h-12 rounded-lg px-8 text-base",
+        xs: "h-7 rounded px-3 text-xs",
+        sm: "h-9 rounded px-4",
+        lg: "h-12 rounded-md px-8 text-base",
         icon: "h-10 w-10",
         "icon-sm": "h-8 w-8",
       },
