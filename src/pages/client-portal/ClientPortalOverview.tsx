@@ -30,6 +30,7 @@ import { LatestProgressWidget } from '@/components/client-portal/dashboard/Lates
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
+import { GamificationProgressCard } from '@/components/client-portal/gamification/GamificationWidgets';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -121,6 +122,9 @@ export default function ClientPortalOverview() {
 
       {/* Feedback Section - shows when feedback is available (24h+ after training) */}
       <ClientPortalFeedbackSection />
+
+      {/* GAMIFICATION WIDGET - Trainings Counter, XP, Badges */}
+      <GamificationProgressCard />
 
       {/* NEW WIDGETS - Priority Order */}
       {/* 1. Latest PR (user's #1 priority) */}

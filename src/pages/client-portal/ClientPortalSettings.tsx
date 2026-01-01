@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Bell, Ruler } from 'lucide-react';
+import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Bell, Ruler, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,14 +15,29 @@ import { ClientPortalLayout } from '@/components/client-portal/ClientPortalLayou
 import { useClientPrivacySettings, useUpdateClientPrivacySettings } from '@/hooks/useClientPortalBenchmarks';
 import { useClientPreferences } from '@/hooks/useClientPreferences';
 import { ClientProfileSection } from '@/components/client-portal/ClientProfileSection';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useLeaderboardSettings, useUpdateLeaderboardSettings } from '@/hooks/useClientGamification';
 
 export default function ClientPortalSettings() {
   const { user } = useClientPortalAuth();
+  const { clientId } = useClientPortal();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  
+  // Leaderboard settings
+  const { data: leaderboardSettings, isLoading: leaderboardLoading } = useLeaderboardSettings(clientId ?? undefined);
+  const updateLeaderboard = useUpdateLeaderboardSettings();
+  const [nickname, setNickname] = useState('');
+  
+  // Initialize nickname from settings
+  useEffect(() => {
+    if (leaderboardSettings?.leaderboard_nickname) {
+      setNickname(leaderboardSettings.leaderboard_nickname);
+    }
+  }, [leaderboardSettings]);
 
   const { data: privacySettings, isLoading: privacyLoading } = useClientPrivacySettings();
   const updatePrivacy = useUpdateClientPrivacySettings();
@@ -80,6 +95,28 @@ export default function ClientPortalSettings() {
     });
   };
 
+  const handleLeaderboardVisibility = (visible: boolean) => {
+    if (!clientId) return;
+    updateLeaderboard.mutate(
+      { clientId, visible, nickname: nickname || 'Anonym' },
+      {
+        onSuccess: () => toast.success('Nastavení žebříčku uloženo'),
+        onError: () => toast.error('Nepodařilo se uložit'),
+      }
+    );
+  };
+
+  const handleNicknameChange = () => {
+    if (!clientId) return;
+    updateLeaderboard.mutate(
+      { clientId, visible: leaderboardSettings?.leaderboard_visible ?? true, nickname: nickname || 'Anonym' },
+      {
+        onSuccess: () => toast.success('Přezdívka uložena'),
+        onError: () => toast.error('Nepodařilo se uložit'),
+      }
+    );
+  };
+
   return (
     <ClientPortalLayout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -93,6 +130,66 @@ export default function ClientPortalSettings() {
 
         {/* My Profile */}
         <ClientProfileSection />
+
+        {/* Leaderboard Settings */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Žebříček
+              </CardTitle>
+              <CardDescription>
+                Nastavení zobrazení v žebříčku tréninků
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {leaderboardLoading ? (
+                <div className="h-24 bg-muted animate-pulse rounded-lg" />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex-1">
+                      <Label className="font-medium">Zobrazit v žebříčku</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Povolit zobrazení tvých statistik v žebříčku
+                      </p>
+                    </div>
+                    <Switch
+                      checked={leaderboardSettings?.leaderboard_visible ?? true}
+                      onCheckedChange={handleLeaderboardVisibility}
+                      disabled={updateLeaderboard.isPending}
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-lg border space-y-3">
+                    <div className="flex-1">
+                      <Label className="font-medium">Přezdívka v žebříčku</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Toto jméno se zobrazí ostatním v žebříčku
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Anonym"
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={handleNicknameChange}
+                        disabled={updateLeaderboard.isPending}
+                      >
+                        Uložit
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Privacy & Benchmarks */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
