@@ -10,6 +10,7 @@ import {
   Stethoscope,
   Wallet,
   ShoppingBag,
+  Trophy,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurem
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
+import { AddPerformanceSheet } from '@/components/performance/AddPerformanceSheet';
 import { useClients, useCreateClient } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
@@ -38,6 +40,7 @@ interface QuickAction {
 const quickActionsConfig: QuickAction[] = [
   { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
   { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
+  { id: 'performance', icon: Trophy, label: 'Přidat výkon', color: 'bg-emerald-500' },
   { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
   { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
   { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
@@ -237,6 +240,11 @@ export function QuickActionButton() {
 
       <NewSaleDialog
         open={activeSheet === 'sale'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+      />
+
+      <AddPerformanceSheet
+        open={activeSheet === 'performance'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
       />
     </>
