@@ -2102,6 +2102,11 @@ export type Database = {
       }
       exercise_entries: {
         Row: {
+          avg_heart_rate: number | null
+          avg_speed_kmh: number | null
+          avg_watts: number | null
+          cadence_spm: number | null
+          calories_kcal: number | null
           client_id: string
           created_at: string
           date: string
@@ -2109,11 +2114,24 @@ export type Database = {
           exercise_id: string | null
           exercise_name: string
           id: string
+          incline_percent: number | null
           is_bodyweight: boolean | null
           is_pr: boolean | null
+          is_test: boolean | null
+          leg_fatigue: boolean | null
+          level: number | null
+          max_heart_rate: number | null
+          max_speed_kmh: number | null
+          max_watts: number | null
+          metrics_json: Json | null
           notes: string | null
+          pace_sec_per_500m: number | null
+          pace_sec_per_km: number | null
           reps: number | null
+          resistance: number | null
+          rpe: number | null
           sets: number
+          strokes: number | null
           tempo: string | null
           time_seconds: number | null
           training_phase: string | null
@@ -2124,6 +2142,11 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          avg_watts?: number | null
+          cadence_spm?: number | null
+          calories_kcal?: number | null
           client_id: string
           created_at?: string
           date?: string
@@ -2131,11 +2154,24 @@ export type Database = {
           exercise_id?: string | null
           exercise_name: string
           id?: string
+          incline_percent?: number | null
           is_bodyweight?: boolean | null
           is_pr?: boolean | null
+          is_test?: boolean | null
+          leg_fatigue?: boolean | null
+          level?: number | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          max_watts?: number | null
+          metrics_json?: Json | null
           notes?: string | null
+          pace_sec_per_500m?: number | null
+          pace_sec_per_km?: number | null
           reps?: number | null
+          resistance?: number | null
+          rpe?: number | null
           sets?: number
+          strokes?: number | null
           tempo?: string | null
           time_seconds?: number | null
           training_phase?: string | null
@@ -2146,6 +2182,11 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          avg_watts?: number | null
+          cadence_spm?: number | null
+          calories_kcal?: number | null
           client_id?: string
           created_at?: string
           date?: string
@@ -2153,11 +2194,24 @@ export type Database = {
           exercise_id?: string | null
           exercise_name?: string
           id?: string
+          incline_percent?: number | null
           is_bodyweight?: boolean | null
           is_pr?: boolean | null
+          is_test?: boolean | null
+          leg_fatigue?: boolean | null
+          level?: number | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          max_watts?: number | null
+          metrics_json?: Json | null
           notes?: string | null
+          pace_sec_per_500m?: number | null
+          pace_sec_per_km?: number | null
           reps?: number | null
+          resistance?: number | null
+          rpe?: number | null
           sets?: number
+          strokes?: number | null
           tempo?: string | null
           time_seconds?: number | null
           training_phase?: string | null
@@ -2256,6 +2310,83 @@ export type Database = {
           },
           {
             foreignKeyName: "exercise_equipment_map_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_metric_definitions: {
+        Row: {
+          created_at: string | null
+          default_value: number | null
+          display_order: number | null
+          exercise_category: string | null
+          exercise_id: string | null
+          id: string
+          input_type: string | null
+          is_optional: boolean | null
+          label: string
+          label_en: string | null
+          max_value: number | null
+          metric_key: string
+          min_value: number | null
+          primary_metric: boolean | null
+          show_in_stats: boolean | null
+          show_in_table: boolean | null
+          stat_role: string | null
+          unit: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_value?: number | null
+          display_order?: number | null
+          exercise_category?: string | null
+          exercise_id?: string | null
+          id?: string
+          input_type?: string | null
+          is_optional?: boolean | null
+          label: string
+          label_en?: string | null
+          max_value?: number | null
+          metric_key: string
+          min_value?: number | null
+          primary_metric?: boolean | null
+          show_in_stats?: boolean | null
+          show_in_table?: boolean | null
+          stat_role?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_value?: number | null
+          display_order?: number | null
+          exercise_category?: string | null
+          exercise_id?: string | null
+          id?: string
+          input_type?: string | null
+          is_optional?: boolean | null
+          label?: string
+          label_en?: string | null
+          max_value?: number | null
+          metric_key?: string
+          min_value?: number | null
+          primary_metric?: boolean | null
+          show_in_stats?: boolean | null
+          show_in_table?: boolean | null
+          stat_role?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_metric_definitions_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
