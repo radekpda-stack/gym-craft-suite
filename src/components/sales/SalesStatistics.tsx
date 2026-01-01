@@ -13,7 +13,10 @@ import {
   Wallet,
   TrendingDown,
   DollarSign,
-  Percent
+  Percent,
+  ChevronRight,
+  PieChartIcon,
+  LineChart
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfDay, startOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -30,13 +33,17 @@ import {
   Pie,
   Cell,
   BarChart,
-  Bar
+  Bar,
+  LineChart as RechartsLineChart,
+  Line,
+  Legend
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { ProductSalesDetailModal } from './ProductSalesDetailModal';
 
 type Period = 'today' | 'week' | 'month' | 'year';
 
@@ -60,6 +67,16 @@ const PAYMENT_METHOD_LABELS: Record<string, { label: string; icon: React.Compone
   card: { label: 'Kartou', icon: CreditCard },
   bank: { label: 'Převodem', icon: Building },
   credit: { label: 'Kreditem', icon: Wallet },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  supplements: 'Doplňky',
+  apparel: 'Oblečení',
+  equipment: 'Vybavení',
+  food: 'Potraviny',
+  drinks: 'Nápoje',
+  accessories: 'Doplňky',
+  other: 'Ostatní',
 };
 
 // Hook for combined statistics (sales_orders + credit_transactions fallback)
@@ -99,7 +116,7 @@ function useCombinedSalesStats(period: Period) {
       if (orders && orders.length > 0) {
         const { data: items } = await supabase
           .from('sales_order_items')
-          .select('*, products(purchase_price)')
+          .select('*, products(purchase_price, category)')
           .in('order_id', orders.map(o => o.id));
         orderItems = items || [];
       }
@@ -125,8 +142,8 @@ function useCombinedSalesStats(period: Period) {
         bank: { count: 0, revenue: 0 },
         credit: { count: 0, revenue: 0 },
       };
-      const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number }> = {};
-      const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number }> = {};
+      const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number; category: string }> = {};
+      const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number; costs: number }> = {};
 
       if (orders && orders.length > 0) {
         // Use new orders
@@ -142,7 +159,7 @@ function useCombinedSalesStats(period: Period) {
           // Daily aggregation - profit calculated later
           const dateKey = order.created_at.split('T')[0];
           if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0 };
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
           }
           dailyData[dateKey].revenue += order.total_amount || 0;
           dailyData[dateKey].count++;
@@ -156,18 +173,19 @@ function useCombinedSalesStats(period: Period) {
           totalCosts += itemCost;
 
           if (!productStats[key]) {
-            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0, costs: 0 };
+            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0, costs: 0, category: item.products?.category || 'other' };
           }
           productStats[key].quantity += item.quantity;
           productStats[key].revenue += item.line_total;
           productStats[key].costs += itemCost;
 
-          // Add profit to daily data
+          // Add profit and costs to daily data
           const order = orders.find(o => o.id === item.order_id);
           if (order) {
             const dateKey = order.created_at.split('T')[0];
             if (dailyData[dateKey]) {
               dailyData[dateKey].profit += item.line_total - itemCost;
+              dailyData[dateKey].costs += itemCost;
             }
           }
         });
@@ -189,17 +207,18 @@ function useCombinedSalesStats(period: Period) {
           // Daily aggregation with profit
           const dateKey = sale.created_at.split('T')[0];
           if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0 };
+            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
           }
           dailyData[dateKey].revenue += amount;
           dailyData[dateKey].count++;
           dailyData[dateKey].profit += amount - purchasePrice;
+          dailyData[dateKey].costs += purchasePrice;
 
           // Product stats with costs
           if (sale.product_id && sale.products) {
             const key = sale.product_id;
             if (!productStats[key]) {
-              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0, costs: 0 };
+              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0, costs: 0, category: sale.products?.category || 'other' };
             }
             productStats[key].quantity++;
             productStats[key].revenue += amount;
@@ -222,8 +241,27 @@ function useCombinedSalesStats(period: Period) {
         }))
         .sort((a, b) => b.quantity - a.quantity);
 
-      // Sort trend data
-      const trendData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+      // Sort trend data and calculate margin trend
+      const trendData = Object.values(dailyData)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(d => ({
+          ...d,
+          margin: d.revenue > 0 ? ((d.revenue - d.costs) / d.revenue) * 100 : 0
+        }));
+
+      // Category stats
+      const categoryStats: Record<string, { name: string; revenue: number; count: number }> = {};
+      topProducts.forEach(p => {
+        const cat = p.category || 'other';
+        const catLabel = CATEGORY_LABELS[cat] || cat;
+        if (!categoryStats[cat]) {
+          categoryStats[cat] = { name: catLabel, revenue: 0, count: 0 };
+        }
+        categoryStats[cat].revenue += p.revenue;
+        categoryStats[cat].count += p.quantity;
+      });
+
+      const categoryData = Object.values(categoryStats).sort((a, b) => b.revenue - a.revenue);
 
       // Calculate average order value
       const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
@@ -240,6 +278,7 @@ function useCombinedSalesStats(period: Period) {
         byPaymentMethod,
         topProducts,
         trendData,
+        categoryData,
       };
     },
   });
@@ -248,6 +287,9 @@ function useCombinedSalesStats(period: Period) {
 export function SalesStatistics() {
   const [period, setPeriod] = useState<Period>('month');
   const { data: stats, isLoading } = useCombinedSalesStats(period);
+  
+  // Product detail modal state
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
 
   // Format trend data for chart
   const chartData = useMemo(() => {
@@ -278,10 +320,16 @@ export function SalesStatistics() {
     return stats.topProducts.slice(0, 10).map(p => ({
       name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
       fullName: p.name,
+      productId: p.productId,
       quantity: p.quantity,
       revenue: p.revenue,
     }));
   }, [stats?.topProducts]);
+
+  // Handle product click
+  const handleProductClick = (productId: string, productName: string) => {
+    setSelectedProduct({ id: productId, name: productName });
+  };
 
   if (isLoading) {
     return (
@@ -518,16 +566,138 @@ export function SalesStatistics() {
             </div>
           </div>
 
+          {/* New Row: Category Chart + Margin Trend */}
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Category Pie Chart */}
+            {stats.categoryData && stats.categoryData.length > 0 && (
+              <div className="glass rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <PieChartIcon className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium">Kategorie produktů</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={stats.categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="revenue"
+                    >
+                      {stats.categoryData.map((_, index) => (
+                        <Cell key={`cat-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload?.length) {
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
+                              <p className="font-medium">{d.name}</p>
+                              <p className="text-xs">{formatCurrency(d.revenue)}</p>
+                              <p className="text-xs text-muted-foreground">{d.count}× prodáno</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap justify-center gap-3 mt-2">
+                  {stats.categoryData.map((cat, index) => (
+                    <div key={cat.name} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <span className="text-xs text-muted-foreground">{cat.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Margin Trend Chart */}
+            {chartData.length > 1 && (
+              <div className="glass rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <LineChart className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium">Trend marže</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <RechartsLineChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="label" 
+                      className="text-xs fill-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      className="text-xs fill-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `${v.toFixed(0)}%`}
+                      domain={[0, 'auto']}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload?.length) {
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
+                              <p className="font-medium">Marže: {d.margin?.toFixed(1)}%</p>
+                              <p className="text-xs">Tržby: {formatCurrency(d.revenue)}</p>
+                              <p className="text-xs text-muted-foreground">Zisk: {formatCurrency(d.profit)}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="margin"
+                      stroke="hsl(var(--chart-2))"
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--chart-2))', r: 3 }}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
           {/* Products Bar Chart */}
           {productBarData.length > 0 && (
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Package className="w-4 h-4 text-muted-foreground" />
                 <h3 className="font-medium">Prodeje podle produktu</h3>
-                <span className="text-xs text-muted-foreground">(seřazeno od nejprodávanějších)</span>
+                <span className="text-xs text-muted-foreground">(klikněte pro detail)</span>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={productBarData} layout="vertical">
+                <BarChart 
+                  data={productBarData} 
+                  layout="vertical"
+                  onClick={(data) => {
+                    if (data?.activePayload?.[0]?.payload) {
+                      const p = data.activePayload[0].payload;
+                      handleProductClick(p.productId, p.fullName);
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
                   <XAxis 
                     type="number"
@@ -548,10 +718,11 @@ export function SalesStatistics() {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="glass rounded-lg p-2 border border-border">
+                          <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
                             <p className="text-sm font-medium">{data.fullName}</p>
                             <p className="text-xs">{data.quantity}× prodáno</p>
                             <p className="text-xs text-muted-foreground">Tržby: {formatCurrency(data.revenue)}</p>
+                            <p className="text-xs text-primary mt-1">Klikněte pro detail</p>
                           </div>
                         );
                       }
@@ -568,72 +739,97 @@ export function SalesStatistics() {
             </div>
           )}
 
-          {/* All Products Table - sorted by sales */}
+          {/* All Products Table - sorted by sales with clickable rows */}
           {stats.topProducts.length > 0 && (
             <div className="glass rounded-xl p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-500" />
-                  <h3 className="font-medium">Všechny produkty</h3>
+                  <h3 className="font-medium">Nejprodávanější produkty</h3>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {stats.topProducts.length} položek
+                  {stats.topProducts.length} položek • klikněte pro detail
                 </span>
               </div>
+              
+              {/* Table Header */}
+              <div className="hidden sm:grid grid-cols-[auto_1fr_repeat(4,80px)_24px] gap-2 px-3 py-2 text-xs text-muted-foreground font-medium border-b border-border mb-2">
+                <span className="w-7">#</span>
+                <span>Produkt</span>
+                <span className="text-right">Ks</span>
+                <span className="text-right">Tržby</span>
+                <span className="text-right">Náklady</span>
+                <span className="text-right">Zisk</span>
+                <span></span>
+              </div>
+              
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {stats.topProducts.map((product, index) => {
-                  const percentage = stats.totalRevenue > 0 
-                    ? Math.round((product.revenue / stats.totalRevenue) * 100) 
-                    : 0;
-                  
-                  return (
-                    <div 
-                      key={product.productId} 
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg",
-                        index === 0 ? "bg-amber-500/10" : 
-                        index === 1 ? "bg-slate-400/10" :
-                        index === 2 ? "bg-orange-700/10" : "bg-secondary/30"
-                      )}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                          index === 0 ? "bg-amber-500 text-white" : 
-                          index === 1 ? "bg-slate-400 text-white" :
-                          index === 2 ? "bg-orange-700 text-white" : "bg-secondary text-muted-foreground"
-                        )}>
-                          {index + 1}
+                {stats.topProducts.map((product, index) => (
+                  <div 
+                    key={product.productId}
+                    onClick={() => handleProductClick(product.productId, product.name)}
+                    className={cn(
+                      "grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_repeat(4,80px)_24px] gap-2 items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
+                      index === 0 ? "bg-amber-500/10" : 
+                      index === 1 ? "bg-slate-400/10" :
+                      index === 2 ? "bg-orange-700/10" : "bg-secondary/30"
+                    )}
+                  >
+                    {/* Rank badge */}
+                    <span className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                      index === 0 ? "bg-amber-500 text-white" : 
+                      index === 1 ? "bg-slate-400 text-white" :
+                      index === 2 ? "bg-orange-700 text-white" : "bg-secondary text-muted-foreground"
+                    )}>
+                      {index + 1}
+                    </span>
+                    
+                    {/* Product name */}
+                    <div className="min-w-0">
+                      <span className="font-medium block truncate">{product.name}</span>
+                      {/* Mobile: show all values */}
+                      <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground sm:hidden">
+                        <span>{product.quantity}×</span>
+                        <span>{formatCurrency(product.revenue)}</span>
+                        <span className={product.profit >= 0 ? "text-emerald-600" : "text-destructive"}>
+                          +{formatCurrency(product.profit)}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium block truncate">{product.name}</span>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <div className="h-1.5 bg-secondary rounded-full flex-1 max-w-[100px]">
-                              <div 
-                                className="h-full bg-primary rounded-full" 
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground">{percentage}%</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm shrink-0">
-                        <div className="text-right">
-                          <span className="text-muted-foreground block">{product.quantity}×</span>
-                        </div>
-                        <div className="text-right min-w-[80px]">
-                          <span className="font-bold">{formatCurrency(product.revenue)}</span>
-                        </div>
+                        <span>({product.margin.toFixed(0)}%)</span>
                       </div>
                     </div>
-                  );
-                })}
+                    
+                    {/* Desktop columns */}
+                    <span className="hidden sm:block text-right text-sm">{product.quantity}×</span>
+                    <span className="hidden sm:block text-right text-sm font-medium">{formatCurrency(product.revenue)}</span>
+                    <span className="hidden sm:block text-right text-sm text-muted-foreground">{formatCurrency(product.costs)}</span>
+                    <span className={cn(
+                      "hidden sm:block text-right text-sm font-medium",
+                      product.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                    )}>
+                      {formatCurrency(product.profit)}
+                    </span>
+                    
+                    {/* Chevron */}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground hidden sm:block" />
+                    
+                    {/* Mobile chevron */}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground sm:hidden" />
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </>
       )}
+      
+      {/* Product Detail Modal */}
+      <ProductSalesDetailModal
+        productId={selectedProduct?.id ?? null}
+        productName={selectedProduct?.name ?? ''}
+        open={!!selectedProduct}
+        onOpenChange={(open) => !open && setSelectedProduct(null)}
+      />
     </div>
   );
 }
