@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
 import { RecordsFeedFilters, PeriodFilter, RecordType } from '@/hooks/useRecordsFeed';
-import { User, Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 
 interface RecordsFilterBarProps {
   filters: RecordsFeedFilters;
@@ -40,25 +41,17 @@ export function RecordsFilterBar({
   return (
     <div className={cn('flex flex-wrap items-center gap-2 sm:gap-3', className)}>
       {/* Client filter */}
-      <Select
-        value={filters.clientId || 'all'}
+      <ClientSearchSelect
+        clients={activeClients}
+        value={filters.clientId || ''}
         onValueChange={(value) => 
-          onFiltersChange({ ...filters, clientId: value === 'all' ? null : value })
+          onFiltersChange({ ...filters, clientId: value || null })
         }
-      >
-        <SelectTrigger className="w-[160px] sm:w-[200px] h-9 rounded-lg glass">
-          <User className="w-4 h-4 mr-2 text-muted-foreground shrink-0" />
-          <SelectValue placeholder="Všichni klienti" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Všichni klienti</SelectItem>
-          {activeClients.map((client) => (
-            <SelectItem key={client.id} value={client.id}>
-              {client.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Všichni klienti"
+        allowAll
+        allLabel="Všichni klienti"
+        className="w-[160px] sm:w-[200px] h-9"
+      />
       
       {/* Period filter */}
       <Select

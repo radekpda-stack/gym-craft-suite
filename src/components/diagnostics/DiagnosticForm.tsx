@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClientSearchSelect } from "@/components/ui/client-search-select";
 import { DatePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 import { JOINT_OPTIONS, MUSCLE_OPTIONS } from "@/hooks/useDiagnostics";
@@ -81,20 +82,15 @@ export function DiagnosticForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Klient *</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-secondary border-border">
-                    <SelectValue placeholder="Vyberte klienta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-popover border-border">
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <ClientSearchSelect
+                  clients={clients}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Vyhledat klienta..."
+                  filterArchived
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

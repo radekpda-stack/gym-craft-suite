@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import {
   Popover,
   PopoverContent,
@@ -150,18 +151,13 @@ export function AddPerformanceSheet({
           {/* Client Selection */}
           <div className="space-y-2">
             <Label htmlFor="client">Klient *</Label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte klienta" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeClients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearchSelect
+              clients={activeClients}
+              value={clientId}
+              onValueChange={setClientId}
+              placeholder="Vyhledat klienta..."
+              filterArchived
+            />
           </div>
 
           {/* Exercise Selection */}

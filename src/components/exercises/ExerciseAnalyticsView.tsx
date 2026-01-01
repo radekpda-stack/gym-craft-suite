@@ -7,7 +7,7 @@ import { LoadDistributionCard } from './analytics/LoadDistributionCard';
 import { MovementPatternsCard } from './analytics/MovementPatternsCard';
 import { TopExercisesCard } from './analytics/TopExercisesCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
 
 const PERIOD_OPTIONS: { value: AnalyticsPeriod; label: string }[] = [
@@ -39,7 +39,7 @@ export function ExerciseAnalyticsView() {
   };
 
   const handleClientChange = (value: string) => {
-    if (value === 'all') {
+    if (!value) {
       setSelectedClientId(null);
       setComparisonMode('all');
     } else {
@@ -66,21 +66,16 @@ export function ExerciseAnalyticsView() {
         </Tabs>
 
         {/* Client Dropdown */}
-        <Select value={selectedClientId || 'all'} onValueChange={handleClientChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Všichni klienti" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všichni klienti</SelectItem>
-            {clients
-              .filter(c => !c.is_archived)
-              .map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <ClientSearchSelect
+          clients={clients}
+          value={selectedClientId || ''}
+          onValueChange={handleClientChange}
+          placeholder="Všichni klienti"
+          allowAll
+          allLabel="Všichni klienti"
+          filterArchived
+          className="w-full sm:w-[180px]"
+        />
       </div>
 
       {/* KPI Cards */}

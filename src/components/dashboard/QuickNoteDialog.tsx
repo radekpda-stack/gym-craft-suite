@@ -8,13 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { toast } from '@/hooks/use-toast';
 import { useClients, useUpdateClient } from '@/hooks/useClients';
 import { ClientFormValues } from '@/lib/validations/client';
@@ -77,21 +71,13 @@ export function QuickNoteDialog({ open, onOpenChange, defaultClientId }: QuickNo
             <label className="text-sm font-medium text-foreground">
               Klient
             </label>
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte klienta..." />
-              </SelectTrigger>
-              <SelectContent>
-                {activeClients.map(client => (
-                  <SelectItem key={client.id} value={client.id}>
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      {client.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearchSelect
+              clients={activeClients}
+              value={selectedClientId}
+              onValueChange={setSelectedClientId}
+              placeholder="Vyhledat klienta..."
+              filterArchived
+            />
           </div>
           
           {/* Note text */}

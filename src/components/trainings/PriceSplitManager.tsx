@@ -10,13 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Client } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -274,18 +268,14 @@ export function PriceSplitManager({
       {/* Add participant */}
       {availableClients.length > 0 && (
         <div className="flex items-center gap-2">
-          <Select onValueChange={addParticipant}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Přidat účastníka..." />
-            </SelectTrigger>
-            <SelectContent>
-              {availableClients.map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ClientSearchSelect
+            clients={availableClients}
+            value=""
+            onValueChange={addParticipant}
+            placeholder="Přidat účastníka..."
+            filterArchived
+            className="flex-1"
+          />
           <Button type="button" variant="outline" size="icon" disabled>
             <Plus className="w-4 h-4" />
           </Button>
