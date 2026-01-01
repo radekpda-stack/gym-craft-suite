@@ -8,6 +8,7 @@ import { TodayPlanCompact } from '@/components/dashboard/TodayPlanCompact';
 import { QuickActionsGrid } from '@/components/dashboard/QuickActionsGrid';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
+import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
 
 function DashboardContent() {
   usePageTracking('dashboard');
@@ -20,6 +21,11 @@ function DashboardContent() {
         {/* Header with date */}
         <SectionErrorBoundary section="Hlavička" compact>
           <DashboardHeader data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
+
+        {/* 🏆 Career Milestone Card */}
+        <SectionErrorBoundary section="Kariérní statistiky" compact>
+          <CareerMilestoneCard />
         </SectionErrorBoundary>
         
         {/* 📅 Today's Plan - compact timeline */}
