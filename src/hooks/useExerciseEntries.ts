@@ -100,6 +100,9 @@ export function useExerciseEntries(clientId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
       toast({ title: 'Záznam přidán', description: 'Tréninkový záznam byl uložen.' });
     },
     onError: () => {
