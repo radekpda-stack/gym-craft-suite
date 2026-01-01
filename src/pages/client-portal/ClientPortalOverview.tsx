@@ -24,6 +24,12 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toVocative } from '@/lib/czechVocative';
+
+// New dashboard widgets
+import { LatestProgressWidget } from '@/components/client-portal/dashboard/LatestProgressWidget';
+import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
+import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
+
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
   { value: 30, label: '30 dní' },
@@ -112,13 +118,23 @@ export default function ClientPortalOverview() {
         </Alert>
       )}
 
-      {/* Hero Cards Grid */}
+      {/* NEW WIDGETS - Priority Order */}
+      {/* 1. Latest PR (user's #1 priority) */}
+      <LatestProgressWidget />
+      
+      {/* 2. Active Challenge (conditional - only shows if challenge exists) */}
+      <ActiveChallengeWidget />
+      
+      {/* 3. Next Training */}
+      <NextTrainingWidget />
+
+      {/* Hero Cards Grid - Credit & Attendance */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Credit Hero Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
         >
           <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
             <CardContent className="p-5">
@@ -175,7 +191,7 @@ export default function ClientPortalOverview() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.25 }}
         >
           <Card className="relative overflow-hidden bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20">
             <CardContent className="p-5">
@@ -254,7 +270,7 @@ export default function ClientPortalOverview() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.35 }}
         >
           <Card>
             <CardContent className="p-4">

@@ -6,13 +6,13 @@ import {
   Calendar, 
   Wallet, 
   Apple, 
-  User,
   LogOut,
   Settings,
   Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useClientNutritionCampaign } from '@/hooks/useClientPortalData';
 import { motion } from 'framer-motion';
 import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
@@ -21,31 +21,45 @@ interface ClientPortalLayoutProps {
   children: ReactNode;
 }
 
-// Desktop nav - all items
-const allNavItems = [
+// Base nav items (always visible)
+const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
   { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-  { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' },
-  { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
-  { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
 ];
 
-// Mobile nav - only main 5 items to prevent overflow
+// Conditional nav item
+const nutritionNavItem = { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' };
+
+// Settings nav item (always at the end)
+const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' };
+
+// Mobile nav - core items only (5 items to prevent overflow)
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
-  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
-  { to: '/client/profile', icon: User, label: 'Profil', trackName: 'profile' },
+  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+  { to: '/client/attendance', icon: Calendar, label: 'Docházka', trackName: 'attendance' },
+  { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' },
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const { isAuthenticated, loading, clientProfile, clientId, signOut } = useClientPortal();
   const location = useLocation();
   const sessionInitialized = useRef(false);
+
+  // Check if nutrition campaign is active
+  const { data: nutritionCampaign } = useClientNutritionCampaign(clientId ?? undefined);
+  const hasActiveNutrition = nutritionCampaign?.isActive;
+
+  // Build desktop nav items dynamically
+  const allNavItems = [
+    ...baseNavItems,
+    ...(hasActiveNutrition ? [nutritionNavItem] : []),
+    settingsNavItem,
+  ];
 
   // Initialize session tracking for client portal
   useEffect(() => {
@@ -73,7 +87,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         }
       });
     }
-  }, [location.pathname, isAuthenticated, clientId]);
+  }, [location.pathname, isAuthenticated, clientId, allNavItems]);
 
   if (loading) {
     return (
