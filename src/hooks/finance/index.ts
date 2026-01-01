@@ -11,6 +11,7 @@ export { useSalesStats, useSalesTrend } from '../useSalesStats';
 export { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '../useProducts';
 export { useProductSalesData } from '../useProductSalesData';
 export { useProductDetailData } from '../useProductDetailData';
+export { useProductSalesDetail } from '../useProductSalesDetail';
 export { useProductsSortedBySales } from '../useProductsSortedBySales';
 export { useSalesOrders } from '../useSalesOrders';
 export { useSalesCart } from '../useSalesCart';
