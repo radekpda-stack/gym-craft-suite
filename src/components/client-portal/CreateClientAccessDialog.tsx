@@ -108,7 +108,7 @@ vaše přihlašovací údaje do klientského portálu:
 Email: ${credentials.email}
 Heslo: ${credentials.password}
 
-Přihlaste se na: ${window.location.origin}/client/login
+Přihlaste se na: ${window.location.origin}/zona/login
 
 Po přihlášení si můžete heslo změnit v nastavení.
 

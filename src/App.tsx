@@ -109,7 +109,21 @@ const App = () => (
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               
-              {/* Client Portal Routes */}
+              {/* Client Portal Routes - Short URL /zona */}
+              <Route path="/zona/login" element={<ClientPortalLogin />} />
+              <Route path="/zona" element={<ClientPortalShell />}>
+                <Route index element={<ClientPortalOverview />} />
+                <Route path="progress" element={<ClientPortalProgress />} />
+                <Route path="diary" element={<ClientPortalWorkoutDiary />} />
+                <Route path="attendance" element={<ClientPortalAttendance />} />
+                <Route path="credit" element={<ClientPortalCredit />} />
+                <Route path="nutrition" element={<ClientPortalNutrition />} />
+                <Route path="challenges" element={<ClientPortalChallenges />} />
+                <Route path="profile" element={<ClientPortalProfile />} />
+                <Route path="settings" element={<ClientPortalSettings />} />
+              </Route>
+              
+              {/* Legacy Client Portal Routes - Redirect to /zona */}
               <Route path="/client/login" element={<ClientPortalLogin />} />
               <Route path="/client" element={<ClientPortalShell />}>
                 <Route index element={<ClientPortalOverview />} />
