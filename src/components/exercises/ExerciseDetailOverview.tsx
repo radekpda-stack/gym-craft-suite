@@ -98,9 +98,13 @@ export function ExerciseDetailOverview({
   onQuickLog 
 }: ExerciseDetailOverviewProps) {
   const navigate = useNavigate();
+  
+  // Determine if this is time-based from stats or exercise type
+  const isTimeBased = stats?.isTimeBased || exercise.is_time_based || exerciseType === 'cardio';
+  
   const hasData = stats && (stats.totalEntries > 0 || (stats.prHistory && stats.prHistory.length > 0));
 
-  // Get last 5 records from PR history or client performance
+  // Get last 5 records from PR history
   const recentRecords = stats?.prHistory?.slice(0, 5) || [];
 
   // Get top PR for selected client or global
@@ -113,7 +117,8 @@ export function ExerciseDetailOverview({
       {/* KPI Cards */}
       {hasData ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {exerciseType === 'strength' || exerciseType === 'mixed' ? (
+          {!isTimeBased ? (
+            // Strength exercise cards
             <>
               {/* Max Weight */}
               <Card className="p-3">
@@ -182,49 +187,63 @@ export function ExerciseDetailOverview({
               </Card>
             </>
           ) : (
+            // Time-based / Cardio exercise cards
             <>
-              {/* Best Time / Pace */}
+              {/* Best Time */}
               <Card className="p-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                   <Timer className="w-3.5 h-3.5 text-primary" />
                   <span className="text-xs">Nejlepší čas</span>
+                  <StatInfoTooltip
+                    title="Nejlepší čas"
+                    description="Nejkratší zaznamenaný čas"
+                    calculation="Minimum z time_seconds"
+                  />
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">-</span>
+                  <span className="text-xl font-bold">
+                    {stats?.bestTime ? formatTime(stats.bestTime) : '-'}
+                  </span>
                 </div>
+                {stats?.bestTimeClient && !selectedClientId && (
+                  <span className="text-xs text-muted-foreground">{stats.bestTimeClient}</span>
+                )}
               </Card>
 
-              {/* Distance */}
+              {/* Average Time */}
               <Card className="p-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                   <Target className="w-3.5 h-3.5" />
-                  <span className="text-xs">Vzdálenost</span>
+                  <span className="text-xs">Průměrný čas</span>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">-</span>
+                  <span className="text-xl font-bold">
+                    {stats?.averageTime ? formatTime(stats.averageTime) : '-'}
+                  </span>
                 </div>
               </Card>
 
-              {/* Power */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Gauge className="w-3.5 h-3.5" />
-                  <span className="text-xs">Výkon</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">-</span>
-                  <span className="text-xs text-muted-foreground">W</span>
-                </div>
-              </Card>
-
-              {/* Entries count */}
+              {/* Total Entries */}
               <Card className="p-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                   <Activity className="w-3.5 h-3.5" />
                   <span className="text-xs">Záznamy</span>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">{stats?.totalEntries || 0}</span>
+                  <span className="text-xl font-bold">{stats?.totalTimeEntries || stats?.totalEntries || 0}</span>
+                </div>
+              </Card>
+
+              {/* PR Count */}
+              <Card className="p-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs">PR záznamy</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">
+                    {stats?.prHistory?.length || 0}
+                  </span>
                 </div>
               </Card>
             </>
@@ -269,10 +288,16 @@ export function ExerciseDetailOverview({
                 <p className="text-sm text-muted-foreground">{topPR.clientName}</p>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-bold text-primary">{topPR.weight} kg</span>
-                {topPR.reps > 0 && (
-                  <p className="text-sm text-muted-foreground">× {topPR.reps} opak.</p>
-                )}
+                {topPR.timeSeconds ? (
+                  <span className="text-2xl font-bold text-primary">{formatTime(topPR.timeSeconds)}</span>
+                ) : topPR.weight ? (
+                  <>
+                    <span className="text-2xl font-bold text-primary">{topPR.weight} kg</span>
+                    {topPR.reps > 0 && (
+                      <p className="text-sm text-muted-foreground">× {topPR.reps} opak.</p>
+                    )}
+                  </>
+                ) : null}
               </div>
             </div>
           </CardContent>
@@ -311,10 +336,16 @@ export function ExerciseDetailOverview({
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{pr.weight} kg</span>
-                    {pr.reps > 0 && (
-                      <span className="text-xs text-muted-foreground ml-1">× {pr.reps}</span>
-                    )}
+                    {pr.timeSeconds ? (
+                      <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
+                    ) : pr.weight ? (
+                      <>
+                        <span className="font-bold">{pr.weight} kg</span>
+                        {pr.reps > 0 && (
+                          <span className="text-xs text-muted-foreground ml-1">× {pr.reps}</span>
+                        )}
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ))}

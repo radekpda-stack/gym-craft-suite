@@ -5,6 +5,7 @@ interface ClientPerformance {
   clientId: string;
   clientName: string;
   maxWeight: number | null;
+  bestTime: number | null; // seconds - lower is better
   totalSets: number;
   totalReps: number;
   totalVolume: number;
@@ -17,7 +18,8 @@ interface PRRecord {
   id: string;
   clientId: string;
   clientName: string;
-  weight: number;
+  weight: number | null;
+  timeSeconds: number | null;
   reps: number;
   date: string;
 }
@@ -25,15 +27,29 @@ interface PRRecord {
 export interface ExerciseStats {
   exerciseId: string;
   exerciseName: string;
+  isTimeBased: boolean;
   totalClients: number;
   totalEntries: number;
+  // Strength stats
   globalMaxWeight: number | null;
   globalMaxWeightClient: string | null;
   averageWeight: number | null;
   averageReps: number | null;
+  // Time-based stats
+  bestTime: number | null; // seconds
+  bestTimeClient: string | null;
+  averageTime: number | null; // seconds
+  totalTimeEntries: number;
+  // Common
   clientPerformances: ClientPerformance[];
   prHistory: PRRecord[];
   mostActiveClient: { name: string; count: number } | null;
+}
+
+function formatTimeForDisplay(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 export function useExerciseStats(exerciseId: string | null) {
@@ -42,7 +58,7 @@ export function useExerciseStats(exerciseId: string | null) {
     queryFn: async (): Promise<ExerciseStats | null> => {
       if (!exerciseId) return null;
 
-      // Fetch all exercise entries for this exercise
+      // Fetch all exercise entries for this exercise including time_seconds
       const { data: entries, error: entriesError } = await supabase
         .from('exercise_entries')
         .select(`
@@ -51,6 +67,7 @@ export function useExerciseStats(exerciseId: string | null) {
           weight_kg,
           reps,
           sets,
+          time_seconds,
           is_pr,
           date,
           clients!inner(id, name)
@@ -60,25 +77,35 @@ export function useExerciseStats(exerciseId: string | null) {
 
       if (entriesError) throw entriesError;
 
-      // Fetch exercise info
+      // Fetch exercise info including is_time_based
       const { data: exercise, error: exerciseError } = await supabase
         .from('exercises')
-        .select('id, name, name_cs')
+        .select('id, name, name_cs, is_time_based, category')
         .eq('id', exerciseId)
         .single();
 
       if (exerciseError) throw exerciseError;
 
+      // Determine if exercise is time-based
+      const isTimeBased = exercise?.is_time_based || 
+        exercise?.category === 'cardio' || 
+        exercise?.category === 'conditioning';
+
       if (!entries || entries.length === 0) {
         return {
           exerciseId,
           exerciseName: exercise?.name_cs || exercise?.name || '',
+          isTimeBased,
           totalClients: 0,
           totalEntries: 0,
           globalMaxWeight: null,
           globalMaxWeightClient: null,
           averageWeight: null,
           averageReps: null,
+          bestTime: null,
+          bestTimeClient: null,
+          averageTime: null,
+          totalTimeEntries: 0,
           clientPerformances: [],
           prHistory: [],
           mostActiveClient: null,
@@ -91,6 +118,7 @@ export function useExerciseStats(exerciseId: string | null) {
         clientName: string;
         entries: typeof entries;
         weights: number[];
+        times: number[];
         reps: number[];
         sets: number[];
         prCount: number;
@@ -107,6 +135,7 @@ export function useExerciseStats(exerciseId: string | null) {
             clientName,
             entries: [],
             weights: [],
+            times: [],
             reps: [],
             sets: [],
             prCount: 0,
@@ -117,6 +146,7 @@ export function useExerciseStats(exerciseId: string | null) {
         const client = clientMap.get(clientId)!;
         client.entries.push(entry);
         if (entry.weight_kg) client.weights.push(entry.weight_kg);
+        if (entry.time_seconds) client.times.push(entry.time_seconds);
         if (entry.reps) client.reps.push(entry.reps);
         if (entry.sets) client.sets.push(entry.sets);
         if (entry.is_pr) client.prCount++;
@@ -126,27 +156,43 @@ export function useExerciseStats(exerciseId: string | null) {
       // Calculate client performances
       const clientPerformances: ClientPerformance[] = Array.from(clientMap.values()).map((client) => {
         const maxWeight = client.weights.length > 0 ? Math.max(...client.weights) : null;
+        const bestTime = client.times.length > 0 ? Math.min(...client.times) : null;
         const totalSets = client.sets.reduce((a, b) => a + b, 0);
         const totalReps = client.reps.reduce((a, b) => a + b, 0) * (client.sets[0] || 1);
         const totalVolume = client.weights.reduce((sum, w, i) => {
           return sum + (w * (client.reps[i] || 1) * (client.sets[i] || 1));
         }, 0);
 
-        // Calculate trend (compare last 5 entries vs previous 5)
-        const recentWeights = client.weights.slice(0, 5);
-        const olderWeights = client.weights.slice(5, 10);
+        // Calculate trend based on exercise type
         let trend: 'up' | 'down' | 'stable' = 'stable';
-        if (recentWeights.length > 0 && olderWeights.length > 0) {
-          const recentAvg = recentWeights.reduce((a, b) => a + b, 0) / recentWeights.length;
-          const olderAvg = olderWeights.reduce((a, b) => a + b, 0) / olderWeights.length;
-          if (recentAvg > olderAvg * 1.05) trend = 'up';
-          else if (recentAvg < olderAvg * 0.95) trend = 'down';
+        
+        if (isTimeBased && client.times.length >= 2) {
+          // For time-based, lower is better
+          const recentTimes = client.times.slice(0, 3);
+          const olderTimes = client.times.slice(3, 6);
+          if (recentTimes.length > 0 && olderTimes.length > 0) {
+            const recentAvg = recentTimes.reduce((a, b) => a + b, 0) / recentTimes.length;
+            const olderAvg = olderTimes.reduce((a, b) => a + b, 0) / olderTimes.length;
+            if (recentAvg < olderAvg * 0.95) trend = 'up'; // Improved (lower time)
+            else if (recentAvg > olderAvg * 1.05) trend = 'down'; // Worse (higher time)
+          }
+        } else if (client.weights.length >= 2) {
+          // For strength, higher is better
+          const recentWeights = client.weights.slice(0, 5);
+          const olderWeights = client.weights.slice(5, 10);
+          if (recentWeights.length > 0 && olderWeights.length > 0) {
+            const recentAvg = recentWeights.reduce((a, b) => a + b, 0) / recentWeights.length;
+            const olderAvg = olderWeights.reduce((a, b) => a + b, 0) / olderWeights.length;
+            if (recentAvg > olderAvg * 1.05) trend = 'up';
+            else if (recentAvg < olderAvg * 0.95) trend = 'down';
+          }
         }
 
         return {
           clientId: client.clientId,
           clientName: client.clientName,
           maxWeight,
+          bestTime,
           totalSets,
           totalReps,
           totalVolume,
@@ -156,29 +202,48 @@ export function useExerciseStats(exerciseId: string | null) {
         };
       });
 
-      // Sort by max weight
-      clientPerformances.sort((a, b) => (b.maxWeight || 0) - (a.maxWeight || 0));
+      // Sort based on exercise type
+      if (isTimeBased) {
+        clientPerformances.sort((a, b) => {
+          if (a.bestTime === null) return 1;
+          if (b.bestTime === null) return -1;
+          return a.bestTime - b.bestTime; // Lower is better
+        });
+      } else {
+        clientPerformances.sort((a, b) => (b.maxWeight || 0) - (a.maxWeight || 0));
+      }
 
-      // PR History
+      // PR History - include both weight and time PRs
       const prHistory: PRRecord[] = entries
-        .filter((e) => e.is_pr && e.weight_kg)
+        .filter((e) => e.is_pr && (e.weight_kg || e.time_seconds))
         .map((e) => ({
           id: e.id,
           clientId: e.client_id,
           clientName: (e.clients as any)?.name || 'Neznámý',
-          weight: e.weight_kg!,
+          weight: e.weight_kg,
+          timeSeconds: e.time_seconds,
           reps: e.reps || 0,
           date: e.date,
         }))
         .slice(0, 50);
 
-      // Global stats
+      // Global stats - Strength
       const allWeights = entries.filter((e) => e.weight_kg).map((e) => e.weight_kg!);
       const allReps = entries.filter((e) => e.reps).map((e) => e.reps!);
       const globalMaxWeight = allWeights.length > 0 ? Math.max(...allWeights) : null;
       
       const maxWeightEntry = entries.find((e) => e.weight_kg === globalMaxWeight);
       const globalMaxWeightClient = maxWeightEntry ? (maxWeightEntry.clients as any)?.name : null;
+
+      // Global stats - Time-based
+      const allTimes = entries.filter((e) => e.time_seconds).map((e) => e.time_seconds!);
+      const bestTime = allTimes.length > 0 ? Math.min(...allTimes) : null;
+      const averageTime = allTimes.length > 0 
+        ? Math.round(allTimes.reduce((a, b) => a + b, 0) / allTimes.length)
+        : null;
+      
+      const bestTimeEntry = entries.find((e) => e.time_seconds === bestTime);
+      const bestTimeClient = bestTimeEntry ? (bestTimeEntry.clients as any)?.name : null;
 
       // Most active client
       let mostActiveClient: { name: string; count: number } | null = null;
@@ -193,6 +258,7 @@ export function useExerciseStats(exerciseId: string | null) {
       return {
         exerciseId,
         exerciseName: exercise?.name_cs || exercise?.name || '',
+        isTimeBased,
         totalClients: clientMap.size,
         totalEntries: entries.length,
         globalMaxWeight,
@@ -203,6 +269,10 @@ export function useExerciseStats(exerciseId: string | null) {
         averageReps: allReps.length > 0
           ? Math.round(allReps.reduce((a, b) => a + b, 0) / allReps.length * 10) / 10
           : null,
+        bestTime,
+        bestTimeClient,
+        averageTime,
+        totalTimeEntries: allTimes.length,
         clientPerformances,
         prHistory,
         mostActiveClient,
@@ -220,7 +290,7 @@ export function useExercisesWithUsage() {
       // Get all exercises
       const { data: exercises, error: exercisesError } = await supabase
         .from('exercises')
-        .select('id, name, name_cs, category, difficulty, movement_pattern, equipment, is_archived')
+        .select('id, name, name_cs, category, difficulty, movement_pattern, equipment, is_archived, is_time_based')
         .eq('is_archived', false)
         .order('category')
         .order('name');

@@ -20,14 +20,31 @@ interface ExerciseHistoryTableProps {
 
 const PAGE_SIZE = 15;
 
+function formatTimeDisplay(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: ExerciseHistoryTableProps) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [sortBy, setSortBy] = useState<'date' | 'weight' | 'volume'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time'>('date');
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-history', exerciseId, clientId, sortBy],
     queryFn: async () => {
+      // First, get exercise info to determine if it's time-based
+      const { data: exercise } = await supabase
+        .from('exercises')
+        .select('is_time_based, category')
+        .eq('id', exerciseId)
+        .single();
+
+      const isTimeBased = exercise?.is_time_based || 
+        exercise?.category === 'cardio' || 
+        exercise?.category === 'conditioning';
+
       // Fetch exercise entries (includes both strength and time-based entries)
       let exerciseQuery = supabase
         .from('exercise_entries')
@@ -54,115 +71,48 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         exerciseQuery = exerciseQuery.order('date', { ascending: false });
       } else if (sortBy === 'weight') {
         exerciseQuery = exerciseQuery.order('weight_kg', { ascending: false, nullsFirst: false });
+      } else if (sortBy === 'time') {
+        exerciseQuery = exerciseQuery.order('time_seconds', { ascending: true, nullsFirst: false });
       }
 
       const { data: exerciseEntries } = await exerciseQuery;
 
-      // Fetch cardio entries
-      let cardioQuery = supabase
-        .from('cardio_entries')
-        .select(`
-          id,
-          date,
-          duration_seconds,
-          distance_meters,
-          avg_watts,
-          avg_speed_kmh,
-          rpe,
-          notes,
-          is_pr,
-          client_id,
-          clients(id, name)
-        `)
-        .eq('exercise_id', exerciseId);
-
-      if (clientId) {
-        cardioQuery = cardioQuery.eq('client_id', clientId);
-      }
-
-      cardioQuery = cardioQuery.order('date', { ascending: false });
-
-      const { data: cardioEntries } = await cardioQuery;
-
-      // Process exercise entries - can be strength OR time-based (cardio from exercise_entries)
-      const exerciseRows = (exerciseEntries || []).map(entry => {
+      // Process exercise entries
+      const rows = (exerciseEntries || []).map(entry => {
         const weight = entry.weight_kg || 0;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
+        const timeSeconds = entry.time_seconds;
         
-        // Check if this is a time-based entry (cardio stored in exercise_entries)
-        const hasTime = entry.time_seconds && entry.time_seconds > 0;
-        const durationMinutes = hasTime ? entry.time_seconds! / 60 : null;
+        // Determine entry type
+        const hasTime = timeSeconds && timeSeconds > 0;
+        const hasWeight = weight > 0;
 
         return {
           id: entry.id,
-          type: hasTime ? 'cardio' as const : 'strength' as const,
+          type: hasTime ? 'time' as const : 'strength' as const,
           date: entry.date,
           clientId: entry.client_id,
           clientName: (entry.clients as any)?.name || 'Neznámý',
-          weight: hasTime ? null : weight,
-          reps: hasTime ? null : reps,
-          sets: hasTime ? null : sets,
-          volume: hasTime ? null : volume,
+          weight: hasWeight ? weight : null,
+          reps: hasWeight ? reps : null,
+          sets: hasWeight ? sets : null,
+          volume: hasWeight ? volume : null,
+          timeSeconds: hasTime ? timeSeconds : null,
           notes: entry.notes,
           isPR: entry.is_pr,
           trainingType: entry.training_type,
-          // Cardio fields from time_seconds
-          duration: durationMinutes,
-          distance: null, // Not stored in exercise_entries
-          pace: null,
-          watts: null,
-          rpe: null,
         };
       });
 
-      const cardioRows = (cardioEntries || []).map(entry => {
-        const distance = entry.distance_meters ? entry.distance_meters / 1000 : null;
-        const duration = entry.duration_seconds ? entry.duration_seconds / 60 : null;
-        const pace = distance && duration ? duration / distance : null;
-
-        return {
-          id: entry.id,
-          type: 'cardio' as const,
-          date: entry.date,
-          clientId: entry.client_id,
-          clientName: (entry.clients as any)?.name || 'Neznámý',
-          // Strength fields null
-          weight: null,
-          reps: null,
-          sets: null,
-          volume: null,
-          notes: entry.notes,
-          isPR: entry.is_pr,
-          trainingType: null,
-          // Cardio fields
-          duration,
-          distance,
-          pace,
-          watts: entry.avg_watts,
-          rpe: entry.rpe,
-        };
-      });
-
-      // Combine and sort
-      let allRows = [...exerciseRows, ...cardioRows];
-
-      if (sortBy === 'date') {
-        allRows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      } else if (sortBy === 'weight') {
-        allRows.sort((a, b) => (b.weight || 0) - (a.weight || 0));
-      } else if (sortBy === 'volume') {
-        allRows.sort((a, b) => (b.volume || 0) - (a.volume || 0));
-      }
-
-      return allRows;
+      return { rows, isTimeBased };
     },
     enabled: !!exerciseId,
   });
 
-  const totalPages = Math.ceil((data?.length || 0) / PAGE_SIZE);
-  const paginatedData = data?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) || [];
+  const totalPages = Math.ceil((data?.rows?.length || 0) / PAGE_SIZE);
+  const paginatedData = data?.rows?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) || [];
 
   if (isLoading) {
     return (
@@ -174,7 +124,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
     );
   }
 
-  if (!data?.length) {
+  if (!data?.rows?.length) {
     return (
       <Card>
         <CardHeader>
@@ -192,8 +142,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
     );
   }
 
-  const isStrengthView = exerciseType === 'strength' || exerciseType === 'mixed';
-  const isCardioView = exerciseType === 'cardio' || exerciseType === 'mixed';
+  const isTimeBased = data.isTimeBased;
 
   return (
     <Card>
@@ -215,8 +164,8 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="date">Podle data</SelectItem>
-            <SelectItem value="weight">Podle váhy</SelectItem>
-            <SelectItem value="volume">Podle objemu</SelectItem>
+            {!isTimeBased && <SelectItem value="weight">Podle váhy</SelectItem>}
+            {isTimeBased && <SelectItem value="time">Podle času</SelectItem>}
           </SelectContent>
         </Select>
       </CardHeader>
@@ -227,21 +176,19 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
               <TableRow>
                 <TableHead className="w-[100px]">Datum</TableHead>
                 {!clientId && <TableHead>Klient</TableHead>}
-                {isStrengthView && (
+                {isTimeBased ? (
+                  <>
+                    <TableHead className="text-right">Čas</TableHead>
+                    <TableHead className="max-w-[200px]">Poznámka</TableHead>
+                  </>
+                ) : (
                   <>
                     <TableHead className="text-right">Série</TableHead>
                     <TableHead className="text-right">Výkon</TableHead>
                     <TableHead className="text-right">Objem</TableHead>
+                    <TableHead className="max-w-[200px]">Poznámka</TableHead>
                   </>
                 )}
-                {isCardioView && (
-                  <>
-                    <TableHead className="text-right">Čas</TableHead>
-                    <TableHead className="text-right">Tempo/Výkon</TableHead>
-                  </>
-                )}
-                <TableHead className="text-center">RPE</TableHead>
-                <TableHead className="max-w-[200px]">Poznámka</TableHead>
                 <TableHead className="w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -261,52 +208,31 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   {!clientId && (
                     <TableCell>{row.clientName}</TableCell>
                   )}
-                  {isStrengthView && row.type === 'strength' && (
+                  {isTimeBased ? (
+                    <>
+                      <TableCell className="text-right font-medium">
+                        {row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                        {row.notes || '-'}
+                      </TableCell>
+                    </>
+                  ) : (
                     <>
                       <TableCell className="text-right text-muted-foreground">
-                        {row.sets}×{row.reps}
+                        {row.sets && row.reps ? `${row.sets}×${row.reps}` : '-'}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {row.weight ? `${row.weight} kg` : '-'}
+                        {row.weight ? `${row.weight} kg` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {row.volume ? `${row.volume} kg` : '-'}
                       </TableCell>
-                    </>
-                  )}
-                  {isStrengthView && row.type === 'cardio' && (
-                    <>
-                      <TableCell className="text-right">-</TableCell>
-                      <TableCell className="text-right">-</TableCell>
-                      <TableCell className="text-right">-</TableCell>
-                    </>
-                  )}
-                  {isCardioView && row.type === 'cardio' && (
-                    <>
-                      <TableCell className="text-right text-muted-foreground">
-                        {row.duration ? `${Math.floor(row.duration)}:${String(Math.round((row.duration % 1) * 60)).padStart(2, '0')}` : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {row.pace ? `${row.pace.toFixed(2)} min/km` : row.watts ? `${row.watts} W` : '-'}
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                        {row.notes || '-'}
                       </TableCell>
                     </>
                   )}
-                  {isCardioView && row.type === 'strength' && (
-                    <>
-                      <TableCell className="text-right">-</TableCell>
-                      <TableCell className="text-right">-</TableCell>
-                    </>
-                  )}
-                  <TableCell className="text-center">
-                    {row.rpe ? (
-                      <Badge variant="secondary" className="text-muted-foreground">
-                        {row.rpe}
-                      </Badge>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
-                    {row.notes || '-'}
-                  </TableCell>
                   <TableCell>
                     <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   </TableCell>
@@ -320,7 +246,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <span className="text-sm text-muted-foreground">
-              {data.length} záznamů celkem
+              {data.rows.length} záznamů celkem
             </span>
             <div className="flex items-center gap-2">
               <Button

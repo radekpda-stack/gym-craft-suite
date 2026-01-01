@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, AreaChart, Area } from 'recharts';
-import { TrendingUp, Loader2, Activity } from 'lucide-react';
+import { TrendingUp, Loader2, Activity, Timer } from 'lucide-react';
 import { format, subDays, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -29,6 +29,12 @@ const COLORS = [
   'hsl(var(--chart-3))',
 ];
 
+function formatTimeDisplay(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: ExerciseProgressChartProps) {
   const [period, setPeriod] = useState('90');
 
@@ -37,42 +43,43 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(period));
 
-      // Fetch strength data (exercise_entries)
-      let strengthQuery = supabase
+      // First, get exercise info to determine if it's time-based
+      const { data: exercise } = await supabase
+        .from('exercises')
+        .select('is_time_based, category')
+        .eq('id', exerciseId)
+        .single();
+
+      const isTimeBased = exercise?.is_time_based || 
+        exercise?.category === 'cardio' || 
+        exercise?.category === 'conditioning';
+
+      // Fetch all data from exercise_entries (includes both strength and time-based)
+      let query = supabase
         .from('exercise_entries')
-        .select('weight_kg, reps, sets, date, client_id, clients(name)')
+        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, clients(name)')
         .eq('exercise_id', exerciseId)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date');
 
       if (clientId) {
-        strengthQuery = strengthQuery.eq('client_id', clientId);
+        query = query.eq('client_id', clientId);
       }
 
-      const { data: strengthEntries } = await strengthQuery;
+      const { data: entries } = await query;
 
-      // Fetch cardio data
-      let cardioQuery = supabase
-        .from('cardio_entries')
-        .select('duration_seconds, distance_meters, avg_watts, avg_speed_kmh, date, client_id, clients(name)')
-        .eq('exercise_id', exerciseId)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .order('date');
-
-      if (clientId) {
-        cardioQuery = cardioQuery.eq('client_id', clientId);
-      }
-
-      const { data: cardioEntries } = await cardioQuery;
-
-      // Process strength data
-      const strengthData = (strengthEntries || []).map(entry => {
+      // Process entries
+      const processedData = (entries || []).map(entry => {
         const weight = entry.weight_kg || 0;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
+        const timeSeconds = entry.time_seconds;
+        
         // Brzycki formula for 1RM estimate
-        const estimated1RM = reps > 0 && reps < 15 ? Math.round(weight * (36 / (37 - reps))) : null;
+        const estimated1RM = reps > 0 && reps < 15 && weight > 0 
+          ? Math.round(weight * (36 / (37 - reps))) 
+          : null;
 
         return {
           date: entry.date,
@@ -80,33 +87,23 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           weight,
           volume,
           estimated1RM,
+          timeSeconds,
+          timeFormatted: timeSeconds ? formatTimeDisplay(timeSeconds) : null,
           clientName: (entry.clients as any)?.name,
+          isPR: entry.is_pr,
         };
       });
 
-      // Process cardio data
-      const cardioData = (cardioEntries || []).map(entry => {
-        const distance = entry.distance_meters ? entry.distance_meters / 1000 : 0; // km
-        const duration = entry.duration_seconds ? entry.duration_seconds / 60 : 0; // min
-        const pace = distance > 0 && duration > 0 ? duration / distance : null; // min/km
-        
-        return {
-          date: entry.date,
-          dateLabel: format(new Date(entry.date), 'd.M', { locale: cs }),
-          distance,
-          duration,
-          pace,
-          watts: entry.avg_watts,
-          speed: entry.avg_speed_kmh,
-          clientName: (entry.clients as any)?.name,
-        };
-      });
+      // Separate strength and time data
+      const strengthData = processedData.filter(d => d.weight > 0);
+      const timeData = processedData.filter(d => d.timeSeconds && d.timeSeconds > 0);
 
       return {
         strengthData,
-        cardioData,
+        timeData,
         hasStrength: strengthData.length > 0,
-        hasCardio: cardioData.length > 0,
+        hasTime: timeData.length > 0,
+        isTimeBased,
       };
     },
     enabled: !!exerciseId,
@@ -122,7 +119,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     );
   }
 
-  const hasData = data?.hasStrength || data?.hasCardio;
+  const hasData = data?.hasStrength || data?.hasTime;
 
   if (!hasData) {
     return (
@@ -152,6 +149,10 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     );
   }
 
+  // Determine what to show based on exercise type and available data
+  const showStrength = !data.isTimeBased && data.hasStrength;
+  const showTime = (data.isTimeBased || exerciseType === 'cardio') && data.hasTime;
+
   return (
     <div className="space-y-4">
       {/* Period selector */}
@@ -168,8 +169,75 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         </Select>
       </div>
 
+      {/* Time-based charts (for cardio exercises) */}
+      {showTime && (
+        <Card className="analytics-chart">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Timer className="h-5 w-5 text-primary" />
+                Čas × datum
+              </CardTitle>
+              <StatInfoTooltip
+                title="Vývoj času"
+                description="Graf zobrazuje vývoj času v průběhu tréninků. Nižší čas = lepší výkon."
+                calculation="Každý bod představuje zaznamenaný čas."
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.timeData}>
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis 
+                    tick={{ fontSize: 11 }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tickFormatter={(v) => formatTimeDisplay(v)}
+                    reversed // Lower time is better, so reverse axis
+                    domain={['dataMin - 10', 'dataMax + 10']}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number) => [formatTimeDisplay(value), 'Čas']}
+                    labelFormatter={(label) => `Datum: ${label}`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="timeSeconds" 
+                    stroke={COLORS[0]} 
+                    strokeWidth={2} 
+                    dot={(props) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.isPR) {
+                        return (
+                          <circle 
+                            cx={cx} 
+                            cy={cy} 
+                            r={6} 
+                            fill={COLORS[0]} 
+                            stroke="hsl(var(--background))" 
+                            strokeWidth={2}
+                          />
+                        );
+                      }
+                      return <circle cx={cx} cy={cy} r={3} fill={COLORS[0]} />;
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Strength charts */}
-      {data?.hasStrength && (exerciseType === 'strength' || exerciseType === 'mixed') && (
+      {showStrength && (
         <>
           {/* Weight over time */}
           <Card className="analytics-chart">
@@ -286,148 +354,6 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
               </CardContent>
             </Card>
           )}
-        </>
-      )}
-
-      {/* Cardio charts */}
-      {data?.hasCardio && (exerciseType === 'cardio' || exerciseType === 'mixed') && (
-        <>
-          {/* Pace / Speed over time */}
-          <Card className="analytics-chart">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Tempo × čas
-                </CardTitle>
-                <StatInfoTooltip
-                  title="Tempo"
-                  description="Vývoj tempa nebo rychlosti v čase."
-                  calculation="Tempo = čas / vzdálenost (min/km)"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.cardioData}>
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis 
-                      tick={{ fontSize: 11 }} 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tickFormatter={(v) => data.cardioData[0]?.pace ? `${v.toFixed(1)} min/km` : `${v} km/h`}
-                      reversed={!!data.cardioData[0]?.pace}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [
-                        data.cardioData[0]?.pace ? `${value.toFixed(2)} min/km` : `${value} km/h`,
-                        data.cardioData[0]?.pace ? 'Tempo' : 'Rychlost'
-                      ]}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey={data.cardioData[0]?.pace ? 'pace' : 'speed'} 
-                      stroke={COLORS[0]} 
-                      strokeWidth={2} 
-                      dot={{ r: 3 }} 
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Power over time (if available) */}
-          {data.cardioData.some(d => d.watts) && (
-            <Card className="analytics-chart">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Activity className="h-5 w-5 text-warning" />
-                    Výkon × čas
-                  </CardTitle>
-                  <StatInfoTooltip
-                    title="Výkon"
-                    description="Vývoj průměrného výkonu ve wattech."
-                    calculation="Průměrný výkon za celou aktivitu."
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data.cardioData.filter(d => d.watts)}>
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v} W`} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--popover))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value} W`, 'Výkon']}
-                      />
-                      <defs>
-                        <linearGradient id="wattsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={COLORS[2]} stopOpacity={0.3} />
-                          <stop offset="100%" stopColor={COLORS[2]} stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="watts" stroke={COLORS[2]} fill="url(#wattsGradient)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Distance over time */}
-          <Card className="analytics-chart">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <TrendingUp className="h-5 w-5 text-success" />
-                  Vzdálenost × čas
-                </CardTitle>
-                <StatInfoTooltip
-                  title="Vzdálenost"
-                  description="Vývoj uběhnuté/najeté vzdálenosti."
-                  calculation="Celková vzdálenost za aktivitu v km."
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.cardioData}>
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v} km`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value.toFixed(2)} km`, 'Vzdálenost']}
-                    />
-                    <defs>
-                      <linearGradient id="distanceGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={COLORS[1]} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={COLORS[1]} stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="distance" stroke={COLORS[1]} fill="url(#distanceGradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
         </>
       )}
     </div>
