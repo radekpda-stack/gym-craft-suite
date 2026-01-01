@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy } from 'lucide-react';
+import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,10 +26,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Slider } from '@/components/ui/slider';
 import { useClients } from '@/hooks/useClients';
 import { useExercises } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { cn } from '@/lib/utils';
+import { detectExerciseMetricCategory, getRpeBgColor } from '@/lib/exerciseMetrics';
 
 const formSchema = z.object({
   client_id: z.string().min(1, 'Vyberte klienta'),
@@ -40,6 +43,20 @@ const formSchema = z.object({
   sets: z.number().min(1).default(1),
   time_seconds: z.number().nullable(),
   notes: z.string().optional(),
+  // Extended metrics
+  distance_meters: z.number().nullable().optional(),
+  avg_watts: z.number().nullable().optional(),
+  max_watts: z.number().nullable().optional(),
+  pace_sec_per_500m: z.number().nullable().optional(),
+  pace_sec_per_km: z.number().nullable().optional(),
+  cadence_spm: z.number().nullable().optional(),
+  strokes: z.number().nullable().optional(),
+  incline_percent: z.number().nullable().optional(),
+  avg_speed_kmh: z.number().nullable().optional(),
+  calories_kcal: z.number().nullable().optional(),
+  rpe: z.number().min(1).max(10).nullable().optional(),
+  level: z.number().nullable().optional(),
+  resistance: z.number().nullable().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -61,6 +78,7 @@ export function QuickLogDialog({
   const { exercises } = useExercises();
   const { createEntry } = useExerciseEntries();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const activeClients = clients.filter(c => !c.is_archived);
   const activeExercises = exercises.filter(e => !e.is_archived);
@@ -76,12 +94,36 @@ export function QuickLogDialog({
       sets: 1,
       time_seconds: null,
       notes: '',
+      distance_meters: null,
+      avg_watts: null,
+      max_watts: null,
+      pace_sec_per_500m: null,
+      pace_sec_per_km: null,
+      cadence_spm: null,
+      strokes: null,
+      incline_percent: null,
+      avg_speed_kmh: null,
+      calories_kcal: null,
+      rpe: null,
+      level: null,
+      resistance: null,
     },
   });
 
   // Reset when dialog opens with pre-selected values
   useEffect(() => {
     if (open) {
+      const selectedExercise = exercises.find(e => e.id === exerciseId);
+      const category = selectedExercise 
+        ? detectExerciseMetricCategory(selectedExercise.name_cs || selectedExercise.name || '', selectedExercise.category)
+        : 'strength';
+      
+      // Set default distance for rower/skierg
+      let defaultDistance: number | null = null;
+      if (category === 'rower' || category === 'skierg') {
+        defaultDistance = 500;
+      }
+      
       form.reset({
         client_id: clientId || '',
         exercise_id: exerciseId || '',
@@ -91,19 +133,52 @@ export function QuickLogDialog({
         sets: 1,
         time_seconds: null,
         notes: '',
+        distance_meters: defaultDistance,
+        avg_watts: null,
+        max_watts: null,
+        pace_sec_per_500m: null,
+        pace_sec_per_km: null,
+        cadence_spm: null,
+        strokes: null,
+        incline_percent: null,
+        avg_speed_kmh: null,
+        calories_kcal: null,
+        rpe: null,
+        level: null,
+        resistance: null,
       });
+      setShowAdvanced(false);
     }
-  }, [open, clientId, exerciseId, form]);
+  }, [open, clientId, exerciseId, form, exercises]);
 
   const selectedExercise = exercises.find(e => e.id === form.watch('exercise_id'));
   const isTimeBased = selectedExercise?.is_time_based;
   const isCardio = selectedExercise?.category?.toLowerCase().includes('kardio') || 
                    selectedExercise?.category?.toLowerCase().includes('cardio');
+  
+  const exerciseCategory = selectedExercise 
+    ? detectExerciseMetricCategory(selectedExercise.name_cs || selectedExercise.name || '', selectedExercise.category)
+    : 'strength';
+
+  const showCardioMetrics = exerciseCategory !== 'strength';
+  const rpeValue = form.watch('rpe');
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
       const exercise = exercises.find(e => e.id === data.exercise_id);
+      
+      // Auto-calculate pace if we have time and distance
+      let pace500m = data.pace_sec_per_500m;
+      let paceKm = data.pace_sec_per_km;
+      
+      if (data.time_seconds && data.distance_meters && !pace500m && !paceKm) {
+        if (exerciseCategory === 'rower' || exerciseCategory === 'skierg') {
+          pace500m = (data.time_seconds / data.distance_meters) * 500;
+        } else if (exerciseCategory === 'treadmill') {
+          paceKm = (data.time_seconds / data.distance_meters) * 1000;
+        }
+      }
       
       await createEntry.mutateAsync({
         client_id: data.client_id,
@@ -117,7 +192,21 @@ export function QuickLogDialog({
         is_bodyweight: exercise?.is_bodyweight || false,
         tempo: null,
         notes: data.notes || null,
-        is_pr: false, // Will be calculated by the mutation
+        is_pr: false,
+        // Extended metrics
+        distance_meters: data.distance_meters ?? null,
+        avg_watts: data.avg_watts ?? null,
+        max_watts: data.max_watts ?? null,
+        pace_sec_per_500m: pace500m ?? null,
+        pace_sec_per_km: paceKm ?? null,
+        cadence_spm: data.cadence_spm ?? null,
+        strokes: data.strokes ?? null,
+        incline_percent: data.incline_percent ?? null,
+        avg_speed_kmh: data.avg_speed_kmh ?? null,
+        calories_kcal: data.calories_kcal ?? null,
+        rpe: data.rpe ?? null,
+        level: data.level ?? null,
+        resistance: data.resistance ?? null,
       });
 
       onOpenChange(false);
@@ -146,7 +235,7 @@ export function QuickLogDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-primary" />
@@ -189,7 +278,22 @@ export function QuickLogDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cvik *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={(val) => {
+                    field.onChange(val);
+                    // Update default distance when exercise changes
+                    const newExercise = exercises.find(e => e.id === val);
+                    if (newExercise) {
+                      const newCategory = detectExerciseMetricCategory(
+                        newExercise.name_cs || newExercise.name || '', 
+                        newExercise.category
+                      );
+                      if (newCategory === 'rower' || newCategory === 'skierg') {
+                        form.setValue('distance_meters', 500);
+                      } else {
+                        form.setValue('distance_meters', null);
+                      }
+                    }
+                  }}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Vyberte cvik" />
@@ -248,47 +352,288 @@ export function QuickLogDialog({
             />
 
             {/* Metrics - conditional based on exercise type */}
-            {(isTimeBased || isCardio) ? (
+            {(isTimeBased || isCardio || showCardioMetrics) ? (
               /* Time-based / Cardio */
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="time_seconds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          <Timer className="w-3 h-3" />
+                          Čas (mm:ss) *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="3:45"
+                            value={formatTime(field.value)}
+                            onChange={(e) => field.onChange(parseTimeInput(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="distance_meters"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vzdálenost (m)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="500"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* RPE Slider */}
                 <FormField
                   control={form.control}
-                  name="time_seconds"
+                  name="rpe"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        <Timer className="w-3 h-3" />
-                        Čas (mm:ss)
+                      <FormLabel className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Activity className="w-3 h-3" />
+                          RPE (vnímaná náročnost)
+                        </span>
+                        {field.value && (
+                          <Badge className={cn('text-xs', getRpeBgColor(field.value))}>
+                            {field.value}/10
+                          </Badge>
+                        )}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="3:45"
-                          value={formatTime(field.value)}
-                          onChange={(e) => field.onChange(parseTimeInput(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sets"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Počet pokusů</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
+                        <Slider
                           min={1}
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          max={10}
+                          step={1}
+                          value={field.value ? [field.value] : [5]}
+                          onValueChange={([val]) => field.onChange(val)}
+                          className="py-2"
                         />
                       </FormControl>
-                      <FormMessage />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Lehké</span>
+                        <span>Maximální</span>
+                      </div>
                     </FormItem>
                   )}
                 />
+
+                {/* Advanced Metrics Collapsible */}
+                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-between text-muted-foreground hover:text-foreground"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        Rozšířené metriky
+                      </span>
+                      <ChevronDown className={cn('w-4 h-4 transition-transform', showAdvanced && 'rotate-180')} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-4">
+                    {/* Power metrics */}
+                    {(exerciseCategory === 'rower' || exerciseCategory === 'skierg' || exerciseCategory === 'bike') && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="avg_watts"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Prům. výkon (W)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="180"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="max_watts"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Max. výkon (W)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="250"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Cadence / Strokes */}
+                    {(exerciseCategory === 'rower' || exerciseCategory === 'skierg') && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="cadence_spm"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Kadence (spm)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="28"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="strokes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Záběry</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="45"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Treadmill specific */}
+                    {exerciseCategory === 'treadmill' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="avg_speed_kmh"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Rychlost (km/h)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  placeholder="10.5"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="incline_percent"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sklon (%)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="2.0"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* SkiErg specific */}
+                    {exerciseCategory === 'skierg' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="level"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Úroveň (1-10)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={10}
+                                  placeholder="5"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="resistance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Odpor (1-3)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={3}
+                                  placeholder="2"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Calories for all cardio */}
+                    <FormField
+                      control={form.control}
+                      name="calories_kcal"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kalorie (kcal)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="85"
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             ) : (
               /* Strength */

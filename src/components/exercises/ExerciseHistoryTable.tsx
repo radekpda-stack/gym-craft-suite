@@ -11,6 +11,7 @@ import { History, Loader2, ChevronLeft, ChevronRight, Trophy, ExternalLink } fro
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import { detectExerciseMetricCategory, getPerformanceDisplay, getRpeBgColor } from '@/lib/exerciseMetrics';
 
 interface ExerciseHistoryTableProps {
   exerciseId: string;
@@ -59,6 +60,12 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           is_pr,
           client_id,
           training_type,
+          avg_watts,
+          pace_sec_per_500m,
+          pace_sec_per_km,
+          avg_speed_kmh,
+          rpe,
+          distance_meters,
           clients(id, name)
         `)
         .eq('exercise_id', exerciseId);
@@ -77,6 +84,17 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
 
       const { data: exerciseEntries } = await exerciseQuery;
 
+      // Get exercise name for category detection
+      const { data: exerciseData } = await supabase
+        .from('exercises')
+        .select('name, name_cs, category')
+        .eq('id', exerciseId)
+        .single();
+
+      const metricCategory = exerciseData 
+        ? detectExerciseMetricCategory(exerciseData.name_cs || exerciseData.name || '', exerciseData.category)
+        : 'strength';
+
       // Process exercise entries
       const rows = (exerciseEntries || []).map(entry => {
         const weight = entry.weight_kg || 0;
@@ -88,6 +106,16 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         // Determine entry type
         const hasTime = timeSeconds && timeSeconds > 0;
         const hasWeight = weight > 0;
+
+        // Get performance display using fallback logic
+        const performanceDisplay = getPerformanceDisplay({
+          avg_watts: (entry as any).avg_watts,
+          pace_sec_per_500m: (entry as any).pace_sec_per_500m,
+          pace_sec_per_km: (entry as any).pace_sec_per_km,
+          avg_speed_kmh: (entry as any).avg_speed_kmh,
+          time_seconds: entry.time_seconds,
+          distance_meters: (entry as any).distance_meters,
+        }, metricCategory);
 
         return {
           id: entry.id,
@@ -103,10 +131,12 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           notes: entry.notes,
           isPR: entry.is_pr,
           trainingType: entry.training_type,
+          rpe: (entry as any).rpe,
+          performanceDisplay,
         };
       });
 
-      return { rows, isTimeBased };
+      return { rows, isTimeBased, metricCategory };
     },
     enabled: !!exerciseId,
   });

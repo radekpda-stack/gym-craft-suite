@@ -17,6 +17,25 @@ export interface ExerciseEntry {
   tempo: string | null;
   notes: string | null;
   is_pr: boolean;
+  distance_meters: number | null;
+  // Extended metrics
+  avg_watts: number | null;
+  max_watts: number | null;
+  avg_speed_kmh: number | null;
+  max_speed_kmh: number | null;
+  pace_sec_per_500m: number | null;
+  pace_sec_per_km: number | null;
+  cadence_spm: number | null;
+  strokes: number | null;
+  avg_heart_rate: number | null;
+  max_heart_rate: number | null;
+  rpe: number | null;
+  leg_fatigue: boolean;
+  is_test: boolean;
+  incline_percent: number | null;
+  level: number | null;
+  resistance: number | null;
+  calories_kcal: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,8 +71,42 @@ export function useExerciseEntries(clientId?: string) {
     },
   });
 
+  // Define input type with optional extended fields
+  type CreateEntryInput = {
+    client_id: string;
+    exercise_id: string | null;
+    exercise_name: string;
+    date: string;
+    sets: number;
+    reps: number | null;
+    weight_kg: number | null;
+    is_bodyweight: boolean;
+    time_seconds: number | null;
+    tempo: string | null;
+    notes: string | null;
+    is_pr: boolean;
+    distance_meters?: number | null;
+    avg_watts?: number | null;
+    max_watts?: number | null;
+    avg_speed_kmh?: number | null;
+    max_speed_kmh?: number | null;
+    pace_sec_per_500m?: number | null;
+    pace_sec_per_km?: number | null;
+    cadence_spm?: number | null;
+    strokes?: number | null;
+    avg_heart_rate?: number | null;
+    max_heart_rate?: number | null;
+    rpe?: number | null;
+    leg_fatigue?: boolean;
+    is_test?: boolean;
+    incline_percent?: number | null;
+    level?: number | null;
+    resistance?: number | null;
+    calories_kcal?: number | null;
+  };
+
   const createEntry = useMutation({
-    mutationFn: async (entry: Omit<ExerciseEntry, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    mutationFn: async (entry: CreateEntryInput) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
