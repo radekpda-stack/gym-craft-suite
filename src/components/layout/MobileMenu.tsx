@@ -117,8 +117,12 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   }, [isModuleEnabled]);
 
   const handleNavigation = (to: string) => {
-    navigate(to);
+    // Close menu first, then navigate after a brief delay to ensure smooth animation
     onClose();
+    // Small delay to allow menu close animation to start
+    setTimeout(() => {
+      navigate(to);
+    }, 50);
   };
 
   const handleSignOut = async () => {
