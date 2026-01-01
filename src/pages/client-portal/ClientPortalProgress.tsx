@@ -18,6 +18,7 @@ import { ProgressSummaryCards } from '@/components/client-portal/progress/Progre
 import { AddMeasurementDialog } from '@/components/client-portal/progress/AddMeasurementDialog';
 import { AddCardioTimeDialog } from '@/components/client-portal/progress/AddCardioTimeDialog';
 import { ReportPerformanceDialog } from '@/components/client-portal/progress/ReportPerformanceDialog';
+import { ClientPortalPRsCard } from '@/components/client-portal/progress/ClientPortalPRsCard';
 import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
 import { Bike, PersonStanding } from 'lucide-react';
 
@@ -123,6 +124,9 @@ export default function ClientPortalProgress() {
         </div>
         <PeriodFilter value={period} onChange={setPeriod} />
       </div>
+
+      {/* Personal Records */}
+      <ClientPortalPRsCard />
 
       {/* Summary cards */}
       {(showWeight || showBodyFat || showExercises) && (
