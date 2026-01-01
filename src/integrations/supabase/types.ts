@@ -475,6 +475,9 @@ export type Database = {
           created_by_user_id: string
           description: string | null
           end_at: string
+          exercise_id: string | null
+          fixed_distance_m: number | null
+          fixed_time_s: number | null
           id: string
           instructions: string | null
           primary_metric: string
@@ -495,6 +498,9 @@ export type Database = {
           created_by_user_id: string
           description?: string | null
           end_at: string
+          exercise_id?: string | null
+          fixed_distance_m?: number | null
+          fixed_time_s?: number | null
           id?: string
           instructions?: string | null
           primary_metric?: string
@@ -515,6 +521,9 @@ export type Database = {
           created_by_user_id?: string
           description?: string | null
           end_at?: string
+          exercise_id?: string | null
+          fixed_distance_m?: number | null
+          fixed_time_s?: number | null
           id?: string
           instructions?: string | null
           primary_metric?: string
@@ -529,7 +538,15 @@ export type Database = {
           updated_at?: string | null
           vod_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "challenges_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_access_tokens: {
         Row: {
@@ -2137,6 +2154,8 @@ export type Database = {
           resistance: number | null
           rpe: number | null
           sets: number
+          source: string | null
+          status: string | null
           strokes: number | null
           tempo: string | null
           time_ms: number | null
@@ -2146,6 +2165,8 @@ export type Database = {
           training_type: string | null
           updated_at: string
           user_id: string
+          verified_at: string | null
+          verified_by_user_id: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -2178,6 +2199,8 @@ export type Database = {
           resistance?: number | null
           rpe?: number | null
           sets?: number
+          source?: string | null
+          status?: string | null
           strokes?: number | null
           tempo?: string | null
           time_ms?: number | null
@@ -2187,6 +2210,8 @@ export type Database = {
           training_type?: string | null
           updated_at?: string
           user_id: string
+          verified_at?: string | null
+          verified_by_user_id?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -2219,6 +2244,8 @@ export type Database = {
           resistance?: number | null
           rpe?: number | null
           sets?: number
+          source?: string | null
+          status?: string | null
           strokes?: number | null
           tempo?: string | null
           time_ms?: number | null
@@ -2228,6 +2255,8 @@ export type Database = {
           training_type?: string | null
           updated_at?: string
           user_id?: string
+          verified_at?: string | null
+          verified_by_user_id?: string | null
           weight_kg?: number | null
         }
         Relationships: [
