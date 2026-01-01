@@ -18,7 +18,7 @@ export function EnergyRating({ value, onChange, label }: EnergyRatingProps) {
   return (
     <div className="space-y-2">
       {label && <span className="text-sm text-muted-foreground">{label}</span>}
-      <div className="flex gap-1">
+      <div className="flex gap-1.5 flex-wrap">
         {ENERGY_EMOJIS.map((energy) => (
           <button
             key={energy.value}
@@ -26,10 +26,10 @@ export function EnergyRating({ value, onChange, label }: EnergyRatingProps) {
             onClick={() => onChange(energy.value)}
             title={energy.label}
             className={cn(
-              "flex-1 p-2 rounded-md text-xl transition-all",
+              "w-10 h-10 flex items-center justify-center rounded-md text-lg transition-all touch-target",
               value === energy.value 
-                ? "bg-primary/20 scale-110" 
-                : "hover:bg-muted opacity-60 hover:opacity-100"
+                ? "bg-primary/20 ring-2 ring-primary/50" 
+                : "bg-muted/50 hover:bg-muted opacity-70 hover:opacity-100"
             )}
           >
             {energy.emoji}
