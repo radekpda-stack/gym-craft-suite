@@ -152,7 +152,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         <>
           {/* Backdrop */}
           <motion.div 
-            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-md lg:hidden"
+            className="fixed inset-0 z-[70] bg-background/60 backdrop-blur-md lg:hidden"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -162,7 +162,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           
           {/* Menu Panel */}
           <motion.div 
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-[300px] bg-background/95 backdrop-blur-xl border-l border-border/30 shadow-2xl lg:hidden"
+            className="fixed inset-y-0 right-0 z-[70] w-full max-w-[300px] bg-background/95 backdrop-blur-xl border-l border-border/30 shadow-2xl lg:hidden"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
