@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   ClipboardList,
-  Dumbbell,
+  Users,
   Calendar,
   MoreHorizontal,
 } from 'lucide-react';
@@ -13,8 +13,8 @@ import { MobileMenu } from './MobileMenu';
 const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Domů' },
   { to: '/calendar', icon: Calendar, label: 'Kalendář' },
+  { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/trainings', icon: ClipboardList, label: 'Tréninky' },
-  { to: '/exercises', icon: Dumbbell, label: 'Cviky' },
 ];
 
 export function MobileNav() {

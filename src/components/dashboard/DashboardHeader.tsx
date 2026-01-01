@@ -11,9 +11,9 @@ interface DashboardHeaderProps {
 }
 
 const statusColors: Record<DayStatus, string> = {
-  ok: 'bg-emerald-500',
-  warning: 'bg-amber-400',
-  critical: 'bg-red-500',
+  ok: 'bg-success',
+  warning: 'bg-warning',
+  critical: 'bg-destructive',
 };
 
 const statusGlow: Record<DayStatus, string> = {
