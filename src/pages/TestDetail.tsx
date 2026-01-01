@@ -39,7 +39,7 @@ export default function TestDetail() {
   const definition = definitions?.find(d => d.id === id);
   
   const { data: allSessions, isLoading } = useTestSessions(clientId || undefined, id);
-  const stats = useTestStats(id || '', clientId || '', allSessions || []);
+  const stats = useTestStats(allSessions, definition);
 
   // Filter sessions for display
   const displaySessions = useMemo(() => {
