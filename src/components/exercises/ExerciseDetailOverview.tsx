@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText } from 'lucide-react';
+import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText, Zap } from 'lucide-react';
+import { formatPace500m } from '@/lib/exerciseMetrics';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -223,29 +224,71 @@ export function ExerciseDetailOverview({
                 </div>
               </Card>
 
-              {/* Total Entries */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span className="text-xs">Záznamy</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">{stats?.totalTimeEntries || stats?.totalEntries || 0}</span>
-                </div>
-              </Card>
+              {/* Best Watts - only show if data exists */}
+              {stats?.bestWatts ? (
+                <Card className="p-3">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Zap className="w-3.5 h-3.5 text-warning" />
+                    <span className="text-xs">Max výkon</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold">{stats.bestWatts}</span>
+                    <span className="text-xs text-muted-foreground">W</span>
+                  </div>
+                  {stats.averageWatts && (
+                    <span className="text-xs text-muted-foreground">Ø {stats.averageWatts} W</span>
+                  )}
+                </Card>
+              ) : stats?.bestPace500m ? (
+                <Card className="p-3">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Gauge className="w-3.5 h-3.5 text-success" />
+                    <span className="text-xs">Nejlepší tempo</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold">{formatPace500m(stats.bestPace500m)}</span>
+                  </div>
+                  {stats.averagePace500m && (
+                    <span className="text-xs text-muted-foreground">Ø {formatPace500m(stats.averagePace500m)}</span>
+                  )}
+                </Card>
+              ) : (
+                <Card className="p-3">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span className="text-xs">Záznamy</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold">{stats?.totalTimeEntries || stats?.totalEntries || 0}</span>
+                  </div>
+                </Card>
+              )}
 
-              {/* PR Count */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">PR záznamy</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.prHistory?.length || 0}
-                  </span>
-                </div>
-              </Card>
+              {/* PR Count or Cadence */}
+              {stats?.averageCadence ? (
+                <Card className="p-3">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span className="text-xs">Prům. kadence</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold">{stats.averageCadence}</span>
+                    <span className="text-xs text-muted-foreground">spm</span>
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-3">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Trophy className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs">PR záznamy</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold">
+                      {stats?.prHistory?.length || 0}
+                    </span>
+                  </div>
+                </Card>
+              )}
             </>
           )}
         </div>

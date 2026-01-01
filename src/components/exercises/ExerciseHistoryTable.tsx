@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { History, Loader2, ChevronLeft, ChevronRight, Trophy, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -209,14 +210,17 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                 {isTimeBased ? (
                   <>
                     <TableHead className="text-right">Čas</TableHead>
-                    <TableHead className="max-w-[200px]">Poznámka</TableHead>
+                    <TableHead className="text-right">Tempo/Výkon</TableHead>
+                    <TableHead className="text-center w-[50px]">RPE</TableHead>
+                    <TableHead className="max-w-[150px]">Poznámka</TableHead>
                   </>
                 ) : (
                   <>
                     <TableHead className="text-right">Série</TableHead>
                     <TableHead className="text-right">Výkon</TableHead>
                     <TableHead className="text-right">Objem</TableHead>
-                    <TableHead className="max-w-[200px]">Poznámka</TableHead>
+                    <TableHead className="text-center w-[50px]">RPE</TableHead>
+                    <TableHead className="max-w-[150px]">Poznámka</TableHead>
                   </>
                 )}
                 <TableHead className="w-[40px]"></TableHead>
@@ -243,7 +247,19 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       <TableCell className="text-right font-medium">
                         {row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                      <TableCell className="text-right text-sm">
+                        {row.performanceDisplay?.value 
+                          ? `${row.performanceDisplay.value}${row.performanceDisplay.unit ? ` ${row.performanceDisplay.unit}` : ''}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {row.rpe ? (
+                          <Badge className={cn("text-xs px-1.5 py-0.5", getRpeBgColor(row.rpe))}>
+                            {row.rpe}
+                          </Badge>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[150px] truncate text-muted-foreground text-sm">
                         {row.notes || '-'}
                       </TableCell>
                     </>
@@ -258,7 +274,14 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       <TableCell className="text-right text-muted-foreground">
                         {row.volume ? `${row.volume} kg` : '-'}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                      <TableCell className="text-center">
+                        {row.rpe ? (
+                          <Badge className={cn("text-xs px-1.5 py-0.5", getRpeBgColor(row.rpe))}>
+                            {row.rpe}
+                          </Badge>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[150px] truncate text-muted-foreground text-sm">
                         {row.notes || '-'}
                       </TableCell>
                     </>

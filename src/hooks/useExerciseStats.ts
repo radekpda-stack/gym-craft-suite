@@ -40,6 +40,12 @@ export interface ExerciseStats {
   bestTimeClient: string | null;
   averageTime: number | null; // seconds
   totalTimeEntries: number;
+  // Extended cardio stats
+  averageWatts: number | null;
+  bestWatts: number | null;
+  averagePace500m: number | null;
+  bestPace500m: number | null;
+  averageCadence: number | null;
   // Common
   clientPerformances: ClientPerformance[];
   prHistory: PRRecord[];
@@ -58,7 +64,7 @@ export function useExerciseStats(exerciseId: string | null) {
     queryFn: async (): Promise<ExerciseStats | null> => {
       if (!exerciseId) return null;
 
-      // Fetch all exercise entries for this exercise including time_seconds
+      // Fetch all exercise entries for this exercise including time_seconds and extended metrics
       const { data: entries, error: entriesError } = await supabase
         .from('exercise_entries')
         .select(`
@@ -70,6 +76,11 @@ export function useExerciseStats(exerciseId: string | null) {
           time_seconds,
           is_pr,
           date,
+          avg_watts,
+          max_watts,
+          pace_sec_per_500m,
+          pace_sec_per_km,
+          cadence_spm,
           clients!inner(id, name)
         `)
         .eq('exercise_id', exerciseId)
@@ -106,6 +117,11 @@ export function useExerciseStats(exerciseId: string | null) {
           bestTimeClient: null,
           averageTime: null,
           totalTimeEntries: 0,
+          averageWatts: null,
+          bestWatts: null,
+          averagePace500m: null,
+          bestPace500m: null,
+          averageCadence: null,
           clientPerformances: [],
           prHistory: [],
           mostActiveClient: null,
@@ -245,6 +261,26 @@ export function useExerciseStats(exerciseId: string | null) {
       const bestTimeEntry = entries.find((e) => e.time_seconds === bestTime);
       const bestTimeClient = bestTimeEntry ? (bestTimeEntry.clients as any)?.name : null;
 
+      // Extended cardio stats - Watts
+      const allWatts = entries.filter((e) => (e as any).avg_watts && (e as any).avg_watts > 0).map((e) => (e as any).avg_watts as number);
+      const averageWatts = allWatts.length > 0 
+        ? Math.round(allWatts.reduce((a, b) => a + b, 0) / allWatts.length)
+        : null;
+      const bestWatts = allWatts.length > 0 ? Math.max(...allWatts) : null;
+
+      // Extended cardio stats - Pace
+      const allPaces = entries.filter((e) => (e as any).pace_sec_per_500m && (e as any).pace_sec_per_500m > 0).map((e) => (e as any).pace_sec_per_500m as number);
+      const averagePace500m = allPaces.length > 0 
+        ? Math.round(allPaces.reduce((a, b) => a + b, 0) / allPaces.length)
+        : null;
+      const bestPace500m = allPaces.length > 0 ? Math.min(...allPaces) : null;
+
+      // Extended cardio stats - Cadence
+      const allCadences = entries.filter((e) => (e as any).cadence_spm && (e as any).cadence_spm > 0).map((e) => (e as any).cadence_spm as number);
+      const averageCadence = allCadences.length > 0 
+        ? Math.round(allCadences.reduce((a, b) => a + b, 0) / allCadences.length)
+        : null;
+
       // Most active client
       let mostActiveClient: { name: string; count: number } | null = null;
       let maxCount = 0;
@@ -273,6 +309,11 @@ export function useExerciseStats(exerciseId: string | null) {
         bestTimeClient,
         averageTime,
         totalTimeEntries: allTimes.length,
+        averageWatts,
+        bestWatts,
+        averagePace500m,
+        bestPace500m,
+        averageCadence,
         clientPerformances,
         prHistory,
         mostActiveClient,
