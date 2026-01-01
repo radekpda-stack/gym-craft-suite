@@ -62,9 +62,10 @@ export default function ClientPortalAdmin() {
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           <PortalUsageStats />
-          <div className="grid lg:grid-cols-2 gap-6">
-            <PortalRecentActivity />
+          {/* Stack vertically for better readability on all devices */}
+          <div className="space-y-6">
             <ClientAccessList />
+            <PortalRecentActivity />
           </div>
         </TabsContent>
 
