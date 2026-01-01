@@ -4961,6 +4961,199 @@ export type Database = {
         }
         Relationships: []
       }
+      test_definitions: {
+        Row: {
+          category: string
+          common_mistakes: Json | null
+          comparability_rules_json: Json | null
+          created_at: string | null
+          device_family: string | null
+          equipment_setup: Json | null
+          how_to_steps: Json | null
+          id: string
+          is_active: boolean | null
+          linked_exercise_id: string | null
+          name: string
+          name_cs: string | null
+          optional_metrics_schema: Json | null
+          primary_metric_better: string
+          primary_metric_key: string
+          protocol_text: string | null
+          recommended_frequency_days: number | null
+          required_metrics_schema: Json
+          scoring_rules: Json | null
+          standardization_checklist: Json | null
+          updated_at: string | null
+          user_id: string | null
+          validity_rules: Json | null
+        }
+        Insert: {
+          category: string
+          common_mistakes?: Json | null
+          comparability_rules_json?: Json | null
+          created_at?: string | null
+          device_family?: string | null
+          equipment_setup?: Json | null
+          how_to_steps?: Json | null
+          id?: string
+          is_active?: boolean | null
+          linked_exercise_id?: string | null
+          name: string
+          name_cs?: string | null
+          optional_metrics_schema?: Json | null
+          primary_metric_better: string
+          primary_metric_key: string
+          protocol_text?: string | null
+          recommended_frequency_days?: number | null
+          required_metrics_schema?: Json
+          scoring_rules?: Json | null
+          standardization_checklist?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          validity_rules?: Json | null
+        }
+        Update: {
+          category?: string
+          common_mistakes?: Json | null
+          comparability_rules_json?: Json | null
+          created_at?: string | null
+          device_family?: string | null
+          equipment_setup?: Json | null
+          how_to_steps?: Json | null
+          id?: string
+          is_active?: boolean | null
+          linked_exercise_id?: string | null
+          name?: string
+          name_cs?: string | null
+          optional_metrics_schema?: Json | null
+          primary_metric_better?: string
+          primary_metric_key?: string
+          protocol_text?: string | null
+          recommended_frequency_days?: number | null
+          required_metrics_schema?: Json
+          scoring_rules?: Json | null
+          standardization_checklist?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          validity_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_definitions_linked_exercise_id_fkey"
+            columns: ["linked_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_sessions: {
+        Row: {
+          attachments: string[] | null
+          client_id: string
+          created_at: string | null
+          date_time: string
+          environment_json: Json | null
+          exercise_entry_id: string | null
+          id: string
+          invalid_reason: string | null
+          is_comparable: boolean
+          is_valid: boolean
+          machine_settings_json: Json | null
+          metrics_json: Json
+          non_comparable_reason: string | null
+          notes: string | null
+          quality_rating_1_5: number | null
+          rpe_1_10: number | null
+          splits_json: Json | null
+          test_definition_id: string
+          updated_at: string | null
+          user_id: string
+          warmup_done: boolean
+          warmup_notes: string | null
+          warmup_type: string[] | null
+        }
+        Insert: {
+          attachments?: string[] | null
+          client_id: string
+          created_at?: string | null
+          date_time?: string
+          environment_json?: Json | null
+          exercise_entry_id?: string | null
+          id?: string
+          invalid_reason?: string | null
+          is_comparable?: boolean
+          is_valid?: boolean
+          machine_settings_json?: Json | null
+          metrics_json?: Json
+          non_comparable_reason?: string | null
+          notes?: string | null
+          quality_rating_1_5?: number | null
+          rpe_1_10?: number | null
+          splits_json?: Json | null
+          test_definition_id: string
+          updated_at?: string | null
+          user_id: string
+          warmup_done?: boolean
+          warmup_notes?: string | null
+          warmup_type?: string[] | null
+        }
+        Update: {
+          attachments?: string[] | null
+          client_id?: string
+          created_at?: string | null
+          date_time?: string
+          environment_json?: Json | null
+          exercise_entry_id?: string | null
+          id?: string
+          invalid_reason?: string | null
+          is_comparable?: boolean
+          is_valid?: boolean
+          machine_settings_json?: Json | null
+          metrics_json?: Json
+          non_comparable_reason?: string | null
+          notes?: string | null
+          quality_rating_1_5?: number | null
+          rpe_1_10?: number | null
+          splits_json?: Json | null
+          test_definition_id?: string
+          updated_at?: string | null
+          user_id?: string
+          warmup_done?: boolean
+          warmup_notes?: string | null
+          warmup_type?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "test_sessions_exercise_entry_id_fkey"
+            columns: ["exercise_entry_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_sessions_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "test_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_availability: {
         Row: {
           created_at: string
