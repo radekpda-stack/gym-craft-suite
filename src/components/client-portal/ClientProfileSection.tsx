@@ -120,33 +120,32 @@ export function ClientProfileSection() {
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Birth Date */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Datum narození
-              </Label>
-              <Input
-                type="date"
-                value={formData.birth_date}
-                onChange={(e) => handleChange('birth_date', e.target.value)}
-              />
-            </div>
+          {/* Birth Date */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Datum narození
+            </Label>
+            <Input
+              type="date"
+              value={formData.birth_date}
+              onChange={(e) => handleChange('birth_date', e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
 
-            {/* Phone */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Telefon
-              </Label>
-              <Input
-                type="tel"
-                placeholder="+420 123 456 789"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-              />
-            </div>
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              Telefon
+            </Label>
+            <Input
+              type="tel"
+              placeholder="+420 123 456 789"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+            />
           </div>
 
           {/* Occupation */}
