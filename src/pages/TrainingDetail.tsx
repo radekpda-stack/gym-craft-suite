@@ -19,14 +19,15 @@ import { RatingInput } from '@/components/ui/rating-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { QuickActionsSection } from '@/components/trainings/QuickActionsSection';
 import {
   useTrainingSession,
   useUpdateTrainingSession,
   useDeleteTrainingSession,
-  useCompleteTrainingSession,
   useCancelTrainingSession,
 } from '@/hooks/useTrainingSessions';
+import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { useClient, useClients } from '@/hooks/useClients';
@@ -34,8 +35,8 @@ import { useTags } from '@/hooks/useTags';
 import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
-import { PaymentMethodSelector, PaymentOption, getPaymentStatusFromOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
-import { useSaveTrainingParticipants, useDeductParticipantsCredit, useTrainingParticipants } from '@/hooks/useTrainingParticipants';
+import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
+import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
@@ -83,13 +84,14 @@ export default function TrainingDetail() {
   const { data: feedbackRequest } = useFeedbackRequest(id);
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
-  const completeTraining = useCompleteTrainingSession();
   const cancelTraining = useCancelTrainingSession();
+  const completeTrainingAtomic = useCompleteTrainingAtomic();
   const updateTrainingTags = useUpdateTrainingSessionTags();
-  const saveParticipants = useSaveTrainingParticipants();
-  const deductParticipantsCredit = useDeductParticipantsCredit();
   const trainingPrices = useTrainingPrices();
   const { registerTrainingDeleteUndo } = useUndoTrainingDelete();
+  
+  // Submission state for double-submit protection
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Tag validation
   const currentTagIds = trainingTags.map(t => t.tag_id);
@@ -256,125 +258,80 @@ export default function TrainingDetail() {
   };
 
   const handleComplete = async () => {
-    const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
-    // For price split, use the actual sum of participant shares to ensure consistency
-    // This fixes the bug where totalPrice didn't match the sum of price_shares
-    const totalPrice = usePriceSplit && participantShares.length > 1
-      ? participantShares.reduce((sum, p) => sum + p.price_share, 0)
-      : getExpectedPrice();
-    const shouldDeductCredit = paymentMethod === 'credit';
-    const paymentStatus = getPaymentStatusFromOption(paymentMethod);
-    const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
+    // Prevent double-submit
+    if (isSubmitting || completeTrainingAtomic.isPending) return;
+    setIsSubmitting(true);
     
-    // Trainer summary data to save
-    const trainerSummaryData = {
-      trainer_went_well: trainerWentWell || undefined,
-      trainer_problems: trainerProblems || undefined,
-      trainer_recommendations: trainerRecommendations || undefined,
-      pain_reported: painReported,
-      pain_notes: painReported ? (painNotes || undefined) : undefined,
-    };
-    
-    if (usePriceSplit && participantShares.length > 1) {
+    try {
+      const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
+      const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
+      
       // Calculate the correct price for this participant count
       const correctPrice = getTrainingPrice(participantCount, trainingPrices);
       
-      // Normalize participant shares to match the correct price
-      // This ensures the sum of price_shares equals the expected price for the participant count
-      const currentSum = participantShares.reduce((sum, p) => sum + p.price_share, 0);
-      const normalizedParticipants = currentSum !== correctPrice
-        ? participantShares.map(p => ({
-            client_id: p.client_id,
-            price_share: Math.round((p.price_share / currentSum) * correctPrice),
-          }))
-        : participantShares.map(p => ({
-            client_id: p.client_id,
-            price_share: p.price_share,
-          }));
+      // Build normalized participants array
+      let normalizedParticipants: Array<{ client_id: string; price_share: number }>;
       
-      // Save participants and deduct credit from each
-      await saveParticipants.mutateAsync({
-        training_session_id: training.id,
-        participants: normalizedParticipants,
-      });
-      
-      // Update training status to completed with payment info and trainer summary
-      await updateTraining.mutateAsync({
-        id: training.id,
-        input: {
-          status: 'completed',
-          participant_count: participantCount,
-          subjective_rating: completeRating || undefined,
-          notes: completeNotes || undefined,
-          payment_status: paymentStatus,
-          final_price: correctPrice,
-          payment_method: paymentMethodValue,
-          ...trainerSummaryData,
-        },
-      });
-      
-      // Only deduct credit if paying from credit
-      if (shouldDeductCredit) {
-        await deductParticipantsCredit.mutateAsync({
-          training_session_id: training.id,
-          participants: normalizedParticipants,
-          totalPrice: correctPrice,
-          description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
-        });
-      }
-    } else {
-      // Standard single client completion
-      if (shouldDeductCredit) {
-        await completeTraining.mutateAsync({
-          id: training.id,
-          client_id: training.client_id,
-          participant_count: completeParticipants,
-          subjective_rating: completeRating || undefined,
-          notes: completeNotes || undefined,
-          trainingPrices,
-        });
-        // Update payment fields and trainer summary
-        await updateTraining.mutateAsync({
-          id: training.id,
-          input: {
-            payment_status: paymentStatus,
-            final_price: totalPrice,
-            payment_method: paymentMethodValue,
-            ...trainerSummaryData,
-          },
-        });
+      if (usePriceSplit && participantShares.length > 1) {
+        // Normalize participant shares to match the correct price
+        const currentSum = participantShares.reduce((sum, p) => sum + p.price_share, 0);
+        normalizedParticipants = currentSum !== correctPrice
+          ? participantShares.map(p => ({
+              client_id: p.client_id,
+              price_share: Math.round((p.price_share / currentSum) * correctPrice),
+            }))
+          : participantShares.map(p => ({
+              client_id: p.client_id,
+              price_share: p.price_share,
+            }));
       } else {
-        // Non-credit payment - just mark as completed without credit deduction
-        await updateTraining.mutateAsync({
-          id: training.id,
-          input: {
-            status: 'completed',
-            participant_count: completeParticipants,
-            subjective_rating: completeRating || undefined,
-            notes: completeNotes || undefined,
-            payment_status: paymentStatus,
-            final_price: totalPrice,
-            payment_method: paymentMethodValue,
-            ...trainerSummaryData,
-          },
-        });
+        // Single client - full price
+        normalizedParticipants = [{
+          client_id: training.client_id,
+          price_share: correctPrice,
+        }];
       }
+      
+      // Trainer summary data
+      const trainerSummaryData = {
+        trainer_went_well: trainerWentWell || undefined,
+        trainer_problems: trainerProblems || undefined,
+        trainer_recommendations: trainerRecommendations || undefined,
+        pain_reported: painReported,
+        pain_notes: painReported ? (painNotes || undefined) : undefined,
+      };
+      
+      // Use atomic RPC - single transaction for everything
+      await completeTrainingAtomic.mutateAsync({
+        sessionId: training.id,
+        participants: normalizedParticipants,
+        paymentMethod: paymentMethodValue as 'credit' | 'cash' | 'card' | 'bank' | 'pending',
+        totalPrice: correctPrice,
+        trainerSummary: trainerSummaryData,
+        subjectiveRating: completeRating,
+        notes: completeNotes || undefined,
+      });
+      
+      // Track training completion
+      trackFeature('training_complete', 'trainings', {
+        metadata: {
+          training_id: training.id,
+          client_id: training.client_id,
+          participant_count: participantCount,
+          payment_method: paymentMethodValue,
+          total_price: correctPrice,
+          has_rating: !!completeRating,
+        }
+      });
+      
+      setShowCompleteDialog(false);
+      navigate('/trainings');
+    } catch (error) {
+      // Error is already handled in the hook with toast
+      console.error('Training completion failed:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Track training completion
-    trackFeature('training_complete', 'trainings', {
-      metadata: {
-        training_id: training.id,
-        client_id: training.client_id,
-        participant_count: participantCount,
-        payment_method: paymentMethodValue,
-        total_price: totalPrice,
-        has_rating: !!completeRating,
-      }
-    });
-    
-    setShowCompleteDialog(false);
-    navigate('/trainings');
   };
 
   const getExpectedPrice = () => {
@@ -446,6 +403,16 @@ export default function TrainingDetail() {
         onFieldUpdate={handleFieldUpdate}
       />
 
+      {/* Status banner for partial/warning completions */}
+      {(training as any).completion_status === 'partial' && (
+        <Alert variant="default" className="border-warning bg-warning/10">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-warning">
+            Trénink byl dokončen s varováním. Zkontrolujte kredit účastníků.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Quick Actions - Only for scheduled trainings */}
       {training.status === 'scheduled' && (
         <QuickActionsSection
@@ -468,7 +435,7 @@ export default function TrainingDetail() {
               input: { date: newDate.toISOString() },
             });
           }}
-          isCompleting={completeTraining.isPending || saveParticipants.isPending}
+          isCompleting={isSubmitting || completeTrainingAtomic.isPending}
           isCanceling={cancelTraining.isPending}
           isRescheduling={updateTraining.isPending}
         />
@@ -562,7 +529,7 @@ export default function TrainingDetail() {
               <PaymentMethodSelector
                 value={paymentMethod}
                 onChange={setPaymentMethod}
-                disabled={completeTraining.isPending || saveParticipants.isPending}
+                disabled={isSubmitting || completeTrainingAtomic.isPending}
               />
             </div>
 
@@ -654,23 +621,22 @@ export default function TrainingDetail() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCompleteDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCompleteDialog(false)} disabled={isSubmitting || completeTrainingAtomic.isPending}>
               Zrušit
             </Button>
             <Button 
               onClick={handleComplete} 
               disabled={
                 !tagValidation.isValid ||
-                completeTraining.isPending || 
-                saveParticipants.isPending || 
-                deductParticipantsCredit.isPending
+                isSubmitting ||
+                completeTrainingAtomic.isPending
               }
               title={!tagValidation.isValid ? "Doplňte povinné tagy" : undefined}
             >
-              {(completeTraining.isPending || saveParticipants.isPending || deductParticipantsCredit.isPending) ? (
+              {(isSubmitting || completeTrainingAtomic.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ukládám...
+                  Dokončuji...
                 </>
               ) : (
                 <>
