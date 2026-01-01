@@ -1257,6 +1257,7 @@ export type Database = {
           supplements: string[] | null
           system_key: string | null
           training_goals: string[] | null
+          training_start_date: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1289,6 +1290,7 @@ export type Database = {
           supplements?: string[] | null
           system_key?: string | null
           training_goals?: string[] | null
+          training_start_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1321,6 +1323,7 @@ export type Database = {
           supplements?: string[] | null
           system_key?: string | null
           training_goals?: string[] | null
+          training_start_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
