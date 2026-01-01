@@ -307,7 +307,7 @@ export function ClientPortalAccessSection({
                 variant="link"
                 size="sm"
                 className="h-auto p-0 text-sm text-primary gap-1"
-                onClick={() => window.open(`${window.location.origin}/zona/login`, '_blank')}
+                onClick={() => window.open(`${window.location.origin}/login?mode=client`, '_blank')}
               >
                 <ExternalLink className="w-3 h-3" />
                 Otevřít přihlášení
