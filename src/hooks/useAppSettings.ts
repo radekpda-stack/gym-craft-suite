@@ -52,34 +52,22 @@ export function useLowCreditThreshold() {
 }
 
 export interface DashboardLayout {
-  showIncomeChart: boolean;
-  showMonthlyChart: boolean;
-  showClientCredits: boolean;
-  showProductBreakdown: boolean;
-  showTaxCalculator: boolean;
+  showCareerMilestone: boolean;
+  showTodayPlan: boolean;
+  showPendingApprovals: boolean;
   showQuickActions: boolean;
-  showTrainingTrend: boolean;
-  showTrainingStats: boolean;
-  showTopClients: boolean;
-  showProfitChart: boolean;
-  showSalesChart: boolean;
+  showActionBlock: boolean;
 }
 
 export function useDashboardLayout() {
   const { data: settings } = useAppSettings();
   
   const defaultLayout: DashboardLayout = {
-    showIncomeChart: true,
-    showMonthlyChart: true,
-    showClientCredits: true,
-    showProductBreakdown: true,
-    showTaxCalculator: true,
+    showCareerMilestone: true,
+    showTodayPlan: true,
+    showPendingApprovals: true,
     showQuickActions: true,
-    showTrainingTrend: true,
-    showTrainingStats: true,
-    showTopClients: true,
-    showProfitChart: true,
-    showSalesChart: true,
+    showActionBlock: true,
   };
   
   return settings?.dashboard_layout || defaultLayout;
