@@ -22,9 +22,9 @@ function DashboardContent() {
           <DashboardHeader data={data} isLoading={isLoading} />
         </SectionErrorBoundary>
         
-        {/* 🔴 Action Block - clients needing attention */}
-        <SectionErrorBoundary section="Akční blok">
-          <ActionBlock data={data} isLoading={isLoading} />
+        {/* 📅 Today's Plan - compact timeline */}
+        <SectionErrorBoundary section="Dnešní plán">
+          <TodayPlanCompact data={data} isLoading={isLoading} />
         </SectionErrorBoundary>
 
         {/* ⏳ Pending Performance Approvals */}
@@ -32,14 +32,14 @@ function DashboardContent() {
           <PendingPerformancesCard />
         </SectionErrorBoundary>
         
-        {/* 📅 Today's Plan - compact timeline */}
-        <SectionErrorBoundary section="Dnešní plán">
-          <TodayPlanCompact data={data} isLoading={isLoading} />
-        </SectionErrorBoundary>
-        
         {/* ⚡ Quick Actions Grid */}
         <SectionErrorBoundary section="Rychlé akce" compact>
           <QuickActionsGrid />
+        </SectionErrorBoundary>
+        
+        {/* 🔴 Action Block - clients needing attention (lower priority) */}
+        <SectionErrorBoundary section="Akční blok">
+          <ActionBlock data={data} isLoading={isLoading} />
         </SectionErrorBoundary>
       </div>
       
