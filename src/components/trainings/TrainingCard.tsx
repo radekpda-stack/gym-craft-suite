@@ -76,24 +76,26 @@ export const TrainingCard = memo(function TrainingCard({
         {/* Primary Row: Time, Client Name, Status */}
         <div className="flex items-start justify-between gap-3">
           <Link to={`/trainings/${session.id}`} className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
-              {/* Time - Bold and prominent */}
-              <span className="text-lg font-bold text-foreground tabular-nums shrink-0">
+            <div className="flex flex-col gap-0.5">
+              {/* Client name - full width, not truncated */}
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "font-semibold text-foreground",
+                  isCanceled && "line-through text-muted-foreground"
+                )}>
+                  {client?.name || 'Klient'}
+                </span>
+                
+                {/* Feedback status indicator for completed trainings */}
+                {isCompleted && feedbackStatus && (
+                  <FeedbackStatusIndicator status={feedbackStatus} />
+                )}
+              </div>
+              
+              {/* Time */}
+              <span className="text-sm text-muted-foreground tabular-nums">
                 {format(sessionDate, 'HH:mm', { locale: cs })}
               </span>
-              
-              {/* Client name */}
-              <span className={cn(
-                "font-semibold text-foreground truncate",
-                isCanceled && "line-through text-muted-foreground"
-              )}>
-                {client?.name || 'Klient'}
-              </span>
-              
-              {/* Feedback status indicator for completed trainings */}
-              {isCompleted && feedbackStatus && (
-                <FeedbackStatusIndicator status={feedbackStatus} />
-              )}
             </div>
             
             {/* Secondary Row: Type, Duration, RPE/RIR, Note */}
@@ -167,36 +169,21 @@ export const TrainingCard = memo(function TrainingCard({
         {/* Quick Actions Row */}
         {(isScheduled || isInProgress || isAwaitingPayment) && (
           <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border/50">
-            {/* Scheduled: Complete + Cancel */}
+            {/* Scheduled: Complete only */}
             {isScheduled && (
-              <>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-8 px-3 gap-1.5 rounded-lg"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onComplete?.();
-                  }}
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">Dokončit</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 gap-1.5 rounded-lg text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onCancel?.();
-                  }}
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">Zrušit</span>
-                </Button>
-              </>
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8 px-3 gap-1.5 rounded-lg"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onComplete?.();
+                }}
+              >
+                <Check className="w-3.5 h-3.5" />
+                Dokončit
+              </Button>
             )}
             
             {/* In Progress: Complete */}
