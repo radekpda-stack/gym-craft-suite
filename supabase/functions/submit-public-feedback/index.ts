@@ -10,33 +10,56 @@ const corsHeaders = {
 // Simple in-memory rate limiter (resets on function cold start)
 const rateLimitMap = new Map<string, { count: number; firstRequest: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 10; // Max submissions per window per IP (lower for submissions)
+const RATE_LIMIT_MAX_REQUESTS = 10; // Max submissions per window per key
 
-function getClientIP(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
-         req.headers.get("cf-connecting-ip") || 
-         "unknown";
+// Generate a unique rate limit key - never use shared "unknown" to prevent global blocking
+function getRateLimitKey(req: Request, token?: string): string {
+  // Try multiple headers for IP detection
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+             req.headers.get("cf-connecting-ip") ||
+             req.headers.get("x-real-ip") ||
+             req.headers.get("x-client-ip") ||
+             req.headers.get("true-client-ip");
+  
+  if (ip && ip !== "unknown") {
+    return `ip:${ip}`;
+  }
+  
+  // Fallback: use token + user-agent hash to create per-device key
+  const userAgent = req.headers.get("user-agent") || "";
+  const acceptLang = req.headers.get("accept-language") || "";
+  const fallbackKey = `${token || "anon"}-${userAgent.slice(0, 50)}-${acceptLang.slice(0, 20)}`;
+  
+  // Simple hash function for the fallback key
+  let hash = 0;
+  for (let i = 0; i < fallbackKey.length; i++) {
+    const char = fallbackKey.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  return `fallback:${Math.abs(hash).toString(36)}`;
 }
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+  const entry = rateLimitMap.get(key);
   
   if (!entry) {
-    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    rateLimitMap.set(key, { count: 1, firstRequest: now });
     return false;
   }
   
   // Reset window if expired
   if (now - entry.firstRequest > RATE_LIMIT_WINDOW_MS) {
-    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    rateLimitMap.set(key, { count: 1, firstRequest: now });
     return false;
   }
   
   // Increment and check
   entry.count++;
   if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
-    console.warn(`Rate limit exceeded for IP: ${ip}, count: ${entry.count}`);
+    console.warn(`Rate limit exceeded for key: ${key}, count: ${entry.count}`);
     return true;
   }
   
@@ -92,17 +115,25 @@ function buildComment(note: string | undefined, painAreaNotes: Record<string, st
 }
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Rate limiting check
-    const clientIP = getClientIP(req);
-    if (isRateLimited(clientIP)) {
-      console.warn(`Rate limit hit for IP: ${clientIP}`);
+    // Parse body first to get token for rate limit key
+    const rawBody = await req.json();
+    const token = rawBody?.token;
+    
+    // Rate limiting check with improved key generation
+    const rateLimitKey = getRateLimitKey(req, token);
+    console.log(`[${requestId}] Rate limit key: ${rateLimitKey.slice(0, 30)}...`);
+    
+    if (isRateLimited(rateLimitKey)) {
+      console.warn(`[${requestId}] Rate limit hit for key: ${rateLimitKey}`);
       return new Response(
-        JSON.stringify({ error: "Příliš mnoho požadavků. Zkuste to později.", code: "RATE_LIMITED" }),
+        JSON.stringify({ error: "Příliš mnoho požadavků. Zkuste to za chvíli.", code: "RATE_LIMITED" }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -111,42 +142,42 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse and validate input
-    const rawBody = await req.json();
+    // Validate input
     const parseResult = feedbackSchema.safeParse(rawBody);
     
     if (!parseResult.success) {
-      console.error("Validation error:", parseResult.error.flatten());
+      console.error(`[${requestId}] Validation error:`, parseResult.error.flatten());
       return new Response(
         JSON.stringify({ 
-          error: "Neplatná data", 
+          error: "Neplatná data formuláře", 
+          code: "VALIDATION_ERROR",
           details: parseResult.error.flatten().fieldErrors 
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const { token, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, pain_type, sleep_after, sleep_hours, note } = parseResult.data;
+    const { token: validToken, values, pain_area, pain_areas, pain_area_notes, pain_area_intensities, pain_area_side, pain_area_other, pain_type, sleep_after, sleep_hours, note } = parseResult.data;
 
-    console.log(`Processing public feedback submission for token: ${token}`);
-    console.log(`Values received:`, values);
+    console.log(`[${requestId}] Processing feedback for token: ${validToken.slice(0, 8)}...`);
+    console.log(`[${requestId}] Values:`, values);
 
     // Find the feedback request by token
     const { data: request, error: requestError } = await supabase
       .from("feedback_requests")
       .select("*, clients(name), training_sessions(date, is_high_intensity_test)")
-      .eq("token", token)
+      .eq("token", validToken)
       .maybeSingle();
 
     if (requestError) {
-      console.error("Error finding request:", requestError);
+      console.error(`[${requestId}] Error finding request:`, requestError);
       throw new Error("Chyba při hledání požadavku");
     }
 
     if (!request) {
-      console.error("Request not found for token:", token);
+      console.error(`[${requestId}] Request not found for token: ${validToken.slice(0, 8)}...`);
       return new Response(
-        JSON.stringify({ error: "Neplatný odkaz", code: "NOT_FOUND" }),
+        JSON.stringify({ error: "Neplatný odkaz na formulář", code: "NOT_FOUND" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -308,7 +339,7 @@ serve(async (req) => {
         meta: {
           feedback_id: feedback.id,
           is_red_flag: isRedFlag,
-          ip_hash: clientIP.split(".").slice(0, 2).join(".") + ".x.x",
+          key_hash: rateLimitKey.slice(0, 20),
         },
       });
 

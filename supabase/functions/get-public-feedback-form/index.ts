@@ -9,33 +9,56 @@ const corsHeaders = {
 // Simple in-memory rate limiter (resets on function cold start)
 const rateLimitMap = new Map<string, { count: number; firstRequest: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 30; // Max requests per window per IP
+const RATE_LIMIT_MAX_REQUESTS = 30; // Max requests per window per key
 
-function getClientIP(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
-         req.headers.get("cf-connecting-ip") || 
-         "unknown";
+// Generate a unique rate limit key - never use shared "unknown" to prevent global blocking
+function getRateLimitKey(req: Request, token?: string): string {
+  // Try multiple headers for IP detection
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+             req.headers.get("cf-connecting-ip") ||
+             req.headers.get("x-real-ip") ||
+             req.headers.get("x-client-ip") ||
+             req.headers.get("true-client-ip");
+  
+  if (ip && ip !== "unknown") {
+    return `ip:${ip}`;
+  }
+  
+  // Fallback: use token + user-agent hash to create per-device key
+  const userAgent = req.headers.get("user-agent") || "";
+  const acceptLang = req.headers.get("accept-language") || "";
+  const fallbackKey = `${token || "anon"}-${userAgent.slice(0, 50)}-${acceptLang.slice(0, 20)}`;
+  
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < fallbackKey.length; i++) {
+    const char = fallbackKey.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  return `fallback:${Math.abs(hash).toString(36)}`;
 }
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+  const entry = rateLimitMap.get(key);
   
   if (!entry) {
-    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    rateLimitMap.set(key, { count: 1, firstRequest: now });
     return false;
   }
   
   // Reset window if expired
   if (now - entry.firstRequest > RATE_LIMIT_WINDOW_MS) {
-    rateLimitMap.set(ip, { count: 1, firstRequest: now });
+    rateLimitMap.set(key, { count: 1, firstRequest: now });
     return false;
   }
   
   // Increment and check
   entry.count++;
   if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
-    console.warn(`Rate limit exceeded for IP: ${ip}, count: ${entry.count}`);
+    console.warn(`Rate limit exceeded for key: ${key}, count: ${entry.count}`);
     return true;
   }
   
@@ -49,17 +72,35 @@ function isValidUUID(str: string): boolean {
 }
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Rate limiting check
-    const clientIP = getClientIP(req);
-    if (isRateLimited(clientIP)) {
-      console.warn(`Rate limit hit for IP: ${clientIP}`);
+    // Get token first for rate limit key
+    const url = new URL(req.url);
+    let token = url.searchParams.get("token");
+    
+    // If not in query params, try to get from body
+    if (!token && req.method === "POST") {
+      try {
+        const body = await req.json();
+        token = body.token;
+      } catch (e) {
+        console.warn(`[${requestId}] Failed to parse request body:`, e);
+      }
+    }
+
+    // Rate limiting check with improved key generation
+    const rateLimitKey = getRateLimitKey(req, token || undefined);
+    console.log(`[${requestId}] Rate limit key: ${rateLimitKey.slice(0, 30)}...`);
+    
+    if (isRateLimited(rateLimitKey)) {
+      console.warn(`[${requestId}] Rate limit hit for key: ${rateLimitKey}`);
       return new Response(
-        JSON.stringify({ error: "Příliš mnoho požadavků. Zkuste to později.", code: "RATE_LIMITED" }),
+        JSON.stringify({ error: "Příliš mnoho požadavků. Zkuste to za chvíli.", code: "RATE_LIMITED" }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -68,22 +109,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get token from query params or body (supports both direct URL and supabase.functions.invoke)
-    const url = new URL(req.url);
-    let token = url.searchParams.get("token");
-    
-    console.log(`Request method: ${req.method}, URL token: ${token ? token.substring(0, 20) + '...' : 'null'}`);
-
-    // If not in query params, try to get from body
-    if (!token && req.method === "POST") {
-      try {
-        const body = await req.json();
-        token = body.token;
-        console.log(`Body token: ${token ? token.substring(0, 20) + '...' : 'null'}, full length: ${token?.length || 0}`);
-      } catch (e) {
-        console.warn('Failed to parse request body:', e);
-      }
-    }
+    console.log(`[${requestId}] Token: ${token ? token.substring(0, 8) + '...' : 'null'}`);
 
     if (!token) {
       return new Response(
@@ -97,7 +123,7 @@ serve(async (req) => {
     
     // Validate token format
     if (!isValidUUID(token)) {
-      console.warn(`Invalid token format from IP ${clientIP}: ${token.substring(0, 20)}... (length: ${token.length})`);
+      console.warn(`[${requestId}] Invalid token format: ${token.substring(0, 20)}... (length: ${token.length})`);
       return new Response(
         JSON.stringify({ error: "Neplatný formát tokenu", code: "INVALID_TOKEN" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -173,12 +199,12 @@ serve(async (req) => {
           feedback_request_id: request.id,
           event_type: "OPENED",
           meta: {
-            ip_hash: clientIP.split(".").slice(0, 2).join(".") + ".x.x",
+            key_hash: rateLimitKey.slice(0, 20),
             user_agent: req.headers.get("user-agent")?.substring(0, 200) || null,
           },
         });
       
-      console.log(`Marked feedback request ${request.id} as opened`);
+      console.log(`[${requestId}] Marked feedback request ${request.id} as opened`);
     }
 
     // Get user's feedback settings for questions configuration
