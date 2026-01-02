@@ -14,6 +14,12 @@ interface ClientPortalContextType {
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ data: unknown; error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
+  // Credentials reminder
+  shouldShowCredentialsReminder: boolean;
+  loginCount: number;
+  credentialsChanged: boolean;
+  refetchClientAccount: () => Promise<void>;
+  dismissCredentialsReminder: () => void;
 }
 
 const ClientPortalContext = createContext<ClientPortalContextType | undefined>(undefined);

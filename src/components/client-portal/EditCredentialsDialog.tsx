@@ -154,7 +154,7 @@ export function EditCredentialsDialog({
             Upravit přihlašovací údaje
           </DialogTitle>
           <DialogDescription>
-            Upravte email nebo heslo pro {clientName}
+            Upravte email nebo heslo pro {clientName}. Po změně bude klient znovu vyzván k nastavení vlastních údajů.
           </DialogDescription>
         </DialogHeader>
 

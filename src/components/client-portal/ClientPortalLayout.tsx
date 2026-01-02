@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -19,6 +19,7 @@ import { motion } from 'framer-motion';
 import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
 import { ClientNotificationCenter } from './ClientNotificationCenter';
+import { CredentialsReminderDialog } from './CredentialsReminderDialog';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -50,9 +51,30 @@ const mobileNavItems = [
 ];
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
-  const { isAuthenticated, loading, clientProfile, clientId, signOut } = useClientPortal();
+  const { 
+    isAuthenticated, 
+    loading, 
+    clientProfile, 
+    clientId, 
+    signOut,
+    user,
+    shouldShowCredentialsReminder,
+    loginCount,
+    refetchClientAccount,
+    dismissCredentialsReminder,
+  } = useClientPortal();
   const location = useLocation();
   const sessionInitialized = useRef(false);
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+
+  // Show credentials dialog when needed (after initial load)
+  useEffect(() => {
+    if (shouldShowCredentialsReminder && !showCredentialsDialog) {
+      // Small delay to let the page render first
+      const timer = setTimeout(() => setShowCredentialsDialog(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowCredentialsReminder, showCredentialsDialog]);
 
   // Check if nutrition campaign is active
   const { data: nutritionCampaign } = useClientNutritionCampaign(clientId ?? undefined);
@@ -113,7 +135,23 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0 md:pl-20">
+    <>
+      {/* Credentials Reminder Dialog */}
+      <CredentialsReminderDialog
+        open={showCredentialsDialog}
+        loginCount={loginCount}
+        currentEmail={user?.email}
+        onSuccess={() => {
+          setShowCredentialsDialog(false);
+          refetchClientAccount();
+        }}
+        onSkip={() => {
+          setShowCredentialsDialog(false);
+          dismissCredentialsReminder();
+        }}
+      />
+
+      <div className="min-h-screen bg-background pb-20 md:pb-0 md:pl-20">
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b md:hidden">
         <div className="flex items-center justify-between px-4 h-14">
@@ -237,5 +275,6 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </div>
       </nav>
     </div>
+    </>
   );
 }

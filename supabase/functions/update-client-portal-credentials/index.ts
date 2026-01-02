@@ -143,9 +143,14 @@ Deno.serve(async (req) => {
       login_identifier?: string;
       portal_password?: string; 
       last_password_reset_at?: string; 
+      credentials_changed_at?: null;
+      login_count?: number;
       updated_at: string 
     } = {
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      // Reset client-change tracking so reminder shows again
+      credentials_changed_at: null,
+      login_count: 0,
     };
     
     if (new_login_identifier) {

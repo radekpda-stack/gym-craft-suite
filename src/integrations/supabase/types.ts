@@ -767,11 +767,13 @@ export type Database = {
           client_id: string
           created_at: string
           created_by_trainer_id: string | null
+          credentials_changed_at: string | null
           credit_history_start_at: string | null
           id: string
           is_active: boolean
           last_password_reset_at: string | null
           last_portal_login: string | null
+          login_count: number | null
           login_identifier: string | null
           portal_password: string | null
           portal_settings: Json | null
@@ -785,11 +787,13 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by_trainer_id?: string | null
+          credentials_changed_at?: string | null
           credit_history_start_at?: string | null
           id?: string
           is_active?: boolean
           last_password_reset_at?: string | null
           last_portal_login?: string | null
+          login_count?: number | null
           login_identifier?: string | null
           portal_password?: string | null
           portal_settings?: Json | null
@@ -803,11 +807,13 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by_trainer_id?: string | null
+          credentials_changed_at?: string | null
           credit_history_start_at?: string | null
           id?: string
           is_active?: boolean
           last_password_reset_at?: string | null
           last_portal_login?: string | null
+          login_count?: number | null
           login_identifier?: string | null
           portal_password?: string | null
           portal_settings?: Json | null
