@@ -18,6 +18,7 @@ export interface NutritionSessionWithClient {
   coffee_count: number;
   last_entry_date?: string;
   last_entries?: { name: string; time: string }[];
+  is_self_service?: boolean;
 }
 
 export function useAllNutritionSessions() {
@@ -40,6 +41,7 @@ export function useAllNutritionSessions() {
           token,
           created_at,
           updated_at,
+          is_self_service,
           clients (name)
         `)
         .eq('user_id', user.id)
@@ -120,6 +122,7 @@ export function useAllNutritionSessions() {
         entries_count: (foodCounts.get(session.id) || 0) + (drinkCounts.get(session.id) || 0) + (coffeeCounts.get(session.id) || 0),
         last_entry_date: lastEntryDates.get(session.id),
         last_entries: lastEntriesMap.get(session.id),
+        is_self_service: session.is_self_service ?? false,
       }));
     },
     enabled: !!user?.id,

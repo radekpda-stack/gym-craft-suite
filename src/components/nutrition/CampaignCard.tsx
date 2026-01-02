@@ -265,6 +265,11 @@ export function CampaignCard({
             <div className="flex items-center gap-2 flex-wrap">
               {getStatusBadge()}
               {getInactivityBadge()}
+              {campaign.is_self_service && (
+                <Badge variant="outline" className="text-purple-600 border-purple-300">
+                  Self-service
+                </Badge>
+              )}
             </div>
             <span className="text-sm text-muted-foreground">
               {campaign.entries_count} záznamů
