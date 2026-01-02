@@ -6,46 +6,37 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 export function ClientTagsCard() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['client-tags-distribution'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // First get all client IDs for this trainer
-      const { data: clients, error: clientsError } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('user_id', user.id);
-
-      if (clientsError) throw clientsError;
-      
-      const clientIds = clients?.map(c => c.id) || [];
-      
-      if (clientIds.length === 0) {
-        return { tags: [], totalTags: 0, totalAssignments: 0 };
-      }
-
-      // Fetch client tags only for trainer's clients
+      // Fetch client tags only for current trainer (via clients.user_id)
       const { data: clientTags, error: tagsError } = await supabase
         .from('client_tags')
         .select(`
           id,
           tag_id,
+          client_id,
           tags (
             id,
             name,
             color,
             type
+          ),
+          clients!inner (
+            id,
+            user_id
           )
         `)
-        .in('client_id', clientIds);
+        .eq('clients.user_id', user.id);
 
       if (tagsError) throw tagsError;
 
       // Count tags
       const tagCounts: Record<string, { name: string; color: string; type: string; count: number }> = {};
-      
+
       (clientTags || []).forEach((ct: any) => {
         if (ct.tags) {
           const tagId = ct.tags.id;
@@ -61,8 +52,7 @@ export function ClientTagsCard() {
         }
       });
 
-      const sortedTags = Object.values(tagCounts)
-        .sort((a, b) => b.count - a.count);
+      const sortedTags = Object.values(tagCounts).sort((a, b) => b.count - a.count);
 
       return {
         tags: sortedTags,
@@ -74,6 +64,24 @@ export function ClientTagsCard() {
 
   if (isLoading) {
     return <Skeleton className="h-48 rounded-xl" />;
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Tags className="h-4 w-4 text-muted-foreground" />
+            Štítky klientů
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nepodařilo se načíst štítky.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!data || data.totalTags === 0) {
