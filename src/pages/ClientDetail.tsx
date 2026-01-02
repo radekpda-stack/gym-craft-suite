@@ -323,6 +323,7 @@ export default function ClientDetail() {
         open={isCreditModalOpen}
         onOpenChange={setIsCreditModalOpen}
         defaultClientId={client.id}
+        showTrigger={false}
       />
     </div>
   );

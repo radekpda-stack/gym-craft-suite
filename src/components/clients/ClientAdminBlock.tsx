@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { PaymentModeSelector, PaymentMode } from './PaymentModeSelector';
 import { Client, useUpdatePaymentMode } from '@/hooks/useClients';
-import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 
 interface ClientAdminBlockProps {
   client: Client;
@@ -36,13 +35,6 @@ export function ClientAdminBlock({
 
   return (
     <div className="space-y-4">
-      {/* Portal Access Section */}
-      <ClientPortalAccessSection
-        clientId={client.id}
-        clientName={client.name}
-        clientEmail={client.email}
-      />
-
       {/* Admin Settings */}
       <div className="glass rounded-xl overflow-hidden">
         {/* Header - Always visible */}
