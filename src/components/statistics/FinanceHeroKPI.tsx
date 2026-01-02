@@ -159,15 +159,15 @@ export function FinanceHeroKPI({
         onClick={() => onCardClick?.('income')}
       />
       
-      {/* Average per training */}
+      {/* Trainings count this year */}
       <MetricCard
-        title="Průměr za trénink"
-        value={formatCurrency(stats?.avgTrainingPrice || 0)}
-        subtitle={`z ${stats?.completedTrainings || 0} tréninků`}
-        progress={Math.min((stats?.avgTrainingPrice || 0) / 1000 * 100, 100)} // 1000 Kč = 100%
+        title="Tréninků celkem"
+        value={`${stats?.completedTrainings || 0}`}
+        subtitle="tento rok"
+        progress={Math.min((stats?.completedTrainings || 0) / 200 * 100, 100)} // 200 trainings = 100%
         variant="blue"
-        icon={<TrendingUp className="h-4 w-4" />}
-        onClick={() => onCardClick?.('average')}
+        icon={<Dumbbell className="h-4 w-4" />}
+        onClick={() => onCardClick?.('trainings')}
       />
 
       {/* Pending payments or product income */}
