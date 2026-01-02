@@ -20,7 +20,7 @@ import {
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useCreateWorkoutLog, WorkoutExercise } from '@/hooks/useClientWorkoutLogs';
 import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
-import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
+import { useUnifiedDiary, UnifiedDiaryEntry, DiaryTag } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -425,6 +425,21 @@ export default function ClientPortalWorkoutDiary() {
                                     <Trophy className="w-3 h-3" /> PR
                                   </Badge>
                                 )}
+                                {/* Tags */}
+                                {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
+                                  <Badge 
+                                    key={tag.id}
+                                    variant="outline"
+                                    className="text-xs"
+                                    style={{ 
+                                      borderColor: tag.color,
+                                      backgroundColor: `${tag.color}15`,
+                                      color: tag.color 
+                                    }}
+                                  >
+                                    {tag.name}
+                                  </Badge>
+                                ))}
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <span>{getWorkoutTypeLabel(entry.workout_type)}</span>
