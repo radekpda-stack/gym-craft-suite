@@ -188,13 +188,39 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
       console.log('Edge function response:', { result, error });
 
+      // Handle Edge Function errors - extract specific error info
       if (error) {
-        console.error('Error loading form:', error);
-        setErrorMessage('Chyba při načítání formuláře');
+        console.error('Edge function error:', error);
+        // Try to parse error context for specific codes
+        const errorData = error.context?.body ? JSON.parse(error.context.body) : null;
+        const errorCode = errorData?.code || result?.code;
+        const errorMsg = errorData?.error || error.message;
+        
+        // Handle specific error codes
+        if (errorCode === 'EXPIRED') {
+          setStatus('expired');
+          return;
+        }
+        if (errorCode === 'ALREADY_COMPLETED') {
+          setStatus('completed');
+          return;
+        }
+        if (errorCode === 'REJECTED') {
+          setStatus('rejected');
+          return;
+        }
+        if (errorCode === 'RATE_LIMITED') {
+          setErrorMessage('Příliš mnoho požadavků. Zkuste to za chvíli.');
+          setStatus('error');
+          return;
+        }
+        
+        setErrorMessage(errorMsg || 'Chyba při načítání formuláře');
         setStatus('error');
         return;
       }
 
+      // Handle response-level error codes
       if (result?.code === 'EXPIRED') {
         setStatus('expired');
         return;
@@ -231,9 +257,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
           }
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading form:', error);
-      setErrorMessage('Chyba při načítání formuláře');
+      setErrorMessage(error?.message || 'Chyba při načítání formuláře');
       setStatus('error');
     }
   };
@@ -319,11 +345,51 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
         },
       });
 
+      // Handle Edge Function errors - extract specific error info
       if (error) {
-        throw new Error(error.message || 'Chyba při odesílání');
+        console.error('Submit edge function error:', error);
+        // Try to parse error context for specific codes
+        let errorMsg = 'Chyba při odesílání';
+        let errorCode = '';
+        
+        try {
+          const errorData = error.context?.body ? JSON.parse(error.context.body) : null;
+          errorCode = errorData?.code || '';
+          errorMsg = errorData?.error || error.message || errorMsg;
+        } catch {
+          errorMsg = error.message || errorMsg;
+        }
+        
+        // Handle specific error codes with user-friendly messages
+        if (errorCode === 'EXPIRED') {
+          setStatus('expired');
+          return;
+        }
+        if (errorCode === 'ALREADY_COMPLETED') {
+          setStatus('completed');
+          return;
+        }
+        if (errorCode === 'RATE_LIMITED') {
+          errorMsg = 'Příliš mnoho pokusů. Zkuste to za chvíli.';
+        }
+        if (errorCode === 'REJECTED') {
+          setStatus('rejected');
+          return;
+        }
+        
+        throw new Error(errorMsg);
       }
 
       if (result?.error) {
+        // Handle response-level errors
+        if (result.code === 'EXPIRED') {
+          setStatus('expired');
+          return;
+        }
+        if (result.code === 'ALREADY_COMPLETED') {
+          setStatus('completed');
+          return;
+        }
         throw new Error(result.error || 'Chyba při odesílání');
       }
 
