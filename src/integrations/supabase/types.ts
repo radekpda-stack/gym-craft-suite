@@ -302,6 +302,7 @@ export type Database = {
           rule_value: Json
           start_at: string | null
           style: string | null
+          xp_bonus: number | null
         }
         Insert: {
           created_at?: string | null
@@ -317,6 +318,7 @@ export type Database = {
           rule_value?: Json
           start_at?: string | null
           style?: string | null
+          xp_bonus?: number | null
         }
         Update: {
           created_at?: string | null
@@ -332,6 +334,7 @@ export type Database = {
           rule_value?: Json
           start_at?: string | null
           style?: string | null
+          xp_bonus?: number | null
         }
         Relationships: []
       }
@@ -1863,6 +1866,51 @@ export type Database = {
             foreignKeyName: "client_workout_templates_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_xp: {
+        Row: {
+          client_id: string
+          last_xp_date: string | null
+          level: number
+          level_xp: number
+          total_xp: number
+          updated_at: string
+          xp_to_next: number
+        }
+        Insert: {
+          client_id: string
+          last_xp_date?: string | null
+          level?: number
+          level_xp?: number
+          total_xp?: number
+          updated_at?: string
+          xp_to_next?: number
+        }
+        Update: {
+          client_id?: string
+          last_xp_date?: string | null
+          level?: number
+          level_xp?: number
+          total_xp?: number
+          updated_at?: string
+          xp_to_next?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_xp_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_xp_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
           },
@@ -3710,6 +3758,87 @@ export type Database = {
           success?: boolean | null
         }
         Relationships: []
+      }
+      loyalty_balance: {
+        Row: {
+          client_id: string
+          lifetime_points: number
+          points_balance: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          lifetime_points?: number
+          points_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          lifetime_points?: number
+          points_balance?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_balance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_balance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      loyalty_ledger: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          meta: Json | null
+          points: number
+          source_id: string | null
+          source_type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          points: number
+          source_id?: string | null
+          source_type: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          points?: number
+          source_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_ledger_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_ledger_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
       }
       measurements: {
         Row: {
@@ -6967,6 +7096,48 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_streak_claims: {
+        Row: {
+          claimed_at: string
+          client_id: string
+          id: string
+          threshold: number
+          week_key: string
+          xp_amount: number
+        }
+        Insert: {
+          claimed_at?: string
+          client_id: string
+          id?: string
+          threshold: number
+          week_key: string
+          xp_amount: number
+        }
+        Update: {
+          claimed_at?: string
+          client_id?: string
+          id?: string
+          threshold?: number
+          week_key?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_streak_claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_streak_claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       workout_entries: {
         Row: {
           calories: number | null
@@ -7065,6 +7236,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          meta: Json | null
           source_id: string | null
           source_type: string
           xp_amount: number
@@ -7074,6 +7246,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          meta?: Json | null
           source_id?: string | null
           source_type: string
           xp_amount: number
@@ -7083,6 +7256,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          meta?: Json | null
           source_id?: string | null
           source_type?: string
           xp_amount?: number
@@ -7414,6 +7588,14 @@ export type Database = {
         }
         Returns: Json
       }
+      calculate_xp_level: {
+        Args: { p_total_xp: number }
+        Returns: {
+          level: number
+          level_xp: number
+          xp_to_next: number
+        }[]
+      }
       clean_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_diagnostics: { Args: never; Returns: Json }
       generate_search_name: {
@@ -7465,6 +7647,14 @@ export type Database = {
       }
       is_client_user: { Args: { _user_id: string }; Returns: boolean }
       normalize_text: { Args: { input_text: string }; Returns: string }
+      recalculate_client_xp: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
+      recalculate_loyalty_balance: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
       rpc_apply_credit_delta: {
         Args: {
           p_client_id: string
