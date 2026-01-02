@@ -56,7 +56,7 @@ export function TopPayingClientsCard() {
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => [formatCurrency(value), 'Utraceno']}
+              formatter={(value: number) => [formatCurrency(value), 'Zaplatil/a']}
               labelFormatter={(label) => chartData.find(d => d.name === label)?.fullName || label}
             />
             <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
@@ -105,7 +105,7 @@ export function TopPayingClientsCard() {
 
   return (
     <StatisticsCard
-      title="Top platící klienti"
+      title="Nejvíce zaplatili"
       icon={<Crown className="h-4 w-4 text-warning" />}
       isLoading={isLoading}
       expandedContent={expandedContent}

@@ -1,29 +1,22 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
-import { MonthlyProgressCard } from './MonthlyProgressCard';
-import { YearComparisonCard } from '@/components/dashboard/YearComparisonCard';
 import { TopPayingClientsCard } from './TopPayingClientsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
-import { TrainingDurationCard } from './TrainingDurationCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
-import { TrainingsByHourCard } from './TrainingsByHourCard';
+import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
+import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
-import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
+import { MetricCard } from '@/components/charts';
 import { 
-  DollarSign, 
-  TrendingUp, 
-  Dumbbell, 
   ShoppingBag,
-  AlertCircle,
   Loader2,
   BarChart3,
-  Target
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TotalIncomeModal } from './modals/TotalIncomeModal';
@@ -40,6 +33,7 @@ export function FinanceStatsSection() {
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
   const monthlyGoal = useMonthlyIncomeGoal();
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
+  const [financeMode, setFinanceMode] = useState<FinanceMode>('received');
 
   const isLoading = statsLoading || analyticsLoading;
 
@@ -49,15 +43,6 @@ export function FinanceStatsSection() {
     analytics?.vsLastMonth
   );
 
-  // Prepare sparkline data from monthly trend - must be before any conditional return
-  const sparklineData = useMemo(() => {
-    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.income }));
-  }, [stats?.monthlyTrend]);
-
-  // Calculate monthly goal progress using configurable goal
-  const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
-  const goalProgress = Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
-  
   const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
 
   if (isLoading) {
@@ -75,10 +60,32 @@ export function FinanceStatsSection() {
     );
   }
 
+  const handleCardClick = (card: string) => {
+    switch (card) {
+      case 'income':
+        setActiveModal('income');
+        break;
+      case 'monthly':
+        setActiveModal('monthly');
+        break;
+      case 'training':
+      case 'trainings':
+        setActiveModal('training');
+        break;
+      case 'products':
+        setActiveModal('products');
+        break;
+      case 'pending':
+        setActiveModal('pending');
+        break;
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Analytics Link */}
-      <div className="flex justify-end">
+      {/* Header with mode toggle and analytics link */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <FinanceModeToggle value={financeMode} onChange={setFinanceMode} />
         <Button 
           variant="outline" 
           size="sm" 
@@ -95,71 +102,20 @@ export function FinanceStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* WHOOP-style Gauge Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <GaugeCard
-          title="Měsíční cíl"
-          value={goalProgress}
-          maxValue={100}
-          displayValue={`${Math.round(goalProgress)}%`}
-          sublabel="splněno"
-          description={`${formatCurrency(currentMonthIncome)} z ${formatCurrency(monthlyGoal)}`}
-          variant={goalProgress >= 100 ? 'success' : goalProgress >= 70 ? 'primary' : 'warning'}
-          size="md"
-          onClick={() => setActiveModal('monthly')}
-        />
-        
-        <SparklineCard
-          title="Celkový příjem"
-          value={formatCurrency(stats?.totalIncome || 0)}
-          subtitle="tento rok"
-          data={sparklineData}
-          trend={analytics?.vsLastMonth.revenue}
-          variant="success"
-          icon={<DollarSign className="h-4 w-4" />}
-          onClick={() => setActiveModal('income')}
-        />
-        
-        <MetricCard
-          title="Z tréninků"
-          value={formatCurrency(stats?.trainingIncome || 0)}
-          subtitle={`${stats?.completedTrainings || 0} tréninků`}
-          progress={stats?.totalIncome ? (stats.trainingIncome / stats.totalIncome) * 100 : 0}
-          variant="blue"
-          icon={<Dumbbell className="h-4 w-4" />}
-          onClick={() => setActiveModal('training')}
-          showProgressValue
-        />
+      {/* Hero KPI Cards - changes based on mode */}
+      <FinanceHeroKPI
+        mode={financeMode}
+        stats={stats}
+        monthlyGoal={monthlyGoal}
+        vsLastMonth={analytics?.vsLastMonth}
+        onCardClick={handleCardClick}
+      />
 
-        {hasPendingPayments ? (
-          <MetricCard
-            title="K zaplacení"
-            value={formatCurrency(stats?.pendingPayments?.amount || 0)}
-            subtitle={`${stats?.pendingPayments?.count || 0} klientů`}
-            progress={100}
-            variant="destructive"
-            icon={<AlertCircle className="h-4 w-4" />}
-            onClick={() => setActiveModal('pending')}
-          />
-        ) : (
-          <MetricCard
-            title="Z produktů"
-            value={formatCurrency(stats?.productIncome || 0)}
-            subtitle={`${stats?.topProducts?.length || 0} produktů`}
-            progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
-            variant="warning"
-            icon={<ShoppingBag className="h-4 w-4" />}
-            onClick={() => setActiveModal('products')}
-            showProgressValue
-          />
-        )}
-      </div>
-
-      {/* Show products card if pending payments shown in KPI */}
-      {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
+      {/* Show products card if pending payments shown in KPI (only in received mode) */}
+      {financeMode === 'received' && hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <MetricCard
-            title="Z produktů"
+            title="Produkty"
             value={formatCurrency(stats?.productIncome || 0)}
             subtitle={`${stats?.topProducts?.length || 0} produktů`}
             progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
@@ -171,25 +127,17 @@ export function FinanceStatsSection() {
         </div>
       )}
 
-      {/* Monthly Progress Chart */}
-      <MonthlyProgressCard />
-
-      {/* Stats Grid */}
+      {/* Stats Grid - simplified */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <RevenueBreakdownCard />
         <AverageTrainingPriceCard />
         <TopPayingClientsCard />
       </div>
 
-      {/* Training Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <TrainingDurationCard />
+      {/* Cancellation Stats - single row */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4">
         <CancellationStatsCard stats={stats} />
-        <TrainingsByHourCard />
       </div>
-
-      {/* Year Comparison */}
-      <YearComparisonCard />
 
       {/* Modals */}
       <TotalIncomeModal 
