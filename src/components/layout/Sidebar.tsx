@@ -245,15 +245,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   };
 
-  // Check if any nutrition child is active
-  const hasActiveNutritionChild = [
-    '/nutrition',
-    '/nutrition/campaigns',
-    '/nutrition/template',
-    '/nutrition/questionnaires',
-    '/nutrition/infographics',
-    '/nutrition/analysis',
-  ].some(path => isActive(path));
+  // Check if nutrition is active
+  const hasActiveNutritionChild = isActive('/nutrition');
 
   // Define sections with items - filtered by module settings
   const sections: NavSection[] = useMemo(() => {
@@ -293,14 +286,6 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
             to: '/nutrition',
             icon: Utensils,
             label: 'Strava',
-            children: [
-              { id: 'nutrition-overview', to: '/nutrition', icon: LayoutDashboard, label: 'Přehled' },
-              { id: 'nutrition-campaigns', to: '/nutrition/campaigns', icon: ClipboardList, label: 'Kampaně' },
-              { id: 'nutrition-analysis', to: '/nutrition/analysis', icon: PieChart, label: 'Analýza' },
-              { id: 'nutrition-template', to: '/nutrition/template', icon: FileText, label: 'Šablona' },
-              { id: 'nutrition-questionnaires', to: '/nutrition/questionnaires', icon: FileQuestion, label: 'Dotazníky' },
-              { id: 'nutrition-infographics', to: '/nutrition/infographics', icon: Image, label: 'Infografiky' },
-            ],
           }] : []),
         ],
       },
