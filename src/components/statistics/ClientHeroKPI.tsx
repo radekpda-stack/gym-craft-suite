@@ -63,16 +63,16 @@ export function ClientHeroKPI({
         onClick={() => onCardClick?.('tenure')}
       />
 
-      {/* Feedback score */}
+      {/* Feedback score - scale is 1-10 */}
       {avgFeedbackScore !== undefined && avgFeedbackScore > 0 ? (
         <GaugeCard
           title="Spokojenost"
           value={avgFeedbackScore}
-          maxValue={5}
+          maxValue={10}
           displayValue={avgFeedbackScore.toFixed(1)}
-          sublabel="/5"
+          sublabel="/10"
           description={`Z ${totalFeedback} odpovědí`}
-          variant={avgFeedbackScore >= 4 ? 'success' : avgFeedbackScore >= 3 ? 'warning' : 'destructive'}
+          variant={avgFeedbackScore >= 8 ? 'success' : avgFeedbackScore >= 6 ? 'warning' : 'destructive'}
           size="md"
           onClick={() => onCardClick?.('feedback')}
         />
