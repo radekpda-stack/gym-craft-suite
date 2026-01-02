@@ -55,7 +55,7 @@ export function CartDiscountSection({
   const calculateDiscountAmount = () => {
     if (!discount) return 0;
     if (discount.type === 'percent') {
-      return Math.round(productsSubtotal * (discount.value / 100) * 100) / 100;
+      return Math.round(productsSubtotal * (discount.value / 100));
     }
     return Math.min(discount.value, productsSubtotal);
   };

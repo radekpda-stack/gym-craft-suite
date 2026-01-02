@@ -12,13 +12,13 @@ import {
   Wrench,
   Building2,
   Coins,
-  ArrowUpDown,
-  Filter
+  SlidersHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Badge } from '@/components/ui/badge';
@@ -312,44 +312,58 @@ export function SalesRegister() {
 
       {/* Products Grid with Sorting */}
       <div>
-        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <div className="flex items-center justify-between mb-3 gap-2">
           <Label className="text-sm font-medium">Produkty a služby</Label>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="out-of-stock-last"
-                checked={outOfStockLast}
-                onCheckedChange={setOutOfStockLast}
-              />
-              <Label htmlFor="out-of-stock-last" className="text-xs cursor-pointer">
-                Vyprodané na konec
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <Switch
-                id="hide-out-of-stock"
-                checked={hideOutOfStock}
-                onCheckedChange={setHideOutOfStock}
-              />
-              <Label htmlFor="hide-out-of-stock" className="text-xs cursor-pointer">
-                Skrýt vyprodané
-              </Label>
-            </div>
-          </div>
+          
+          {/* Compact filters in popover for mobile */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-8">
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Řazení</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Řazení</Label>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                    <SelectTrigger className="w-full h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SORT_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="out-of-stock-last" className="text-sm cursor-pointer">
+                      Vyprodané na konec
+                    </Label>
+                    <Switch
+                      id="out-of-stock-last"
+                      checked={outOfStockLast}
+                      onCheckedChange={setOutOfStockLast}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="hide-out-of-stock" className="text-sm cursor-pointer">
+                      Skrýt vyprodané
+                    </Label>
+                    <Switch
+                      id="hide-out-of-stock"
+                      checked={hideOutOfStock}
+                      onCheckedChange={setHideOutOfStock}
+                    />
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         
         {sortedProducts.length === 0 ? (
@@ -423,10 +437,10 @@ export function SalesRegister() {
                     </div>
                   )}
 
-                  {/* In cart indicator */}
+                  {/* In cart indicator with count */}
                   {inCart && (
-                    <Badge className="absolute top-2 right-2 bg-primary">
-                      {cartItem.quantity}×
+                    <Badge className="absolute -top-2 -right-2 bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
+                      {cartItem.quantity}
                     </Badge>
                   )}
                 </button>
@@ -470,13 +484,13 @@ export function SalesRegister() {
             })}
           </div>
 
-          {/* Payment Method */}
+          {/* Payment Method - Compact on mobile */}
           <div className="mb-4">
             <Label className="mb-2 block text-sm">Způsob platby</Label>
             <RadioGroup 
               value={paymentMethod} 
               onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-              className="grid grid-cols-4 gap-2"
+              className="grid grid-cols-4 gap-1.5 sm:gap-2"
             >
               {PAYMENT_METHODS.map((method) => {
                 // Credit requires client
@@ -495,7 +509,7 @@ export function SalesRegister() {
                     <Label
                       htmlFor={`payment-${method.value}`}
                       className={cn(
-                        "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                        "flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl border-2 cursor-pointer transition-all",
                         "hover:bg-secondary/50",
                         paymentMethod === method.value 
                           ? "border-primary bg-primary/10" 
@@ -504,11 +518,11 @@ export function SalesRegister() {
                       )}
                     >
                       <method.icon className={cn(
-                        "w-5 h-5",
+                        "w-5 h-5 sm:w-6 sm:h-6",
                         paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                       )} />
                       <span className={cn(
-                        "text-xs font-medium",
+                        "text-[10px] sm:text-xs font-medium text-center leading-tight",
                         paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                       )}>
                         {method.label}
