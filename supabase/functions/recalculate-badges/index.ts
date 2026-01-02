@@ -238,19 +238,40 @@ serve(async (req) => {
       
       console.log(`Client ${clientId}: ${allWorkouts.length} workouts`);
       
+      // Get existing badges to detect newly earned ones
+      const { data: existingBadges } = await supabase
+        .from('client_badges')
+        .select('badge_id, earned_at')
+        .eq('client_id', clientId);
+      
+      const existingBadgeMap = new Map(
+        (existingBadges || []).map(b => [b.badge_id, b.earned_at])
+      );
+      
       // Calculate progress for each badge
       const badgeUpdates: any[] = [];
+      const newlyEarnedBadges: { badge_id: string; badge_name: string; badge_rarity: string }[] = [];
       
       for (const badge of badges || []) {
         const progress = calculateBadgeProgress(badge, allWorkouts, allWorkouts);
+        const wasEarned = existingBadgeMap.get(badge.id);
+        const isNewlyEarned = progress.earned && !wasEarned;
         
         badgeUpdates.push({
           client_id: clientId,
           badge_id: badge.id,
           progress_current: progress.current,
           progress_target: progress.target,
-          earned_at: progress.earned ? new Date().toISOString() : null,
+          earned_at: progress.earned ? (wasEarned || new Date().toISOString()) : null,
         });
+        
+        if (isNewlyEarned) {
+          newlyEarnedBadges.push({
+            badge_id: badge.id,
+            badge_name: (badge as any).name || badge.id,
+            badge_rarity: (badge as any).rarity || 'Common',
+          });
+        }
       }
       
       // Upsert badge progress
@@ -264,6 +285,27 @@ serve(async (req) => {
         
         if (upsertError) {
           console.error(`Error upserting badges for ${clientId}:`, upsertError);
+        }
+      }
+      
+      // Track newly earned badges in client_portal_activity
+      for (const earnedBadge of newlyEarnedBadges) {
+        try {
+          await supabase
+            .from('client_portal_activity')
+            .insert({
+              client_id: clientId,
+              activity_type: 'badge_earned',
+              activity_date: new Date().toISOString().split('T')[0],
+              metadata: {
+                badge_id: earnedBadge.badge_id,
+                badge_name: earnedBadge.badge_name,
+                badge_rarity: earnedBadge.badge_rarity,
+              },
+            });
+          console.log(`Tracked badge earned: ${earnedBadge.badge_name} for client ${clientId}`);
+        } catch (activityError) {
+          console.error(`Failed to track badge activity:`, activityError);
         }
       }
       

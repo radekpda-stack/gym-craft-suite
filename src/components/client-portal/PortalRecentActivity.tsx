@@ -53,6 +53,10 @@ const ACTIVITY_ICONS: Record<string, typeof Activity> = {
   challenge_joined: Trophy,
   challenge_submitted: Award,
   
+  // Badges/Gamification
+  badge_earned: Award,
+  level_up: Zap,
+  
   // Other
   form_submit: FileText,
   credit_view: CreditCard,
@@ -91,6 +95,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   challenge_joined: 'Zapojil/a se do výzvy',
   challenge_submitted: 'Odeslal/a výsledek výzvy',
   
+  // Badges/Gamification
+  badge_earned: 'Získal/a odznak',
+  level_up: 'Dosáhl/a nové úrovně',
+  
   // Other
   form_submit: 'Odeslání formuláře',
   credit_view: 'Zobrazení kreditu',
@@ -119,9 +127,11 @@ const ACTIVITY_COLORS: Record<string, string> = {
   credentials_changed: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   profile_updated: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   
-  // Purple - challenges
+  // Purple - challenges & badges
   challenge_joined: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
   challenge_submitted: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  badge_earned: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  level_up: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
   
   default: 'bg-primary/10 text-primary',
 };
@@ -148,6 +158,13 @@ function getActivityDetail(activityType: string, metadata: Record<string, any> |
     case 'challenge_joined':
     case 'challenge_submitted':
       return metadata.challenge_title || null;
+    case 'badge_earned':
+      const badgeParts = [];
+      if (metadata.badge_name) badgeParts.push(metadata.badge_name);
+      if (metadata.badge_rarity) badgeParts.push(`(${metadata.badge_rarity})`);
+      return badgeParts.length > 0 ? badgeParts.join(' ') : null;
+    case 'level_up':
+      return metadata.new_level ? `Level ${metadata.new_level}` : null;
     case 'credentials_changed':
       const changes = [];
       if (metadata.email_changed) changes.push('email');
