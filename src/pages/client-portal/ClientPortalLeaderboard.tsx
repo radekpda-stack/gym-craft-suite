@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Zap, Dumbbell, Crown, ShieldCheck, Users } from 'lucide-react';
+import { Trophy, Medal, Dumbbell, Crown, Users } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboard, useLeaderboardSettings, LeaderboardEntry } from '@/hooks/useClientGamification';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; currentClientId?: string }) {
@@ -58,12 +57,6 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
               entry.is_anonymous && "italic text-muted-foreground"
             )}>
               {entry.nickname}
-              {/* Gender indicator for anonymous users */}
-              {entry.is_anonymous && entry.gender && (
-                <span className="ml-1 not-italic">
-                  {entry.gender === 'male' ? '♂' : '♀'}
-                </span>
-              )}
             </span>
             
             {isCurrentUser && (
@@ -71,24 +64,13 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
                 Ty
               </Badge>
             )}
-            
-            {entry.is_verified && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Verified – 70%+ tréninků s trenérem</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
         </div>
       </div>
       
       {/* Score */}
       <div className="text-right shrink-0">
-        <span className="font-bold text-lg">{entry.xp || entry.workout_count}</span>
+        <span className="font-bold text-lg">{entry.workout_count}</span>
       </div>
     </motion.div>
   );
@@ -112,20 +94,14 @@ function EmptyState() {
 
 export default function ClientPortalLeaderboard() {
   const { clientId } = useClientPortal();
-  const [activeTab, setActiveTab] = useState<'xp_month' | 'workouts_month' | 'workouts_alltime'>('xp_month');
+  const [activeTab, setActiveTab] = useState<'workouts_month' | 'workouts_alltime'>('workouts_month');
   
-  const { data: xpMonthData, isLoading: xpLoading } = useLeaderboard('xp_month');
   const { data: workoutsMonthData, isLoading: workoutsMonthLoading } = useLeaderboard('workouts_month');
   const { data: allTimeData, isLoading: allTimeLoading } = useLeaderboard('workouts_alltime');
   const { data: settings } = useLeaderboardSettings(clientId ?? undefined);
   
-  const isLoading = activeTab === 'xp_month' ? xpLoading : 
-                    activeTab === 'workouts_month' ? workoutsMonthLoading : 
-                    allTimeLoading;
-  
-  const data = activeTab === 'xp_month' ? xpMonthData :
-               activeTab === 'workouts_month' ? workoutsMonthData :
-               allTimeData;
+  const isLoading = activeTab === 'workouts_month' ? workoutsMonthLoading : allTimeLoading;
+  const data = activeTab === 'workouts_month' ? workoutsMonthData : allTimeData;
   
   // Find current user's rank
   const currentUserEntry = data?.find(e => e.client_id === clientId);
@@ -138,7 +114,7 @@ export default function ClientPortalLeaderboard() {
           <Trophy className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">Žebříčky</h1>
+          <h1 className="text-xl font-bold">Žebříček</h1>
           <p className="text-sm text-muted-foreground">
             Porovnej se s ostatními
           </p>
@@ -160,48 +136,38 @@ export default function ClientPortalLeaderboard() {
               <div>
                 <p className="font-medium">Tvoje pozice</p>
                 <p className="text-sm text-muted-foreground">
-                  {activeTab === 'xp_month' ? `${currentUserEntry.xp} XP tento měsíc` :
-                   activeTab === 'workouts_month' ? `${currentUserEntry.workout_count} tréninků tento měsíc` :
-                   `${currentUserEntry.workout_count} tréninků celkem`
+                  {activeTab === 'workouts_month' 
+                    ? `${currentUserEntry.workout_count} tréninků tento měsíc` 
+                    : `${currentUserEntry.workout_count} tréninků celkem`
                   }
                 </p>
               </div>
             </div>
-            {currentUserEntry.is_verified && (
-              <Badge variant="secondary" className="gap-1">
-                <ShieldCheck className="w-3 h-3" />
-                Verified
-              </Badge>
-            )}
           </div>
         </motion.div>
       )}
       
-      {/* Visibility info - show different message if anonymous vs visible */}
+      {/* Visibility info */}
       {(!settings || !settings.leaderboard_visible) && (
         <Card className="border-blue-500/30 bg-blue-500/5">
           <CardContent className="py-4">
             <p className="text-sm text-blue-600 dark:text-blue-400">
-              📛 Ve výchozím nastavení jsi anonymní. Pokud chceš zobrazit své jméno, můžeš to změnit v nastavení.
+              📛 Jsi anonymní. Pokud chceš zobrazit své jméno, změň to v nastavení.
             </p>
           </CardContent>
         </Card>
       )}
       
-      {/* Tabs */}
+      {/* Tabs - Simplified to 2 */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="xp_month" className="gap-1.5">
-            <Zap className="w-4 h-4" />
-            <span className="hidden sm:inline">XP</span>
-          </TabsTrigger>
+        <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="workouts_month" className="gap-1.5">
             <Dumbbell className="w-4 h-4" />
-            <span className="hidden sm:inline">Měsíc</span>
+            Tento měsíc
           </TabsTrigger>
           <TabsTrigger value="workouts_alltime" className="gap-1.5">
             <Trophy className="w-4 h-4" />
-            <span className="hidden sm:inline">Celkem</span>
+            Celkem
           </TabsTrigger>
         </TabsList>
         
@@ -218,19 +184,12 @@ export default function ClientPortalLeaderboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  {activeTab === 'xp_month' && (
-                    <>
-                      <Zap className="w-4 h-4" />
-                      XP tento měsíc
-                    </>
-                  )}
-                  {activeTab === 'workouts_month' && (
+                  {activeTab === 'workouts_month' ? (
                     <>
                       <Dumbbell className="w-4 h-4" />
                       Tréninky tento měsíc
                     </>
-                  )}
-                  {activeTab === 'workouts_alltime' && (
+                  ) : (
                     <>
                       <Trophy className="w-4 h-4" />
                       Celkový počet tréninků
@@ -251,14 +210,6 @@ export default function ClientPortalLeaderboard() {
           )}
         </TabsContent>
       </Tabs>
-      
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3 text-primary" />
-          <span>Verified = 70%+ tréninků s trenérem</span>
-        </div>
-      </div>
     </div>
   );
 }

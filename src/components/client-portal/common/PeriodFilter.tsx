@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type Period = 30 | 90 | 180 | 'all';
+export type Period = 30 | 90 | 'all';
 
 interface PeriodFilterProps {
   value: Period;
@@ -10,16 +10,15 @@ interface PeriodFilterProps {
 }
 
 const periodLabels: Record<Period, string> = {
-  30: '30 dní',
-  90: '90 dní',
-  180: '180 dní',
+  30: 'Měsíc',
+  90: '3 měsíce',
   all: 'Vše',
 };
 
 export function PeriodFilter({ 
   value, 
   onChange, 
-  options = [30, 90, 180, 'all'],
+  options = [30, 90, 'all'],
   className 
 }: PeriodFilterProps) {
   return (

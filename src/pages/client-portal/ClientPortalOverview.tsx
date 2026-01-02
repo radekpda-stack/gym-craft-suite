@@ -104,7 +104,7 @@ export default function ClientPortalOverview() {
           <h1 className="text-xl sm:text-2xl font-bold truncate">
             Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
           </h1>
-          <p className="text-muted-foreground text-sm">Tvůj sportovní přehled</p>
+          <p className="text-muted-foreground text-sm">Jak ti to jde</p>
         </div>
         <PeriodChips value={period} onChange={setPeriod} />
       </div>
