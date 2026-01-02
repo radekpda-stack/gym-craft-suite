@@ -364,16 +364,19 @@ export function useCreateClientNutritionSession() {
     mutationFn: async ({ 
       clientId,
       trainerId,
+      clientName,
       durationDays = 7,
     }: { 
       clientId: string;
       trainerId: string;
+      clientName: string;
       durationDays?: number;
     }) => {
       const startDate = new Date();
       const endDate = addDays(startDate, durationDays - 1);
 
-      const { data, error } = await supabase
+      // Create the nutrition session
+      const { data: session, error } = await supabase
         .from('nutrition_log_sessions')
         .insert({
           client_id: clientId,
@@ -386,7 +389,21 @@ export function useCreateClientNutritionSession() {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Notify trainer about client starting nutrition tracking
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: trainerId,
+          client_id: clientId,
+          type: 'client_nutrition_started',
+          title: 'Klient začal sledovat stravu',
+          message: `${clientName} si sám/sama aktivoval/a sledování stravy na ${durationDays} dní.`,
+          entity_type: 'nutrition_session',
+          entity_id: session.id,
+        });
+
+      return session;
     },
     onSuccess: (_, { clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
