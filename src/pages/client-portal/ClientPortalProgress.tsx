@@ -11,7 +11,7 @@ import { useClientAllExercises } from '@/hooks/useClientAllExercises';
 import { 
   WeightChart, 
   BodyFatChart, 
-  CardioProgressChart, 
+  CombinedCardioChart, 
   AllExercisesChart 
 } from '@/components/client-portal/progress';
 import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
@@ -157,7 +157,7 @@ export default function ClientPortalProgress() {
         />
       )}
 
-      {/* Cardio Section */}
+      {/* Cardio Section - Combined Charts */}
       {(showRowing500 || showRowing1000 || showRunning500 || showRunning1000) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -168,39 +168,25 @@ export default function ClientPortalProgress() {
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {showRowing500 && (
-              <CardioProgressChart 
-                data={rowing500Data || []} 
-                title="Veslo 500m"
+            {/* Veslo - Combined 500m + 1000m */}
+            {(showRowing500 || showRowing1000) && (
+              <CombinedCardioChart 
+                data500={rowing500Data || []} 
+                data1000={rowing1000Data || []}
+                title="Veslo"
                 icon={Bike}
-                isLoading={rowing500Loading}
+                isLoading={rowing500Loading || rowing1000Loading}
               />
             )}
             
-            {showRowing1000 && (
-              <CardioProgressChart 
-                data={rowing1000Data || []} 
-                title="Veslo 1000m"
-                icon={Bike}
-                isLoading={rowing1000Loading}
-              />
-            )}
-            
-            {showRunning500 && (
-              <CardioProgressChart 
-                data={running500Data || []} 
-                title="Běh 500m"
+            {/* Běh - Combined 500m + 1000m */}
+            {(showRunning500 || showRunning1000) && (
+              <CombinedCardioChart 
+                data500={running500Data || []} 
+                data1000={running1000Data || []}
+                title="Běh"
                 icon={PersonStanding}
-                isLoading={running500Loading}
-              />
-            )}
-            
-            {showRunning1000 && (
-              <CardioProgressChart 
-                data={running1000Data || []} 
-                title="Běh 1000m"
-                icon={PersonStanding}
-                isLoading={running1000Loading}
+                isLoading={running500Loading || running1000Loading}
               />
             )}
           </div>
