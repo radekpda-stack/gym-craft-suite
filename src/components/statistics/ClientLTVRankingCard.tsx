@@ -1,23 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { Crown, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Crown, Loader2, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import { format, differenceInMonths } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { differenceInMonths } from 'date-fns';
 
-const COLORS = [
-  'hsl(var(--warning))',
-  'hsl(var(--primary))',
-  'hsl(var(--success))',
-  'hsl(var(--muted-foreground))',
-];
+interface TopClientLTVProps {
+  onViewAll?: () => void;
+  limit?: number;
+}
 
-export function ClientLTVRankingCard() {
+export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ['client-ltv-ranking'],
+    queryKey: ['client-ltv-ranking-compact'],
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return null;
@@ -26,7 +23,8 @@ export function ClientLTVRankingCard() {
       const { data: clients } = await supabase
         .from('clients')
         .select('id, name, created_at, is_archived')
-        .eq('user_id', user.user.id);
+        .eq('user_id', user.user.id)
+        .eq('is_archived', false);
 
       if (!clients) return null;
 
@@ -49,12 +47,11 @@ export function ClientLTVRankingCard() {
         revenue: number; 
         trainings: number; 
         months: number;
-        avgPerMonth: number;
       }> = {};
 
       transactions?.forEach(t => {
         if (!clientLTV[t.client_id]) {
-          clientLTV[t.client_id] = { revenue: 0, trainings: 0, months: 0, avgPerMonth: 0 };
+          clientLTV[t.client_id] = { revenue: 0, trainings: 0, months: 0 };
         }
         clientLTV[t.client_id].revenue += Math.abs(t.amount);
       });
@@ -66,11 +63,10 @@ export function ClientLTVRankingCard() {
       });
 
       // Calculate months active
+      const now = new Date();
       clients.forEach(c => {
         if (clientLTV[c.id]) {
-          const months = Math.max(1, differenceInMonths(new Date(), new Date(c.created_at)));
-          clientLTV[c.id].months = months;
-          clientLTV[c.id].avgPerMonth = clientLTV[c.id].revenue / months;
+          clientLTV[c.id].months = Math.max(1, differenceInMonths(now, new Date(c.created_at)));
         }
       });
 
@@ -82,8 +78,6 @@ export function ClientLTVRankingCard() {
           return {
             id,
             name: client?.name || 'Neznámý',
-            isArchived: client?.is_archived || false,
-            createdAt: client?.created_at || '',
             ...data,
           };
         })
@@ -94,122 +88,98 @@ export function ClientLTVRankingCard() {
       const totalLTV = ranking.reduce((sum, c) => sum + c.revenue, 0);
       const avgLTV = ranking.length > 0 ? totalLTV / ranking.length : 0;
 
-      return { ranking, totalLTV, avgLTV };
+      return { ranking, avgLTV };
     },
   });
 
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
   }
 
   const ranking = data?.ranking || [];
-  const chartData = ranking.slice(0, 8).map((c, i) => ({
-    name: c.name.length > 10 ? c.name.slice(0, 10) + '...' : c.name,
-    fullName: c.name,
-    value: c.revenue,
-    rank: i + 1,
-  }));
+
+  if (ranking.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Crown className="h-4 w-4 text-warning" />
+            Top klienti podle hodnoty
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Zatím žádná data
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Crown className="h-5 w-5 text-warning" />
-          Lifetime Value klientů
-        </CardTitle>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Crown className="h-4 w-4 text-warning" />
+            Top klienti podle hodnoty
+          </CardTitle>
+          <span className="text-xs text-muted-foreground">
+            Ø {formatCurrency(data?.avgLTV || 0)}
+          </span>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4 sm:space-y-6">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="p-3 sm:p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Top 10 celkem</p>
-            <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrency(data?.totalLTV || 0)}</p>
-          </div>
-          <div className="p-3 sm:p-4 rounded-xl bg-secondary/50">
-            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Průměrná LTV</p>
-            <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrency(data?.avgLTV || 0)}</p>
-          </div>
-        </div>
-
-        <div className="h-48 sm:h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 0, right: 10, left: 60, bottom: 0 }}
-            >
-              <XAxis
-                type="number"
-                tick={{ fontSize: 10 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-              />
-            <YAxis
-              type="category"
-              dataKey="name"
-              tick={{ fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              width={55}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--popover))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                }}
-                formatter={(value: number) => [formatCurrency(value), 'LTV']}
-                labelFormatter={(label) => chartData.find(d => d.name === label)?.fullName || label}
-              />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {chartData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[Math.min(index, 3)]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="space-y-2">
-          {ranking.slice(0, 5).map((client, i) => (
-            <div
-              key={client.id}
-              className={cn(
-                'flex items-center justify-between p-2.5 sm:p-3 rounded-lg gap-2',
-                i === 0 && 'bg-warning/10 border border-warning/20',
-                i > 0 && 'bg-secondary/30'
-              )}
-            >
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <span
-                  className={cn(
-                    'w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
-                    i === 0 && 'bg-warning/20 text-warning',
-                    i === 1 && 'bg-muted text-muted-foreground',
-                    i > 1 && 'bg-secondary text-muted-foreground'
-                  )}
-                >
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{client.name}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                    {client.trainings} tréninků • {client.months}m
-                  </p>
-                </div>
-              </div>
-              <span className="font-bold text-sm sm:text-lg text-success flex-shrink-0">
-                {formatCurrency(client.revenue)}
+      <CardContent className="space-y-2">
+        {ranking.slice(0, limit).map((client, i) => (
+          <div
+            key={client.id}
+            className={cn(
+              'flex items-center justify-between p-2.5 rounded-lg gap-3',
+              i === 0 && 'bg-warning/10 border border-warning/20',
+              i > 0 && 'bg-secondary/30'
+            )}
+          >
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span
+                className={cn(
+                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                  i === 0 && 'bg-warning/20 text-warning',
+                  i === 1 && 'bg-muted text-muted-foreground',
+                  i > 1 && 'bg-secondary text-muted-foreground'
+                )}
+              >
+                {i + 1}
               </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm truncate">{client.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {client.trainings} tréninků • {client.months}m
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
+            <span className="font-bold text-sm text-success flex-shrink-0">
+              {formatCurrency(client.revenue)}
+            </span>
+          </div>
+        ))}
+
+        {ranking.length > limit && onViewAll && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-2 text-muted-foreground hover:text-foreground"
+            onClick={onViewAll}
+          >
+            Zobrazit vše
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
