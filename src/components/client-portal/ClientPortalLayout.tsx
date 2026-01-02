@@ -3,8 +3,6 @@ import { NavLink, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   TrendingUp, 
-  Calendar, 
-  Wallet, 
   Apple, 
   LogOut,
   Settings,
@@ -32,7 +30,6 @@ const baseNavItems = [
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
   { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
   { to: '/client/leaderboard', icon: Trophy, label: 'Žebříček', trackName: 'leaderboard' },
-  { to: '/client/credit', icon: Wallet, label: 'Kredit', trackName: 'credit' },
 ];
 
 // Conditional nav item

@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Bell, Ruler, Trophy } from 'lucide-react';
+import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
 import { ClientPortalLayout } from '@/components/client-portal/ClientPortalLayout';
 import { useClientPrivacySettings, useUpdateClientPrivacySettings } from '@/hooks/useClientPortalBenchmarks';
-import { useClientPreferences } from '@/hooks/useClientPreferences';
 import { ClientProfileSection } from '@/components/client-portal/ClientProfileSection';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboardSettings, useUpdateLeaderboardSettings } from '@/hooks/useClientGamification';
@@ -41,7 +39,6 @@ export default function ClientPortalSettings() {
 
   const { data: privacySettings, isLoading: privacyLoading } = useClientPrivacySettings();
   const updatePrivacy = useUpdateClientPrivacySettings();
-  const { preferences, updatePreferences, isUpdating } = useClientPreferences();
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,19 +85,12 @@ export default function ClientPortalSettings() {
     });
   };
 
-  const handlePreferenceChange = (key: string, value: any) => {
-    updatePreferences({ [key]: value }, {
-      onSuccess: () => toast.success('Nastavení uloženo'),
-      onError: () => toast.error('Nepodařilo se uložit'),
-    });
-  };
-
   const handleLeaderboardVisibility = (visible: boolean) => {
     if (!clientId) return;
     updateLeaderboard.mutate(
       { clientId, visible, nickname: nickname || 'Anonym' },
       {
-        onSuccess: () => toast.success('Nastavení žebříčku uloženo'),
+        onSuccess: () => toast.success('Nastavení uloženo'),
         onError: () => toast.error('Nepodařilo se uložit'),
       }
     );
@@ -131,20 +121,20 @@ export default function ClientPortalSettings() {
         {/* My Profile */}
         <ClientProfileSection />
 
-        {/* Leaderboard Settings */}
+        {/* Privacy Settings (merged leaderboard + benchmarks) */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Žebříček
+                <Shield className="w-5 h-5" />
+                Soukromí
               </CardTitle>
               <CardDescription>
-                Nastavení zobrazení v žebříčku tréninků
+                Nastavení viditelnosti v žebříčku a srovnání s ostatními
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {leaderboardLoading ? (
+              {(leaderboardLoading || privacyLoading) ? (
                 <div className="h-24 bg-muted animate-pulse rounded-lg" />
               ) : (
                 <>
@@ -152,15 +142,19 @@ export default function ClientPortalSettings() {
                   <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
                     <p className="text-sm text-muted-foreground">
                       <Shield className="h-4 w-4 inline mr-1.5 text-primary" />
-                      <strong>Ve výchozím nastavení jsi anonymní</strong> – ostatní klienti vidí pouze náhodně vygenerovanou přezdívku (např. "Rychlý Orel #42"). Tvoje skutečné jméno ani identita není nikomu zobrazena.
+                      <strong>Ve výchozím nastavení jsi anonymní</strong> – tvoje jméno nikdo nevidí.
                     </p>
                   </div>
 
+                  {/* Leaderboard visibility */}
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex-1 pr-4">
-                      <Label className="font-medium">Zobrazit mé jméno ostatním</Label>
+                      <Label className="font-medium flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-primary" />
+                        Zobrazit mě v žebříčku
+                      </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Pokud toto zapneš, ostatní uvidí tvou přezdívku (nebo jméno) místo anonymního označení. Můžeš kdykoliv vypnout.
+                        Ostatní uvidí tvou přezdívku místo anonymního označení
                       </p>
                     </div>
                     <Switch
@@ -173,14 +167,14 @@ export default function ClientPortalSettings() {
                   {(leaderboardSettings?.leaderboard_visible) && (
                     <div className="p-4 rounded-lg border space-y-3">
                       <div className="flex-1">
-                        <Label className="font-medium">Přezdívka v žebříčku</Label>
+                        <Label className="font-medium">Moje přezdívka</Label>
                         <p className="text-sm text-muted-foreground">
-                          Toto jméno uvidí ostatní klienti v žebříčku
+                          Toto jméno uvidí ostatní
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Např. SuperTrenér, Silák..."
+                          placeholder="Např. Silák, Běžec..."
                           value={nickname}
                           onChange={(e) => setNickname(e.target.value)}
                           className="flex-1"
@@ -195,34 +189,13 @@ export default function ClientPortalSettings() {
                       </div>
                     </div>
                   )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        {/* Privacy & Benchmarks */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Soukromí & srovnání
-              </CardTitle>
-              <CardDescription>
-                Nastavení anonymního srovnání s ostatními klienty
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {privacyLoading ? (
-                <div className="h-24 bg-muted animate-pulse rounded-lg" />
-              ) : (
-                <>
+                  {/* Anonymous benchmarks */}
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex-1">
-                      <Label className="font-medium">Anonymní srovnání výkonu</Label>
+                      <Label className="font-medium">Porovnat mé výsledky</Label>
                       <p className="text-sm text-muted-foreground">
-                        Povolit anonymní srovnání tvých výsledků s ostatními klienty
+                        Anonymní srovnání s ostatními klienty
                       </p>
                     </div>
                     <Switch
@@ -232,11 +205,12 @@ export default function ClientPortalSettings() {
                     />
                   </div>
 
+                  {/* Challenges participation */}
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex-1">
                       <Label className="font-medium">Účast ve výzvách</Label>
                       <p className="text-sm text-muted-foreground">
-                        Zobrazení v anonymním žebříčku jako "Athlete #X"
+                        Zapojit se do skupinových výzev
                       </p>
                     </div>
                     <Switch
@@ -248,7 +222,7 @@ export default function ClientPortalSettings() {
 
                   <p className="text-xs text-muted-foreground">
                     <Users className="h-3 w-3 inline mr-1" />
-                    Nikdy nezobrazujeme jméno. Srovnání je vždy anonymní. Žebříček se zobrazí od 8 účastníků.
+                    Srovnání je vždy anonymní. Nikdy nezobrazujeme tvoje jméno bez povolení.
                   </p>
                 </>
               )}
@@ -256,97 +230,8 @@ export default function ClientPortalSettings() {
           </Card>
         </motion.div>
 
-        {/* Notifications */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notifikace
-              </CardTitle>
-              <CardDescription>Upozornění a připomínky</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { key: 'notify_water_reminder', label: 'Připomínka pitného režimu' },
-                { key: 'notify_campaign_reminder', label: 'Připomínka kampaně (strava)' },
-                { key: 'notify_new_challenge', label: 'Nová výzva' },
-                { key: 'notify_low_credit', label: 'Upozornění na nízký kredit' },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-lg border">
-                  <Label className="font-medium">{label}</Label>
-                  <Switch
-                    checked={(preferences as any)?.[key] || false}
-                    onCheckedChange={(checked) => handlePreferenceChange(key, checked)}
-                    disabled={isUpdating}
-                  />
-                </div>
-              ))}
-              <p className="text-xs text-muted-foreground">
-                Notifikace budou dostupné v příští verzi aplikace.
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Units */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ruler className="w-5 h-5" />
-                Jednotky
-              </CardTitle>
-              <CardDescription>Preferované jednotky měření</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Váha</Label>
-                  <Select
-                    value={preferences?.weight_unit || 'kg'}
-                    onValueChange={(v) => handlePreferenceChange('weight_unit', v)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="lb">lb</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Vzdálenost</Label>
-                  <Select
-                    value={preferences?.distance_unit || 'km'}
-                    onValueChange={(v) => handlePreferenceChange('distance_unit', v)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="km">km</SelectItem>
-                      <SelectItem value="mi">mi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Formát času</Label>
-                  <Select
-                    value={preferences?.time_format || 'mm:ss'}
-                    onValueChange={(v) => handlePreferenceChange('time_format', v)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mm:ss">mm:ss</SelectItem>
-                      <SelectItem value="hh:mm:ss">hh:mm:ss</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* Password */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
