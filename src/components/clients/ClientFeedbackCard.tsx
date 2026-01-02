@@ -46,8 +46,8 @@ export function ClientFeedbackCard({
 
   const totalFeedbacks = feedbackData.length;
   const pendingRequests = feedbackRequests.filter(r => r.status === 'pending').length;
-  const redFlags = feedbackData.filter(f => f.is_red_flag).length;
-  const highPainCount = feedbackData.filter(f => (f.pain || 0) >= 7).length;
+  const redFlags = stats.redFlagCount || feedbackData.filter(f => f.is_red_flag).length;
+  const highPainCount = stats.highPainCount || feedbackData.filter(f => (f.pain || 0) >= 7).length;
   
   const lastFeedback = feedbackData[0];
   const lastFeedbackDaysAgo = lastFeedback 
@@ -135,40 +135,46 @@ export function ClientFeedbackCard({
         <div className="mt-2 p-4 glass rounded-2xl space-y-4">
           {totalFeedbacks > 0 ? (
             <>
-              {/* Quick stats */}
+              {/* Quick stats - use new D+1 values when available */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
                     <Activity className="w-3 h-3 text-primary" />
-                    <p className="text-lg font-bold text-foreground">{stats.avgRpe.toFixed(1)}</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {stats.avgDifficulty > 0 ? stats.avgDifficulty.toFixed(1) : stats.avgRpe.toFixed(1)}
+                    </p>
                   </div>
-                  <p className="text-[9px] text-muted-foreground">Ø RPE</p>
+                  <p className="text-[9px] text-muted-foreground">Ø Náročnost</p>
                 </div>
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
                     <Battery className="w-3 h-3 text-orange-500" />
-                    <p className="text-lg font-bold text-foreground">{stats.avgFatigue.toFixed(1)}</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {stats.avgSoreness > 0 ? stats.avgSoreness.toFixed(1) : stats.avgFatigue.toFixed(1)}
+                    </p>
                   </div>
-                  <p className="text-[9px] text-muted-foreground">Ø Únava</p>
+                  <p className="text-[9px] text-muted-foreground">Ø Svalovka</p>
                 </div>
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
                     <Brain className="w-3 h-3 text-green-500" />
-                    <p className="text-lg font-bold text-foreground">{stats.avgMood.toFixed(1)}</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {stats.avgBodyFeel > 0 ? stats.avgBodyFeel.toFixed(1) : stats.avgMood.toFixed(1)}
+                    </p>
                   </div>
-                  <p className="text-[9px] text-muted-foreground">Ø Nálada</p>
+                  <p className="text-[9px] text-muted-foreground">Ø Pocit</p>
                 </div>
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
                     <AlertTriangle className={cn(
                       'w-3 h-3',
-                      highPainCount > 0 ? 'text-warning' : 'text-muted-foreground'
+                      stats.highPainCount > 0 ? 'text-warning' : 'text-muted-foreground'
                     )} />
                     <p className={cn(
                       'text-lg font-bold',
-                      highPainCount > 0 ? 'text-warning' : 'text-foreground'
+                      stats.highPainCount > 0 ? 'text-warning' : 'text-foreground'
                     )}>
-                      {highPainCount}
+                      {stats.highPainCount}
                     </p>
                   </div>
                   <p className="text-[9px] text-muted-foreground">Vysoká bolest</p>
@@ -188,12 +194,17 @@ export function ClientFeedbackCard({
                        `Před ${lastFeedbackDaysAgo} dny`}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span>
-                      RPE: <strong>{lastFeedback.rpe_rating || '—'}</strong>
+                      Náročnost: <strong>{lastFeedback.difficulty || lastFeedback.rpe_rating || '—'}/10</strong>
                     </span>
-                    {lastFeedback.pain > 0 && (
-                      <span className={lastFeedback.pain >= 7 ? 'text-warning' : ''}>
+                    {lastFeedback.body_feel && (
+                      <span>
+                        Pocit: <strong>{lastFeedback.body_feel}/10</strong>
+                      </span>
+                    )}
+                    {(lastFeedback.pain ?? 0) > 1 && (
+                      <span className={(lastFeedback.pain ?? 0) >= 7 ? 'text-warning' : ''}>
                         Bolest: <strong>{lastFeedback.pain}/10</strong>
                       </span>
                     )}

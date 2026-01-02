@@ -124,8 +124,9 @@ export function useClientFeedbackStats(clientId: string | undefined) {
 
   const stats = {
     totalFeedback: feedback.length,
+    // Legacy stats (for backward compatibility)
     avgRpe: feedback.length > 0 
-      ? feedback.reduce((sum, f) => sum + f.rpe_rating, 0) / feedback.length 
+      ? feedback.reduce((sum, f) => sum + (f.difficulty || f.rpe_rating || 5), 0) / feedback.length 
       : 0,
     avgFatigue: feedback.length > 0 
       ? feedback.reduce((sum, f) => sum + f.fatigue_level, 0) / feedback.length 
@@ -142,6 +143,31 @@ export function useClientFeedbackStats(clientId: string | undefined) {
     avgSleepQuality: feedback.filter(f => f.sleep_quality).length > 0
       ? feedback.filter(f => f.sleep_quality).reduce((sum, f) => sum + (f.sleep_quality || 0), 0) / feedback.filter(f => f.sleep_quality).length
       : 0,
+    // NEW: D+1 feedback stats (1-10 scale)
+    avgSoreness: feedback.filter(f => f.soreness).length > 0
+      ? feedback.filter(f => f.soreness).reduce((sum, f) => sum + (f.soreness || 0), 0) / feedback.filter(f => f.soreness).length
+      : 0,
+    avgBodyFeel: feedback.filter(f => f.body_feel).length > 0
+      ? feedback.filter(f => f.body_feel).reduce((sum, f) => sum + (f.body_feel || 0), 0) / feedback.filter(f => f.body_feel).length
+      : 0,
+    avgEnergy: feedback.filter(f => f.energy_rating).length > 0
+      ? feedback.filter(f => f.energy_rating).reduce((sum, f) => sum + (f.energy_rating || 0), 0) / feedback.filter(f => f.energy_rating).length
+      : 0,
+    avgPain: feedback.filter(f => f.pain).length > 0
+      ? feedback.filter(f => f.pain).reduce((sum, f) => sum + (f.pain || 0), 0) / feedback.filter(f => f.pain).length
+      : 0,
+    avgDifficulty: feedback.filter(f => f.difficulty).length > 0
+      ? feedback.filter(f => f.difficulty).reduce((sum, f) => sum + (f.difficulty || 0), 0) / feedback.filter(f => f.difficulty).length
+      : 0,
+    avgFun: feedback.filter(f => f.fun).length > 0
+      ? feedback.filter(f => f.fun).reduce((sum, f) => sum + (f.fun || 0), 0) / feedback.filter(f => f.fun).length
+      : 0,
+    avgSessionFit: feedback.filter(f => f.session_fit).length > 0
+      ? feedback.filter(f => f.session_fit).reduce((sum, f) => sum + (f.session_fit || 0), 0) / feedback.filter(f => f.session_fit).length
+      : 0,
+    // Red flag count
+    redFlagCount: feedback.filter(f => f.is_red_flag).length,
+    highPainCount: feedback.filter(f => f.pain && f.pain >= 7).length,
     // Muscle soreness frequency
     muscleFrequency: feedback.reduce((acc, f) => {
       f.muscle_soreness.forEach(muscle => {
@@ -162,25 +188,37 @@ export function useClientFeedbackStats(clientId: string | undefined) {
       low_entire: feedback.filter(f => f.energy_level === 'low_entire').length,
       good_start_only: feedback.filter(f => f.energy_level === 'good_start_only').length,
     },
-    // Time series data for charts
+    // Time series data for charts - use new fields when available
     rpeOverTime: feedback.map(f => ({
       date: f.training_date,
-      value: f.rpe_rating,
+      value: f.difficulty || f.rpe_rating,
     })).reverse(),
     fatigueOverTime: feedback.map(f => ({
       date: f.training_date,
-      value: f.fatigue_level,
+      value: f.soreness || f.fatigue_level,
     })).reverse(),
     moodOverTime: feedback.map(f => ({
       date: f.training_date,
-      value: f.mood_rating,
+      value: f.fun || f.mood_rating,
+    })).reverse(),
+    bodyFeelOverTime: feedback.filter(f => f.body_feel).map(f => ({
+      date: f.training_date,
+      value: f.body_feel!,
+    })).reverse(),
+    painOverTime: feedback.filter(f => f.pain).map(f => ({
+      date: f.training_date,
+      value: f.pain!,
+    })).reverse(),
+    energyOverTime: feedback.filter(f => f.energy_rating).map(f => ({
+      date: f.training_date,
+      value: f.energy_rating!,
     })).reverse(),
     sleepVsRpe: feedback
       .filter(f => f.sleep_hours && f.sleep_quality)
       .map(f => ({
         sleepHours: f.sleep_hours,
         sleepQuality: f.sleep_quality,
-        rpe: f.rpe_rating,
+        rpe: f.difficulty || f.rpe_rating,
         date: f.training_date,
       })).reverse(),
     // Pain area intensity statistics
