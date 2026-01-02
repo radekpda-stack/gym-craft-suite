@@ -442,57 +442,10 @@ serve(async (req) => {
       ));
     }
 
-    // For food entries, get AI calorie estimate asynchronously
-    let calorieEstimate = null;
-    if (type === 'food' && data) {
-      try {
-        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-        if (lovableApiKey) {
-          const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-nutrition`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              analyzeType: 'single-food',
-              foodEntry: {
-                description: (validatedEntry as any).description,
-                portion_size: (validatedEntry as any).portion_size,
-                portion_estimate: (validatedEntry as any).portion_estimate,
-                grams: (validatedEntry as any).grams,
-                meal_type: (validatedEntry as any).meal_type,
-              }
-            }),
-          });
-
-          if (analyzeResponse.ok) {
-            calorieEstimate = await analyzeResponse.json();
-            
-            // Update the entry with calorie estimates
-            if (calorieEstimate?.calorie_estimate_low && calorieEstimate?.calorie_estimate_high) {
-              await supabase
-                .from('nutrition_food_entries')
-                .update({
-                  calorie_estimate_low: calorieEstimate.calorie_estimate_low,
-                  calorie_estimate_high: calorieEstimate.calorie_estimate_high,
-                })
-                .eq('id', data.id);
-              
-              data.calorie_estimate_low = calorieEstimate.calorie_estimate_low;
-              data.calorie_estimate_high = calorieEstimate.calorie_estimate_high;
-            }
-          }
-        }
-      } catch (aiError) {
-        console.error('AI calorie estimate error (non-blocking):', aiError);
-      }
-    }
-
-    console.log(`Successfully saved ${type} entry for session ${session.id}`);
+    console.log(`Created ${type} entry ${data.id} for session ${session.id}`);
 
     return await normalizeResponseTime(startTime, new Response(
-      JSON.stringify({ success: true, entry: data, calorieEstimate }), 
+      JSON.stringify({ success: true, entry: data }), 
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }

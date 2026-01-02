@@ -169,11 +169,19 @@ export function useCreateNutritionLogSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ clientId, startDate }: { clientId: string; startDate: Date }) => {
+    mutationFn: async ({ 
+      clientId, 
+      startDate,
+      durationDays = 7,
+    }: { 
+      clientId: string; 
+      startDate: Date;
+      durationDays?: number;
+    }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const endDate = addDays(startDate, 6);
+      const endDate = addDays(startDate, durationDays - 1);
 
       const { data, error } = await supabase
         .from('nutrition_log_sessions')
@@ -191,6 +199,7 @@ export function useCreateNutritionLogSession() {
     },
     onSuccess: (_, { clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['nutrition-log-sessions', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-nutrition-sessions'] });
     },
   });
 }

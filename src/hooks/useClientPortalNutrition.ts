@@ -349,6 +349,7 @@ export function useDeleteNutritionEntryPortal() {
       return { type, sessionId, clientId };
     },
     onSuccess: ({ type, sessionId, clientId }) => {
+      // Invalidate both portal and trainer-side queries for consistency
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: [`nutrition-${type}-entries`, sessionId] });
