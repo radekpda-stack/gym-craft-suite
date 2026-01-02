@@ -185,7 +185,7 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
         // Calculate line discount for inventory items
         if (item.lineDiscount) {
           if (item.lineDiscount.type === 'percent') {
-            lineDiscountsTotal += Math.round(lineTotal * (item.lineDiscount.value / 100) * 100) / 100;
+            lineDiscountsTotal += Math.round(lineTotal * (item.lineDiscount.value / 100));
           } else {
             lineDiscountsTotal += Math.min(item.lineDiscount.value, lineTotal);
           }
@@ -200,7 +200,7 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
     let orderDiscountAmount = 0;
     if (orderDiscount && productsSubtotal > 0) {
       if (orderDiscount.type === 'percent') {
-        orderDiscountAmount = Math.round(productsSubtotal * (orderDiscount.value / 100) * 100) / 100;
+        orderDiscountAmount = Math.round(productsSubtotal * (orderDiscount.value / 100));
       } else {
         orderDiscountAmount = Math.min(orderDiscount.value, productsSubtotal);
       }
@@ -279,7 +279,7 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
 
       if (item.product.kind === 'inventory' && item.lineDiscount) {
         if (item.lineDiscount.type === 'percent') {
-          lineDiscountAmount = Math.round(lineTotal * (item.lineDiscount.value / 100) * 100) / 100;
+          lineDiscountAmount = Math.round(lineTotal * (item.lineDiscount.value / 100));
         } else {
           lineDiscountAmount = Math.min(item.lineDiscount.value, lineTotal);
         }
