@@ -177,6 +177,11 @@ function SessionCard({ session, onCopyLink, onOpenDetail, publicUrl }: SessionCa
                     Probíhá
                   </Badge>
                 )}
+                {(session as any).is_self_service && (
+                  <Badge variant="outline" className="text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-900/20">
+                    Self-service
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 Vytvořeno {format(parseISO(session.created_at), 'd.M.yyyy HH:mm', { locale: cs })}

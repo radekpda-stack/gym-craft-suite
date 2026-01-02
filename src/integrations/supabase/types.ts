@@ -4503,6 +4503,7 @@ export type Database = {
           end_date: string
           expected_entries_per_day: number | null
           id: string
+          is_self_service: boolean | null
           start_date: string
           status: string
           template_snapshot: Json | null
@@ -4517,6 +4518,7 @@ export type Database = {
           end_date: string
           expected_entries_per_day?: number | null
           id?: string
+          is_self_service?: boolean | null
           start_date?: string
           status?: string
           template_snapshot?: Json | null
@@ -4531,6 +4533,7 @@ export type Database = {
           end_date?: string
           expected_entries_per_day?: number | null
           id?: string
+          is_self_service?: boolean | null
           start_date?: string
           status?: string
           template_snapshot?: Json | null
@@ -4549,6 +4552,63 @@ export type Database = {
           },
           {
             foreignKeyName: "nutrition_log_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      nutrition_meal_templates: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string
+          id: string
+          meal_type: string | null
+          name: string
+          note: string | null
+          portion_size: string | null
+          quality: string | null
+          updated_at: string
+          use_count: number | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description: string
+          id?: string
+          meal_type?: string | null
+          name: string
+          note?: string | null
+          portion_size?: string | null
+          quality?: string | null
+          updated_at?: string
+          use_count?: number | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          meal_type?: string | null
+          name?: string
+          note?: string | null
+          portion_size?: string | null
+          quality?: string | null
+          updated_at?: string
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_meal_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_meal_templates_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"

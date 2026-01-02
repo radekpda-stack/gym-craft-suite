@@ -376,7 +376,7 @@ export function useCreateClientNutritionSession() {
       const startDate = new Date();
       const endDate = addDays(startDate, durationDays - 1);
 
-      // Create the nutrition session
+      // Create the nutrition session with self-service flag
       const { data: session, error } = await supabase
         .from('nutrition_log_sessions')
         .insert({
@@ -385,6 +385,7 @@ export function useCreateClientNutritionSession() {
           start_date: format(startDate, 'yyyy-MM-dd'),
           end_date: format(endDate, 'yyyy-MM-dd'),
           status: 'active',
+          is_self_service: true,
         })
         .select()
         .single();
