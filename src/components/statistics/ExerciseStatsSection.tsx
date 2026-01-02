@@ -3,18 +3,21 @@ import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useTrainingIntensityStats } from '@/hooks/useTrainingIntensityStats';
 import { InsightsBar, generateExerciseInsights } from './InsightsBar';
 import { RecentPRsList, useMonthlyPRCount } from './RecentPRsList';
-import { Loader2, Activity, Trophy } from 'lucide-react';
+import { Loader2, Activity, Trophy, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PRsDetailModal } from './modals/PRsDetailModal';
+import { IntensityDetailModal } from './modals/IntensityDetailModal';
 import { Card } from '@/components/ui/card';
 import { VolumeStatsCard } from './VolumeStatsCard';
 import { CardioStatsCard } from './CardioStatsCard';
+import { StatInfoTooltip } from './StatInfoTooltip';
 
 export function ExerciseStatsSection() {
   const { data: stats, isLoading } = useAnnualStats('year');
   const { data: intensityStats, isLoading: intensityLoading } = useTrainingIntensityStats();
   const { data: monthlyPRs } = useMonthlyPRCount();
   const [showPRsModal, setShowPRsModal] = useState(false);
+  const [showIntensityModal, setShowIntensityModal] = useState(false);
 
   // Generate insights
   const insights = generateExerciseInsights(stats);
@@ -53,13 +56,23 @@ export function ExerciseStatsSection() {
       {/* Hero KPI Cards - 2 metrics */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {/* RPE Card */}
-        <Card className="p-4 sm:p-5">
+        <Card 
+          className="p-4 sm:p-5 cursor-pointer hover:bg-accent/50 transition-colors group"
+          onClick={() => setShowIntensityModal(true)}
+        >
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Activity className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-muted-foreground">Ø Intenzita</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Ø Intenzita</p>
+                <StatInfoTooltip
+                  title="Průměrná intenzita (RPE)"
+                  description="Průměrná vnímaná náročnost tréninků na škále 1-10."
+                  calculation="Průměr hodnot RPE ze všech dokončených tréninků, kde bylo RPE zadáno."
+                />
+              </div>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-2xl sm:text-3xl font-bold">
                   {avgRPE ? avgRPE.toFixed(1) : '—'}
@@ -72,6 +85,7 @@ export function ExerciseStatsSection() {
                 </p>
               )}
             </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors mt-2" />
           </div>
         </Card>
 
@@ -112,11 +126,15 @@ export function ExerciseStatsSection() {
         onViewAll={() => setShowPRsModal(true)}
       />
 
-      {/* Modal */}
+      {/* Modals */}
       <PRsDetailModal 
         open={showPRsModal} 
         onOpenChange={setShowPRsModal}
         stats={stats}
+      />
+      <IntensityDetailModal
+        open={showIntensityModal}
+        onOpenChange={setShowIntensityModal}
       />
     </div>
   );
