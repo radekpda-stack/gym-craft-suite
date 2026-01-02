@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useAllClientWorkoutLogs, useAddTrainerComment } from '@/hooks/useClientWorkoutLogs';
+import { useReviewWorkout } from '@/hooks/useAssignWorkout';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { BookOpen, Search, ChevronDown, ChevronUp, User, MessageSquare, Send, Trophy, Clock } from 'lucide-react';
+import { BookOpen, Search, ChevronDown, ChevronUp, User, MessageSquare, Send, Trophy, Clock, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from './workout-diary/WorkoutTypeSelector';
@@ -17,6 +18,7 @@ import { getEnergyEmoji } from './workout-diary/EnergyRating';
 export function ClientWorkoutLogsOverview() {
   const { data: logs, isLoading } = useAllClientWorkoutLogs();
   const addComment = useAddTrainerComment();
+  const reviewWorkout = useReviewWorkout();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [commentingLogId, setCommentingLogId] = useState<string | null>(null);
@@ -30,11 +32,34 @@ export function ClientWorkoutLogsOverview() {
     });
   };
 
-  const handleAddComment = async (logId: string) => {
+  const handleAddComment = async (logId: string, clientId: string) => {
     if (!commentText.trim()) return;
     await addComment.mutateAsync({ logId, comment: commentText.trim() });
     setCommentText('');
     setCommentingLogId(null);
+  };
+
+  const handleReview = async (logId: string, clientId: string, withComment?: boolean) => {
+    await reviewWorkout.mutateAsync({
+      logId,
+      clientId,
+      comment: withComment ? commentText.trim() : undefined,
+    });
+    setCommentText('');
+    setCommentingLogId(null);
+  };
+
+  const getStatusBadge = (status: string | undefined) => {
+    switch (status) {
+      case 'planned':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Plánovaný</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Dokončený</Badge>;
+      case 'reviewed':
+        return <Badge variant="outline" className="text-primary border-primary/50 bg-primary/10">Zkontrolován</Badge>;
+      default:
+        return null;
+    }
   };
 
   const filteredLogs = logs?.filter(log => {
@@ -110,6 +135,7 @@ export function ClientWorkoutLogsOverview() {
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{log.client?.name || 'Klient'}</span>
                             {hasPR && <Badge variant="secondary" className="text-xs gap-1"><Trophy className="w-3 h-3" />PR</Badge>}
+                            {getStatusBadge((log as any).status)}
                             {log.trainer_comment && <MessageSquare className="w-4 h-4 text-primary" />}
                           </div>
                           <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
@@ -171,17 +197,27 @@ export function ClientWorkoutLogsOverview() {
                                 onChange={(e) => setCommentText(e.target.value)}
                                 rows={2}
                               />
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleAddComment(log.id)} disabled={addComment.isPending}>
-                                  <Send className="w-4 h-4 mr-1" />Odeslat
+                              <div className="flex gap-2 flex-wrap">
+                                <Button size="sm" onClick={() => handleReview(log.id, log.client_id!, true)} disabled={reviewWorkout.isPending || addComment.isPending}>
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />Zkontrolovat s komentářem
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleAddComment(log.id, log.client_id!)} disabled={addComment.isPending}>
+                                  <Send className="w-4 h-4 mr-1" />Pouze komentář
                                 </Button>
                                 <Button size="sm" variant="ghost" onClick={() => setCommentingLogId(null)}>Zrušit</Button>
                               </div>
                             </div>
                           ) : (
-                            <Button variant="outline" size="sm" className="mt-3" onClick={(e) => { e.stopPropagation(); setCommentingLogId(log.id); }}>
-                              <MessageSquare className="w-4 h-4 mr-2" />Přidat komentář
-                            </Button>
+                            <div className="flex gap-2 mt-3">
+                              {(log as any).status !== 'reviewed' && (
+                                <Button variant="default" size="sm" onClick={(e) => { e.stopPropagation(); handleReview(log.id, log.client_id!); }} disabled={reviewWorkout.isPending}>
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />Zkontrolovat
+                                </Button>
+                              )}
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setCommentingLogId(log.id); }}>
+                                <MessageSquare className="w-4 h-4 mr-2" />Přidat komentář
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </motion.div>

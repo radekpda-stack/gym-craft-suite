@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useCreateWorkoutLog, WorkoutExercise } from '@/hooks/useClientWorkoutLogs';
+import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
 import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { format, parseISO } from 'date-fns';
@@ -70,13 +74,19 @@ export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
   const { data: entries, isLoading } = useUnifiedDiary();
   const createLog = useCreateWorkoutLog();
+  const completeAssignedWorkout = useCompleteAssignedWorkout();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
 
-  const [activeTab, setActiveTab] = useState('seznam');
+  // Get tab from URL param
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'seznam');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workoutDate, setWorkoutDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [workoutType, setWorkoutType] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState('');
+  const [workoutRpe, setWorkoutRpe] = useState<number | null>(null);
   const [energyBefore, setEnergyBefore] = useState<number | null>(null);
   const [energyAfter, setEnergyAfter] = useState<number | null>(null);
   const [workoutNotes, setWorkoutNotes] = useState('');
@@ -84,6 +94,13 @@ export default function ClientPortalWorkoutDiary() {
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [selectedDateEntries, setSelectedDateEntries] = useState<UnifiedDiaryEntry[]>([]);
   const [dateDetailOpen, setDateDetailOpen] = useState(false);
+  
+  // For planned workout completion
+  const [editingPlannedWorkoutId, setEditingPlannedWorkoutId] = useState<string | null>(null);
+  
+  // Filters
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterSource, setFilterSource] = useState<string>('all');
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs(prev => {
@@ -121,10 +138,12 @@ export default function ClientPortalWorkoutDiary() {
     setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
     setWorkoutType(null);
     setDurationMinutes('');
+    setWorkoutRpe(null);
     setEnergyBefore(null);
     setEnergyAfter(null);
     setWorkoutNotes('');
     setExercises([{ ...emptyExercise }]);
+    setEditingPlannedWorkoutId(null);
   };
 
   const handleSaveWorkout = async () => {
@@ -148,19 +167,34 @@ export default function ClientPortalWorkoutDiary() {
       return;
     }
 
-    await createLog.mutateAsync({
-      client_id: clientId,
-      trainer_id: clientAccount.trainer_id,
-      date: workoutDate,
-      notes: workoutNotes || undefined,
-      workout_type: workoutType || undefined,
-      duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
-      energy_before: energyBefore || undefined,
-      energy_after: energyAfter || undefined,
-      exercises: validExercises,
-    });
+    // If completing a planned workout, update existing record
+    if (editingPlannedWorkoutId) {
+      await completeAssignedWorkout.mutateAsync({
+        logId: editingPlannedWorkoutId,
+        clientId,
+        duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
+        rpe: workoutRpe || undefined,
+        notes: workoutNotes || undefined,
+        energy_before: energyBefore || undefined,
+        energy_after: energyAfter || undefined,
+      });
+      trackPortalEvent('planned_workout_completed', { workout_type: workoutType });
+    } else {
+      // Create new workout log
+      await createLog.mutateAsync({
+        client_id: clientId,
+        trainer_id: clientAccount.trainer_id,
+        date: workoutDate,
+        notes: workoutNotes || undefined,
+        workout_type: workoutType || undefined,
+        duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
+        energy_before: energyBefore || undefined,
+        energy_after: energyAfter || undefined,
+        exercises: validExercises,
+      });
+      trackPortalEvent('workout_logged', { exercise_count: validExercises.length, workout_type: workoutType });
+    }
 
-    trackPortalEvent('workout_logged', { exercise_count: validExercises.length, workout_type: workoutType });
     setDialogOpen(false);
     resetForm();
   };
@@ -182,6 +216,7 @@ export default function ClientPortalWorkoutDiary() {
     setWorkoutType(entry.workout_type || null);
     setDurationMinutes(entry.duration_minutes?.toString() || '');
     setWorkoutNotes(entry.notes || '');
+    setEditingPlannedWorkoutId(entry.id); // Track which planned workout we're completing
     
     if (entry.exercises && entry.exercises.length > 0) {
       setExercises(entry.exercises.map(ex => ({
@@ -201,6 +236,21 @@ export default function ClientPortalWorkoutDiary() {
     setDialogOpen(true);
   };
 
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'planned':
+      case 'draft':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Plánovaný</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Dokončený</Badge>;
+      case 'reviewed':
+        return <Badge variant="outline" className="text-primary border-primary/50 bg-primary/10">Zkontrolován</Badge>;
+      default:
+        return null;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -213,7 +263,14 @@ export default function ClientPortalWorkoutDiary() {
   }
 
   // Filter for list view - only completed entries
-  const completedEntries = entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [];
+  const completedEntries = (entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [])
+    .filter(e => filterType === 'all' || e.workout_type === filterType)
+    .filter(e => {
+      if (filterSource === 'all') return true;
+      if (filterSource === 'coached') return e.is_coached;
+      if (filterSource === 'self') return !e.is_coached;
+      return true;
+    });
 
   return (
     <div className="space-y-6">
@@ -272,6 +329,33 @@ export default function ClientPortalWorkoutDiary() {
               weeklyGoal={4} 
             />
           )}
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Typ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všechny typy</SelectItem>
+                <SelectItem value="strength">Síla</SelectItem>
+                <SelectItem value="run">Běh</SelectItem>
+                <SelectItem value="conditioning">Kondice</SelectItem>
+                <SelectItem value="mobility">Mobilita</SelectItem>
+                <SelectItem value="other">Ostatní</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterSource} onValueChange={setFilterSource}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Zdroj" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Vše</SelectItem>
+                <SelectItem value="coached">S trenérem</SelectItem>
+                <SelectItem value="self">Samostatně</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Workout Logs */}
           {completedEntries.length === 0 ? (
@@ -335,6 +419,7 @@ export default function ClientPortalWorkoutDiary() {
                                 >
                                   {entry.is_coached ? 'S trenérem' : 'Samostatně'}
                                 </Badge>
+                                {getStatusBadge(entry.status)}
                                 {hasPR && (
                                   <Badge variant="secondary" className="text-xs gap-1">
                                     <Trophy className="w-3 h-3" /> PR
@@ -477,7 +562,7 @@ export default function ClientPortalWorkoutDiary() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Dumbbell className="w-5 h-5" />
-              Nový trénink
+              {editingPlannedWorkoutId ? 'Splnit plánovaný trénink' : 'Nový trénink'}
             </DialogTitle>
           </DialogHeader>
 
@@ -523,6 +608,25 @@ export default function ClientPortalWorkoutDiary() {
                 onChange={setEnergyAfter}
                 label="Pocit po"
               />
+            </div>
+
+            {/* RPE Slider */}
+            <div className="space-y-3">
+              <Label>Celková náročnost (RPE)</Label>
+              <div className="flex items-center gap-4">
+                <Slider
+                  value={workoutRpe ? [workoutRpe] : [5]}
+                  onValueChange={(val) => setWorkoutRpe(val[0])}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-lg font-bold w-8 text-center">{workoutRpe || 5}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                1 = velmi lehké, 10 = maximální úsilí
+              </p>
             </div>
 
             {/* Exercises */}
@@ -638,9 +742,13 @@ export default function ClientPortalWorkoutDiary() {
             </Button>
             <Button
               onClick={handleSaveWorkout}
-              disabled={createLog.isPending || !exercises.some(ex => ex.exercise_name.trim())}
+              disabled={(createLog.isPending || completeAssignedWorkout.isPending) || !exercises.some(ex => ex.exercise_name.trim())}
             >
-              {createLog.isPending ? 'Ukládám...' : 'Uložit trénink'}
+              {(createLog.isPending || completeAssignedWorkout.isPending) 
+                ? 'Ukládám...' 
+                : editingPlannedWorkoutId 
+                  ? 'Označit jako splněný' 
+                  : 'Uložit trénink'}
             </Button>
           </DialogFooter>
         </DialogContent>
