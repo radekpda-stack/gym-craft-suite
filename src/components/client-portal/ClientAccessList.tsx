@@ -366,6 +366,12 @@ export function ClientAccessList() {
                           )}
                         </div>
                       </div>
+                      {account.credentials_changed_at && (
+                        <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                          <Check className="h-3 w-3" />
+                          <span>Změněno klientem</span>
+                        </div>
+                      )}
                     </div>
                     <div className="mt-3 pt-3 border-t flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>
@@ -449,6 +455,11 @@ export function ClientAccessList() {
                                   {copiedField === `pass-${account.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                                 </Button>
                               </>
+                            )}
+                            {account.credentials_changed_at && (
+                              <Badge variant="outline" className="ml-1 text-amber-600 dark:text-amber-500 border-amber-500/50 text-[10px] px-1">
+                                Změněno
+                              </Badge>
                             )}
                           </div>
                         </TableCell>
