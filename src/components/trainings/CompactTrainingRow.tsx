@@ -143,8 +143,8 @@ export const CompactTrainingRow = memo(function CompactTrainingRow({
         <Link
           to={`/trainings/${session.id}`}
           className={cn(
-            'flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors',
-            'min-h-[64px]'
+            'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3 hover:bg-accent/50 transition-colors',
+            'min-h-[60px] sm:min-h-[64px]'
           )}
         >
           <div className="w-12 flex-shrink-0 text-center">
