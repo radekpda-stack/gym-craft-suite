@@ -54,7 +54,6 @@ verify_jwt = false
 [functions.submit-nutrition-entry]
 verify_jwt = false
 
-
 [functions.calendar-webhook]
 verify_jwt = false
 
@@ -99,3 +98,6 @@ verify_jwt = true
 
 [functions.evaluate-challenge-winners]
 verify_jwt = true
+
+[functions.feedback-submit]
+verify_jwt = false
