@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 
 export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal';
 
@@ -79,17 +79,18 @@ export const themes: Theme[] = [
 ];
 
 const THEME_STORAGE_KEY = 'app-theme';
+const DEFAULT_THEME: ThemeId = 'arctic-pro';
 const VALID_THEME_IDS = themes.map(t => t.id);
 
-// Apply theme immediately (can be called outside React)
+// Apply theme to DOM - this is the core function
 function applyThemeToDOM(themeId: ThemeId) {
   const root = document.documentElement;
   
   // Remove all theme classes
-  themes.forEach(t => root.classList.remove(`theme-${t.id}`));
+  themes.forEach(t => root.classList.remove('theme-' + t.id));
   
   // Add new theme class
-  root.classList.add(`theme-${themeId}`);
+  root.classList.add('theme-' + themeId);
   
   // Handle dark/light mode
   if (themeId === 'light-minimal' || themeId === 'frost-minimal') {
@@ -99,31 +100,47 @@ function applyThemeToDOM(themeId: ThemeId) {
     root.classList.remove('light');
     root.classList.add('dark');
   }
+  
+  console.log('[Theme] Applied theme:', themeId, 'Classes:', root.className);
 }
 
-// Initialize theme immediately on module load (before React renders)
-function initializeTheme(): ThemeId {
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored && VALID_THEME_IDS.includes(stored as ThemeId)) {
-        const themeId = stored as ThemeId;
-        applyThemeToDOM(themeId);
-        return themeId;
-      }
-    } catch (e) {
-      console.warn('Failed to read theme from localStorage:', e);
+// Get initial theme from localStorage
+function getInitialTheme(): ThemeId {
+  if (typeof window === 'undefined') return DEFAULT_THEME;
+  
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored && VALID_THEME_IDS.includes(stored as ThemeId)) {
+      return stored as ThemeId;
     }
+  } catch (e) {
+    console.warn('Failed to read theme from localStorage:', e);
   }
-  // Default theme
-  applyThemeToDOM('arctic-pro');
-  return 'arctic-pro';
+  
+  return DEFAULT_THEME;
 }
 
-// Initialize on module load
-const initialTheme = initializeTheme();
+// Initialize theme on module load
+const initialTheme = getInitialTheme();
+if (typeof window !== 'undefined') {
+  applyThemeToDOM(initialTheme);
+}
 
-export function useTheme() {
+interface ThemeContextType {
+  currentTheme: ThemeId;
+  setTheme: (themeId: ThemeId) => void;
+  resetTheme: () => void;
+  themes: Theme[];
+  currentThemeData: Theme | undefined;
+}
+
+const ThemeContext = createContext<ThemeContextType | null>(null);
+
+interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
 
   const setTheme = useCallback((themeId: ThemeId) => {
@@ -131,12 +148,16 @@ export function useTheme() {
       console.warn('Invalid theme ID:', themeId);
       return;
     }
+    
+    console.log('[Theme] Setting theme to:', themeId);
     setCurrentTheme(themeId);
+    
     try {
       localStorage.setItem(THEME_STORAGE_KEY, themeId);
     } catch (e) {
       console.warn('Failed to save theme to localStorage:', e);
     }
+    
     applyThemeToDOM(themeId);
   }, []);
 
@@ -146,20 +167,54 @@ export function useTheme() {
     } catch (e) {
       console.warn('Failed to remove theme from localStorage:', e);
     }
-    setCurrentTheme('arctic-pro');
-    applyThemeToDOM('arctic-pro');
+    setCurrentTheme(DEFAULT_THEME);
+    applyThemeToDOM(DEFAULT_THEME);
   }, []);
 
-  // Re-apply theme when component mounts (in case of hydration mismatch)
+  // Apply theme on mount
   useEffect(() => {
     applyThemeToDOM(currentTheme);
-  }, [currentTheme]);
+  }, []);
 
-  return {
+  const value: ThemeContextType = {
     currentTheme,
     setTheme,
     resetTheme,
     themes,
     currentThemeData: themes.find(t => t.id === currentTheme),
   };
+
+  return React.createElement(ThemeContext.Provider, { value }, children);
+}
+
+export function useTheme(): ThemeContextType {
+  const context = useContext(ThemeContext);
+  
+  // Fallback for components outside provider (shouldn't happen but safe)
+  if (!context) {
+    console.warn('useTheme used outside ThemeProvider, using fallback');
+    return {
+      currentTheme: initialTheme,
+      setTheme: (themeId: ThemeId) => {
+        try {
+          localStorage.setItem(THEME_STORAGE_KEY, themeId);
+        } catch (e) {
+          // ignore
+        }
+        applyThemeToDOM(themeId);
+      },
+      resetTheme: () => {
+        try {
+          localStorage.removeItem(THEME_STORAGE_KEY);
+        } catch (e) {
+          // ignore
+        }
+        applyThemeToDOM(DEFAULT_THEME);
+      },
+      themes,
+      currentThemeData: themes.find(t => t.id === initialTheme),
+    };
+  }
+  
+  return context;
 }

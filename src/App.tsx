@@ -16,6 +16,7 @@ import { DemoProvider } from "@/contexts/DemoContext";
 import { UndoToast } from "@/components/ui/UndoToast";
 import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
 import { PageLoader } from "@/components/PageLoader";
+import { ThemeProvider } from "@/hooks/useTheme";
 
 // Eagerly loaded (critical path)
 import UnifiedLogin from "./pages/UnifiedLogin";
@@ -90,14 +91,15 @@ const queryClient = new QueryClient({
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <UndoProvider>
-          <TooltipProvider>
-            <OfflineBanner />
-            <Toaster />
-            <Sonner />
-            <UndoToast />
-          <BrowserRouter>
+      <ThemeProvider>
+        <LanguageProvider>
+          <UndoProvider>
+            <TooltipProvider>
+              <OfflineBanner />
+              <Toaster />
+              <Sonner />
+              <UndoToast />
+            <BrowserRouter>
             <DemoProvider>
             <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -205,6 +207,7 @@ const App = () => (
           </TooltipProvider>
         </UndoProvider>
       </LanguageProvider>
+    </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
