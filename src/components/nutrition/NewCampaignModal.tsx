@@ -85,7 +85,8 @@ export function NewCampaignModal({ open, onOpenChange, preselectedClientId }: Ne
       const startDate = getStartDate();
       const result = await createSession.mutateAsync({ 
         clientId: selectedClientId, 
-        startDate 
+        startDate,
+        durationDays: duration,
       });
       
       setCreatedToken(result.token);
