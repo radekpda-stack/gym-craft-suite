@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
+import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
 import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
@@ -414,6 +415,17 @@ export function TrainingDetailView({
 
       {/* Client Profile Panel - show restrictions/alerts */}
       {client && <ClientProfilePanel client={client} />}
+
+      {/* PARTICIPANTS - show for scheduled/in_progress trainings */}
+      {(training.status === 'scheduled' || training.status === 'in_progress') && (
+        <TrainingParticipantsManager
+          trainingId={training.id}
+          primaryClientId={training.client_id}
+          primaryClientName={client?.name || 'Primární klient'}
+          currentParticipantCount={training.participant_count || 1}
+          isEditable={true}
+        />
+      )}
 
       {/* TAGS - immediately after header */}
       <div className="glass rounded-xl p-4">
