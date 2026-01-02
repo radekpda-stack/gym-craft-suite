@@ -148,11 +148,19 @@ export default function ClientPortalSettings() {
                 <div className="h-24 bg-muted animate-pulse rounded-lg" />
               ) : (
                 <>
+                  {/* Anonymity explanation */}
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                    <p className="text-sm text-muted-foreground">
+                      <Shield className="h-4 w-4 inline mr-1.5 text-primary" />
+                      <strong>Ve výchozím nastavení jsi anonymní</strong> – ostatní klienti vidí pouze náhodně vygenerovanou přezdívku (např. "Rychlý Orel #42"). Tvoje skutečné jméno ani identita není nikomu zobrazena.
+                    </p>
+                  </div>
+
                   <div className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="flex-1">
-                      <Label className="font-medium">Zobrazit pravé jméno</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Ve výchozím nastavení jsi anonymní. Zapni, pokud chceš zobrazit své jméno/přezdívku.
+                    <div className="flex-1 pr-4">
+                      <Label className="font-medium">Zobrazit mé jméno ostatním</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Pokud toto zapneš, ostatní uvidí tvou přezdívku (nebo jméno) místo anonymního označení. Můžeš kdykoliv vypnout.
                       </p>
                     </div>
                     <Switch
@@ -162,29 +170,31 @@ export default function ClientPortalSettings() {
                     />
                   </div>
 
-                  <div className="p-4 rounded-lg border space-y-3">
-                    <div className="flex-1">
-                      <Label className="font-medium">Přezdívka v žebříčku</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Toto jméno se zobrazí ostatním v žebříčku
-                      </p>
+                  {(leaderboardSettings?.leaderboard_visible) && (
+                    <div className="p-4 rounded-lg border space-y-3">
+                      <div className="flex-1">
+                        <Label className="font-medium">Přezdívka v žebříčku</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Toto jméno uvidí ostatní klienti v žebříčku
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Např. SuperTrenér, Silák..."
+                          value={nickname}
+                          onChange={(e) => setNickname(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleNicknameChange}
+                          disabled={updateLeaderboard.isPending}
+                        >
+                          Uložit
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Anonym"
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={handleNicknameChange}
-                        disabled={updateLeaderboard.isPending}
-                      >
-                        Uložit
-                      </Button>
-                    </div>
-                  </div>
+                  )}
                 </>
               )}
             </CardContent>
