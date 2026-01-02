@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, StickyNote, BarChart3 } from 'lucide-react';
+import { Plus, Search, StickyNote, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CommandPalette } from '@/components/search/CommandPalette';
 import { QuickNoteDialog } from '@/components/dashboard/QuickNoteDialog';
+import { SendBroadcastDialog } from '@/components/dashboard/SendBroadcastDialog';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
@@ -25,6 +26,7 @@ export function QuickActionsGrid() {
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showNote, setShowNote] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   
   const { data: clients = [] } = useClients();
   const createTraining = useCreateTrainingSession();
@@ -51,6 +53,11 @@ export function QuickActionsGrid() {
     trackFeature('quick_action_note', 'clients');
   };
   
+  const handleOpenBroadcast = () => {
+    setShowBroadcast(true);
+    trackFeature('quick_action_broadcast', 'clients');
+  };
+  
   const actions: QuickAction[] = [
     {
       id: 'new-training',
@@ -58,6 +65,12 @@ export function QuickActionsGrid() {
       icon: <Plus className="w-4 h-4" />,
       primary: true,
       onClick: () => setShowTrainingSheet(true),
+    },
+    {
+      id: 'broadcast',
+      label: 'Zpráva',
+      icon: <Send className="w-4 h-4" />,
+      onClick: handleOpenBroadcast,
     },
     {
       id: 'search',
@@ -70,12 +83,6 @@ export function QuickActionsGrid() {
       label: 'Poznámka',
       icon: <StickyNote className="w-4 h-4" />,
       onClick: handleOpenNote,
-    },
-    {
-      id: 'stats',
-      label: 'Statistiky',
-      icon: <BarChart3 className="w-4 h-4" />,
-      onClick: () => navigate('/statistics'),
     },
   ];
 
@@ -130,6 +137,11 @@ export function QuickActionsGrid() {
       <QuickNoteDialog
         open={showNote}
         onOpenChange={setShowNote}
+      />
+      
+      <SendBroadcastDialog
+        open={showBroadcast}
+        onOpenChange={setShowBroadcast}
       />
     </>
   );

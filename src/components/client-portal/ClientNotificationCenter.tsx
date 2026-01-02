@@ -32,6 +32,7 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   message: MessageSquare,
   trainer_pr_challenge: Trophy,
   beat_trainer: Trophy,
+  broadcast: MessageSquare,
   default: Bell,
 };
 
@@ -68,6 +69,8 @@ function NotificationItem({
               ? "bg-amber-500/20 text-amber-600"
               : notification.type === "beat_trainer"
               ? "bg-green-500/20 text-green-600"
+              : notification.type === "broadcast"
+              ? "bg-blue-500/20 text-blue-600"
               : "bg-muted text-muted-foreground"
           )}
         >
@@ -117,6 +120,16 @@ function NotificationItem({
                   Vyplnit
                 </Button>
               )}
+            {notification.type === "broadcast" && notification.action_url && (
+              <a
+                href={notification.action_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                Zobrazit →
+              </a>
+            )}
           </div>
         </div>
       </div>
