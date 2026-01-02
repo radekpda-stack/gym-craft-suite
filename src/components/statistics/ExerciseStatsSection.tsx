@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useGenderStats } from '@/hooks/useGenderStats';
+import { usePRTrend } from '@/hooks/usePRTrend';
 import { InsightsBar, generateExerciseInsights } from './InsightsBar';
 import { TopExercisesCard } from './TopExercisesCard';
 import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
@@ -23,18 +24,14 @@ export function ExerciseStatsSection() {
   const navigate = useNavigate();
   const { data: stats, isLoading } = useAnnualStats('year');
   const { data: genderStats } = useGenderStats();
+  const { data: prTrend } = usePRTrend(6);
   const [activeModal, setActiveModal] = useState<ExerciseModal>(null);
 
   // Generate insights
   const insights = generateExerciseInsights(stats);
 
-  // Generate sparkline data from PR counts by month (simulated from monthly trend)
-  const prSparklineData = useMemo(() => {
-    // Use monthly trend as proxy for PR velocity
-    return (stats?.monthlyTrend || []).slice(-6).map(m => ({ 
-      value: Math.round(m.trainings * 0.15) // Approximate PR rate
-    }));
-  }, [stats?.monthlyTrend]);
+  // Use real PR trend data from database
+  const prSparklineData = (prTrend || []).map(m => ({ value: m.count }));
 
   if (isLoading) {
     return (
@@ -69,7 +66,7 @@ export function ExerciseStatsSection() {
         <GaugeCard
           title="PR Rate"
           value={prRate}
-          maxValue={20}
+          maxValue={Math.max(20, Math.ceil(prRate * 2))}
           displayValue={`${prRate.toFixed(1)}%`}
           sublabel="ze záznamů"
           description={`${totalPRs} osobních rekordů`}
@@ -81,7 +78,7 @@ export function ExerciseStatsSection() {
         <GaugeCard
           title="Max váha"
           value={maxWeight}
-          maxValue={200}
+          maxValue={Math.ceil((maxWeight * 1.25) / 50) * 50 || 100}
           displayValue={maxWeight > 0 ? `${maxWeight}` : '-'}
           sublabel="kg"
           description={stats?.maxWeightLifted ? `${stats.maxWeightLifted.exercise}` : 'žádný záznam'}

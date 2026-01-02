@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { InsightsBar, generateClientInsights } from './InsightsBar';
-import { ClientRetentionCard } from './ClientRetentionCard';
 import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
 import { ClientActivityCard } from './ClientActivityCard';
 import { ClientAcquisitionCard } from './ClientAcquisitionCard';
@@ -68,12 +67,12 @@ export function ClientStatsSection() {
       {/* WHOOP-style Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <GaugeCard
-          title="Retence (60d)"
+          title="Aktivita klientů (60d)"
           value={retentionRate}
           maxValue={100}
           displayValue={`${retentionRate}%`}
           sublabel="aktivní"
-          description={`30d: ${analytics?.retentionRate30Days || 0}%`}
+          description={`Alespoň 1 trénink za 60 dní`}
           variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
           size="md"
         />
@@ -103,7 +102,7 @@ export function ClientStatsSection() {
           title="Noví klienti"
           value={newClients}
           subtitle="první trénink ≤30 dní"
-          progress={Math.min((newClients / 10) * 100, 100)}
+          progress={0}
           variant="success"
           icon={<UserPlus className="h-4 w-4" />}
           showProgressValue={false}
@@ -126,17 +125,18 @@ export function ClientStatsSection() {
       {/* Client Analytics */}
       <ClientAnalyticsCard />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <ClientRetentionCard />
+      {/* Stats Grid - removed ClientRetentionCard as data is in gauge above */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <ClientActivityCard />
         <ClientAcquisitionCard />
       </div>
 
-      {/* Feedback and Measurements */}
+      {/* Feedback and Measurements - only show if data exists */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <ClientFeedbackCard stats={stats} />
-        <MeasurementsCard stats={stats} />
+        {(stats?.totalFeedback || 0) > 0 && <ClientFeedbackCard stats={stats} />}
+        {((stats?.totalMeasurements || 0) + (stats?.totalDiagnostics || 0) + (stats?.totalPhotos || 0) + (stats?.totalVoiceNotes || 0)) > 0 && (
+          <MeasurementsCard stats={stats} />
+        )}
         <ClientTagsCard />
       </div>
 
