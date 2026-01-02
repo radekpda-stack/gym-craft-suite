@@ -51,7 +51,7 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
 
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, name')
+        .select('id, name, gender')
         .in('id', clientIds);
 
       // Get leaderboard settings for all clients
@@ -60,29 +60,38 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
         .select('client_id, leaderboard_visible, leaderboard_nickname')
         .in('client_id', clientIds);
 
-      const clientMap = new Map(clients?.map(c => [c.id, c.name]) || []);
+      const clientMap = new Map(clients?.map(c => [c.id, { name: c.name, gender: c.gender }]) || []);
       const settingsMap = new Map(leaderboardSettings?.map(s => [s.client_id, s]) || []);
 
       return Object.entries(workoutsByClient)
         .map(([id, count]) => {
           const settings = settingsMap.get(id);
+          const clientInfo = clientMap.get(id);
           // Default to anonymous (leaderboard_visible defaults to false/null)
           const isVisible = settings?.leaderboard_visible === true;
           
           let displayName: string;
           if (isVisible) {
             // Use nickname if available, otherwise real name
-            displayName = settings?.leaderboard_nickname || clientMap.get(id) || 'Neznámý';
+            displayName = settings?.leaderboard_nickname || clientInfo?.name || 'Neznámý';
           } else {
             // Anonymous name
             displayName = generateAnonymousName(id);
           }
+
+          // Get gender
+          const rawGender = clientInfo?.gender;
+          const gender: 'male' | 'female' | null = 
+            rawGender === 'male' ? 'male' : 
+            rawGender === 'female' ? 'female' : 
+            null;
 
           return {
             clientId: id,
             name: displayName,
             count,
             isAnonymous: !isVisible,
+            gender,
           };
         })
         .sort((a, b) => b.count - a.count)
@@ -146,8 +155,13 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
                 )}>
                   {position}
                 </span>
-                <span className={cn(isMe ? 'text-primary' : '', item.isAnonymous && 'italic')}>
+                <span className={cn(isMe ? 'text-primary' : '', item.isAnonymous && 'italic text-muted-foreground')}>
                   {item.name}
+                  {item.isAnonymous && item.gender && (
+                    <span className="ml-1 not-italic">
+                      {item.gender === 'male' ? '♂' : '♀'}
+                    </span>
+                  )}
                   {isMe && ' (vy)'}
                 </span>
               </div>

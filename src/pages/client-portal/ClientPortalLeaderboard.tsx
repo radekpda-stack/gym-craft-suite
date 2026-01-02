@@ -58,6 +58,12 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
               entry.is_anonymous && "italic text-muted-foreground"
             )}>
               {entry.nickname}
+              {/* Gender indicator for anonymous users */}
+              {entry.is_anonymous && entry.gender && (
+                <span className="ml-1 not-italic">
+                  {entry.gender === 'male' ? '♂' : '♀'}
+                </span>
+              )}
             </span>
             
             {isCurrentUser && (
