@@ -3,6 +3,7 @@ import { AlertTriangle, Bell, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AvatarInitials } from '@/components/ui/avatar-initials';
 import { NutritionSessionWithClient } from '@/hooks/useAllNutritionSessions';
 import { toast } from 'sonner';
 
@@ -49,19 +50,24 @@ export function AttentionRequiredSection({ sessions, onOpenDetail }: AttentionRe
     }
   };
 
+  const displayedCampaigns = needsAttention.slice(0, 3);
+  const remainingCount = needsAttention.length - 3;
+
   return (
-    <Card className="border-amber-500/30 bg-amber-500/5">
+    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2 text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-4 w-4" />
-          Vyžadují pozornost
-          <Badge variant="secondary" className="ml-auto">
+        <CardTitle className="text-base flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-500/15">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+          </div>
+          <span className="text-amber-700 dark:text-amber-400">Vyžadují pozornost</span>
+          <Badge variant="secondary" className="ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">
             {needsAttention.length}
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {needsAttention.slice(0, 5).map(campaign => {
+        {displayedCampaigns.map(campaign => {
           const daysSince = campaign.last_entry_date 
             ? differenceInDays(today, parseISO(campaign.last_entry_date))
             : differenceInDays(today, parseISO(campaign.start_date));
@@ -69,23 +75,26 @@ export function AttentionRequiredSection({ sessions, onOpenDetail }: AttentionRe
           return (
             <div 
               key={campaign.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-background hover:bg-muted/50 transition-colors cursor-pointer group"
+              className="flex items-center justify-between p-3 rounded-xl bg-background/80 hover:bg-background transition-colors cursor-pointer group border border-transparent hover:border-border/50"
               onClick={() => onOpenDetail(campaign.id)}
             >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{campaign.client_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {campaign.entries_count === 0 
-                    ? 'Žádná data' 
-                    : `${daysSince} dny bez záznamu`
-                  }
-                </p>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <AvatarInitials name={campaign.client_name} size="sm" />
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{campaign.client_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {campaign.entries_count === 0 
+                      ? 'Žádná data' 
+                      : `${daysSince} ${daysSince === 1 ? 'den' : daysSince < 5 ? 'dny' : 'dní'} bez záznamu`
+                    }
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8"
+                  className="h-8 w-8 hover:bg-amber-500/10 hover:text-amber-600"
                   onClick={(e) => sendReminder(campaign, e)}
                   title="Poslat připomínku"
                 >
@@ -96,9 +105,9 @@ export function AttentionRequiredSection({ sessions, onOpenDetail }: AttentionRe
             </div>
           );
         })}
-        {needsAttention.length > 5 && (
+        {remainingCount > 0 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
-            +{needsAttention.length - 5} dalších
+            +{remainingCount} {remainingCount === 1 ? 'další' : 'dalších'}
           </p>
         )}
       </CardContent>
