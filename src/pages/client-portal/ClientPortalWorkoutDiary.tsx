@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientWorkoutLogs, useCreateWorkoutLog, useDeleteWorkoutLog, WorkoutExercise } from '@/hooks/useClientWorkoutLogs';
+import { useCreateWorkoutLog, WorkoutExercise } from '@/hooks/useClientWorkoutLogs';
+import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -29,7 +31,10 @@ import {
   MessageSquare,
   X,
   Trophy,
-  User
+  User,
+  Calendar,
+  List,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +42,8 @@ import { WorkoutTypeSelector, getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkou
 import { EnergyRating, getEnergyEmoji } from '@/components/client-portal/workout-diary/EnergyRating';
 import { ExerciseAutocomplete } from '@/components/client-portal/workout-diary/ExerciseAutocomplete';
 import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/WorkoutStatsCard';
+import { DiaryCalendarView } from '@/components/client-portal/workout-diary/DiaryCalendarView';
+import { DiaryPlanView } from '@/components/client-portal/workout-diary/DiaryPlanView';
 
 interface ExerciseInput {
   exercise_name: string;
@@ -61,11 +68,11 @@ const emptyExercise: ExerciseInput = {
 
 export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
-  const { data: logs, isLoading } = useClientWorkoutLogs(clientId);
+  const { data: entries, isLoading } = useUnifiedDiary();
   const createLog = useCreateWorkoutLog();
-  const deleteLog = useDeleteWorkoutLog();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
 
+  const [activeTab, setActiveTab] = useState('seznam');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workoutDate, setWorkoutDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [workoutType, setWorkoutType] = useState<string | null>(null);
@@ -75,6 +82,8 @@ export default function ClientPortalWorkoutDiary() {
   const [workoutNotes, setWorkoutNotes] = useState('');
   const [exercises, setExercises] = useState<ExerciseInput[]>([{ ...emptyExercise }]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+  const [selectedDateEntries, setSelectedDateEntries] = useState<UnifiedDiaryEntry[]>([]);
+  const [dateDetailOpen, setDateDetailOpen] = useState(false);
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs(prev => {
@@ -106,6 +115,16 @@ export default function ClientPortalWorkoutDiary() {
     setExercises(prev => prev.map((ex, i) => 
       i === index ? { ...ex, exercise_name: name, exercise_id: exerciseId } : ex
     ));
+  };
+
+  const resetForm = () => {
+    setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
+    setWorkoutType(null);
+    setDurationMinutes('');
+    setEnergyBefore(null);
+    setEnergyAfter(null);
+    setWorkoutNotes('');
+    setExercises([{ ...emptyExercise }]);
   };
 
   const handleSaveWorkout = async () => {
@@ -142,32 +161,59 @@ export default function ClientPortalWorkoutDiary() {
     });
 
     trackPortalEvent('workout_logged', { exercise_count: validExercises.length, workout_type: workoutType });
-
-    // Reset form
     setDialogOpen(false);
-    setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
-    setWorkoutType(null);
-    setDurationMinutes('');
-    setEnergyBefore(null);
-    setEnergyAfter(null);
-    setWorkoutNotes('');
-    setExercises([{ ...emptyExercise }]);
+    resetForm();
   };
 
-  const handleDeleteLog = async (logId: string) => {
-    if (!clientId) return;
-    await deleteLog.mutateAsync({ logId, clientId });
+  const handleDateSelect = (date: Date, dayEntries: UnifiedDiaryEntry[]) => {
+    if (dayEntries.length > 0) {
+      setSelectedDateEntries(dayEntries);
+      setDateDetailOpen(true);
+    } else {
+      // Open add workout dialog for empty day
+      setWorkoutDate(format(date, 'yyyy-MM-dd'));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleStartPlannedWorkout = (entry: UnifiedDiaryEntry) => {
+    // Pre-fill form with planned workout data
+    setWorkoutDate(entry.scheduled_for ? format(parseISO(entry.scheduled_for), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+    setWorkoutType(entry.workout_type || null);
+    setDurationMinutes(entry.duration_minutes?.toString() || '');
+    setWorkoutNotes(entry.notes || '');
+    
+    if (entry.exercises && entry.exercises.length > 0) {
+      setExercises(entry.exercises.map(ex => ({
+        exercise_name: ex.exercise_name,
+        exercise_id: undefined,
+        sets: ex.sets?.toString() || '',
+        reps: ex.reps?.toString() || '',
+        weight_kg: ex.weight_kg?.toString() || '',
+        duration_seconds: ex.duration_seconds ? (ex.duration_seconds / 60).toString() : '',
+        rpe: ex.rpe?.toString() || '',
+        notes: ex.notes || '',
+      })));
+    } else {
+      setExercises([{ ...emptyExercise }]);
+    }
+    
+    setDialogOpen(true);
   };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-12 w-full" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
     );
   }
+
+  // Filter for list view - only completed entries
+  const completedEntries = entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [];
 
   return (
     <div className="space-y-6">
@@ -185,194 +231,245 @@ export default function ClientPortalWorkoutDiary() {
         </Button>
       </div>
 
-      {/* Stats Card */}
-      {logs && logs.length > 0 && (
-        <WorkoutStatsCard logs={logs} weeklyGoal={4} />
-      )}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="kalendar" className="gap-2">
+            <Calendar className="w-4 h-4" />
+            <span className="hidden sm:inline">Kalendář</span>
+          </TabsTrigger>
+          <TabsTrigger value="seznam" className="gap-2">
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">Seznam</span>
+          </TabsTrigger>
+          <TabsTrigger value="plan" className="gap-2">
+            <ClipboardList className="w-4 h-4" />
+            <span className="hidden sm:inline">Plán</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Workout Logs */}
-      {logs?.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Dumbbell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="font-medium mb-2">Zatím žádné záznamy</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Začněte zaznamenávat své tréninky
-            </p>
-            <Button variant="outline" onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Přidat první trénink
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {logs?.map((log) => {
-            const isExpanded = expandedLogs.has(log.id);
-            const exerciseCount = log.exercises?.length || 0;
-            const totalSets = log.exercises?.reduce((sum, ex) => sum + (ex.sets || 0), 0) || 0;
-            const WorkoutIcon = getWorkoutTypeIcon(log.workout_type);
-            const hasPR = log.exercises?.some(ex => ex.is_personal_record);
+        {/* Calendar Tab */}
+        <TabsContent value="kalendar" className="mt-4">
+          <DiaryCalendarView 
+            entries={entries || []} 
+            onDateSelect={handleDateSelect}
+          />
+        </TabsContent>
 
-            return (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card className="overflow-hidden">
-                  <div
-                    className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => toggleLogExpanded(log.id)}
+        {/* List Tab */}
+        <TabsContent value="seznam" className="mt-4 space-y-4">
+          {/* Stats Card */}
+          {completedEntries.length > 0 && (
+            <WorkoutStatsCard 
+              logs={completedEntries.filter(e => !e.is_coached).map(e => ({
+                id: e.id,
+                client_id: '',
+                trainer_id: '',
+                date: e.date,
+                created_at: e.created_at,
+                updated_at: e.created_at,
+              }))} 
+              weeklyGoal={4} 
+            />
+          )}
+
+          {/* Workout Logs */}
+          {completedEntries.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Dumbbell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="font-medium mb-2">Zatím žádné záznamy</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Začněte zaznamenávat své tréninky
+                </p>
+                <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Přidat první trénink
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {completedEntries.map((entry) => {
+                const isExpanded = expandedLogs.has(entry.id);
+                const exerciseCount = entry.exercises?.length || 0;
+                const WorkoutIcon = getWorkoutTypeIcon(entry.workout_type);
+                const hasPR = entry.exercises?.some(ex => ex.is_personal_record);
+
+                return (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center",
-                          getWorkoutTypeColor(log.workout_type)
-                        )}>
-                          <WorkoutIcon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {format(parseISO(log.date), 'EEEE d. MMMM', { locale: cs })}
-                            </span>
-                            {hasPR && (
-                              <Badge variant="secondary" className="text-xs gap-1">
-                                <Trophy className="w-3 h-3" /> PR
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{getWorkoutTypeLabel(log.workout_type)}</span>
-                            <span>•</span>
-                            <span>{exerciseCount} cviků</span>
-                            {log.duration_minutes && (
-                              <>
-                                <span>•</span>
-                                <span>{log.duration_minutes} min</span>
-                              </>
-                            )}
-                            {(log.energy_before || log.energy_after) && (
-                              <>
-                                <span>•</span>
-                                <span>
-                                  {getEnergyEmoji(log.energy_before)}→{getEnergyEmoji(log.energy_after)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteLog(log.id);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                    <Card className="overflow-hidden">
+                      <div
+                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => toggleLogExpanded(entry.id)}
                       >
-                        <div className="px-4 pb-4 border-t pt-4 space-y-3">
-                          {log.notes && (
-                            <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
-                              <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                              <span>{log.notes}</span>
-                            </div>
-                          )}
-
-                          {log.exercises?.map((ex, idx) => (
-                            <div
-                              key={ex.id || idx}
-                              className={cn(
-                                "p-3 rounded-lg",
-                                ex.is_personal_record ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30"
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-10 h-10 rounded-lg flex items-center justify-center",
+                              entry.is_coached 
+                                ? "bg-primary/10" 
+                                : "bg-green-500/10",
+                              entry.is_coached 
+                                ? "text-primary" 
+                                : getWorkoutTypeColor(entry.workout_type)
+                            )}>
+                              {entry.is_coached ? (
+                                <User className="w-5 h-5" />
+                              ) : (
+                                <WorkoutIcon className="w-5 h-5" />
                               )}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{ex.exercise_name}</span>
-                                  {ex.is_personal_record && (
-                                    <Trophy className="w-4 h-4 text-yellow-500" />
-                                  )}
-                                </div>
-                                {ex.rpe && (
-                                  <Badge variant="outline" className="text-xs">
-                                    RPE {ex.rpe}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium">
+                                  {format(parseISO(entry.date), 'EEEE d. MMMM', { locale: cs })}
+                                </span>
+                                <Badge 
+                                  variant={entry.is_coached ? "default" : "secondary"} 
+                                  className="text-xs"
+                                >
+                                  {entry.is_coached ? 'S trenérem' : 'Samostatně'}
+                                </Badge>
+                                {hasPR && (
+                                  <Badge variant="secondary" className="text-xs gap-1">
+                                    <Trophy className="w-3 h-3" /> PR
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                {ex.sets && (
-                                  <span className="flex items-center gap-1">
-                                    <Target className="w-3.5 h-3.5" />
-                                    {ex.sets} sérií
-                                  </span>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{getWorkoutTypeLabel(entry.workout_type)}</span>
+                                {exerciseCount > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{exerciseCount} cviků</span>
+                                  </>
                                 )}
-                                {ex.reps && (
-                                  <span>{ex.reps} opakování</span>
+                                {entry.duration_minutes && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{entry.duration_minutes} min</span>
+                                  </>
                                 )}
-                                {ex.weight_kg && (
-                                  <span className="font-medium text-foreground">
-                                    {ex.weight_kg} kg
-                                  </span>
-                                )}
-                                {ex.duration_seconds && (
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    {Math.round(ex.duration_seconds / 60)} min
-                                  </span>
+                                {(entry.energy_before || entry.energy_after) && (
+                                  <>
+                                    <span>•</span>
+                                    <span>
+                                      {getEnergyEmoji(entry.energy_before)}→{getEnergyEmoji(entry.energy_after)}
+                                    </span>
+                                  </>
                                 )}
                               </div>
-                              {ex.notes && (
-                                <p className="text-xs text-muted-foreground mt-2 italic">
-                                  {ex.notes}
-                                </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="px-4 pb-4 border-t pt-4 space-y-3">
+                              {entry.notes && (
+                                <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+                                  <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                                  <span>{entry.notes}</span>
+                                </div>
+                              )}
+
+                              {entry.exercises?.map((ex, idx) => (
+                                <div
+                                  key={ex.id || idx}
+                                  className={cn(
+                                    "p-3 rounded-lg",
+                                    ex.is_personal_record ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{ex.exercise_name}</span>
+                                      {ex.is_personal_record && (
+                                        <Trophy className="w-4 h-4 text-yellow-500" />
+                                      )}
+                                    </div>
+                                    {ex.rpe && (
+                                      <Badge variant="outline" className="text-xs">
+                                        RPE {ex.rpe}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                                    {ex.sets && (
+                                      <span className="flex items-center gap-1">
+                                        <Target className="w-3.5 h-3.5" />
+                                        {ex.sets} sérií
+                                      </span>
+                                    )}
+                                    {ex.reps && (
+                                      <span>{ex.reps} opakování</span>
+                                    )}
+                                    {ex.weight_kg && (
+                                      <span className="font-medium text-foreground">
+                                        {ex.weight_kg} kg
+                                      </span>
+                                    )}
+                                    {ex.duration_seconds && (
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        {Math.round(ex.duration_seconds / 60)} min
+                                      </span>
+                                    )}
+                                  </div>
+                                  {ex.notes && (
+                                    <p className="text-xs text-muted-foreground mt-2 italic">
+                                      {ex.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+
+                              {/* Trainer comment */}
+                              {entry.trainer_comment && (
+                                <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm">
+                                  <User className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                                  <div>
+                                    <div className="font-medium text-primary mb-1">Komentář trenéra</div>
+                                    <span className="whitespace-pre-wrap">{entry.trainer_comment}</span>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                          ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-                          {/* Trainer comment */}
-                          {log.trainer_comment && (
-                            <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm">
-                              <User className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                              <div>
-                                <div className="font-medium text-primary mb-1">Komentář trenéra</div>
-                                <span>{log.trainer_comment}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+        {/* Plan Tab */}
+        <TabsContent value="plan" className="mt-4">
+          <DiaryPlanView onStartWorkout={handleStartPlannedWorkout} />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Workout Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -546,6 +643,70 @@ export default function ClientPortalWorkoutDiary() {
               {createLog.isPending ? 'Ukládám...' : 'Uložit trénink'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Date Detail Dialog */}
+      <Dialog open={dateDetailOpen} onOpenChange={setDateDetailOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDateEntries.length > 0 && format(parseISO(selectedDateEntries[0].date), 'EEEE d. MMMM yyyy', { locale: cs })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {selectedDateEntries.map(entry => {
+              const WorkoutIcon = getWorkoutTypeIcon(entry.workout_type);
+              return (
+                <Card key={entry.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        entry.is_coached ? "bg-primary/10 text-primary" : "bg-green-500/10",
+                        !entry.is_coached && getWorkoutTypeColor(entry.workout_type)
+                      )}>
+                        {entry.is_coached ? <User className="w-5 h-5" /> : <WorkoutIcon className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {getWorkoutTypeLabel(entry.workout_type)}
+                          <Badge variant={entry.is_coached ? "default" : "secondary"} className="text-xs">
+                            {entry.is_coached ? 'S trenérem' : 'Samostatně'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {entry.duration_minutes && `${entry.duration_minutes} min`}
+                          {entry.rpe && ` • RPE ${entry.rpe}`}
+                        </div>
+                      </div>
+                    </div>
+                    {entry.notes && (
+                      <p className="text-sm text-muted-foreground">{entry.notes}</p>
+                    )}
+                    {entry.exercises && entry.exercises.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        {entry.exercises.map((ex, idx) => (
+                          <div key={idx} className="text-sm flex items-center gap-2">
+                            <Dumbbell className="w-3 h-3 text-muted-foreground" />
+                            <span>{ex.exercise_name}</span>
+                            {ex.sets && ex.reps && (
+                              <span className="text-muted-foreground">
+                                {ex.sets}×{ex.reps}
+                              </span>
+                            )}
+                            {ex.weight_kg && (
+                              <span className="font-medium">{ex.weight_kg}kg</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
