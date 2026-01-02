@@ -1,46 +1,27 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useTrainingIntensityStats } from '@/hooks/useTrainingIntensityStats';
 import { InsightsBar, generateExerciseInsights } from './InsightsBar';
-import { ExerciseHeroKPI } from './ExerciseHeroKPI';
 import { RecentPRsList, useMonthlyPRCount } from './RecentPRsList';
-import { ExerciseBodyPartCard } from './ExerciseBodyPartCard';
-import { StrengthProgressCard } from './StrengthProgressCard';
-import { IntensityStatsCard } from './IntensityStatsCard';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Activity, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PRsDetailModal } from './modals/PRsDetailModal';
-import { MaxWeightModal } from './modals/MaxWeightModal';
-
-type ExerciseModal = 'prs' | 'maxweight' | null;
+import { Card } from '@/components/ui/card';
 
 export function ExerciseStatsSection() {
-  const navigate = useNavigate();
   const { data: stats, isLoading } = useAnnualStats('year');
-  const { data: intensityStats } = useTrainingIntensityStats();
+  const { data: intensityStats, isLoading: intensityLoading } = useTrainingIntensityStats();
   const { data: monthlyPRs } = useMonthlyPRCount();
-  const [activeModal, setActiveModal] = useState<ExerciseModal>(null);
+  const [showPRsModal, setShowPRsModal] = useState(false);
 
   // Generate insights
   const insights = generateExerciseInsights(stats);
 
-  const handleCardClick = (card: string) => {
-    switch (card) {
-      case 'prs':
-        setActiveModal('prs');
-        break;
-      case 'exercises':
-        navigate('/exercises');
-        break;
-    }
-  };
-
-  if (isLoading) {
+  if (isLoading || intensityLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -51,6 +32,15 @@ export function ExerciseStatsSection() {
     );
   }
 
+  const avgRPE = intensityStats?.avgRPE;
+  const totalPRs = stats?.totalPRs || 0;
+
+  const getIntensityLabel = (rpe: number) => {
+    if (rpe >= 8) return { label: 'Vysoká', color: 'text-red-500' };
+    if (rpe >= 6) return { label: 'Střední', color: 'text-amber-500' };
+    return { label: 'Nízká', color: 'text-green-500' };
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Insight Bar */}
@@ -58,38 +48,66 @@ export function ExerciseStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* Hero KPI Cards */}
-      <ExerciseHeroKPI
-        stats={stats}
-        monthlyPRs={monthlyPRs || 0}
-        avgRPE={intensityStats?.avgRPE}
-        onCardClick={handleCardClick}
-      />
+      {/* Hero KPI Cards - 2 metrics */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        {/* RPE Card */}
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm text-muted-foreground">Ø Intenzita</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl sm:text-3xl font-bold">
+                  {avgRPE ? avgRPE.toFixed(1) : '—'}
+                </span>
+                <span className="text-sm text-muted-foreground">RPE</span>
+              </div>
+              {avgRPE && (
+                <p className={`text-xs mt-1 ${getIntensityLabel(avgRPE).color}`}>
+                  {getIntensityLabel(avgRPE).label} intenzita
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* PRs Card */}
+        <Card 
+          className="p-4 sm:p-5 cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => setShowPRsModal(true)}
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10">
+              <Trophy className="h-5 w-5 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm text-muted-foreground">Osobní rekordy</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl sm:text-3xl font-bold">
+                  {monthlyPRs || 0}
+                </span>
+                <span className="text-sm text-muted-foreground">tento měsíc</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalPRs} celkem
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Recent PRs List */}
       <RecentPRsList 
         limit={5}
-        onViewAll={() => setActiveModal('prs')}
+        onViewAll={() => setShowPRsModal(true)}
       />
 
-      {/* Strength Progress Chart */}
-      <StrengthProgressCard />
-
-      {/* Stats Grid - simplified to 2 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <ExerciseBodyPartCard />
-        <IntensityStatsCard />
-      </div>
-
-      {/* Modals */}
+      {/* Modal */}
       <PRsDetailModal 
-        open={activeModal === 'prs'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <MaxWeightModal 
-        open={activeModal === 'maxweight'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
+        open={showPRsModal} 
+        onOpenChange={setShowPRsModal}
         stats={stats}
       />
     </div>
