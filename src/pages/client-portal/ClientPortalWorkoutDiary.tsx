@@ -83,6 +83,7 @@ export default function ClientPortalWorkoutDiary() {
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'seznam');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDetailedMode, setIsDetailedMode] = useState(false); // Quick vs Detailed mode
   const [workoutDate, setWorkoutDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [workoutType, setWorkoutType] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState('');
@@ -144,11 +145,13 @@ export default function ClientPortalWorkoutDiary() {
     setWorkoutNotes('');
     setExercises([{ ...emptyExercise }]);
     setEditingPlannedWorkoutId(null);
+    setIsDetailedMode(false);
   };
 
   const handleSaveWorkout = async () => {
     if (!clientId || !clientAccount?.trainer_id) return;
 
+    // For quick mode, we don't require exercises
     const validExercises = exercises
       .filter(ex => ex.exercise_name.trim())
       .map((ex, idx) => ({
@@ -163,7 +166,10 @@ export default function ClientPortalWorkoutDiary() {
         sort_order: idx,
       }));
 
-    if (validExercises.length === 0) {
+    // In quick mode, allow saving without exercises
+    // In detailed mode or when completing planned workout, require exercises
+    const requiresExercises = isDetailedMode || editingPlannedWorkoutId;
+    if (requiresExercises && validExercises.length === 0) {
       return;
     }
 
@@ -190,9 +196,13 @@ export default function ClientPortalWorkoutDiary() {
         duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
         energy_before: energyBefore || undefined,
         energy_after: energyAfter || undefined,
-        exercises: validExercises,
+        exercises: validExercises.length > 0 ? validExercises : undefined,
       });
-      trackPortalEvent('workout_logged', { exercise_count: validExercises.length, workout_type: workoutType });
+      trackPortalEvent('workout_logged', { 
+        exercise_count: validExercises.length, 
+        workout_type: workoutType,
+        mode: isDetailedMode ? 'detailed' : 'quick'
+      });
     }
 
     setDialogOpen(false);
@@ -217,6 +227,7 @@ export default function ClientPortalWorkoutDiary() {
     setDurationMinutes(entry.duration_minutes?.toString() || '');
     setWorkoutNotes(entry.notes || '');
     setEditingPlannedWorkoutId(entry.id); // Track which planned workout we're completing
+    setIsDetailedMode(true); // Show detailed mode for planned workouts
     
     if (entry.exercises && entry.exercises.length > 0) {
       setExercises(entry.exercises.map(ex => ({
@@ -581,188 +592,263 @@ export default function ClientPortalWorkoutDiary() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Workout Type */}
-            <div className="space-y-2">
-              <Label>Typ tréninku</Label>
-              <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
-            </div>
+            {/* Quick Mode - Simple Form */}
+            {!isDetailedMode && !editingPlannedWorkoutId ? (
+              <>
+                {/* Workout Type - Large buttons for quick selection */}
+                <div className="space-y-2">
+                  <Label>Co jsi dnes dělal/a?</Label>
+                  <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
+                </div>
 
-            {/* Date and Duration */}
-            <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="workout-date">Datum</Label>
-                <Input
-                  id="workout-date"
-                  type="date"
-                  value={workoutDate}
-                  onChange={(e) => setWorkoutDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="workout-duration">Délka (min)</Label>
-                <Input
-                  id="workout-duration"
-                  type="number"
-                  placeholder="60"
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Energy before/after */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <EnergyRating 
-                value={energyBefore} 
-                onChange={setEnergyBefore}
-                label="Energie před"
-              />
-              <EnergyRating 
-                value={energyAfter} 
-                onChange={setEnergyAfter}
-                label="Pocit po"
-              />
-            </div>
-
-            {/* RPE Slider */}
-            <div className="space-y-3">
-              <Label>Celková náročnost (RPE)</Label>
-              <div className="flex items-center gap-4">
-                <Slider
-                  value={workoutRpe ? [workoutRpe] : [5]}
-                  onValueChange={(val) => setWorkoutRpe(val[0])}
-                  min={1}
-                  max={10}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-lg font-bold w-8 text-center">{workoutRpe || 5}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                1 = velmi lehké, 10 = maximální úsilí
-              </p>
-            </div>
-
-            {/* Exercises */}
-            <div className="space-y-3">
-              <Label>Cviky</Label>
-              {exercises.map((ex, idx) => (
-                <div key={idx} className="p-3 border rounded-lg space-y-3 relative">
-                  {exercises.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-6 w-6"
-                      onClick={() => removeExercise(idx)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-
-                  <ExerciseAutocomplete
-                    value={ex.exercise_name}
-                    onChange={(name, exerciseId) => updateExerciseName(idx, name, exerciseId)}
-                  />
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Série</Label>
-                      <Input
-                        type="number"
-                        placeholder="3"
-                        value={ex.sets}
-                        onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Opakování</Label>
-                      <Input
-                        type="number"
-                        placeholder="10"
-                        value={ex.reps}
-                        onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Váha (kg)</Label>
-                      <Input
-                        type="number"
-                        step="0.5"
-                        placeholder="50"
-                        value={ex.weight_kg}
-                        onChange={(e) => updateExercise(idx, 'weight_kg', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Čas (min)</Label>
-                      <Input
-                        type="number"
-                        placeholder="10"
-                        value={ex.duration_seconds}
-                        onChange={(e) => updateExercise(idx, 'duration_seconds', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">RPE (1-10)</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="10"
-                        placeholder="7"
-                        value={ex.rpe}
-                        onChange={(e) => updateExercise(idx, 'rpe', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
+                {/* Duration - Simple */}
+                <div className="space-y-2">
+                  <Label htmlFor="workout-duration">Jak dlouho? (minuty)</Label>
                   <Input
-                    placeholder="Poznámka k cviku"
-                    value={ex.notes}
-                    onChange={(e) => updateExercise(idx, 'notes', e.target.value)}
+                    id="workout-duration"
+                    type="number"
+                    placeholder="45"
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(e.target.value)}
+                    className="text-lg h-12"
                   />
                 </div>
-              ))}
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={addExercise}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Přidat další cvik
-              </Button>
-            </div>
+                {/* Energy after - Quick feeling */}
+                <EnergyRating 
+                  value={energyAfter} 
+                  onChange={setEnergyAfter}
+                  label="Jak se cítíš po tréninku?"
+                />
 
-            {/* Workout Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="workout-notes">Poznámky k tréninku</Label>
-              <Textarea
-                id="workout-notes"
-                placeholder="Jak se cítíš? Co šlo dobře?"
-                value={workoutNotes}
-                onChange={(e) => setWorkoutNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
+                {/* Simple notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="workout-notes">Poznámka (volitelné)</Label>
+                  <Textarea
+                    id="workout-notes"
+                    placeholder="Co šlo dobře? Co tě potěšilo?"
+                    value={workoutNotes}
+                    onChange={(e) => setWorkoutNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                {/* Toggle to detailed mode */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => setIsDetailedMode(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Přidat cviky a více detailů
+                </Button>
+              </>
+            ) : (
+              /* Detailed Mode - Full Form */
+              <>
+                {/* Workout Type */}
+                <div className="space-y-2">
+                  <Label>Typ tréninku</Label>
+                  <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
+                </div>
+
+                {/* Date and Duration */}
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="workout-date">Datum</Label>
+                    <Input
+                      id="workout-date"
+                      type="date"
+                      value={workoutDate}
+                      onChange={(e) => setWorkoutDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="workout-duration">Délka (min)</Label>
+                    <Input
+                      id="workout-duration"
+                      type="number"
+                      placeholder="60"
+                      value={durationMinutes}
+                      onChange={(e) => setDurationMinutes(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Energy before/after */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <EnergyRating 
+                    value={energyBefore} 
+                    onChange={setEnergyBefore}
+                    label="Energie před"
+                  />
+                  <EnergyRating 
+                    value={energyAfter} 
+                    onChange={setEnergyAfter}
+                    label="Pocit po"
+                  />
+                </div>
+
+                {/* RPE Slider */}
+                <div className="space-y-3">
+                  <Label>Celková náročnost (RPE)</Label>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      value={workoutRpe ? [workoutRpe] : [5]}
+                      onValueChange={(val) => setWorkoutRpe(val[0])}
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <span className="text-lg font-bold w-8 text-center">{workoutRpe || 5}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    1 = velmi lehké, 10 = maximální úsilí
+                  </p>
+                </div>
+
+                {/* Exercises */}
+                <div className="space-y-3">
+                  <Label>Cviky</Label>
+                  {exercises.map((ex, idx) => (
+                    <div key={idx} className="p-3 border rounded-lg space-y-3 relative">
+                      {exercises.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 h-6 w-6"
+                          onClick={() => removeExercise(idx)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+
+                      <ExerciseAutocomplete
+                        value={ex.exercise_name}
+                        onChange={(name, exerciseId) => updateExerciseName(idx, name, exerciseId)}
+                      />
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Série</Label>
+                          <Input
+                            type="number"
+                            placeholder="3"
+                            value={ex.sets}
+                            onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Opakování</Label>
+                          <Input
+                            type="number"
+                            placeholder="10"
+                            value={ex.reps}
+                            onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Váha (kg)</Label>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            placeholder="50"
+                            value={ex.weight_kg}
+                            onChange={(e) => updateExercise(idx, 'weight_kg', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Čas (min)</Label>
+                          <Input
+                            type="number"
+                            placeholder="10"
+                            value={ex.duration_seconds}
+                            onChange={(e) => updateExercise(idx, 'duration_seconds', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">RPE (1-10)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            placeholder="7"
+                            value={ex.rpe}
+                            onChange={(e) => updateExercise(idx, 'rpe', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <Input
+                        placeholder="Poznámka k cviku"
+                        value={ex.notes}
+                        onChange={(e) => updateExercise(idx, 'notes', e.target.value)}
+                      />
+                    </div>
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={addExercise}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Přidat další cvik
+                  </Button>
+                </div>
+
+                {/* Workout Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="workout-notes">Poznámky k tréninku</Label>
+                  <Textarea
+                    id="workout-notes"
+                    placeholder="Jak se cítíš? Co šlo dobře?"
+                    value={workoutNotes}
+                    onChange={(e) => setWorkoutNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Toggle back to quick mode (only if not editing planned) */}
+                {!editingPlannedWorkoutId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setIsDetailedMode(false)}
+                  >
+                    Zpět na rychlý záznam
+                  </Button>
+                )}
+              </>
+            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Zrušit
             </Button>
             <Button
               onClick={handleSaveWorkout}
-              disabled={(createLog.isPending || completeAssignedWorkout.isPending) || !exercises.some(ex => ex.exercise_name.trim())}
+              disabled={
+                (createLog.isPending || completeAssignedWorkout.isPending) || 
+                (isDetailedMode && !exercises.some(ex => ex.exercise_name.trim())) ||
+                (!isDetailedMode && !workoutType)
+              }
             >
               {(createLog.isPending || completeAssignedWorkout.isPending) 
                 ? 'Ukládám...' 
                 : editingPlannedWorkoutId 
                   ? 'Označit jako splněný' 
-                  : 'Uložit trénink'}
+                  : '✓ Uložit'}
             </Button>
           </DialogFooter>
         </DialogContent>
