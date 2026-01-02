@@ -92,3 +92,12 @@ verify_jwt = true
 
 [functions.update-client-own-credentials]
 verify_jwt = true
+
+[functions.calculate-xp]
+verify_jwt = true
+
+[functions.calculate-lp]
+verify_jwt = true
+
+[functions.evaluate-challenge-winners]
+verify_jwt = true
