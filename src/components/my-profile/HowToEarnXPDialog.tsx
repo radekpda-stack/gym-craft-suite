@@ -12,7 +12,9 @@ import {
   Link, 
   Trophy, 
   Award,
-  Zap
+  Zap,
+  ShoppingBag,
+  Droplets
 } from 'lucide-react';
 
 interface HowToEarnXPDialogProps {
@@ -76,6 +78,22 @@ const XP_RULES = [
     description: 'Za získání nového odznaku',
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10',
+  },
+  {
+    icon: ShoppingBag,
+    label: 'Nákup produktů',
+    xp: '+5-15 XP',
+    description: 'Za nákup produktů ve fitku (pitný režim, suplementy)',
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10',
+  },
+  {
+    icon: Droplets,
+    label: 'Pitný režim bonus',
+    xp: '+3 XP',
+    description: 'Za nákup nápoje při tréninku',
+    color: 'text-sky-500',
+    bgColor: 'bg-sky-500/10',
   },
 ];
 
