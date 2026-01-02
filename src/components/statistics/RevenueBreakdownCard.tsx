@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 const COLORS = [
   'hsl(var(--primary))',
   'hsl(var(--warning))',
-  'hsl(var(--success))',
+  'hsl(var(--destructive))',
 ];
 
 export function RevenueBreakdownCard() {
@@ -29,14 +29,14 @@ export function RevenueBreakdownCard() {
       const breakdown = {
         training: 0,
         product: 0,
-        payment: 0,
+        cancellation: 0,
       };
 
       transactions.forEach(t => {
         const absAmount = Math.abs(t.amount);
         if (t.type === 'training') breakdown.training += absAmount;
         else if (t.type === 'product') breakdown.product += absAmount;
-        else if (t.type === 'payment' || t.type === 'manual') breakdown.payment += absAmount;
+        else if (t.type === 'cancellation' || t.type === 'late_cancel') breakdown.cancellation += absAmount;
       });
 
       return breakdown;
@@ -45,11 +45,15 @@ export function RevenueBreakdownCard() {
 
   const chartData = useMemo(() => {
     if (!data) return [];
-    return [
-      { name: 'Tréninky', value: data.training, icon: Dumbbell },
-      { name: 'Produkty', value: data.product, icon: ShoppingBag },
-      { name: 'Dobití kreditu', value: data.payment, icon: CreditCard },
-    ].filter(d => d.value > 0);
+    const items = [
+      { name: 'Za tréninky', value: data.training, icon: Dumbbell },
+      { name: 'Za produkty', value: data.product, icon: ShoppingBag },
+    ];
+    // Only show cancellation if there's any
+    if (data.cancellation > 0) {
+      items.push({ name: 'Storno poplatky', value: data.cancellation, icon: CreditCard });
+    }
+    return items.filter(d => d.value > 0);
   }, [data]);
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
@@ -110,12 +114,12 @@ export function RevenueBreakdownCard() {
 
   return (
     <StatisticsCard
-      title="Zdroje příjmů"
+      title="Struktura plateb"
       icon={<Wallet className="h-4 w-4 text-primary" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
-      infoDescription="Rozdělení příjmů podle zdroje - tréninky, produkty a dobití kreditu."
-      infoCalculation="Tréninky = stržené částky za tréninky. Produkty = prodané produkty. Dobití = vklady na kredit."
+      infoDescription="Rozdělení plateb podle typu - tréninky, produkty a storno poplatky."
+      infoCalculation="Za tréninky = stržené částky za tréninky. Za produkty = prodané produkty. Storno = poplatky za pozdní zrušení."
     >
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
