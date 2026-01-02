@@ -24,8 +24,9 @@ import { MonthlyAverageModal } from './modals/MonthlyAverageModal';
 import { TrainingIncomeModal } from './modals/TrainingIncomeModal';
 import { ProductIncomeModal } from './modals/ProductIncomeModal';
 import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
+import { CancellationDetailModal } from './modals/CancellationDetailModal';
 
-type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | null;
+type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | null;
 
 export function FinanceStatsSection() {
   const navigate = useNavigate();
@@ -136,7 +137,7 @@ export function FinanceStatsSection() {
 
       {/* Cancellation Stats - single row */}
       <div className="grid grid-cols-1 gap-3 sm:gap-4">
-        <CancellationStatsCard stats={stats} />
+        <CancellationStatsCard onClick={() => setActiveModal('cancellation')} />
       </div>
 
       {/* Modals */}
@@ -164,6 +165,10 @@ export function FinanceStatsSection() {
         open={activeModal === 'pending'} 
         onOpenChange={(open) => !open && setActiveModal(null)}
         stats={stats}
+      />
+      <CancellationDetailModal 
+        open={activeModal === 'cancellation'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
       />
     </div>
   );
