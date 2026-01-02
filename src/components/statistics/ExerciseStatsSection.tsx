@@ -1,20 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
-import { useGenderStats } from '@/hooks/useGenderStats';
-import { usePRTrend } from '@/hooks/usePRTrend';
+import { useTrainingIntensityStats } from '@/hooks/useTrainingIntensityStats';
 import { InsightsBar, generateExerciseInsights } from './InsightsBar';
-import { TopExercisesCard } from './TopExercisesCard';
-import { PRTimelineCard } from '@/components/dashboard/PRTimelineCard';
+import { ExerciseHeroKPI } from './ExerciseHeroKPI';
+import { RecentPRsList, useMonthlyPRCount } from './RecentPRsList';
 import { ExerciseBodyPartCard } from './ExerciseBodyPartCard';
-import { RecordWeightsCard } from './RecordWeightsCard';
 import { StrengthProgressCard } from './StrengthProgressCard';
 import { IntensityStatsCard } from './IntensityStatsCard';
-import { TrainingTypesCard } from './TrainingTypesCard';
-import { GaugeCard, SparklineCard, MetricCard } from '@/components/charts';
-import { Trophy, Zap, Loader2, Dumbbell, TrendingUp } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PRsDetailModal } from './modals/PRsDetailModal';
 import { MaxWeightModal } from './modals/MaxWeightModal';
 
@@ -23,22 +18,30 @@ type ExerciseModal = 'prs' | 'maxweight' | null;
 export function ExerciseStatsSection() {
   const navigate = useNavigate();
   const { data: stats, isLoading } = useAnnualStats('year');
-  const { data: genderStats } = useGenderStats();
-  const { data: prTrend } = usePRTrend(6);
+  const { data: intensityStats } = useTrainingIntensityStats();
+  const { data: monthlyPRs } = useMonthlyPRCount();
   const [activeModal, setActiveModal] = useState<ExerciseModal>(null);
 
   // Generate insights
   const insights = generateExerciseInsights(stats);
 
-  // Use real PR trend data from database
-  const prSparklineData = (prTrend || []).map(m => ({ value: m.count }));
+  const handleCardClick = (card: string) => {
+    switch (card) {
+      case 'prs':
+        setActiveModal('prs');
+        break;
+      case 'exercises':
+        navigate('/exercises');
+        break;
+    }
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
         <div className="flex items-center justify-center py-12">
@@ -48,12 +51,6 @@ export function ExerciseStatsSection() {
     );
   }
 
-  const totalExercises = stats?.totalExerciseEntries || 0;
-  const uniqueExercises = stats?.uniqueExercises || 0;
-  const totalPRs = stats?.totalPRs || 0;
-  const prRate = totalExercises > 0 ? (totalPRs / totalExercises) * 100 : 0;
-  const maxWeight = stats?.maxWeightLifted?.weight || 0;
-
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Insight Bar */}
@@ -61,113 +58,34 @@ export function ExerciseStatsSection() {
         <InsightsBar insights={insights} />
       )}
 
-      {/* WHOOP-style Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <GaugeCard
-          title="PR Rate"
-          value={prRate}
-          maxValue={Math.max(20, Math.ceil(prRate * 2))}
-          displayValue={`${prRate.toFixed(1)}%`}
-          sublabel="ze záznamů"
-          description={`${totalPRs} osobních rekordů`}
-          variant={prRate >= 10 ? 'success' : prRate >= 5 ? 'primary' : 'warning'}
-          size="md"
-          onClick={() => setActiveModal('prs')}
-        />
-        
-        <GaugeCard
-          title="Max váha"
-          value={maxWeight}
-          maxValue={Math.ceil((maxWeight * 1.25) / 50) * 50 || 100}
-          displayValue={maxWeight > 0 ? `${maxWeight}` : '-'}
-          sublabel="kg"
-          description={stats?.maxWeightLifted ? `${stats.maxWeightLifted.exercise}` : 'žádný záznam'}
-          variant="destructive"
-          size="md"
-          onClick={() => setActiveModal('maxweight')}
-        />
+      {/* Hero KPI Cards */}
+      <ExerciseHeroKPI
+        stats={stats}
+        monthlyPRs={monthlyPRs || 0}
+        avgRPE={intensityStats?.avgRPE}
+        onCardClick={handleCardClick}
+      />
 
-        <SparklineCard
-          title="Osobní rekordy"
-          value={totalPRs}
-          subtitle="tento rok"
-          data={prSparklineData}
-          variant="success"
-          icon={<Trophy className="h-4 w-4" />}
-          onClick={() => setActiveModal('prs')}
-        />
+      {/* Recent PRs List */}
+      <RecentPRsList 
+        limit={5}
+        onViewAll={() => setActiveModal('prs')}
+      />
 
-        <MetricCard
-          title="Různé cviky"
-          value={uniqueExercises}
-          subtitle={`z ${totalExercises.toLocaleString('cs-CZ')} záznamů`}
-          progress={Math.min((uniqueExercises / 100) * 100, 100)}
-          variant="purple"
-          icon={<Dumbbell className="h-4 w-4" />}
-          onClick={() => navigate('/exercises')}
-          showProgressValue
-        />
-      </div>
-
-      {/* Secondary stats */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Přehled záznamů
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold">{totalExercises.toLocaleString('cs-CZ')}</p>
-              <p className="text-xs text-muted-foreground">záznamů cviků</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{uniqueExercises}</p>
-              <p className="text-xs text-muted-foreground">různých cviků</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats?.topExercises?.[0]?.count || 0}×</p>
-              <p className="text-xs text-muted-foreground truncate" title={stats?.topExercises?.[0]?.name}>
-                {stats?.topExercises?.[0]?.name || 'nejčastější cvik'}
-              </p>
-            </div>
-            <div 
-              className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
-              onClick={() => navigate('/exercises')}
-            >
-              <p className="text-2xl font-bold text-primary">→</p>
-              <p className="text-xs text-muted-foreground">Knihovna cviků</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* PR Timeline */}
-      <PRTimelineCard />
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <TopExercisesCard />
-        <ExerciseBodyPartCard />
-        <RecordWeightsCard />
-      </div>
-
-      {/* Intensity and Training Types */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <IntensityStatsCard />
-        <TrainingTypesCard />
-      </div>
-
-      {/* Strength Progress */}
+      {/* Strength Progress Chart */}
       <StrengthProgressCard />
+
+      {/* Stats Grid - simplified to 2 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <ExerciseBodyPartCard />
+        <IntensityStatsCard />
+      </div>
 
       {/* Modals */}
       <PRsDetailModal 
         open={activeModal === 'prs'} 
         onOpenChange={(open) => !open && setActiveModal(null)}
         stats={stats}
-        genderStats={genderStats?.prsByGender}
       />
       <MaxWeightModal 
         open={activeModal === 'maxweight'} 
