@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -153,19 +154,15 @@ export function ChatInterface() {
             <p className="text-xs text-muted-foreground">Pomoc s tréninky a analýzou dat</p>
           </div>
         </div>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-          <SelectTrigger className="w-[200px] glass-input">
-            <SelectValue placeholder="Vybrat klienta" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všichni klienti</SelectItem>
-            {clients.map(client => (
-              <SelectItem key={client.id} value={client.id}>
-                {client.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ClientSearchSelect
+          clients={clients.filter(c => !c.is_archived)}
+          value={selectedClientId === 'all' ? '' : selectedClientId}
+          onValueChange={(v) => setSelectedClientId(v || 'all')}
+          placeholder="Vybrat klienta"
+          allowAll
+          allLabel="Všichni klienti"
+          className="w-[200px]"
+        />
       </div>
 
       {/* Messages */}
