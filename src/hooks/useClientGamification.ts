@@ -364,18 +364,29 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       
       const clientIds = settings.map(s => s.client_id);
       
-      // Get confirmed workouts for these clients
       const now = new Date();
       const monthStart = startOfMonth(now);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const { data: confirmedWorkouts, error: confirmedError } = await supabase
-        .from('client_confirmed_workouts')
-        .select('client_id, xp, performed_at')
+      // Get XP data from client_xp table (total XP)
+      const { data: clientXpData, error: xpError } = await supabase
+        .from('client_xp')
+        .select('client_id, total_xp')
         .in('client_id', clientIds);
       
-      if (confirmedError) throw confirmedError;
+      if (xpError) throw xpError;
       
-      // Get training sessions for these clients
+      // Get XP events for this month (for monthly XP calculation)
+      const { data: xpEvents, error: eventsError } = await supabase
+        .from('xp_events')
+        .select('client_id, xp_amount, created_at, source_type')
+        .in('client_id', clientIds)
+        .gte('created_at', monthStart.toISOString());
+      
+      if (eventsError) throw eventsError;
+      
+      // Get training sessions for workout counts and verified status
       const { data: trainingSessions, error: trainingError } = await supabase
         .from('training_sessions')
         .select('client_id, date')
@@ -384,9 +395,13 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       
       if (trainingError) throw trainingError;
       
-      // Calculate verified status (70%+ coach-confirmed in last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // Get unique workout dates from xp_events (each date = 1 workout)
+      const { data: allXpEvents, error: allEventsError } = await supabase
+        .from('xp_events')
+        .select('client_id, created_at, source_type')
+        .in('client_id', clientIds);
+      
+      if (allEventsError) throw allEventsError;
       
       // Aggregate data per client
       const clientData: Record<string, {
@@ -409,36 +424,66 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
         };
       });
       
-      // Process confirmed workouts
-      confirmedWorkouts?.forEach(w => {
-        const date = parseISO(w.performed_at);
-        clientData[w.client_id].totalXP += w.xp;
-        clientData[w.client_id].totalWorkouts++;
-        
-        if (date >= monthStart) {
-          clientData[w.client_id].monthlyXP += w.xp;
-          clientData[w.client_id].monthlyWorkouts++;
-        }
-        
-        if (date >= thirtyDaysAgo) {
-          clientData[w.client_id].totalRecent++;
+      // Set total XP from client_xp table
+      clientXpData?.forEach(xp => {
+        if (clientData[xp.client_id]) {
+          clientData[xp.client_id].totalXP = xp.total_xp;
         }
       });
       
-      // Process training sessions (coach-confirmed)
+      // Calculate monthly XP from xp_events
+      xpEvents?.forEach(event => {
+        if (clientData[event.client_id]) {
+          clientData[event.client_id].monthlyXP += event.xp_amount;
+        }
+      });
+      
+      // Calculate workout counts (count unique dates from xp_events)
+      const workoutDates: Record<string, Set<string>> = {};
+      const monthlyWorkoutDates: Record<string, Set<string>> = {};
+      
+      clientIds.forEach(id => {
+        workoutDates[id] = new Set();
+        monthlyWorkoutDates[id] = new Set();
+      });
+      
+      allXpEvents?.forEach(event => {
+        const date = parseISO(event.created_at);
+        const dateKey = format(date, 'yyyy-MM-dd');
+        
+        if (workoutDates[event.client_id]) {
+          workoutDates[event.client_id].add(dateKey);
+          
+          if (date >= monthStart) {
+            monthlyWorkoutDates[event.client_id].add(dateKey);
+          }
+        }
+      });
+      
+      // Set workout counts
+      clientIds.forEach(id => {
+        clientData[id].totalWorkouts = workoutDates[id].size;
+        clientData[id].monthlyWorkouts = monthlyWorkoutDates[id].size;
+      });
+      
+      // Calculate verified status from training sessions (coach-confirmed)
       trainingSessions?.forEach(t => {
         const date = parseISO(t.date);
-        clientData[t.client_id].totalXP += 10;
-        clientData[t.client_id].totalWorkouts++;
-        
-        if (date >= monthStart) {
-          clientData[t.client_id].monthlyXP += 10;
-          clientData[t.client_id].monthlyWorkouts++;
-        }
         
         if (date >= thirtyDaysAgo) {
           clientData[t.client_id].coachConfirmedRecent++;
           clientData[t.client_id].totalRecent++;
+        }
+      });
+      
+      // Also count recent xp_events for totalRecent
+      allXpEvents?.forEach(event => {
+        const date = parseISO(event.created_at);
+        if (date >= thirtyDaysAgo && clientData[event.client_id]) {
+          // Avoid double counting training_sessions
+          if (event.source_type !== 'training_session') {
+            clientData[event.client_id].totalRecent++;
+          }
         }
       });
       
