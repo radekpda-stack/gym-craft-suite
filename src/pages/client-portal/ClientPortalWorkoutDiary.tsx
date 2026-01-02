@@ -236,16 +236,15 @@ export default function ClientPortalWorkoutDiary() {
     setDialogOpen(true);
   };
 
-  // Get status badge
+  // Get status badge - simplified
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'planned':
       case 'draft':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Plánovaný</Badge>;
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Naplánovaný</Badge>;
       case 'completed':
-        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Dokončený</Badge>;
       case 'reviewed':
-        return <Badge variant="outline" className="text-primary border-primary/50 bg-primary/10">Zkontrolován</Badge>;
+        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Hotovo</Badge>;
       default:
         return null;
     }
@@ -279,7 +278,7 @@ export default function ClientPortalWorkoutDiary() {
         <div>
           <h1 className="text-2xl font-bold">Tréninkový deník</h1>
           <p className="text-muted-foreground text-sm">
-            Zaznamenávejte své tréninky a sledujte progres
+            Zaznamenej si své tréninky
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>

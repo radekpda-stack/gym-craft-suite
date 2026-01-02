@@ -140,11 +140,11 @@ export default function ClientPortalCredit() {
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
                   <div>
                     <p className="text-2xl font-bold text-success">+{stats.addedInPeriod.toLocaleString('cs-CZ')}</p>
-                    <p className="text-xs text-muted-foreground">přidáno</p>
+                    <p className="text-xs text-muted-foreground">dobito</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">-{stats.spentInPeriod.toLocaleString('cs-CZ')}</p>
-                    <p className="text-xs text-muted-foreground">čerpáno</p>
+                    <p className="text-xs text-muted-foreground">utraceno</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function ClientPortalCredit() {
                         {stats.netChange > 0 ? '+' : ''}{stats.netChange.toLocaleString('cs-CZ')}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">celkem za období</p>
+                    <p className="text-xs text-muted-foreground">rozdíl</p>
                   </div>
                 </div>
               </>

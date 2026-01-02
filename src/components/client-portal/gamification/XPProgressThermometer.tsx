@@ -54,14 +54,14 @@ export function XPProgressThermometer({ clientId }: XPProgressThermometerProps) 
     {
       icon: Flame,
       value: streak?.currentStreak ?? 0,
-      label: 'Série',
+      label: 'Dní v řadě',
       color: 'text-orange-500',
       bgColor: 'bg-orange-500/10',
     },
     {
       icon: Zap,
       value: xpLevel.total_xp,
-      label: 'Celkem XP',
+      label: 'Body',
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       formatValue: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString(),

@@ -4,12 +4,10 @@ import { Award, Lock, Check, Sparkles } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useBadgeDefinitions, useClientBadges, BadgeDefinition } from '@/hooks/useClientGamification';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { XPProgressThermometer } from '@/components/client-portal/gamification/XPProgressThermometer';
 
 // Badge icon mapping
 const badgeIcons: Record<string, string> = {
@@ -47,28 +45,10 @@ const badgeIcons: Record<string, string> = {
   egg: '🥚',
   hammer: '🔨',
   flag: '🇨🇿',
-  // Purchase badges
   shopping_bag: '🛍️',
   droplets: '💧',
   pill: '💊',
   star: '⭐',
-};
-
-// Rarity colors
-const rarityColors: Record<string, string> = {
-  Common: 'bg-muted text-muted-foreground border-muted',
-  Uncommon: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
-  Rare: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-  Epic: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
-  Legendary: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-};
-
-const rarityLabels: Record<string, string> = {
-  Common: 'Běžný',
-  Uncommon: 'Neobvyklý',
-  Rare: 'Vzácný',
-  Epic: 'Epický',
-  Legendary: 'Legendární',
 };
 
 interface BadgeCardProps {
@@ -118,11 +98,6 @@ function BadgeCard({ definition, earned, earnedAt, progressCurrent = 0, progress
         <p className="text-xs text-muted-foreground line-clamp-2">
           {definition.description}
         </p>
-        
-        {/* Rarity Badge */}
-        <Badge variant="outline" className={cn("text-[10px] px-2", rarityColors[definition.rarity])}>
-          {rarityLabels[definition.rarity]}
-        </Badge>
       </div>
       
       {/* Progress or Earned Date */}
@@ -168,7 +143,6 @@ export default function ClientPortalBadges() {
   const { data: clientBadges, isLoading: badgesLoading } = useClientBadges(clientId ?? undefined);
   
   const [filter, setFilter] = useState<'all' | 'earned' | 'locked'>('all');
-  const [rarityFilter, setRarityFilter] = useState<string | null>(null);
   
   const isLoading = definitionsLoading || badgesLoading;
   
@@ -184,11 +158,10 @@ export default function ClientPortalBadges() {
     };
   }) ?? [];
   
-  // Apply filters
+  // Apply filters - simplified (removed rarity filter)
   const filteredBadges = badges.filter(b => {
     if (filter === 'earned' && !b.earned) return false;
     if (filter === 'locked' && b.earned) return false;
-    if (rarityFilter && b.definition.rarity !== rarityFilter) return false;
     return true;
   });
   
@@ -217,9 +190,6 @@ export default function ClientPortalBadges() {
   
   return (
     <div className="space-y-6">
-      {/* XP Progress Thermometer */}
-      <XPProgressThermometer clientId={clientId ?? undefined} />
-      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -229,7 +199,7 @@ export default function ClientPortalBadges() {
           <div>
             <h1 className="text-xl font-bold">Odznaky</h1>
             <p className="text-sm text-muted-foreground">
-              {earnedCount} z {totalCount} odemčeno
+              {earnedCount} z {totalCount} získáno
             </p>
           </div>
         </div>
@@ -242,43 +212,14 @@ export default function ClientPortalBadges() {
         )}
       </div>
       
-      {/* Filters */}
+      {/* Filters - Simplified */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList className="w-full">
           <TabsTrigger value="all" className="flex-1">Vše</TabsTrigger>
-          <TabsTrigger value="earned" className="flex-1">Odemčené</TabsTrigger>
-          <TabsTrigger value="locked" className="flex-1">Zamčené</TabsTrigger>
+          <TabsTrigger value="earned" className="flex-1">Získané</TabsTrigger>
+          <TabsTrigger value="locked" className="flex-1">Nezískané</TabsTrigger>
         </TabsList>
       </Tabs>
-      
-      {/* Rarity filter chips */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setRarityFilter(null)}
-          className={cn(
-            "px-3 py-1 rounded-full text-xs font-medium transition-all",
-            !rarityFilter 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          Vše
-        </button>
-        {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map(rarity => (
-          <button
-            key={rarity}
-            onClick={() => setRarityFilter(rarityFilter === rarity ? null : rarity)}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all border",
-              rarityFilter === rarity 
-                ? rarityColors[rarity]
-                : "bg-muted text-muted-foreground hover:bg-muted/80 border-transparent"
-            )}
-          >
-            {rarityLabels[rarity]}
-          </button>
-        ))}
-      </div>
       
       {/* Badges Grid */}
       {filteredBadges.length === 0 ? (
@@ -287,9 +228,9 @@ export default function ClientPortalBadges() {
             <Award className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">
               {filter === 'earned' 
-                ? 'Zatím nemáš žádné odemčené odznaky' 
+                ? 'Zatím nemáš žádné odznaky' 
                 : filter === 'locked'
-                ? 'Všechny odznaky máš odemčené! 🎉'
+                ? 'Všechny odznaky máš! 🎉'
                 : 'Žádné odznaky nenalezeny'
               }
             </p>

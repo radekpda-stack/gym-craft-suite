@@ -218,8 +218,8 @@ export function GamificationProgressCard() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-2">
+          {/* Quick Stats - Simplified to 3 boxes */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 rounded-xl bg-primary/10">
               <Dumbbell className="w-5 h-5 text-primary mx-auto mb-1" />
               <p className="text-lg font-bold">{stats.totalWorkouts}</p>
@@ -230,15 +230,10 @@ export function GamificationProgressCard() {
               <p className="text-lg font-bold">{stats.monthlyWorkouts}</p>
               <p className="text-[10px] text-muted-foreground">Tento měsíc</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-amber-500/10">
-              <Zap className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-              <p className="text-lg font-bold">{stats.monthlyXP}</p>
-              <p className="text-[10px] text-muted-foreground">XP</p>
-            </div>
             <div className="text-center p-3 rounded-xl bg-orange-500/10">
               <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
               <p className="text-lg font-bold">{stats.currentStreak}</p>
-              <p className="text-[10px] text-muted-foreground">Streak</p>
+              <p className="text-[10px] text-muted-foreground">Dní v řadě</p>
             </div>
           </div>
           
@@ -254,7 +249,7 @@ export function GamificationProgressCard() {
                     Další odznak: {nextBadge.definition.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Chybí ti {nextBadge.remaining} {nextBadge.remaining === 1 ? 'trénink' : nextBadge.remaining < 5 ? 'tréninky' : 'tréninků'}
+                    Ještě {nextBadge.remaining} {nextBadge.remaining === 1 ? 'trénink' : nextBadge.remaining < 5 ? 'tréninky' : 'tréninků'}
                   </p>
                 </div>
               </div>
