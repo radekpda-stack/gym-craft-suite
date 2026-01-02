@@ -7,6 +7,7 @@ export interface ClientAccount {
   user_id: string;
   client_id: string;
   trainer_id: string;
+  auth_user_id: string | null;
   is_active: boolean;
   last_portal_login: string | null;
   portal_settings: Record<string, unknown>;

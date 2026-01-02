@@ -113,81 +113,37 @@ export function useSubmitClientPortalFeedback() {
       sleepHours?: number;
       note?: string;
     }) => {
-      if (!clientAccount?.client_id || !clientAccount?.trainer_id) {
+      if (!clientAccount?.client_id || !clientAccount?.trainer_id || !clientAccount?.auth_user_id) {
         throw new Error("Client not authenticated");
       }
 
-      // Get training session details
-      const { data: session, error: sessionError } = await supabase
-        .from("training_sessions")
-        .select("date")
-        .eq("id", trainingSessionId)
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Insert feedback - use trainer_id as user_id (owner of the data)
-      // RLS policy allows clients to insert for their own client_id via auth_user_id
-      // Map slider values (1-10) to database ranges (1-5)
-      const mapToFiveScale = (val: number | undefined, defaultVal: number = 3): number => {
-        if (!val) return defaultVal;
-        return Math.max(1, Math.min(5, Math.ceil(val / 2)));
-      };
-
-      // Map pain_type - database only allows 'muscle' or 'joint'
-      const mappedPainType = painType === 'tendon' ? 'muscle' : painType || null;
-
-      const { error } = await supabase.from("training_feedback").insert({
-        training_session_id: trainingSessionId,
-        client_id: clientAccount.client_id,
-        user_id: clientAccount.trainer_id,
-        training_date: session.date,
-        source: "link", // Database allows: 'manual', 'email', 'link'
-        // Required fields with defaults based on slider values (mapped to 1-5 scale)
-        fatigue_level: mapToFiveScale(values.energy ? 10 - values.energy : undefined, 3),
-        energy_level: values.energy && values.energy >= 7 ? "stable" : values.energy && values.energy <= 3 ? "low_entire" : "stable",
-        rpe_rating: values.difficulty || 5,
-        mood_rating: mapToFiveScale(values.fun, 3), // Database allows 1-5
-        technique_rating: 5, // Default
-        goal_relevance: "yes", // Database allows: 'yes', 'partially', 'no'
-        // Slider values
-        soreness: values.soreness || null,
-        body_feel: values.body_feel || null,
-        energy_rating: values.energy || null,
-        pain: values.pain || null,
-        session_fit: values.session_fit || null,
-        difficulty: values.difficulty || null,
-        fun: values.fun || null,
-        // Pain data
-        pain_area: painAreas?.length ? painAreas.join(", ") : null,
-        pain_area_intensities: painAreaIntensities || null,
-        pain_area_other: painAreaOther || null,
-        pain_type: mappedPainType, // Database allows: 'muscle', 'joint'
-        // Sleep data
-        sleep_after: sleepAfter || null,
-        sleep_hours: sleepHours || null,
-        // Note (max 200 chars in database)
-        comment: note ? note.substring(0, 200) : null,
+      // Call unified edge function
+      const { data, error } = await supabase.functions.invoke("feedback-submit", {
+        body: {
+          client_session_token: clientAccount.auth_user_id,
+          training_session_id: trainingSessionId,
+          values,
+          pain_areas: painAreas,
+          pain_area_intensities: painAreaIntensities,
+          pain_area_other: painAreaOther,
+          pain_type: painType,
+          sleep_after: sleepAfter,
+          sleep_hours: sleepHours,
+          note,
+        },
       });
 
-      if (error) throw error;
-      await supabase.from("notifications").insert({
-        client_id: clientAccount.client_id,
-        user_id: clientAccount.trainer_id,
-        type: "feedback_received",
-        title: "Klient vyplnil zpětnou vazbu",
-        message: `Zpětná vazba k tréninku ze dne ${session.date} byla vyplněna přes klientský portál.`,
-      });
+      if (error) {
+        // Try to extract specific error from response
+        const errorData = error.context?.body ? JSON.parse(error.context.body) : null;
+        throw new Error(errorData?.error || error.message || "Chyba při odesílání zpětné vazby");
+      }
 
-      // Mark notification as completed if exists
-      await supabase
-        .from("client_portal_notifications")
-        .update({ action_completed: true, is_read: true })
-        .eq("client_id", clientAccount.client_id)
-        .eq("type", "feedback_reminder")
-        .contains("metadata", { training_session_id: trainingSessionId });
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-      return { success: true };
+      return { success: true, feedbackId: data?.feedbackId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
