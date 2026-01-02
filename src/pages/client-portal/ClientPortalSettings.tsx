@@ -109,7 +109,7 @@ export default function ClientPortalSettings() {
   const handleNicknameChange = () => {
     if (!clientId) return;
     updateLeaderboard.mutate(
-      { clientId, visible: leaderboardSettings?.leaderboard_visible ?? true, nickname: nickname || 'Anonym' },
+      { clientId, visible: leaderboardSettings?.leaderboard_visible ?? false, nickname: nickname || 'Anonym' },
       {
         onSuccess: () => toast.success('Přezdívka uložena'),
         onError: () => toast.error('Nepodařilo se uložit'),
