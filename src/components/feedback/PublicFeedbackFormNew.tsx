@@ -364,12 +364,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
     const helpText = question.helpText || DEFAULT_HELP_TEXTS[question.id];
     
     return (
-      <Card key={question.id}>
+      <Card key={question.id} className="jm-card">
         <CardContent className="pt-6">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Label className="text-base font-medium">
+                <Label className="text-h3">
                   {question.emoji && <span className="mr-2">{question.emoji}</span>}
                   {question.label}
                 </Label>
@@ -386,7 +386,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                     </PopoverTrigger>
                     <PopoverContent 
                       side="top" 
-                      className="max-w-[280px] text-sm"
+                      className="max-w-[280px] text-body"
                       sideOffset={8}
                     >
                       {helpText}
@@ -394,7 +394,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                   </Popover>
                 )}
               </div>
-              <span className="text-2xl font-bold text-primary">{value}</span>
+              <span className="metric-value text-primary">{value}</span>
             </div>
             <Slider
               value={[value]}
@@ -404,32 +404,32 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               step={1}
               className="py-2"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-meta">
               <span>{question.minLabel}</span>
               <span>{question.maxLabel}</span>
             </div>
             
             {/* Difficulty (RPE) description and scale anchoring */}
             {question.id === 'difficulty' && (
-              <div className="space-y-2 mt-2 border-t pt-2">
-                <p className="text-xs text-muted-foreground text-center">
+              <div className="space-y-2 mt-2 border-t border-border pt-2">
+                <p className="text-meta text-center">
                   Hodnotíš celkovou náročnost na konci tréninku (RPE = jak těžké to bylo).
                 </p>
                 <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
                   <div className="text-center">
-                    <span className="font-medium text-green-500">1-3</span>
+                    <span className="font-medium text-success">1-3</span>
                     <p>rezerva</p>
                   </div>
                   <div className="text-center">
-                    <span className="font-medium text-yellow-500">4-6</span>
+                    <span className="font-medium text-warning">4-6</span>
                     <p>kontrola</p>
                   </div>
                   <div className="text-center">
-                    <span className="font-medium text-orange-500">7-8</span>
+                    <span className="font-medium text-warning">7-8</span>
                     <p>na hraně</p>
                   </div>
                   <div className="text-center">
-                    <span className="font-medium text-red-500">9-10</span>
+                    <span className="font-medium text-destructive">9-10</span>
                     <p>maximum</p>
                   </div>
                 </div>
@@ -444,10 +444,10 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="public-page flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Načítám formulář...</p>
+          <p className="text-muted-foreground text-body">Načítám formulář...</p>
         </div>
       </div>
     );
@@ -456,12 +456,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Error state
   if (status === 'error') {
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-xl font-semibold mb-2">Chyba</h2>
-            <p className="text-muted-foreground">{errorMessage}</p>
+            <h2 className="text-h3 mb-2">Chyba</h2>
+            <p className="text-muted-foreground text-body">{errorMessage}</p>
           </CardContent>
         </Card>
       </div>
@@ -471,12 +471,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Expired state
   if (status === 'expired') {
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-warning" />
-            <h2 className="text-xl font-semibold mb-2">Platnost vypršela</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-h3 mb-2">Platnost vypršela</h2>
+            <p className="text-muted-foreground text-body">
               Platnost tohoto odkazu již vypršela. Kontaktujte svého trenéra pro nový odkaz.
             </p>
           </CardContent>
@@ -488,12 +488,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Already completed state
   if (status === 'completed') {
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="w-12 h-12 mx-auto mb-4 text-primary" />
-            <h2 className="text-xl font-semibold mb-2">Již vyplněno</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-h3 mb-2">Již vyplněno</h2>
+            <p className="text-muted-foreground text-body">
               Zpětná vazba pro tento trénink již byla odeslána. Děkujeme!
             </p>
           </CardContent>
@@ -505,12 +505,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Rejected state
   if (status === 'rejected') {
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <XCircle className="w-12 h-12 mx-auto mb-4 text-warning" />
-            <h2 className="text-xl font-semibold mb-2">Děkujeme za upozornění</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-h3 mb-2">Děkujeme za upozornění</h2>
+            <p className="text-muted-foreground text-body">
               Formulář byl označen jako nesprávně doručený. Váš trenér bude informován.
             </p>
           </CardContent>
@@ -522,14 +522,14 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
   // Success state
   if (status === 'success') {
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">Děkujeme!</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-h3 mb-2">Děkujeme!</h2>
+            <p className="text-muted-foreground text-body">
               Vaše zpětná vazba byla úspěšně odeslána. Trenér ji použije pro optimalizaci vašeho tréninku.
             </p>
           </CardContent>
@@ -543,19 +543,19 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
   // Form state
   return (
-    <div className="public-page py-6 px-4">
+    <div className="min-h-screen bg-background py-6 px-4">
       <div className="max-w-lg mx-auto">
         {/* Header with explanation */}
-        <Card className="public-card mb-6">
+        <Card className="jm-card mb-6">
           <CardHeader className="text-center pb-4">
-            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-7 h-7 text-primary" />
             </div>
-            <CardTitle className="text-xl">Krátká zpětná vazba po tréninku</CardTitle>
+            <CardTitle className="text-h2">Krátká zpětná vazba po tréninku</CardTitle>
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
             {/* Intro explanation text */}
-            <div className="text-sm text-muted-foreground text-center space-y-2">
+            <div className="text-body text-muted-foreground text-center space-y-2">
               <p>
                 Tento formulář slouží trenérovi k lepšímu pochopení,
                 jak tvé tělo reagovalo na poslední trénink.
@@ -564,14 +564,14 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                 Odpovědi pomáhají přizpůsobit další tréninky tak,
                 aby byly bezpečné, efektivní a dlouhodobě udržitelné.
               </p>
-              <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground/80 mt-2">
+              <p className="flex items-center justify-center gap-2 text-meta mt-2">
                 <Clock className="w-3.5 h-3.5" />
                 Vyplnění zabere přibližně 1–2 minuty
               </p>
             </div>
 
             {/* Client and Training Info - Double-check header */}
-            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
               <div className="flex items-center gap-2 justify-center">
                 <User className="w-4 h-4 text-primary" />
                 <span className="font-semibold text-foreground">
@@ -579,12 +579,12 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                 </span>
               </div>
               {formData?.trainingDate && (
-                <p className="text-sm text-center text-muted-foreground">
+                <p className="text-body text-center text-muted-foreground">
                   Trénink: {format(new Date(formData.trainingDate), "EEEE d. MMMM yyyy 'v' HH:mm", { locale: cs })}
                 </p>
               )}
               {formData?.trainerName && (
-                <p className="text-xs text-center text-muted-foreground">
+                <p className="text-meta text-center">
                   Trenér: {formData.trainerName}
                 </p>
               )}
@@ -624,17 +624,17 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               
               {/* Conditional pain area selection with pain type switch */}
               {question.id === 'pain' && showPainAreas && (
-                <Card className="mt-4 border-border bg-secondary/30">
+                <Card className="mt-4 jm-card bg-secondary/30">
                   <CardContent className="pt-6 space-y-4">
                     {/* Pain Type Switch - Extended with tendon option */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Je tato bolest spíš:</Label>
+                      <Label className="text-body font-medium">Je tato bolest spíš:</Label>
                       <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setPainType('muscle')}
                           className={cn(
-                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                            "py-3 px-3 rounded-lg border-2 text-body font-medium transition-all touch-target",
                             painType === 'muscle'
                               ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
@@ -646,7 +646,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           type="button"
                           onClick={() => setPainType('joint')}
                           className={cn(
-                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                            "py-3 px-3 rounded-lg border-2 text-body font-medium transition-all touch-target",
                             painType === 'joint'
                               ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
@@ -658,7 +658,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           type="button"
                           onClick={() => setPainType('tendon')}
                           className={cn(
-                            "py-3 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                            "py-3 px-3 rounded-lg border-2 text-body font-medium transition-all touch-target",
                             painType === 'tendon'
                               ? "border-primary bg-primary/10 text-foreground"
                               : "border-border bg-card hover:border-muted-foreground"
@@ -667,7 +667,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                           🦵 Šlachová
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-meta">
                         {painType === 'muscle' 
                           ? 'Normální reakce na trénink, obvykle přejde do 24-48 hodin.'
                           : painType === 'joint'
@@ -691,7 +691,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                         placeholder="Upřesni, kde to bolí..."
                         value={painAreaOther}
                         onChange={(e) => setPainAreaOther(e.target.value)}
-                        className="mt-3"
+                        className="mt-3 jm-input"
                         maxLength={100}
                       />
                     )}
@@ -708,11 +708,11 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
             <CollapsibleTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="w-full justify-between h-12 glass-subtle border border-border/50"
+                className="w-full justify-between h-12 jm-card border border-border"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 text-body">
                   💡 Chceš doplnit více detailů?
-                  <span className="text-xs text-muted-foreground">(volitelné)</span>
+                  <span className="text-meta">(volitelné)</span>
                 </span>
                 <ChevronDown className={cn(
                   "w-5 h-5 transition-transform",
@@ -724,14 +724,14 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               {optionalQuestions.map((question) => renderSlider(question))}
               
               {/* Sleep Hours Slider - moved to optional */}
-              <Card>
+              <Card className="jm-card">
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <Label className="text-base font-medium">
+                      <Label className="text-h3">
                         🕐 Kolik hodin jsi spal/a?
                       </Label>
-                      <span className="text-2xl font-bold text-primary">{sleepHours}h</span>
+                      <span className="metric-value text-primary">{sleepHours}h</span>
                     </div>
                     <Slider
                       value={[sleepHours]}
@@ -741,7 +741,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       step={0.5}
                       className="py-2"
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground">
+                    <div className="flex justify-between text-meta">
                       <span>4h</span>
                       <span>12h</span>
                     </div>
@@ -750,9 +750,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
               </Card>
 
               {/* Sleep After Training Question - moved to optional */}
-              <Card>
+              <Card className="jm-card">
                 <CardContent className="pt-6">
-                  <Label className="mb-3 block text-base font-medium">
+                  <Label className="mb-3 block text-h3">
                     😴 Jak ses vyspal/a po tréninku?
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -760,7 +760,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       type="button"
                       onClick={() => setSleepAfter('poor')}
                       className={cn(
-                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        "py-3 px-4 rounded-lg border-2 text-body font-medium transition-all touch-target",
                         sleepAfter === 'poor'
                           ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
@@ -772,7 +772,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       type="button"
                       onClick={() => setSleepAfter('average')}
                       className={cn(
-                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        "py-3 px-4 rounded-lg border-2 text-body font-medium transition-all touch-target",
                         sleepAfter === 'average'
                           ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
@@ -784,7 +784,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       type="button"
                       onClick={() => setSleepAfter('good')}
                       className={cn(
-                        "py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all",
+                        "py-3 px-4 rounded-lg border-2 text-body font-medium transition-all touch-target",
                         sleepAfter === 'good'
                           ? "border-primary bg-primary/10 text-foreground"
                           : "border-border bg-card hover:border-muted-foreground"
@@ -798,9 +798,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
               {/* Optional note */}
               {questionsConfig.noteEnabled && (
-                <Card>
+                <Card className="jm-card">
                   <CardContent className="pt-6">
-                    <Label className="mb-3 block text-base font-medium">
+                    <Label className="mb-3 block text-h3">
                       📝 Poznámka (volitelné)
                     </Label>
                     <Textarea
@@ -809,8 +809,9 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
                       onChange={(e) => setNote(e.target.value)}
                       maxLength={questionsConfig.noteMaxLength}
                       rows={3}
+                      className="jm-input"
                     />
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                    <p className="text-meta mt-1 text-right">
                       {note.length}/{questionsConfig.noteMaxLength}
                     </p>
                   </CardContent>
@@ -822,7 +823,7 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
         {/* Submit Button */}
         <Button
-          className="w-full mt-6 h-14 text-lg font-semibold"
+          className="w-full mt-6 h-14 text-lg font-semibold jm-btn-primary"
           onClick={handleSubmit}
           disabled={status === 'submitting'}
         >
@@ -838,13 +839,13 @@ export function PublicFeedbackFormNew({ token }: PublicFeedbackFormNewProps) {
 
         {/* Footer with reject option */}
         <div className="text-center mt-4 space-y-2">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-meta">
             Vaše odpovědi jsou důvěrné a pomohou zlepšit váš trénink.
           </p>
           <button
             type="button"
             onClick={() => setShowRejectConfirm(true)}
-            className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+            className="text-meta underline hover:text-foreground transition-colors"
           >
             Tohle nejsem já / špatný příjemce
           </button>
