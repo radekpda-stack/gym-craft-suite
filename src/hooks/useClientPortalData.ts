@@ -289,6 +289,53 @@ export function useClientNutritionCampaign(clientId: string | undefined) {
   });
 }
 
+// Get all nutrition campaigns for a client (for history)
+export function useClientNutritionSessions(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-portal-nutrition-sessions', clientId],
+    queryFn: async () => {
+      if (!clientId) return [];
+
+      const { data: sessions, error } = await supabase
+        .from('nutrition_log_sessions')
+        .select('id, start_date, end_date, status, created_at')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!sessions?.length) return [];
+
+      // Get entry counts for each session
+      const sessionIds = sessions.map(s => s.id);
+      const [foodResult, drinkResult, coffeeResult] = await Promise.all([
+        supabase
+          .from('nutrition_food_entries')
+          .select('session_id')
+          .in('session_id', sessionIds),
+        supabase
+          .from('nutrition_drink_entries')
+          .select('session_id')
+          .in('session_id', sessionIds),
+        supabase
+          .from('nutrition_coffee_entries')
+          .select('session_id')
+          .in('session_id', sessionIds),
+      ]);
+
+      const entryCounts = new Map<string, number>();
+      [...(foodResult.data || []), ...(drinkResult.data || []), ...(coffeeResult.data || [])].forEach(e => {
+        entryCounts.set(e.session_id, (entryCounts.get(e.session_id) || 0) + 1);
+      });
+
+      return sessions.map(session => ({
+        ...session,
+        entries_count: entryCounts.get(session.id) || 0,
+      }));
+    },
+    enabled: !!clientId,
+  });
+}
+
 export function useClientTodayNutrition(clientId: string | undefined, sessionId: string | undefined) {
   const today = format(new Date(), 'yyyy-MM-dd');
 
