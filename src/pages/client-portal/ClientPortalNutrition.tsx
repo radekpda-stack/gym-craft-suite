@@ -100,12 +100,14 @@ export default function ClientPortalNutrition() {
 
   const handleStartTracking = async () => {
     const trainerId = clientAccount?.trainer_id;
+    const clientName = (clientAccount as any)?.clients?.name || 'Klient';
     if (!clientId || !trainerId) return;
     
     try {
       await createSession.mutateAsync({
         clientId,
         trainerId,
+        clientName,
         durationDays: 7,
       });
       toast.success('Sledování stravy zahájeno na 7 dní');
