@@ -370,8 +370,8 @@ export function SalesStatistics() {
         </div>
       ) : (
         <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* KPI Cards - 4 main metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Tržby */}
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -418,150 +418,99 @@ export function SalesStatistics() {
               <p className="text-2xl font-bold text-foreground">{stats.totalOrders}</p>
               <p className="text-xs text-muted-foreground mt-1">transakcí</p>
             </div>
-
-            {/* Průměrný zisk */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Percent className="w-4 h-4" />
-                <span className="text-xs">Průměrný zisk</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.avgProfit)}</p>
-              <p className="text-xs text-muted-foreground mt-1">na prodej</p>
-            </div>
-
-            {/* Nejprodávanější */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <span className="text-xs">Nejprodávanější</span>
-              </div>
-              {stats.topProducts[0] ? (
-                <>
-                  <p className="text-sm font-bold text-foreground truncate">{stats.topProducts[0].name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{stats.topProducts[0].quantity}× prodáno</p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">Žádná data</p>
-              )}
-            </div>
           </div>
 
-          {/* Charts Row 1 */}
-          <div className="grid lg:grid-cols-3 gap-4">
-            {/* Trend Chart */}
-            <div className="lg:col-span-2 glass rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                <h3 className="font-medium">Tržby v čase</h3>
-              </div>
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="label" 
-                      className="text-xs fill-muted-foreground" 
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      className="text-xs fill-muted-foreground"
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(value) => value >= 1000 ? `${Math.round(value/1000)}k` : value}
-                    />
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="glass rounded-lg p-2 border border-border">
-                              <p className="text-sm font-medium">{formatCurrency(payload[0].value as number)}</p>
-                              <p className="text-xs text-muted-foreground">{payload[0].payload.count} prodejů</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="hsl(var(--primary))" 
-                      fillOpacity={1} 
-                      fill="url(#colorRevenue)" 
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  Žádná data za vybrané období
-                </div>
-              )}
+          {/* Trend Chart - Full Width */}
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Tržby v čase</h3>
             </div>
-
-            {/* Payment Methods Pie Chart */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-                <h3 className="font-medium">Platební metody</h3>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="label" 
+                    className="text-xs fill-muted-foreground" 
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value) => value >= 1000 ? `${Math.round(value/1000)}k` : value}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="glass rounded-lg p-2 border border-border">
+                            <p className="text-sm font-medium">{formatCurrency(payload[0].value as number)}</p>
+                            <p className="text-xs text-muted-foreground">{payload[0].payload.count} prodejů</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="hsl(var(--primary))" 
+                    fillOpacity={1} 
+                    fill="url(#colorRevenue)" 
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                Žádná data za vybrané období
               </div>
-              {paymentMethodPieData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <PieChart>
-                      <Pie
-                        data={paymentMethodPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {paymentMethodPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="glass rounded-lg p-2 border border-border">
-                                <p className="text-sm font-medium">{data.name}</p>
-                                <p className="text-xs">{formatCurrency(data.value)}</p>
-                                <p className="text-xs text-muted-foreground">{data.count} transakcí</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex flex-wrap justify-center gap-3 mt-2">
-                    {paymentMethodPieData.map((entry, index) => (
-                      <div key={entry.name} className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                        />
-                        <span className="text-xs text-muted-foreground">{entry.name}</span>
+            )}
+          </div>
+
+          {/* Payment Methods - Simplified to numbers */}
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Platební metody</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Object.entries(stats.byPaymentMethod)
+                .filter(([_, data]) => data.count > 0)
+                .sort((a, b) => b[1].revenue - a[1].revenue)
+                .map(([method, data]) => {
+                  const methodInfo = PAYMENT_METHOD_LABELS[method];
+                  const Icon = methodInfo?.icon || Wallet;
+                  const percentage = stats.totalRevenue > 0 
+                    ? ((data.revenue / stats.totalRevenue) * 100).toFixed(0) 
+                    : 0;
+                  return (
+                    <div key={method} className="bg-secondary/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">{methodInfo?.label || method}</span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
-                  Žádná data
-                </div>
+                      <p className="text-lg font-bold">{formatCurrency(data.revenue)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {data.count}× • {percentage}%
+                      </p>
+                    </div>
+                  );
+                })}
+              {Object.values(stats.byPaymentMethod).every(d => d.count === 0) && (
+                <p className="text-sm text-muted-foreground col-span-full text-center py-4">
+                  Žádné platby
+                </p>
               )}
             </div>
           </div>
