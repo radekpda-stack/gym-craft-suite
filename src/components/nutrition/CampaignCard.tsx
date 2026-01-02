@@ -6,18 +6,18 @@ import {
   CheckCircle2, 
   Clock, 
   MoreHorizontal,
-  User,
   Calendar,
   XCircle,
   Eye,
   AlertTriangle,
   Bell,
-  Mail
+  ChevronRight
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { AvatarInitials } from '@/components/ui/avatar-initials';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +73,7 @@ export function CampaignCard({
   // Calculate days since last entry (for inactivity badge)
   const daysSinceLastEntry = campaign.last_entry_date 
     ? differenceInDays(today, parseISO(campaign.last_entry_date))
-    : currentDay; // If no entries, assume inactive since start
+    : currentDay;
   const isInactive = isActive && daysSinceLastEntry >= 2 && campaign.entries_count > 0;
   const hasNoEntries = isActive && campaign.entries_count === 0 && currentDay >= 2;
 
@@ -108,7 +108,7 @@ export function CampaignCard({
   const getStatusBadge = () => {
     if (isCompleted) {
       return (
-        <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+        <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] sm:text-xs">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Dokončeno
         </Badge>
@@ -116,16 +116,16 @@ export function CampaignCard({
     }
     if (isExpired) {
       return (
-        <Badge variant="destructive">
+        <Badge variant="destructive" className="text-[10px] sm:text-xs">
           <XCircle className="h-3 w-3 mr-1" />
           Vypršelo
         </Badge>
       );
     }
     return (
-      <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+      <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px] sm:text-xs">
         <Clock className="h-3 w-3 mr-1" />
-        Den {currentDay} / {totalDays}
+        Den {currentDay}/{totalDays}
       </Badge>
     );
   };
@@ -133,7 +133,7 @@ export function CampaignCard({
   const getInactivityBadge = () => {
     if (hasNoEntries) {
       return (
-        <Badge variant="outline" className="text-amber-600 border-amber-300">
+        <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px] sm:text-xs">
           <AlertTriangle className="h-3 w-3 mr-1" />
           Žádná data
         </Badge>
@@ -141,9 +141,9 @@ export function CampaignCard({
     }
     if (isInactive) {
       return (
-        <Badge variant="outline" className="text-orange-600 border-orange-300">
+        <Badge variant="outline" className="text-orange-600 border-orange-300 text-[10px] sm:text-xs">
           <Clock className="h-3 w-3 mr-1" />
-          {daysSinceLastEntry} dny neaktivní
+          {daysSinceLastEntry}d neaktivní
         </Badge>
       );
     }
@@ -153,31 +153,38 @@ export function CampaignCard({
   if (variant === 'compact') {
     return (
       <div 
-        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+        className={cn(
+          "flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-muted/50 transition-all cursor-pointer group",
+          (isInactive || hasNoEntries) && "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
+        )}
         onClick={() => onOpenDetail?.(campaign.id)}
       >
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "p-2 rounded-full",
-            isCompleted ? "bg-green-500/10" : isActive ? "bg-blue-500/10" : "bg-muted"
-          )}>
-            <User className={cn(
-              "h-4 w-4",
-              isCompleted ? "text-green-600" : isActive ? "text-blue-600" : "text-muted-foreground"
-            )} />
-          </div>
-          <div>
-            <p className="font-medium">{campaign.client_name}</p>
-            <p className="text-xs text-muted-foreground">
-              {totalDays} dní • {campaign.entries_count} záznamů
-            </p>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <AvatarInitials 
+            name={campaign.client_name} 
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium truncate">{campaign.client_name}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{totalDays}d</span>
+              <span>•</span>
+              <span>{campaign.entries_count} záznamů</span>
+              {isActive && (
+                <>
+                  <span>•</span>
+                  <span className="text-blue-600">{Math.round(progress)}%</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {(isInactive || hasNoEntries) && (
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           )}
           {getStatusBadge()}
+          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
     );
@@ -186,32 +193,24 @@ export function CampaignCard({
   return (
     <Card 
       className={cn(
-        "transition-all hover:shadow-md",
-        isActive && "border-blue-500/30 bg-blue-500/5",
-        (isInactive || hasNoEntries) && isActive && "border-amber-500/30 bg-amber-500/5",
+        "transition-all hover:shadow-md hover:-translate-y-0.5",
+        isActive && "border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent",
+        (isInactive || hasNoEntries) && isActive && "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent",
         selected && "ring-2 ring-primary"
       )}
     >
       <CardContent className="pt-5">
         <div className="flex items-start justify-between mb-4">
           <div 
-            className="flex items-center gap-3 flex-1 cursor-pointer"
+            className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
             onClick={() => onOpenDetail?.(campaign.id)}
           >
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
-              isCompleted ? "bg-green-500/10" : isActive ? "bg-blue-500/10" : "bg-muted"
-            )}>
-              <User className={cn(
-                "h-5 w-5",
-                isCompleted ? "text-green-600" : isActive ? "text-blue-600" : "text-muted-foreground"
-              )} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg">{campaign.client_name}</h3>
+            <AvatarInitials name={campaign.client_name} size="md" />
+            <div className="min-w-0">
+              <h3 className="font-semibold text-lg truncate">{campaign.client_name}</h3>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
                   {format(startDate, 'd. M.', { locale: cs })} – {format(endDate, 'd. M. yyyy', { locale: cs })}
                 </span>
               </div>
@@ -220,7 +219,7 @@ export function CampaignCard({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="shrink-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -230,7 +229,7 @@ export function CampaignCard({
                 Otevřít detail
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onViewClient?.(campaign.client_id); }}>
-                <User className="h-4 w-4 mr-2" />
+                <AvatarInitials name={campaign.client_name} size="sm" className="h-4 w-4 mr-2 text-[8px]" />
                 Zobrazit klienta
               </DropdownMenuItem>
               {isActive && (
@@ -266,7 +265,7 @@ export function CampaignCard({
               {getStatusBadge()}
               {getInactivityBadge()}
               {campaign.is_self_service && (
-                <Badge variant="outline" className="text-purple-600 border-purple-300">
+                <Badge variant="outline" className="text-purple-600 border-purple-300 text-[10px] sm:text-xs">
                   Self-service
                 </Badge>
               )}
@@ -285,31 +284,33 @@ export function CampaignCard({
             </div>
           )}
 
-          {/* Entry Stats - simplified */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-            <div className="text-center">
-              <p className="text-lg font-semibold">{campaign.food_count}</p>
-              <p className="text-xs text-muted-foreground">Jídla</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-semibold">{campaign.drink_count}</p>
-              <p className="text-xs text-muted-foreground">Nápoje</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-semibold">{campaign.coffee_count}</p>
-              <p className="text-xs text-muted-foreground">Káva</p>
+          {/* Entry Stats - horizontal layout */}
+          <div className="flex items-center justify-between gap-2 pt-2 border-t">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-semibold">{campaign.food_count}</span>
+                <span className="text-xs text-muted-foreground">jídel</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-semibold">{campaign.drink_count}</span>
+                <span className="text-xs text-muted-foreground">nápojů</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-semibold">{campaign.coffee_count}</span>
+                <span className="text-xs text-muted-foreground">káv</span>
+              </div>
             </div>
           </div>
 
-          {/* Last entries preview */}
+          {/* Last entries preview - collapsible style */}
           {campaign.last_entries && campaign.last_entries.length > 0 && (
             <div className="pt-2 border-t">
               <p className="text-xs text-muted-foreground mb-1.5">Poslední záznamy:</p>
               <div className="space-y-1">
-                {campaign.last_entries.slice(0, 3).map((entry, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs">
+                {campaign.last_entries.slice(0, 2).map((entry, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-xs bg-muted/50 rounded-md px-2 py-1">
                     <span className="truncate flex-1">{entry.name}</span>
-                    <span className="text-muted-foreground ml-2">{entry.time}</span>
+                    <span className="text-muted-foreground ml-2 shrink-0">{entry.time}</span>
                   </div>
                 ))}
               </div>
@@ -333,6 +334,7 @@ export function CampaignCard({
               size="icon"
               onClick={(e) => { e.stopPropagation(); sendReminder(); }}
               title="Poslat připomínku"
+              className="shrink-0"
             >
               <Bell className="h-4 w-4" />
             </Button>
