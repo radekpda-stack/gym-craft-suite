@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Wallet, 
   ChevronRight, 
@@ -34,7 +33,6 @@ export function ClientFinanceCard({
   budgetGroupName,
   defaultOpen = false 
 }: ClientFinanceCardProps) {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const { data: transactions = [] } = useCreditTransactions(clientId);
@@ -189,19 +187,6 @@ export function ClientFinanceCard({
                 ))}
               </div>
             )}
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 border-t border-border/50">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1 gap-1"
-                onClick={() => navigate(`/records/${clientId}?tab=transactions`)}
-              >
-                Historie
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>
