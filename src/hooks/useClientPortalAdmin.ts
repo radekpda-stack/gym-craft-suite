@@ -17,6 +17,8 @@ export interface PortalClient {
   portal_settings: Record<string, boolean> | null;
   login_identifier: string | null;
   portal_password: string | null;
+  credentials_changed_at: string | null;
+  login_count: number | null;
   client: {
     id: string;
     name: string;
@@ -95,6 +97,8 @@ export function usePortalClients() {
           portal_settings,
           login_identifier,
           portal_password,
+          credentials_changed_at,
+          login_count,
           client:clients(id, name, email, phone)
         `)
         .eq('trainer_id', user.id)
