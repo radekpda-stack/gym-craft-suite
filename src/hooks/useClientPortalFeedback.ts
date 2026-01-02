@@ -136,7 +136,7 @@ export function useSubmitClientPortalFeedback() {
         source: "client_portal",
         // Required fields with defaults based on slider values
         fatigue_level: values.energy ? 10 - values.energy : 5,
-        energy_level: values.energy && values.energy >= 7 ? "high" : values.energy && values.energy <= 3 ? "low" : "normal",
+        energy_level: values.energy && values.energy >= 7 ? "stable" : values.energy && values.energy <= 3 ? "low_entire" : "stable",
         rpe_rating: values.difficulty || 5,
         mood_rating: values.fun || 5,
         technique_rating: 5, // Default
