@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useClientPortalAnalytics } from '@/hooks/useClientPortalAnalytics';
 
 interface AddMeasurementInput {
   date: string;
@@ -20,6 +21,7 @@ interface AddCardioInput {
 export function useClientAddMeasurement() {
   const { clientId, user } = useClientPortal();
   const queryClient = useQueryClient();
+  const { trackPortalEvent } = useClientPortalAnalytics();
 
   return useMutation({
     mutationFn: async (input: AddMeasurementInput) => {
@@ -50,6 +52,23 @@ export function useClientAddMeasurement() {
         console.error('Measurement insert error:', error);
         throw new Error(error.message || 'Nepodařilo se uložit měření');
       }
+
+      // Track activity based on type
+      if (input.weight) {
+        trackPortalEvent('measurement_weight_added', {
+          value: input.weight,
+          unit: 'kg',
+          date: input.date,
+        });
+      }
+      if (input.body_fat_percentage) {
+        trackPortalEvent('measurement_bodyfat_added', {
+          value: input.body_fat_percentage,
+          unit: '%',
+          date: input.date,
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -63,6 +82,7 @@ export function useClientAddMeasurement() {
 export function useClientAddCardio() {
   const { clientId, user } = useClientPortal();
   const queryClient = useQueryClient();
+  const { trackPortalEvent } = useClientPortalAnalytics();
 
   return useMutation({
     mutationFn: async (input: AddCardioInput) => {
@@ -97,6 +117,24 @@ export function useClientAddCardio() {
         console.error('Cardio entry insert error:', error);
         throw new Error(error.message || 'Nepodařilo se uložit kardio záznam');
       }
+
+      // Track activity
+      const mins = Math.floor(input.duration_seconds / 60);
+      const secs = input.duration_seconds % 60;
+      const timeDisplay = `${mins}:${secs.toString().padStart(2, '0')}`;
+      const distanceDisplay = input.distance_meters >= 1000 
+        ? `${input.distance_meters / 1000} km` 
+        : `${input.distance_meters} m`;
+
+      trackPortalEvent('cardio_entry_added', {
+        exercise_name: input.exercise_name,
+        distance_meters: input.distance_meters,
+        distance_display: distanceDisplay,
+        duration_seconds: input.duration_seconds,
+        time_display: timeDisplay,
+        is_pr: isPR,
+        date: input.date,
+      });
 
       // Auto-submit to matching active challenges
       await autoSubmitToChallenge(

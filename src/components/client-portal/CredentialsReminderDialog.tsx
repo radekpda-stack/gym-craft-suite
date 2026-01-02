@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useClientPortalAnalytics } from '@/hooks/useClientPortalAnalytics';
 
 interface CredentialsReminderDialogProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function CredentialsReminderDialog({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirm?: string }>({});
+  const { trackPortalEvent } = useClientPortalAnalytics();
 
   const isLastReminder = loginCount >= 5;
   const remainingReminders = Math.max(0, 5 - loginCount);
@@ -77,6 +79,12 @@ export function CredentialsReminderDialog({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      // Track credentials change
+      trackPortalEvent('credentials_changed', {
+        email_changed: email !== currentEmail,
+        password_changed: true,
+      });
 
       toast.success('Přihlašovací údaje byly úspěšně změněny!', {
         description: 'Od příštího přihlášení použijte nové údaje.',
