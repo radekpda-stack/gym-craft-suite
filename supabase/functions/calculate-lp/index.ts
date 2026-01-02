@@ -12,6 +12,13 @@ const LP_CONFIG = {
   DAILY_CAP: 50,
 };
 
+// XP Configuration for purchases
+const PURCHASE_XP_CONFIG = {
+  BASE_XP: 5,
+  DRINK_BONUS: 3,
+  SUPPLEMENT_BONUS: 5,
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -213,7 +220,10 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    // Check shop badges
+    // Award XP for purchase
+    await awardPurchaseXP(supabase as any, clientId, order_id, categories);
+
+    // Check shop badges (including purchase_count badges)
     await checkShopBadges(supabase as any, clientId, categories);
 
     console.log(`[calculate-lp] Awarded ${earnedPoints} LP to client ${clientId}`);
@@ -235,6 +245,60 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+async function awardPurchaseXP(
+  supabase: any,
+  clientId: string,
+  orderId: string,
+  categories: Record<string, number>
+) {
+  // Check if XP already awarded for this order
+  const { data: existingXP } = await supabase
+    .from('xp_events')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('source_type', 'purchase')
+    .eq('source_id', orderId)
+    .single();
+
+  if (existingXP) {
+    console.log(`[calculate-lp] XP already awarded for order ${orderId}`);
+    return;
+  }
+
+  // Calculate XP based on categories
+  let totalXP = PURCHASE_XP_CONFIG.BASE_XP;
+  let description = 'Nákup ve fitku';
+
+  // Bonus for drinks (water, drink categories)
+  const drinkCount = (categories['water'] || 0) + (categories['drink'] || 0);
+  if (drinkCount > 0) {
+    totalXP += PURCHASE_XP_CONFIG.DRINK_BONUS * drinkCount;
+    description = 'Nákup nápoje';
+  }
+
+  // Bonus for supplements
+  const supplementCount = categories['supplement'] || 0;
+  if (supplementCount > 0) {
+    totalXP += PURCHASE_XP_CONFIG.SUPPLEMENT_BONUS * supplementCount;
+    description = 'Nákup suplementů';
+  }
+
+  // Award XP
+  await supabase.from('xp_events').insert({
+    client_id: clientId,
+    source_type: 'purchase',
+    source_id: orderId,
+    xp_amount: totalXP,
+    description,
+    meta: { categories },
+  });
+
+  // Recalculate total XP
+  await supabase.rpc('recalculate_client_xp', { p_client_id: clientId });
+
+  console.log(`[calculate-lp] Awarded ${totalXP} XP for purchase to client ${clientId}`);
+}
+
 async function checkShopBadges(
   supabase: any,
   clientId: string,
@@ -243,17 +307,50 @@ async function checkShopBadges(
   // Get all LP entries to count category purchases
   const { data: allEntries } = await supabase
     .from('loyalty_ledger')
-    .select('meta')
+    .select('meta, source_id')
     .eq('client_id', clientId)
     .eq('source_type', 'sale');
 
   const categoryCounts: Record<string, number> = {};
+  const uniqueOrders = new Set<string>();
+  
   for (const entry of allEntries || []) {
+    // Track unique orders for purchase_count badges
+    if (entry.source_id) {
+      uniqueOrders.add(entry.source_id);
+    }
+    
     const meta = entry.meta as { categories?: Record<string, number> };
     if (meta?.categories) {
       for (const [cat, count] of Object.entries(meta.categories)) {
         categoryCounts[cat] = (categoryCounts[cat] || 0) + count;
       }
+    }
+  }
+
+  // Combine water + drink for hydration badges
+  const waterTotal = (categoryCounts['water'] || 0) + (categoryCounts['drink'] || 0);
+  categoryCounts['water'] = waterTotal;
+
+  const totalOrderCount = uniqueOrders.size;
+  console.log(`[calculate-lp] Client ${clientId} has ${totalOrderCount} unique orders, categories:`, categoryCounts);
+
+  // Check purchase_count badges (total order count)
+  const { data: purchaseBadges } = await supabase
+    .from('badge_definitions')
+    .select('*')
+    .eq('rule_type', 'purchase_count')
+    .eq('is_active', true);
+
+  for (const badge of purchaseBadges || []) {
+    const ruleValue = badge.rule_value as { count: number };
+    const requiredCount = ruleValue.count;
+
+    if (totalOrderCount >= requiredCount) {
+      await awardBadgeIfNotEarned(supabase, clientId, badge, totalOrderCount, requiredCount);
+    } else {
+      // Update progress for not-yet-earned badges
+      await updateBadgeProgress(supabase, clientId, badge.id, totalOrderCount, requiredCount);
     }
   }
 
@@ -268,54 +365,13 @@ async function checkShopBadges(
     const ruleValue = badge.rule_value as { category: string; count: number };
     const category = ruleValue.category;
     const requiredCount = ruleValue.count;
+    const currentCount = categoryCounts[category] || 0;
 
-    if (categoryCounts[category] >= requiredCount) {
-      // Check if badge already earned
-      const { data: existing } = await supabase
-        .from('client_badges')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('badge_id', badge.id)
-        .single();
-
-      if (!existing) {
-        // Award badge
-        await supabase.from('client_badges').insert({
-          client_id: clientId,
-          badge_id: badge.id,
-          earned_at: new Date().toISOString(),
-          progress_current: categoryCounts[category],
-          progress_target: requiredCount,
-        });
-
-        // Award XP bonus for badge
-        if (badge.xp_bonus > 0) {
-          await supabase.from('xp_events').insert({
-            client_id: clientId,
-            source_type: 'badge',
-            source_id: badge.id,
-            xp_amount: badge.xp_bonus,
-            description: `Odznak: ${badge.name}`,
-            meta: { badge_name: badge.name, badge_rarity: badge.rarity },
-          });
-
-          await supabase.rpc('recalculate_client_xp', { p_client_id: clientId });
-        }
-
-        // Track activity
-        await supabase.from('client_portal_activity').insert({
-          client_id: clientId,
-          activity_type: 'badge_earned',
-          activity_date: new Date().toISOString().split('T')[0],
-          metadata: {
-            badge_id: badge.id,
-            badge_name: badge.name,
-            badge_rarity: badge.rarity,
-          },
-        });
-
-        console.log(`[calculate-lp] Awarded badge ${badge.id} to client ${clientId}`);
-      }
+    if (currentCount >= requiredCount) {
+      await awardBadgeIfNotEarned(supabase, clientId, badge, currentCount, requiredCount);
+    } else {
+      // Update progress for not-yet-earned badges
+      await updateBadgeProgress(supabase, clientId, badge.id, currentCount, requiredCount);
     }
   }
 
@@ -336,44 +392,130 @@ async function checkShopBadges(
     for (const badge of lpBadges || []) {
       const ruleValue = badge.rule_value as { lifetime_points: number };
       if (balance.lifetime_points >= ruleValue.lifetime_points) {
-        const { data: existing } = await supabase
-          .from('client_badges')
-          .select('id')
-          .eq('client_id', clientId)
-          .eq('badge_id', badge.id)
-          .single();
-
-        if (!existing) {
-          await supabase.from('client_badges').insert({
-            client_id: clientId,
-            badge_id: badge.id,
-            earned_at: new Date().toISOString(),
-            progress_current: balance.lifetime_points,
-            progress_target: ruleValue.lifetime_points,
-          });
-
-          if (badge.xp_bonus > 0) {
-            await supabase.from('xp_events').insert({
-              client_id: clientId,
-              source_type: 'badge',
-              source_id: badge.id,
-              xp_amount: badge.xp_bonus,
-              description: `Odznak: ${badge.name}`,
-              meta: { badge_name: badge.name, badge_rarity: badge.rarity },
-            });
-            await supabase.rpc('recalculate_client_xp', { p_client_id: clientId });
-          }
-
-          await supabase.from('client_portal_activity').insert({
-            client_id: clientId,
-            activity_type: 'badge_earned',
-            activity_date: new Date().toISOString().split('T')[0],
-            metadata: { badge_id: badge.id, badge_name: badge.name, badge_rarity: badge.rarity },
-          });
-
-          console.log(`[calculate-lp] Awarded LP milestone badge ${badge.id} to client ${clientId}`);
-        }
+        await awardBadgeIfNotEarned(supabase, clientId, badge, balance.lifetime_points, ruleValue.lifetime_points);
       }
     }
+  }
+}
+
+async function awardBadgeIfNotEarned(
+  supabase: any,
+  clientId: string,
+  badge: any,
+  currentValue: number,
+  targetValue: number
+) {
+  // Check if badge already earned
+  const { data: existing } = await supabase
+    .from('client_badges')
+    .select('id, earned_at')
+    .eq('client_id', clientId)
+    .eq('badge_id', badge.id)
+    .single();
+
+  if (existing?.earned_at) {
+    // Already earned
+    return;
+  }
+
+  if (existing) {
+    // Update existing record with earned_at
+    await supabase
+      .from('client_badges')
+      .update({
+        earned_at: new Date().toISOString(),
+        progress_current: currentValue,
+        progress_target: targetValue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+  } else {
+    // Create new record
+    await supabase.from('client_badges').insert({
+      client_id: clientId,
+      badge_id: badge.id,
+      earned_at: new Date().toISOString(),
+      progress_current: currentValue,
+      progress_target: targetValue,
+    });
+  }
+
+  // Award XP bonus for badge
+  if (badge.xp_bonus > 0) {
+    // Check if XP already awarded for this badge
+    const { data: existingXP } = await supabase
+      .from('xp_events')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('source_type', 'badge')
+      .eq('source_id', badge.id)
+      .single();
+
+    if (!existingXP) {
+      await supabase.from('xp_events').insert({
+        client_id: clientId,
+        source_type: 'badge',
+        source_id: badge.id,
+        xp_amount: badge.xp_bonus,
+        description: `Odznak: ${badge.name}`,
+        meta: { badge_name: badge.name, badge_rarity: badge.rarity },
+      });
+
+      await supabase.rpc('recalculate_client_xp', { p_client_id: clientId });
+    }
+  }
+
+  // Track activity
+  await supabase.from('client_portal_activity').insert({
+    client_id: clientId,
+    activity_type: 'badge_earned',
+    activity_date: new Date().toISOString().split('T')[0],
+    metadata: {
+      badge_id: badge.id,
+      badge_name: badge.name,
+      badge_rarity: badge.rarity,
+    },
+  });
+
+  console.log(`[calculate-lp] Awarded badge ${badge.id} to client ${clientId}`);
+}
+
+async function updateBadgeProgress(
+  supabase: any,
+  clientId: string,
+  badgeId: string,
+  currentValue: number,
+  targetValue: number
+) {
+  // Upsert progress
+  const { data: existing } = await supabase
+    .from('client_badges')
+    .select('id, earned_at')
+    .eq('client_id', clientId)
+    .eq('badge_id', badgeId)
+    .single();
+
+  if (existing?.earned_at) {
+    // Already earned, don't update
+    return;
+  }
+
+  if (existing) {
+    await supabase
+      .from('client_badges')
+      .update({
+        progress_current: currentValue,
+        progress_target: targetValue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+  } else {
+    await supabase.from('client_badges').insert({
+      client_id: clientId,
+      badge_id: badgeId,
+      earned_at: null,
+      progress_current: currentValue,
+      progress_target: targetValue,
+    });
   }
 }
