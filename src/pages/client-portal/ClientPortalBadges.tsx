@@ -47,6 +47,11 @@ const badgeIcons: Record<string, string> = {
   egg: '🥚',
   hammer: '🔨',
   flag: '🇨🇿',
+  // Purchase badges
+  shopping_bag: '🛍️',
+  droplets: '💧',
+  pill: '💊',
+  star: '⭐',
 };
 
 // Rarity colors
