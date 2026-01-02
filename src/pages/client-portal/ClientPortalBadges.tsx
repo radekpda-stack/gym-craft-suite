@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Lock, Check, Sparkles, Filter } from 'lucide-react';
+import { Award, Lock, Check, Sparkles } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useBadgeDefinitions, useClientBadges, BadgeDefinition } from '@/hooks/useClientGamification';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { XPProgressThermometer } from '@/components/client-portal/gamification/XPProgressThermometer';
 
 // Badge icon mapping
 const badgeIcons: Record<string, string> = {
@@ -211,6 +212,9 @@ export default function ClientPortalBadges() {
   
   return (
     <div className="space-y-6">
+      {/* XP Progress Thermometer */}
+      <XPProgressThermometer clientId={clientId ?? undefined} />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
