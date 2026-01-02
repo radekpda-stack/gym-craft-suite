@@ -262,11 +262,11 @@ function FeedbackForm({ feedback, onComplete, onCancel }: FeedbackFormProps) {
           placeholder="Chceš něco dodat?"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          maxLength={500}
+          maxLength={200}
           className="min-h-[80px]"
         />
         <p className="text-xs text-muted-foreground text-right">
-          {note.length}/500
+          {note.length}/200
         </p>
       </div>
 

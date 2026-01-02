@@ -24,7 +24,7 @@ export const feedbackFormSchema = z.object({
     .max(200)
     .optional(),
   pain_type: z
-    .enum(["muscle", "joint", "tendon"])
+    .enum(["muscle", "joint"])
     .optional()
     .nullable(),
   // Sleep data

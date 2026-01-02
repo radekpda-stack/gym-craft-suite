@@ -128,19 +128,28 @@ export function useSubmitClientPortalFeedback() {
 
       // Insert feedback - use trainer_id as user_id (owner of the data)
       // RLS policy allows clients to insert for their own client_id via auth_user_id
+      // Map slider values (1-10) to database ranges (1-5)
+      const mapToFiveScale = (val: number | undefined, defaultVal: number = 3): number => {
+        if (!val) return defaultVal;
+        return Math.max(1, Math.min(5, Math.ceil(val / 2)));
+      };
+
+      // Map pain_type - database only allows 'muscle' or 'joint'
+      const mappedPainType = painType === 'tendon' ? 'muscle' : painType || null;
+
       const { error } = await supabase.from("training_feedback").insert({
         training_session_id: trainingSessionId,
         client_id: clientAccount.client_id,
         user_id: clientAccount.trainer_id,
         training_date: session.date,
-        source: "client_portal",
-        // Required fields with defaults based on slider values
-        fatigue_level: values.energy ? 10 - values.energy : 5,
+        source: "link", // Database allows: 'manual', 'email', 'link'
+        // Required fields with defaults based on slider values (mapped to 1-5 scale)
+        fatigue_level: mapToFiveScale(values.energy ? 10 - values.energy : undefined, 3),
         energy_level: values.energy && values.energy >= 7 ? "stable" : values.energy && values.energy <= 3 ? "low_entire" : "stable",
         rpe_rating: values.difficulty || 5,
-        mood_rating: values.fun || 5,
+        mood_rating: mapToFiveScale(values.fun, 3), // Database allows 1-5
         technique_rating: 5, // Default
-        goal_relevance: "relevant", // Default
+        goal_relevance: "yes", // Database allows: 'yes', 'partially', 'no'
         // Slider values
         soreness: values.soreness || null,
         body_feel: values.body_feel || null,
@@ -153,12 +162,12 @@ export function useSubmitClientPortalFeedback() {
         pain_area: painAreas?.length ? painAreas.join(", ") : null,
         pain_area_intensities: painAreaIntensities || null,
         pain_area_other: painAreaOther || null,
-        pain_type: painType || null,
+        pain_type: mappedPainType, // Database allows: 'muscle', 'joint'
         // Sleep data
         sleep_after: sleepAfter || null,
         sleep_hours: sleepHours || null,
-        // Note
-        comment: note || null,
+        // Note (max 200 chars in database)
+        comment: note ? note.substring(0, 200) : null,
       });
 
       if (error) throw error;
