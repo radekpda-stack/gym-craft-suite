@@ -50,6 +50,7 @@ export interface LeaderboardEntry {
   is_verified: boolean;
   rank: number;
   is_anonymous: boolean;
+  gender: 'male' | 'female' | null;
 }
 
 export interface GamificationStats {
@@ -390,8 +391,17 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       
       if (settingsError) throw settingsError;
       
+      // Get client gender information
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, gender')
+        .in('id', clientIds);
+      
+      if (clientsError) throw clientsError;
+      
       // Create settings map - default to anonymous if no settings exist
       const settingsMap = new Map(settings?.map(s => [s.client_id, s]) || []);
+      const genderMap = new Map(clientsData?.map(c => [c.id, c.gender]) || []);
       
       // Get XP events for this month (for monthly XP calculation)
       const { data: xpEvents, error: eventsError } = await supabase
@@ -512,6 +522,13 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
           ? (data.coachConfirmedRecent / data.totalRecent) >= 0.7 
           : false;
         
+        // Get gender
+        const rawGender = genderMap.get(clientId);
+        const gender: 'male' | 'female' | null = 
+          rawGender === 'male' ? 'male' : 
+          rawGender === 'female' ? 'female' : 
+          null;
+        
         let sortValue = 0;
         let displayValue = 0;
         
@@ -546,6 +563,7 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
           is_verified: isVerified,
           rank: 0,
           is_anonymous: !isVisible,
+          gender,
         };
       });
       
