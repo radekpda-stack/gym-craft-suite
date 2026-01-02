@@ -15,9 +15,18 @@ export interface DiaryExercise {
   reps?: number | null;
   weight_kg?: number | null;
   duration_seconds?: number | null;
+  time_seconds?: number | null;
   rpe?: number | null;
   notes?: string | null;
   is_personal_record?: boolean;
+  is_pr?: boolean;
+}
+
+export interface DiaryTag {
+  id: string;
+  name: string;
+  color: string;
+  tag_type?: string;
 }
 
 export interface UnifiedDiaryEntry {
@@ -35,6 +44,7 @@ export interface UnifiedDiaryEntry {
   trainer_commented_at?: string | null;
   scheduled_for?: string | null;
   exercises?: DiaryExercise[];
+  tags?: DiaryTag[];
   // For coached sessions
   training_type?: string | null;
   training_goal?: string | null;
@@ -99,7 +109,7 @@ export function useUnifiedDiary() {
 
       if (logsError) throw logsError;
 
-      // Fetch coached training sessions
+      // Fetch coached training sessions with exercise_entries
       const { data: trainingSessions, error: sessionsError } = await supabase
         .from('training_sessions')
         .select(`
@@ -115,13 +125,46 @@ export function useUnifiedDiary() {
           trainer_went_well,
           trainer_problems,
           trainer_recommendations,
-          created_at
+          created_at,
+          exercise_entries(
+            id,
+            exercise_name,
+            sets,
+            reps,
+            weight_kg,
+            time_seconds,
+            is_pr,
+            rpe,
+            notes
+          )
         `)
         .eq('client_id', clientId)
         .in('status', ['completed', 'scheduled', 'in_progress'])
         .order('date', { ascending: false });
 
       if (sessionsError) throw sessionsError;
+
+      // Fetch tags for all sessions
+      const sessionIds = (trainingSessions || []).map(s => s.id);
+      let tagsBySession: Record<string, DiaryTag[]> = {};
+      
+      if (sessionIds.length > 0) {
+        const { data: sessionTags } = await supabase
+          .from('training_session_tags')
+          .select('training_session_id, tag_id, tags(id, name, color, tag_type)')
+          .in('training_session_id', sessionIds);
+
+        if (sessionTags) {
+          tagsBySession = sessionTags.reduce((acc, st) => {
+            const tag = st.tags as unknown as DiaryTag;
+            if (tag) {
+              if (!acc[st.training_session_id]) acc[st.training_session_id] = [];
+              acc[st.training_session_id].push(tag);
+            }
+            return acc;
+          }, {} as Record<string, DiaryTag[]>);
+        }
+      }
 
       // Transform workout logs to unified format
       const diaryFromLogs: UnifiedDiaryEntry[] = (workoutLogs || []).map(log => ({
@@ -139,35 +182,54 @@ export function useUnifiedDiary() {
         trainer_commented_at: log.trainer_commented_at,
         scheduled_for: log.scheduled_for,
         exercises: log.client_workout_exercises || [],
+        tags: [], // Client logs don't have tags yet
         created_at: log.created_at,
         is_coached: false,
       }));
 
       // Transform training sessions to unified format
-      const diaryFromSessions: UnifiedDiaryEntry[] = (trainingSessions || []).map(session => ({
-        id: `session-${session.id}`,
-        date: typeof session.date === 'string' ? session.date.split('T')[0] : session.date,
-        source: 'coached_session' as DiaryEntrySource,
-        status: mapSessionStatus(session.status),
-        workout_type: session.training_type || 'strength',
-        duration_minutes: session.duration,
-        rpe: session.rpe,
-        notes: session.notes,
-        energy_before: null,
-        energy_after: session.subjective_rating,
-        trainer_comment: [
-          session.trainer_went_well ? `✅ ${session.trainer_went_well}` : null,
-          session.trainer_problems ? `⚠️ ${session.trainer_problems}` : null,
-          session.trainer_recommendations ? `💡 ${session.trainer_recommendations}` : null,
-        ].filter(Boolean).join('\n') || null,
-        trainer_commented_at: null,
-        scheduled_for: null,
-        training_type: session.training_type,
-        training_goal: session.training_goal,
-        exercises: [], // Could fetch workout_entries if needed
-        created_at: session.created_at,
-        is_coached: true,
-      }));
+      const diaryFromSessions: UnifiedDiaryEntry[] = (trainingSessions || []).map(session => {
+        // Map exercise_entries to DiaryExercise format
+        const exercises: DiaryExercise[] = (session.exercise_entries || []).map((ex: any) => ({
+          id: ex.id,
+          exercise_name: ex.exercise_name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight_kg: ex.weight_kg,
+          duration_seconds: ex.time_seconds, // Map time_seconds to duration_seconds
+          time_seconds: ex.time_seconds,
+          rpe: ex.rpe,
+          notes: ex.notes,
+          is_personal_record: ex.is_pr,
+          is_pr: ex.is_pr,
+        }));
+
+        return {
+          id: `session-${session.id}`,
+          date: typeof session.date === 'string' ? session.date.split('T')[0] : session.date,
+          source: 'coached_session' as DiaryEntrySource,
+          status: mapSessionStatus(session.status),
+          workout_type: session.training_type || 'strength',
+          duration_minutes: session.duration,
+          rpe: session.rpe,
+          notes: session.notes,
+          energy_before: null,
+          energy_after: session.subjective_rating,
+          trainer_comment: [
+            session.trainer_went_well ? `✅ ${session.trainer_went_well}` : null,
+            session.trainer_problems ? `⚠️ ${session.trainer_problems}` : null,
+            session.trainer_recommendations ? `💡 ${session.trainer_recommendations}` : null,
+          ].filter(Boolean).join('\n') || null,
+          trainer_commented_at: null,
+          scheduled_for: null,
+          training_type: session.training_type,
+          training_goal: session.training_goal,
+          exercises,
+          tags: tagsBySession[session.id] || [],
+          created_at: session.created_at,
+          is_coached: true,
+        };
+      });
 
       // Merge and sort by date (descending)
       const merged = [...diaryFromLogs, ...diaryFromSessions];
