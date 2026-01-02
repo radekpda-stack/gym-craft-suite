@@ -8,6 +8,7 @@ import {
   Check,
   Copy,
   X,
+  CalendarPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,7 @@ import { Client } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateNutritionLogSession } from '@/hooks/useNutritionLog';
 import { cn } from '@/lib/utils';
+import { AssignWorkoutDialog } from './AssignWorkoutDialog';
 
 interface ClientActionsSheetProps {
   client: Client;
@@ -78,6 +80,7 @@ export function ClientActionsSheet({
   const { trackFeature } = useFeatureTracking();
   const [isOpen, setIsOpen] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [showAssignWorkoutDialog, setShowAssignWorkoutDialog] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showStatementDialog, setShowStatementDialog] = useState(false);
   const [isGenerating, setIsGenerating] = useState<'feedback' | 'nutrition' | null>(null);
@@ -191,12 +194,20 @@ export function ClientActionsSheet({
           )}
           
           {/* Action buttons grid */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-2">
             <ActionButton 
               icon={Plus} 
               label="Trénink" 
               onClick={handleAddTraining}
               variant="primary"
+            />
+            <ActionButton 
+              icon={CalendarPlus} 
+              label="Plán" 
+              onClick={() => {
+                setIsOpen(false);
+                setShowAssignWorkoutDialog(true);
+              }}
             />
             <ActionButton 
               icon={Link2} 
@@ -262,6 +273,14 @@ export function ClientActionsSheet({
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Assign Workout Dialog */}
+      <AssignWorkoutDialog
+        open={showAssignWorkoutDialog}
+        onOpenChange={setShowAssignWorkoutDialog}
+        clientId={client.id}
+        clientName={client.name}
+      />
     </>
   );
 }
