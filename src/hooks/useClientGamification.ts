@@ -49,6 +49,7 @@ export interface LeaderboardEntry {
   workout_count: number;
   is_verified: boolean;
   rank: number;
+  is_anonymous: boolean;
 }
 
 export interface GamificationStats {
@@ -347,35 +348,50 @@ export function useCanConfirmToday(clientId?: string) {
   };
 }
 
+// Generate anonymous name from client ID
+function generateAnonymousName(clientId: string): string {
+  const adjectives = ['Rychlý', 'Silný', 'Vytrvalý', 'Odhodlaný', 'Aktivní', 'Energický', 'Fit', 'Sportovní'];
+  const animals = ['Lev', 'Orel', 'Vlk', 'Tygr', 'Medvěd', 'Sokol', 'Jelen', 'Panter'];
+  
+  // Use client ID to generate consistent anonymous name
+  const hash = clientId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const adjective = adjectives[hash % adjectives.length];
+  const animal = animals[(hash * 7) % animals.length];
+  const number = (hash % 99) + 1;
+  
+  return `${adjective} ${animal} #${number}`;
+}
+
 // Leaderboard data
 export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_alltime') {
   return useQuery({
     queryKey: ['leaderboard', type],
     queryFn: async () => {
-      // Get all visible clients with their settings
-      const { data: settings, error: settingsError } = await supabase
-        .from('client_leaderboard_settings')
-        .select('client_id, leaderboard_nickname, leaderboard_visible')
-        .eq('leaderboard_visible', true);
-      
-      if (settingsError) throw settingsError;
-      
-      if (!settings?.length) return [];
-      
-      const clientIds = settings.map(s => s.client_id);
-      
       const now = new Date();
       const monthStart = startOfMonth(now);
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Get XP data from client_xp table (total XP)
+      // Get all clients with XP data (active in gamification)
       const { data: clientXpData, error: xpError } = await supabase
         .from('client_xp')
-        .select('client_id, total_xp')
-        .in('client_id', clientIds);
+        .select('client_id, total_xp');
       
       if (xpError) throw xpError;
+      if (!clientXpData?.length) return [];
+      
+      const clientIds = clientXpData.map(c => c.client_id);
+      
+      // Get leaderboard settings for all clients
+      const { data: settings, error: settingsError } = await supabase
+        .from('client_leaderboard_settings')
+        .select('client_id, leaderboard_nickname, leaderboard_visible')
+        .in('client_id', clientIds);
+      
+      if (settingsError) throw settingsError;
+      
+      // Create settings map - default to anonymous if no settings exist
+      const settingsMap = new Map(settings?.map(s => [s.client_id, s]) || []);
       
       // Get XP events for this month (for monthly XP calculation)
       const { data: xpEvents, error: eventsError } = await supabase
@@ -487,9 +503,11 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
         }
       });
       
-      // Build leaderboard
-      const entries: LeaderboardEntry[] = settings.map(s => {
-        const data = clientData[s.client_id];
+      // Build leaderboard - include ALL clients but anonymize those without visible setting
+      const entries: LeaderboardEntry[] = clientIds.map(clientId => {
+        const data = clientData[clientId];
+        const clientSettings = settingsMap.get(clientId);
+        const isVisible = clientSettings?.leaderboard_visible === true;
         const isVerified = data.totalRecent > 0 
           ? (data.coachConfirmedRecent / data.totalRecent) >= 0.7 
           : false;
@@ -512,13 +530,22 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
             break;
         }
         
+        // Determine display name
+        let nickname: string;
+        if (isVisible) {
+          nickname = clientSettings?.leaderboard_nickname || 'Aktivní sportovec';
+        } else {
+          nickname = generateAnonymousName(clientId);
+        }
+        
         return {
-          client_id: s.client_id,
-          nickname: s.leaderboard_nickname || 'Anonym',
+          client_id: clientId,
+          nickname,
           xp: type === 'xp_month' ? displayValue : data.totalXP,
           workout_count: type.includes('workouts') ? displayValue : data.totalWorkouts,
           is_verified: isVerified,
           rank: 0,
+          is_anonymous: !isVisible,
         };
       });
       
