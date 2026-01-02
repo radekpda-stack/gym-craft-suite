@@ -126,7 +126,8 @@ export function useSubmitClientPortalFeedback() {
 
       if (sessionError) throw sessionError;
 
-      // Insert feedback
+      // Insert feedback - use trainer_id as user_id (owner of the data)
+      // RLS policy allows clients to insert for their own client_id via auth_user_id
       const { error } = await supabase.from("training_feedback").insert({
         training_session_id: trainingSessionId,
         client_id: clientAccount.client_id,
