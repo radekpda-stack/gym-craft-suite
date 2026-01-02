@@ -10,7 +10,8 @@ import {
   Wrench,
   PackagePlus,
   Loader2,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +54,7 @@ export function StockManagement() {
   const [creditDelta, setCreditDelta] = useState('');
   const [stockQuantity, setStockQuantity] = useState('0');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
+  const [xpBonus, setXpBonus] = useState('0');
   const [showMargin, setShowMargin] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -74,6 +76,7 @@ export function StockManagement() {
     setCreditDelta('');
     setStockQuantity('0');
     setLowStockThreshold('5');
+    setXpBonus('0');
     setEditingProduct(null);
   };
 
@@ -90,6 +93,7 @@ export function StockManagement() {
       credit_delta: kind === 'credit_topup' ? parseFloat(creditDelta) || 0 : 0,
       stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
       low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
+      xp_bonus: parseInt(xpBonus) || 0,
     });
 
     resetForm();
@@ -110,6 +114,7 @@ export function StockManagement() {
       credit_delta: kind === 'credit_topup' ? parseFloat(creditDelta) || 0 : 0,
       stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
       low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
+      xp_bonus: parseInt(xpBonus) || 0,
     });
 
     resetForm();
@@ -132,6 +137,7 @@ export function StockManagement() {
     setCreditDelta(product.credit_delta?.toString() || '0');
     setStockQuantity(product.stock_quantity?.toString() || '0');
     setLowStockThreshold(product.low_stock_threshold?.toString() || '5');
+    setXpBonus(product.xp_bonus?.toString() || '0');
   };
 
   const isLowStock = (product: Product) => 
@@ -323,6 +329,23 @@ export function StockManagement() {
                     </div>
                   </div>
                 )}
+                {/* XP Bonus field */}
+                <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    <Label>XP Bonus při nákupu</Label>
+                  </div>
+                  <Input
+                    type="number"
+                    value={xpBonus}
+                    onChange={(e) => setXpBonus(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Jednorázový XP bonus pro klienta při nákupu
+                  </p>
+                </div>
                 {price && purchasePrice && parseFloat(purchasePrice) > 0 && (
                   <div className="p-3 rounded-lg bg-secondary/50">
                     <p className="text-sm text-muted-foreground">Marže:</p>
@@ -426,6 +449,18 @@ export function StockManagement() {
                     </div>
                   </div>
                 )}
+                {/* XP Bonus in edit mode */}
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <Label className="text-xs whitespace-nowrap">XP:</Label>
+                  <Input
+                    type="number"
+                    value={xpBonus}
+                    onChange={(e) => setXpBonus(e.target.value)}
+                    className="w-16"
+                    min="0"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleUpdate} disabled={updateProduct.isPending}>
                     Uložit

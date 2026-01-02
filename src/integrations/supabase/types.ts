@@ -5345,6 +5345,7 @@ export type Database = {
           stock_quantity: number | null
           updated_at: string
           user_id: string | null
+          xp_bonus: number | null
         }
         Insert: {
           category?: string
@@ -5360,6 +5361,7 @@ export type Database = {
           stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
+          xp_bonus?: number | null
         }
         Update: {
           category?: string
@@ -5375,6 +5377,7 @@ export type Database = {
           stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
+          xp_bonus?: number | null
         }
         Relationships: []
       }
