@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, XCircle, Wallet, ShoppingBag } from 'lucide-react';
+import { Search, Plus, Dumbbell, Wallet, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { useClients } from '@/hooks/useClients';
 import {
   useTrainingSessions,
@@ -18,6 +17,7 @@ import { useAddTrainingSessionParticipants } from '@/hooks/useTrainingSessionPar
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { CompactTrainingRow } from '@/components/trainings/CompactTrainingRow';
+import { TrainingDayGroup } from '@/components/trainings/TrainingDayGroup';
 import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { TrainingListSkeleton } from '@/components/skeletons';
@@ -25,9 +25,8 @@ import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { HorizontalChipScroller } from '@/components/ui/HorizontalChipScroller';
-import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval, format, parseISO } from 'date-fns';
 import { useTrainingsPageState, TimeFilter } from '@/hooks/useTrainingsPageState';
 
 type StatusFilter = 'all' | 'scheduled' | 'completed' | 'canceled' | 'awaiting_payment';
@@ -231,24 +230,48 @@ export default function Trainings() {
   };
 
   // Apply status filter
-  const filteredSessions = timeFilteredSessions.filter((session) => {
-    const client = clients.find((c) => c.id === session.client_id);
-    const matchesSearch =
-      client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredSessions = useMemo(() => {
+    return timeFilteredSessions.filter((session) => {
+      const client = clients.find((c) => c.id === session.client_id);
+      const matchesSearch =
+        client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (session.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (statusFilter === 'all' || !statusFilter) {
-      return matchesSearch;
-    }
+      if (statusFilter === 'all' || !statusFilter) {
+        return matchesSearch;
+      }
 
-    if (statusFilter === 'awaiting_payment') {
-      return matchesSearch && 
-        session.status === 'completed' && 
-        (!session.payment_status || session.payment_status === 'pending');
-    }
+      if (statusFilter === 'awaiting_payment') {
+        return matchesSearch && 
+          session.status === 'completed' && 
+          (!session.payment_status || session.payment_status === 'pending');
+      }
 
-    return matchesSearch && session.status === statusFilter;
-  });
+      return matchesSearch && session.status === statusFilter;
+    });
+  }, [timeFilteredSessions, clients, searchQuery, statusFilter]);
+
+  // Group sessions by date
+  const groupedSessions = useMemo(() => {
+    const groups: Record<string, typeof filteredSessions> = {};
+    
+    filteredSessions.forEach((session) => {
+      const dateKey = format(parseISO(session.date), 'yyyy-MM-dd');
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(session);
+    });
+
+    // Sort groups by date and sessions within each group by time
+    const sortedKeys = Object.keys(groups).sort();
+    return sortedKeys.map((dateKey) => ({
+      date: dateKey,
+      sessions: groups[dateKey].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      ),
+    }));
+  }, [filteredSessions]);
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     try {
@@ -391,22 +414,28 @@ export default function Trainings() {
       {isLoading ? (
         <TrainingListSkeleton />
       ) : (
-        <div className="space-y-1 bg-card rounded-lg border border-border overflow-hidden">
-          {filteredSessions.map((session) => {
-            const client = clients.find((c) => c.id === session.client_id);
+        <div className="space-y-3">
+          {groupedSessions.map(({ date, sessions: daySessions }) => (
+            <div key={date} className="bg-card rounded-lg border border-border overflow-hidden">
+              <TrainingDayGroup date={date}>
+                {daySessions.map((session) => {
+                  const client = clients.find((c) => c.id === session.client_id);
 
-            return (
-              <CompactTrainingRow
-                key={session.id}
-                session={session}
-                client={client}
-                onStart={() => handleStartTraining(session.id)}
-                onComplete={() => handleCompleteTraining(session.id)}
-                onCancel={() => handleOpenCancelDialog(session.id)}
-                onDuplicate={() => handleDuplicateTraining(session.id)}
-              />
-            );
-          })}
+                  return (
+                    <CompactTrainingRow
+                      key={session.id}
+                      session={session}
+                      client={client}
+                      onStart={() => handleStartTraining(session.id)}
+                      onComplete={() => handleCompleteTraining(session.id)}
+                      onCancel={() => handleOpenCancelDialog(session.id)}
+                      onDuplicate={() => handleDuplicateTraining(session.id)}
+                    />
+                  );
+                })}
+              </TrainingDayGroup>
+            </div>
+          ))}
         </div>
       )}
 
