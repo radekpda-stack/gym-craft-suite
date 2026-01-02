@@ -2,7 +2,7 @@
  * Analytics Tracker - Single Source of Truth
  * 
  * All analytics events flow through this module.
- * Handles deduplication, enrichment, and queuing.
+ * Handles deduplication, enrichment, sampling, and queuing.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,7 @@ import {
   getCurrentPageState, 
   getCurrentPageName 
 } from './visibility';
+import { shouldSampleEvent, getSamplingConfig } from './sampling';
 
 // Re-export types
 export type { EventCategory, TrackOptions, ErrorCode, AnalyticsEvent };
@@ -62,6 +63,14 @@ export async function track(
     
     // Generate event ID
     const eventId = generateEventId();
+    
+    // Apply sampling (critical events bypass this)
+    if (!shouldSampleEvent(eventName, eventId)) {
+      if (import.meta.env.DEV) {
+        console.debug(`[Analytics] Sampled out: ${eventName}`);
+      }
+      return;
+    }
     
     // Get session
     const sessionId = await getSessionId();
@@ -271,7 +280,8 @@ export const debug = {
   clearLog: clearDebugLog,
   getQueueStatus,
   getCurrentPage: getCurrentPageName,
-  getPageState: getCurrentPageState
+  getPageState: getCurrentPageState,
+  getSamplingConfig,
 };
 
 // Expose to window for debugging

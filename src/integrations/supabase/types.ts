@@ -128,6 +128,51 @@ export type Database = {
         }
         Relationships: []
       }
+      app_events: {
+        Row: {
+          category: string
+          created_at: string | null
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          event_name: string
+          id: string
+          metadata: Json | null
+          session_id: string | null
+          success: boolean | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          event_name: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          success?: boolean | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          event_name?: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          success?: boolean | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null
@@ -7300,6 +7345,16 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_daily_error_counts: {
+        Row: {
+          affected_sessions: number | null
+          affected_users: number | null
+          error_count: number | null
+          error_date: string | null
+          error_type: string | null
+        }
+        Relationships: []
+      }
       vw_group_ledger_balances: {
         Row: {
           discrepancy: number | null
@@ -7308,6 +7363,31 @@ export type Database = {
           ledger_balance: number | null
           member_count: number | null
           stored_balance: number | null
+        }
+        Relationships: []
+      }
+      vw_top_errors_24h: {
+        Row: {
+          error_type: string | null
+          first_seen: string | null
+          last_seen: string | null
+          message: string | null
+          occurrence_count: number | null
+          screen: string | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
+      vw_top_errors_7d: {
+        Row: {
+          days_occurring: number | null
+          error_type: string | null
+          first_seen: string | null
+          last_seen: string | null
+          message: string | null
+          occurrence_count: number | null
+          screen: string | null
+          unique_users: number | null
         }
         Relationships: []
       }
@@ -7329,6 +7409,7 @@ export type Database = {
         Returns: Json
       }
       clean_old_login_attempts: { Args: never; Returns: undefined }
+      cleanup_old_diagnostics: { Args: never; Returns: Json }
       generate_search_name: {
         Args: { name_cs: string; name_en: string }
         Returns: string

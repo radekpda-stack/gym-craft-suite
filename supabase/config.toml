@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.recalculate-badges]
 verify_jwt = true
+
+[functions.cleanup-diagnostics]
+verify_jwt = false

@@ -1,5 +1,8 @@
 // Lightweight global client error reporter that logs to console and backend.
 // Keeps app behavior unchanged while giving us diagnostics for production-only crashes.
+// v1.1: Added debounce/throttle for repeated identical errors
+
+import { checkErrorThrottle, markErrorLogged } from '@/lib/analytics/core/errorThrottle';
 
 type ClientErrorPayload = {
   kind: 'error' | 'unhandledrejection';
@@ -12,6 +15,7 @@ type ClientErrorPayload = {
   href?: string;
   userAgent?: string;
   timestamp: string;
+  duplicateCount?: number;
 };
 
 const LAST_SEND_KEY = '__lastClientErrorSentAt';
@@ -31,7 +35,7 @@ async function sendToBackend(payload: ClientErrorPayload) {
   });
 }
 
-function shouldThrottle(now: number) {
+function shouldThrottleGlobal(now: number) {
   try {
     const last = Number(sessionStorage.getItem(LAST_SEND_KEY) || '0');
     if (now - last < 10_000) return true; // max 1 event / 10s
@@ -51,12 +55,25 @@ export function initClientErrorReporter() {
 
   window.addEventListener('error', (event) => {
     const now = Date.now();
-    if (shouldThrottle(now)) return;
+    if (shouldThrottleGlobal(now)) return;
 
     const err = event.error as Error | undefined;
+    const message = err?.message || event.message || 'Unknown error';
+    const screen = window.location.pathname;
+    
+    // Check per-error throttle (same message+screen within 60s)
+    const throttleCheck = checkErrorThrottle(message, screen);
+    if (!throttleCheck.shouldLog) {
+      // Still log to console in dev for debugging
+      if (import.meta.env.DEV) {
+        console.debug(`[client-error] Throttled duplicate #${throttleCheck.duplicateCount}:`, message.substring(0, 100));
+      }
+      return;
+    }
+    
     const payload: ClientErrorPayload = {
       kind: 'error',
-      message: err?.message || event.message || 'Unknown error',
+      message,
       name: err?.name,
       stack: err?.stack,
       source: event.filename,
@@ -65,19 +82,21 @@ export function initClientErrorReporter() {
       href: window.location.href,
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
+      duplicateCount: throttleCheck.duplicateCount,
     };
 
     // Console for local debugging
     // eslint-disable-next-line no-console
     console.error('[client-error]', payload);
 
-    // Backend for production-only issues
+    // Mark as logged and send to backend
+    markErrorLogged(throttleCheck.throttleKey);
     void sendToBackend(payload);
   });
 
   window.addEventListener('unhandledrejection', (event) => {
     const now = Date.now();
-    if (shouldThrottle(now)) return;
+    if (shouldThrottleGlobal(now)) return;
 
     const reason = event.reason;
     const message =
@@ -87,6 +106,17 @@ export function initClientErrorReporter() {
           ? reason
           : 'Unhandled promise rejection';
 
+    const screen = window.location.pathname;
+    
+    // Check per-error throttle
+    const throttleCheck = checkErrorThrottle(message, screen);
+    if (!throttleCheck.shouldLog) {
+      if (import.meta.env.DEV) {
+        console.debug(`[client-rejection] Throttled duplicate #${throttleCheck.duplicateCount}:`, message.substring(0, 100));
+      }
+      return;
+    }
+
     const payload: ClientErrorPayload = {
       kind: 'unhandledrejection',
       message,
@@ -95,10 +125,12 @@ export function initClientErrorReporter() {
       href: window.location.href,
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
+      duplicateCount: throttleCheck.duplicateCount,
     };
 
     // eslint-disable-next-line no-console
     console.error('[client-unhandledrejection]', payload);
+    markErrorLogged(throttleCheck.throttleKey);
     void sendToBackend(payload);
   });
 }
