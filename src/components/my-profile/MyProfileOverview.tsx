@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { XPLevelCard } from './XPLevelCard';
 import { XPBreakdownCard } from './XPBreakdownCard';
 import { LoyaltyCard } from './LoyaltyCard';
+import { WeeklyGoalsCard } from './WeeklyGoalsCard';
 
 interface MyProfileOverviewProps {
   clientId: string;
@@ -16,6 +17,7 @@ export function MyProfileOverview({ clientId }: MyProfileOverviewProps) {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <Skeleton className="h-48" />
         <Skeleton className="h-48" />
         <Skeleton className="h-48" />
         <div className="grid grid-cols-2 gap-4">
@@ -48,6 +50,9 @@ export function MyProfileOverview({ clientId }: MyProfileOverviewProps) {
     <div className="space-y-6">
       {/* XP Level Card */}
       <XPLevelCard clientId={clientId} />
+      
+      {/* Weekly Goals */}
+      <WeeklyGoalsCard clientId={clientId} />
       
       {/* Loyalty Points Card */}
       <LoyaltyCard clientId={clientId} />

@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useCelebrations } from '@/contexts/CelebrationContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Workout types for client-confirmed
 const workoutTypes = [
@@ -41,6 +43,8 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
   const [notes, setNotes] = useState('');
   const { mutate: confirmWorkout, isPending } = useConfirmWorkout();
   const { toast } = useToast();
+  const { clientId } = useClientPortal();
+  const { showLevelUp, showBadge, showPR } = useCelebrations();
   
   const handleSubmit = () => {
     confirmWorkout(
@@ -50,7 +54,7 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
         notes: notes || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (data) => {
           toast({
             title: 'Trénink potvrzen! 💪',
             description: '+6 XP',
@@ -58,6 +62,41 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
           onOpenChange(false);
           setWorkoutType('');
           setNotes('');
+
+          // Call calculate-xp edge function for celebrations
+          if (clientId && data?.id) {
+            try {
+              const { data: xpResult } = await supabase.functions.invoke('calculate-xp', {
+                body: { workout_id: data.id, client_id: clientId },
+              });
+
+              if (xpResult?.celebrations) {
+                // Show level up celebration
+                if (xpResult.celebrations.level_up && xpResult.total_xp > 0) {
+                  // Only show if level actually changed (check against previous)
+                  // For now, we'll skip this as it's complex to track old level
+                }
+
+                // Show badge celebrations
+                for (const badge of xpResult.celebrations.new_badges || []) {
+                  setTimeout(() => {
+                    showBadge(badge.name, badge.icon, badge.rarity, badge.xp_bonus);
+                  }, 500);
+                  break; // Only show first badge
+                }
+
+                // Show PR celebrations
+                for (const pr of xpResult.celebrations.new_prs || []) {
+                  setTimeout(() => {
+                    showPR(pr.name, pr.value, 25);
+                  }, 1000);
+                  break; // Only show first PR
+                }
+              }
+            } catch (err) {
+              console.error('Error calculating XP:', err);
+            }
+          }
         },
         onError: (error) => {
           toast({

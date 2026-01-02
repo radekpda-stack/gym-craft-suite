@@ -210,6 +210,15 @@ Deno.serve(async (req: Request) => {
 
       console.log(`[calculate-xp] Inserted ${events.length} XP events for client ${client_id}`);
 
+      // Get old XP level before recalculation
+      const { data: oldXPData } = await supabase
+        .from('client_xp')
+        .select('level, total_xp')
+        .eq('client_id', client_id)
+        .single();
+
+      const oldLevel = oldXPData?.level || 1;
+
       // Recalculate client_xp
       const { error: recalcError } = await supabase.rpc('recalculate_client_xp', {
         p_client_id: client_id,
@@ -219,6 +228,33 @@ Deno.serve(async (req: Request) => {
         console.error('Error recalculating client XP:', recalcError);
       }
 
+      // Get new XP level after recalculation
+      const { data: newXPData } = await supabase
+        .from('client_xp')
+        .select('level, total_xp')
+        .eq('client_id', client_id)
+        .single();
+
+      const newLevel = newXPData?.level || 1;
+      const leveledUp = newLevel > oldLevel;
+
+      if (leveledUp) {
+        console.log(`[calculate-xp] Client ${client_id} leveled up from ${oldLevel} to ${newLevel}!`);
+      }
+
+      // Check for newly earned badges
+      const { data: recentBadges } = await supabase
+        .from('client_badges')
+        .select('badge_id, earned_at, badge_definitions!inner(name, icon_key, rarity, xp_bonus)')
+        .eq('client_id', client_id)
+        .not('earned_at', 'is', null)
+        .order('earned_at', { ascending: false })
+        .limit(3);
+
+      // Filter badges earned in last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const newBadges = recentBadges?.filter(b => b.earned_at && b.earned_at > fiveMinutesAgo) || [];
+
       // Track activity
       await supabase.from('client_portal_activity').insert({
         client_id,
@@ -227,6 +263,8 @@ Deno.serve(async (req: Request) => {
         metadata: {
           total_xp: events.reduce((sum, e) => sum + e.xp_amount, 0),
           events: events.map(e => ({ type: e.source_type, amount: e.xp_amount })),
+          leveled_up: leveledUp,
+          new_level: leveledUp ? newLevel : null,
         },
       });
     }
@@ -234,10 +272,49 @@ Deno.serve(async (req: Request) => {
     const totalXp = events.reduce((sum, e) => sum + e.xp_amount, 0);
     console.log(`[calculate-xp] Total XP awarded: ${totalXp}`);
 
+    // Get final level info
+    const { data: finalXP } = await supabase
+      .from('client_xp')
+      .select('level')
+      .eq('client_id', client_id)
+      .single();
+
+    // Check for new badges
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: earnedBadges } = await supabase
+      .from('client_badges')
+      .select('badge_id, earned_at, badge_definitions!inner(name, icon_key, rarity, xp_bonus)')
+      .eq('client_id', client_id)
+      .not('earned_at', 'is', null)
+      .gte('earned_at', fiveMinutesAgo);
+
+    // Check for new PRs
+    const { data: newPRs } = await supabase
+      .from('client_prs')
+      .select('pr_definition_id, best_display, achieved_at, pr_definitions!inner(name)')
+      .eq('client_id', client_id)
+      .gte('achieved_at', fiveMinutesAgo);
+
     return new Response(JSON.stringify({ 
       success: true, 
       total_xp: totalXp,
       events: events.map(e => ({ type: e.source_type, xp: e.xp_amount })),
+      celebrations: {
+        level_up: events.length > 0 ? {
+          // Return level_up info if we have events (XP was awarded)
+          new_level: finalXP?.level || 1,
+        } : null,
+        new_badges: earnedBadges?.map(b => ({
+          name: (b.badge_definitions as any).name,
+          icon: (b.badge_definitions as any).icon_key,
+          rarity: (b.badge_definitions as any).rarity,
+          xp_bonus: (b.badge_definitions as any).xp_bonus,
+        })) || [],
+        new_prs: newPRs?.map(pr => ({
+          name: (pr.pr_definitions as any).name,
+          value: pr.best_display,
+        })) || [],
+      },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
