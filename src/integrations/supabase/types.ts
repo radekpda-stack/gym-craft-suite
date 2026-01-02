@@ -5470,6 +5470,7 @@ export type Database = {
           total_discount: number | null
           updated_at: string
           user_id: string
+          xp_earned: number | null
         }
         Insert: {
           client_id?: string | null
@@ -5489,6 +5490,7 @@ export type Database = {
           total_discount?: number | null
           updated_at?: string
           user_id: string
+          xp_earned?: number | null
         }
         Update: {
           client_id?: string | null
@@ -5508,6 +5510,7 @@ export type Database = {
           total_discount?: number | null
           updated_at?: string
           user_id?: string
+          xp_earned?: number | null
         }
         Relationships: [
           {
@@ -7334,6 +7337,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_client_xp: {
+        Args: { p_client_id: string; p_source?: string; p_xp_amount: number }
+        Returns: undefined
+      }
       bulk_create_client_portals: {
         Args: { p_trainer_id: string }
         Returns: Json
@@ -7349,6 +7356,7 @@ export type Database = {
         }
         Returns: Json
       }
+      calculate_sale_xp: { Args: { p_items: Json }; Returns: number }
       calculate_xp_level: {
         Args: { p_total_xp: number }
         Returns: {

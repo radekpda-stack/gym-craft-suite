@@ -1,0 +1,212 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { 
+  History, 
+  ChevronRight, 
+  User, 
+  Banknote, 
+  CreditCard, 
+  Wallet, 
+  Building2,
+  Loader2,
+  Package,
+  Sparkles,
+  Tag
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
+import { SalesOrderDetailModal } from './SalesOrderDetailModal';
+
+interface SalesOrder {
+  id: string;
+  client_id: string | null;
+  total_amount: number;
+  payment_method: string;
+  payment_status: string;
+  products_subtotal: number;
+  services_subtotal: number;
+  total_discount: number;
+  xp_earned: number;
+  created_at: string;
+  clients?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+const PAYMENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  cash: Banknote,
+  card: CreditCard,
+  credit: Wallet,
+  bank: Building2,
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Hotově',
+  card: 'Kartou',
+  credit: 'Kredit',
+  bank: 'Převodem',
+};
+
+export function SalesHistory() {
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['sales_orders_history'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('sales_orders')
+        .select(`
+          id,
+          client_id,
+          total_amount,
+          payment_method,
+          payment_status,
+          products_subtotal,
+          services_subtotal,
+          total_discount,
+          xp_earned,
+          created_at,
+          clients (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return data as SalesOrder[];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!orders || orders.length === 0) {
+    return (
+      <Card className="glass">
+        <CardContent className="py-12 text-center">
+          <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-1">Zatím žádné prodeje</h3>
+          <p className="text-muted-foreground text-sm">
+            Zde se zobrazí historie vašich prodejů
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Group orders by date
+  const groupedOrders = orders.reduce((acc, order) => {
+    const date = format(new Date(order.created_at), 'yyyy-MM-dd');
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(order);
+    return acc;
+  }, {} as Record<string, SalesOrder[]>);
+
+  return (
+    <>
+      <ScrollArea className="h-[calc(100vh-300px)] pr-2">
+        <div className="space-y-6">
+          {Object.entries(groupedOrders).map(([date, dayOrders]) => (
+            <div key={date}>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-1 z-10">
+                {format(new Date(date), 'EEEE d. MMMM yyyy', { locale: cs })}
+              </h3>
+              <div className="space-y-2">
+                {dayOrders.map((order) => {
+                  const PaymentIcon = PAYMENT_ICONS[order.payment_method] || Banknote;
+                  const hasDiscount = order.total_discount > 0;
+                  const hasXP = order.xp_earned > 0;
+
+                  return (
+                    <button
+                      key={order.id}
+                      onClick={() => setSelectedOrderId(order.id)}
+                      className={cn(
+                        "w-full p-4 rounded-xl text-left transition-all",
+                        "glass hover:bg-secondary/50",
+                        "flex items-center gap-4"
+                      )}
+                    >
+                      {/* Payment icon */}
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <PaymentIcon className="w-5 h-5 text-primary" />
+                      </div>
+
+                      {/* Order info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {order.clients ? (
+                            <span className="font-medium truncate">{order.clients.name}</span>
+                          ) : (
+                            <span className="text-muted-foreground">Bez klienta</span>
+                          )}
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {PAYMENT_LABELS[order.payment_method] || order.payment_method}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{format(new Date(order.created_at), 'HH:mm')}</span>
+                          {hasDiscount && (
+                            <span className="flex items-center gap-1 text-destructive">
+                              <Tag className="w-3 h-3" />
+                              -{formatCurrency(order.total_discount)}
+                            </span>
+                          )}
+                          {hasXP && (
+                            <span className="flex items-center gap-1 text-amber-500">
+                              <Sparkles className="w-3 h-3" />
+                              +{order.xp_earned} XP
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg">
+                          {formatCurrency(order.total_amount)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* Order Detail Modal */}
+      <SalesOrderDetailModal
+        orderId={selectedOrderId}
+        open={!!selectedOrderId}
+        onOpenChange={(open) => !open && setSelectedOrderId(null)}
+      />
+    </>
+  );
+}

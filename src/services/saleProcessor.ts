@@ -35,6 +35,7 @@ export interface ProcessSaleResult {
   servicesSubtotal?: number;
   totalDiscount?: number;
   creditDelta?: number;
+  xpEarned?: number;
   idempotent?: boolean;
   error?: string;
 }
@@ -125,6 +126,7 @@ export async function processSaleWithDiscount(input: ProcessSaleWithDiscountInpu
       servicesSubtotal: result.services_subtotal,
       totalDiscount: result.total_discount,
       creditDelta: result.credit_delta,
+      xpEarned: result.xp_earned,
       idempotent: result.idempotent,
     };
   } catch (err) {
@@ -285,11 +287,18 @@ export function showSaleResultToast(result: ProcessSaleResult, totalAmount: numb
       ? 'Prodej již byl zaznamenán'
       : `Prodej dokončen: ${totalAmount.toLocaleString('cs-CZ')} Kč`;
     
-    const description = result.totalDiscount && result.totalDiscount > 0
-      ? `Sleva: ${result.totalDiscount.toLocaleString('cs-CZ')} Kč${result.creditDelta && result.creditDelta > 0 ? ` • Kredit +${result.creditDelta.toLocaleString('cs-CZ')} Kč` : ''}`
-      : result.creditDelta && result.creditDelta > 0
-        ? `Kredit navýšen o ${result.creditDelta.toLocaleString('cs-CZ')} Kč`
-        : undefined;
+    const parts: string[] = [];
+    if (result.totalDiscount && result.totalDiscount > 0) {
+      parts.push(`Sleva: ${result.totalDiscount.toLocaleString('cs-CZ')} Kč`);
+    }
+    if (result.creditDelta && result.creditDelta > 0) {
+      parts.push(`Kredit +${result.creditDelta.toLocaleString('cs-CZ')} Kč`);
+    }
+    if (result.xpEarned && result.xpEarned > 0) {
+      parts.push(`+${result.xpEarned} XP`);
+    }
+    
+    const description = parts.length > 0 ? parts.join(' • ') : undefined;
 
     toast.success(message, { description });
   } else {
