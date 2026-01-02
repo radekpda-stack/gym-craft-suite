@@ -8,7 +8,7 @@ import {
   CheckCheck,
   MessageSquare,
   ClipboardList,
-  X,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import {
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   feedback_reminder: ClipboardList,
   message: MessageSquare,
+  trainer_pr_challenge: Trophy,
   default: Bell,
 };
 
@@ -62,6 +63,8 @@ function NotificationItem({
             "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
             notification.type === "feedback_reminder"
               ? "bg-primary/20 text-primary"
+              : notification.type === "trainer_pr_challenge"
+              ? "bg-amber-500/20 text-amber-600"
               : "bg-muted text-muted-foreground"
           )}
         >
