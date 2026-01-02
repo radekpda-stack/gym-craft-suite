@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Wallet, 
   ChevronRight, 
-  Plus,
   AlertTriangle,
   Package,
   Receipt,
@@ -12,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useClientPackages } from '@/hooks/useClientPackages';
@@ -38,7 +36,6 @@ export function ClientFinanceCard({
 }: ClientFinanceCardProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [creditModalOpen, setCreditModalOpen] = useState(false);
 
   const { data: transactions = [] } = useCreditTransactions(clientId);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(clientId);
@@ -196,15 +193,6 @@ export function ClientFinanceCard({
             {/* Actions */}
             <div className="flex gap-2 pt-2 border-t border-border/50">
               <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 gap-1"
-                onClick={() => setCreditModalOpen(true)}
-              >
-                <Plus className="w-4 h-4" />
-                Kredit
-              </Button>
-              <Button
                 variant="ghost"
                 size="sm"
                 className="flex-1 gap-1"
@@ -217,12 +205,6 @@ export function ClientFinanceCard({
           </div>
         </CollapsibleContent>
       </Collapsible>
-
-      <UnifiedCreditModal
-        open={creditModalOpen}
-        onOpenChange={setCreditModalOpen}
-        defaultClientId={clientId}
-      />
     </>
   );
 }
