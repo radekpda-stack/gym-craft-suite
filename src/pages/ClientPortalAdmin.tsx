@@ -21,7 +21,7 @@ export default function ClientPortalAdmin() {
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
 
-  const loginUrl = `${window.location.origin}/zona/login`;
+  const loginUrl = `${window.location.origin}/login?mode=client`;
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(loginUrl);
