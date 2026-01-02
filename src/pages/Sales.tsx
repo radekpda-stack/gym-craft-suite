@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { CreditCard, Package, BarChart3 } from 'lucide-react';
+import { CreditCard, Package, BarChart3, History } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesRegister } from '@/components/sales/SalesRegister';
 import { StockManagement } from '@/components/sales/StockManagement';
 import { SalesStatistics } from '@/components/sales/SalesStatistics';
+import { SalesHistory } from '@/components/sales/SalesHistory';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { value: 'register', label: 'Pokladna', icon: CreditCard },
+  { value: 'history', label: 'Historie', icon: History },
   { value: 'stock', label: 'Sklad', icon: Package },
   { value: 'stats', label: 'Statistiky', icon: BarChart3 },
 ];
@@ -50,6 +52,10 @@ export default function Sales() {
 
         <TabsContent value="register" className="mt-0">
           <SalesRegister />
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0">
+          <SalesHistory />
         </TabsContent>
 
         <TabsContent value="stock" className="mt-0">
