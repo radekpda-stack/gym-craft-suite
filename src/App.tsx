@@ -51,13 +51,8 @@ const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
 const Tests = lazy(() => import("./pages/Tests"));
 const TestDetail = lazy(() => import("./pages/TestDetail"));
 const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
-const NutritionOverview = lazy(() => import("./pages/NutritionOverview"));
-const NutritionCampaigns = lazy(() => import("./pages/NutritionCampaigns"));
+const NutritionPage = lazy(() => import("./pages/NutritionPage"));
 const NutritionCampaignDetail = lazy(() => import("./pages/NutritionCampaignDetail"));
-const NutritionAnalysis = lazy(() => import("./pages/NutritionAnalysis"));
-const NutritionTemplate = lazy(() => import("./pages/NutritionTemplate"));
-const NutritionQuestionnaires = lazy(() => import("./pages/NutritionQuestionnaires"));
-const NutritionInfographics = lazy(() => import("./pages/NutritionInfographics"));
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const Challenges = lazy(() => import("./pages/Challenges"));
@@ -180,13 +175,8 @@ const App = () => (
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
                           <Route path="/tests" element={<Tests />} />
                           <Route path="/tests/:id" element={<TestDetail />} />
-                          <Route path="/nutrition" element={<NutritionOverview />} />
-                          <Route path="/nutrition/campaigns" element={<NutritionCampaigns />} />
+                          <Route path="/nutrition" element={<NutritionPage />} />
                           <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
-                          <Route path="/nutrition/analysis" element={<NutritionAnalysis />} />
-                          <Route path="/nutrition/template" element={<NutritionTemplate />} />
-                          <Route path="/nutrition/questionnaires" element={<NutritionQuestionnaires />} />
-                          <Route path="/nutrition/infographics" element={<NutritionInfographics />} />
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />
                           <Route path="/challenges" element={<Challenges />} />
