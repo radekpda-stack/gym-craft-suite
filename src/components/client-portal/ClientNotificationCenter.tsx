@@ -31,6 +31,7 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   feedback_reminder: ClipboardList,
   message: MessageSquare,
   trainer_pr_challenge: Trophy,
+  beat_trainer: Trophy,
   default: Bell,
 };
 
@@ -65,6 +66,8 @@ function NotificationItem({
               ? "bg-primary/20 text-primary"
               : notification.type === "trainer_pr_challenge"
               ? "bg-amber-500/20 text-amber-600"
+              : notification.type === "beat_trainer"
+              ? "bg-green-500/20 text-green-600"
               : "bg-muted text-muted-foreground"
           )}
         >

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { notifyClientsAboutTrainerPR, isTrainerClient } from '@/lib/trainerPRNotifications';
+import { notifyClientsAboutTrainerPR, isTrainerClient, checkClientBeatTrainer } from '@/lib/trainerPRNotifications';
 export interface ExerciseEntry {
   id: string;
   user_id: string;
@@ -157,6 +157,16 @@ export function useExerciseEntries(clientId?: string) {
           weightKg: entry.weight_kg ?? null,
           timeSeconds: entry.time_seconds ?? null,
           userId: user.id,
+        }).catch(console.error); // Fire and forget
+      }
+
+      // If this is a client's PR, check if they beat the trainer
+      if (isPR && !isTrainerClient(entry.client_id)) {
+        checkClientBeatTrainer({
+          clientId: entry.client_id,
+          exerciseName: entry.exercise_name,
+          weightKg: entry.weight_kg ?? null,
+          timeSeconds: entry.time_seconds ?? null,
         }).catch(console.error); // Fire and forget
       }
 
