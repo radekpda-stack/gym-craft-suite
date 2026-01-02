@@ -388,13 +388,13 @@ export default function TrainingDetail() {
           trainingPrice={getTrainingPrice(training.participant_count || 1, trainingPrices)}
           clientName={client?.name || 'Klient'}
           onComplete={openCompleteDialog}
-          onCancelWithCredit={() => {
+          onCancelWithCredit={async () => {
             setCancelDeductCredit(true);
-            handleCancel();
+            await handleCancel();
           }}
-          onCancelNoCredit={() => {
+          onCancelNoCredit={async () => {
             setCancelDeductCredit(false);
-            handleCancel();
+            await handleCancel();
           }}
           onReschedule={async (newDate) => {
             await updateTraining.mutateAsync({
