@@ -12,7 +12,21 @@ export function ClientTagsCard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Fetch all client tags with tag details
+      // First get all client IDs for this trainer
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (clientsError) throw clientsError;
+      
+      const clientIds = clients?.map(c => c.id) || [];
+      
+      if (clientIds.length === 0) {
+        return { tags: [], totalTags: 0, totalAssignments: 0 };
+      }
+
+      // Fetch client tags only for trainer's clients
       const { data: clientTags, error: tagsError } = await supabase
         .from('client_tags')
         .select(`
@@ -24,7 +38,8 @@ export function ClientTagsCard() {
             color,
             type
           )
-        `);
+        `)
+        .in('client_id', clientIds);
 
       if (tagsError) throw tagsError;
 
