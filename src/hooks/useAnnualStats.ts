@@ -374,15 +374,15 @@ export function useAnnualStats(
         client: clientMap.get(maxWeightEntry.client_id) || 'Neznámý',
       } : null;
 
-      // Finance stats - 'payment' is credit deposit, 'manual' is manual adjustment (also income)
-      const deposits = creditTransactions.filter(t => t.type === 'payment' || t.type === 'manual');
-      const totalIncome = deposits.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-      
+      // Finance stats - income from actual services (trainings + products)
       const productSales = creditTransactions.filter(t => t.type === 'product');
       const productIncome = productSales.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
       const trainingCharges = creditTransactions.filter(t => t.type === 'training');
       const trainingIncome = trainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      // Total income = trainings + products (consistent with breakdown)
+      const totalIncome = trainingIncome + productIncome;
 
       const months = Math.max(1, totalDays / 30);
       const avgMonthlyIncome = totalIncome / months;
