@@ -1770,6 +1770,11 @@ export type Database = {
           energy_before: number | null
           id: string
           notes: string | null
+          rpe: number | null
+          scheduled_for: string | null
+          source: string
+          status: string
+          template_id: string | null
           trainer_comment: string | null
           trainer_commented_at: string | null
           trainer_id: string
@@ -1785,6 +1790,11 @@ export type Database = {
           energy_before?: number | null
           id?: string
           notes?: string | null
+          rpe?: number | null
+          scheduled_for?: string | null
+          source?: string
+          status?: string
+          template_id?: string | null
           trainer_comment?: string | null
           trainer_commented_at?: string | null
           trainer_id: string
@@ -1800,6 +1810,11 @@ export type Database = {
           energy_before?: number | null
           id?: string
           notes?: string | null
+          rpe?: number | null
+          scheduled_for?: string | null
+          source?: string
+          status?: string
+          template_id?: string | null
           trainer_comment?: string | null
           trainer_commented_at?: string | null
           trainer_id?: string
@@ -1820,6 +1835,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_workout_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
+            referencedColumns: ["id"]
           },
         ]
       }
