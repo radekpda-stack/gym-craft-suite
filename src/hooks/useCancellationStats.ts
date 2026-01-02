@@ -83,7 +83,7 @@ export function useCancellationStats() {
 
       if (totalError) throw totalError;
 
-      // Fetch credit transactions for canceled trainings
+      // Fetch credit transactions for canceled trainings (to get actual amounts if available)
       const { data: creditTransactions, error: creditError } = await supabase
         .from('credit_transactions')
         .select('training_session_id, amount')
@@ -91,25 +91,39 @@ export function useCancellationStats() {
 
       if (creditError) throw creditError;
 
-      // Create a map of session_id -> credit amount
-      const creditMap = new Map<string, number>();
+      // Create a map of session_id -> credit amount (for actual recorded amounts)
+      const creditAmountMap = new Map<string, number>();
       creditTransactions?.forEach(ct => {
         if (ct.training_session_id) {
-          creditMap.set(ct.training_session_id, Math.abs(ct.amount));
+          creditAmountMap.set(ct.training_session_id, Math.abs(ct.amount));
         }
       });
 
+      // Default training price for late cancellation deduction
+      const DEFAULT_TRAINING_PRICE = 800;
+
       // Process cancellations
-      const cancellations: CancellationRecord[] = (canceledSessions || []).map(session => ({
-        id: session.id,
-        date: session.date,
-        canceledAt: session.canceled_at,
-        isLate: session.is_late_cancellation || false,
-        clientId: session.client_id,
-        clientName: (session.clients as any)?.name || 'Neznámý klient',
-        creditDeducted: creditMap.has(session.id),
-        creditAmount: creditMap.get(session.id) || null,
-      }));
+      // IMPORTANT: is_late_cancellation = true means credit was ALWAYS deducted
+      const cancellations: CancellationRecord[] = (canceledSessions || []).map(session => {
+        const isLate = session.is_late_cancellation || false;
+        // Credit is deducted when it's a late cancellation
+        const creditDeducted = isLate;
+        // Use actual amount from credit_transactions if available, otherwise use default
+        const creditAmount = creditDeducted 
+          ? (creditAmountMap.get(session.id) || DEFAULT_TRAINING_PRICE)
+          : null;
+
+        return {
+          id: session.id,
+          date: session.date,
+          canceledAt: session.canceled_at,
+          isLate,
+          clientId: session.client_id,
+          clientName: (session.clients as any)?.name || 'Neznámý klient',
+          creditDeducted,
+          creditAmount,
+        };
+      });
 
       // Calculate summary stats
       const totalCanceled = cancellations.length;
