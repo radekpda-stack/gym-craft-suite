@@ -37,6 +37,7 @@ import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientWorkoutDiary } from '@/components/clients/ClientWorkoutDiary';
+import { ClientWeeklyGoals } from '@/components/clients/ClientWeeklyGoals';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
@@ -234,7 +235,10 @@ export default function ClientDetail() {
       {/* SECTION 2.5: Personal Records */}
       <ClientPRsCard clientId={client.id} />
 
-      {/* SECTION 2.6: Workout Diary */}
+      {/* SECTION 2.6: Weekly Goals */}
+      <ClientWeeklyGoals clientId={client.id} />
+
+      {/* SECTION 2.7: Workout Diary */}
       <ClientWorkoutDiary clientId={client.id} clientName={client.name} />
 
       {/* SECTION 3: Training History (Primary) */}
