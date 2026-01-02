@@ -3,11 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Trophy, TrendingUp, Flame, Award, BarChart3, BookOpen } from 'lucide-react';
+import { User, Trophy, TrendingUp, Flame, BarChart3, BookOpen } from 'lucide-react';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { MyProfileProgress } from '@/components/my-profile/MyProfileProgress';
 import { MyProfileChallenges } from '@/components/my-profile/MyProfileChallenges';
-import { MyProfileBadges } from '@/components/my-profile/MyProfileBadges';
 import { MyProfileLeaderboard } from '@/components/my-profile/MyProfileLeaderboard';
 import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutDiary';
 import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
@@ -70,10 +69,6 @@ export default function MyProfile() {
             <Flame className="w-3.5 h-3.5" />
             Výzvy
           </TabsTrigger>
-          <TabsTrigger value="badges" className="flex items-center gap-1.5 text-xs">
-            <Award className="w-3.5 h-3.5" />
-            Odznaky
-          </TabsTrigger>
           <TabsTrigger value="leaderboard" className="flex items-center gap-1.5 text-xs">
             <BarChart3 className="w-3.5 h-3.5" />
             Žebříčky
@@ -98,10 +93,6 @@ export default function MyProfile() {
 
         <TabsContent value="challenges" className="mt-6">
           <MyProfileChallenges clientId={profile.clientId} />
-        </TabsContent>
-
-        <TabsContent value="badges" className="mt-6">
-          <MyProfileBadges clientId={profile.clientId} />
         </TabsContent>
 
         <TabsContent value="leaderboard" className="mt-6">
