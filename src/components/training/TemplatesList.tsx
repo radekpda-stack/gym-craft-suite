@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -34,9 +35,11 @@ import {
   Clock, 
   Dumbbell,
   Edit,
-  Loader2
+  Loader2,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AssignTemplateToClientDialog } from './AssignTemplateToClientDialog';
 
 interface TemplatesListProps {
   onCreateNew: () => void;
@@ -63,6 +66,7 @@ export function TemplatesList({
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [assignTemplate, setAssignTemplate] = useState<TrainingTemplate | null>(null);
   
   const { data: templates = [], isLoading } = useTrainingTemplates(category || undefined);
   const deleteTemplate = useDeleteTrainingTemplate();
@@ -165,6 +169,14 @@ export function TemplatesList({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();
+                        setAssignTemplate(template);
+                      }}>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Přiřadit klientovi
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
                         handleDuplicate(template.id);
                       }}>
                         <Copy className="w-4 h-4 mr-2" />
@@ -233,6 +245,15 @@ export function TemplatesList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assign Template Dialog */}
+      {assignTemplate && (
+        <AssignTemplateToClientDialog
+          open={!!assignTemplate}
+          onOpenChange={(open) => !open && setAssignTemplate(null)}
+          template={assignTemplate}
+        />
+      )}
     </div>
   );
 }
