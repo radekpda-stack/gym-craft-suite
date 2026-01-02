@@ -10,6 +10,7 @@ export interface NutritionLogSession {
   end_date: string;
   token: string;
   status: 'active' | 'completed';
+  is_self_service?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,7 @@ export interface NutritionFoodEntry {
   entry_date: string;
   entry_time: string;
   description: string;
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   portion_mode: 'grams' | 'portion_size' | 'units';
   grams?: number;
   portion_size?: 'small' | 'medium' | 'large';

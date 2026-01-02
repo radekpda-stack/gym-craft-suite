@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, parseISO, addDays, isSameDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { ArrowLeft, Copy, RotateCcw, Check, Download, FileText, Utensils, Coffee, Droplets, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, RotateCcw, Check, Download, FileText, Utensils, Coffee, Droplets, Trash2, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import {
   NutritionCoffeeEntry
 } from '@/hooks/useNutritionLog';
 import { exportNutritionLogToPDF, generateNutritionSummaryText } from '@/lib/nutritionExport';
+import { NutritionStats } from './NutritionStats';
 
 interface NutritionLogDetailProps {
   sessionId: string;
@@ -38,6 +39,7 @@ export function NutritionLogDetail({ sessionId, clientName, onBack }: NutritionL
   const deleteEntry = useDeleteNutritionEntry();
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'days' | 'stats'>('days');
 
   const days = useMemo(() => {
     if (!session) return [];
@@ -187,36 +189,66 @@ export function NutritionLogDetail({ sessionId, clientName, onBack }: NutritionL
         </div>
       </div>
 
-      {/* Week Summary */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{weekSummary.totalEntries}</div>
-            <div className="text-sm text-muted-foreground">Celkem záznamů</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{weekSummary.daysWithEntries}/7</div>
-            <div className="text-sm text-muted-foreground">Dní se záznamy</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{weekSummary.avgDrinksMl} ml</div>
-            <div className="text-sm text-muted-foreground">Ø tekutiny/den</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{weekSummary.avgCoffees}</div>
-            <div className="text-sm text-muted-foreground">Ø kávy/den</div>
-          </CardContent>
-        </Card>
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        <Button 
+          variant={viewMode === 'days' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => setViewMode('days')}
+        >
+          <Utensils className="h-4 w-4 mr-2" />
+          Po dnech
+        </Button>
+        <Button 
+          variant={viewMode === 'stats' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => setViewMode('stats')}
+        >
+          <BarChart3 className="h-4 w-4 mr-2" />
+          Statistiky
+        </Button>
       </div>
 
-      {/* Day Tabs */}
-      <Tabs value={selectedDayIndex.toString()} onValueChange={(v) => setSelectedDayIndex(parseInt(v))}>
+      {viewMode === 'stats' ? (
+        <NutritionStats 
+          food={food} 
+          drinks={drinks} 
+          coffee={coffee} 
+          startDate={session.start_date} 
+          endDate={session.end_date} 
+        />
+      ) : (
+        <>
+          {/* Week Summary */}
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold">{weekSummary.totalEntries}</div>
+                <div className="text-sm text-muted-foreground">Celkem záznamů</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold">{weekSummary.daysWithEntries}/7</div>
+                <div className="text-sm text-muted-foreground">Dní se záznamy</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold">{weekSummary.avgDrinksMl} ml</div>
+                <div className="text-sm text-muted-foreground">Ø tekutiny/den</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold">{weekSummary.avgCoffees}</div>
+                <div className="text-sm text-muted-foreground">Ø kávy/den</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Day Tabs */}
+          <Tabs value={selectedDayIndex.toString()} onValueChange={(v) => setSelectedDayIndex(parseInt(v))}>
         <TabsList className="w-full justify-start">
           {days.map((day, index) => {
             const dayFood = food.filter(e => isSameDay(parseISO(e.entry_date), day)).length;
@@ -340,17 +372,19 @@ export function NutritionLogDetail({ sessionId, clientName, onBack }: NutritionL
         ))}
       </Tabs>
 
-      {/* Export Actions */}
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={handleGenerateSummary}>
-          <FileText className="h-4 w-4 mr-2" />
-          Kopírovat souhrn
-        </Button>
-        <Button variant="outline" onClick={handleExportPDF}>
-          <Download className="h-4 w-4 mr-2" />
-          Export PDF
-        </Button>
-      </div>
+          {/* Export Actions */}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGenerateSummary}>
+              <FileText className="h-4 w-4 mr-2" />
+              Kopírovat souhrn
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
