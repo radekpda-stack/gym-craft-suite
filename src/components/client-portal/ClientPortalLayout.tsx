@@ -213,6 +213,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </nav>
 
         <div className="flex flex-col items-center gap-4">
+          <ClientNotificationCenter />
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-sm font-bold text-primary">
               {clientProfile?.name?.charAt(0) ?? 'K'}
