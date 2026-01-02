@@ -7,6 +7,8 @@ import { Loader2, Activity, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PRsDetailModal } from './modals/PRsDetailModal';
 import { Card } from '@/components/ui/card';
+import { VolumeStatsCard } from './VolumeStatsCard';
+import { CardioStatsCard } from './CardioStatsCard';
 
 export function ExerciseStatsSection() {
   const { data: stats, isLoading } = useAnnualStats('year');
@@ -97,6 +99,12 @@ export function ExerciseStatsSection() {
           </div>
         </Card>
       </div>
+
+      {/* Volume Stats */}
+      <VolumeStatsCard />
+
+      {/* Cardio Stats */}
+      <CardioStatsCard />
 
       {/* Recent PRs List */}
       <RecentPRsList 
