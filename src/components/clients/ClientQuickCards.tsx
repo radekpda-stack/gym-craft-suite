@@ -71,6 +71,7 @@ export function ClientQuickCards({
   const unpaidAmount = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
   const activePackages = packages.filter(p => p.is_active);
   const recentTransactions = transactions.slice(0, 3);
+  const hasFinanceDetails = unpaidCount > 0 || activePackages.length > 0 || recentTransactions.length > 0;
   
   // Find next scheduled and last completed training
   const { nextSession, lastSession } = useMemo(() => {
@@ -253,6 +254,15 @@ export function ClientQuickCards({
           {/* Expandable content */}
           <CollapsibleContent>
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+              {/* Empty state */}
+              {!hasFinanceDetails && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Zatím žádné finanční záznamy</p>
+                  <p className="text-xs opacity-70">Přidejte kredit nebo balíček pro zobrazení historie</p>
+                </div>
+              )}
+
               {/* Unpaid trainings */}
               {unpaidCount > 0 && (
                 <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/20">
