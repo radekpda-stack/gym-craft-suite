@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientNutritionCampaign, useClientTodayNutrition, useClientNutritionCompletedDays, useClientNutritionSessions } from '@/hooks/useClientPortalData';
-import { useQuickAddWater, useDeleteNutritionEntryPortal } from '@/hooks/useClientPortalNutrition';
+import { useQuickAddWater, useDeleteNutritionEntryPortal, useCreateClientNutritionSession } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, UtensilsCrossed, History } from 'lucide-react';
+import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, UtensilsCrossed, History, Loader2, PlayCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ type EditingEntry = {
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | null;
 
 export default function ClientPortalNutrition() {
-  const { clientId } = useClientPortal();
+  const { clientId, clientAccount } = useClientPortal();
   const { data: campaign, isLoading } = useClientNutritionCampaign(clientId ?? undefined);
   const { data: allSessions, isLoading: sessionsLoading } = useClientNutritionSessions(clientId ?? undefined);
   const { data: todayData, isLoading: todayLoading } = useClientTodayNutrition(
@@ -36,6 +36,7 @@ export default function ClientPortalNutrition() {
   const { data: completedDays = [] } = useClientNutritionCompletedDays(campaign?.id);
   const quickWater = useQuickAddWater();
   const deleteEntry = useDeleteNutritionEntryPortal();
+  const createSession = useCreateClientNutritionSession();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -97,6 +98,23 @@ export default function ClientPortalNutrition() {
     setShowAddForm(true);
   };
 
+  const handleStartTracking = async () => {
+    const trainerId = clientAccount?.trainer_id;
+    if (!clientId || !trainerId) return;
+    
+    try {
+      await createSession.mutateAsync({
+        clientId,
+        trainerId,
+        durationDays: 7,
+      });
+      toast.success('Sledování stravy zahájeno na 7 dní');
+      trackPortalEvent('client_portal_start_nutrition_tracking');
+    } catch (error) {
+      toast.error('Nepodařilo se zahájit sledování');
+    }
+  };
+
   // Calculate water from drinks
   const waterMl = todayData?.drinks
     ?.filter(d => d.drink_type?.toLowerCase().includes('voda') || d.drink_type?.toLowerCase().includes('water'))
@@ -121,11 +139,22 @@ export default function ClientPortalNutrition() {
             </div>
             <h3 className="font-semibold mb-2">Nemáš aktivní nutriční kampaň</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Kontaktuj svého trenéra pro nastavení sledování stravy.
+              Můžeš začít sledovat stravu sám/sama, nebo požádat trenéra.
             </p>
-            <Button variant="outline" size="sm">
-              Kontaktovat trenéra
-            </Button>
+            <div className="flex flex-col gap-2 max-w-xs mx-auto">
+              <Button 
+                onClick={handleStartTracking}
+                disabled={createSession.isPending}
+                className="gap-2"
+              >
+                {createSession.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <PlayCircle className="w-4 h-4" />
+                )}
+                Začít sledovat stravu (7 dní)
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (

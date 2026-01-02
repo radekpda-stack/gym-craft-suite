@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-
+import { format, addDays } from 'date-fns';
 export interface FoodEntryInput {
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   description: string;
@@ -353,6 +352,45 @@ export function useDeleteNutritionEntryPortal() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: [`nutrition-${type}-entries`, sessionId] });
+    },
+  });
+}
+
+// Self-service: Client creates their own nutrition log session
+export function useCreateClientNutritionSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      clientId,
+      trainerId,
+      durationDays = 7,
+    }: { 
+      clientId: string;
+      trainerId: string;
+      durationDays?: number;
+    }) => {
+      const startDate = new Date();
+      const endDate = addDays(startDate, durationDays - 1);
+
+      const { data, error } = await supabase
+        .from('nutrition_log_sessions')
+        .insert({
+          client_id: clientId,
+          user_id: trainerId,
+          start_date: format(startDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-sessions', clientId] });
     },
   });
 }
