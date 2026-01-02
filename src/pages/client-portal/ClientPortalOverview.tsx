@@ -136,143 +136,72 @@ export default function ClientPortalOverview() {
       {/* 3. Next Training */}
       <NextTrainingWidget />
 
-      {/* Hero Cards Grid - Credit & Attendance */}
+      {/* Simplified Credit & Attendance Cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Credit Hero Card */}
+        {/* Credit Card - Simplified */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Wallet className="w-6 h-6 text-primary" />
-                </div>
-                <Link to="/client/credit">
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                    Detail <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-
-              {creditLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-10 w-32" />
-                  <Skeleton className="h-4 w-48" />
-                </div>
-              ) : creditStats ? (
-                <>
-                  <p className="text-4xl font-bold tracking-tight">
-                    {creditStats.balance.toLocaleString('cs-CZ')} <span className="text-lg font-normal text-muted-foreground">Kč</span>
-                  </p>
-                  
-                  <div className="mt-4 space-y-2">
-                    {creditStats.lastTransaction && (
-                      <p className="text-sm text-muted-foreground">
-                        Poslední: {creditStats.lastTransaction.description || creditStats.lastTransaction.type}
-                        {' '}
-                        <span className={cn(
-                          "font-medium",
-                          creditStats.lastTransaction.amount > 0 ? "text-success" : "text-foreground"
-                        )}>
-                          ({creditStats.lastTransaction.amount > 0 ? '+' : ''}{creditStats.lastTransaction.amount} Kč)
-                        </span>
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-muted-foreground">Za období:</span>
-                      <TrendBadge value={creditStats.netChange} suffix=" Kč" />
+          <Link to="/client/credit">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 hover:border-primary/40 transition-colors cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Kredit</p>
+                      {creditLoading ? (
+                        <Skeleton className="h-7 w-20" />
+                      ) : (
+                        <p className="text-xl font-bold">
+                          {creditStats?.balance.toLocaleString('cs-CZ') ?? 0} Kč
+                        </p>
+                      )}
                     </div>
                   </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground text-sm">Zatím nemáš žádné transakce</p>
-              )}
-            </CardContent>
-          </Card>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
 
-        {/* Attendance Hero Card */}
+        {/* Attendance Card - Simplified */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <Card className="relative overflow-hidden bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-success" />
-                </div>
-                <Link to="/client/attendance">
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                    Detail <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-
-              {attendanceLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-10 w-24" />
-                  <Skeleton className="h-4 w-48" />
-                </div>
-              ) : attendanceStats ? (
-                <>
-                  <p className="text-4xl font-bold tracking-tight">
-                    {attendanceStats.trainingsInPeriod} <span className="text-lg font-normal text-muted-foreground">tréninků</span>
-                  </p>
-                  
-                  <div className="mt-4 space-y-2">
-                    {attendanceStats.lastTraining && (
-                      <p className="text-sm text-muted-foreground">
-                        Poslední: {format(parseISO(attendanceStats.lastTraining.date), 'd. MMMM', { locale: cs })}
-                        {attendanceStats.lastTraining.type && (
-                          <span className="text-foreground font-medium"> • {attendanceStats.lastTraining.type}</span>
-                        )}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-muted-foreground">Oproti minulému období:</span>
-                      <TrendBadge value={attendanceStats.trend} />
+          <Link to="/client/attendance">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20 hover:border-success/40 transition-colors cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tréninky ({period} dní)</p>
+                      {attendanceLoading ? (
+                        <Skeleton className="h-7 w-16" />
+                      ) : (
+                        <p className="text-xl font-bold">
+                          {attendanceStats?.trainingsInPeriod ?? 0}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground text-sm">Zatím tu nejsou žádné absolvované tréninky</p>
-              )}
-            </CardContent>
-          </Card>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
       </div>
-
-      {/* Secondary Metrics */}
-      {attendanceStats && attendanceStats.trainingsInPeriod > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 rounded-xl bg-muted/50">
-                  <p className="text-2xl font-bold">{attendanceStats.avgPerWeek}</p>
-                  <p className="text-xs text-muted-foreground">průměr / týden</p>
-                </div>
-                <div className="text-center p-3 rounded-xl bg-muted/50">
-                  <p className="text-2xl font-bold">{attendanceStats.trainingsInPeriod}</p>
-                  <p className="text-xs text-muted-foreground">za {period} dní</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
       {/* Recent Activity */}
       {recentActivity && recentActivity.length > 0 && (
         <motion.div
