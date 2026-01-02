@@ -21,6 +21,19 @@ const TIME_PR_MESSAGES = [
   "Pozor, trenér zrychlil! {exercise} za {time}. Doženeš ho? 🏃",
 ];
 
+// Messages when client beats trainer
+const CLIENT_BEAT_TRAINER_WEIGHT_MESSAGES = [
+  "Porazil/a jsi trenéra! 🎉 Tvých {weight} kg na {exercise} je víc než jeho {trainer_weight} kg!",
+  "Gratuluji! Překonal/a jsi trenéra na {exercise}: {weight} kg vs {trainer_weight} kg! 💪",
+  "Neuvěřitelné! Tvůj výkon {weight} kg na {exercise} je lepší než trenérův! 🏆",
+];
+
+const CLIENT_BEAT_TRAINER_TIME_MESSAGES = [
+  "Porazil/a jsi trenéra! 🎉 Tvůj čas {time} na {exercise} je rychlejší než jeho {trainer_time}!",
+  "Gratuluji! Překonal/a jsi trenéra na {exercise}: {time} vs {trainer_time}! 🚀",
+  "Neuvěřitelné! Předběhl/a jsi trenéra na {exercise}! 🏆",
+];
+
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -191,6 +204,136 @@ export async function notifyClientsAboutTrainerPR({
 
 export function isTrainerClient(clientId: string): boolean {
   return clientId === TRAINER_CLIENT_ID;
+}
+
+interface CheckClientBeatTrainerParams {
+  clientId: string;
+  exerciseName: string;
+  weightKg: number | null;
+  timeSeconds: number | null;
+}
+
+/**
+ * Check if client just beat the trainer's best performance and award achievement
+ */
+export async function checkClientBeatTrainer({
+  clientId,
+  exerciseName,
+  weightKg,
+  timeSeconds,
+}: CheckClientBeatTrainerParams): Promise<void> {
+  try {
+    // Don't check for trainer themselves
+    if (clientId === TRAINER_CLIENT_ID) {
+      return;
+    }
+
+    // Check if trainer has leaderboard visibility enabled
+    const { data: trainerSettings } = await supabase
+      .from("client_leaderboard_settings")
+      .select("leaderboard_visible")
+      .eq("client_id", TRAINER_CLIENT_ID)
+      .single();
+
+    if (!trainerSettings?.leaderboard_visible) {
+      return;
+    }
+
+    // Get trainer's best performance for this exercise
+    const { data: trainerEntries } = await supabase
+      .from("exercise_entries")
+      .select("weight_kg, time_seconds")
+      .eq("client_id", TRAINER_CLIENT_ID)
+      .eq("exercise_name", exerciseName);
+
+    if (!trainerEntries || trainerEntries.length === 0) {
+      return;
+    }
+
+    // Find trainer's best
+    let trainerBestWeight: number | null = null;
+    let trainerBestTime: number | null = null;
+
+    for (const entry of trainerEntries) {
+      if (entry.weight_kg && (!trainerBestWeight || entry.weight_kg > trainerBestWeight)) {
+        trainerBestWeight = entry.weight_kg;
+      }
+      if (entry.time_seconds && (!trainerBestTime || entry.time_seconds < trainerBestTime)) {
+        trainerBestTime = entry.time_seconds;
+      }
+    }
+
+    let beatTrainer = false;
+    let message = "";
+    let achievementType = "";
+
+    // Check if client beat trainer on weight
+    if (weightKg && weightKg > 0 && trainerBestWeight && weightKg > trainerBestWeight) {
+      beatTrainer = true;
+      achievementType = "beat_trainer_weight";
+      const template = getRandomMessage(CLIENT_BEAT_TRAINER_WEIGHT_MESSAGES);
+      message = template
+        .replace("{weight}", weightKg.toString())
+        .replace("{trainer_weight}", trainerBestWeight.toString())
+        .replace("{exercise}", exerciseName);
+    }
+
+    // Check if client beat trainer on time
+    if (timeSeconds && timeSeconds > 0 && trainerBestTime && timeSeconds < trainerBestTime) {
+      beatTrainer = true;
+      achievementType = "beat_trainer_time";
+      const template = getRandomMessage(CLIENT_BEAT_TRAINER_TIME_MESSAGES);
+      message = template
+        .replace("{time}", formatTime(timeSeconds))
+        .replace("{trainer_time}", formatTime(trainerBestTime))
+        .replace("{exercise}", exerciseName);
+    }
+
+    if (beatTrainer && message) {
+      // Check if client has active portal account
+      const { data: account } = await supabase
+        .from("client_accounts")
+        .select("client_id")
+        .eq("client_id", clientId)
+        .eq("is_active", true)
+        .single();
+
+      if (!account) {
+        return;
+      }
+
+      // Create notification
+      await supabase.from("client_portal_notifications").insert({
+        client_id: clientId,
+        type: "beat_trainer",
+        title: "Porazil/a jsi trenéra! 👑",
+        message,
+        metadata: {
+          exercise_name: exerciseName,
+          client_weight_kg: weightKg,
+          client_time_seconds: timeSeconds,
+          trainer_best_weight_kg: trainerBestWeight,
+          trainer_best_time_seconds: trainerBestTime,
+        } as Json,
+      });
+
+      // Create repeatable achievement
+      await supabase.from("client_achievements").insert({
+        client_id: clientId,
+        achievement_type: achievementType,
+        achievement_data: {
+          exercise_name: exerciseName,
+          client_value: weightKg || timeSeconds,
+          trainer_value: trainerBestWeight || trainerBestTime,
+          earned_at: new Date().toISOString(),
+        } as Json,
+      });
+
+      console.log(`Client ${clientId} beat trainer on ${exerciseName}!`);
+    }
+  } catch (error) {
+    console.error("Error in checkClientBeatTrainer:", error);
+  }
 }
 
 export { TRAINER_CLIENT_ID };
