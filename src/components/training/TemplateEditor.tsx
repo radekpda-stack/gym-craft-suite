@@ -33,9 +33,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Plus, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Loader2, UserPlus } from 'lucide-react';
 import { SortableExerciseItem } from './SortableExerciseItem';
 import { ExercisePickerDialog } from './ExercisePickerDialog';
+import { AssignTemplateToClientDialog } from './AssignTemplateToClientDialog';
 
 interface TemplateEditorProps {
   template?: TrainingTemplate | null;
@@ -74,6 +75,8 @@ export function TemplateEditor({ template, onBack, onSaved }: TemplateEditorProp
   );
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [savedTemplate, setSavedTemplate] = useState<TrainingTemplate | null>(null);
 
   const createTemplate = useCreateTrainingTemplate();
   const updateTemplate = useUpdateTrainingTemplate();
@@ -175,14 +178,114 @@ export function TemplateEditor({ template, onBack, onSaved }: TemplateEditorProp
       })),
     };
 
+    let resultTemplate: TrainingTemplate;
+    
     if (template?.id) {
       await updateTemplate.mutateAsync({ id: template.id, ...input });
+      resultTemplate = { ...template, ...input, exercises: template.exercises };
     } else {
-      await createTemplate.mutateAsync(input);
+      const result = await createTemplate.mutateAsync(input);
+      resultTemplate = {
+        id: result.id,
+        name: input.name,
+        description: input.description || null,
+        category: input.category || null,
+        estimated_duration: input.estimated_duration || null,
+        tags: null,
+        is_public: false,
+        user_id: result.user_id,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        exercises: exercises.map((ex, idx) => ({
+          id: `temp-${idx}`,
+          template_id: result.id,
+          exercise_id: ex.exercise_id,
+          exercise_name: ex.exercise_name,
+          block_type: ex.block_type,
+          sets: ex.sets,
+          reps_min: ex.reps_min,
+          reps_max: ex.reps_max,
+          time_seconds: ex.time_seconds,
+          rest_seconds: ex.rest_seconds,
+          tempo: ex.tempo,
+          rpe: ex.rpe,
+          rir: ex.rir,
+          notes: ex.notes,
+          sort_order: idx,
+          created_at: new Date().toISOString(),
+        })),
+      };
     }
 
+    setSavedTemplate(resultTemplate);
     onSaved?.();
     onBack();
+  };
+
+  const handleSaveAndAssign = async () => {
+    const input: CreateTemplateInput = {
+      name,
+      description: description || undefined,
+      category: category || undefined,
+      estimated_duration: estimatedDuration ? parseInt(estimatedDuration) : undefined,
+      exercises: exercises.map((ex, idx) => ({
+        exercise_id: ex.exercise_id,
+        exercise_name: ex.exercise_name,
+        block_type: ex.block_type,
+        sets: ex.sets,
+        reps_min: ex.reps_min,
+        reps_max: ex.reps_max,
+        time_seconds: ex.time_seconds,
+        rest_seconds: ex.rest_seconds,
+        tempo: ex.tempo,
+        rpe: ex.rpe,
+        rir: ex.rir,
+        notes: ex.notes,
+        sort_order: idx,
+      })),
+    };
+
+    let resultTemplate: TrainingTemplate;
+    
+    if (template?.id) {
+      await updateTemplate.mutateAsync({ id: template.id, ...input });
+      resultTemplate = { ...template, ...input, exercises: template.exercises };
+    } else {
+      const result = await createTemplate.mutateAsync(input);
+      resultTemplate = {
+        id: result.id,
+        name: input.name,
+        description: input.description || null,
+        category: input.category || null,
+        estimated_duration: input.estimated_duration || null,
+        tags: null,
+        is_public: false,
+        user_id: result.user_id,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        exercises: exercises.map((ex, idx) => ({
+          id: `temp-${idx}`,
+          template_id: result.id,
+          exercise_id: ex.exercise_id,
+          exercise_name: ex.exercise_name,
+          block_type: ex.block_type,
+          sets: ex.sets,
+          reps_min: ex.reps_min,
+          reps_max: ex.reps_max,
+          time_seconds: ex.time_seconds,
+          rest_seconds: ex.rest_seconds,
+          tempo: ex.tempo,
+          rpe: ex.rpe,
+          rir: ex.rir,
+          notes: ex.notes,
+          sort_order: idx,
+          created_at: new Date().toISOString(),
+        })),
+      };
+    }
+
+    setSavedTemplate(resultTemplate);
+    setShowAssignDialog(true);
   };
 
   const isSaving = createTemplate.isPending || updateTemplate.isPending;
@@ -197,7 +300,19 @@ export function TemplateEditor({ template, onBack, onSaved }: TemplateEditorProp
         <h1 className="text-2xl font-bold">
           {template ? 'Upravit šablonu' : 'Nová šablona'}
         </h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSaveAndAssign} 
+            disabled={!name.trim() || isSaving}
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <UserPlus className="w-4 h-4 mr-2" />
+            )}
+            Uložit a přiřadit
+          </Button>
           <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
             {isSaving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -314,6 +429,20 @@ export function TemplateEditor({ template, onBack, onSaved }: TemplateEditorProp
         onOpenChange={setShowExercisePicker}
         onSelect={handleAddExercise}
       />
+
+      {/* Assign Dialog after save */}
+      {savedTemplate && (
+        <AssignTemplateToClientDialog
+          open={showAssignDialog}
+          onOpenChange={(open) => {
+            setShowAssignDialog(open);
+            if (!open) {
+              onBack();
+            }
+          }}
+          template={savedTemplate}
+        />
+      )}
     </div>
   );
 }
