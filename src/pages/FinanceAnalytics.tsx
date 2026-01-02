@@ -10,8 +10,15 @@ import {
   TrendingDown,
   Dumbbell,
   ShoppingBag,
-  DollarSign
+  DollarSign,
+  HelpCircle
 } from 'lucide-react';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   useFinanceAnalytics, 
   FinancePeriodType,
@@ -213,7 +220,22 @@ export default function FinanceAnalytics() {
             {/* Trend Chart */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">Trend příjmů</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg font-medium">Trend příjmů</CardTitle>
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-sm">
+                          Graf zobrazuje celkový příjem (tréninky + produkty) po jednotlivých dnech za vybrané období. 
+                          Hodnoty jsou součtem stržených kreditů od klientů.
+                        </p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
               </CardHeader>
               <CardContent>
                 {trendData.length > 0 ? (

@@ -91,6 +91,8 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
       const previousRange = getPreviousPeriodRange(periodType, dateRange);
 
       // Fetch current period transactions
+      // Note: training and product transactions have NEGATIVE amounts (credit deduction from client = income for trainer)
+      // We need to fetch negative amounts and use absolute values
       let query = supabase
         .from('credit_transactions')
         .select(`
@@ -106,7 +108,7 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
         .eq('user_id', user.id)
         .gte('created_at', dateRange.start.toISOString())
         .lte('created_at', dateRange.end.toISOString())
-        .gt('amount', 0);
+        .lt('amount', 0); // Negative amounts = income (credit deducted from client)
 
       if (selectedClientIds && selectedClientIds.length > 0) {
         query = query.in('client_id', selectedClientIds);
@@ -123,7 +125,7 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
         .eq('user_id', user.id)
         .gte('created_at', previousRange.start.toISOString())
         .lte('created_at', previousRange.end.toISOString())
-        .gt('amount', 0);
+        .lt('amount', 0); // Negative amounts = income
 
       if (selectedClientIds && selectedClientIds.length > 0) {
         previousQuery = previousQuery.in('client_id', selectedClientIds);
@@ -141,12 +143,14 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
       const trendMap = new Map<string, number>();
 
       transactions?.forEach(tx => {
-        const amount = tx.amount;
+        // Use absolute value since amounts are negative (deductions)
+        const amount = Math.abs(tx.amount);
         totalIncome += amount;
 
-        if (tx.training_session_id) {
+        // Categorize by type field instead of just foreign keys
+        if (tx.type === 'training' || tx.training_session_id) {
           trainingIncome += amount;
-        } else if (tx.product_id) {
+        } else if (tx.type === 'product' || tx.product_id) {
           productIncome += amount;
         } else {
           otherIncome += amount;
@@ -170,9 +174,9 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
         const clientData = clientMap.get(clientId)!;
         clientData.totalIncome += amount;
         clientData.transactionCount += 1;
-        if (tx.training_session_id) {
+        if (tx.type === 'training' || tx.training_session_id) {
           clientData.trainingIncome += amount;
-        } else if (tx.product_id) {
+        } else if (tx.type === 'product' || tx.product_id) {
           clientData.productIncome += amount;
         }
 
@@ -187,11 +191,12 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
       let prevProductIncome = 0;
 
       previousTransactions?.forEach(tx => {
-        prevTotalIncome += tx.amount;
-        if (tx.training_session_id) {
-          prevTrainingIncome += tx.amount;
-        } else if (tx.product_id) {
-          prevProductIncome += tx.amount;
+        const amount = Math.abs(tx.amount);
+        prevTotalIncome += amount;
+        if (tx.type === 'training' || tx.training_session_id) {
+          prevTrainingIncome += amount;
+        } else if (tx.type === 'product' || tx.product_id) {
+          prevProductIncome += amount;
         }
       });
 
