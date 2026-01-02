@@ -16,6 +16,7 @@ export interface Product {
   is_active: boolean;
   stock_quantity: number;
   low_stock_threshold: number;
+  xp_bonus: number;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -31,6 +32,7 @@ export interface CreateProductInput {
   is_active?: boolean;
   stock_quantity?: number;
   low_stock_threshold?: number;
+  xp_bonus?: number;
 }
 
 export function useProducts(activeOnly = false) {
@@ -76,6 +78,7 @@ export function useCreateProduct() {
           is_active: input.is_active ?? true,
           stock_quantity: kind === 'inventory' ? (input.stock_quantity ?? 0) : 0,
           low_stock_threshold: kind === 'inventory' ? (input.low_stock_threshold ?? 5) : 0,
+          xp_bonus: input.xp_bonus ?? 0,
           user_id: user.id,
         })
         .select()
