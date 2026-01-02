@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, Flame, Zap, Trophy, Award, ChevronRight, Plus, Check } from 'lucide-react';
+import { Dumbbell, Flame, Zap, Trophy, Award, ChevronRight, Plus, Check, HelpCircle } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { 
   useClientGamificationStats, 
@@ -22,6 +22,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useCelebrations } from '@/contexts/CelebrationContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Workout types for client-confirmed
 const workoutTypes = [
@@ -56,8 +57,8 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
       {
         onSuccess: async (data) => {
           toast({
-            title: 'Trénink potvrzen! 💪',
-            description: '+6 XP',
+            title: 'Trénink zaznamenán! 💪',
+            description: '+6 XP za samostatný trénink',
           });
           onOpenChange(false);
           setWorkoutType('');
@@ -115,7 +116,17 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-primary" />
-            Potvrdit trénink
+            Zaznamenat vlastní trénink
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[280px] text-xs">
+                  <p>Zaznamenej své cvičení mimo lekce s trenérem. Získáš 6 XP (max. 1x denně).</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </DialogTitle>
         </DialogHeader>
         
@@ -157,7 +168,7 @@ function ConfirmWorkoutDialog({ open, onOpenChange }: ConfirmWorkoutDialogProps)
             disabled={isPending}
             className="w-full"
           >
-            {isPending ? 'Ukládám...' : 'Potvrdit trénink'}
+            {isPending ? 'Ukládám...' : 'Zaznamenat trénink'}
           </Button>
         </div>
       </DialogContent>
@@ -255,28 +266,42 @@ export function GamificationProgressCard() {
           )}
           
           {/* Confirm Workout Button */}
-          <Button 
-            onClick={() => setDialogOpen(true)}
-            disabled={!canConfirm || canConfirmLoading}
-            className="w-full gap-2"
-            variant={canConfirm ? 'default' : 'secondary'}
-          >
-            {canConfirm ? (
-              <>
-                <Plus className="w-4 h-4" />
-                Potvrdit dokončený trénink
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4" />
-                Dnes již potvrzeno
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => setDialogOpen(true)}
+              disabled={!canConfirm || canConfirmLoading}
+              className="flex-1 gap-2"
+              variant={canConfirm ? 'default' : 'secondary'}
+            >
+              {canConfirm ? (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Zaznamenat vlastní trénink
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Dnes již zaznamenáno
+                </>
+              )}
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-2 rounded-lg hover:bg-muted cursor-help">
+                    <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[280px] text-xs">
+                  <p>Zaznamenej své cvičení mimo lekce s trenérem. Získáš 6 XP za každý samostatný trénink (max. 1x denně). Tréninky s trenérem se počítají automaticky.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           
           {canConfirm && (
             <p className="text-[10px] text-muted-foreground text-center">
-              Max 1 potvrzení za den • +6 XP
+              Za cvičení mimo trenéra • max. 1x denně • +6 XP
             </p>
           )}
         </CardContent>
