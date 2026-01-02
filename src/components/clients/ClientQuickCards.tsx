@@ -3,9 +3,9 @@
  * 
  * 2 quick cards showing key information:
  * A) Next/Last Training (PT session)
- * B) Credit balance (Kč only) with shared budget info
+ * B) Credit balance with finance info (unpaid trainings, packages)
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calendar, 
@@ -14,6 +14,11 @@ import {
   Plus,
   CalendarClock,
   CheckCircle,
+  AlertTriangle,
+  Package,
+  ChevronDown,
+  ChevronUp,
+  Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +26,10 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { format, differenceInDays, isFuture } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
+import { useClientPackages } from '@/hooks/useClientPackages';
+import { useCreditTransactions } from '@/hooks/useCreditTransactions';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TrainingSession {
   id: string;
@@ -42,6 +51,7 @@ interface QuickCardsProps {
 }
 
 export function ClientQuickCards({
+  clientId,
   sessions,
   creditBalance,
   isSharedBudget,
@@ -50,17 +60,24 @@ export function ClientQuickCards({
   onAddTraining,
   onAddCredit,
 }: QuickCardsProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  
+  // Fetch finance data
+  const { data: unpaidTrainings = [] } = useUnpaidTrainings(clientId);
+  const { data: packages = [] } = useClientPackages(clientId);
+  const { data: transactions = [] } = useCreditTransactions(clientId);
+  
+  const unpaidCount = unpaidTrainings.length;
+  const unpaidAmount = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
+  const activePackages = packages.filter(p => p.is_active);
+  const recentTransactions = transactions.slice(0, 3);
   
   // Find next scheduled and last completed training
   const { nextSession, lastSession } = useMemo(() => {
-    const now = new Date();
-    
-    // Next scheduled session
     const scheduled = sessions
       .filter(s => s.status === 'scheduled' && isFuture(new Date(s.date)))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Last completed session
     const completed = sessions
       .filter(s => s.status === 'completed')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -86,6 +103,12 @@ export function ClientQuickCards({
     if (creditBalance <= 0) return 'text-destructive';
     if (creditBalance < 800) return 'text-warning';
     return 'text-success';
+  };
+
+  const getCreditBgColor = () => {
+    if (creditBalance <= 0) return 'bg-destructive/10 border-destructive/30';
+    if (creditBalance < 800) return 'bg-warning/10 border-warning/30';
+    return 'bg-success/10 border-success/30';
   };
 
   return (
@@ -152,52 +175,148 @@ export function ClientQuickCards({
         </div>
       </div>
 
-      {/* CARD B: Credit */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CreditCard className="w-4 h-4" />
-            <span className="text-sm font-medium">Kredit</span>
-          </div>
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={onAddCredit}>
-            <Plus className="w-3 h-3" />
-            Dobít
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          {/* Balance */}
-          <div className="flex items-baseline gap-2">
-            <span className={cn('text-2xl font-bold', getCreditStatusColor())}>
-              {formatCurrency(creditBalance)}
-            </span>
-          </div>
-
-          {/* Shared budget info */}
-          <div className="flex items-center gap-2">
-            {isSharedBudget ? (
-              <>
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <Users className="w-3 h-3" />
-                  Sdílený
+      {/* CARD B: Credit with Finance */}
+      <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <CreditCard className="w-4 h-4" />
+              <span className="text-sm font-medium">Kredit</span>
+              {unpaidCount > 0 && (
+                <Badge variant="destructive" className="h-5 text-[10px]">
+                  {unpaidCount} nezaplaceno
                 </Badge>
-                {budgetGroupName && (
-                  <span className="text-xs text-muted-foreground">
-                    {budgetGroupName}
-                    {budgetMemberCount && budgetMemberCount > 1 && (
-                      <span className="ml-1">({budgetMemberCount} členů)</span>
-                    )}
-                  </span>
-                )}
-              </>
-            ) : (
-              <Badge variant="outline" className="text-xs">
-                Osobní
-              </Badge>
-            )}
+              )}
+            </div>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={onAddCredit}>
+              <Plus className="w-3 h-3" />
+              Dobít
+            </Button>
           </div>
+
+          <div className="space-y-2">
+            {/* Balance */}
+            <div className={cn('p-3 rounded-xl border', getCreditBgColor())}>
+              <div className="flex items-center justify-between">
+                <span className={cn('text-2xl font-bold', getCreditStatusColor())}>
+                  {formatCurrency(creditBalance)}
+                </span>
+                {isSharedBudget && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Users className="w-3 h-3" />
+                    Sdílený
+                  </Badge>
+                )}
+              </div>
+              {isSharedBudget && budgetGroupName && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {budgetGroupName}
+                  {budgetMemberCount && budgetMemberCount > 1 && ` (${budgetMemberCount} členů)`}
+                </p>
+              )}
+            </div>
+
+            {/* Quick stats row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {unpaidCount > 0 && (
+                <div className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>{formatCurrency(unpaidAmount)} k zaplacení</span>
+                </div>
+              )}
+              {activePackages.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Package className="w-3 h-3" />
+                  <span>{activePackages.length} aktivní balíček</span>
+                </div>
+              )}
+            </div>
+
+            {/* Expand button */}
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-center gap-1 pt-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                {showDetails ? (
+                  <>
+                    <ChevronUp className="w-3 h-3" />
+                    Skrýt detaily
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3 h-3" />
+                    Zobrazit detaily
+                  </>
+                )}
+              </button>
+            </CollapsibleTrigger>
+          </div>
+
+          {/* Expandable content */}
+          <CollapsibleContent>
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+              {/* Unpaid trainings */}
+              {unpaidCount > 0 && (
+                <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-destructive flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Nezaplacené tréninky
+                    </span>
+                    <span className="text-xs font-bold text-destructive">
+                      {unpaidCount}× ({formatCurrency(unpaidAmount)})
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Active packages */}
+              {activePackages.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Package className="w-3 h-3" />
+                    Aktivní balíčky
+                  </p>
+                  {activePackages.map((pkg) => (
+                    <div key={pkg.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                      <span className="text-sm font-medium text-foreground">{pkg.package_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {pkg.trainings_used || 0}/{pkg.trainings_total} tréninků
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recent transactions */}
+              {recentTransactions.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Receipt className="w-3 h-3" />
+                    Poslední transakce
+                  </p>
+                  {recentTransactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground truncate">
+                          {tx.description || tx.type}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {format(new Date(tx.created_at), 'd. MMM', { locale: cs })}
+                        </p>
+                      </div>
+                      <span className={cn(
+                        'text-sm font-medium shrink-0',
+                        tx.amount > 0 ? 'text-success' : 'text-destructive'
+                      )}>
+                        {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
         </div>
-      </div>
+      </Collapsible>
     </div>
   );
 }
