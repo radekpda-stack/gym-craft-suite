@@ -231,7 +231,7 @@ export default function ClientDetail() {
         onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
       />
 
-      {/* SECTION 2: 3 Quick Cards - Trainings, Credit, Client Zone */}
+      {/* SECTION 2: 2 Quick Cards - Trainings, Credit */}
       <ClientQuickCards
         clientId={client.id}
         clientName={client.name}
@@ -240,10 +240,8 @@ export default function ClientDetail() {
         isSharedBudget={isSharedBudget}
         budgetGroupName={sharedBudgetInfo?.groupName}
         budgetMemberCount={sharedBudgetInfo?.members?.length}
-        clientZone={clientZoneInfo}
         onAddTraining={() => setIsTrainingDialogOpen(true)}
         onAddCredit={() => setIsCreditModalOpen(true)}
-        onScrollToClientZone={scrollToAdminSection}
       />
 
       {/* SECTION 2.5: Personal Records */}
