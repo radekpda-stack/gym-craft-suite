@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal';
 
@@ -79,6 +81,7 @@ export const themes: Theme[] = [
 ];
 
 const THEME_STORAGE_KEY = 'app-theme';
+const THEME_DB_KEY = 'user_theme';
 const DEFAULT_THEME: ThemeId = 'arctic-pro';
 const VALID_THEME_IDS = themes.map(t => t.id);
 
@@ -100,11 +103,9 @@ function applyThemeToDOM(themeId: ThemeId) {
     root.classList.remove('light');
     root.classList.add('dark');
   }
-  
-  console.log('[Theme] Applied theme:', themeId, 'Classes:', root.className);
 }
 
-// Get initial theme from localStorage
+// Get initial theme from localStorage (fast, synchronous)
 function getInitialTheme(): ThemeId {
   if (typeof window === 'undefined') return DEFAULT_THEME;
   
@@ -120,18 +121,17 @@ function getInitialTheme(): ThemeId {
   return DEFAULT_THEME;
 }
 
-// Initialize theme on module load
+// Initialize theme on module load (before React)
 const initialTheme = getInitialTheme();
-if (typeof window !== 'undefined') {
-  applyThemeToDOM(initialTheme);
-}
 
 interface ThemeContextType {
   currentTheme: ThemeId;
-  setTheme: (themeId: ThemeId) => void;
+  setTheme: (themeId: ThemeId, showToast?: boolean) => void;
   resetTheme: () => void;
   themes: Theme[];
   currentThemeData: Theme | undefined;
+  isLoading: boolean;
+  isSyncing: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -142,14 +142,79 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const setTheme = useCallback((themeId: ThemeId) => {
+  // Sync theme from database on mount (for logged-in users)
+  useEffect(() => {
+    const syncFromDatabase = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('user_id', user.id)
+          .eq('key', THEME_DB_KEY)
+          .maybeSingle();
+
+        if (!error && data?.value) {
+          const dbTheme = data.value as string;
+          if (VALID_THEME_IDS.includes(dbTheme as ThemeId)) {
+            setCurrentTheme(dbTheme as ThemeId);
+            localStorage.setItem(THEME_STORAGE_KEY, dbTheme);
+            applyThemeToDOM(dbTheme as ThemeId);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to sync theme from database:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    syncFromDatabase();
+  }, []);
+
+  // Save theme to database
+  const saveToDatabase = useCallback(async (themeId: ThemeId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setIsSyncing(true);
+
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({
+          user_id: user.id,
+          key: THEME_DB_KEY,
+          value: themeId,
+          description: 'User preferred theme',
+        }, {
+          onConflict: 'user_id,key',
+        });
+
+      if (error) {
+        console.warn('Failed to save theme to database:', error);
+      }
+    } catch (e) {
+      console.warn('Failed to save theme to database:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  const setTheme = useCallback((themeId: ThemeId, showToast = true) => {
     if (!VALID_THEME_IDS.includes(themeId)) {
       console.warn('Invalid theme ID:', themeId);
       return;
     }
     
-    console.log('[Theme] Setting theme to:', themeId);
     setCurrentTheme(themeId);
     
     try {
@@ -159,7 +224,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
     
     applyThemeToDOM(themeId);
-  }, []);
+    saveToDatabase(themeId);
+
+    if (showToast) {
+      const themeData = themes.find(t => t.id === themeId);
+      toast({
+        title: 'Vzhled změněn',
+        description: themeData?.nameCs || themeData?.name,
+      });
+    }
+  }, [saveToDatabase]);
 
   const resetTheme = useCallback(() => {
     try {
@@ -169,12 +243,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
     setCurrentTheme(DEFAULT_THEME);
     applyThemeToDOM(DEFAULT_THEME);
-  }, []);
+    saveToDatabase(DEFAULT_THEME);
 
-  // Apply theme on mount
-  useEffect(() => {
-    applyThemeToDOM(currentTheme);
-  }, []);
+    toast({
+      title: 'Vzhled resetován',
+      description: 'Výchozí téma bylo obnoveno',
+    });
+  }, [saveToDatabase]);
 
   const value: ThemeContextType = {
     currentTheme,
@@ -182,6 +257,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     resetTheme,
     themes,
     currentThemeData: themes.find(t => t.id === currentTheme),
+    isLoading,
+    isSyncing,
   };
 
   return React.createElement(ThemeContext.Provider, { value }, children);
@@ -213,6 +290,8 @@ export function useTheme(): ThemeContextType {
       },
       themes,
       currentThemeData: themes.find(t => t.id === initialTheme),
+      isLoading: false,
+      isSyncing: false,
     };
   }
   
