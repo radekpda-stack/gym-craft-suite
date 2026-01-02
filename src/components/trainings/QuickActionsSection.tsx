@@ -35,8 +35,8 @@ interface QuickActionsSectionProps {
   trainingPrice: number;
   clientName: string;
   onComplete: () => void;
-  onCancelWithCredit: () => void;
-  onCancelNoCredit: () => void;
+  onCancelWithCredit: () => Promise<void>;
+  onCancelNoCredit: () => Promise<void>;
   onReschedule: (newDate: Date) => Promise<void>;
   isCompleting?: boolean;
   isCanceling?: boolean;
@@ -71,13 +71,13 @@ export function QuickActionsSection({
     setShowRescheduleDialog(false);
   };
 
-  const handleCancelWithCreditConfirm = () => {
-    onCancelWithCredit();
+  const handleCancelWithCreditConfirm = async () => {
+    await onCancelWithCredit();
     setShowCancelCreditDialog(false);
   };
 
-  const handleCancelNoCreditConfirm = () => {
-    onCancelNoCredit();
+  const handleCancelNoCreditConfirm = async () => {
+    await onCancelNoCredit();
     setShowCancelNoCreditDialog(false);
   };
 
@@ -193,7 +193,7 @@ export function QuickActionsSection({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelCreditDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCancelCreditDialog(false)} disabled={isCanceling}>
               Zpět
             </Button>
             <Button 
@@ -239,7 +239,7 @@ export function QuickActionsSection({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelNoCreditDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCancelNoCreditDialog(false)} disabled={isCanceling}>
               Zpět
             </Button>
             <Button 
