@@ -150,13 +150,13 @@ export default function ClientPortalSettings() {
                 <>
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex-1">
-                      <Label className="font-medium">Zobrazit v žebříčku</Label>
+                      <Label className="font-medium">Zobrazit pravé jméno</Label>
                       <p className="text-sm text-muted-foreground">
-                        Povolit zobrazení tvých statistik v žebříčku
+                        Ve výchozím nastavení jsi anonymní. Zapni, pokud chceš zobrazit své jméno/přezdívku.
                       </p>
                     </div>
                     <Switch
-                      checked={leaderboardSettings?.leaderboard_visible ?? true}
+                      checked={leaderboardSettings?.leaderboard_visible ?? false}
                       onCheckedChange={handleLeaderboardVisibility}
                       disabled={updateLeaderboard.isPending}
                     />

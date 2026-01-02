@@ -54,7 +54,8 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
           <div className="flex items-center gap-2">
             <span className={cn(
               "font-medium truncate",
-              isCurrentUser && "text-primary"
+              isCurrentUser && "text-primary",
+              entry.is_anonymous && "italic text-muted-foreground"
             )}>
               {entry.nickname}
             </span>
@@ -170,12 +171,12 @@ export default function ClientPortalLeaderboard() {
         </motion.div>
       )}
       
-      {/* Visibility warning */}
-      {settings && !settings.leaderboard_visible && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+      {/* Visibility info - show different message if anonymous vs visible */}
+      {(!settings || !settings.leaderboard_visible) && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
           <CardContent className="py-4">
-            <p className="text-sm text-amber-600 dark:text-amber-400">
-              Jsi skrytý v žebříčku. Můžeš to změnit v nastavení.
+            <p className="text-sm text-blue-600 dark:text-blue-400">
+              📛 Ve výchozím nastavení jsi anonymní. Pokud chceš zobrazit své jméno, můžeš to změnit v nastavení.
             </p>
           </CardContent>
         </Card>

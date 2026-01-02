@@ -2,12 +2,25 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Flame, Dumbbell } from 'lucide-react';
+import { Trophy, Dumbbell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MyProfileLeaderboardProps {
   clientId: string;
+}
+
+// Generate anonymous name from client ID
+function generateAnonymousName(clientId: string): string {
+  const adjectives = ['Rychlý', 'Silný', 'Vytrvalý', 'Odhodlaný', 'Aktivní', 'Energický', 'Fit', 'Sportovní'];
+  const animals = ['Lev', 'Orel', 'Vlk', 'Tygr', 'Medvěd', 'Sokol', 'Jelen', 'Panter'];
+  
+  // Use client ID to generate consistent anonymous name
+  const hash = clientId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const adjective = adjectives[hash % adjectives.length];
+  const animal = animals[(hash * 7) % animals.length];
+  const number = (hash % 99) + 1;
+  
+  return `${adjective} ${animal} #${number}`;
 }
 
 export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
@@ -41,14 +54,37 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
         .select('id, name')
         .in('id', clientIds);
 
+      // Get leaderboard settings for all clients
+      const { data: leaderboardSettings } = await supabase
+        .from('client_leaderboard_settings')
+        .select('client_id, leaderboard_visible, leaderboard_nickname')
+        .in('client_id', clientIds);
+
       const clientMap = new Map(clients?.map(c => [c.id, c.name]) || []);
+      const settingsMap = new Map(leaderboardSettings?.map(s => [s.client_id, s]) || []);
 
       return Object.entries(workoutsByClient)
-        .map(([id, count]) => ({
-          clientId: id,
-          name: clientMap.get(id) || 'Neznámý',
-          count,
-        }))
+        .map(([id, count]) => {
+          const settings = settingsMap.get(id);
+          // Default to anonymous (leaderboard_visible defaults to false/null)
+          const isVisible = settings?.leaderboard_visible === true;
+          
+          let displayName: string;
+          if (isVisible) {
+            // Use nickname if available, otherwise real name
+            displayName = settings?.leaderboard_nickname || clientMap.get(id) || 'Neznámý';
+          } else {
+            // Anonymous name
+            displayName = generateAnonymousName(id);
+          }
+
+          return {
+            clientId: id,
+            name: displayName,
+            count,
+            isAnonymous: !isVisible,
+          };
+        })
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
     },
@@ -110,7 +146,10 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
                 )}>
                   {position}
                 </span>
-                <span className={isMe ? 'text-primary' : ''}>{item.name}</span>
+                <span className={cn(isMe ? 'text-primary' : '', item.isAnonymous && 'italic')}>
+                  {item.name}
+                  {isMe && ' (vy)'}
+                </span>
               </div>
               <span className="text-sm">
                 {item.count} tréninků
