@@ -7,7 +7,7 @@ import { User, Trophy, TrendingUp, Flame, BarChart3, BookOpen } from 'lucide-rea
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { MyProfileProgress } from '@/components/my-profile/MyProfileProgress';
 import { MyProfileChallenges } from '@/components/my-profile/MyProfileChallenges';
-import { MyProfileLeaderboard } from '@/components/my-profile/MyProfileLeaderboard';
+import { TrainerLeaderboards } from '@/components/my-profile/TrainerLeaderboards';
 import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutDiary';
 import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
 
@@ -96,7 +96,7 @@ export default function MyProfile() {
         </TabsContent>
 
         <TabsContent value="leaderboard" className="mt-6">
-          <MyProfileLeaderboard clientId={profile.clientId} />
+          <TrainerLeaderboards />
         </TabsContent>
 
         <TabsContent value="diary" className="mt-6">
