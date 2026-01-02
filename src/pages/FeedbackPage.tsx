@@ -37,13 +37,13 @@ export default function FeedbackPage() {
   if (!token) {
     const canExtractFromPasted = !!extractUuid(pasted);
     return (
-      <div className="public-page flex items-center justify-center p-4">
-        <Card className="public-card w-full max-w-md">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="jm-card w-full max-w-md">
           <CardHeader>
-            <CardTitle>Neplatný odkaz</CardTitle>
+            <CardTitle className="text-h2">Neplatný odkaz</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               Odkaz neobsahuje platný kód. Pokud jste zkopírovali celou zprávu, vložte ji sem – odkaz najdeme automaticky.
             </p>
             <Textarea
@@ -51,9 +51,10 @@ export default function FeedbackPage() {
               onChange={(e) => setPasted(e.target.value)}
               placeholder="Vložte sem zkopírovaný text nebo odkaz…"
               rows={4}
+              className="jm-input"
             />
             <Button
-              className="w-full"
+              className="w-full jm-btn-primary"
               onClick={() => {
                 const extracted = extractUuid(pasted);
                 if (extracted) navigate(`/feedback/${extracted}`);
