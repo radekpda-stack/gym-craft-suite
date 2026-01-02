@@ -51,6 +51,11 @@ export function useLowCreditThreshold() {
   return settings?.low_credit_threshold || 500;
 }
 
+export function useMonthlyIncomeGoal() {
+  const { data: settings } = useAppSettings();
+  return settings?.monthly_income_goal || 100000;
+}
+
 export interface DashboardLayout {
   showCareerMilestone: boolean;
   showTodayPlan: boolean;

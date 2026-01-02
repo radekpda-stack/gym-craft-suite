@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Wallet, CreditCard, Banknote, Coins } from 'lucide-react';
+import { Wallet, Dumbbell, ShoppingBag, CreditCard } from 'lucide-react';
 import { StatisticsCard } from './StatisticsGrid';
 import { formatCurrency } from '@/lib/formatters';
 import { useQuery } from '@tanstack/react-query';
@@ -8,39 +8,35 @@ import { supabase } from '@/integrations/supabase/client';
 
 const COLORS = [
   'hsl(var(--primary))',
-  'hsl(var(--success))',
   'hsl(var(--warning))',
-  'hsl(var(--destructive))',
+  'hsl(var(--success))',
 ];
 
 export function RevenueBreakdownCard() {
   const { data, isLoading } = useQuery({
-    queryKey: ['revenue-breakdown'],
+    queryKey: ['revenue-breakdown-by-source'],
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return null;
 
       const { data: transactions } = await supabase
         .from('credit_transactions')
-        .select('amount, payment_method, type')
-        .eq('user_id', user.user.id)
-        .gt('amount', 0);
+        .select('amount, type')
+        .eq('user_id', user.user.id);
 
       if (!transactions) return null;
 
       const breakdown = {
-        cash: 0,
-        card: 0,
-        credit: 0,
-        other: 0,
+        training: 0,
+        product: 0,
+        payment: 0,
       };
 
       transactions.forEach(t => {
-        const method = t.payment_method || 'other';
-        if (method === 'cash') breakdown.cash += t.amount;
-        else if (method === 'card') breakdown.card += t.amount;
-        else if (method === 'credit') breakdown.credit += t.amount;
-        else breakdown.other += t.amount;
+        const absAmount = Math.abs(t.amount);
+        if (t.type === 'training') breakdown.training += absAmount;
+        else if (t.type === 'product') breakdown.product += absAmount;
+        else if (t.type === 'payment' || t.type === 'manual') breakdown.payment += absAmount;
       });
 
       return breakdown;
@@ -50,10 +46,9 @@ export function RevenueBreakdownCard() {
   const chartData = useMemo(() => {
     if (!data) return [];
     return [
-      { name: 'Hotovost', value: data.cash, icon: Banknote },
-      { name: 'Karta', value: data.card, icon: CreditCard },
-      { name: 'Kredit', value: data.credit, icon: Coins },
-      { name: 'Ostatní', value: data.other, icon: Wallet },
+      { name: 'Tréninky', value: data.training, icon: Dumbbell },
+      { name: 'Produkty', value: data.product, icon: ShoppingBag },
+      { name: 'Dobití kreditu', value: data.payment, icon: CreditCard },
     ].filter(d => d.value > 0);
   }, [data]);
 
@@ -89,7 +84,7 @@ export function RevenueBreakdownCard() {
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {chartData.map((item, i) => {
           const Icon = item.icon;
           const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
@@ -115,12 +110,12 @@ export function RevenueBreakdownCard() {
 
   return (
     <StatisticsCard
-      title="Příjmy podle plateb"
+      title="Zdroje příjmů"
       icon={<Wallet className="h-4 w-4 text-primary" />}
       isLoading={isLoading}
       expandedContent={expandedContent}
-      infoDescription="Rozdělení příjmů podle způsobu platby - hotovost, karta, kredit nebo ostatní."
-      infoCalculation="Součet všech kladných transakcí (platby) rozdělených podle zvoleného způsobu platby."
+      infoDescription="Rozdělení příjmů podle zdroje - tréninky, produkty a dobití kreditu."
+      infoCalculation="Tréninky = stržené částky za tréninky. Produkty = prodané produkty. Dobití = vklady na kredit."
     >
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +147,7 @@ export function RevenueBreakdownCard() {
       </div>
       <div className="text-center mt-2">
         <p className="text-2xl font-bold">{formatCurrency(total)}</p>
-        <p className="text-xs text-muted-foreground">Celkové příjmy</p>
+        <p className="text-xs text-muted-foreground">Celkový obrat</p>
       </div>
     </StatisticsCard>
   );

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
+import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { MonthlyProgressCard } from './MonthlyProgressCard';
@@ -37,6 +38,7 @@ export function FinanceStatsSection() {
   const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
+  const monthlyGoal = useMonthlyIncomeGoal();
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
 
   const isLoading = statsLoading || analyticsLoading;
@@ -52,8 +54,7 @@ export function FinanceStatsSection() {
     return (stats?.monthlyTrend || []).slice(-6).map(m => ({ value: m.income }));
   }, [stats?.monthlyTrend]);
 
-  // Calculate monthly goal progress (example: 100k CZK target)
-  const monthlyGoal = 100000;
+  // Calculate monthly goal progress using configurable goal
   const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
   const goalProgress = Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
   
