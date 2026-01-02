@@ -26,7 +26,6 @@ import { motion } from 'framer-motion';
 import { toVocative } from '@/lib/czechVocative';
 
 // New dashboard widgets
-import { LatestProgressWidget } from '@/components/client-portal/dashboard/LatestProgressWidget';
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
@@ -126,14 +125,11 @@ export default function ClientPortalOverview() {
       {/* GAMIFICATION WIDGET - Trainings Counter, XP, Badges */}
       <GamificationProgressCard />
 
-      {/* NEW WIDGETS - Priority Order */}
-      {/* 1. Latest PR (user's #1 priority) */}
-      <LatestProgressWidget />
-      
-      {/* 2. Active Challenge (conditional - only shows if challenge exists) */}
+      {/* WIDGETS - Priority Order */}
+      {/* 1. Active Challenge (conditional - only shows if challenge exists) */}
       <ActiveChallengeWidget />
       
-      {/* 3. Next Training */}
+      {/* 2. Next Training */}
       <NextTrainingWidget />
 
       {/* Simplified Credit & Attendance Cards */}
