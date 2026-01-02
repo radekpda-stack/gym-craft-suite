@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -224,17 +225,21 @@ const PRHistory = () => {
             </Select>
 
             {/* Client */}
-            <Select value={clientFilter || 'all'} onValueChange={(v) => setClientFilter(v === 'all' ? null : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Klient" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všichni klienti</SelectItem>
-                {clientOptions.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearchSelect
+              clients={(clients || []).filter(c => !c.is_archived)}
+              value={clientFilter ? (clients?.find(c => c.name === clientFilter)?.id || '') : ''}
+              onValueChange={(clientId) => {
+                if (!clientId) {
+                  setClientFilter(null);
+                } else {
+                  const client = clients?.find(c => c.id === clientId);
+                  setClientFilter(client?.name || null);
+                }
+              }}
+              placeholder="Všichni klienti"
+              allowAll
+              allLabel="Všichni klienti"
+            />
           </div>
 
           {/* Custom date range */}

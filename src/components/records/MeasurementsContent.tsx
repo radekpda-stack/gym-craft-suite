@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ClientAvatar } from '@/components/ui/client-avatar';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
 import { useMeasurements, useCreateMeasurement } from '@/hooks/useMeasurements';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
@@ -191,21 +192,13 @@ export default function MeasurementsContent() {
 
       {/* Client & Time Selection */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <Select value={effectiveClientId} onValueChange={setSelectedClientId}>
-          <SelectTrigger className="w-full sm:w-64 h-12 bg-secondary border-border rounded-xl">
-            <SelectValue placeholder="Vyberte klienta" />
-          </SelectTrigger>
-          <SelectContent>
-            {clients.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
-                <div className="flex items-center gap-2">
-                  <ClientAvatar name={client.name} size="sm" />
-                  <span>{client.name}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ClientSearchSelect
+          clients={clients.filter(c => !c.is_archived)}
+          value={effectiveClientId}
+          onValueChange={(v) => setSelectedClientId(v || '')}
+          placeholder="Vyberte klienta"
+          className="w-full sm:w-64"
+        />
 
         <div className="flex gap-2">
           {(['week', 'month', 'year'] as const).map((range) => (

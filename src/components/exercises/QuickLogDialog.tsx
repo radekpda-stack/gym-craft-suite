@@ -30,6 +30,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Slider } from '@/components/ui/slider';
 import { TimeInputSimple } from '@/components/ui/time-input-simple';
 import { useClients } from '@/hooks/useClients';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useExercises } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { cn } from '@/lib/utils';
@@ -238,20 +239,14 @@ export function QuickLogDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Klient *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte klienta" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {activeClients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <ClientSearchSelect
+                      clients={activeClients}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Vyberte klienta"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

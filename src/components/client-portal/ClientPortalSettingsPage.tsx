@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   usePortalClients, 
@@ -555,25 +556,17 @@ export function ClientPortalSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-            <SelectTrigger className="w-full sm:max-w-sm">
-              <SelectValue placeholder="Vyberte klienta" />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map(client => (
-                <SelectItem key={client.client_id} value={client.client_id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-medium text-primary">
-                        {client.client?.name?.charAt(0)?.toUpperCase() || '?'}
-                      </span>
-                    </div>
-                    <span>{client.client?.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ClientSearchSelect
+            clients={clients.map(pc => ({
+              id: pc.client_id,
+              name: pc.client?.name || 'Neznámý',
+              is_archived: false,
+            })) as any}
+            value={selectedClientId}
+            onValueChange={setSelectedClientId}
+            placeholder="Vyberte klienta"
+            className="w-full sm:max-w-sm"
+          />
         </CardContent>
       </Card>
 

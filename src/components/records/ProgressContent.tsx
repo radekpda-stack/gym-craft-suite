@@ -14,6 +14,7 @@ import { ProgressList } from '@/components/progress/ProgressList';
 import { ProgressChart } from '@/components/progress/ProgressChart';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { useClients } from '@/hooks/useClients';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 
 export default function ProgressContent() {
   const [selectedClient, setSelectedClient] = useState<string>('all');
@@ -73,19 +74,14 @@ export default function ProgressContent() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Klient</label>
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Všichni klienti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Všichni klienti</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClientSearchSelect
+                clients={clients.filter(c => !c.is_archived)}
+                value={selectedClient === 'all' ? '' : selectedClient}
+                onValueChange={(v) => setSelectedClient(v || 'all')}
+                placeholder="Vyberte klienta"
+                allowAll
+                allLabel="Všichni klienti"
+              />
             </div>
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Cvik</label>

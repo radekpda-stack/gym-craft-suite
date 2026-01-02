@@ -41,6 +41,7 @@ import { FeedbackDetailDialog } from '@/components/feedback/FeedbackDetailDialog
 import { DeleteFeedbackDialog } from '@/components/feedback/DeleteFeedbackDialog';
 import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useClients } from '@/hooks/useClients';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { usePendingFeedbackTrainings } from '@/hooks/usePendingFeedbackTrainings';
 import { useCreateFeedbackRequest, useDeleteFeedbackRequest, useDeleteMultipleFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { toast } from 'sonner';
@@ -616,20 +617,15 @@ export default function FeedbackOverview() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                      <SelectTrigger className="w-[180px]">
-                        <Users className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Všichni klienti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Všichni klienti</SelectItem>
-                        {clients.map(client => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ClientSearchSelect
+                      clients={clients.filter(c => !c.is_archived)}
+                      value={selectedClientId === 'all' ? '' : selectedClientId}
+                      onValueChange={(v) => setSelectedClientId(v || 'all')}
+                      placeholder="Všichni klienti"
+                      allowAll
+                      allLabel="Všichni klienti"
+                      className="w-[180px]"
+                    />
 
                     {/* Bulk delete button */}
                     {selectedIds.size > 0 && (
