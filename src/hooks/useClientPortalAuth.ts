@@ -10,6 +10,8 @@ export interface ClientAccount {
   is_active: boolean;
   last_portal_login: string | null;
   portal_settings: Record<string, unknown>;
+  login_count: number;
+  credentials_changed_at: string | null;
 }
 
 export interface ClientProfile {
@@ -28,6 +30,7 @@ export function useClientPortalAuth() {
   const [loading, setLoading] = useState(true);
   const [clientDataLoaded, setClientDataLoaded] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [credentialsReminderDismissed, setCredentialsReminderDismissed] = useState(false);
   const fetchingRef = useRef(false);
 
   // Fetch client account data for authenticated users
@@ -60,12 +63,22 @@ export function useClientPortalAuth() {
         if (clientError) throw clientError;
         setClientProfile(client as ClientProfile);
 
-        // Update last login (fire and forget)
+        // Update last login and increment login count (fire and forget)
+        const newLoginCount = (account.login_count || 0) + 1;
         supabase
           .from('client_accounts')
-          .update({ last_portal_login: new Date().toISOString() })
+          .update({ 
+            last_portal_login: new Date().toISOString(),
+            login_count: newLoginCount
+          })
           .eq('id', account.id)
           .then(() => {});
+        
+        // Update local state with incremented count
+        setClientAccount({
+          ...account,
+          login_count: newLoginCount,
+        } as ClientAccount);
 
         // Log activity (fire and forget)
         supabase
@@ -181,6 +194,29 @@ export function useClientPortalAuth() {
   // Loading until we have session info AND client data
   const isFullyLoaded = !loading && clientDataLoaded;
 
+  // Should show credentials reminder if:
+  // - Client has logged in less than 5 times AND hasn't changed credentials yet
+  // - Or if login count >= 5 and credentials not changed (force change)
+  const loginCount = clientAccount?.login_count ?? 0;
+  const credentialsChanged = !!clientAccount?.credentials_changed_at;
+  const shouldShowCredentialsReminder = 
+    isClient && 
+    !credentialsChanged && 
+    !credentialsReminderDismissed &&
+    loginCount > 0; // Only show after first login is recorded
+
+  // Refetch client account data (used after credentials change)
+  const refetchClientAccount = useCallback(async () => {
+    if (!user) return;
+    fetchingRef.current = false;
+    await fetchClientData(user.id);
+  }, [user, fetchClientData]);
+
+  // Dismiss reminder temporarily (for skip button)
+  const dismissCredentialsReminder = useCallback(() => {
+    setCredentialsReminderDismissed(true);
+  }, []);
+
   return {
     user,
     session,
@@ -192,6 +228,12 @@ export function useClientPortalAuth() {
     signInWithMagicLink,
     signIn,
     signOut,
+    // Credentials reminder
+    shouldShowCredentialsReminder,
+    loginCount,
+    credentialsChanged,
+    refetchClientAccount,
+    dismissCredentialsReminder,
   };
 }
 
