@@ -31,7 +31,6 @@ import { ClientMeasurementsCard } from '@/components/clients/ClientMeasurementsC
 import { ClientNutritionCard } from '@/components/clients/ClientNutritionCard';
 import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
 import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
-import { ClientFinanceCard } from '@/components/clients/ClientFinanceCard';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
 import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
@@ -191,19 +190,6 @@ export default function ClientDetail() {
       icon: SECTION_ICONS.media,
       title: 'Média & Fotky',
       children: <ClientMediaGallery clientId={client.id} />,
-    },
-    {
-      id: 'finance',
-      icon: SECTION_ICONS.finance,
-      title: 'Finance',
-      children: (
-        <ClientFinanceCard
-          clientId={client.id}
-          creditBalance={creditBalance}
-          isSharedBudget={isSharedBudget}
-          budgetGroupName={sharedBudgetInfo?.groupName}
-        />
-      ),
     },
     {
       id: 'timeline',
