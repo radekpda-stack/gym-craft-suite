@@ -272,7 +272,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
           ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
-          ...(isModuleEnabled('client_portal') ? [{ id: 'challenges', to: '/challenges', icon: Trophy, label: 'Výzvy' }] : []),
+          ...(isModuleEnabled('challenges') ? [{ id: 'challenges', to: '/challenges', icon: Trophy, label: 'Výzvy' }] : []),
         ],
       },
       {
