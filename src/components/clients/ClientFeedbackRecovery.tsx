@@ -29,7 +29,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useClientFeedback } from '@/hooks/useTrainingFeedback';
+import { useClientFeedback, TrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { 
   safeAverage, 
   formatMetric, 
@@ -46,13 +46,53 @@ import { LIMITING_FACTOR_LABELS } from '@/lib/coachSuggestions';
 import { cn } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { FeedbackMetricDetailDialog } from '@/components/feedback/FeedbackMetricDetailDialog';
 
 interface ClientFeedbackRecoveryProps {
   clientId: string;
   days?: number;
 }
 
-type PeriodFilter = 7 | 30 | 90;
+type PeriodFilter = 7 | 30 | 90 | 365;
+
+type MetricType = 'sessionLoad' | 'readiness' | 'pain' | 'sessionFit';
+
+// Define metric configurations for detail dialog
+const getMetricConfig = (type: MetricType) => {
+  const configs = {
+    sessionLoad: {
+      key: 'sessionLoad',
+      label: 'sRPE',
+      color: 'hsl(var(--primary))',
+      icon: <Zap className="w-4 h-4" />,
+      getValue: (f: TrainingFeedback) => calculateSessionLoad(f.rpe_rating, 60),
+      suffix: ' AU',
+    },
+    readiness: {
+      key: 'readiness',
+      label: 'Připravenost',
+      color: 'hsl(142, 76%, 36%)',
+      icon: <Activity className="w-4 h-4" />,
+      getValue: (f: TrainingFeedback) => (f as any).readiness_level ?? f.body_feel,
+    },
+    pain: {
+      key: 'pain',
+      label: 'Bolest',
+      color: 'hsl(var(--destructive))',
+      icon: <Heart className="w-4 h-4" />,
+      inverted: true,
+      getValue: (f: TrainingFeedback) => f.pain,
+    },
+    sessionFit: {
+      key: 'sessionFit',
+      label: 'Session Fit',
+      color: 'hsl(var(--primary))',
+      icon: <Target className="w-4 h-4" />,
+      getValue: (f: TrainingFeedback) => (f as any).session_fit ?? f.fun,
+    },
+  };
+  return configs[type];
+};
 
 const MiniSparkline = ({ 
   data, 
@@ -131,6 +171,7 @@ export function ClientFeedbackRecovery({
   days: initialDays = 30,
 }: ClientFeedbackRecoveryProps) {
   const [period, setPeriod] = useState<PeriodFilter>(initialDays as PeriodFilter);
+  const [selectedMetric, setSelectedMetric] = useState<MetricType | null>(null);
   const { data: allFeedback, isLoading } = useClientFeedback(clientId);
 
   const analytics = useMemo(() => {
@@ -281,15 +322,15 @@ export function ClientFeedbackRecovery({
   return (
     <div className="space-y-4">
       {/* Period Filter */}
-      <div className="flex gap-2">
-        {([7, 30, 90] as const).map((days) => (
+      <div className="flex gap-2 flex-wrap">
+        {([7, 30, 90, 365] as const).map((days) => (
           <Button
             key={days}
             variant={period === days ? 'default' : 'outline'}
             size="sm"
             onClick={() => setPeriod(days)}
           >
-            {days} dní
+            {days === 365 ? '1 rok' : `${days} dní`}
           </Button>
         ))}
       </div>
@@ -297,7 +338,10 @@ export function ClientFeedbackRecovery({
       {/* Mini Charts Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* sRPE Trend */}
-        <Card className="glass">
+        <Card 
+          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+          onClick={() => setSelectedMetric('sessionLoad')}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -321,7 +365,10 @@ export function ClientFeedbackRecovery({
         </Card>
 
         {/* Readiness Trend */}
-        <Card className="glass">
+        <Card 
+          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+          onClick={() => setSelectedMetric('readiness')}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -345,7 +392,10 @@ export function ClientFeedbackRecovery({
         </Card>
 
         {/* Pain Incidence */}
-        <Card className="glass">
+        <Card 
+          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+          onClick={() => setSelectedMetric('pain')}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -371,7 +421,10 @@ export function ClientFeedbackRecovery({
         </Card>
 
         {/* Session Fit Trend */}
-        <Card className="glass">
+        <Card 
+          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+          onClick={() => setSelectedMetric('sessionFit')}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -487,6 +540,17 @@ export function ClientFeedbackRecovery({
           </div>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      {selectedMetric && allFeedback && (
+        <FeedbackMetricDetailDialog
+          open={!!selectedMetric}
+          onOpenChange={(open) => !open && setSelectedMetric(null)}
+          metric={getMetricConfig(selectedMetric)}
+          feedback={allFeedback}
+          period={period}
+        />
+      )}
     </div>
   );
 }
