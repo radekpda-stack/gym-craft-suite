@@ -19,10 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Challenge, useCreateChallenge, useUpdateChallenge } from '@/hooks/useChallenges';
+import { useExercises } from '@/hooks/useExercises';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Dumbbell } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,6 +49,7 @@ interface ChallengeEditorProps {
 export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEditorProps) {
   const createChallenge = useCreateChallenge();
   const updateChallenge = useUpdateChallenge();
+  const { exercises = [] } = useExercises();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -50,6 +64,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
   const [requiresVideo, setRequiresVideo] = useState(false);
   const [rankingMode, setRankingMode] = useState<string>('top3');
   const [tieBreaker, setTieBreaker] = useState<string>('earliest_submission');
+  const [exerciseId, setExerciseId] = useState<string | null>(null);
+  const [exerciseOpen, setExerciseOpen] = useState(false);
 
   useEffect(() => {
     if (challenge) {
@@ -66,6 +82,7 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRequiresVideo(challenge.requires_video);
       setRankingMode(challenge.ranking_mode || 'top3');
       setTieBreaker(challenge.tie_breaker || 'earliest_submission');
+      setExerciseId((challenge as any).exercise_id || null);
     } else {
       // Reset form
       setTitle('');
@@ -81,6 +98,7 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRequiresVideo(false);
       setRankingMode('top3');
       setTieBreaker('earliest_submission');
+      setExerciseId(null);
     }
   }, [challenge, open]);
 
@@ -99,6 +117,7 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       requires_video: requiresVideo,
       ranking_mode: rankingMode as Challenge['ranking_mode'],
       tie_breaker: tieBreaker as Challenge['tie_breaker'],
+      exercise_id: exerciseId,
     };
 
     if (challenge) {
@@ -135,6 +154,74 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
             />
           </div>
 
+          {/* Exercise Linking */}
+          <div className="space-y-2">
+            <Label>Propojit s cvikem (volitelné)</Label>
+            <Popover open={exerciseOpen} onOpenChange={setExerciseOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={exerciseOpen}
+                  className="w-full justify-between"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Dumbbell className="h-4 w-4 shrink-0" />
+                    {exerciseId
+                      ? exercises.find((e) => e.id === exerciseId)?.name || 'Neznámý cvik'
+                      : 'Vyberte cvik...'}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <Command>
+                  <CommandInput placeholder="Hledat cvik..." />
+                  <CommandList>
+                    <CommandEmpty>Cvik nenalezen</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="none"
+                        onSelect={() => {
+                          setExerciseId(null);
+                          setExerciseOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            !exerciseId ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        Bez cviku
+                      </CommandItem>
+                      {exercises.slice(0, 50).map((exercise) => (
+                        <CommandItem
+                          key={exercise.id}
+                          value={exercise.name}
+                          onSelect={() => {
+                            setExerciseId(exercise.id);
+                            setExerciseOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              exerciseId === exercise.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {exercise.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">
+              Propojení s cvikem umožní sledovat osobní rekordy
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="description">Popis</Label>
             <Textarea
