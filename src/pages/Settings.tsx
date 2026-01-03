@@ -23,6 +23,7 @@ import {
   Boxes,
   Dumbbell,
   Paintbrush,
+  UserCircle,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -30,6 +31,7 @@ import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
+import { TrainerProfileSettings } from '@/components/settings/TrainerProfileSettings';
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { DataExport } from '@/components/settings/DataExport';
@@ -132,6 +134,22 @@ export default function Settings() {
       case 'account':
         return (
           <>
+            <SettingsSection
+              title={language === 'cs' ? 'Můj profil trenéra' : 'My Trainer Profile'}
+              description={language === 'cs' 
+                ? 'Vaše osobní údaje, fotka a odbornost' 
+                : 'Your personal details, photo and expertise'}
+              icon={UserCircle}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Tyto údaje mohou vidět klienti ve vašem profilu' 
+                  : 'These details can be seen by clients on your profile'
+              }}
+            >
+              <TrainerProfileSettings />
+            </SettingsSection>
+
             <SettingsSection
               title={t.settings.language}
               description={language === 'cs' 
