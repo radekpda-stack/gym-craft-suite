@@ -19,7 +19,7 @@ export function PortalPreviewButton({ variant = 'outline', size = 'default' }: P
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
 
-  const portalUrl = `${window.location.origin}/client`;
+  const portalUrl = `${window.location.origin}/client?demo=true`;
 
   const handleOpenInNewTab = () => {
     window.open(portalUrl, '_blank');

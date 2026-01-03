@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -31,9 +32,10 @@ import { Label } from '@/components/ui/label';
 import { usePortalClients, PortalClient, useResetClientPassword, useDisableClientAccess, useUpdateClientCredentials } from '@/hooks/useClientPortalAdmin';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil, Search, X } from 'lucide-react';
+import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil, Search, X, Settings2 } from 'lucide-react';
 import { InviteClientDialog } from './InviteClientDialog';
 import { ClientPortalDetailSheet } from './ClientPortalDetailSheet';
+import { BulkClientSettingsDialog } from './BulkClientSettingsDialog';
 import { toast } from '@/hooks/use-toast';
 import { BulkCreatePortalsButton } from './BulkCreatePortalsButton';
 
@@ -53,6 +55,10 @@ export function ClientAccessList() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [selectedClient, setSelectedClient] = useState<PortalClient | null>(null);
+  
+  // Selection state for bulk actions
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [bulkSettingsOpen, setBulkSettingsOpen] = useState(false);
   
   // Edit credentials dialog
   const [editDialog, setEditDialog] = useState<{
@@ -170,6 +176,34 @@ export function ClientAccessList() {
     return <Badge variant="secondary">Deaktivovaný</Badge>;
   };
 
+  // Selection helpers
+  const toggleClientSelection = (clientId: string) => {
+    setSelectedClientIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!filteredClients) return;
+    if (selectedClientIds.size === filteredClients.length) {
+      setSelectedClientIds(new Set());
+    } else {
+      setSelectedClientIds(new Set(filteredClients.map(c => c.client_id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedClientIds(new Set());
+  };
+
+  const isAllSelected = filteredClients && filteredClients.length > 0 && selectedClientIds.size === filteredClients.length;
+
   if (isLoading) {
     return (
       <Card>
@@ -233,6 +267,32 @@ export function ClientAccessList() {
               )}
             </div>
           )}
+
+          {/* Selection Actions Bar */}
+          {selectedClientIds.size > 0 && (
+            <div className="mb-4 p-3 bg-muted/50 border rounded-lg flex items-center justify-between gap-4">
+              <span className="text-sm font-medium">
+                Vybráno: {selectedClientIds.size} klientů
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkSettingsOpen(true)}
+                >
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Hromadné nastavení
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                >
+                  Zrušit výběr
+                </Button>
+              </div>
+            </div>
+          )}
           
           {clients?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -266,19 +326,28 @@ export function ClientAccessList() {
                 {filteredClients?.map((account) => (
                   <div 
                     key={account.id}
-                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setSelectedClient(account)}
+                    className="p-4 rounded-lg border bg-card"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="text-sm font-medium text-primary">
-                            {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{account.client?.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{account.client?.email || 'Bez emailu'}</p>
+                        <Checkbox
+                          checked={selectedClientIds.has(account.client_id)}
+                          onCheckedChange={() => toggleClientSelection(account.client_id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div 
+                          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          onClick={() => setSelectedClient(account)}
+                        >
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-medium text-primary">
+                              {account.client?.name?.charAt(0)?.toUpperCase() || '?'}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{account.client?.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{account.client?.email || 'Bez emailu'}</p>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -395,6 +464,12 @@ export function ClientAccessList() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead>Klient</TableHead>
                       <TableHead>Přihlašovací jméno</TableHead>
                       <TableHead>Heslo</TableHead>
@@ -406,6 +481,12 @@ export function ClientAccessList() {
                   <TableBody>
                     {filteredClients?.map((account) => (
                       <TableRow key={account.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClient(account)}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedClientIds.has(account.client_id)}
+                            onCheckedChange={() => toggleClientSelection(account.client_id)}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -538,6 +619,14 @@ export function ClientAccessList() {
         client={selectedClient}
         open={!!selectedClient}
         onOpenChange={(open) => !open && setSelectedClient(null)}
+      />
+
+      {/* Bulk Settings Dialog */}
+      <BulkClientSettingsDialog
+        open={bulkSettingsOpen}
+        onOpenChange={setBulkSettingsOpen}
+        selectedClientIds={Array.from(selectedClientIds)}
+        onComplete={clearSelection}
       />
 
       {/* Password Reset Dialog */}
