@@ -11,7 +11,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { 
   ChevronLeft, ChevronRight, Loader2, Send, Save, User, Briefcase, 
-  Activity, Heart, Target, Plus, Trash2, AlertCircle, Moon
+  Activity, Heart, Target, Plus, Trash2, AlertCircle, Moon, Dumbbell, Clock, MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -58,6 +58,13 @@ export interface ClientIntakeData {
   diet_quality?: 'good' | 'average' | 'chaotic';
   diet_note?: string;
   
+  // NOVÉ: Pohybová zkušenost
+  training_experience?: 'beginner' | '1-3years' | '3plus';
+  previous_activities?: string[];
+  had_trainer?: boolean;
+  what_worked?: string;
+  what_didnt_work?: string;
+  
   // Bolest / omezení - strukturované
   has_pain?: boolean;
   pain_entries?: PainEntry[];
@@ -80,6 +87,11 @@ export interface ClientIntakeData {
   training_preference?: string;
   avoid_exercises?: string;
   biggest_problem?: string;
+  
+  // NOVÉ: Rozšířené cíle
+  why_now?: string;
+  weekly_availability?: '1-2h' | '3-4h' | '5h+';
+  preferred_environment?: 'gym' | 'home' | 'outdoor' | 'any';
   
   // Doplnění
   additional_notes?: string;
@@ -132,6 +144,11 @@ const GOALS = [
   'lepší pohyblivost', 'prevence zranění', 'sportovní výkon', 'celkové zdraví'
 ];
 
+const PREVIOUS_ACTIVITIES = [
+  'posilovna', 'běh', 'plavání', 'cyklistika', 'jóga', 'crossfit', 
+  'bojové sporty', 'týmové sporty', 'tanec', 'turistika'
+];
+
 export function ClientIntakeForm({
   formData,
   setFormData,
@@ -145,19 +162,21 @@ export function ClientIntakeForm({
   const [currentStep, setCurrentStep] = useState(0);
   const [editingPainId, setEditingPainId] = useState<string | null>(null);
   
-  // Steps definition
+  // Steps definition - přidán krok "Pohybová zkušenost"
   const STEPS = isNewClient 
     ? [
         { id: 'about', title: 'O vás', icon: User },
         { id: 'lifestyle', title: 'Životní styl', icon: Briefcase },
-        { id: 'pain', title: 'Bolest a omezení', icon: Heart },
-        { id: 'goals', title: 'Cíle', icon: Target },
+        { id: 'experience', title: 'Pohybová zkušenost', icon: Dumbbell },
+        { id: 'pain', title: 'Zdraví', icon: Heart },
+        { id: 'goals', title: 'Cíle & Motivace', icon: Target },
       ]
     : [
         { id: 'about', title: 'Základní údaje', icon: User },
         { id: 'lifestyle', title: 'Životní styl', icon: Briefcase },
-        { id: 'pain', title: 'Bolest a omezení', icon: Heart },
-        { id: 'goals', title: 'Cíle', icon: Target },
+        { id: 'experience', title: 'Pohybová zkušenost', icon: Dumbbell },
+        { id: 'pain', title: 'Zdraví', icon: Heart },
+        { id: 'goals', title: 'Cíle & Motivace', icon: Target },
       ];
   
   const totalSteps = STEPS.length;
@@ -224,9 +243,10 @@ export function ClientIntakeForm({
 
   const canGoNext = () => {
     const step = STEPS[currentStep];
-    // Validace pro krok "O vás" - jméno, email, telefon a rok narození jsou vždy povinné
+    // Validace pro krok "O vás" - jméno, (email NEBO telefon), rok narození povinné
     if (step.id === 'about') {
-      return !!(formData.name && formData.email && formData.phone && formData.birth_year);
+      const hasContact = !!(formData.email || formData.phone);
+      return !!(formData.name && hasContact && formData.birth_year);
     }
     if (step.id === 'lifestyle') {
       return !!(formData.work_type && formData.movement_frequency && formData.sleep_hours);
@@ -269,7 +289,7 @@ export function ClientIntakeForm({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email {!formData.phone && '*'}</Label>
             <Input
               id="email"
               type="email"
@@ -280,7 +300,7 @@ export function ClientIntakeForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefon *</Label>
+            <Label htmlFor="phone">Telefon {!formData.email && '*'}</Label>
             <Input
               id="phone"
               value={formData.phone || ''}
@@ -290,6 +310,7 @@ export function ClientIntakeForm({
             />
           </div>
         </div>
+        <p className="text-xs text-muted-foreground">* Stačí vyplnit email nebo telefon</p>
       </div>
 
       {/* Základní údaje */}
@@ -804,7 +825,123 @@ export function ClientIntakeForm({
     </div>
   );
 
-  // Render Goals step
+  // Render Experience step (NEW)
+  const renderExperienceStep = () => (
+    <div className="space-y-6">
+      {/* Training experience level */}
+      <div className="space-y-3">
+        <Label className="text-base flex items-center gap-2">
+          <Dumbbell className="w-4 h-4" />
+          Jak dlouho cvičíš?
+        </Label>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: 'beginner', label: 'Začátečník', desc: '< 1 rok' },
+            { value: '1-3years', label: 'Pokročilý', desc: '1-3 roky' },
+            { value: '3plus', label: 'Zkušený', desc: '3+ let' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => updateField('training_experience', opt.value as ClientIntakeData['training_experience'])}
+              className={cn(
+                "p-3 rounded-lg text-center transition-colors",
+                formData.training_experience === opt.value
+                  ? "bg-primary/20 border-2 border-primary"
+                  : "bg-secondary/50 hover:bg-secondary/70"
+              )}
+            >
+              <span className="font-medium text-sm block">{opt.label}</span>
+              <span className="text-xs text-muted-foreground">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Previous activities */}
+      <div className="space-y-3">
+        <Label className="text-base">Co jsi dělal/a? (vyber vše, co platí)</Label>
+        <div className="flex flex-wrap gap-2">
+          {PREVIOUS_ACTIVITIES.map((activity) => (
+            <Badge
+              key={activity}
+              variant={(formData.previous_activities || []).includes(activity) ? 'default' : 'outline'}
+              className="cursor-pointer px-3 py-1.5 capitalize"
+              onClick={() => {
+                const current = formData.previous_activities || [];
+                if (current.includes(activity)) {
+                  updateField('previous_activities', current.filter(a => a !== activity));
+                } else {
+                  updateField('previous_activities', [...current, activity]);
+                }
+              }}
+            >
+              {activity}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* Had trainer before */}
+      <div className="space-y-3">
+        <Label className="text-base">Měl/a jsi někdy osobního trenéra?</Label>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => updateField('had_trainer', false)}
+            className={cn(
+              "flex-1 p-3 rounded-lg text-center font-medium transition-colors",
+              formData.had_trainer === false
+                ? "bg-secondary border-2 border-primary"
+                : "bg-secondary/50 hover:bg-secondary/70"
+            )}
+          >
+            Ne
+          </button>
+          <button
+            type="button"
+            onClick={() => updateField('had_trainer', true)}
+            className={cn(
+              "flex-1 p-3 rounded-lg text-center font-medium transition-colors",
+              formData.had_trainer === true
+                ? "bg-primary/20 border-2 border-primary"
+                : "bg-secondary/50 hover:bg-secondary/70"
+            )}
+          >
+            Ano
+          </button>
+        </div>
+      </div>
+
+      {/* What worked / didn't work */}
+      {formData.had_trainer && (
+        <div className="space-y-4 border-l-2 border-primary/30 pl-4">
+          <div className="space-y-2">
+            <Label htmlFor="what_worked">Co se ti osvědčilo?</Label>
+            <Input
+              id="what_worked"
+              value={formData.what_worked || ''}
+              onChange={(e) => updateField('what_worked', e.target.value)}
+              placeholder="Např. silový trénink, konzistence..."
+              className="bg-secondary/50"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="what_didnt_work">Co nefungovalo?</Label>
+            <Input
+              id="what_didnt_work"
+              value={formData.what_didnt_work || ''}
+              onChange={(e) => updateField('what_didnt_work', e.target.value)}
+              placeholder="Např. příliš intenzivní, nudné..."
+              className="bg-secondary/50"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Render Goals step (ROZŠÍŘENO)
   const renderGoalsStep = () => (
     <div className="space-y-6">
       {/* Hlavní cíl */}
@@ -833,6 +970,79 @@ export function ClientIntakeForm({
         />
       </div>
 
+      {/* WHY NOW - NOVÉ */}
+      <div className="space-y-2">
+        <Label htmlFor="why_now" className="flex items-center gap-2">
+          Proč teď?
+        </Label>
+        <Input
+          id="why_now"
+          value={formData.why_now || ''}
+          onChange={(e) => updateField('why_now', e.target.value)}
+          placeholder="Co tě motivovalo začít právě teď?"
+          className="bg-secondary/50"
+        />
+      </div>
+
+      {/* Time availability - NOVÉ */}
+      <div className="space-y-3">
+        <Label className="text-base flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          Kolik času týdně chceš cvičit?
+        </Label>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: '1-2h', label: '1-2 hodiny' },
+            { value: '3-4h', label: '3-4 hodiny' },
+            { value: '5h+', label: '5+ hodin' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => updateField('weekly_availability', opt.value as ClientIntakeData['weekly_availability'])}
+              className={cn(
+                "p-3 rounded-lg text-center font-medium transition-colors",
+                formData.weekly_availability === opt.value
+                  ? "bg-primary/20 border-2 border-primary"
+                  : "bg-secondary/50 hover:bg-secondary/70"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Environment preference - NOVÉ */}
+      <div className="space-y-3">
+        <Label className="text-base flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          Kde chceš cvičit?
+        </Label>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { value: 'gym', label: '🏋️ Posilovna' },
+            { value: 'home', label: '🏠 Doma' },
+            { value: 'outdoor', label: '🌳 Venku' },
+            { value: 'any', label: '🤷 Kdekoliv' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => updateField('preferred_environment', opt.value as ClientIntakeData['preferred_environment'])}
+              className={cn(
+                "p-3 rounded-lg text-center font-medium transition-colors",
+                formData.preferred_environment === opt.value
+                  ? "bg-primary/20 border-2 border-primary"
+                  : "bg-secondary/50 hover:bg-secondary/70"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Biggest problem */}
       <div className="space-y-2">
         <Label htmlFor="biggest_problem">Co je pro tebe teď největší problém?</Label>
@@ -841,30 +1051,6 @@ export function ClientIntakeForm({
           value={formData.biggest_problem || ''}
           onChange={(e) => updateField('biggest_problem', e.target.value)}
           placeholder="Např. nemám čas, bolí mě záda při cvičení..."
-          className="bg-secondary/50"
-        />
-      </div>
-
-      {/* Preference tréninku */}
-      <div className="space-y-2">
-        <Label htmlFor="training_preference">Jaký trénink preferuješ? (volitelné)</Label>
-        <Input
-          id="training_preference"
-          value={formData.training_preference || ''}
-          onChange={(e) => updateField('training_preference', e.target.value)}
-          placeholder="Např. raději silový, nesnáším běhání..."
-          className="bg-secondary/50"
-        />
-      </div>
-
-      {/* Čemu se vyhnout */}
-      <div className="space-y-2">
-        <Label htmlFor="avoid_exercises">Čemu se chceš vyhnout? (volitelné)</Label>
-        <Input
-          id="avoid_exercises"
-          value={formData.avoid_exercises || ''}
-          onChange={(e) => updateField('avoid_exercises', e.target.value)}
-          placeholder="Např. běh, dřepy s činkou..."
           className="bg-secondary/50"
         />
       </div>
@@ -890,6 +1076,8 @@ export function ClientIntakeForm({
         return renderAboutStep();
       case 'lifestyle':
         return renderLifestyleStep();
+      case 'experience':
+        return renderExperienceStep();
       case 'pain':
         return renderPainStep();
       case 'goals':

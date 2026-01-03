@@ -55,6 +55,11 @@ const WORK_TYPES = [
   { value: "active", label: "Aktivní/fyzická" },
 ];
 
+const PREVIOUS_ACTIVITIES = [
+  'posilovna', 'běh', 'plavání', 'cyklistika', 'jóga', 'crossfit', 
+  'bojové sporty', 'týmové sporty', 'tanec', 'turistika'
+];
+
 const trainerPreDiagnosticSchema = z.object({
   // Basic info
   name: z.string().min(2, "Jméno musí mít alespoň 2 znaky"),
@@ -73,9 +78,15 @@ const trainerPreDiagnosticSchema = z.object({
   painAreas: z.array(z.string()).optional(),
   healthRestrictions: z.string().optional(),
   
+  // NEW: Movement experience
+  trainingExperience: z.enum(["beginner", "1-3years", "3plus"]).optional(),
+  previousActivities: z.array(z.string()).optional(),
+  hadTrainer: z.boolean().optional(),
+  
   // Goals
   trainingGoals: z.array(z.string()).default([]),
   mainMotivation: z.string().optional(),
+  weeklyAvailability: z.enum(["1-2h", "3-4h", "5h+"]).optional(),
   
   // Trainer notes
   trainerPriorities: z.string().optional(),
@@ -98,6 +109,7 @@ export function TrainerPreDiagnosticClientForm({
   const [isLoading, setIsLoading] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     lifestyle: false,
+    experience: true,
     health: false,
     goals: true,
     trainer: false,
@@ -114,6 +126,7 @@ export function TrainerPreDiagnosticClientForm({
       birthDate: '',
       trainingGoals: [],
       painAreas: [],
+      previousActivities: [],
       sittingHours: 6,
       sleepHours: 7,
       sleepQuality: 3,
@@ -122,6 +135,7 @@ export function TrainerPreDiagnosticClientForm({
 
   const trainingGoals = form.watch("trainingGoals");
   const painAreas = form.watch("painAreas") || [];
+  const previousActivities = form.watch("previousActivities") || [];
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -147,6 +161,14 @@ export function TrainerPreDiagnosticClientForm({
       form.setValue("painAreas", painAreas.filter(a => a !== area));
     } else {
       form.setValue("painAreas", [...painAreas, area]);
+    }
+  };
+
+  const toggleActivity = (activity: string) => {
+    if (previousActivities.includes(activity)) {
+      form.setValue("previousActivities", previousActivities.filter(a => a !== activity));
+    } else {
+      form.setValue("previousActivities", [...previousActivities, activity]);
     }
   };
 
@@ -429,6 +451,97 @@ export function TrainerPreDiagnosticClientForm({
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Experience Section - NEW */}
+        <Collapsible open={openSections.experience}>
+          <SectionHeader section="experience" title="Pohybová zkušenost" icon="🏃" />
+          <CollapsibleContent className="pt-3 space-y-4">
+            <FormField
+              control={form.control}
+              name="trainingExperience"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Úroveň zkušeností</FormLabel>
+                  <FormControl>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'beginner', label: 'Začátečník' },
+                        { value: '1-3years', label: '1-3 roky' },
+                        { value: '3plus', label: '3+ let' },
+                      ].map((opt) => (
+                        <Badge
+                          key={opt.value}
+                          variant={field.value === opt.value ? "default" : "outline"}
+                          className={cn(
+                            "cursor-pointer justify-center py-2 transition-colors",
+                            field.value === opt.value 
+                              ? "bg-primary text-primary-foreground" 
+                              : "hover:bg-primary/20"
+                          )}
+                          onClick={() => field.onChange(opt.value)}
+                        >
+                          {opt.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-2">
+              <Label>Předchozí aktivity</Label>
+              <div className="flex flex-wrap gap-2">
+                {PREVIOUS_ACTIVITIES.map((activity) => (
+                  <Badge
+                    key={activity}
+                    variant={previousActivities.includes(activity) ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer transition-colors capitalize",
+                      previousActivities.includes(activity)
+                        ? "bg-primary/80 text-primary-foreground hover:bg-primary"
+                        : "hover:bg-primary/20"
+                    )}
+                    onClick={() => toggleActivity(activity)}
+                  >
+                    {activity}
+                    {previousActivities.includes(activity) && (
+                      <X className="w-3 h-3 ml-1" />
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="hadTrainer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Měl/a osobního trenéra?</FormLabel>
+                  <FormControl>
+                    <div className="flex gap-2">
+                      <Badge
+                        variant={field.value === false ? "default" : "outline"}
+                        className="cursor-pointer px-4 py-2"
+                        onClick={() => field.onChange(false)}
+                      >
+                        Ne
+                      </Badge>
+                      <Badge
+                        variant={field.value === true ? "default" : "outline"}
+                        className="cursor-pointer px-4 py-2"
+                        onClick={() => field.onChange(true)}
+                      >
+                        Ano
+                      </Badge>
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Health Section */}
         <Collapsible open={openSections.health}>
           <SectionHeader section="health" title="Spánek a zdraví" icon="💤" />
@@ -586,13 +699,46 @@ export function TrainerPreDiagnosticClientForm({
               name="mainMotivation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Hlavní motivace</FormLabel>
+                  <FormLabel>Hlavní motivace / Proč teď?</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Co klienta motivuje k tréninku..."
                       className="bg-secondary border-border min-h-[60px]"
                       {...field}
                     />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weeklyAvailability"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Časová dostupnost (týdně)</FormLabel>
+                  <FormControl>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: '1-2h', label: '1-2h' },
+                        { value: '3-4h', label: '3-4h' },
+                        { value: '5h+', label: '5h+' },
+                      ].map((opt) => (
+                        <Badge
+                          key={opt.value}
+                          variant={field.value === opt.value ? "default" : "outline"}
+                          className={cn(
+                            "cursor-pointer justify-center py-2 transition-colors",
+                            field.value === opt.value 
+                              ? "bg-primary text-primary-foreground" 
+                              : "hover:bg-primary/20"
+                          )}
+                          onClick={() => field.onChange(opt.value)}
+                        >
+                          {opt.label}
+                        </Badge>
+                      ))}
+                    </div>
                   </FormControl>
                 </FormItem>
               )}

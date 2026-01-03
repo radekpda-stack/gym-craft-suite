@@ -232,34 +232,37 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
           />
         )}
 
-        <FormField
-          control={form.control}
-          name="creditBalance"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Kredit (CZK)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  className="bg-secondary border-border"
-                  value={field.value === 0 ? '' : field.value}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    field.onChange(val === '' ? 0 : parseFloat(val));
-                  }}
-                  onBlur={(e) => {
-                    if (e.target.value === '') {
-                      field.onChange(0);
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Kredit pouze při editaci existujícího klienta */}
+        {defaultValues && (
+          <FormField
+            control={form.control}
+            name="creditBalance"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kredit (CZK)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0"
+                    className="bg-secondary border-border"
+                    value={field.value === 0 ? '' : field.value}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      field.onChange(val === '' ? 0 : parseFloat(val));
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === '') {
+                        field.onChange(0);
+                      }
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className="space-y-3">
           <Label>Tréninkové cíle</Label>
