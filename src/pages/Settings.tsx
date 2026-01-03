@@ -15,7 +15,6 @@ import {
   BarChart2,
   Shield,
   UserCog,
-  Palette,
   Bell,
   Settings2,
   Zap,
@@ -24,7 +23,6 @@ import {
   Dumbbell,
   Paintbrush,
   UserCircle,
-  Users,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -47,8 +45,6 @@ import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
-import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
-import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
 import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -83,15 +79,6 @@ export default function Settings() {
         : 'Company details, pricing and packages',
       icon: Building2,
       iconColor: 'text-amber-500',
-    },
-    {
-      id: 'portal',
-      title: language === 'cs' ? 'Klientský portál' : 'Client Portal',
-      description: language === 'cs' 
-        ? 'Viditelnost sekcí a nastavení portálu' 
-        : 'Section visibility and portal settings',
-      icon: Users,
-      iconColor: 'text-green-500',
     },
     {
       id: 'app',
@@ -259,31 +246,6 @@ export default function Settings() {
               icon={Clock}
             >
               <CapacitySettingsPanel />
-            </SettingsSection>
-          </>
-        );
-
-      case 'portal':
-        return (
-          <>
-            <SettingsSection
-              title={language === 'cs' ? 'Viditelnost sekcí' : 'Section Visibility'}
-              description={language === 'cs' 
-                ? 'Nastavte, které sekce klienti uvidí v portálu' 
-                : 'Set which sections clients can see in portal'}
-              icon={Users}
-            >
-              <PortalVisibilitySettings />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Nastavení per klient' : 'Per-Client Settings'}
-              description={language === 'cs' 
-                ? 'Individuální nastavení pro jednotlivé klienty' 
-                : 'Individual settings for each client'}
-              icon={UserCircle}
-            >
-              <ClientPortalSettingsPage />
             </SettingsSection>
           </>
         );
