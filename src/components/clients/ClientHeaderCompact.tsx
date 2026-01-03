@@ -10,6 +10,8 @@
  * - "U tebe X měsíců"
  * - Red flag indicator
  * - Last portal login
+ * - Days since training badge
+ * - Training streak badge
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -36,6 +38,8 @@ import { format, differenceInYears, differenceInMonths, formatDistanceToNow } fr
 import { cs } from 'date-fns/locale';
 import { Client } from '@/hooks/useClients';
 import { toast } from '@/hooks/use-toast';
+import { ClientDaysSinceBadge } from './ClientDaysSinceBadge';
+import { ClientStreakBadge } from './ClientStreakBadge';
 
 interface ClientHeaderCompactProps {
   client: Client;
@@ -119,8 +123,13 @@ export function ClientHeaderCompact({
           </div>
         </div>
 
-        {/* Red flag + Contact icons */}
+        {/* Red flag + Days since + Streak + Contact icons */}
         <div className="flex items-center gap-1 shrink-0">
+          {/* Days since training */}
+          <ClientDaysSinceBadge clientId={client.id} />
+          
+          {/* Training streak */}
+          <ClientStreakBadge clientId={client.id} />
           {/* Red flag indicator */}
           {redFlagCount > 0 && (
             <Tooltip>

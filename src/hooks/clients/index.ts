@@ -21,3 +21,9 @@ export { useClientLTV } from '../useClientLTV';
 export { useClientsAtRisk } from '../useClientsAtRisk';
 export { useTopClients } from '../useTopClients';
 export { useTopClientsData } from '../useTopClientsData';
+
+// New audit hooks
+export { useClientReadiness } from '../useClientReadiness';
+export { useClientInjuryHistory } from '../useClientInjuryHistory';
+export { useClientPeriodization, PHASE_CONFIG } from '../useClientPeriodization';
+export { useClientCommunicationLog } from '../useClientCommunicationLog';

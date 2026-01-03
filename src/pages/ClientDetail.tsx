@@ -24,6 +24,14 @@ import { ClientTrainingHistory } from '@/components/clients/ClientTrainingHistor
 import { ClientCreditHistory } from '@/components/clients/ClientCreditHistory';
 import { ClientSecondaryAccordions, SECTION_ICONS } from '@/components/clients/ClientSecondaryAccordions';
 
+// New audit components
+import { ClientReadinessCard } from '@/components/clients/ClientReadinessCard';
+import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
+import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
+import { ClientPainMapPreview } from '@/components/clients/ClientPainMapPreview';
+import { ClientCommunicationLog } from '@/components/clients/ClientCommunicationLog';
+import { ClientInjuryHistory } from '@/components/clients/ClientInjuryHistory';
+
 // Existing components for accordion sections
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
 import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
@@ -218,6 +226,24 @@ export default function ClientDetail() {
       children: <div id="section-media"><ClientMediaGallery clientId={client.id} /></div>,
     },
     {
+      id: 'injuries',
+      icon: SECTION_ICONS.diagnostics,
+      title: 'Historie zranění',
+      children: <div id="section-injuries"><ClientInjuryHistory clientId={client.id} /></div>,
+    },
+    {
+      id: 'communication',
+      icon: SECTION_ICONS.notes,
+      title: 'Komunikace',
+      children: <div id="section-communication"><ClientCommunicationLog clientId={client.id} /></div>,
+    },
+    {
+      id: 'pain-map',
+      icon: SECTION_ICONS.feedback,
+      title: 'Mapa bolesti',
+      children: <div id="section-pain"><ClientPainMapPreview clientId={client.id} /></div>,
+    },
+    {
       id: 'timeline',
       icon: SECTION_ICONS.timeline,
       title: 'Časová osa',
@@ -244,6 +270,18 @@ export default function ClientDetail() {
         redFlagCount={redFlagCount}
         lastPortalLogin={portalAccess?.last_portal_login}
       />
+
+      {/* NEW: Health Alert Banner */}
+      <ClientHealthAlert 
+        clientId={client.id} 
+        healthRestrictions={client.health_restrictions} 
+      />
+
+      {/* NEW: Readiness + Periodization Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <ClientReadinessCard clientId={client.id} />
+        <ClientPeriodizationCard clientId={client.id} />
+      </div>
 
       {/* Quick Navigation */}
       <ClientQuickNav
