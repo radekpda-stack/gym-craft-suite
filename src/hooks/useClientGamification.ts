@@ -391,10 +391,10 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       
       if (settingsError) throw settingsError;
       
-      // Get client gender information
+      // Get client gender and self-profile information
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('id, gender')
+        .select('id, gender, is_self_profile')
         .in('id', clientIds);
       
       if (clientsError) throw clientsError;
@@ -402,6 +402,7 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       // Create settings map - default to anonymous if no settings exist
       const settingsMap = new Map(settings?.map(s => [s.client_id, s]) || []);
       const genderMap = new Map(clientsData?.map(c => [c.id, c.gender]) || []);
+      const selfProfileMap = new Map(clientsData?.map(c => [c.id, c.is_self_profile]) || []);
       
       // Get XP events for this month (for monthly XP calculation)
       const { data: xpEvents, error: eventsError } = await supabase
@@ -517,7 +518,9 @@ export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_a
       const entries: LeaderboardEntry[] = clientIds.map(clientId => {
         const data = clientData[clientId];
         const clientSettings = settingsMap.get(clientId);
-        const isVisible = clientSettings?.leaderboard_visible === true;
+        // Trainer's self-profile is always visible
+        const isSelfProfile = selfProfileMap.get(clientId) === true;
+        const isVisible = isSelfProfile || clientSettings?.leaderboard_visible === true;
         const isVerified = data.totalRecent > 0 
           ? (data.coachConfirmedRecent / data.totalRecent) >= 0.7 
           : false;
