@@ -7,6 +7,7 @@ import {
   Calendar,
   Clock,
   CreditCard,
+  AlertTriangle,
   Package,
   Tag,
   Wrench,
@@ -28,6 +29,7 @@ import { SettingsLayout, SettingsCategory } from '@/components/settings/Settings
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
 import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
+import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
 import { TrainerProfileSettings } from '@/components/settings/TrainerProfileSettings';
@@ -216,6 +218,16 @@ export default function Settings() {
               }}
             >
               <TrainingPricesSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Upozornění na kredit' : 'Credit Alerts'}
+              description={language === 'cs' 
+                ? 'Prahy pro zvýraznění klientů s nízkým kreditem' 
+                : 'Thresholds for highlighting low credit clients'}
+              icon={AlertTriangle}
+            >
+              <CreditThresholdSettings />
             </SettingsSection>
 
             <SettingsSection

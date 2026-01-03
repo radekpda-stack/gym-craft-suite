@@ -17,7 +17,6 @@ export function TrainingPricesSettings() {
   });
   
   const [monthlyGoal, setMonthlyGoal] = useState(100000);
-  const [lowCreditThreshold, setLowCreditThreshold] = useState(500);
 
   useEffect(() => {
     if (settings?.training_prices) {
@@ -25,9 +24,6 @@ export function TrainingPricesSettings() {
     }
     if (settings?.monthly_income_goal) {
       setMonthlyGoal(settings.monthly_income_goal);
-    }
-    if (settings?.low_credit_threshold) {
-      setLowCreditThreshold(settings.low_credit_threshold);
     }
   }, [settings]);
 
@@ -137,63 +133,33 @@ export function TrainingPricesSettings() {
       {/* Separator */}
       <div className="border-t my-6" />
       
-      {/* Monthly Goal and Low Credit */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label className="text-muted-foreground text-sm">Měsíční cíl příjmu</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              value={monthlyGoal}
-              onChange={(e) => setMonthlyGoal(parseInt(e.target.value) || 0)}
-              onBlur={async (e) => {
-                const value = parseInt(e.target.value) || 100000;
-                if (settings?.monthly_income_goal === value) return;
-                try {
-                  await updateSetting.mutateAsync({ key: 'monthly_income_goal', value });
-                  toast.success('Měsíční cíl uložen');
-                } catch {
-                  toast.error('Chyba při ukládání');
-                }
-              }}
-              className="pr-10 text-lg font-semibold"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              Kč
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Zobrazuje se jako gauge na statistikách
-          </p>
+      {/* Monthly Goal */}
+      <div className="space-y-2">
+        <Label className="text-muted-foreground text-sm">Měsíční cíl příjmu</Label>
+        <div className="relative max-w-xs">
+          <Input
+            type="number"
+            value={monthlyGoal}
+            onChange={(e) => setMonthlyGoal(parseInt(e.target.value) || 0)}
+            onBlur={async (e) => {
+              const value = parseInt(e.target.value) || 100000;
+              if (settings?.monthly_income_goal === value) return;
+              try {
+                await updateSetting.mutateAsync({ key: 'monthly_income_goal', value });
+                toast.success('Měsíční cíl uložen');
+              } catch {
+                toast.error('Chyba při ukládání');
+              }
+            }}
+            className="pr-10 text-lg font-semibold"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+            Kč
+          </span>
         </div>
-        
-        <div className="space-y-2">
-          <Label className="text-muted-foreground text-sm">Práh nízkého kreditu</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              value={lowCreditThreshold}
-              onChange={(e) => setLowCreditThreshold(parseInt(e.target.value) || 0)}
-              onBlur={async (e) => {
-                const value = parseInt(e.target.value) || 500;
-                if (settings?.low_credit_threshold === value) return;
-                try {
-                  await updateSetting.mutateAsync({ key: 'low_credit_threshold', value });
-                  toast.success('Práh uložen');
-                } catch {
-                  toast.error('Chyba při ukládání');
-                }
-              }}
-              className="pr-10 text-lg font-semibold"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              Kč
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Klienti pod touto hranicí se zvýrazní
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Zobrazuje se jako gauge na statistikách
+        </p>
       </div>
       
       <p className="text-xs text-muted-foreground mt-4">
