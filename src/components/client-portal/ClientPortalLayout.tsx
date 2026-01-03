@@ -9,7 +9,9 @@ import {
   Trophy,
   BookOpen,
   Award,
-  Users
+  Users,
+  ShoppingBag,
+  Dumbbell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -28,11 +30,11 @@ interface ClientPortalLayoutProps {
 // Base nav items (always visible)
 const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-  { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
+  { to: '/client/homework', icon: Dumbbell, label: 'Domácí', trackName: 'homework' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
   { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-  { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
+  { to: '/client/purchases', icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
 ];
 
 // Conditional nav item
@@ -46,7 +48,7 @@ const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
   { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
-  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+  { to: '/client/purchases', icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
   { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
 ];
 

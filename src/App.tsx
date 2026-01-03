@@ -71,6 +71,8 @@ const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/Client
 const ClientPortalBadges = lazy(() => import("./pages/client-portal/ClientPortalBadges"));
 const ClientPortalLeaderboard = lazy(() => import("./pages/client-portal/ClientPortalLeaderboard"));
 const ClientPortalRewards = lazy(() => import("./pages/client-portal/ClientPortalRewards"));
+const ClientPortalPurchases = lazy(() => import("./pages/client-portal/ClientPortalPurchases"));
+const ClientPortalHomework = lazy(() => import("./pages/client-portal/ClientPortalHomework"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -120,8 +122,10 @@ const App = () => (
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
                 <Route path="diary" element={<ClientPortalWorkoutDiary />} />
+                <Route path="homework" element={<ClientPortalHomework />} />
                 <Route path="attendance" element={<ClientPortalAttendance />} />
                 <Route path="credit" element={<ClientPortalCredit />} />
+                <Route path="purchases" element={<ClientPortalPurchases />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
                 <Route path="challenges" element={<ClientPortalChallenges />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
@@ -138,6 +142,7 @@ const App = () => (
                 <Route path="diary" element={<ClientPortalWorkoutDiary />} />
                 <Route path="attendance" element={<ClientPortalAttendance />} />
                 <Route path="credit" element={<ClientPortalCredit />} />
+                <Route path="purchases" element={<ClientPortalPurchases />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
                 <Route path="challenges" element={<ClientPortalChallenges />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
