@@ -113,12 +113,6 @@ export default function Index() {
           </SectionErrorBoundary>
         )}
         
-        {/* 🔴 Action Block - clients needing attention (lower priority) */}
-        {layout.showActionBlock && (
-          <SectionErrorBoundary section="Akční blok">
-            <ActionBlock data={data} isLoading={isLoading} />
-          </SectionErrorBoundary>
-        )}
       </div>
       
       {/* Desktop fixed bottom bar */}
