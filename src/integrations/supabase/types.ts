@@ -562,6 +562,7 @@ export type Database = {
           score_secondary: number | null
           status: string
           submitted_at: string | null
+          team_id: string | null
           video_url: string | null
           winner_rank: number | null
           xp_awarded: number | null
@@ -582,6 +583,7 @@ export type Database = {
           score_secondary?: number | null
           status?: string
           submitted_at?: string | null
+          team_id?: string | null
           video_url?: string | null
           winner_rank?: number | null
           xp_awarded?: number | null
@@ -602,6 +604,7 @@ export type Database = {
           score_secondary?: number | null
           status?: string
           submitted_at?: string | null
+          team_id?: string | null
           video_url?: string | null
           winner_rank?: number | null
           xp_awarded?: number | null
@@ -628,6 +631,117 @@ export type Database = {
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "challenge_submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_team_members: {
+        Row: {
+          client_id: string
+          id: string
+          joined_at: string
+          role: string
+          team_id: string
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          team_id: string
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_team_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_team_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "challenge_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_teams: {
+        Row: {
+          captain_client_id: string
+          challenge_id: string
+          created_at: string
+          id: string
+          invite_code: string
+          member_count: number | null
+          team_name: string
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          captain_client_id: string
+          challenge_id: string
+          created_at?: string
+          id?: string
+          invite_code?: string
+          member_count?: number | null
+          team_name: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          captain_client_id?: string
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          invite_code?: string
+          member_count?: number | null
+          team_name?: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_teams_captain_client_id_fkey"
+            columns: ["captain_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_teams_captain_client_id_fkey"
+            columns: ["captain_client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "challenge_teams_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
         ]
       }
       challenges: {
@@ -643,6 +757,9 @@ export type Database = {
           fixed_time_s: number | null
           id: string
           instructions: string | null
+          is_team_challenge: boolean | null
+          max_team_size: number | null
+          min_team_size: number | null
           primary_metric: string
           published_to_portal_clients: boolean | null
           ranking_mode: string | null
@@ -651,6 +768,7 @@ export type Database = {
           secondary_metric: string | null
           start_at: string
           status: string
+          team_scoring_mode: string | null
           tie_breaker: string | null
           title: string
           unit_label: string | null
@@ -672,6 +790,9 @@ export type Database = {
           fixed_time_s?: number | null
           id?: string
           instructions?: string | null
+          is_team_challenge?: boolean | null
+          max_team_size?: number | null
+          min_team_size?: number | null
           primary_metric?: string
           published_to_portal_clients?: boolean | null
           ranking_mode?: string | null
@@ -680,6 +801,7 @@ export type Database = {
           secondary_metric?: string | null
           start_at: string
           status?: string
+          team_scoring_mode?: string | null
           tie_breaker?: string | null
           title: string
           unit_label?: string | null
@@ -701,6 +823,9 @@ export type Database = {
           fixed_time_s?: number | null
           id?: string
           instructions?: string | null
+          is_team_challenge?: boolean | null
+          max_team_size?: number | null
+          min_team_size?: number | null
           primary_metric?: string
           published_to_portal_clients?: boolean | null
           ranking_mode?: string | null
@@ -709,6 +834,7 @@ export type Database = {
           secondary_metric?: string | null
           start_at?: string
           status?: string
+          team_scoring_mode?: string | null
           tie_breaker?: string | null
           title?: string
           unit_label?: string | null

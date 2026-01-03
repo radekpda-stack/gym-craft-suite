@@ -35,7 +35,7 @@ import {
 import { Challenge, useCreateChallenge, useUpdateChallenge } from '@/hooks/useChallenges';
 import { useExercises } from '@/hooks/useExercises';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown, Dumbbell } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Dumbbell, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -66,6 +66,12 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
   const [tieBreaker, setTieBreaker] = useState<string>('earliest_submission');
   const [exerciseId, setExerciseId] = useState<string | null>(null);
   const [exerciseOpen, setExerciseOpen] = useState(false);
+  
+  // Team challenge settings
+  const [isTeamChallenge, setIsTeamChallenge] = useState(false);
+  const [minTeamSize, setMinTeamSize] = useState(2);
+  const [maxTeamSize, setMaxTeamSize] = useState(4);
+  const [teamScoringMode, setTeamScoringMode] = useState<string>('sum');
 
   useEffect(() => {
     if (challenge) {
@@ -83,6 +89,11 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRankingMode(challenge.ranking_mode || 'top3');
       setTieBreaker(challenge.tie_breaker || 'earliest_submission');
       setExerciseId((challenge as any).exercise_id || null);
+      // Team settings
+      setIsTeamChallenge((challenge as any).is_team_challenge || false);
+      setMinTeamSize((challenge as any).min_team_size || 2);
+      setMaxTeamSize((challenge as any).max_team_size || 4);
+      setTeamScoringMode((challenge as any).team_scoring_mode || 'sum');
     } else {
       // Reset form
       setTitle('');
@@ -99,6 +110,10 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRankingMode('top3');
       setTieBreaker('earliest_submission');
       setExerciseId(null);
+      setIsTeamChallenge(false);
+      setMinTeamSize(2);
+      setMaxTeamSize(4);
+      setTeamScoringMode('sum');
     }
   }, [challenge, open]);
 
@@ -118,6 +133,10 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       ranking_mode: rankingMode as Challenge['ranking_mode'],
       tie_breaker: tieBreaker as Challenge['tie_breaker'],
       exercise_id: exerciseId,
+      is_team_challenge: isTeamChallenge,
+      min_team_size: minTeamSize,
+      max_team_size: maxTeamSize,
+      team_scoring_mode: teamScoringMode,
     };
 
     if (challenge) {
@@ -396,6 +415,79 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
                 <p className="text-sm text-muted-foreground">Klient musí přiložit video důkaz</p>
               </div>
               <Switch checked={requiresVideo} onCheckedChange={setRequiresVideo} />
+            </div>
+
+            {/* Team Challenge Settings */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label>Týmová výzva</Label>
+                    <p className="text-sm text-muted-foreground">Klienti soutěží v týmech</p>
+                  </div>
+                </div>
+                <Switch checked={isTeamChallenge} onCheckedChange={setIsTeamChallenge} />
+              </div>
+
+              {isTeamChallenge && (
+                <div className="space-y-4 pl-7">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Min. členů v týmu</Label>
+                      <Select 
+                        value={minTeamSize.toString()} 
+                        onValueChange={(v) => setMinTeamSize(parseInt(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Max. členů v týmu</Label>
+                      <Select 
+                        value={maxTeamSize.toString()} 
+                        onValueChange={(v) => setMaxTeamSize(parseInt(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[2, 3, 4, 5, 6, 8, 10].filter(n => n >= minTeamSize).map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Způsob počítání skóre</Label>
+                    <Select value={teamScoringMode} onValueChange={setTeamScoringMode}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sum">Součet všech skóre</SelectItem>
+                        <SelectItem value="average">Průměr skóre členů</SelectItem>
+                        <SelectItem value="best">Nejlepší skóre každého člena</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {teamScoringMode === 'sum' && 'Všechna schválená skóre členů se sčítají'}
+                      {teamScoringMode === 'average' && 'Průměr ze všech schválených skóre'}
+                      {teamScoringMode === 'best' && 'Součet nejlepších skóre každého člena'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
