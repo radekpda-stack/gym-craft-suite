@@ -12,6 +12,9 @@ import { PendingPerformancesCard } from '@/components/performance/PendingPerform
 import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
 import { LastTrainingWidget } from '@/components/dashboard/LastTrainingWidget';
+import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
+import { GoalTrackerCard } from '@/components/dashboard/GoalTrackerCard';
+import { WinOfTheWeekCard } from '@/components/dashboard/WinOfTheWeekCard';
 
 export default function Index() {
   usePageTracking('dashboard');
