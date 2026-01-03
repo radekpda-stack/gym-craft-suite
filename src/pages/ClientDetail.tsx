@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ChevronLeft } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient } from '@/hooks/useClients';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance, useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
@@ -43,6 +44,7 @@ import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
@@ -129,10 +131,25 @@ export default function ClientDetail() {
   };
 
   const handleUpdateTrainingStartDate = async (date: string | null) => {
-    await updateClient.mutateAsync({ 
-      id: client.id, 
-      values: { training_start_date: date } as any 
+    const updated = await updateClient.mutateAsync({
+      id: client.id,
+      values: { training_start_date: date } as any,
     });
+
+    // Force UI to reflect the saved value immediately (even before refetch finishes)
+    queryClient.setQueryData(["clients", client.id], updated);
+
+    // If backend didn't persist the field, warn instead of showing a false-success state
+    const saved = (updated as any)?.training_start_date ?? null;
+    if (saved !== date) {
+      toast({
+        title: 'Datum se neuložilo',
+        description: 'Zkuste to prosím ještě jednou (případně refresh stránky).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     toast({ title: 'Datum aktualizováno' });
   };
 
