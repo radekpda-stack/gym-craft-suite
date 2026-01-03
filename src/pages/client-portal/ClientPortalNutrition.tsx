@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientNutritionCampaign, useClientTodayNutrition, useClientNutritionCompletedDays, useClientNutritionSessions } from '@/hooks/useClientPortalData';
+import { useClientNutritionCampaign, useClientNutritionByDate, useClientNutritionCompletedDays, useClientNutritionSessions } from '@/hooks/useClientPortalData';
 import { useQuickAddWater, useDeleteNutritionEntryPortal, useCreateClientNutritionSession } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, UtensilsCrossed, History, Loader2, PlayCircle } from 'lucide-react';
@@ -17,21 +17,25 @@ import { NutritionDailySummary } from '@/components/client-portal/nutrition/Nutr
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { NutritionHistory } from '@/components/client-portal/nutrition/NutritionHistory';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { type MealTypeId } from '@/components/client-portal/nutrition/constants';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
   entry: any;
 } | null;
 
-type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | null;
-
 export default function ClientPortalNutrition() {
   const { clientId, clientAccount } = useClientPortal();
   const { data: campaign, isLoading } = useClientNutritionCampaign(clientId ?? undefined);
   const { data: allSessions, isLoading: sessionsLoading } = useClientNutritionSessions(clientId ?? undefined);
-  const { data: todayData, isLoading: todayLoading } = useClientTodayNutrition(
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  
+  const { data: dayData, isLoading: dayLoading } = useClientNutritionByDate(
     clientId ?? undefined, 
-    campaign?.id
+    campaign?.id,
+    selectedDateStr
   );
   const { data: completedDays = [] } = useClientNutritionCompletedDays(campaign?.id);
   const quickWater = useQuickAddWater();
@@ -41,8 +45,7 @@ export default function ClientPortalNutrition() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [prefilledMealType, setPrefilledMealType] = useState<MealType>(null);
+  const [prefilledMealType, setPrefilledMealType] = useState<MealTypeId | undefined>();
   const [activeTab, setActiveTab] = useState('current');
 
   const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
@@ -93,7 +96,7 @@ export default function ClientPortalNutrition() {
     }
   };
 
-  const handleQuickMeal = (mealType: MealType) => {
+  const handleQuickMeal = (mealType: MealTypeId) => {
     setPrefilledMealType(mealType);
     setShowAddForm(true);
   };
@@ -118,7 +121,7 @@ export default function ClientPortalNutrition() {
   };
 
   // Calculate water from drinks
-  const waterMl = todayData?.drinks
+  const waterMl = dayData?.drinks
     ?.filter(d => d.drink_type?.toLowerCase().includes('voda') || d.drink_type?.toLowerCase().includes('water'))
     .reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0;
 
@@ -240,11 +243,11 @@ export default function ClientPortalNutrition() {
         )}
 
         {/* Daily Summary */}
-        {campaign.isActive && todayData && (
+        {campaign.isActive && dayData && (
           <NutritionDailySummary
-            foodCount={todayData.food?.length || 0}
-            drinkCount={todayData.drinks?.length || 0}
-            coffeeCount={todayData.coffee?.length || 0}
+            foodCount={dayData.food?.length || 0}
+            drinkCount={dayData.drinks?.length || 0}
+            coffeeCount={dayData.coffee?.length || 0}
             waterMl={waterMl}
             campaignProgress={campaign.daysCompleted}
             campaignTotal={campaign.totalDays}
@@ -310,20 +313,25 @@ export default function ClientPortalNutrition() {
           <FoodLogForm
             sessionId={campaign.id}
             clientId={clientId}
+            selectedDate={selectedDate}
+            prefilledMealType={prefilledMealType}
+            campaignStartDate={campaign.start_date}
+            campaignEndDate={campaign.end_date}
             onClose={() => {
               setShowAddForm(false);
-              setPrefilledMealType(null);
+              setPrefilledMealType(undefined);
             }}
           />
         )}
 
-        {/* Today's Entries */}
-        {campaign.isActive && todayData && (
+        {/* Day's Entries */}
+        {campaign.isActive && dayData && (
           <TodayEntries
-            food={todayData.food}
-            drinks={todayData.drinks}
-            coffee={todayData.coffee}
-            isLoading={todayLoading}
+            food={dayData.food}
+            drinks={dayData.drinks}
+            coffee={dayData.coffee}
+            isLoading={dayLoading}
+            selectedDate={selectedDate}
             onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
             onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
             onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}

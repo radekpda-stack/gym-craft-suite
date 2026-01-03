@@ -19,7 +19,7 @@ export interface DrinkEntryInput {
 }
 
 export interface CoffeeEntryInput {
-  coffee_type: 'espresso' | 'cappuccino' | 'energy' | 'other';
+  coffee_type: 'espresso' | 'cappuccino' | 'tea' | 'energy' | 'other';
   count: number;
   sugar?: boolean;
   sugar_spoons?: number;
