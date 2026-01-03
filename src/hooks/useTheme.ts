@@ -88,20 +88,40 @@ const VALID_THEME_IDS = themes.map(t => t.id);
 // Apply theme to DOM - this is the core function
 function applyThemeToDOM(themeId: ThemeId) {
   const root = document.documentElement;
-  
-  // Remove all theme classes
-  themes.forEach(t => root.classList.remove('theme-' + t.id));
-  
+  const body = document.body;
+
+  // Remove all theme classes (html + body)
+  themes.forEach(t => {
+    root.classList.remove('theme-' + t.id);
+    body?.classList.remove('theme-' + t.id);
+  });
+
   // Add new theme class
   root.classList.add('theme-' + themeId);
-  
+  body?.classList.add('theme-' + themeId);
+
   // Handle dark/light mode
-  if (themeId === 'light-minimal' || themeId === 'frost-minimal') {
-    root.classList.remove('dark');
-    root.classList.add('light');
-  } else {
-    root.classList.remove('light');
-    root.classList.add('dark');
+  const isLight = themeId === 'light-minimal' || themeId === 'frost-minimal';
+  root.classList.toggle('dark', !isLight);
+  root.classList.toggle('light', isLight);
+  body?.classList.toggle('dark', !isLight);
+  body?.classList.toggle('light', isLight);
+
+  // Helpful for debugging + CSS targeting if needed
+  root.setAttribute('data-theme', themeId);
+  root.setAttribute('data-color-mode', isLight ? 'light' : 'dark');
+
+  // Hint to the browser for native controls
+  root.style.colorScheme = isLight ? 'light' : 'dark';
+
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug('[theme] applied', {
+      themeId,
+      htmlClass: root.className,
+      bodyClass: body?.className,
+      background: getComputedStyle(root).getPropertyValue('--background')?.trim(),
+    });
   }
 }
 
