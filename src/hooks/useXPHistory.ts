@@ -13,11 +13,16 @@ export interface XPEvent {
 
 // Source type labels for display
 export const XP_SOURCE_LABELS: Record<string, string> = {
+  // Skutečné hodnoty z databáze
+  training_session: 'Trénink s trenérem',
+  exercise_entry: 'Záznam cviku',
+  
+  // Zachovat pro zpětnou kompatibilitu
   training_completed: 'Trénink s trenérem',
   workout_confirmed: 'Vlastní trénink',
   challenge_completed: 'Výzva dokončena',
   badge_earned: 'Nový odznak',
-  streak_bonus: 'Streak bonus',
+  streak_bonus: 'Bonus za sérii',
   first_workout: 'První trénink',
   daily_bonus: 'Denní bonus',
   manual: 'Bonus od trenéra',
@@ -25,6 +30,9 @@ export const XP_SOURCE_LABELS: Record<string, string> = {
 
 // Source type icons
 export const XP_SOURCE_ICONS: Record<string, string> = {
+  training_session: '🏋️',
+  exercise_entry: '💪',
+  
   training_completed: '🏋️',
   workout_confirmed: '💪',
   challenge_completed: '🏆',
