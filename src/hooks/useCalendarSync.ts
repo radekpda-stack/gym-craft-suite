@@ -212,7 +212,8 @@ export function useUpdateEventClientMatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ eventId, clientId }: { eventId: string; clientId: string | null }) => {
+    mutationFn: async ({ eventId, clientId, learn = false }: { eventId: string; clientId: string | null; learn?: boolean }) => {
+      // Update the event with the new client match
       const { error } = await supabase
         .from('calendar_ics_events')
         .update({
@@ -223,9 +224,21 @@ export function useUpdateEventClientMatch() {
         .eq('id', eventId);
 
       if (error) throw error;
+
+      // If learning is requested and we have a client, call the learn action
+      if (learn && clientId) {
+        await supabase.functions.invoke('sync-ics-calendar', {
+          body: {
+            action: 'learn_alias',
+            eventId,
+            clientId,
+          },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['client-aliases'] });
     },
   });
 }

@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { 
   Calendar, Plus, RefreshCw, Trash2, CheckCircle2, XCircle, 
-  Clock, Users, ExternalLink, Loader2, AlertTriangle, Settings2 
+  Clock, Users, ExternalLink, Loader2, AlertTriangle, Settings2,
+  GraduationCap, Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -29,12 +30,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -49,9 +44,11 @@ import {
   useSyncICSFeed,
   useCreateSessionsFromEvents,
   useTestICSUrl,
+  useUpdateEventClientMatch,
   ICSFeed,
 } from '@/hooks/useCalendarSync';
 import { useClients } from '@/hooks/useClients';
+import { ClientMatchSuggestions, MatchSuggestion } from './ClientMatchSuggestions';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -435,71 +432,115 @@ function EventsDialog({ feedId, open, onOpenChange }: {
 }) {
   const { data: events, isLoading } = useICSEvents(feedId);
   const { data: clients } = useClients();
+  const updateEventMatch = useUpdateEventClientMatch();
+
+  const handleSelectClient = async (eventId: string, clientId: string, learn: boolean = false) => {
+    try {
+      await updateEventMatch.mutateAsync({ eventId, clientId, learn });
+      if (learn) {
+        toast.success('Klient přiřazen a vzor naučen');
+      } else {
+        toast.success('Klient přiřazen');
+      }
+    } catch (error) {
+      toast.error('Nepodařilo se přiřadit klienta');
+    }
+  };
+
+  const handleLearnAndSelect = async (eventId: string, clientId: string) => {
+    await handleSelectClient(eventId, clientId, true);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importované události</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Importované události
+          </DialogTitle>
           <DialogDescription>
-            Zkontrolujte přiřazení klientů k událostem
+            Systém automaticky rozpoznává klienty podle jména, přezdívek i naučených vzorů
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="py-8 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : events?.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">
-            Žádné události k zobrazení
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {events?.map((event: any) => (
-              <div 
-                key={event.id}
-                className={cn(
-                  "p-3 rounded-lg border",
-                  event.is_processed ? "bg-muted/50" : "bg-background"
-                )}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 flex-1">
-                    <p className="font-medium">{event.summary}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(event.start_at), 'EEEE d. MMMM yyyy, HH:mm', { locale: cs })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {event.matched_client ? (
-                      <Badge variant="secondary">
-                        <Users className="h-3 w-3 mr-1" />
-                        {event.matched_client.name}
-                      </Badge>
-                    ) : (
-                      <Select>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Přiřadit klienta..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+        <TooltipProvider>
+          {isLoading ? (
+            <div className="py-8 flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : events?.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              Žádné události k zobrazení
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {events?.map((event: any) => {
+                const suggestions = (event.match_suggestions || []) as MatchSuggestion[];
+                
+                return (
+                  <div 
+                    key={event.id}
+                    className={cn(
+                      "p-3 rounded-lg border",
+                      event.is_processed ? "bg-muted/50" : "bg-background"
                     )}
-                    {event.is_processed && (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    )}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <p className="font-medium truncate">{event.summary}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(event.start_at), 'EEEE d. MMMM yyyy, HH:mm', { locale: cs })}
+                        </p>
+                        
+                        {/* Show suggestions for unmatched events */}
+                        {!event.matched_client && suggestions.length > 0 && (
+                          <div className="pt-1">
+                            <ClientMatchSuggestions
+                              suggestions={suggestions}
+                              onSelect={(clientId) => handleSelectClient(event.id, clientId)}
+                              onLearn={(clientId) => handleLearnAndSelect(event.id, clientId)}
+                              showLearnButton
+                              disabled={updateEventMatch.isPending}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {event.matched_client ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <Users className="h-3 w-3" />
+                            {event.matched_client.name}
+                          </Badge>
+                        ) : (
+                          <Select
+                            onValueChange={(value) => handleSelectClient(event.id, value)}
+                            disabled={updateEventMatch.isPending}
+                          >
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue placeholder="Vybrat..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clients?.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {event.is_processed && (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </TooltipProvider>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

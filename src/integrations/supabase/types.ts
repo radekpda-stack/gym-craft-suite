@@ -375,6 +375,7 @@ export type Database = {
           id: string
           is_processed: boolean | null
           location: string | null
+          match_suggestions: Json | null
           matched_client_id: string | null
           start_at: string
           summary: string | null
@@ -390,6 +391,7 @@ export type Database = {
           id?: string
           is_processed?: boolean | null
           location?: string | null
+          match_suggestions?: Json | null
           matched_client_id?: string | null
           start_at: string
           summary?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           id?: string
           is_processed?: boolean | null
           location?: string | null
+          match_suggestions?: Json | null
           matched_client_id?: string | null
           start_at?: string
           summary?: string | null
@@ -1594,6 +1597,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "diagnostics"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_name_aliases: {
+        Row: {
+          alias: string
+          client_id: string
+          created_at: string | null
+          id: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          alias: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          alias?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_name_aliases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_name_aliases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
           },
         ]
       }
