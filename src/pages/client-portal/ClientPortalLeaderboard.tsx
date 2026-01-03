@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight } from 'lucide-react';
+import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight, Timer, Route } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboard, useLeaderboardSettings, LeaderboardEntry } from '@/hooks/useClientGamification';
 import { 
   useExercisesForComparison, 
   useStrengthExerciseLeaderboard,
   useCardioExerciseLeaderboard,
-  ExerciseLeaderboardEntry
+  ExerciseLeaderboardEntry,
+  GenderFilter
 } from '@/hooks/useExerciseLeaderboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 
 function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; currentClientId?: string }) {
@@ -169,23 +171,84 @@ function EmptyState({ message }: { message?: string }) {
   );
 }
 
+function GenderFilterToggle({ 
+  value, 
+  onChange 
+}: { 
+  value: GenderFilter; 
+  onChange: (value: GenderFilter) => void;
+}) {
+  return (
+    <ToggleGroup 
+      type="single" 
+      value={value} 
+      onValueChange={(v) => v && onChange(v as GenderFilter)}
+      className="justify-start"
+    >
+      <ToggleGroupItem value="all" aria-label="Všichni" size="sm" className="gap-1.5 px-3">
+        <Users className="w-4 h-4" />
+        <span className="hidden sm:inline">Všichni</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="male" aria-label="Muži" size="sm" className="gap-1.5 px-3">
+        👨
+        <span className="hidden sm:inline">Muži</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="female" aria-label="Ženy" size="sm" className="gap-1.5 px-3">
+        👩
+        <span className="hidden sm:inline">Ženy</span>
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+
+function CardioMetricToggle({
+  value,
+  onChange
+}: {
+  value: 'distance' | 'duration';
+  onChange: (value: 'distance' | 'duration') => void;
+}) {
+  return (
+    <ToggleGroup 
+      type="single" 
+      value={value} 
+      onValueChange={(v) => v && onChange(v as 'distance' | 'duration')}
+      className="justify-start"
+    >
+      <ToggleGroupItem value="distance" aria-label="Vzdálenost" size="sm" className="gap-1.5 px-3">
+        <Route className="w-4 h-4" />
+        <span className="hidden sm:inline">Vzdálenost</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="duration" aria-label="Čas" size="sm" className="gap-1.5 px-3">
+        <Timer className="w-4 h-4" />
+        <span className="hidden sm:inline">Čas</span>
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+
 function ExerciseComparisonTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
   
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [exerciseType, setExerciseType] = useState<'strength' | 'cardio'>('strength');
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [cardioMetric, setCardioMetric] = useState<'distance' | 'duration'>('distance');
   
   const { data: exercises, isLoading: exercisesLoading } = useExercisesForComparison(trainerId);
   
   const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
     exerciseType === 'strength' ? selectedExercise : null,
-    trainerId
+    trainerId,
+    genderFilter
   );
   
   const { data: cardioLeaderboard, isLoading: cardioLoading } = useCardioExerciseLeaderboard(
     exerciseType === 'cardio' ? selectedExercise : null,
-    trainerId
+    trainerId,
+    cardioMetric,
+    genderFilter
   );
   
   const leaderboard = exerciseType === 'strength' ? strengthLeaderboard : cardioLeaderboard;
@@ -194,6 +257,14 @@ function ExerciseComparisonTab() {
   const currentExercises = exerciseType === 'strength' 
     ? exercises?.strength || [] 
     : exercises?.cardio || [];
+
+  const getGenderLabel = (filter: GenderFilter) => {
+    switch (filter) {
+      case 'male': return 'Muži';
+      case 'female': return 'Ženy';
+      default: return 'Všichni';
+    }
+  };
 
   if (exercisesLoading) {
     return (
@@ -236,7 +307,7 @@ function ExerciseComparisonTab() {
               Vyber cvik pro porovnání
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
+          <CardContent className="space-y-1 max-h-[400px] overflow-y-auto">
             {currentExercises.length === 0 ? (
               <EmptyState message="Zatím nejsou k dispozici žádné cviky pro porovnání" />
             ) : (
@@ -277,6 +348,20 @@ function ExerciseComparisonTab() {
             <h3 className="font-semibold capitalize">{selectedExercise}</h3>
           </div>
 
+          {/* Gender filter */}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground font-medium">Pohlaví</p>
+            <GenderFilterToggle value={genderFilter} onChange={setGenderFilter} />
+          </div>
+
+          {/* Cardio metric toggle - only for cardio */}
+          {exerciseType === 'cardio' && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Metrika</p>
+              <CardioMetricToggle value={cardioMetric} onChange={setCardioMetric} />
+            </div>
+          )}
+
           {/* Leaderboard */}
           {isLoading ? (
             <div className="space-y-3">
@@ -285,9 +370,16 @@ function ExerciseComparisonTab() {
               ))}
             </div>
           ) : !leaderboard ? (
-            <EmptyState message="Nedostatek dat pro zobrazení žebříčku (potřeba alespoň 2 účastníci)" />
+            <EmptyState message={`Žádní účastníci v kategorii "${getGenderLabel(genderFilter)}"`} />
           ) : (
             <>
+              {/* Active filter badge */}
+              {genderFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  {genderFilter === 'male' ? '👨' : '👩'} {getGenderLabel(genderFilter)}
+                </Badge>
+              )}
+
               {/* Your position */}
               {leaderboard.client_rank && (
                 <motion.div
@@ -304,6 +396,7 @@ function ExerciseComparisonTab() {
                         <p className="font-medium">Tvoje pozice</p>
                         <p className="text-sm text-muted-foreground">
                           z {leaderboard.total_participants} účastníků
+                          {genderFilter !== 'all' && ` (${getGenderLabel(genderFilter).toLowerCase()})`}
                         </p>
                       </div>
                     </div>
@@ -332,7 +425,7 @@ function ExerciseComparisonTab() {
                     ) : (
                       <>
                         <Footprints className="w-4 h-4" />
-                        Nejlepší výkony (vzdálenost)
+                        Nejlepší výkony ({cardioMetric === 'distance' ? 'vzdálenost' : 'čas'})
                       </>
                     )}
                   </CardTitle>
