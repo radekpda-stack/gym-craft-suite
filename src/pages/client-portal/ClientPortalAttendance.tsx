@@ -5,44 +5,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientAttendanceStats, type PeriodDays } from '@/hooks/useClientPortalStats';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Calendar, CheckCircle2, Clock, Dumbbell, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Dumbbell, AlertCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { PeriodChips, TrendIcon } from '@/components/client-portal/common/SharedComponents';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 30, label: '30 dní' },
   { value: 90, label: '90 dní' },
   { value: 'all', label: 'Vše' },
 ];
-
-function PeriodChips({ value, onChange }: { value: PeriodDays; onChange: (v: PeriodDays) => void }) {
-  return (
-    <div className="flex gap-2">
-      {periodOptions.map(opt => (
-        <button
-          key={String(opt.value)}
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "px-3 py-1.5 text-xs font-medium rounded-full transition-all",
-            value === opt.value
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function TrendIcon({ value }: { value: number }) {
-  if (value > 0) return <TrendingUp className="w-4 h-4 text-success" />;
-  if (value < 0) return <TrendingDown className="w-4 h-4 text-destructive" />;
-  return <Minus className="w-4 h-4 text-muted-foreground" />;
-}
 
 export default function ClientPortalAttendance() {
   const { clientId } = useClientPortal();
@@ -72,7 +46,7 @@ export default function ClientPortalAttendance() {
           <h1 className="text-xl sm:text-2xl font-bold">Docházka</h1>
           <p className="text-muted-foreground text-sm">Historie absolvovaných tréninků</p>
         </div>
-        <PeriodChips value={period} onChange={setPeriod} />
+        <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
       </div>
 
       {/* Error Alert */}
