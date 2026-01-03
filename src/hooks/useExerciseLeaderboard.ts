@@ -19,7 +19,9 @@ export interface ExerciseForLeaderboard {
   exercise_type: 'strength' | 'cardio';
 }
 
-// Fetch popular exercises that have enough data for comparison
+export type GenderFilter = 'all' | 'male' | 'female';
+
+// Fetch all exercises for comparison (no limits)
 export function useExercisesForComparison(trainerId: string | undefined) {
   return useQuery({
     queryKey: ['exercises-for-comparison', trainerId],
@@ -62,7 +64,7 @@ export function useExercisesForComparison(trainerId: string | undefined) {
         }
       });
 
-      // Convert to arrays and sort by count
+      // Convert to arrays and sort by count - NO LIMITS
       const strengthExercises: ExerciseForLeaderboard[] = Array.from(strengthCounts.entries())
         .map(([name, data]) => ({
           exercise_name: name,
@@ -70,9 +72,8 @@ export function useExercisesForComparison(trainerId: string | undefined) {
           entry_count: data.count,
           exercise_type: 'strength' as const,
         }))
-        .filter(e => e.entry_count >= 3)
-        .sort((a, b) => b.entry_count - a.entry_count)
-        .slice(0, 20);
+        .filter(e => e.entry_count >= 1) // At least 1 entry
+        .sort((a, b) => b.entry_count - a.entry_count);
 
       const cardioExercises: ExerciseForLeaderboard[] = Array.from(cardioCounts.entries())
         .map(([name, data]) => ({
@@ -81,9 +82,8 @@ export function useExercisesForComparison(trainerId: string | undefined) {
           entry_count: data.count,
           exercise_type: 'cardio' as const,
         }))
-        .filter(e => e.entry_count >= 3)
-        .sort((a, b) => b.entry_count - a.entry_count)
-        .slice(0, 20);
+        .filter(e => e.entry_count >= 1) // At least 1 entry
+        .sort((a, b) => b.entry_count - a.entry_count);
 
       return { strength: strengthExercises, cardio: cardioExercises };
     },
@@ -95,12 +95,13 @@ export function useExercisesForComparison(trainerId: string | undefined) {
 // Fetch leaderboard for a specific strength exercise (by max weight)
 export function useStrengthExerciseLeaderboard(
   exerciseName: string | null,
-  trainerId: string | undefined
+  trainerId: string | undefined,
+  genderFilter: GenderFilter = 'all'
 ) {
   const { clientId } = useClientPortal();
 
   return useQuery({
-    queryKey: ['strength-exercise-leaderboard', exerciseName, trainerId],
+    queryKey: ['strength-exercise-leaderboard', exerciseName, trainerId, genderFilter],
     queryFn: async () => {
       if (!exerciseName || !trainerId) return null;
 
@@ -125,7 +126,7 @@ export function useStrengthExerciseLeaderboard(
       });
 
       const clientIds = Array.from(clientBests.keys());
-      if (clientIds.length < 2) return null;
+      if (clientIds.length < 1) return null;
 
       // Get client names and leaderboard settings
       const { data: clients } = await supabase
@@ -141,9 +142,20 @@ export function useStrengthExerciseLeaderboard(
       const settingsMap = new Map((settings || []).map(s => [s.client_id, s]));
       const clientsMap = new Map((clients || []).map(c => [c.id, c]));
 
+      // Filter by gender if needed
+      const filteredClientIds = genderFilter === 'all' 
+        ? clientIds 
+        : clientIds.filter(cid => {
+            const client = clientsMap.get(cid);
+            return client?.gender === genderFilter;
+          });
+
+      if (filteredClientIds.length < 1) return null;
+
       // Build leaderboard
-      const leaderboard: ExerciseLeaderboardEntry[] = Array.from(clientBests.entries())
-        .map(([cid, data]) => {
+      const leaderboard: ExerciseLeaderboardEntry[] = filteredClientIds
+        .map(cid => {
+          const data = clientBests.get(cid)!;
           const client = clientsMap.get(cid);
           const setting = settingsMap.get(cid);
           const isVisible = setting?.leaderboard_visible === true;
@@ -179,6 +191,7 @@ export function useStrengthExerciseLeaderboard(
         exercise_name: exerciseName,
         metric: 'weight',
         unit: 'kg',
+        gender_filter: genderFilter,
       };
     },
     enabled: !!exerciseName && !!trainerId,
@@ -190,12 +203,13 @@ export function useStrengthExerciseLeaderboard(
 export function useCardioExerciseLeaderboard(
   exerciseName: string | null,
   trainerId: string | undefined,
-  metric: 'distance' | 'duration' = 'distance'
+  metric: 'distance' | 'duration' = 'distance',
+  genderFilter: GenderFilter = 'all'
 ) {
   const { clientId } = useClientPortal();
 
   return useQuery({
-    queryKey: ['cardio-exercise-leaderboard', exerciseName, trainerId, metric],
+    queryKey: ['cardio-exercise-leaderboard', exerciseName, trainerId, metric, genderFilter],
     queryFn: async () => {
       if (!exerciseName || !trainerId) return null;
 
@@ -229,7 +243,7 @@ export function useCardioExerciseLeaderboard(
       });
 
       const clientIds = Array.from(clientBests.keys());
-      if (clientIds.length < 2) return null;
+      if (clientIds.length < 1) return null;
 
       // Get client names and leaderboard settings
       const { data: clients } = await supabase
@@ -245,9 +259,20 @@ export function useCardioExerciseLeaderboard(
       const settingsMap = new Map((settings || []).map(s => [s.client_id, s]));
       const clientsMap = new Map((clients || []).map(c => [c.id, c]));
 
+      // Filter by gender if needed
+      const filteredClientIds = genderFilter === 'all' 
+        ? clientIds 
+        : clientIds.filter(cid => {
+            const client = clientsMap.get(cid);
+            return client?.gender === genderFilter;
+          });
+
+      if (filteredClientIds.length < 1) return null;
+
       // Build leaderboard
-      const leaderboard: ExerciseLeaderboardEntry[] = Array.from(clientBests.entries())
-        .map(([cid, data]) => {
+      const leaderboard: ExerciseLeaderboardEntry[] = filteredClientIds
+        .map(cid => {
+          const data = clientBests.get(cid)!;
           const client = clientsMap.get(cid);
           const setting = settingsMap.get(cid);
           const isVisible = setting?.leaderboard_visible === true;
@@ -297,6 +322,7 @@ export function useCardioExerciseLeaderboard(
         exercise_name: exerciseName,
         metric,
         unit: metric === 'distance' ? 'm' : 's',
+        gender_filter: genderFilter,
       };
     },
     enabled: !!exerciseName && !!trainerId,
