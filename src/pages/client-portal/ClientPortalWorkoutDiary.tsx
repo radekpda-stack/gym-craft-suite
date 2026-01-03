@@ -45,6 +45,7 @@ import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/Worko
 import { WorkoutFilters } from '@/components/client-portal/workout-diary/WorkoutFilters';
 import { WorkoutListItem } from '@/components/client-portal/workout-diary/WorkoutListItem';
 import { WorkoutDateDetailDialog } from '@/components/client-portal/workout-diary/WorkoutDateDetailDialog';
+import { WorkoutProgressCharts } from '@/components/client-portal/workout-diary/WorkoutProgressCharts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { exportWorkoutDiaryToPDF, exportWorkoutDiaryToCSV } from '@/lib/workoutDiaryExport';
@@ -81,9 +82,10 @@ export default function ClientPortalWorkoutDiary() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [entryForTemplate, setEntryForTemplate] = useState<UnifiedDiaryEntry | null>(null);
   
-  // Filters
+  // Filters and search
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSource, setFilterSource] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs(prev => {
@@ -261,8 +263,19 @@ export default function ClientPortalWorkoutDiary() {
         if (filterSource === 'coached') return e.is_coached;
         if (filterSource === 'self') return !e.is_coached;
         return true;
+      })
+      .filter(e => {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        // Search in notes
+        if (e.notes?.toLowerCase().includes(query)) return true;
+        // Search in workout type
+        if (e.workout_type?.toLowerCase().includes(query)) return true;
+        // Search in exercise names
+        if (e.exercises?.some(ex => ex.exercise_name.toLowerCase().includes(query))) return true;
+        return false;
       });
-  }, [entries, filterType, filterSource]);
+  }, [entries, filterType, filterSource, searchQuery]);
 
   if (isLoading) {
     return (
@@ -359,13 +372,33 @@ export default function ClientPortalWorkoutDiary() {
             />
           )}
 
-          {/* Filters */}
+          {/* Filters with Search */}
           <WorkoutFilters
             filterType={filterType}
             setFilterType={setFilterType}
             filterSource={filterSource}
             setFilterSource={setFilterSource}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
           />
+
+          {/* Progress Charts */}
+          {completedEntries.length >= 3 && (
+            <WorkoutProgressCharts 
+              logs={completedEntries.filter(e => !e.is_coached).map(e => ({
+                id: e.id,
+                date: e.date,
+                duration_minutes: e.duration_minutes,
+                workout_type: e.workout_type,
+                exercises: e.exercises?.map(ex => ({
+                  exercise_name: ex.exercise_name,
+                  weight_kg: ex.weight_kg,
+                  sets: ex.sets,
+                  reps: ex.reps,
+                })),
+              }))} 
+            />
+          )}
 
           {/* Workout Logs */}
           {completedEntries.length === 0 ? (
