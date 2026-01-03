@@ -26,6 +26,7 @@ export interface Client {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  training_start_date: string | null;
   // Extended personal data fields
   handedness: string | null;
   occupation: string | null;
@@ -206,7 +207,7 @@ export function useUpdateClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: ClientFormValues }) => {
+    mutationFn: async ({ id, values }: { id: string; values: ClientFormValues & { training_start_date?: string | null } }) => {
       const updateData: Record<string, unknown> = {
         name: values.name,
         email: values.email,
@@ -222,6 +223,11 @@ export function useUpdateClient() {
       // Only update created_at if it's provided (for editing creation date)
       if (values.createdAt) {
         updateData.created_at = new Date(values.createdAt).toISOString();
+      }
+
+      // Update training_start_date if provided
+      if (values.training_start_date !== undefined) {
+        updateData.training_start_date = values.training_start_date;
       }
 
       const { data, error } = await supabase

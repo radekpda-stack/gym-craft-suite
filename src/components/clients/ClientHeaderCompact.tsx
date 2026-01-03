@@ -54,8 +54,8 @@ export function ClientHeaderCompact({
     : null;
 
   // Training start date - use training_start_date or fallback to created_at
-  const trainingStartDate = (client as any).training_start_date 
-    ? new Date((client as any).training_start_date)
+  const trainingStartDate = client.training_start_date 
+    ? new Date(client.training_start_date)
     : new Date(client.created_at);
 
   // Calculate months with trainer
@@ -74,7 +74,7 @@ export function ClientHeaderCompact({
   };
 
   const handleStartEditDate = () => {
-    const date = (client as any).training_start_date || format(new Date(client.created_at), 'yyyy-MM-dd');
+    const date = client.training_start_date || format(new Date(client.created_at), 'yyyy-MM-dd');
     setStartDateInput(date);
     setIsEditingStartDate(true);
   };
