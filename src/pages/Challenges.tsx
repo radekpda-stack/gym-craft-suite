@@ -1,18 +1,23 @@
-import { useState } from 'react';
-import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles, Copy, Download, Award, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useChallenges, useUpdateChallenge, useDeleteChallenge, Challenge } from '@/hooks/useChallenges';
+import { useDuplicateChallenge, useArchiveExpiredChallenges, useExportChallengeResults } from '@/hooks/useChallengeActions';
 import { ChallengeEditor } from '@/components/challenges/ChallengeEditor';
 import { ChallengeSubmissionsView } from '@/components/challenges/ChallengeSubmissionsView';
+import { ChallengeWinnerManager } from '@/components/challenges/ChallengeWinnerManager';
+import { ChallengeStatsCard } from '@/components/challenges/ChallengeStatsCard';
 import { useSeedChallenges } from '@/hooks/useSeedChallenges';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format, isAfter, isBefore } from 'date-fns';
@@ -23,15 +28,36 @@ export default function Challenges() {
   const { data: challenges, isLoading } = useChallenges();
   const updateChallenge = useUpdateChallenge();
   const deleteChallenge = useDeleteChallenge();
+  const duplicateChallenge = useDuplicateChallenge();
+  const archiveExpired = useArchiveExpiredChallenges();
+  const exportResults = useExportChallengeResults();
   const seedChallenges = useSeedChallenges();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
   const [viewingSubmissions, setViewingSubmissions] = useState<Challenge | null>(null);
+  const [managingWinners, setManagingWinners] = useState<Challenge | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStats, setSelectedStats] = useState<Challenge | null>(null);
 
-  const draftChallenges = challenges?.filter(c => c.status === 'draft') || [];
-  const publishedChallenges = challenges?.filter(c => c.status === 'published') || [];
-  const archivedChallenges = challenges?.filter(c => c.status === 'archived') || [];
+  // Auto-archive expired challenges on mount
+  useEffect(() => {
+    archiveExpired.mutate();
+  }, []);
+
+  // Filter challenges by search
+  const filterBySearch = (list: Challenge[]) => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(c => 
+      c.title.toLowerCase().includes(q) || 
+      c.description?.toLowerCase().includes(q)
+    );
+  };
+
+  const draftChallenges = filterBySearch(challenges?.filter(c => c.status === 'draft') || []);
+  const publishedChallenges = filterBySearch(challenges?.filter(c => c.status === 'published') || []);
+  const archivedChallenges = filterBySearch(challenges?.filter(c => c.status === 'archived') || []);
 
   const getStatusBadge = (challenge: Challenge) => {
     const now = new Date();
@@ -110,6 +136,24 @@ export default function Challenges() {
                   <Users className="h-4 w-4 mr-2" />
                   Výsledky
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setManagingWinners(challenge)}>
+                  <Award className="h-4 w-4 mr-2" />
+                  Správa vítězů
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedStats(challenge)}>
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Statistiky
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => duplicateChallenge.mutate(challenge)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplikovat
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportResults.mutate(challenge.id)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {challenge.status === 'draft' && (
                   <DropdownMenuItem onClick={() => handlePublish(challenge)}>
                     <Play className="h-4 w-4 mr-2" />
@@ -190,7 +234,7 @@ export default function Challenges() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Trophy className="h-6 w-6 text-amber-500" />
@@ -198,7 +242,17 @@ export default function Challenges() {
           </h1>
           <p className="text-muted-foreground">Správa challenge pro klienty v portálu</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Hledat výzvu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-48"
+            />
+          </div>
           {challenges?.length === 0 && (
             <Button 
               variant="outline" 
@@ -289,6 +343,31 @@ export default function Challenges() {
           open={!!viewingSubmissions}
           onOpenChange={(open) => !open && setViewingSubmissions(null)}
         />
+      )}
+
+      {managingWinners && (
+        <ChallengeWinnerManager
+          challenge={managingWinners}
+          open={!!managingWinners}
+          onOpenChange={(open) => !open && setManagingWinners(null)}
+        />
+      )}
+
+      {/* Stats Dialog */}
+      {selectedStats && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-background rounded-xl shadow-xl border max-w-md w-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="font-semibold">Statistiky: {selectedStats.title}</h2>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedStats(null)}>
+                ✕
+              </Button>
+            </div>
+            <div className="p-4">
+              <ChallengeStatsCard challenge={selectedStats} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
