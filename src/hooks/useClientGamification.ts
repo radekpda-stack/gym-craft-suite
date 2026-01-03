@@ -363,228 +363,48 @@ function generateAnonymousName(clientId: string): string {
   return `${adjective} ${animal} #${number}`;
 }
 
-// Leaderboard data
+// Leaderboard data - now uses edge function to bypass RLS
 export function useLeaderboard(type: 'xp_month' | 'workouts_month' | 'workouts_alltime') {
+  const { clientId, clientAccount } = useClientPortal();
+  const trainerId = clientAccount?.trainer_id;
+
   return useQuery({
-    queryKey: ['leaderboard', type],
+    queryKey: ['leaderboard', type, trainerId, clientId],
     queryFn: async () => {
-      const now = new Date();
-      const monthStart = startOfMonth(now);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      // Get all clients with XP data (active in gamification)
-      const { data: clientXpData, error: xpError } = await supabase
-        .from('client_xp')
-        .select('client_id, total_xp');
-      
-      if (xpError) throw xpError;
-      if (!clientXpData?.length) return [];
-      
-      const clientIds = clientXpData.map(c => c.client_id);
-      
-      // Get leaderboard settings for all clients
-      const { data: settings, error: settingsError } = await supabase
-        .from('client_leaderboard_settings')
-        .select('client_id, leaderboard_nickname, leaderboard_visible')
-        .in('client_id', clientIds);
-      
-      if (settingsError) throw settingsError;
-      
-      // Get client gender and self-profile information
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('id, gender, is_self_profile')
-        .in('id', clientIds);
-      
-      if (clientsError) throw clientsError;
-      
-      // Create settings map - default to anonymous if no settings exist
-      const settingsMap = new Map(settings?.map(s => [s.client_id, s]) || []);
-      const genderMap = new Map(clientsData?.map(c => [c.id, c.gender]) || []);
-      const selfProfileMap = new Map(clientsData?.map(c => [c.id, c.is_self_profile]) || []);
-      
-      // Get XP events for this month (for monthly XP calculation)
-      const { data: xpEvents, error: eventsError } = await supabase
-        .from('xp_events')
-        .select('client_id, xp_amount, created_at, source_type')
-        .in('client_id', clientIds)
-        .gte('created_at', monthStart.toISOString());
-      
-      if (eventsError) throw eventsError;
-      
-      // Get training sessions for workout counts and verified status
-      const { data: trainingSessions, error: trainingError } = await supabase
-        .from('training_sessions')
-        .select('client_id, date')
-        .in('client_id', clientIds)
-        .eq('status', 'completed');
-      
-      if (trainingError) throw trainingError;
-      
-      // Get unique workout dates from xp_events (each date = 1 workout)
-      const { data: allXpEvents, error: allEventsError } = await supabase
-        .from('xp_events')
-        .select('client_id, created_at, source_type')
-        .in('client_id', clientIds);
-      
-      if (allEventsError) throw allEventsError;
-      
-      // Aggregate data per client
-      const clientData: Record<string, {
-        totalXP: number;
-        monthlyXP: number;
-        totalWorkouts: number;
-        monthlyWorkouts: number;
-        coachConfirmedRecent: number;
-        totalRecent: number;
-      }> = {};
-      
-      clientIds.forEach(id => {
-        clientData[id] = {
-          totalXP: 0,
-          monthlyXP: 0,
-          totalWorkouts: 0,
-          monthlyWorkouts: 0,
-          coachConfirmedRecent: 0,
-          totalRecent: 0,
-        };
+      if (!trainerId || !clientId) return [];
+
+      // Map type to edge function format
+      const leaderboardType = type === 'workouts_alltime' ? 'alltime' : 'month';
+
+      const { data, error } = await supabase.functions.invoke('client-portal-benchmarks', {
+        body: {
+          action: 'get_workouts_leaderboard',
+          trainerId,
+          clientId,
+          leaderboardType,
+        },
       });
-      
-      // Set total XP from client_xp table
-      clientXpData?.forEach(xp => {
-        if (clientData[xp.client_id]) {
-          clientData[xp.client_id].totalXP = xp.total_xp;
-        }
-      });
-      
-      // Calculate monthly XP from xp_events
-      xpEvents?.forEach(event => {
-        if (clientData[event.client_id]) {
-          clientData[event.client_id].monthlyXP += event.xp_amount;
-        }
-      });
-      
-      // Calculate workout counts (count unique dates from xp_events)
-      const workoutDates: Record<string, Set<string>> = {};
-      const monthlyWorkoutDates: Record<string, Set<string>> = {};
-      
-      clientIds.forEach(id => {
-        workoutDates[id] = new Set();
-        monthlyWorkoutDates[id] = new Set();
-      });
-      
-      allXpEvents?.forEach(event => {
-        const date = parseISO(event.created_at);
-        const dateKey = format(date, 'yyyy-MM-dd');
-        
-        if (workoutDates[event.client_id]) {
-          workoutDates[event.client_id].add(dateKey);
-          
-          if (date >= monthStart) {
-            monthlyWorkoutDates[event.client_id].add(dateKey);
-          }
-        }
-      });
-      
-      // Set workout counts
-      clientIds.forEach(id => {
-        clientData[id].totalWorkouts = workoutDates[id].size;
-        clientData[id].monthlyWorkouts = monthlyWorkoutDates[id].size;
-      });
-      
-      // Calculate verified status from training sessions (coach-confirmed)
-      trainingSessions?.forEach(t => {
-        const date = parseISO(t.date);
-        
-        if (date >= thirtyDaysAgo) {
-          clientData[t.client_id].coachConfirmedRecent++;
-          clientData[t.client_id].totalRecent++;
-        }
-      });
-      
-      // Also count recent xp_events for totalRecent
-      allXpEvents?.forEach(event => {
-        const date = parseISO(event.created_at);
-        if (date >= thirtyDaysAgo && clientData[event.client_id]) {
-          // Avoid double counting training_sessions
-          if (event.source_type !== 'training_session') {
-            clientData[event.client_id].totalRecent++;
-          }
-        }
-      });
-      
-      // Build leaderboard - include ALL clients but anonymize those without visible setting
-      const entries: LeaderboardEntry[] = clientIds.map(clientId => {
-        const data = clientData[clientId];
-        const clientSettings = settingsMap.get(clientId);
-        // Trainer's self-profile is always visible
-        const isSelfProfile = selfProfileMap.get(clientId) === true;
-        const isVisible = isSelfProfile || clientSettings?.leaderboard_visible === true;
-        const isVerified = data.totalRecent > 0 
-          ? (data.coachConfirmedRecent / data.totalRecent) >= 0.7 
-          : false;
-        
-        // Get gender
-        const rawGender = genderMap.get(clientId);
-        const gender: 'male' | 'female' | null = 
-          rawGender === 'male' ? 'male' : 
-          rawGender === 'female' ? 'female' : 
-          null;
-        
-        let sortValue = 0;
-        let displayValue = 0;
-        
-        switch (type) {
-          case 'xp_month':
-            sortValue = data.monthlyXP;
-            displayValue = data.monthlyXP;
-            break;
-          case 'workouts_month':
-            sortValue = data.monthlyWorkouts;
-            displayValue = data.monthlyWorkouts;
-            break;
-          case 'workouts_alltime':
-            sortValue = data.totalWorkouts;
-            displayValue = data.totalWorkouts;
-            break;
-        }
-        
-        // Determine display name
-        let nickname: string;
-        if (isVisible) {
-          nickname = clientSettings?.leaderboard_nickname || 'Aktivní sportovec';
-        } else {
-          nickname = generateAnonymousName(clientId);
-        }
-        
-        return {
-          client_id: clientId,
-          nickname,
-          xp: type === 'xp_month' ? displayValue : data.totalXP,
-          workout_count: type.includes('workouts') ? displayValue : data.totalWorkouts,
-          is_verified: isVerified,
-          rank: 0,
-          is_anonymous: !isVisible,
-          gender,
-        };
-      });
-      
-      // Sort and assign ranks
-      entries.sort((a, b) => {
-        const aVal = type === 'xp_month' ? a.xp : a.workout_count;
-        const bVal = type === 'xp_month' ? b.xp : b.workout_count;
-        return bVal - aVal;
-      });
-      
-      entries.forEach((entry, index) => {
-        entry.rank = index + 1;
-      });
-      
-      return entries.filter(e => 
-        type === 'xp_month' ? e.xp > 0 : e.workout_count > 0
-      );
+
+      if (error) {
+        console.error('[useLeaderboard] Error:', error);
+        throw error;
+      }
+
+      // Transform to expected format
+      const entries: LeaderboardEntry[] = (data?.leaderboard || []).map((e: any) => ({
+        client_id: e.client_id,
+        nickname: e.nickname,
+        xp: 0, // Not used for workout leaderboards
+        workout_count: e.workout_count,
+        is_verified: e.is_verified,
+        rank: e.rank,
+        is_anonymous: e.is_anonymous,
+        gender: e.gender as 'male' | 'female' | null,
+      }));
+
+      return entries;
     },
+    enabled: !!trainerId && !!clientId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
