@@ -8272,6 +8272,10 @@ export type Database = {
       }
       is_client_user: { Args: { _user_id: string }; Returns: boolean }
       normalize_text: { Args: { input_text: string }; Returns: string }
+      recalculate_client_badges: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
       recalculate_client_xp: {
         Args: { p_client_id: string }
         Returns: undefined
