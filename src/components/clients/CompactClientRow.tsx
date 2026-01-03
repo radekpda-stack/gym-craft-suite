@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { MoreHorizontal, Calendar, Star } from 'lucide-react';
+import { MoreHorizontal, Calendar, Star, ClipboardList } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CreditStatusBadge } from '@/components/ui/CreditStatusBadge';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ interface CompactClientRowProps {
   onEdit?: () => void;
   onArchive?: () => void;
   onToggleFavorite?: () => void;
+  onSendPreDiagnostic?: () => void;
   className?: string;
 }
 
@@ -72,6 +73,7 @@ export const CompactClientRow = memo(function CompactClientRow({
   onEdit,
   onArchive,
   onToggleFavorite,
+  onSendPreDiagnostic,
   className,
 }: CompactClientRowProps) {
   const { offsetX, isDragging, direction, handlers } = useSwipeGesture({
@@ -183,12 +185,19 @@ export const CompactClientRow = memo(function CompactClientRow({
             <DropdownMenuContent align="end" className="w-48">
               {onNewTraining && (
                 <DropdownMenuItem onClick={onNewTraining}>
+                  <Calendar className="w-4 h-4 mr-2" />
                   Nový trénink
                 </DropdownMenuItem>
               )}
               {onAddCredit && (
                 <DropdownMenuItem onClick={onAddCredit}>
                   Dobít kredit
+                </DropdownMenuItem>
+              )}
+              {onSendPreDiagnostic && (
+                <DropdownMenuItem onClick={onSendPreDiagnostic}>
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  Poslat pre-diagnostiku
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
