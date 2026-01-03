@@ -20,7 +20,7 @@ interface FeedbackTrendsChartProps {
   clientId: string;
 }
 
-type TimePeriod = 7 | 30 | 90;
+type TimePeriod = 7 | 30 | 90 | 365;
 
 const METRICS = [
   { key: 'pain', label: 'Bolest', color: 'hsl(var(--destructive))' },
@@ -50,8 +50,8 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
       .sort((a, b) => new Date(a.training_date).getTime() - new Date(b.training_date).getTime());
 
     return recentFeedbacks.map(f => ({
-      date: format(new Date(f.training_date), 'd.M', { locale: cs }),
-      fullDate: format(new Date(f.training_date), 'd. MMMM', { locale: cs }),
+      date: format(new Date(f.training_date), period > 90 ? 'MMM' : 'd.M', { locale: cs }),
+      fullDate: format(new Date(f.training_date), 'd. MMMM yyyy', { locale: cs }),
       pain: f.pain,
       energy: f.energy_rating,
       fun: f.fun,
@@ -132,7 +132,7 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-base">Trendy feedbacku</CardTitle>
           <div className="flex gap-1">
-            {([7, 30, 90] as TimePeriod[]).map(p => (
+            {([7, 30, 90, 365] as TimePeriod[]).map(p => (
               <Button
                 key={p}
                 variant={period === p ? 'default' : 'outline'}
@@ -140,7 +140,7 @@ export function FeedbackTrendsChart({ clientId }: FeedbackTrendsChartProps) {
                 className="h-7 px-2 text-xs"
                 onClick={() => setPeriod(p)}
               >
-                {p}d
+                {p === 365 ? '1r' : `${p}d`}
               </Button>
             ))}
           </div>
