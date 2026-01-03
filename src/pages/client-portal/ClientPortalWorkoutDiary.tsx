@@ -1,23 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,47 +14,52 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useCreateWorkoutLog, useDeleteWorkoutLog, useUpdateWorkoutLog } from '@/hooks/useClientWorkoutLogs';
 import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
 import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
+import { useWorkoutForm } from '@/hooks/useWorkoutForm';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   Plus, 
   Dumbbell, 
-  Trash2, 
-  ChevronDown, 
-  ChevronUp,
-  Clock,
-  Target,
-  MessageSquare,
-  Trophy,
-  User,
   Calendar,
   List,
   ClipboardList,
-  MoreVertical,
-  Pencil
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
-import { getEnergyEmoji } from '@/components/client-portal/workout-diary/EnergyRating';
-import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/WorkoutStatsCard';
 import { DiaryCalendarView } from '@/components/client-portal/workout-diary/DiaryCalendarView';
 import { DiaryPlanView } from '@/components/client-portal/workout-diary/DiaryPlanView';
-import { AddWorkoutDialog, ExerciseInput, emptyExercise } from '@/components/client-portal/workout-diary/AddWorkoutDialog';
+import { AddWorkoutDialog } from '@/components/client-portal/workout-diary/AddWorkoutDialog';
+import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/WorkoutStatsCard';
+import { WorkoutFilters } from '@/components/client-portal/workout-diary/WorkoutFilters';
+import { WorkoutListItem } from '@/components/client-portal/workout-diary/WorkoutListItem';
+import { WorkoutDateDetailDialog } from '@/components/client-portal/workout-diary/WorkoutDateDetailDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { exportWorkoutDiaryToPDF, exportWorkoutDiaryToCSV } from '@/lib/workoutDiaryExport';
 
 export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
-  const { data: entries, isLoading } = useUnifiedDiary();
+  const { data: entries, isLoading, refetch } = useUnifiedDiary();
   const createLog = useCreateWorkoutLog();
   const updateLog = useUpdateWorkoutLog();
   const deleteLog = useDeleteWorkoutLog();
   const completeAssignedWorkout = useCompleteAssignedWorkout();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
+
+  // Form state management
+  const workoutForm = useWorkoutForm();
 
   // Get tab from URL param
   const [searchParams] = useSearchParams();
@@ -76,26 +67,19 @@ export default function ClientPortalWorkoutDiary() {
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'seznam');
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isDetailedMode, setIsDetailedMode] = useState(false); // Quick vs Detailed mode
-  const [workoutDate, setWorkoutDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [workoutType, setWorkoutType] = useState<string | null>(null);
-  const [durationMinutes, setDurationMinutes] = useState('');
-  const [workoutRpe, setWorkoutRpe] = useState<number | null>(null);
-  const [energyBefore, setEnergyBefore] = useState<number | null>(null);
-  const [energyAfter, setEnergyAfter] = useState<number | null>(null);
-  const [workoutNotes, setWorkoutNotes] = useState('');
-  const [exercises, setExercises] = useState<ExerciseInput[]>([{ ...emptyExercise }]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [selectedDateEntries, setSelectedDateEntries] = useState<UnifiedDiaryEntry[]>([]);
   const [dateDetailOpen, setDateDetailOpen] = useState(false);
   
-  // For planned workout completion or editing
-  const [editingPlannedWorkoutId, setEditingPlannedWorkoutId] = useState<string | null>(null);
-  const [editingExistingLogId, setEditingExistingLogId] = useState<string | null>(null);
-  
   // Delete confirmation
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [logToDelete, setLogToDelete] = useState<UnifiedDiaryEntry | null>(null);
+  
+  // Save as template dialog
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [entryForTemplate, setEntryForTemplate] = useState<UnifiedDiaryEntry | null>(null);
   
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
@@ -113,50 +97,10 @@ export default function ClientPortalWorkoutDiary() {
     });
   };
 
-  const resetForm = () => {
-    setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
-    setWorkoutType(null);
-    setDurationMinutes('');
-    setWorkoutRpe(null);
-    setEnergyBefore(null);
-    setEnergyAfter(null);
-    setWorkoutNotes('');
-    setExercises([{ ...emptyExercise }]);
-    setEditingPlannedWorkoutId(null);
-    setEditingExistingLogId(null);
-    setIsDetailedMode(false);
-  };
-
   // Edit existing workout
   const handleEditWorkout = (entry: UnifiedDiaryEntry) => {
-    // Only allow editing self-logged workouts
     if (entry.is_coached) return;
-    
-    setWorkoutDate(entry.date);
-    setWorkoutType(entry.workout_type || null);
-    setDurationMinutes(entry.duration_minutes?.toString() || '');
-    setWorkoutRpe(null);
-    setEnergyBefore(entry.energy_before || null);
-    setEnergyAfter(entry.energy_after || null);
-    setWorkoutNotes(entry.notes || '');
-    setEditingExistingLogId(entry.id);
-    setIsDetailedMode(true);
-    
-    if (entry.exercises && entry.exercises.length > 0) {
-      setExercises(entry.exercises.map(ex => ({
-        exercise_name: ex.exercise_name,
-        exercise_id: undefined,
-        sets: ex.sets?.toString() || '',
-        reps: ex.reps?.toString() || '',
-        weight_kg: ex.weight_kg?.toString() || '',
-        duration_seconds: ex.duration_seconds ? (ex.duration_seconds / 60).toString() : '',
-        rpe: ex.rpe?.toString() || '',
-        notes: ex.notes || '',
-      })));
-    } else {
-      setExercises([{ ...emptyExercise }]);
-    }
-    
+    workoutForm.loadFromEntry(entry);
     setDialogOpen(true);
   };
 
@@ -175,82 +119,116 @@ export default function ClientPortalWorkoutDiary() {
     trackPortalEvent('workout_deleted', { workout_type: logToDelete.workout_type });
   };
 
+  // Repeat workout
+  const handleRepeatWorkout = (entry: UnifiedDiaryEntry) => {
+    workoutForm.loadForRepeat(entry);
+    setDialogOpen(true);
+    trackPortalEvent('workout_repeat_started', { workout_type: entry.workout_type });
+  };
+
+  // Save as template
+  const handleSaveAsTemplate = (entry: UnifiedDiaryEntry) => {
+    setEntryForTemplate(entry);
+    setTemplateName(entry.workout_type ? `${entry.workout_type} trénink` : 'Můj trénink');
+    setTemplateDialogOpen(true);
+  };
+
+  const confirmSaveTemplate = async () => {
+    if (!entryForTemplate || !clientId || !clientAccount?.trainer_id || !templateName.trim()) return;
+    
+    setSavingTemplate(true);
+    try {
+      const { error } = await supabase.from('client_workout_templates').insert({
+        client_id: clientId,
+        trainer_id: clientAccount.trainer_id,
+        name: templateName.trim(),
+        workout_type: entryForTemplate.workout_type,
+        exercises: entryForTemplate.exercises?.map(ex => ({
+          exercise_name: ex.exercise_name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight_kg: ex.weight_kg,
+          duration_seconds: ex.duration_seconds,
+        })) || [],
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Šablona uložena');
+      trackPortalEvent('workout_template_saved', { template_name: templateName });
+    } catch (err) {
+      toast.error('Nepodařilo se uložit šablonu');
+    } finally {
+      setSavingTemplate(false);
+      setTemplateDialogOpen(false);
+      setEntryForTemplate(null);
+      setTemplateName('');
+    }
+  };
+
   const handleSaveWorkout = async () => {
     if (!clientId || !clientAccount?.trainer_id) return;
 
-    // For quick mode, we don't require exercises
-    const validExercises = exercises
-      .filter(ex => ex.exercise_name.trim())
-      .map((ex, idx) => ({
-        exercise_name: ex.exercise_name.trim(),
-        exercise_id: ex.exercise_id || null,
-        sets: ex.sets ? parseInt(ex.sets) : null,
-        reps: ex.reps ? parseInt(ex.reps) : null,
-        weight_kg: ex.weight_kg ? parseFloat(ex.weight_kg) : null,
-        duration_seconds: ex.duration_seconds ? parseInt(ex.duration_seconds) * 60 : null,
-        rpe: ex.rpe ? parseInt(ex.rpe) : null,
-        notes: ex.notes || null,
-        sort_order: idx,
-      }));
+    const { formState, getValidExercises } = workoutForm;
+    const validExercises = getValidExercises();
 
     // In quick mode, allow saving without exercises
-    // In detailed mode or when completing planned workout, require exercises
-    const requiresExercises = isDetailedMode || editingPlannedWorkoutId || editingExistingLogId;
+    const requiresExercises = formState.isDetailedMode || formState.editingPlannedWorkoutId || formState.editingExistingLogId;
     if (requiresExercises && validExercises.length === 0) {
       return;
     }
 
     // If completing a planned workout, update existing record
-    if (editingPlannedWorkoutId) {
+    if (formState.editingPlannedWorkoutId) {
       await completeAssignedWorkout.mutateAsync({
-        logId: editingPlannedWorkoutId,
+        logId: formState.editingPlannedWorkoutId,
         clientId,
-        duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
-        rpe: workoutRpe || undefined,
-        notes: workoutNotes || undefined,
-        energy_before: energyBefore || undefined,
-        energy_after: energyAfter || undefined,
+        duration_minutes: formState.durationMinutes ? parseInt(formState.durationMinutes) : undefined,
+        rpe: formState.workoutRpe || undefined,
+        notes: formState.workoutNotes || undefined,
+        energy_before: formState.energyBefore || undefined,
+        energy_after: formState.energyAfter || undefined,
       });
-      trackPortalEvent('planned_workout_completed', { workout_type: workoutType });
-    } else if (editingExistingLogId) {
+      trackPortalEvent('planned_workout_completed', { workout_type: formState.workoutType });
+    } else if (formState.editingExistingLogId) {
       // Update existing workout log
       await updateLog.mutateAsync({
-        logId: editingExistingLogId,
+        logId: formState.editingExistingLogId,
         clientId,
-        date: workoutDate,
-        notes: workoutNotes || null,
-        workout_type: workoutType,
-        duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
-        energy_before: energyBefore,
-        energy_after: energyAfter,
+        date: formState.workoutDate,
+        notes: formState.workoutNotes || null,
+        workout_type: formState.workoutType,
+        duration_minutes: formState.durationMinutes ? parseInt(formState.durationMinutes) : null,
+        energy_before: formState.energyBefore,
+        energy_after: formState.energyAfter,
         exercises: validExercises,
       });
       trackPortalEvent('workout_updated', { 
         exercise_count: validExercises.length, 
-        workout_type: workoutType
+        workout_type: formState.workoutType
       });
     } else {
       // Create new workout log
       await createLog.mutateAsync({
         client_id: clientId,
         trainer_id: clientAccount.trainer_id,
-        date: workoutDate,
-        notes: workoutNotes || undefined,
-        workout_type: workoutType || undefined,
-        duration_minutes: durationMinutes ? parseInt(durationMinutes) : undefined,
-        energy_before: energyBefore || undefined,
-        energy_after: energyAfter || undefined,
+        date: formState.workoutDate,
+        notes: formState.workoutNotes || undefined,
+        workout_type: formState.workoutType || undefined,
+        duration_minutes: formState.durationMinutes ? parseInt(formState.durationMinutes) : undefined,
+        energy_before: formState.energyBefore || undefined,
+        energy_after: formState.energyAfter || undefined,
         exercises: validExercises.length > 0 ? validExercises : undefined,
       });
       trackPortalEvent('workout_logged', { 
         exercise_count: validExercises.length, 
-        workout_type: workoutType,
-        mode: isDetailedMode ? 'detailed' : 'quick'
+        workout_type: formState.workoutType,
+        mode: formState.isDetailedMode ? 'detailed' : 'quick'
       });
     }
 
     setDialogOpen(false);
-    resetForm();
+    workoutForm.resetForm();
   };
 
   const handleDateSelect = (date: Date, dayEntries: UnifiedDiaryEntry[]) => {
@@ -259,51 +237,32 @@ export default function ClientPortalWorkoutDiary() {
       setDateDetailOpen(true);
     } else {
       // Open add workout dialog for empty day
-      setWorkoutDate(format(date, 'yyyy-MM-dd'));
+      workoutForm.updateField('workoutDate', format(date, 'yyyy-MM-dd'));
       setDialogOpen(true);
     }
   };
 
   const handleStartPlannedWorkout = (entry: UnifiedDiaryEntry) => {
-    // Pre-fill form with planned workout data
-    setWorkoutDate(entry.scheduled_for ? format(parseISO(entry.scheduled_for), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-    setWorkoutType(entry.workout_type || null);
-    setDurationMinutes(entry.duration_minutes?.toString() || '');
-    setWorkoutNotes(entry.notes || '');
-    setEditingPlannedWorkoutId(entry.id); // Track which planned workout we're completing
-    setIsDetailedMode(true); // Show detailed mode for planned workouts
-    
-    if (entry.exercises && entry.exercises.length > 0) {
-      setExercises(entry.exercises.map(ex => ({
-        exercise_name: ex.exercise_name,
-        exercise_id: undefined,
-        sets: ex.sets?.toString() || '',
-        reps: ex.reps?.toString() || '',
-        weight_kg: ex.weight_kg?.toString() || '',
-        duration_seconds: ex.duration_seconds ? (ex.duration_seconds / 60).toString() : '',
-        rpe: ex.rpe?.toString() || '',
-        notes: ex.notes || '',
-      })));
-    } else {
-      setExercises([{ ...emptyExercise }]);
-    }
-    
+    workoutForm.loadFromPlanned(entry);
     setDialogOpen(true);
   };
 
-  // Get status badge - simplified
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'planned':
-      case 'draft':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Naplánovaný</Badge>;
-      case 'completed':
-      case 'reviewed':
-        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Hotovo</Badge>;
-      default:
-        return null;
-    }
+  const handleOpenNewWorkout = () => {
+    workoutForm.resetForm();
+    setDialogOpen(true);
   };
+
+  // Filter for list view - only completed entries
+  const completedEntries = useMemo(() => {
+    return (entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [])
+      .filter(e => filterType === 'all' || e.workout_type === filterType)
+      .filter(e => {
+        if (filterSource === 'all') return true;
+        if (filterSource === 'coached') return e.is_coached;
+        if (filterSource === 'self') return !e.is_coached;
+        return true;
+      });
+  }, [entries, filterType, filterSource]);
 
   if (isLoading) {
     return (
@@ -316,15 +275,7 @@ export default function ClientPortalWorkoutDiary() {
     );
   }
 
-  // Filter for list view - only completed entries
-  const completedEntries = (entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [])
-    .filter(e => filterType === 'all' || e.workout_type === filterType)
-    .filter(e => {
-      if (filterSource === 'all') return true;
-      if (filterSource === 'coached') return e.is_coached;
-      if (filterSource === 'self') return !e.is_coached;
-      return true;
-    });
+  const isSaving = createLog.isPending || completeAssignedWorkout.isPending || updateLog.isPending;
 
   return (
     <div className="space-y-6">
@@ -336,7 +287,7 @@ export default function ClientPortalWorkoutDiary() {
             Zaznamenej si své tréninky
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={handleOpenNewWorkout}>
           <Plus className="w-4 h-4 mr-2" />
           Přidat trénink
         </Button>
@@ -376,46 +327,45 @@ export default function ClientPortalWorkoutDiary() {
                 id: e.id,
                 date: e.date,
                 duration_minutes: e.duration_minutes,
+                workout_type: e.workout_type,
+                notes: e.notes,
                 exercises: e.exercises?.map(ex => ({
-                  is_personal_record: ex.is_personal_record,
+                  is_personal_record: ex.is_personal_record || ex.is_pr,
                   weight_kg: ex.weight_kg,
                   sets: ex.sets,
                   reps: ex.reps,
                 })),
               }))} 
-              weeklyGoal={4} 
+              weeklyGoal={4}
+              onExport={(format) => {
+                const exportData = completedEntries.map(e => ({
+                  id: e.id,
+                  date: e.date,
+                  workout_type: e.workout_type,
+                  duration_minutes: e.duration_minutes,
+                  notes: e.notes,
+                  exercises: e.exercises,
+                  is_coached: e.is_coached,
+                }));
+                if (format === 'pdf') {
+                  exportWorkoutDiaryToPDF(exportData);
+                  trackPortalEvent('workout_diary_exported', { format: 'pdf' });
+                } else {
+                  exportWorkoutDiaryToCSV(exportData);
+                  trackPortalEvent('workout_diary_exported', { format: 'csv' });
+                }
+                toast.success(`Deník exportován jako ${format.toUpperCase()}`);
+              }}
             />
           )}
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Typ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny typy</SelectItem>
-                <SelectItem value="strength">Síla</SelectItem>
-                <SelectItem value="cardio">Kardio</SelectItem>
-                <SelectItem value="run">Běh</SelectItem>
-                <SelectItem value="hiit">HIIT</SelectItem>
-                <SelectItem value="conditioning">Kondice</SelectItem>
-                <SelectItem value="mobility">Mobilita</SelectItem>
-                <SelectItem value="recovery">Regenerace</SelectItem>
-                <SelectItem value="other">Ostatní</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterSource} onValueChange={setFilterSource}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Zdroj" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Vše</SelectItem>
-                <SelectItem value="coached">S trenérem</SelectItem>
-                <SelectItem value="self">Samostatně</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <WorkoutFilters
+            filterType={filterType}
+            setFilterType={setFilterType}
+            filterSource={filterSource}
+            setFilterSource={setFilterSource}
+          />
 
           {/* Workout Logs */}
           {completedEntries.length === 0 ? (
@@ -426,7 +376,7 @@ export default function ClientPortalWorkoutDiary() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Začněte zaznamenávat své tréninky
                 </p>
-                <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                <Button variant="outline" onClick={handleOpenNewWorkout}>
                   <Plus className="w-4 h-4 mr-2" />
                   Přidat první trénink
                 </Button>
@@ -434,216 +384,18 @@ export default function ClientPortalWorkoutDiary() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {completedEntries.map((entry) => {
-                const isExpanded = expandedLogs.has(entry.id);
-                const exerciseCount = entry.exercises?.length || 0;
-                const WorkoutIcon = getWorkoutTypeIcon(entry.workout_type);
-                const hasPR = entry.exercises?.some(ex => ex.is_personal_record);
-
-                return (
-                  <motion.div
-                    key={entry.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <Card className="overflow-hidden">
-                      <div
-                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => toggleLogExpanded(entry.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-10 h-10 rounded-lg flex items-center justify-center",
-                              entry.is_coached 
-                                ? "bg-primary/10" 
-                                : "bg-green-500/10",
-                              entry.is_coached 
-                                ? "text-primary" 
-                                : getWorkoutTypeColor(entry.workout_type)
-                            )}>
-                              {entry.is_coached ? (
-                                <User className="w-5 h-5" />
-                              ) : (
-                                <WorkoutIcon className="w-5 h-5" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium">
-                                  {format(parseISO(entry.date), 'EEEE d. MMMM', { locale: cs })}
-                                </span>
-                                <Badge 
-                                  variant={entry.is_coached ? "default" : "secondary"} 
-                                  className="text-xs"
-                                >
-                                  {entry.is_coached ? 'S trenérem' : 'Samostatně'}
-                                </Badge>
-                                {getStatusBadge(entry.status)}
-                                {hasPR && (
-                                  <Badge variant="secondary" className="text-xs gap-1">
-                                    <Trophy className="w-3 h-3" /> PR
-                                  </Badge>
-                                )}
-                                {/* Tags */}
-                                {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
-                                  <Badge 
-                                    key={tag.id}
-                                    variant="outline"
-                                    className="text-xs"
-                                    style={{ 
-                                      borderColor: tag.color,
-                                      backgroundColor: `${tag.color}15`,
-                                      color: tag.color 
-                                    }}
-                                  >
-                                    {tag.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{getWorkoutTypeLabel(entry.workout_type)}</span>
-                                {exerciseCount > 0 && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{exerciseCount} cviků</span>
-                                  </>
-                                )}
-                                {entry.duration_minutes && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{entry.duration_minutes} min</span>
-                                  </>
-                                )}
-                                {(entry.energy_before || entry.energy_after) && (
-                                  <>
-                                    <span>•</span>
-                                    <span>
-                                      {getEnergyEmoji(entry.energy_before)}→{getEnergyEmoji(entry.energy_after)}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {/* Edit/Delete dropdown for self-logged workouts */}
-                            {!entry.is_coached && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditWorkout(entry); }}>
-                                    <Pencil className="w-4 h-4 mr-2" />
-                                    Upravit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteWorkout(entry); }}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Smazat
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            {isExpanded ? (
-                              <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <div className="px-4 pb-4 border-t pt-4 space-y-3">
-                              {entry.notes && (
-                                <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
-                                  <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                                  <span>{entry.notes}</span>
-                                </div>
-                              )}
-
-                              {entry.exercises?.map((ex, idx) => (
-                                <div
-                                  key={ex.id || idx}
-                                  className={cn(
-                                    "p-3 rounded-lg",
-                                    ex.is_personal_record ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30"
-                                  )}
-                                >
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{ex.exercise_name}</span>
-                                      {ex.is_personal_record && (
-                                        <Trophy className="w-4 h-4 text-yellow-500" />
-                                      )}
-                                    </div>
-                                    {ex.rpe && (
-                                      <Badge variant="outline" className="text-xs">
-                                        RPE {ex.rpe}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                    {ex.sets && (
-                                      <span className="flex items-center gap-1">
-                                        <Target className="w-3.5 h-3.5" />
-                                        {ex.sets} sérií
-                                      </span>
-                                    )}
-                                    {ex.reps && (
-                                      <span>{ex.reps} opakování</span>
-                                    )}
-                                    {ex.weight_kg && (
-                                      <span className="font-medium text-foreground">
-                                        {ex.weight_kg} kg
-                                      </span>
-                                    )}
-                                    {ex.duration_seconds && (
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-3.5 h-3.5" />
-                                        {Math.round(ex.duration_seconds / 60)} min
-                                      </span>
-                                    )}
-                                  </div>
-                                  {ex.notes && (
-                                    <p className="text-xs text-muted-foreground mt-2 italic">
-                                      {ex.notes}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-
-                              {/* Trainer comment */}
-                              {entry.trainer_comment && (
-                                <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm">
-                                  <User className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                                  <div>
-                                    <div className="font-medium text-primary mb-1">Komentář trenéra</div>
-                                    <span className="whitespace-pre-wrap">{entry.trainer_comment}</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+              {completedEntries.map((entry) => (
+                <WorkoutListItem
+                  key={entry.id}
+                  entry={entry}
+                  isExpanded={expandedLogs.has(entry.id)}
+                  onToggleExpand={() => toggleLogExpanded(entry.id)}
+                  onEdit={() => handleEditWorkout(entry)}
+                  onDelete={() => handleDeleteWorkout(entry)}
+                  onRepeat={() => handleRepeatWorkout(entry)}
+                  onSaveAsTemplate={() => handleSaveAsTemplate(entry)}
+                />
+              ))}
             </div>
           )}
         </TabsContent>
@@ -658,93 +410,23 @@ export default function ClientPortalWorkoutDiary() {
       <AddWorkoutDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        isDetailedMode={isDetailedMode}
-        setIsDetailedMode={setIsDetailedMode}
-        workoutDate={workoutDate}
-        setWorkoutDate={setWorkoutDate}
-        workoutType={workoutType}
-        setWorkoutType={setWorkoutType}
-        durationMinutes={durationMinutes}
-        setDurationMinutes={setDurationMinutes}
-        workoutRpe={workoutRpe}
-        setWorkoutRpe={setWorkoutRpe}
-        energyBefore={energyBefore}
-        setEnergyBefore={setEnergyBefore}
-        energyAfter={energyAfter}
-        setEnergyAfter={setEnergyAfter}
-        workoutNotes={workoutNotes}
-        setWorkoutNotes={setWorkoutNotes}
-        exercises={exercises}
-        setExercises={setExercises}
-        editingPlannedWorkoutId={editingPlannedWorkoutId}
-        editingExistingLogId={editingExistingLogId}
+        formState={workoutForm.formState}
+        updateField={workoutForm.updateField}
+        addExercise={workoutForm.addExercise}
+        removeExercise={workoutForm.removeExercise}
+        updateExercise={workoutForm.updateExercise}
+        updateExerciseName={workoutForm.updateExerciseName}
         onSave={handleSaveWorkout}
-        isSaving={createLog.isPending || completeAssignedWorkout.isPending || updateLog.isPending}
+        isSaving={isSaving}
+        canSave={workoutForm.canSave(isSaving)}
       />
 
       {/* Date Detail Dialog */}
-      <Dialog open={dateDetailOpen} onOpenChange={setDateDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedDateEntries.length > 0 && format(parseISO(selectedDateEntries[0].date), 'EEEE d. MMMM yyyy', { locale: cs })}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {selectedDateEntries.map(entry => {
-              const WorkoutIcon = getWorkoutTypeIcon(entry.workout_type);
-              return (
-                <Card key={entry.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        entry.is_coached ? "bg-primary/10 text-primary" : "bg-green-500/10",
-                        !entry.is_coached && getWorkoutTypeColor(entry.workout_type)
-                      )}>
-                        {entry.is_coached ? <User className="w-5 h-5" /> : <WorkoutIcon className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <div className="font-medium flex items-center gap-2">
-                          {getWorkoutTypeLabel(entry.workout_type)}
-                          <Badge variant={entry.is_coached ? "default" : "secondary"} className="text-xs">
-                            {entry.is_coached ? 'S trenérem' : 'Samostatně'}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {entry.duration_minutes && `${entry.duration_minutes} min`}
-                          {entry.rpe && ` • RPE ${entry.rpe}`}
-                        </div>
-                      </div>
-                    </div>
-                    {entry.notes && (
-                      <p className="text-sm text-muted-foreground">{entry.notes}</p>
-                    )}
-                    {entry.exercises && entry.exercises.length > 0 && (
-                      <div className="mt-3 space-y-1">
-                        {entry.exercises.map((ex, idx) => (
-                          <div key={idx} className="text-sm flex items-center gap-2">
-                            <Dumbbell className="w-3 h-3 text-muted-foreground" />
-                            <span>{ex.exercise_name}</span>
-                            {ex.sets && ex.reps && (
-                              <span className="text-muted-foreground">
-                                {ex.sets}×{ex.reps}
-                              </span>
-                            )}
-                            {ex.weight_kg && (
-                              <span className="font-medium">{ex.weight_kg}kg</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <WorkoutDateDetailDialog
+        open={dateDetailOpen}
+        onOpenChange={setDateDetailOpen}
+        entries={selectedDateEntries}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -767,6 +449,42 @@ export default function ClientPortalWorkoutDiary() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uložit jako šablonu</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="template-name">Název šablony</Label>
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Např. Pondělní silový trénink"
+              />
+            </div>
+            {entryForTemplate?.exercises && entryForTemplate.exercises.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Šablona bude obsahovat {entryForTemplate.exercises.length} cviků
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+              Zrušit
+            </Button>
+            <Button 
+              onClick={confirmSaveTemplate} 
+              disabled={!templateName.trim() || savingTemplate}
+            >
+              {savingTemplate ? 'Ukládám...' : 'Uložit šablonu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
