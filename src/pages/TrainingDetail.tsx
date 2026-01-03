@@ -37,6 +37,8 @@ import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
+import { useTrainingSummary } from '@/hooks/useTrainingSummary';
+import { TrainingSummaryOverlay } from '@/components/trainings/TrainingSummaryOverlay';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,6 +110,11 @@ export default function TrainingDetail() {
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
+  
+  // Summary overlay state
+  const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
+  const { data: trainingSummary } = useTrainingSummary(completedSessionId || undefined, training?.client_id);
 
   if (trainingLoading) {
     return <TrainingDetailSkeleton />;
@@ -292,7 +299,10 @@ export default function TrainingDetail() {
       });
       
       setShowCompleteDialog(false);
-      navigate('/trainings');
+      
+      // Show training summary overlay with celebration
+      setCompletedSessionId(training.id);
+      setShowSummaryOverlay(true);
     } catch (error) {
       // Error is already handled in the hook with toast
       console.error('Training completion failed:', error);
@@ -542,6 +552,20 @@ export default function TrainingDetail() {
       </Dialog>
 
       {/* Cancel Training Dialog - Kept for legacy, Quick Actions handles this now */}
+      
+      {/* Training Summary Overlay with Celebration */}
+      {trainingSummary && (
+        <TrainingSummaryOverlay
+          open={showSummaryOverlay}
+          onClose={() => {
+            setShowSummaryOverlay(false);
+            setCompletedSessionId(null);
+            navigate('/trainings');
+          }}
+          summary={trainingSummary}
+          clientName={client?.name || 'Klient'}
+        />
+      )}
     </div>
   );
 }
