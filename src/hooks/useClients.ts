@@ -204,22 +204,34 @@ export function useCreateClient() {
   });
 }
 
+/**
+ * Partial update mutation for clients.
+ * IMPORTANT: Only updates fields that are explicitly provided (not undefined).
+ * This prevents accidental overwrites of credit_balance and other fields.
+ */
 export function useUpdateClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: ClientFormValues & { training_start_date?: string | null } }) => {
-      const updateData: Record<string, unknown> = {
-        name: values.name,
-        email: values.email,
-        phone: values.phone || null,
-        training_goals: values.trainingGoals,
-        notes: values.notes || "",
-        health_restrictions: values.healthRestrictions || "",
-        credit_balance: values.creditBalance || 0,
-        birth_date: values.birthDate || null,
-        gender: values.gender || null,
-      };
+    mutationFn: async ({ id, values }: { id: string; values: Partial<ClientFormValues> & { training_start_date?: string | null } }) => {
+      const updateData: Record<string, unknown> = {};
+
+      // Only add fields that are explicitly provided (not undefined)
+      if (values.name !== undefined) updateData.name = values.name;
+      if (values.email !== undefined) updateData.email = values.email;
+      if (values.phone !== undefined) updateData.phone = values.phone || null;
+      if (values.trainingGoals !== undefined) updateData.training_goals = values.trainingGoals;
+      if (values.notes !== undefined) updateData.notes = values.notes || "";
+      if (values.healthRestrictions !== undefined) updateData.health_restrictions = values.healthRestrictions || "";
+      if (values.birthDate !== undefined) updateData.birth_date = values.birthDate || null;
+      if (values.gender !== undefined) updateData.gender = values.gender || null;
+      if (values.feedbackEnabled !== undefined) updateData.feedback_enabled = values.feedbackEnabled;
+      
+      // CRITICAL: Only update credit_balance if explicitly provided
+      // This prevents accidental overwrites when updating other fields
+      if (values.creditBalance !== undefined) {
+        updateData.credit_balance = values.creditBalance;
+      }
 
       // Only update created_at if it's provided (for editing creation date)
       if (values.createdAt) {
@@ -229,6 +241,22 @@ export function useUpdateClient() {
       // Update training_start_date if provided
       if (values.training_start_date !== undefined) {
         updateData.training_start_date = values.training_start_date;
+      }
+
+      // Extended fields - only if explicitly provided
+      if (values.handedness !== undefined) updateData.handedness = values.handedness;
+      if (values.occupation !== undefined) updateData.occupation = values.occupation;
+      if (values.sitting_hours_daily !== undefined) updateData.sitting_hours_daily = values.sitting_hours_daily;
+      if (values.sports_history !== undefined) updateData.sports_history = values.sports_history;
+      if (values.current_activities !== undefined) updateData.current_activities = values.current_activities;
+      if (values.sleep_hours !== undefined) updateData.sleep_hours = values.sleep_hours;
+      if (values.stress_level !== undefined) updateData.stress_level = values.stress_level;
+      if (values.dietary_restrictions !== undefined) updateData.dietary_restrictions = values.dietary_restrictions;
+      if (values.supplements !== undefined) updateData.supplements = values.supplements;
+
+      // Don't update if no fields to update
+      if (Object.keys(updateData).length === 0) {
+        throw new Error("No fields to update");
       }
 
       const { data, error } = await supabase
