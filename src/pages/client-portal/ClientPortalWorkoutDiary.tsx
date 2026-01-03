@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -14,23 +15,40 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useCreateWorkoutLog, useDeleteWorkoutLog } from '@/hooks/useClientWorkoutLogs';
-import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
+import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
+import { useUnifiedDiary, usePlannedWorkouts, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { format } from 'date-fns';
-import { Plus, Dumbbell } from 'lucide-react';
+import { format, parseISO, isBefore, startOfDay } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { 
+  Plus, 
+  Dumbbell, 
+  ClipboardList,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { SimpleAddWorkoutDialog } from '@/components/client-portal/workout-diary/SimpleAddWorkoutDialog';
 import { SimpleWorkoutCard } from '@/components/client-portal/workout-diary/SimpleWorkoutCard';
 import { SimpleStatsCard } from '@/components/client-portal/workout-diary/SimpleStatsCard';
+import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
-  const { data: entries, isLoading, refetch } = useUnifiedDiary();
+  const { data: entries, isLoading } = useUnifiedDiary();
+  const { data: plannedWorkouts, isLoading: loadingPlanned } = usePlannedWorkouts();
   const createLog = useCreateWorkoutLog();
   const deleteLog = useDeleteWorkoutLog();
+  const completeAssignedWorkout = useCompleteAssignedWorkout();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [trainerSectionExpanded, setTrainerSectionExpanded] = useState(true);
   
   // Delete confirmation
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -81,7 +99,7 @@ export default function ClientPortalWorkoutDiary() {
       workout_type: data.workoutType,
       duration_minutes: data.durationMinutes,
       energy_after: data.feeling,
-      exercises: [], // No detailed exercises in simple mode
+      exercises: [],
     });
 
     toast.success('Trénink odeslán trenérovi! 💪');
@@ -92,7 +110,20 @@ export default function ClientPortalWorkoutDiary() {
     });
   };
 
-  if (isLoading) {
+  const handleCompleteAssignedWorkout = async (workout: UnifiedDiaryEntry) => {
+    if (!clientId) return;
+    
+    await completeAssignedWorkout.mutateAsync({
+      logId: workout.id,
+      clientId,
+      duration_minutes: workout.duration_minutes || undefined,
+    });
+    
+    toast.success('Trénink splněn! 🎉');
+    trackPortalEvent('planned_workout_completed', { workout_type: workout.workout_type });
+  };
+
+  if (isLoading || loadingPlanned) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -103,7 +134,8 @@ export default function ClientPortalWorkoutDiary() {
     );
   }
 
-  const isSaving = createLog.isPending;
+  const hasPlannedWorkouts = plannedWorkouts && plannedWorkouts.length > 0;
+  const isSaving = createLog.isPending || completeAssignedWorkout.isPending;
 
   return (
     <div className="space-y-4 pb-20">
@@ -120,8 +152,134 @@ export default function ClientPortalWorkoutDiary() {
         <SimpleStatsCard workoutDates={workoutDates} />
       )}
 
+      {/* Trainer-assigned workouts section */}
+      {hasPlannedWorkouts && (
+        <Card className="border-primary/30 bg-primary/5">
+          <button
+            className="w-full p-4 flex items-center justify-between text-left"
+            onClick={() => setTrainerSectionExpanded(!trainerSectionExpanded)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary">Tréninky od trenéra</h3>
+                <p className="text-sm text-muted-foreground">
+                  {plannedWorkouts.length} {plannedWorkouts.length === 1 ? 'naplánovaný trénink' : 'naplánované tréninky'}
+                </p>
+              </div>
+            </div>
+            {trainerSectionExpanded ? (
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {trainerSectionExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="px-4 pb-4 space-y-3">
+                  {plannedWorkouts.map((workout) => {
+                    const Icon = getWorkoutTypeIcon(workout.workout_type);
+                    const isOverdue = workout.scheduled_for && isBefore(parseISO(workout.scheduled_for), startOfDay(new Date()));
+                    const isToday = workout.scheduled_for && 
+                      format(parseISO(workout.scheduled_for), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+
+                    return (
+                      <Card 
+                        key={workout.id}
+                        className={cn(
+                          "overflow-hidden",
+                          isToday && "ring-2 ring-primary",
+                          isOverdue && "border-destructive/50"
+                        )}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <div className={cn(
+                                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                                getWorkoutTypeColor(workout.workout_type)
+                              )}>
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium">
+                                    {getWorkoutTypeLabel(workout.workout_type)}
+                                  </span>
+                                  {isToday && (
+                                    <Badge variant="default" className="text-xs">Dnes</Badge>
+                                  )}
+                                  {isOverdue && (
+                                    <Badge variant="destructive" className="text-xs">Zpožděno</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                  {workout.scheduled_for && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      {format(parseISO(workout.scheduled_for), 'EEEE d. M.', { locale: cs })}
+                                    </span>
+                                  )}
+                                  {workout.duration_minutes && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3.5 h-3.5" />
+                                      {workout.duration_minutes} min
+                                    </span>
+                                  )}
+                                </div>
+                                {workout.notes && (
+                                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                    {workout.notes}
+                                  </p>
+                                )}
+                                {workout.exercises && workout.exercises.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {workout.exercises.slice(0, 3).map((ex, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs">
+                                        {ex.exercise_name}
+                                      </Badge>
+                                    ))}
+                                    {workout.exercises.length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{workout.exercises.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleCompleteAssignedWorkout(workout)}
+                              disabled={completeAssignedWorkout.isPending}
+                              className="shrink-0"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Splnit
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+      )}
+
       {/* Workout List */}
-      {completedEntries.length === 0 ? (
+      {completedEntries.length === 0 && !hasPlannedWorkouts ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Dumbbell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -135,16 +293,22 @@ export default function ClientPortalWorkoutDiary() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-3">
-          {completedEntries.map((entry) => (
-            <SimpleWorkoutCard
-              key={entry.id}
-              entry={entry}
-              onDelete={entry.is_coached ? undefined : () => handleDeleteWorkout(entry)}
-            />
-          ))}
-        </div>
+      ) : completedEntries.length > 0 && (
+        <>
+          <h3 className="text-lg font-semibold flex items-center gap-2 pt-2">
+            <Dumbbell className="w-5 h-5" />
+            Moje tréninky
+          </h3>
+          <div className="space-y-3">
+            {completedEntries.map((entry) => (
+              <SimpleWorkoutCard
+                key={entry.id}
+                entry={entry}
+                onDelete={entry.is_coached ? undefined : () => handleDeleteWorkout(entry)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {/* FAB Button */}
