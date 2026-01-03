@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function normalizeIcsUrl(url: string): string {
+  if (url.startsWith('webcal://')) return url.replace('webcal://', 'https://');
+  if (url.startsWith('webcals://')) return url.replace('webcals://', 'https://');
+  return url;
+}
+
+async function fetchIcs(url: string): Promise<string> {
+  const fetchUrl = normalizeIcsUrl(url);
+  const res = await fetch(fetchUrl, {
+    headers: {
+      // Some calendar providers (incl. iCloud) behave better with explicit headers.
+      'Accept': 'text/calendar, text/plain;q=0.9, */*;q=0.8',
+      'User-Agent': 'Mozilla/5.0 (compatible; LovableCalendarSync/1.0)',
+    },
+  });
+
+  if (!res.ok) {
+    const preview = await res.text().catch(() => '');
+    throw new Error(`Failed to fetch ICS (HTTP ${res.status}). ${preview?.slice(0, 200) || ''}`.trim());
+  }
+
+  const content = await res.text();
+  if (!content.includes('BEGIN:VCALENDAR')) {
+    throw new Error('Response is not a valid ICS file (missing BEGIN:VCALENDAR).');
+  }
+  return content;
+}
+
 // Czech nicknames database
 const CZECH_NICKNAMES: Record<string, string[]> = {
   'jan': ['honza', 'jenda', 'jeník', 'honzík', 'jéňa', 'johny'],
@@ -408,23 +436,10 @@ serve(async (req) => {
         .eq('id', feedId);
 
       try {
-        // Convert webcal:// to https:// (webcal is just a URI scheme for calendar apps)
-        let fetchUrl = feed.ics_url;
-        if (fetchUrl.startsWith('webcal://')) {
-          fetchUrl = fetchUrl.replace('webcal://', 'https://');
-        } else if (fetchUrl.startsWith('webcals://')) {
-          fetchUrl = fetchUrl.replace('webcals://', 'https://');
-        }
-        
         // Fetch ICS content
+        const fetchUrl = normalizeIcsUrl(feed.ics_url);
         console.log(`[ICS Sync] Fetching ICS from: ${fetchUrl}`);
-        const icsResponse = await fetch(fetchUrl);
-        
-        if (!icsResponse.ok) {
-          throw new Error(`Failed to fetch ICS: ${icsResponse.status}`);
-        }
-
-        const icsContent = await icsResponse.text();
+        const icsContent = await fetchIcs(fetchUrl);
         console.log(`[ICS Sync] Fetched ${icsContent.length} bytes`);
 
         // Parse ICS
@@ -745,14 +760,9 @@ serve(async (req) => {
 
       try {
         // Fetch ICS content
-        console.log(`[ICS Sync Auto] Fetching ICS from: ${feed.ics_url}`);
-        const icsResponse = await fetch(feed.ics_url);
-        
-        if (!icsResponse.ok) {
-          throw new Error(`Failed to fetch ICS: ${icsResponse.status}`);
-        }
-
-        const icsContent = await icsResponse.text();
+        const fetchUrl = normalizeIcsUrl(feed.ics_url);
+        console.log(`[ICS Sync Auto] Fetching ICS from: ${fetchUrl}`);
+        const icsContent = await fetchIcs(fetchUrl);
         console.log(`[ICS Sync Auto] Fetched ${icsContent.length} bytes`);
 
         // Parse ICS
@@ -1003,30 +1013,13 @@ serve(async (req) => {
 
     if (action === 'test_url') {
       try {
-        const response = await fetch(icsUrl, { method: 'HEAD' });
-        
-        if (!response.ok) {
-          return new Response(
-            JSON.stringify({ valid: false, error: `HTTP ${response.status}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const fullResponse = await fetch(icsUrl);
-        const content = await fullResponse.text();
-        
-        if (!content.includes('BEGIN:VCALENDAR')) {
-          return new Response(
-            JSON.stringify({ valid: false, error: 'Not a valid ICS file' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
+        const fetchUrl = normalizeIcsUrl(icsUrl);
+        const content = await fetchIcs(fetchUrl);
         const events = parseICS(content);
 
         return new Response(
-          JSON.stringify({ 
-            valid: true, 
+          JSON.stringify({
+            valid: true,
             events_count: events.length,
             sample_events: events.slice(0, 3).map(e => ({
               summary: e.summary,
@@ -1035,10 +1028,10 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch URL';
         return new Response(
-          JSON.stringify({ valid: false, error: 'Failed to fetch URL' }),
+          JSON.stringify({ valid: false, error: message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

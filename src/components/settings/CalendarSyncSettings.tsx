@@ -167,7 +167,8 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
       const result = await syncFeed.mutateAsync(feed.id);
       toast.success(`Synchronizováno ${result.events_synced} událostí`);
     } catch (error) {
-      toast.error('Synchronizace selhala');
+      const message = error instanceof Error ? error.message : 'Synchronizace selhala';
+      toast.error(message);
     }
   };
 
@@ -176,7 +177,8 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
       const result = await createSessions.mutateAsync(feed.id);
       toast.success(`Vytvořeno ${result.sessions_created} tréninků`);
     } catch (error) {
-      toast.error('Vytvoření tréninků selhalo');
+      const message = error instanceof Error ? error.message : 'Vytvoření tréninků selhalo';
+      toast.error(message);
     }
   };
 
@@ -312,7 +314,8 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
       const result = await testUrl.mutateAsync(icsUrl);
       setTestResult(result);
     } catch (error) {
-      setTestResult({ valid: false, error: 'Test selhal' });
+      const message = error instanceof Error ? error.message : 'Test selhal';
+      setTestResult({ valid: false, error: message });
     } finally {
       setTesting(false);
     }
