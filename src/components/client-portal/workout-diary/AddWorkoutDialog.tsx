@@ -11,114 +11,56 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { Plus, Dumbbell, X } from 'lucide-react';
+import { Plus, Dumbbell, X, Footprints } from 'lucide-react';
 import { WorkoutTypeSelector } from './WorkoutTypeSelector';
 import { EnergyRating } from './EnergyRating';
 import { ExerciseAutocomplete } from './ExerciseAutocomplete';
-
-export interface ExerciseInput {
-  exercise_name: string;
-  exercise_id?: string;
-  sets: string;
-  reps: string;
-  weight_kg: string;
-  duration_seconds: string;
-  rpe: string;
-  notes: string;
-}
-
-export const emptyExercise: ExerciseInput = {
-  exercise_name: '',
-  sets: '',
-  reps: '',
-  weight_kg: '',
-  duration_seconds: '',
-  rpe: '',
-  notes: '',
-};
+import { WorkoutFormState, ExerciseInput } from '@/hooks/useWorkoutForm';
 
 interface AddWorkoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // Form state
-  isDetailedMode: boolean;
-  setIsDetailedMode: (mode: boolean) => void;
-  workoutDate: string;
-  setWorkoutDate: (date: string) => void;
-  workoutType: string | null;
-  setWorkoutType: (type: string) => void;
-  durationMinutes: string;
-  setDurationMinutes: (duration: string) => void;
-  workoutRpe: number | null;
-  setWorkoutRpe: (rpe: number | null) => void;
-  energyBefore: number | null;
-  setEnergyBefore: (energy: number | null) => void;
-  energyAfter: number | null;
-  setEnergyAfter: (energy: number | null) => void;
-  workoutNotes: string;
-  setWorkoutNotes: (notes: string) => void;
-  exercises: ExerciseInput[];
-  setExercises: React.Dispatch<React.SetStateAction<ExerciseInput[]>>;
-  // Mode indicators
-  editingPlannedWorkoutId: string | null;
-  editingExistingLogId: string | null;
-  // Actions
+  formState: WorkoutFormState;
+  updateField: <K extends keyof WorkoutFormState>(field: K, value: WorkoutFormState[K]) => void;
+  addExercise: () => void;
+  removeExercise: (index: number) => void;
+  updateExercise: (index: number, field: keyof ExerciseInput, value: string) => void;
+  updateExerciseName: (index: number, name: string, exerciseId?: string) => void;
   onSave: () => void;
   isSaving: boolean;
+  canSave: boolean;
 }
 
 export function AddWorkoutDialog({
   open,
   onOpenChange,
-  isDetailedMode,
-  setIsDetailedMode,
-  workoutDate,
-  setWorkoutDate,
-  workoutType,
-  setWorkoutType,
-  durationMinutes,
-  setDurationMinutes,
-  workoutRpe,
-  setWorkoutRpe,
-  energyBefore,
-  setEnergyBefore,
-  energyAfter,
-  setEnergyAfter,
-  workoutNotes,
-  setWorkoutNotes,
-  exercises,
-  setExercises,
-  editingPlannedWorkoutId,
-  editingExistingLogId,
+  formState,
+  updateField,
+  addExercise,
+  removeExercise,
+  updateExercise,
+  updateExerciseName,
   onSave,
   isSaving,
+  canSave,
 }: AddWorkoutDialogProps) {
-  const addExercise = () => {
-    setExercises(prev => [...prev, { ...emptyExercise }]);
-  };
+  const {
+    isDetailedMode,
+    workoutDate,
+    workoutType,
+    durationMinutes,
+    workoutRpe,
+    energyBefore,
+    energyAfter,
+    workoutNotes,
+    exercises,
+    distanceKm,
+    paceMinPerKm,
+    editingPlannedWorkoutId,
+    editingExistingLogId,
+  } = formState;
 
-  const removeExercise = (index: number) => {
-    setExercises(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateExercise = (index: number, field: keyof ExerciseInput, value: string) => {
-    setExercises(prev => prev.map((ex, i) => 
-      i === index ? { ...ex, [field]: value } : ex
-    ));
-  };
-
-  const updateExerciseName = (index: number, name: string, exerciseId?: string) => {
-    setExercises(prev => prev.map((ex, i) => 
-      i === index ? { ...ex, exercise_name: name, exercise_id: exerciseId } : ex
-    ));
-  };
-
-  const canSave = () => {
-    if (isSaving) return false;
-    if (isDetailedMode && !exercises.some(ex => ex.exercise_name.trim())) return false;
-    if (!isDetailedMode && !editingExistingLogId && !workoutType) return false;
-    return true;
-  };
+  const isRunWorkout = workoutType === 'run';
 
   const getSaveButtonText = () => {
     if (isSaving) return 'Ukládám...';
@@ -150,8 +92,44 @@ export function AddWorkoutDialog({
               {/* Workout Type */}
               <div className="space-y-2">
                 <Label>Co jsi dělal/a?</Label>
-                <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
+                <WorkoutTypeSelector 
+                  value={workoutType} 
+                  onChange={(v) => updateField('workoutType', v)} 
+                />
               </div>
+
+              {/* Running-specific fields */}
+              {isRunWorkout && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
+                    <Footprints className="w-4 h-4" />
+                    Běžecké metriky
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Vzdálenost (km)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="5.0"
+                        value={distanceKm}
+                        onChange={(e) => updateField('distanceKm', e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Tempo (min/km)</Label>
+                      <Input
+                        type="text"
+                        placeholder="5:30"
+                        value={paceMinPerKm}
+                        onChange={(e) => updateField('paceMinPerKm', e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Date Selection */}
               <div className="space-y-2">
@@ -160,7 +138,7 @@ export function AddWorkoutDialog({
                   id="quick-workout-date"
                   type="date"
                   value={workoutDate}
-                  onChange={(e) => setWorkoutDate(e.target.value)}
+                  onChange={(e) => updateField('workoutDate', e.target.value)}
                   max={format(new Date(), 'yyyy-MM-dd')}
                 />
               </div>
@@ -173,7 +151,7 @@ export function AddWorkoutDialog({
                   type="number"
                   placeholder="45"
                   value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  onChange={(e) => updateField('durationMinutes', e.target.value)}
                   className="text-lg h-12"
                 />
               </div>
@@ -181,7 +159,7 @@ export function AddWorkoutDialog({
               {/* Energy after */}
               <EnergyRating 
                 value={energyAfter} 
-                onChange={setEnergyAfter}
+                onChange={(v) => updateField('energyAfter', v)}
                 label="Jak se cítíš po tréninku?"
               />
 
@@ -192,7 +170,7 @@ export function AddWorkoutDialog({
                   id="workout-notes"
                   placeholder="Co šlo dobře? Co tě potěšilo?"
                   value={workoutNotes}
-                  onChange={(e) => setWorkoutNotes(e.target.value)}
+                  onChange={(e) => updateField('workoutNotes', e.target.value)}
                   rows={2}
                 />
               </div>
@@ -203,7 +181,7 @@ export function AddWorkoutDialog({
                 variant="ghost"
                 size="sm"
                 className="w-full text-muted-foreground"
-                onClick={() => setIsDetailedMode(true)}
+                onClick={() => updateField('isDetailedMode', true)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Přidat cviky a více detailů
@@ -215,8 +193,42 @@ export function AddWorkoutDialog({
               {/* Workout Type */}
               <div className="space-y-2">
                 <Label>Typ tréninku</Label>
-                <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
+                <WorkoutTypeSelector 
+                  value={workoutType} 
+                  onChange={(v) => updateField('workoutType', v)} 
+                />
               </div>
+
+              {/* Running-specific fields in detailed mode */}
+              {isRunWorkout && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
+                    <Footprints className="w-4 h-4" />
+                    Běžecké metriky
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Vzdálenost (km)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="5.0"
+                        value={distanceKm}
+                        onChange={(e) => updateField('distanceKm', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Tempo (min/km)</Label>
+                      <Input
+                        type="text"
+                        placeholder="5:30"
+                        value={paceMinPerKm}
+                        onChange={(e) => updateField('paceMinPerKm', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Date and Duration */}
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
@@ -226,7 +238,7 @@ export function AddWorkoutDialog({
                     id="workout-date"
                     type="date"
                     value={workoutDate}
-                    onChange={(e) => setWorkoutDate(e.target.value)}
+                    onChange={(e) => updateField('workoutDate', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -236,7 +248,7 @@ export function AddWorkoutDialog({
                     type="number"
                     placeholder="60"
                     value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(e.target.value)}
+                    onChange={(e) => updateField('durationMinutes', e.target.value)}
                   />
                 </div>
               </div>
@@ -245,12 +257,12 @@ export function AddWorkoutDialog({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <EnergyRating 
                   value={energyBefore} 
-                  onChange={setEnergyBefore}
+                  onChange={(v) => updateField('energyBefore', v)}
                   label="Energie před"
                 />
                 <EnergyRating 
                   value={energyAfter} 
-                  onChange={setEnergyAfter}
+                  onChange={(v) => updateField('energyAfter', v)}
                   label="Pocit po"
                 />
               </div>
@@ -261,7 +273,7 @@ export function AddWorkoutDialog({
                 <div className="flex items-center gap-4">
                   <Slider
                     value={workoutRpe ? [workoutRpe] : [5]}
-                    onValueChange={(val) => setWorkoutRpe(val[0])}
+                    onValueChange={(val) => updateField('workoutRpe', val[0])}
                     min={1}
                     max={10}
                     step={1}
@@ -326,7 +338,7 @@ export function AddWorkoutDialog({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">Čas (min)</Label>
                         <Input
@@ -337,7 +349,17 @@ export function AddWorkoutDialog({
                         />
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">RPE (1-10)</Label>
+                        <Label className="text-xs text-muted-foreground">Vzdálenost (km)</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="5"
+                          value={ex.distance_km}
+                          onChange={(e) => updateExercise(idx, 'distance_km', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">RPE</Label>
                         <Input
                           type="number"
                           min="1"
@@ -375,7 +397,7 @@ export function AddWorkoutDialog({
                   id="workout-notes"
                   placeholder="Jak se cítíš? Co šlo dobře?"
                   value={workoutNotes}
-                  onChange={(e) => setWorkoutNotes(e.target.value)}
+                  onChange={(e) => updateField('workoutNotes', e.target.value)}
                   rows={3}
                 />
               </div>
@@ -387,7 +409,7 @@ export function AddWorkoutDialog({
                   variant="ghost"
                   size="sm"
                   className="w-full text-muted-foreground"
-                  onClick={() => setIsDetailedMode(false)}
+                  onClick={() => updateField('isDetailedMode', false)}
                 >
                   Zpět na rychlý záznam
                 </Button>
@@ -400,7 +422,7 @@ export function AddWorkoutDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={onSave} disabled={!canSave()}>
+          <Button onClick={onSave} disabled={!canSave}>
             {getSaveButtonText()}
           </Button>
         </DialogFooter>
@@ -408,3 +430,7 @@ export function AddWorkoutDialog({
     </Dialog>
   );
 }
+
+// Re-export for backwards compatibility
+export type { ExerciseInput } from '@/hooks/useWorkoutForm';
+export { emptyExercise } from '@/hooks/useWorkoutForm';

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { startOfWeek, endOfWeek, isWithinInterval, parseISO, differenceInDays, subDays, format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isWithinInterval, parseISO, differenceInDays, subDays, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Flame, TrendingUp, Clock, Trophy } from 'lucide-react';
+import { Flame, TrendingUp, Clock, Trophy, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkoutExercise {
@@ -18,23 +19,48 @@ interface WorkoutLogEntry {
   date: string;
   duration_minutes?: number | null;
   exercises?: WorkoutExercise[];
+  workout_type?: string | null;
+  notes?: string | null;
 }
 
 interface WorkoutStatsCardProps {
   logs: WorkoutLogEntry[];
   weeklyGoal?: number;
+  onExport?: (format: 'pdf' | 'csv') => void;
 }
 
-export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps) {
+type StatsPeriod = 'week' | 'month' | '3months';
+
+export function WorkoutStatsCard({ logs, weeklyGoal = 4, onExport }: WorkoutStatsCardProps) {
+  const [period, setPeriod] = useState<StatsPeriod>('week');
+
   const stats = useMemo(() => {
     const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    let periodStart: Date;
+    let periodEnd: Date = now;
 
-    // This week's workouts
-    const thisWeekLogs = logs.filter(log => {
+    switch (period) {
+      case 'week':
+        periodStart = startOfWeek(now, { weekStartsOn: 1 });
+        periodEnd = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        periodStart = startOfMonth(now);
+        periodEnd = endOfMonth(now);
+        break;
+      case '3months':
+        periodStart = subMonths(startOfMonth(now), 2);
+        periodEnd = endOfMonth(now);
+        break;
+      default:
+        periodStart = startOfWeek(now, { weekStartsOn: 1 });
+        periodEnd = endOfWeek(now, { weekStartsOn: 1 });
+    }
+
+    // Filter logs by period
+    const periodLogs = logs.filter(log => {
       const logDate = parseISO(log.date);
-      return isWithinInterval(logDate, { start: weekStart, end: weekEnd });
+      return isWithinInterval(logDate, { start: periodStart, end: periodEnd });
     });
 
     // Calculate streak
@@ -58,8 +84,8 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps
       }
     }
 
-    // Total volume this week (simplified: sum of weight * sets * reps)
-    const weeklyVolume = thisWeekLogs.reduce((total, log) => {
+    // Total volume (sum of weight * sets * reps)
+    const periodVolume = periodLogs.reduce((total, log) => {
       return total + (log.exercises?.reduce((exTotal, ex) => {
         const weight = ex.weight_kg || 0;
         const sets = ex.sets || 0;
@@ -68,25 +94,30 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps
       }, 0) || 0);
     }, 0);
 
-    // Total duration this week
-    const weeklyDuration = thisWeekLogs.reduce((total, log) => {
+    // Total duration
+    const periodDuration = periodLogs.reduce((total, log) => {
       return total + (log.duration_minutes || 0);
     }, 0);
 
-    // PRs this week
-    const prsThisWeek = thisWeekLogs.reduce((total, log) => {
+    // PRs in period
+    const prsPeriod = periodLogs.reduce((total, log) => {
       return total + (log.exercises?.filter(ex => ex.is_personal_record).length || 0);
     }, 0);
 
+    // Progress calculation
+    const progressGoal = period === 'week' ? weeklyGoal : period === 'month' ? weeklyGoal * 4 : weeklyGoal * 12;
+    const progress = Math.min((periodLogs.length / progressGoal) * 100, 100);
+
     return {
-      weeklyCount: thisWeekLogs.length,
+      count: periodLogs.length,
       streak,
-      weeklyVolume,
-      weeklyDuration,
-      prsThisWeek,
-      progress: Math.min((thisWeekLogs.length / weeklyGoal) * 100, 100),
+      volume: periodVolume,
+      duration: periodDuration,
+      prs: prsPeriod,
+      progress,
+      goal: progressGoal,
     };
-  }, [logs, weeklyGoal]);
+  }, [logs, period, weeklyGoal]);
 
   // Activity calendar (last 7 weeks)
   const activityData = useMemo(() => {
@@ -103,14 +134,68 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps
     return days;
   }, [logs]);
 
+  const periodLabel = period === 'week' ? 'Tento týden' : period === 'month' ? 'Tento měsíc' : 'Poslední 3 měsíce';
+
   return (
     <Card>
       <CardContent className="pt-4 space-y-4">
-        {/* Weekly progress */}
+        {/* Period selector */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1">
+            <Button
+              variant={period === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPeriod('week')}
+              className="h-7 text-xs"
+            >
+              Týden
+            </Button>
+            <Button
+              variant={period === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPeriod('month')}
+              className="h-7 text-xs"
+            >
+              Měsíc
+            </Button>
+            <Button
+              variant={period === '3months' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPeriod('3months')}
+              className="h-7 text-xs"
+            >
+              3 měsíce
+            </Button>
+          </div>
+          {onExport && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onExport('csv')}
+                className="h-7 text-xs"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                CSV
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onExport('pdf')}
+                className="h-7 text-xs"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                PDF
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Tento týden</span>
-            <span className="font-medium">{stats.weeklyCount}/{weeklyGoal} tréninků</span>
+            <span className="text-muted-foreground">{periodLabel}</span>
+            <span className="font-medium">{stats.count}/{stats.goal} tréninků</span>
           </div>
           <Progress value={stats.progress} className="h-2" />
         </div>
@@ -128,27 +213,27 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps
           <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
             <TrendingUp className="w-5 h-5 text-blue-500" />
             <div>
-              <div className="text-lg font-bold">{stats.weeklyVolume > 0 ? `${(stats.weeklyVolume / 1000).toFixed(1)}t` : '0'}</div>
+              <div className="text-lg font-bold">{stats.volume > 0 ? `${(stats.volume / 1000).toFixed(1)}t` : '0'}</div>
               <div className="text-xs text-muted-foreground">Objem</div>
             </div>
           </div>
 
-          {stats.weeklyDuration > 0 && (
+          {stats.duration > 0 && (
             <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
               <Clock className="w-5 h-5 text-green-500" />
               <div>
-                <div className="text-lg font-bold">{stats.weeklyDuration} min</div>
+                <div className="text-lg font-bold">{stats.duration} min</div>
                 <div className="text-xs text-muted-foreground">Čas</div>
               </div>
             </div>
           )}
 
-          {stats.prsThisWeek > 0 && (
+          {stats.prs > 0 && (
             <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
               <Trophy className="w-5 h-5 text-yellow-500" />
               <div>
-                <div className="text-lg font-bold">{stats.prsThisWeek}</div>
-                <div className="text-xs text-muted-foreground">PR tento týden</div>
+                <div className="text-lg font-bold">{stats.prs}</div>
+                <div className="text-xs text-muted-foreground">PR</div>
               </div>
             </div>
           )}
