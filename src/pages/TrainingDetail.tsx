@@ -30,7 +30,7 @@ import { useTags } from '@/hooks/useTags';
 import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
-import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
+import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption, PartialPaymentMethod } from '@/components/trainings/PaymentMethodSelector';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
@@ -107,6 +107,7 @@ export default function TrainingDetail() {
   const [participantShares, setParticipantShares] = useState<ParticipantShare[]>([]);
   const [usePriceSplit, setUsePriceSplit] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PartialPaymentMethod>('cash');
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -278,13 +279,23 @@ export default function TrainingDetail() {
         }];
       }
       
+      // Check if using partial credit (hybrid payment)
+      const isPartialCredit = paymentMethod === 'credit_partial';
+      const clientCreditBalance = client?.credit_balance ?? 0;
+      const creditToUse = isPartialCredit ? Math.min(clientCreditBalance, correctPrice) : 0;
+      
       // Use atomic RPC - single transaction for everything
       await completeTrainingAtomic.mutateAsync({
         sessionId: training.id,
         participants: normalizedParticipants,
-        paymentMethod: paymentMethodValue as 'credit' | 'cash' | 'card' | 'bank' | 'pending',
+        paymentMethod: isPartialCredit ? 'credit' : (paymentMethodValue as 'credit' | 'cash' | 'card' | 'bank' | 'pending'),
         totalPrice: correctPrice,
         notes: completeNotes || undefined,
+        // Hybrid payment params
+        usePartialCredit: isPartialCredit,
+        partialCreditAmount: isPartialCredit ? creditToUse : undefined,
+        partialPaymentMethod: isPartialCredit ? (partialPaymentMethod === 'later' ? 'pending' : partialPaymentMethod) : undefined,
+        partialAmountPending: isPartialCredit && partialPaymentMethod === 'later' ? (correctPrice - creditToUse) : undefined,
       });
       
       // Track training completion
@@ -507,6 +518,10 @@ export default function TrainingDetail() {
                 value={paymentMethod}
                 onChange={setPaymentMethod}
                 disabled={isSubmitting || completeTrainingAtomic.isPending}
+                clientCreditBalance={client?.credit_balance ?? 0}
+                trainingPrice={getExpectedPrice()}
+                partialMethod={partialPaymentMethod}
+                onPartialMethodChange={setPartialPaymentMethod}
               />
             </div>
 
@@ -542,6 +557,7 @@ export default function TrainingDetail() {
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {paymentMethod === 'credit' ? 'Dokončit a odečíst kredit' : 
+                   paymentMethod === 'credit_partial' ? (partialPaymentMethod === 'later' ? 'Dokončit (kredit + doplatek později)' : 'Dokončit (kredit + doplatek)') :
                    paymentMethod === 'later' ? 'Dokončit (platba později)' :
                    'Dokončit trénink'}
                 </>
