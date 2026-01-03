@@ -3,6 +3,7 @@ import { ClientPortalProvider, useClientPortal } from "@/contexts/ClientPortalCo
 import { ClientPortalLayout } from "@/components/client-portal/ClientPortalLayout";
 import { CelebrationProvider } from "@/contexts/CelebrationContext";
 import { useBadgeNotifications } from "@/hooks/useBadgeNotifications";
+import { useChallengeNotifications } from "@/hooks/useChallengeNotifications";
 
 // Inner component that uses the context
 function ClientPortalContent() {
@@ -10,6 +11,9 @@ function ClientPortalContent() {
   
   // Enable badge/level notifications
   useBadgeNotifications(clientId ?? undefined);
+  
+  // Enable challenge notifications
+  useChallengeNotifications();
   
   return (
     <ClientPortalLayout>

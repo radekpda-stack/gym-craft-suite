@@ -3,6 +3,7 @@ import { Trophy, Medal, Award, Calendar } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
 
 interface CompletedChallenge {
   id: string;
@@ -20,15 +21,6 @@ interface ChallengeHistoryProps {
 }
 
 export function ChallengeHistory({ completedChallenges, isLoading }: ChallengeHistoryProps) {
-  const formatScore = (score: number, metric: string) => {
-    if (metric === 'time_seconds') {
-      const mins = Math.floor(score / 60);
-      const secs = Math.round(score % 60);
-      return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-    }
-    return score.toLocaleString('cs-CZ');
-  };
-
   const getRankIcon = (rank?: number) => {
     if (!rank) return null;
     if (rank === 1) return <Trophy className="h-5 w-5 text-amber-500" />;
@@ -121,10 +113,10 @@ export function ChallengeHistory({ completedChallenges, isLoading }: ChallengeHi
 
               <div className="text-right">
                 <p className="font-bold">
-                  {formatScore(challenge.bestScore, challenge.metric)}
-                  {challenge.unitLabel && (
+                  {formatChallengeScore(challenge.bestScore, challenge.metric)}
+                  {getMetricLabel(challenge.metric, challenge.unitLabel) && (
                     <span className="text-xs font-normal text-muted-foreground ml-1">
-                      {challenge.unitLabel}
+                      {getMetricLabel(challenge.metric, challenge.unitLabel)}
                     </span>
                   )}
                 </p>

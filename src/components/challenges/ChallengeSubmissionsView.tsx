@@ -10,6 +10,7 @@ import { Challenge, useChallengeSubmissions } from '@/hooks/useChallenges';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Trophy, Medal, Award, Users } from 'lucide-react';
+import { formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
 
 interface ChallengeSubmissionsViewProps {
   challenge: Challenge;
@@ -19,27 +20,6 @@ interface ChallengeSubmissionsViewProps {
 
 export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: ChallengeSubmissionsViewProps) {
   const { data: submissions, isLoading } = useChallengeSubmissions(challenge.id);
-
-  const getMetricLabel = (metric: string) => {
-    const labels: Record<string, string> = {
-      time_seconds: 's',
-      reps: 'rep',
-      rounds: 'kola',
-      weight_kg: 'kg',
-      distance_m: 'm',
-      calories: 'kcal',
-    };
-    return challenge.unit_label || labels[metric] || '';
-  };
-
-  const formatScore = (score: number) => {
-    if (challenge.primary_metric === 'time_seconds') {
-      const mins = Math.floor(score / 60);
-      const secs = score % 60;
-      return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-    }
-    return score.toLocaleString('cs-CZ');
-  };
 
   // Sort submissions
   const sortedSubmissions = [...(submissions || [])].sort((a, b) => {
@@ -124,9 +104,9 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold">
-                    {formatScore(sub.score_primary)}
+                    {formatChallengeScore(sub.score_primary, challenge.primary_metric)}
                     <span className="text-sm font-normal text-muted-foreground ml-1">
-                      {getMetricLabel(challenge.primary_metric)}
+                      {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
                     </span>
                   </p>
                 </div>

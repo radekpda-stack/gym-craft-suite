@@ -4,8 +4,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, ChevronRight, Clock, Medal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { differenceInDays, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { useClientActiveChallenges } from '@/hooks/useClientPortalBenchmarks';
+import { formatCountdown, formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
 
 interface ActiveChallengeWidgetProps {
   className?: string;
@@ -28,9 +29,9 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
     return null;
   }
 
-  const daysRemaining = challenge 
-    ? differenceInDays(parseISO(challenge.end_at), new Date())
-    : 0;
+  const endDate = challenge ? parseISO(challenge.end_at) : new Date();
+  const countdownText = formatCountdown(endDate);
+  const isUrgent = endDate.getTime() - Date.now() < 72 * 60 * 60 * 1000; // < 72h
 
   return (
     <motion.div
@@ -64,7 +65,7 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-500">
                   Aktivní výzva
                 </span>
-                {daysRemaining <= 3 && daysRemaining > 0 && (
+                {isUrgent && (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">
                     Končí brzy!
                   </span>
@@ -78,10 +79,7 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  {daysRemaining > 0 
-                    ? `${daysRemaining} ${daysRemaining === 1 ? 'den' : daysRemaining < 5 ? 'dny' : 'dní'} zbývá`
-                    : 'Dnes končí!'
-                  }
+                  {countdownText}
                 </div>
                 {participantCount > 0 && (
                   <div className="flex items-center gap-1.5">
@@ -95,7 +93,12 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                 <div className="mt-3 p-2 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground">Tvůj nejlepší výsledek</p>
                   <p className="text-sm font-semibold">
-                    {submission.score_primary} {challenge.unit_label ?? ''}
+                    {formatChallengeScore(submission.score_primary, challenge.primary_metric)}
+                    {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
+                      </span>
+                    )}
                   </p>
                 </div>
               ) : (

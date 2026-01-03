@@ -1,20 +1,16 @@
-import { useState } from 'react';
-import { Trophy, Clock, Play, Send, ChevronRight, Medal, Award, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Trophy, Clock, Send, ChevronRight, Medal, Award, Users, History } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { 
   useClientActiveChallenges, 
   useSubmitChallengeResult,
@@ -25,9 +21,12 @@ import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { useClientChallengeHistory } from '@/hooks/useClientChallengeHistory';
 import { ChallengeHistory } from '@/components/client-portal/challenges/ChallengeHistory';
 import { AchievementsBadges } from '@/components/client-portal/challenges/AchievementsBadges';
-import { format, isAfter, isBefore, differenceInDays } from 'date-fns';
+import { ChallengeSubmissionDialog } from '@/components/client-portal/challenges/ChallengeSubmissionDialog';
+import { formatChallengeScore, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
+import { format, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function ClientPortalChallenges() {
   useClientPortalPageTracking('client_portal_challenges');
@@ -39,8 +38,7 @@ export default function ClientPortalChallenges() {
 
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
-  const [submitScore, setSubmitScore] = useState('');
-  const [submitNote, setSubmitNote] = useState('');
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
 
   const { data: leaderboard } = useChallengeLeaderboard(selectedChallenge);
 
@@ -50,8 +48,20 @@ export default function ClientPortalChallenges() {
   const displayMode = data?.display_mode || 'both';
   const minGroupSize = data?.min_group_size || 8;
 
+  // Split into active and completed
+  const { activeChallenges, completedChallenges } = useMemo(() => {
+    const now = new Date();
+    const active = challenges.filter(c => isAfter(new Date(c.end_at), now));
+    const completed = challenges.filter(c => !isAfter(new Date(c.end_at), now));
+    return { activeChallenges: active, completedChallenges: completed };
+  }, [challenges]);
+
+  const getClientSubmissions = (challengeId: string) => {
+    return clientSubmissions.filter(s => s.challenge_id === challengeId);
+  };
+
   const getClientBestSubmission = (challengeId: string) => {
-    const subs = clientSubmissions.filter(s => s.challenge_id === challengeId);
+    const subs = getClientSubmissions(challengeId);
     if (subs.length === 0) return null;
     
     const challenge = challenges.find(c => c.id === challengeId);
@@ -64,58 +74,31 @@ export default function ClientPortalChallenges() {
     return sorted[0];
   };
 
-  const formatScore = (score: number, metric: string) => {
-    if (metric === 'time_seconds') {
-      const mins = Math.floor(score / 60);
-      const secs = Math.round(score % 60);
-      return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-    }
-    return score.toLocaleString('cs-CZ');
-  };
-
-  const getMetricLabel = (metric: string, unitLabel?: string | null) => {
-    if (unitLabel) return unitLabel;
-    const labels: Record<string, string> = {
-      time_seconds: 's',
-      reps: 'opakování',
-      rounds: 'kol',
-      weight_kg: 'kg',
-      distance_m: 'm',
-      calories: 'kcal',
-    };
-    return labels[metric] || '';
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedChallenge || !submitScore) return;
-
-    const score = parseFloat(submitScore);
-    if (isNaN(score) || score <= 0) {
-      toast.error('Zadejte platnou hodnotu');
-      return;
-    }
-
-    try {
-      await submitResult.mutateAsync({
-        challengeId: selectedChallenge,
-        score_primary: score,
-        note: submitNote || undefined,
-      });
-      toast.success('Výsledek odeslán!');
-      setSubmitDialogOpen(false);
-      setSubmitScore('');
-      setSubmitNote('');
-    } catch (error) {
-      toast.error('Nepodařilo se odeslat výsledek');
-    }
-  };
-
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-4 w-4 text-amber-500" />;
     if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
     if (rank === 3) return <Award className="h-4 w-4 text-amber-700" />;
     return null;
   };
+
+  const handleSubmit = async (score: number, note?: string) => {
+    if (!selectedChallenge) return;
+
+    try {
+      await submitResult.mutateAsync({
+        challengeId: selectedChallenge,
+        score_primary: score,
+        note,
+      });
+      toast.success('Výsledek odeslán!');
+      setSubmitDialogOpen(false);
+    } catch (error) {
+      toast.error('Nepodařilo se odeslat výsledek');
+      throw error;
+    }
+  };
+
+  const selectedChallengeData = challenges.find(c => c.id === selectedChallenge);
 
   if (isLoading) {
     return (
@@ -133,41 +116,95 @@ export default function ClientPortalChallenges() {
     );
   }
 
-  if (challenges.length === 0) {
+  const renderChallengeCard = (challenge: any, isActive: boolean = true) => {
+    const end = new Date(challenge.end_at);
+    const best = getClientBestSubmission(challenge.id);
+    const participants = participantCounts[challenge.id] || 0;
+    const submissions = getClientSubmissions(challenge.id);
+
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-amber-500" />
-            Výzvy
-          </h1>
-          <p className="text-muted-foreground">Zapoj se do aktuálních výzev</p>
-        </div>
-        
-        <Card className="text-center py-12">
-          <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <p className="font-medium mb-2">Momentálně nejsou žádné aktivní výzvy</p>
-          <p className="text-sm text-muted-foreground">Tvůj trenér brzy vyhlásí novou výzvu!</p>
-        </Card>
-
-        {/* History & Achievements even when no active challenges */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <ChallengeHistory 
-            completedChallenges={historyData?.completedChallenges || []}
-            isLoading={historyLoading}
-          />
-          <AchievementsBadges
-            achievements={historyData?.achievements || []}
-            streakCount={historyData?.streakCount || 0}
-            prCount={historyData?.prCount || 0}
-            isLoading={historyLoading}
-          />
-        </div>
-      </div>
+      <Card 
+        key={challenge.id} 
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md",
+          selectedChallenge === challenge.id && "ring-2 ring-primary"
+        )}
+        onClick={() => setSelectedChallenge(challenge.id)}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-lg">{challenge.title}</CardTitle>
+              <CardDescription className="line-clamp-2">
+                {challenge.description}
+              </CardDescription>
+            </div>
+            {isActive ? (
+              <Badge variant={getCountdownVariant(end)}>
+                <Clock className="h-3 w-3 mr-1" />
+                {formatCountdown(end)}
+              </Badge>
+            ) : (
+              <Badge variant="outline">
+                Ukončeno {format(end, 'd. M.', { locale: cs })}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {best ? (
+                <div>
+                  <span className="text-sm text-muted-foreground">Tvůj nejlepší:</span>
+                  <p className="text-xl font-bold">
+                    {formatChallengeScore(best.score_primary, challenge.primary_metric)}
+                    {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (
+                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                        {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-muted-foreground">
+                  <span className="text-sm">Ještě jsi neodeslal(a) výsledek</span>
+                </div>
+              )}
+              {submissions.length > 1 && (
+                <Badge variant="outline" className="text-xs">
+                  <History className="h-3 w-3 mr-1" />
+                  {submissions.length} pokusů
+                </Badge>
+              )}
+              {participants >= minGroupSize && privacySettings?.allow_challenges_participation && (
+                <Badge variant="outline">
+                  <Users className="h-3 w-3 mr-1" />
+                  {participants}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isActive && (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedChallenge(challenge.id);
+                    setSubmitDialogOpen(true);
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Odeslat výsledek
+                </Button>
+              )}
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
-  }
-
-  const selectedChallengeData = challenges.find(c => c.id === selectedChallenge);
+  };
 
   return (
     <div className="space-y-6">
@@ -179,80 +216,46 @@ export default function ClientPortalChallenges() {
         <p className="text-muted-foreground">Zapoj se do aktuálních výzev</p>
       </div>
 
-      <div className="space-y-4">
-        {challenges.map((challenge) => {
-          const now = new Date();
-          const end = new Date(challenge.end_at);
-          const daysLeft = differenceInDays(end, now);
-          const best = getClientBestSubmission(challenge.id);
-          const participants = participantCounts[challenge.id] || 0;
+      {/* Tabs for Active/Completed */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'completed')}>
+        <TabsList className="grid w-full grid-cols-2 max-w-xs">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Aktivní
+            {activeChallenges.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                {activeChallenges.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Ukončené
+          </TabsTrigger>
+        </TabsList>
 
-          return (
-            <Card 
-              key={challenge.id} 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedChallenge === challenge.id ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setSelectedChallenge(challenge.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {challenge.description}
-                    </CardDescription>
-                  </div>
-                  <Badge variant={daysLeft <= 3 ? 'destructive' : 'secondary'}>
-                    <Clock className="h-3 w-3 mr-1" />
-                    {daysLeft > 0 ? `${daysLeft} dní` : 'Dnes končí'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {best ? (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Tvůj nejlepší:</span>
-                        <p className="text-xl font-bold">
-                          {formatScore(best.score_primary, challenge.primary_metric)}
-                          <span className="text-sm font-normal text-muted-foreground ml-1">
-                            {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
-                          </span>
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        <span className="text-sm">Ještě jsi neodeslal(a) výsledek</span>
-                      </div>
-                    )}
-                    {participants >= minGroupSize && privacySettings?.allow_challenges_participation && (
-                      <Badge variant="outline">
-                        {participants} účastníků
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedChallenge(challenge.id);
-                        setSubmitDialogOpen(true);
-                      }}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Odeslat výsledek
-                    </Button>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
-              </CardContent>
+        <TabsContent value="active" className="mt-4 space-y-4">
+          {activeChallenges.length === 0 ? (
+            <Card className="text-center py-12">
+              <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="font-medium mb-2">Momentálně nejsou žádné aktivní výzvy</p>
+              <p className="text-sm text-muted-foreground">Tvůj trenér brzy vyhlásí novou výzvu!</p>
             </Card>
-          );
-        })}
-      </div>
+          ) : (
+            activeChallenges.map(challenge => renderChallengeCard(challenge, true))
+          )}
+        </TabsContent>
+
+        <TabsContent value="completed" className="mt-4 space-y-4">
+          {completedChallenges.length === 0 ? (
+            <Card className="text-center py-8">
+              <p className="text-sm text-muted-foreground">Zatím nemáš žádné dokončené výzvy</p>
+            </Card>
+          ) : (
+            completedChallenges.map(challenge => renderChallengeCard(challenge, false))
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Challenge Detail / Leaderboard */}
       {selectedChallengeData && (
@@ -270,11 +273,60 @@ export default function ClientPortalChallenges() {
               <div>
                 <Button variant="outline" asChild>
                   <a href={selectedChallengeData.vod_url} target="_blank" rel="noopener noreferrer">
-                    <Play className="h-4 w-4 mr-2" />
+                    <Trophy className="h-4 w-4 mr-2" />
                     Video instrukce
                   </a>
                 </Button>
               </div>
+            )}
+
+            {/* My Attempts Section */}
+            {getClientSubmissions(selectedChallengeData.id).length > 0 && (
+              <Accordion type="single" collapsible>
+                <AccordionItem value="my-attempts" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Moje pokusy ({getClientSubmissions(selectedChallengeData.id).length})
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 pt-2">
+                      {getClientSubmissions(selectedChallengeData.id)
+                        .sort((a, b) => new Date(b.submitted_at || '').getTime() - new Date(a.submitted_at || '').getTime())
+                        .map((sub) => {
+                          const best = getClientBestSubmission(selectedChallengeData.id);
+                          const isBest = best?.id === sub.id;
+                          return (
+                            <div 
+                              key={sub.id}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-lg",
+                                isBest ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isBest && <Trophy className="h-4 w-4 text-amber-500" />}
+                                <span className="font-medium">
+                                  {formatChallengeScore(sub.score_primary, selectedChallengeData.primary_metric)}
+                                </span>
+                                {getMetricLabel(selectedChallengeData.primary_metric, selectedChallengeData.unit_label) && (
+                                  <span className="text-sm text-muted-foreground">
+                                    {getMetricLabel(selectedChallengeData.primary_metric, selectedChallengeData.unit_label)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {sub.submitted_at && format(new Date(sub.submitted_at), 'd. M. yyyy', { locale: cs })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             )}
 
             {/* Leaderboard */}
@@ -291,20 +343,21 @@ export default function ClientPortalChallenges() {
                   {leaderboard.leaderboard.slice(0, 10).map((entry: any) => (
                     <div 
                       key={entry.rank}
-                      className={`flex items-center gap-3 p-2 rounded-lg ${
-                        entry.is_you ? 'bg-primary/10 border border-primary/20' : 'bg-muted/50'
-                      }`}
+                      className={cn(
+                        "flex items-center gap-3 p-2 rounded-lg transition-all",
+                        entry.is_you ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
+                      )}
                     >
                       <div className="w-8 flex justify-center">
                         {getRankIcon(entry.rank) || (
                           <span className="text-muted-foreground text-sm">{entry.rank}.</span>
                         )}
                       </div>
-                      <span className={`flex-1 ${entry.is_you ? 'font-semibold' : ''}`}>
+                      <span className={cn("flex-1", entry.is_you && "font-semibold")}>
                         {entry.is_you ? 'Ty' : entry.pseudonym}
                       </span>
                       <span className="font-mono font-medium">
-                        {formatScore(entry.score, selectedChallengeData.primary_metric)}
+                        {formatChallengeScore(entry.score, selectedChallengeData.primary_metric)}
                       </span>
                     </div>
                   ))}
@@ -353,48 +406,14 @@ export default function ClientPortalChallenges() {
       </div>
 
       {/* Submit Dialog */}
-      <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Odeslat výsledek</DialogTitle>
-            <DialogDescription>
-              {selectedChallengeData?.title}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="score">
-                Výsledek ({getMetricLabel(selectedChallengeData?.primary_metric || 'reps', selectedChallengeData?.unit_label)})
-              </Label>
-              <Input
-                id="score"
-                type="number"
-                value={submitScore}
-                onChange={(e) => setSubmitScore(e.target.value)}
-                placeholder={selectedChallengeData?.primary_metric === 'time_seconds' ? 'Čas v sekundách' : 'Hodnota'}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="note">Poznámka (volitelné)</Label>
-              <Textarea
-                id="note"
-                value={submitNote}
-                onChange={(e) => setSubmitNote(e.target.value)}
-                placeholder="Jak se ti dařilo?"
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSubmitDialogOpen(false)}>
-              Zrušit
-            </Button>
-            <Button onClick={handleSubmit} disabled={!submitScore || submitResult.isPending}>
-              {submitResult.isPending ? 'Odesílám...' : 'Odeslat'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ChallengeSubmissionDialog
+        open={submitDialogOpen}
+        onOpenChange={setSubmitDialogOpen}
+        challenge={selectedChallengeData || null}
+        previousSubmissions={selectedChallengeData ? getClientSubmissions(selectedChallengeData.id) : []}
+        onSubmit={handleSubmit}
+        isPending={submitResult.isPending}
+      />
     </div>
   );
 }
