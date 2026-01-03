@@ -129,6 +129,15 @@ export default function ClientPortalProgress() {
       {/* Client Benchmarks - Comparison with others */}
       {clientId && <ClientExerciseBenchmarks clientId={clientId} />}
 
+      {/* Info tip for new users */}
+      {!isDataLoading && (showWeight || showBodyFat || showExercises) && (
+        <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+          <p className="text-xs text-muted-foreground text-center">
+            💡 Grafy níže ukazují vývoj tvých měření v čase. Čím více dat, tím přesnější obraz.
+          </p>
+        </div>
+      )}
+
       {/* Summary cards */}
       {(showWeight || showBodyFat || showExercises) && (
         <ProgressSummaryCards

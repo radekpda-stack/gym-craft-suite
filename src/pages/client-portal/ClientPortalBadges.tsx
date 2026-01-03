@@ -177,6 +177,16 @@ export default function ClientPortalBadges() {
         )}
       </div>
 
+      {/* Explanation for new users */}
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Odznaky získáváš za své úspěchy - pravidelné tréninky, osobní rekordy a splněné výzvy. Sbírej je všechny!
+          </p>
+        </div>
+      </div>
+
       {/* XP History Summary */}
       {xpEvents.length > 0 && (
         <Card className="bg-gradient-to-br from-yellow-500/10 via-background to-yellow-500/5 border-yellow-500/20">

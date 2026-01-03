@@ -80,6 +80,9 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
             </span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Jak si vedeš ve srovnání s ostatními klienty
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Overall percentile */}
