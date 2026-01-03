@@ -4,9 +4,10 @@ import { ClipboardList, Plus, Scale, Stethoscope, Settings2 } from 'lucide-react
 import { useRecordsFeed } from '@/hooks/useRecordsFeed';
 import { useClients, Client } from '@/hooks/useClients';
 import { useMeasurements, useCreateMeasurement, Measurement } from '@/hooks/useMeasurements';
-import { Diagnostic } from '@/hooks/useDiagnostics';
+import { useDiagnostics, Diagnostic } from '@/hooks/useDiagnostics';
 import { RecordsFilterBar } from '@/components/records/RecordsFilterBar';
 import { RecordsFeed } from '@/components/records/RecordsFeed';
+import { RecordsStatsBar } from '@/components/records/RecordsStatsBar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ export default function Records() {
   
   const { data: clients = [] } = useClients();
   const { data: measurements = [] } = useMeasurements();
+  const { data: diagnostics = [] } = useDiagnostics();
   const createMeasurement = useCreateMeasurement();
   
   // Sheets state
@@ -125,6 +127,13 @@ export default function Records() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      
+      {/* Stats bar */}
+      <RecordsStatsBar
+        measurements={measurements}
+        diagnostics={diagnostics}
+        clients={clients}
+      />
       
       {/* Filter bar */}
       <RecordsFilterBar
