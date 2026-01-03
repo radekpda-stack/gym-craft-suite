@@ -713,6 +713,60 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          client_id: string
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          read_at: string | null
+          sender_id: string
+          sender_type: string
+          trainer_id: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          sender_id: string
+          sender_type: string
+          trainer_id: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          sender_id?: string
+          sender_type?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_access_tokens: {
         Row: {
           client_id: string
@@ -881,6 +935,82 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_assigned_workouts: {
+        Row: {
+          client_id: string
+          client_notes: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          exercises: Json
+          id: string
+          scheduled_for: string | null
+          status: string
+          template_id: string | null
+          title: string
+          trainer_id: string
+          trainer_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          exercises?: Json
+          id?: string
+          scheduled_for?: string | null
+          status?: string
+          template_id?: string | null
+          title: string
+          trainer_id: string
+          trainer_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          exercises?: Json
+          id?: string
+          scheduled_for?: string | null
+          status?: string
+          template_id?: string | null
+          title?: string
+          trainer_id?: string
+          trainer_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assigned_workouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assigned_workouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_assigned_workouts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1687,6 +1817,63 @@ export type Database = {
           },
           {
             foreignKeyName: "client_training_phases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_training_plans: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          goals: Json | null
+          id: string
+          name: string
+          start_date: string
+          status: string
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          goals?: Json | null
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          goals?: Json | null
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_training_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_training_plans_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"

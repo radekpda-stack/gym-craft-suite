@@ -24,6 +24,7 @@ import {
   Dumbbell,
   Paintbrush,
   UserCircle,
+  Users,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -46,6 +47,8 @@ import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
+import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
+import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -64,48 +67,39 @@ export default function Settings() {
   const categories: SettingsCategory[] = [
     {
       id: 'account',
-      title: language === 'cs' ? 'Účet & Identita' : 'Account & Identity',
+      title: language === 'cs' ? 'Můj účet' : 'My Account',
       description: language === 'cs' 
-        ? 'Osobní nastavení, přihlášení a firemní údaje' 
-        : 'Personal settings, login and company details',
+        ? 'Profil, heslo a jazyk' 
+        : 'Profile, password and language',
       icon: User,
       iconColor: 'text-blue-500',
     },
     {
-      id: 'operations',
-      title: language === 'cs' ? 'Provoz' : 'Operations',
+      id: 'company',
+      title: language === 'cs' ? 'Firma & Fakturace' : 'Company & Billing',
       description: language === 'cs' 
-        ? 'Pracovní doba a kapacita' 
-        : 'Working hours and capacity',
-      icon: Calendar,
-      iconColor: 'text-green-500',
-    },
-    {
-      id: 'services',
-      title: language === 'cs' ? 'Služby & Ceny' : 'Services & Pricing',
-      description: language === 'cs' 
-        ? 'Ceník, balíčky a štítky' 
-        : 'Pricing, packages and tags',
-      icon: CreditCard,
+        ? 'Firemní údaje, ceny a balíčky' 
+        : 'Company details, pricing and packages',
+      icon: Building2,
       iconColor: 'text-amber-500',
     },
     {
-      id: 'personalization',
-      title: language === 'cs' ? 'Personalizace' : 'Personalization',
+      id: 'portal',
+      title: language === 'cs' ? 'Klientský portál' : 'Client Portal',
       description: language === 'cs' 
-        ? 'Vzhled, dashboard a výchozí hodnoty' 
-        : 'Appearance, dashboard and default values',
-      icon: Palette,
-      iconColor: 'text-purple-500',
+        ? 'Viditelnost sekcí a nastavení portálu' 
+        : 'Section visibility and portal settings',
+      icon: Users,
+      iconColor: 'text-green-500',
     },
     {
-      id: 'modules',
-      title: language === 'cs' ? 'Moduly & Funkce' : 'Modules & Features',
+      id: 'app',
+      title: language === 'cs' ? 'Aplikace' : 'Application',
       description: language === 'cs' 
-        ? 'Zapnutí/vypnutí funkcí aplikace' 
-        : 'Enable/disable app features',
+        ? 'Moduly, vzhled a personalizace' 
+        : 'Modules, appearance and personalization',
       icon: Boxes,
-      iconColor: 'text-cyan-500',
+      iconColor: 'text-purple-500',
     },
     {
       id: 'system',
@@ -140,14 +134,18 @@ export default function Settings() {
                 ? 'Vaše osobní údaje, fotka a odbornost' 
                 : 'Your personal details, photo and expertise'}
               icon={UserCircle}
-              impact={{
-                type: 'info',
-                message: language === 'cs' 
-                  ? 'Tyto údaje mohou vidět klienti ve vašem profilu' 
-                  : 'These details can be seen by clients on your profile'
-              }}
             >
               <TrainerProfileSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Změna hesla' : 'Change Password'}
+              description={language === 'cs' 
+                ? 'Aktualizujte přístupové heslo k účtu' 
+                : 'Update your account password'}
+              icon={KeyRound}
+            >
+              <PasswordChangeSettings />
             </SettingsSection>
 
             <SettingsSection
@@ -186,6 +184,21 @@ export default function Settings() {
             </SettingsSection>
 
             <SettingsSection
+              title={language === 'cs' ? 'Notifikace' : 'Notifications'}
+              description={language === 'cs' 
+                ? 'Upozornění a připomínky' 
+                : 'Alerts and reminders'}
+              icon={Bell}
+            >
+              <NotificationSettings />
+            </SettingsSection>
+          </>
+        );
+
+      case 'company':
+        return (
+          <>
+            <SettingsSection
               title={language === 'cs' ? 'Firemní profil' : 'Company Profile'}
               description={language === 'cs' 
                 ? 'Údaje zobrazené na fakturách a výpisech' 
@@ -202,52 +215,6 @@ export default function Settings() {
             </SettingsSection>
 
             <SettingsSection
-              title={language === 'cs' ? 'Notifikace' : 'Notifications'}
-              description={language === 'cs' 
-                ? 'Upozornění a připomínky' 
-                : 'Alerts and reminders'}
-              icon={Bell}
-            >
-              <NotificationSettings />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Změna hesla' : 'Change Password'}
-              description={language === 'cs' 
-                ? 'Aktualizujte přístupové heslo k účtu' 
-                : 'Update your account password'}
-              icon={KeyRound}
-            >
-              <PasswordChangeSettings />
-            </SettingsSection>
-          </>
-        );
-
-      case 'operations':
-        return (
-          <>
-            <SettingsSection
-              title={language === 'cs' ? 'Pracovní doba' : 'Working Hours'}
-              description={language === 'cs' 
-                ? 'Používá se pro přehled vytíženosti v kalendáři' 
-                : 'Used for capacity overview in calendar'}
-              icon={Clock}
-              impact={{
-                type: 'info',
-                message: language === 'cs' 
-                  ? 'Ovlivňuje pouze vizualizaci, ne skutečné plánování' 
-                  : 'Affects visualization only, not actual scheduling'
-              }}
-            >
-              <CapacitySettingsPanel />
-            </SettingsSection>
-          </>
-        );
-
-      case 'services':
-        return (
-          <>
-            <SettingsSection
               title={language === 'cs' ? 'Ceny tréninků' : 'Training Prices'}
               description={language === 'cs' 
                 ? 'Základní ceny podle počtu účastníků' 
@@ -256,8 +223,8 @@ export default function Settings() {
               impact={{
                 type: 'warning',
                 message: language === 'cs' 
-                  ? 'Změny cen ovlivní pouze NOVÉ tréninky. Existující záznamy zůstanou beze změny.' 
-                  : 'Price changes affect only NEW trainings. Existing records remain unchanged.'
+                  ? 'Změny cen ovlivní pouze NOVÉ tréninky' 
+                  : 'Price changes affect only NEW trainings'
               }}
             >
               <TrainingPricesSettings />
@@ -269,12 +236,6 @@ export default function Settings() {
                 ? 'Předplacené balíčky pro klienty' 
                 : 'Prepaid packages for clients'}
               icon={Package}
-              impact={{
-                type: 'info',
-                message: language === 'cs' 
-                  ? 'Změny se projeví při nákupu nových balíčků' 
-                  : 'Changes apply when purchasing new packages'
-              }}
             >
               <PackagesManagement />
             </SettingsSection>
@@ -288,27 +249,78 @@ export default function Settings() {
             >
               <TagsManagement />
             </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Pracovní doba' : 'Working Hours'}
+              description={language === 'cs' 
+                ? 'Pro přehled vytíženosti v kalendáři' 
+                : 'For capacity overview in calendar'}
+              icon={Clock}
+            >
+              <CapacitySettingsPanel />
+            </SettingsSection>
           </>
         );
 
-      case 'personalization':
+      case 'portal':
         return (
           <>
             <SettingsSection
+              title={language === 'cs' ? 'Viditelnost sekcí' : 'Section Visibility'}
+              description={language === 'cs' 
+                ? 'Nastavte, které sekce klienti uvidí v portálu' 
+                : 'Set which sections clients can see in portal'}
+              icon={Users}
+            >
+              <PortalVisibilitySettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Nastavení per klient' : 'Per-Client Settings'}
+              description={language === 'cs' 
+                ? 'Individuální nastavení pro jednotlivé klienty' 
+                : 'Individual settings for each client'}
+              icon={UserCircle}
+            >
+              <ClientPortalSettingsPage />
+            </SettingsSection>
+          </>
+        );
+
+      case 'app':
+        return (
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Moduly' : 'Modules'}
+              description={language === 'cs' 
+                ? 'Zapněte nebo vypněte funkce aplikace' 
+                : 'Enable or disable app features'}
+              icon={Boxes}
+              impact={{
+                type: 'info',
+                message: language === 'cs' 
+                  ? 'Vypnuté moduly jsou skryté z navigace, data zůstávají' 
+                  : 'Disabled modules are hidden from navigation, data is preserved'
+              }}
+            >
+              <ModuleSettings />
+            </SettingsSection>
+
+            <SettingsSection
               title={language === 'cs' ? 'Vzhled aplikace' : 'App Appearance'}
               description={language === 'cs' 
-                ? 'Zvolte barevné schéma, které vám vyhovuje' 
-                : 'Choose a color scheme that suits you'}
+                ? 'Barevné schéma' 
+                : 'Color scheme'}
               icon={Paintbrush}
             >
               <ThemeSettings />
             </SettingsSection>
 
             <SettingsSection
-              title={language === 'cs' ? 'Nastavení dashboardu' : 'Dashboard Settings'}
+              title={language === 'cs' ? 'Dashboard' : 'Dashboard'}
               description={language === 'cs' 
-                ? 'Zobrazované sekce na hlavním přehledu' 
-                : 'Sections displayed on main overview'}
+                ? 'Zobrazované sekce na přehledu' 
+                : 'Sections displayed on overview'}
               icon={LayoutDashboard}
             >
               <DashboardPersonalizationSettings />
@@ -317,8 +329,8 @@ export default function Settings() {
             <SettingsSection
               title={language === 'cs' ? 'Rychlé akce' : 'Quick Actions'}
               description={language === 'cs' 
-                ? 'Pořadí a viditelnost rychlých akcí' 
-                : 'Order and visibility of quick actions'}
+                ? 'Pořadí a viditelnost' 
+                : 'Order and visibility'}
               icon={Zap}
             >
               <QuickActionSettings />
@@ -327,32 +339,11 @@ export default function Settings() {
             <SettingsSection
               title={language === 'cs' ? 'Výchozí hodnoty' : 'Default Values'}
               description={language === 'cs' 
-                ? 'Přednastavené hodnoty při vytváření tréninků' 
-                : 'Preset values when creating trainings'}
+                ? 'Přednastavené hodnoty při vytváření' 
+                : 'Preset values when creating'}
               icon={Settings2}
             >
               <DefaultValuesSettings />
-            </SettingsSection>
-          </>
-        );
-
-      case 'modules':
-        return (
-          <>
-            <SettingsSection
-              title={language === 'cs' ? 'Správa modulů' : 'Module Management'}
-              description={language === 'cs' 
-                ? 'Zapněte nebo vypněte funkce aplikace podle potřeby' 
-                : 'Enable or disable app features as needed'}
-              icon={Boxes}
-              impact={{
-                type: 'info',
-                message: language === 'cs' 
-                  ? 'Vypnuté moduly jsou skryté z navigace, data zůstávají zachována' 
-                  : 'Disabled modules are hidden from navigation, data is preserved'
-              }}
-            >
-              <ModuleSettings />
             </SettingsSection>
           </>
         );
@@ -373,8 +364,8 @@ export default function Settings() {
             <SettingsSection
               title={language === 'cs' ? 'Export dat' : 'Data Export'}
               description={language === 'cs' 
-                ? 'Stáhněte všechna data pro zálohu nebo analýzu' 
-                : 'Download all data for backup or analysis'}
+                ? 'Stáhněte všechna data pro zálohu' 
+                : 'Download all data for backup'}
               icon={Download}
             >
               <DataExport />
@@ -384,8 +375,8 @@ export default function Settings() {
               <SettingsSection
                 title={language === 'cs' ? 'Statistiky využívání' : 'Usage Statistics'}
                 description={language === 'cs' 
-                  ? 'Analýza využívání funkcí všemi uživateli' 
-                  : 'Feature usage analytics from all users'}
+                  ? 'Analýza využívání funkcí' 
+                  : 'Feature usage analytics'}
                 icon={BarChart2}
               >
                 <FeatureUsageStats />
@@ -412,14 +403,14 @@ export default function Settings() {
             <SettingsSection
               title={language === 'cs' ? 'Správa uživatelů' : 'User Management'}
               description={language === 'cs' 
-                ? 'Schvalování nových uživatelů a správa přístupů' 
-                : 'Approve new users and manage access'}
+                ? 'Schvalování nových uživatelů' 
+                : 'Approve new users'}
               icon={UserCog}
               impact={{
                 type: 'warning',
                 message: language === 'cs' 
-                  ? 'Pozor: Změny přístupů se projeví okamžitě' 
-                  : 'Caution: Access changes take effect immediately'
+                  ? 'Změny se projeví okamžitě' 
+                  : 'Changes take effect immediately'
               }}
             >
               <UserManagementSettings />

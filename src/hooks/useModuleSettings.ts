@@ -8,6 +8,12 @@ export interface ModuleSettings {
   training_templates: boolean;
   pr_history: boolean;
   tests: boolean;
+  // New modules
+  sales: boolean;
+  calendar: boolean;
+  statistics: boolean;
+  challenges: boolean;
+  exercises: boolean;
 }
 
 const DEFAULT_MODULES: ModuleSettings = {
@@ -18,6 +24,12 @@ const DEFAULT_MODULES: ModuleSettings = {
   training_templates: true,
   pr_history: true,
   tests: true,
+  // New modules - all enabled by default
+  sales: true,
+  calendar: true,
+  statistics: true,
+  challenges: true,
+  exercises: true,
 };
 
 export function useModuleSettings() {
