@@ -8,6 +8,8 @@
  * - Birth year + age
  * - "Chodí od" with edit capability
  * - "U tebe X měsíců"
+ * - Red flag indicator
+ * - Last portal login
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -21,13 +23,16 @@ import {
   Check,
   X,
   Copy,
+  AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { format, differenceInYears, differenceInMonths } from 'date-fns';
+import { format, differenceInYears, differenceInMonths, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Client } from '@/hooks/useClients';
 import { toast } from '@/hooks/use-toast';
@@ -35,11 +40,15 @@ import { toast } from '@/hooks/use-toast';
 interface ClientHeaderCompactProps {
   client: Client;
   onUpdateTrainingStartDate?: (date: string | null) => Promise<void>;
+  redFlagCount?: number;
+  lastPortalLogin?: string | null;
 }
 
 export function ClientHeaderCompact({ 
   client, 
-  onUpdateTrainingStartDate 
+  onUpdateTrainingStartDate,
+  redFlagCount = 0,
+  lastPortalLogin,
 }: ClientHeaderCompactProps) {
   const [isEditingStartDate, setIsEditingStartDate] = useState(false);
   const [startDateInput, setStartDateInput] = useState('');
@@ -110,8 +119,36 @@ export function ClientHeaderCompact({
           </div>
         </div>
 
-        {/* Contact icons */}
+        {/* Red flag + Contact icons */}
         <div className="flex items-center gap-1 shrink-0">
+          {/* Red flag indicator */}
+          {redFlagCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 rounded-full bg-destructive/10">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{redFlagCount}× červený signál ve feedbacku</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Portal login indicator */}
+          {lastPortalLogin && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 rounded-full hover:bg-secondary/50 transition-colors">
+                  <Globe className="w-4 h-4 text-success" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>V zóně {formatDistanceToNow(new Date(lastPortalLogin), { locale: cs, addSuffix: true })}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {client.phone && (
             <>
               <a 

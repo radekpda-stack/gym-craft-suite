@@ -3,7 +3,7 @@
  * 
  * 2 quick cards showing key information:
  * A) Next/Last Training (PT session)
- * B) Credit balance with finance info (unpaid trainings, packages)
+ * B) Credit balance with finance info (unpaid trainings, packages, LTV)
  */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,9 +19,11 @@ import {
   ChevronDown,
   ChevronUp,
   Receipt,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { format, differenceInDays, isFuture } from 'date-fns';
@@ -29,6 +31,7 @@ import { cs } from 'date-fns/locale';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useClientPackages } from '@/hooks/useClientPackages';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
+import { useClientLTV } from '@/hooks/useClientLTV';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TrainingSession {
@@ -66,6 +69,7 @@ export function ClientQuickCards({
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(clientId);
   const { data: packages = [] } = useClientPackages(clientId);
   const { data: transactions = [] } = useCreditTransactions(clientId);
+  const { data: ltvData } = useClientLTV(clientId);
   
   const unpaidCount = unpaidTrainings.length;
   const unpaidAmount = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
@@ -202,12 +206,33 @@ export function ClientQuickCards({
                 <span className={cn('text-2xl font-bold', getCreditStatusColor())}>
                   {formatCurrency(creditBalance)}
                 </span>
-                {isSharedBudget && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <Users className="w-3 h-3" />
-                    Sdílený
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* LTV indicator */}
+                  {ltvData && ltvData.totalRevenue > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="text-xs gap-1 bg-background/50">
+                          <TrendingUp className="w-3 h-3 text-success" />
+                          LTV
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs">
+                        <div className="space-y-1 text-xs">
+                          <p className="font-medium">Lifetime Value: {formatCurrency(ltvData.totalRevenue)}</p>
+                          <p>Tréninků: {ltvData.totalTrainings}</p>
+                          <p>Průměr/měsíc: {formatCurrency(ltvData.avgRevenuePerMonth)}</p>
+                          <p>Aktivní měsíců: {ltvData.monthsActive}</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {isSharedBudget && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <Users className="w-3 h-3" />
+                      Sdílený
+                    </Badge>
+                  )}
+                </div>
               </div>
               {isSharedBudget && budgetGroupName && (
                 <p className="text-xs text-muted-foreground mt-1">
