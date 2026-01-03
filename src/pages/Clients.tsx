@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
-import { Search, Plus, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, Users, Link as LinkIcon, Archive, ArchiveRestore, Calendar, CalendarDays, BarChart3, MoreHorizontal, Filter, ClipboardList } from 'lucide-react';
+import { Search, Plus, Phone, Mail, CreditCard, Pencil, Trash2, Wallet, History, Dumbbell, Package, Edit3, X, Tag, Star, Users, Link as LinkIcon, Archive, ArchiveRestore, Calendar, CalendarDays, BarChart3, MoreHorizontal, Filter, ClipboardList, Copy, Check, Loader2 } from 'lucide-react';
 import { PreDiagnosticInviteDialog } from '@/components/pre-diagnostic/PreDiagnosticInviteDialog';
 import { UnassignedPreDiagnosticList } from '@/components/pre-diagnostic/UnassignedPreDiagnosticList';
+import { useCreateClientPreDiagnostic } from '@/hooks/usePreDiagnosticForms';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,6 +95,9 @@ export default function Clients() {
   const [creditDescription, setCreditDescription] = useState('');
   const [showGroupsSheet, setShowGroupsSheet] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [preDiagClient, setPreDiagClient] = useState<Client | null>(null);
+  const [preDiagLink, setPreDiagLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: clients = [], isLoading } = useClients();
   const { data: trainingCounts = {} } = useClientTrainingCounts();
@@ -108,6 +112,7 @@ export default function Clients() {
   const { data: allTags = [] } = useTags();
   const { data: budgetGroups = [] } = useBudgetGroups();
   const { data: scheduleData } = useClientScheduleData();
+  const createClientPreDiagnostic = useCreateClientPreDiagnostic();
 
   // Handle URL filter parameter
   useEffect(() => {
@@ -230,6 +235,33 @@ export default function Clients() {
     setCreditDescription('');
     setCreditClient(null);
     trackFeature('credit_add', 'finance');
+  };
+
+  const handleSendPreDiagnostic = async (client: Client) => {
+    setPreDiagClient(client);
+    setPreDiagLink(null);
+    setCopied(false);
+    
+    try {
+      const form = await createClientPreDiagnostic.mutateAsync(client.id);
+      const link = `${window.location.origin}/pre-diagnostic/${form.token}`;
+      setPreDiagLink(link);
+      trackFeature('pre_diagnostic_send_from_list', 'clients');
+    } catch (error) {
+      setPreDiagClient(null);
+    }
+  };
+
+  const handleCopyPreDiagLink = async () => {
+    if (!preDiagLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(preDiagLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const getCreditColor = (credit: number) => {
@@ -443,6 +475,57 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
+      {/* Pre-Diagnostic Link Dialog */}
+      <Dialog open={!!preDiagClient} onOpenChange={(open) => !open && setPreDiagClient(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              Pre-diagnostika - {preDiagClient?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Zkopírujte odkaz a pošlete ho klientovi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {createClientPreDiagnostic.isPending ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : preDiagLink ? (
+              <>
+                <div className="flex gap-2">
+                  <Input 
+                    value={preDiagLink} 
+                    readOnly 
+                    className="font-mono text-xs"
+                    onClick={(e) => e.currentTarget.select()}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleCopyPreDiagLink}
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-success" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Odkaz je platný 7 dní. Po vyplnění formuláře se data automaticky propojí s kartou klienta.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-destructive">
+                Nepodařilo se vytvořit odkaz. Zkuste to prosím znovu.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Search & Filters - Consolidated */}
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
@@ -555,6 +638,7 @@ export default function Clients() {
                 onEdit={() => setEditingClient(client)}
                 onArchive={() => handleArchiveClient(client)}
                 onToggleFavorite={() => toggleFavorite.mutate({ clientId: client.id, isFavorite: !client.is_favorite })}
+                onSendPreDiagnostic={() => handleSendPreDiagnostic(client)}
               />
             );
           })}
