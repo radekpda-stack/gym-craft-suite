@@ -264,7 +264,7 @@ export default function Trainings() {
     });
 
     // Sort groups by date and sessions within each group by time
-    const sortedKeys = Object.keys(groups).sort();
+    const sortedKeys = Object.keys(groups).sort().reverse();
     return sortedKeys.map((dateKey) => ({
       date: dateKey,
       sessions: groups[dateKey].sort((a, b) => 
