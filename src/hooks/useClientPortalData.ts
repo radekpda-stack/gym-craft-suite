@@ -338,30 +338,34 @@ export function useClientNutritionSessions(clientId: string | undefined) {
 
 export function useClientTodayNutrition(clientId: string | undefined, sessionId: string | undefined) {
   const today = format(new Date(), 'yyyy-MM-dd');
+  return useClientNutritionByDate(clientId, sessionId, today);
+}
 
+// Hook to get nutrition entries for a specific date
+export function useClientNutritionByDate(clientId: string | undefined, sessionId: string | undefined, dateStr: string) {
   return useQuery({
-    queryKey: ['client-portal-today-nutrition', clientId, sessionId, today],
+    queryKey: ['client-portal-nutrition-by-date', clientId, sessionId, dateStr],
     queryFn: async () => {
-      if (!clientId || !sessionId) return { food: [], drinks: [], coffee: [] };
+      if (!clientId || !sessionId || !dateStr) return { food: [], drinks: [], coffee: [] };
 
       const [foodResult, drinkResult, coffeeResult] = await Promise.all([
         supabase
           .from('nutrition_food_entries')
           .select('*')
           .eq('session_id', sessionId)
-          .eq('entry_date', today)
+          .eq('entry_date', dateStr)
           .order('entry_time', { ascending: true }),
         supabase
           .from('nutrition_drink_entries')
           .select('*')
           .eq('session_id', sessionId)
-          .eq('entry_date', today)
+          .eq('entry_date', dateStr)
           .order('entry_time', { ascending: true }),
         supabase
           .from('nutrition_coffee_entries')
           .select('*')
           .eq('session_id', sessionId)
-          .eq('entry_date', today)
+          .eq('entry_date', dateStr)
           .order('entry_time', { ascending: true }),
       ]);
 
@@ -371,7 +375,7 @@ export function useClientTodayNutrition(clientId: string | undefined, sessionId:
         coffee: coffeeResult.data ?? [],
       };
     },
-    enabled: !!clientId && !!sessionId,
+    enabled: !!clientId && !!sessionId && !!dateStr,
   });
 }
 

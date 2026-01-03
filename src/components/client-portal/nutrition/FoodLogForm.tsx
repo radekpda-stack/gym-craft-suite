@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Utensils, Droplets, Coffee, X, ChevronRight, Loader2 } from 'lucide-react';
+import { Utensils, Droplets, Coffee, X, Loader2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { 
   useAddFoodEntry, 
   useAddDrinkEntry, 
@@ -16,6 +20,21 @@ import {
   DrinkEntryInput,
   CoffeeEntryInput 
 } from '@/hooks/useClientPortalNutrition';
+import {
+  MEAL_TYPES,
+  PORTION_SIZES,
+  QUALITY_OPTIONS,
+  SATIATION_OPTIONS,
+  DRINK_TYPES,
+  DRINK_AMOUNTS,
+  COFFEE_TYPES,
+  type MealTypeId,
+  type PortionSizeId,
+  type QualityId,
+  type SatiationId,
+  type DrinkTypeId,
+  type CoffeeTypeId,
+} from './constants';
 
 type EntryType = 'food' | 'drink' | 'coffee' | null;
 
@@ -23,54 +42,41 @@ interface FoodLogFormProps {
   sessionId: string;
   clientId: string;
   onClose?: () => void;
+  prefilledMealType?: MealTypeId;
+  selectedDate?: Date;
+  campaignStartDate?: string;
+  campaignEndDate?: string;
 }
 
-const MEAL_TYPES = [
-  { id: 'breakfast', label: 'Snídaně', icon: '🌅' },
-  { id: 'lunch', label: 'Oběd', icon: '☀️' },
-  { id: 'dinner', label: 'Večeře', icon: '🌙' },
-  { id: 'snack', label: 'Svačina', icon: '🍎' },
-] as const;
-
-const PORTION_SIZES = [
-  { id: 'small', label: 'Malá', icon: '🥄' },
-  { id: 'medium', label: 'Střední', icon: '🍽️' },
-  { id: 'large', label: 'Velká', icon: '🍳' },
-] as const;
-
-const DRINK_TYPES = [
-  { id: 'water', label: 'Voda', icon: '💧' },
-  { id: 'sugary', label: 'Slazené', icon: '🥤' },
-  { id: 'sports', label: 'Ionťák', icon: '⚡' },
-  { id: 'alcohol', label: 'Alkohol', icon: '🍺' },
-  { id: 'other', label: 'Jiné', icon: '🧃' },
-] as const;
-
-const COFFEE_TYPES = [
-  { id: 'espresso', label: 'Espresso', icon: '☕' },
-  { id: 'cappuccino', label: 'Cappuccino', icon: '🥛' },
-  { id: 'energy', label: 'Energy drink', icon: '⚡' },
-  { id: 'other', label: 'Jiné', icon: '🫖' },
-] as const;
-
-export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) {
+export function FoodLogForm({ 
+  sessionId, 
+  clientId, 
+  onClose, 
+  prefilledMealType,
+  selectedDate: initialDate,
+  campaignStartDate,
+  campaignEndDate,
+}: FoodLogFormProps) {
   const [step, setStep] = useState<'type' | 'form'>('type');
   const [entryType, setEntryType] = useState<EntryType>(null);
+  const [entryDate, setEntryDate] = useState<Date>(initialDate || new Date());
   
   // Food form state
-  const [mealType, setMealType] = useState<FoodEntryInput['meal_type']>('lunch');
+  const [mealType, setMealType] = useState<MealTypeId>(prefilledMealType || 'lunch');
   const [description, setDescription] = useState('');
-  const [portionSize, setPortionSize] = useState<FoodEntryInput['portion_size']>('medium');
-  const [quality, setQuality] = useState<FoodEntryInput['quality']>();
-  const [satiation, setSatiation] = useState<FoodEntryInput['satiation']>();
+  const [portionSize, setPortionSize] = useState<PortionSizeId>('medium');
+  const [quality, setQuality] = useState<QualityId | undefined>();
+  const [satiation, setSatiation] = useState<SatiationId | undefined>();
   const [note, setNote] = useState('');
 
   // Drink form state
-  const [drinkType, setDrinkType] = useState<DrinkEntryInput['drink_type']>('water');
+  const [drinkType, setDrinkType] = useState<DrinkTypeId>('water');
   const [drinkAmount, setDrinkAmount] = useState<number>(300);
+  const [customAmount, setCustomAmount] = useState<string>('');
+  const [showCustomAmount, setShowCustomAmount] = useState(false);
 
   // Coffee form state
-  const [coffeeType, setCoffeeType] = useState<CoffeeEntryInput['coffee_type']>('espresso');
+  const [coffeeType, setCoffeeType] = useState<CoffeeTypeId>('espresso');
   const [coffeeCount, setCoffeeCount] = useState(1);
 
   const addFood = useAddFoodEntry();
@@ -78,6 +84,35 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
   const addCoffee = useAddCoffeeEntry();
 
   const isLoading = addFood.isPending || addDrink.isPending || addCoffee.isPending;
+
+  // Update date when initialDate changes
+  useEffect(() => {
+    if (initialDate) {
+      setEntryDate(initialDate);
+    }
+  }, [initialDate]);
+
+  // Update meal type when prefilled changes
+  useEffect(() => {
+    if (prefilledMealType) {
+      setMealType(prefilledMealType);
+      setEntryType('food');
+      setStep('form');
+    }
+  }, [prefilledMealType]);
+
+  // Date validation for campaign period
+  const isDateDisabled = (date: Date) => {
+    const today = startOfDay(new Date());
+    if (date > today) return true;
+    
+    if (campaignStartDate && campaignEndDate) {
+      const start = startOfDay(parseISO(campaignStartDate));
+      const end = startOfDay(parseISO(campaignEndDate));
+      return !isWithinInterval(startOfDay(date), { start, end });
+    }
+    return false;
+  };
 
   const handleSelectType = (type: EntryType) => {
     setEntryType(type);
@@ -99,6 +134,7 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
       await addFood.mutateAsync({
         sessionId,
         clientId,
+        date: entryDate,
         entry: {
           meal_type: mealType,
           description: description.trim(),
@@ -116,13 +152,16 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
   };
 
   const handleSubmitDrink = async () => {
+    const finalAmount = showCustomAmount ? parseInt(customAmount) || 300 : drinkAmount;
+    
     try {
       await addDrink.mutateAsync({
         sessionId,
         clientId,
+        date: entryDate,
         entry: {
           drink_type: drinkType,
-          amount_ml: drinkAmount,
+          amount_ml: finalAmount,
         },
       });
       toast.success('Záznam přidán');
@@ -137,6 +176,7 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
       await addCoffee.mutateAsync({
         sessionId,
         clientId,
+        date: entryDate,
         entry: {
           coffee_type: coffeeType,
           count: coffeeCount,
@@ -149,12 +189,36 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
     }
   };
 
+  const renderDatePicker = () => (
+    <div className="space-y-2 pb-2 border-b mb-4">
+      <Label className="text-xs text-muted-foreground">Datum záznamu</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="w-full justify-start text-left font-normal">
+            <Calendar className="mr-2 h-4 w-4" />
+            {format(entryDate, 'd. MMMM yyyy', { locale: cs })}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <CalendarComponent
+            mode="single"
+            selected={entryDate}
+            onSelect={(date) => date && setEntryDate(date)}
+            disabled={isDateDisabled}
+            locale={cs}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
   return (
     <Card className="border-0 shadow-lg">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">
-            {step === 'type' ? 'Přidat záznam' : entryType === 'food' ? 'Jídlo' : entryType === 'drink' ? 'Pití' : 'Káva'}
+            {step === 'type' ? 'Přidat záznam' : entryType === 'food' ? 'Jídlo' : entryType === 'drink' ? 'Pití' : 'Káva / Čaj'}
           </CardTitle>
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -172,29 +236,32 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="grid grid-cols-3 gap-3"
+              className="space-y-4"
             >
-              <button
-                onClick={() => handleSelectType('food')}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
-              >
-                <Utensils className="w-6 h-6 text-orange-500" />
-                <span className="text-sm font-medium">Jídlo</span>
-              </button>
-              <button
-                onClick={() => handleSelectType('drink')}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
-              >
-                <Droplets className="w-6 h-6 text-blue-500" />
-                <span className="text-sm font-medium">Pití</span>
-              </button>
-              <button
-                onClick={() => handleSelectType('coffee')}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 transition-colors"
-              >
-                <Coffee className="w-6 h-6 text-amber-600" />
-                <span className="text-sm font-medium">Káva</span>
-              </button>
+              {renderDatePicker()}
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => handleSelectType('food')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
+                >
+                  <Utensils className="w-6 h-6 text-orange-500" />
+                  <span className="text-sm font-medium">Jídlo</span>
+                </button>
+                <button
+                  onClick={() => handleSelectType('drink')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                >
+                  <Droplets className="w-6 h-6 text-blue-500" />
+                  <span className="text-sm font-medium">Pití</span>
+                </button>
+                <button
+                  onClick={() => handleSelectType('coffee')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 transition-colors"
+                >
+                  <Coffee className="w-6 h-6 text-amber-600" />
+                  <span className="text-sm font-medium">Káva/Čaj</span>
+                </button>
+              </div>
             </motion.div>
           ) : entryType === 'food' ? (
             <motion.div
@@ -204,6 +271,8 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
+              {renderDatePicker()}
+              
               {/* Meal Type */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Typ jídla</Label>
@@ -259,6 +328,60 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
                 </div>
               </div>
 
+              {/* Quality (optional) */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Kvalita jídla (volitelné)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {QUALITY_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setQuality(quality === option.id ? undefined : option.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        quality === option.id 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Satiation (optional) */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Jak jsi se najedl/a? (volitelné)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {SATIATION_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setSatiation(satiation === option.id ? undefined : option.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        satiation === option.id 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Note (optional) */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Poznámka (volitelné)</Label>
+                <Input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="např. domácí příprava, restaurace..."
+                />
+              </div>
+
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={handleBack} disabled={isLoading} className="flex-1">
@@ -277,6 +400,8 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
+              {renderDatePicker()}
+              
               {/* Drink Type */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Typ nápoje</Label>
@@ -302,22 +427,47 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
               {/* Amount */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Množství (ml)</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[200, 300, 500, 750].map((amount) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {DRINK_AMOUNTS.map((amount) => (
                     <button
                       key={amount}
-                      onClick={() => setDrinkAmount(amount)}
+                      onClick={() => {
+                        setDrinkAmount(amount);
+                        setShowCustomAmount(false);
+                      }}
                       className={cn(
                         "p-2 rounded-lg transition-colors text-sm font-medium",
-                        drinkAmount === amount 
+                        !showCustomAmount && drinkAmount === amount 
                           ? "bg-primary text-primary-foreground" 
                           : "bg-muted/50 hover:bg-muted"
                       )}
                     >
-                      {amount} ml
+                      {amount}
                     </button>
                   ))}
+                  <button
+                    onClick={() => setShowCustomAmount(true)}
+                    className={cn(
+                      "p-2 rounded-lg transition-colors text-sm font-medium",
+                      showCustomAmount 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted/50 hover:bg-muted"
+                    )}
+                  >
+                    Jiné
+                  </button>
                 </div>
+                {showCustomAmount && (
+                  <Input
+                    type="number"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder="Zadej množství v ml"
+                    min={1}
+                    max={5000}
+                    className="mt-2"
+                  />
+                )}
               </div>
 
               {/* Actions */}
@@ -338,10 +488,12 @@ export function FoodLogForm({ sessionId, clientId, onClose }: FoodLogFormProps) 
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
+              {renderDatePicker()}
+              
               {/* Coffee Type */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Typ</Label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   {COFFEE_TYPES.map((type) => (
                     <button
                       key={type.id}

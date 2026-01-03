@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Utensils, Droplets, Coffee, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,7 @@ interface TodayEntriesProps {
   drinks: any[];
   coffee: any[];
   isLoading?: boolean;
+  selectedDate?: Date;
   onEditFood?: (entry: any) => void;
   onEditDrink?: (entry: any) => void;
   onEditCoffee?: (entry: any) => void;
@@ -35,33 +36,18 @@ interface TodayEntriesProps {
   onDeleteCoffee?: (entryId: string) => void;
 }
 
-const MEAL_LABELS: Record<string, string> = {
-  breakfast: 'Snídaně',
-  lunch: 'Oběd',
-  dinner: 'Večeře',
-  snack: 'Svačina',
-};
-
-const DRINK_LABELS: Record<string, string> = {
-  water: 'Voda',
-  sugary: 'Slazené',
-  sports: 'Ionťák',
-  alcohol: 'Alkohol',
-  other: 'Jiné',
-};
-
-const COFFEE_LABELS: Record<string, string> = {
-  espresso: 'Espresso',
-  cappuccino: 'Cappuccino',
-  energy: 'Energy drink',
-  other: 'Jiné',
-};
+import {
+  MEAL_LABELS,
+  DRINK_LABELS,
+  COFFEE_LABELS,
+} from './constants';
 
 export function TodayEntries({ 
   food, 
   drinks, 
   coffee, 
   isLoading,
+  selectedDate,
   onEditFood,
   onEditDrink,
   onEditCoffee,
@@ -69,6 +55,8 @@ export function TodayEntries({
   onDeleteDrink,
   onDeleteCoffee,
 }: TodayEntriesProps) {
+  const displayDate = selectedDate || new Date();
+  const isSelectedToday = isToday(displayDate);
   const [deleteDialog, setDeleteDialog] = useState<{ type: 'food' | 'drink' | 'coffee'; id: string } | null>(null);
   
   const hasEntries = food.length > 0 || drinks.length > 0 || coffee.length > 0;
@@ -93,7 +81,9 @@ export function TodayEntries({
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Dnešní záznamy</CardTitle>
+          <CardTitle className="text-sm">
+            {isSelectedToday ? 'Dnešní záznamy' : `Záznamy ${format(displayDate, 'd. MMMM', { locale: cs })}`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-2">
@@ -110,7 +100,10 @@ export function TodayEntries({
       <Card className="border-dashed">
         <CardContent className="py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Zatím žádné záznamy pro dnešek
+            {isSelectedToday 
+              ? 'Zatím žádné záznamy pro dnešek' 
+              : `Žádné záznamy pro ${format(displayDate, 'd. MMMM', { locale: cs })}`
+            }
           </p>
         </CardContent>
       </Card>
@@ -122,9 +115,9 @@ export function TodayEntries({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
-            <span>Dnešní záznamy</span>
+            <span>{isSelectedToday ? 'Dnešní záznamy' : 'Záznamy'}</span>
             <span className="text-xs font-normal text-muted-foreground">
-              {format(new Date(), 'd. MMMM', { locale: cs })}
+              {format(displayDate, 'd. MMMM', { locale: cs })}
             </span>
           </CardTitle>
         </CardHeader>
