@@ -28,11 +28,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { usePortalClients, useResetClientPassword, useDisableClientAccess, useUpdateClientCredentials } from '@/hooks/useClientPortalAdmin';
+import { usePortalClients, PortalClient, useResetClientPassword, useDisableClientAccess, useUpdateClientCredentials } from '@/hooks/useClientPortalAdmin';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { User, MoreHorizontal, Key, UserCheck, UserX, Copy, Check, Plus, Eye, EyeOff, Pencil, Search, X } from 'lucide-react';
 import { InviteClientDialog } from './InviteClientDialog';
+import { ClientPortalDetailSheet } from './ClientPortalDetailSheet';
 import { toast } from '@/hooks/use-toast';
 import { BulkCreatePortalsButton } from './BulkCreatePortalsButton';
 
@@ -51,6 +52,7 @@ export function ClientAccessList() {
   });
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [selectedClient, setSelectedClient] = useState<PortalClient | null>(null);
   
   // Edit credentials dialog
   const [editDialog, setEditDialog] = useState<{
@@ -264,7 +266,8 @@ export function ClientAccessList() {
                 {filteredClients?.map((account) => (
                   <div 
                     key={account.id}
-                    className="p-4 rounded-lg border bg-card"
+                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setSelectedClient(account)}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -281,7 +284,7 @@ export function ClientAccessList() {
                       <div className="flex items-center gap-2 shrink-0">
                         {getStatusBadge(account)}
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -402,7 +405,7 @@ export function ClientAccessList() {
                   </TableHeader>
                   <TableBody>
                     {filteredClients?.map((account) => (
-                      <TableRow key={account.id}>
+                      <TableRow key={account.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClient(account)}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -480,7 +483,7 @@ export function ClientAccessList() {
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
@@ -530,6 +533,12 @@ export function ClientAccessList() {
       </Card>
 
       <InviteClientDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      
+      <ClientPortalDetailSheet 
+        client={selectedClient}
+        open={!!selectedClient}
+        onOpenChange={(open) => !open && setSelectedClient(null)}
+      />
 
       {/* Password Reset Dialog */}
       <Dialog open={passwordDialog.open} onOpenChange={(open) => setPasswordDialog(prev => ({ ...prev, open }))}>
