@@ -14,7 +14,7 @@ import { Camera, X, Plus, Instagram, Facebook, Linkedin, Globe, Save, Loader2 } 
 
 interface TrainerProfile {
   id: string;
-  full_name: string | null;
+  display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
   specializations: string[];
@@ -49,7 +49,7 @@ export function TrainerProfileSettings() {
   
   const [profile, setProfile] = useState<TrainerProfile>({
     id: '',
-    full_name: '',
+    display_name: '',
     avatar_url: null,
     bio: '',
     specializations: [],
@@ -76,18 +76,7 @@ export function TrainerProfileSettings() {
         throw error;
       }
       
-      // Cast to include new columns that may not be in generated types yet
-      return data as unknown as {
-        id: string;
-        full_name: string | null;
-        avatar_url: string | null;
-        bio: string | null;
-        specializations: string[] | null;
-        certifications: string[] | null;
-        experience_years: number | null;
-        social_links: Record<string, string> | null;
-        phone: string | null;
-      } | null;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -96,11 +85,11 @@ export function TrainerProfileSettings() {
     if (existingProfile) {
       setProfile({
         id: existingProfile.id,
-        full_name: existingProfile.full_name || '',
+        display_name: existingProfile.display_name || '',
         avatar_url: existingProfile.avatar_url,
         bio: existingProfile.bio || '',
-        specializations: (existingProfile.specializations as string[]) || [],
-        certifications: (existingProfile.certifications as string[]) || [],
+        specializations: existingProfile.specializations || [],
+        certifications: existingProfile.certifications || [],
         experience_years: existingProfile.experience_years,
         social_links: (existingProfile.social_links as TrainerProfile['social_links']) || {},
         phone: existingProfile.phone || '',
@@ -112,11 +101,10 @@ export function TrainerProfileSettings() {
     mutationFn: async () => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Use raw update to handle columns not yet in generated types
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: profile.full_name || null,
+          display_name: profile.display_name || null,
           avatar_url: profile.avatar_url,
           bio: profile.bio || null,
           specializations: profile.specializations,
@@ -124,7 +112,7 @@ export function TrainerProfileSettings() {
           experience_years: profile.experience_years,
           social_links: profile.social_links,
           phone: profile.phone || null,
-        } as Record<string, unknown>)
+        })
         .eq('id', user.id);
       
       if (error) throw error;
@@ -258,13 +246,13 @@ export function TrainerProfileSettings() {
           </label>
         </div>
         <div className="flex-1">
-          <Label htmlFor="full_name">
+          <Label htmlFor="display_name">
             {language === 'cs' ? 'Jméno' : 'Full Name'}
           </Label>
           <Input
-            id="full_name"
-            value={profile.full_name || ''}
-            onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
+            id="display_name"
+            value={profile.display_name || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
             placeholder={language === 'cs' ? 'Vaše jméno' : 'Your name'}
             className="mt-1"
           />

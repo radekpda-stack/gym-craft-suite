@@ -123,6 +123,10 @@ function getInitialTheme(): ThemeId {
 
 // Initialize theme on module load (before React)
 const initialTheme = getInitialTheme();
+// Apply theme immediately to prevent flash of wrong theme
+if (typeof document !== 'undefined') {
+  applyThemeToDOM(initialTheme);
+}
 
 interface ThemeContextType {
   currentTheme: ThemeId;
