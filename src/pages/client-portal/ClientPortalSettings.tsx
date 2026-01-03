@@ -17,12 +17,12 @@ import { ClientProfileSection } from '@/components/client-portal/ClientProfileSe
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboardSettings, useUpdateLeaderboardSettings } from '@/hooks/useClientGamification';
 import { ThemeSwitcher } from '@/components/client-portal/common/SharedComponents';
-import { useTheme } from 'next-themes';
+import { useTheme, themes, ThemeId } from '@/hooks/useTheme';
 
 export default function ClientPortalSettings() {
   const { user } = useClientPortalAuth();
   const { clientId } = useClientPortal();
-  const { theme, setTheme } = useTheme();
+  const { currentTheme, setTheme: setAppTheme } = useTheme();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -303,8 +303,14 @@ export default function ClientPortalSettings() {
                   <div className="space-y-3">
                     <Label>Barevný režim</Label>
                     <ThemeSwitcher 
-                      value={(theme as 'light' | 'dark' | 'system') || 'system'} 
-                      onChange={(t) => setTheme(t)} 
+                      value={currentTheme === 'light-minimal' || currentTheme === 'frost-minimal' ? 'light' : 'dark'} 
+                      onChange={(t) => {
+                        if (t === 'light') {
+                          setAppTheme('frost-minimal');
+                        } else {
+                          setAppTheme('arctic-pro');
+                        }
+                      }} 
                     />
                   </div>
                 </CardContent>
