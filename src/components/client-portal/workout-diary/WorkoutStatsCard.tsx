@@ -1,14 +1,27 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { WorkoutLog } from '@/hooks/useClientWorkoutLogs';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, differenceInDays, subDays, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Flame, Dumbbell, Clock, TrendingUp, Trophy } from 'lucide-react';
+import { Flame, TrendingUp, Clock, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface WorkoutExercise {
+  is_personal_record?: boolean;
+  weight_kg?: number | null;
+  sets?: number | null;
+  reps?: number | null;
+}
+
+interface WorkoutLogEntry {
+  id: string;
+  date: string;
+  duration_minutes?: number | null;
+  exercises?: WorkoutExercise[];
+}
+
 interface WorkoutStatsCardProps {
-  logs: WorkoutLog[];
+  logs: WorkoutLogEntry[];
   weeklyGoal?: number;
 }
 
@@ -57,12 +70,12 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4 }: WorkoutStatsCardProps
 
     // Total duration this week
     const weeklyDuration = thisWeekLogs.reduce((total, log) => {
-      return total + ((log as any).duration_minutes || 0);
+      return total + (log.duration_minutes || 0);
     }, 0);
 
     // PRs this week
     const prsThisWeek = thisWeekLogs.reduce((total, log) => {
-      return total + (log.exercises?.filter(ex => (ex as any).is_personal_record).length || 0);
+      return total + (log.exercises?.filter(ex => ex.is_personal_record).length || 0);
     }, 0);
 
     return {

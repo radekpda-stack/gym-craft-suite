@@ -175,11 +175,94 @@ export function useDeleteWorkoutLog() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['client-workout-logs', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['all-client-workout-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-diary'] });
       toast.success('Záznam byl smazán');
     },
     onError: (error) => {
       console.error('Error deleting workout log:', error);
       toast.error('Nepodařilo se smazat záznam');
+    },
+  });
+}
+
+// Hook for updating a workout log
+export interface UpdateWorkoutLogInput {
+  logId: string;
+  clientId: string;
+  date?: string;
+  notes?: string | null;
+  workout_type?: string | null;
+  duration_minutes?: number | null;
+  energy_before?: number | null;
+  energy_after?: number | null;
+  exercises?: Omit<WorkoutExercise, 'id'>[];
+}
+
+export function useUpdateWorkoutLog() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateWorkoutLogInput) => {
+      // Update the workout log
+      const { error: logError } = await supabase
+        .from('client_workout_logs')
+        .update({
+          date: input.date,
+          notes: input.notes,
+          workout_type: input.workout_type,
+          duration_minutes: input.duration_minutes,
+          energy_before: input.energy_before,
+          energy_after: input.energy_after,
+        })
+        .eq('id', input.logId);
+
+      if (logError) throw logError;
+
+      // If exercises provided, replace them
+      if (input.exercises !== undefined) {
+        // Delete existing exercises
+        const { error: deleteError } = await supabase
+          .from('client_workout_exercises')
+          .delete()
+          .eq('workout_log_id', input.logId);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new exercises
+        if (input.exercises.length > 0) {
+          const exercisesToInsert = input.exercises.map((ex, idx) => ({
+            workout_log_id: input.logId,
+            exercise_id: ex.exercise_id,
+            exercise_name: ex.exercise_name,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight_kg: ex.weight_kg,
+            duration_seconds: ex.duration_seconds,
+            distance_meters: ex.distance_meters,
+            rpe: ex.rpe,
+            notes: ex.notes,
+            sort_order: idx,
+          }));
+
+          const { error: insertError } = await supabase
+            .from('client_workout_exercises')
+            .insert(exercisesToInsert);
+
+          if (insertError) throw insertError;
+        }
+      }
+
+      return input;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['client-workout-logs', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-client-workout-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-diary'] });
+      toast.success('Trénink byl upraven');
+    },
+    onError: (error) => {
+      console.error('Error updating workout log:', error);
+      toast.error('Nepodařilo se upravit trénink');
     },
   });
 }
