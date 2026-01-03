@@ -6025,6 +6025,166 @@ export type Database = {
         }
         Relationships: []
       }
+      test_batteries: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_cs: string | null
+          recommended_order: number[] | null
+          rest_between_tests_minutes: number | null
+          test_definition_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_cs?: string | null
+          recommended_order?: number[] | null
+          rest_between_tests_minutes?: number | null
+          test_definition_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_cs?: string | null
+          recommended_order?: number[] | null
+          rest_between_tests_minutes?: number | null
+          test_definition_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      test_benchmarks: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          created_at: string
+          gender: string | null
+          id: string
+          notes: string | null
+          percentile_25: number | null
+          percentile_5: number | null
+          percentile_50: number | null
+          percentile_75: number | null
+          percentile_95: number | null
+          source: string | null
+          test_definition_id: string
+        }
+        Insert: {
+          age_max?: number | null
+          age_min?: number | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+          percentile_25?: number | null
+          percentile_5?: number | null
+          percentile_50?: number | null
+          percentile_75?: number | null
+          percentile_95?: number | null
+          source?: string | null
+          test_definition_id: string
+        }
+        Update: {
+          age_max?: number | null
+          age_min?: number | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+          percentile_25?: number | null
+          percentile_5?: number | null
+          percentile_50?: number | null
+          percentile_75?: number | null
+          percentile_95?: number | null
+          source?: string | null
+          test_definition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_benchmarks_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "test_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_context: {
+        Row: {
+          caffeine_mg: number | null
+          created_at: string
+          days_since_last_training: number | null
+          hours_since_last_meal: number | null
+          hydration_level_1_5: number | null
+          id: string
+          last_training_intensity: string | null
+          motivation_level_1_5: number | null
+          notes: string | null
+          nutrition_quality_1_5: number | null
+          sleep_hours: number | null
+          sleep_quality_1_5: number | null
+          stress_level_1_5: number | null
+          subjective_readiness_1_10: number | null
+          test_session_id: string
+        }
+        Insert: {
+          caffeine_mg?: number | null
+          created_at?: string
+          days_since_last_training?: number | null
+          hours_since_last_meal?: number | null
+          hydration_level_1_5?: number | null
+          id?: string
+          last_training_intensity?: string | null
+          motivation_level_1_5?: number | null
+          notes?: string | null
+          nutrition_quality_1_5?: number | null
+          sleep_hours?: number | null
+          sleep_quality_1_5?: number | null
+          stress_level_1_5?: number | null
+          subjective_readiness_1_10?: number | null
+          test_session_id: string
+        }
+        Update: {
+          caffeine_mg?: number | null
+          created_at?: string
+          days_since_last_training?: number | null
+          hours_since_last_meal?: number | null
+          hydration_level_1_5?: number | null
+          id?: string
+          last_training_intensity?: string | null
+          motivation_level_1_5?: number | null
+          notes?: string | null
+          nutrition_quality_1_5?: number | null
+          sleep_hours?: number | null
+          sleep_quality_1_5?: number | null
+          stress_level_1_5?: number | null
+          subjective_readiness_1_10?: number | null
+          test_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_context_test_session_id_fkey"
+            columns: ["test_session_id"]
+            isOneToOne: true
+            referencedRelation: "test_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_definitions: {
         Row: {
           category: string
@@ -6107,6 +6267,138 @@ export type Database = {
             columns: ["linked_exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_goals: {
+        Row: {
+          achieved_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          target_date: string | null
+          target_value: number
+          test_definition_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_date?: string | null
+          target_value: number
+          test_definition_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_date?: string | null
+          target_value?: number
+          test_definition_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "test_goals_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "test_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_schedules: {
+        Row: {
+          client_id: string
+          completed_session_id: string | null
+          created_at: string
+          id: string
+          is_completed: boolean | null
+          notes: string | null
+          reminder_days_before: number | null
+          scheduled_date: string
+          test_definition_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          completed_session_id?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          reminder_days_before?: number | null
+          scheduled_date: string
+          test_definition_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          completed_session_id?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          reminder_days_before?: number | null
+          scheduled_date?: string
+          test_definition_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "test_schedules_completed_session_id_fkey"
+            columns: ["completed_session_id"]
+            isOneToOne: false
+            referencedRelation: "test_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_schedules_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "test_definitions"
             referencedColumns: ["id"]
           },
         ]
