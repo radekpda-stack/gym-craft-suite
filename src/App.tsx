@@ -140,6 +140,7 @@ const App = () => (
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
                 <Route path="diary" element={<ClientPortalWorkoutDiary />} />
+                <Route path="homework" element={<ClientPortalHomework />} />
                 <Route path="attendance" element={<ClientPortalAttendance />} />
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="purchases" element={<ClientPortalPurchases />} />
