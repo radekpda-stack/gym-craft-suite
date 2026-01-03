@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ChevronLeft } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
@@ -17,14 +16,13 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
 import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 
-// New components
+// Components
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
 import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
-import { ClientTrainingHistory } from '@/components/clients/ClientTrainingHistory';
-import { ClientCreditHistory } from '@/components/clients/ClientCreditHistory';
+import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFinanceCard';
 import { ClientSecondaryAccordions, SECTION_ICONS } from '@/components/clients/ClientSecondaryAccordions';
 
-// New audit components
+// Audit components
 import { ClientReadinessCard } from '@/components/clients/ClientReadinessCard';
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
@@ -32,7 +30,7 @@ import { ClientPainMapPreview } from '@/components/clients/ClientPainMapPreview'
 import { ClientCommunicationLog } from '@/components/clients/ClientCommunicationLog';
 import { ClientInjuryHistory } from '@/components/clients/ClientInjuryHistory';
 
-// Existing components for accordion sections
+// Accordion section components
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
 import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
 import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
@@ -45,8 +43,6 @@ import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecov
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
-import { ClientWorkoutDiary } from '@/components/clients/ClientWorkoutDiary';
-import { ClientWeeklyGoals } from '@/components/clients/ClientWeeklyGoals';
 import { ClientQuickNav } from '@/components/clients/ClientQuickNav';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
@@ -174,14 +170,19 @@ export default function ClientDetail() {
   // Calculate notes count
   const notesCount = client.notes ? client.notes.split('\n\n').filter(n => n.startsWith('[')).length : 0;
 
-  // Build accordion sections with IDs for navigation
+  // Build accordion sections - reorganized and consolidated
   const accordionSections = [
     {
       id: 'notes',
       icon: SECTION_ICONS.notes,
-      title: 'Poznámka trenéra',
+      title: 'Poznámky & Komunikace',
       badge: notesCount || undefined,
-      children: <div id="section-notes"><ClientNotesSection notes={client.notes} onAddNote={handleAddNote} /></div>,
+      children: (
+        <div id="section-notes" className="space-y-4">
+          <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
+          <ClientCommunicationLog clientId={client.id} />
+        </div>
+      ),
     },
     {
       id: 'measurements',
@@ -192,11 +193,12 @@ export default function ClientDetail() {
     {
       id: 'diagnostics',
       icon: SECTION_ICONS.diagnostics,
-      title: 'Diagnostika',
+      title: 'Diagnostika & Mapa bolesti',
       children: (
-        <div id="section-diagnostics">
+        <div id="section-diagnostics" className="space-y-4">
           <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
           <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
+          <ClientPainMapPreview clientId={client.id} />
         </div>
       ),
     },
@@ -217,6 +219,12 @@ export default function ClientDetail() {
       ),
     },
     {
+      id: 'prs',
+      icon: SECTION_ICONS.measurements,
+      title: 'Osobní rekordy',
+      children: <div id="section-prs"><ClientPRsCard clientId={client.id} /></div>,
+    },
+    {
       id: 'nutrition',
       icon: SECTION_ICONS.challenges,
       title: 'Výživa & Výzvy',
@@ -233,18 +241,6 @@ export default function ClientDetail() {
       icon: SECTION_ICONS.diagnostics,
       title: 'Historie zranění',
       children: <div id="section-injuries"><ClientInjuryHistory clientId={client.id} /></div>,
-    },
-    {
-      id: 'communication',
-      icon: SECTION_ICONS.notes,
-      title: 'Komunikace',
-      children: <div id="section-communication"><ClientCommunicationLog clientId={client.id} /></div>,
-    },
-    {
-      id: 'pain-map',
-      icon: SECTION_ICONS.feedback,
-      title: 'Mapa bolesti',
-      children: <div id="section-pain"><ClientPainMapPreview clientId={client.id} /></div>,
     },
     {
       id: 'timeline',
@@ -308,38 +304,16 @@ export default function ClientDetail() {
         />
       </div>
 
-      {/* SECTION 2.5: Personal Records */}
-      <div id="section-prs">
-        <ClientPRsCard clientId={client.id} />
-      </div>
-
-      {/* SECTION 2.6: Weekly Goals */}
-      <div id="section-goals">
-        <ClientWeeklyGoals clientId={client.id} />
-      </div>
-
-      {/* SECTION 2.7: Workout Diary */}
-      <div id="section-diary">
-        <ClientWorkoutDiary clientId={client.id} clientName={client.name} />
-      </div>
-
-      {/* SECTION 3: Training History (Primary) */}
-      <div id="section-credit">
-        <ClientTrainingHistory
+      {/* SECTION 3: Unified Training & Finance History */}
+      <div id="section-history">
+        <ClientTrainingFinanceCard
           clientId={client.id}
           sessions={sessions}
+          transactions={allTransactions as any}
           isSharedBudget={isSharedBudget}
           budgetGroupName={sharedBudgetInfo?.groupName}
         />
       </div>
-
-      {/* SECTION 4: Credit History (Primary) */}
-      <ClientCreditHistory
-        clientId={client.id}
-        transactions={allTransactions as any}
-        isSharedBudget={isSharedBudget}
-        budgetGroupName={sharedBudgetInfo?.groupName}
-      />
 
       {/* SECTION 5: Secondary sections in Accordions */}
       <ClientSecondaryAccordions sections={accordionSections} />
