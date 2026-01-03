@@ -190,7 +190,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                 <span className="text-base font-bold tracking-tight">Just Move</span>
               </div>
               <div className="flex items-center gap-1">
-                <NotificationCenter />
+                <NotificationCenter onOpenChange={(open) => open && onClose()} />
                 <motion.button
                   onClick={onClose}
                   className="p-2 rounded-lg hover:bg-secondary/80 transition-colors touch-target"

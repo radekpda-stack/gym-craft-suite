@@ -73,7 +73,11 @@ function extractTrainingId(message: string): string | null {
   return match ? match[1] : null;
 }
 
-export function NotificationCenter() {
+interface NotificationCenterProps {
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function NotificationCenter({ onOpenChange }: NotificationCenterProps = {}) {
   const navigate = useNavigate();
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
@@ -87,6 +91,11 @@ export function NotificationCenter() {
   const [feedbackMeta, setFeedbackMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open);
+    onOpenChange?.(open);
+  };
 
   // Handle feedback notification click
   const handleFeedbackNotificationClick = async (notification: typeof notifications[0]) => {
@@ -157,7 +166,7 @@ export function NotificationCenter() {
 
   return (
     <>
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <Sheet open={sheetOpen} onOpenChange={handleSheetOpenChange}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
