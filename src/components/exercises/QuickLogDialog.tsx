@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity } from 'lucide-react';
+import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity, Star, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,6 +33,8 @@ import { useClients } from '@/hooks/useClients';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useExercises } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { useRecentExercises } from '@/hooks/useRecentExercises';
+import { useFavoriteExercises } from '@/hooks/useFavoriteExercises';
 import { cn } from '@/lib/utils';
 import { detectExerciseMetricCategory, getRpeBgColor } from '@/lib/exerciseMetrics';
 
@@ -79,11 +81,27 @@ export function QuickLogDialog({
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { exercises } = useExercises();
   const { createEntry } = useExerciseEntries();
+  const { data: recentExercises = [] } = useRecentExercises(8);
+  const { favoriteIds, isFavorite } = useFavoriteExercises();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const activeClients = clients.filter(c => !c.is_archived);
   const activeExercises = exercises.filter(e => !e.is_archived);
+
+  // Organize exercises: favorites first, then recent, then rest
+  const organizedExercises = useMemo(() => {
+    const favorites = activeExercises.filter(e => favoriteIds.includes(e.id));
+    const recentIds = recentExercises.map(r => r.exercise_id);
+    const recent = activeExercises.filter(e => 
+      recentIds.includes(e.id) && !favoriteIds.includes(e.id)
+    ).sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id));
+    const rest = activeExercises.filter(e => 
+      !favoriteIds.includes(e.id) && !recentIds.includes(e.id)
+    );
+    
+    return { favorites, recent, rest };
+  }, [activeExercises, favoriteIds, recentExercises]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -280,15 +298,60 @@ export function QuickLogDialog({
                         <SelectValue placeholder="Vyberte cvik" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      {activeExercises.map(exercise => (
-                        <SelectItem key={exercise.id} value={exercise.id}>
-                          {exercise.name_cs || exercise.name}
-                          {exercise.is_time_based && (
-                            <Badge variant="secondary" className="ml-2 text-xs">čas</Badge>
-                          )}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="max-h-[300px]">
+                      {/* Favorites */}
+                      {organizedExercises.favorites.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-1.5 text-xs">
+                            <Star className="w-3 h-3 text-yellow-500" />
+                            Oblíbené
+                          </SelectLabel>
+                          {organizedExercises.favorites.map(exercise => (
+                            <SelectItem key={exercise.id} value={exercise.id}>
+                              <span className="flex items-center gap-2">
+                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                {exercise.name_cs || exercise.name}
+                                {exercise.is_time_based && (
+                                  <Badge variant="secondary" className="ml-1 text-xs">čas</Badge>
+                                )}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      
+                      {/* Recent */}
+                      {organizedExercises.recent.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-1.5 text-xs">
+                            <Clock className="w-3 h-3" />
+                            Nedávné
+                          </SelectLabel>
+                          {organizedExercises.recent.map(exercise => (
+                            <SelectItem key={exercise.id} value={exercise.id}>
+                              {exercise.name_cs || exercise.name}
+                              {exercise.is_time_based && (
+                                <Badge variant="secondary" className="ml-2 text-xs">čas</Badge>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      
+                      {/* All others */}
+                      <SelectGroup>
+                        {(organizedExercises.favorites.length > 0 || organizedExercises.recent.length > 0) && (
+                          <SelectLabel className="text-xs">Všechny cviky</SelectLabel>
+                        )}
+                        {organizedExercises.rest.map(exercise => (
+                          <SelectItem key={exercise.id} value={exercise.id}>
+                            {exercise.name_cs || exercise.name}
+                            {exercise.is_time_based && (
+                              <Badge variant="secondary" className="ml-2 text-xs">čas</Badge>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <FormMessage />

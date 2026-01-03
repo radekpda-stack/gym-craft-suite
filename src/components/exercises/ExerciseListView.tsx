@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
-  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown 
+  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star 
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExercises';
+import { useFavoriteExercises } from '@/hooks/useFavoriteExercises';
 import { cn } from '@/lib/utils';
 import { BulkExerciseEditDialog } from '@/components/exercises/BulkExerciseEditDialog';
 import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
@@ -83,6 +84,7 @@ interface ExerciseListViewProps {
 export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { favoriteIds, toggleFavorite, isFavorite } = useFavoriteExercises();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [patternFilter, setPatternFilter] = useState<string>('all');
@@ -494,6 +496,24 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                               </div>
                               {!bulkEditMode && (
                                 <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleFavorite.mutate(exercise.id);
+                                    }}
+                                  >
+                                    <Star 
+                                      className={cn(
+                                        "w-4 h-4 transition-colors",
+                                        isFavorite(exercise.id) 
+                                          ? "text-yellow-500 fill-yellow-500" 
+                                          : "text-muted-foreground hover:text-yellow-500"
+                                      )} 
+                                    />
+                                  </Button>
                                   <ExerciseContextMenu
                                     exercise={exercise as any}
                                     onEdit={() => setEditExercise(exercise as any)}
