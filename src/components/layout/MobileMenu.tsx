@@ -23,6 +23,7 @@ import {
   LayoutTemplate,
   ClipboardCheck,
   Target,
+  Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -74,6 +75,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         items: [
           { to: '/clients', icon: Users, label: 'Klienti' },
           ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+          ...(isModuleEnabled('challenges') ? [{ to: '/challenges', icon: Trophy, label: 'Výzvy' }] : []),
           { to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
         ],
       },
