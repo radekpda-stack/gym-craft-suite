@@ -231,24 +231,49 @@ function scoreClientMatch(
   return null;
 }
 
-// Find best client matches for an event
+// Find best client matches for an event (supports multiple clients)
 function findClientMatches(
   summary: string, 
   clients: Array<{ id: string; name: string }>,
   aliasMap: Map<string, string[]>
 ): ClientMatchResult[] {
   const results: ClientMatchResult[] = [];
+  const matchedClientIds = new Set<string>();
 
   for (const client of clients) {
     const aliases = aliasMap.get(client.id) || [];
     const match = scoreClientMatch(summary, client, aliases);
-    if (match) {
+    if (match && !matchedClientIds.has(match.clientId)) {
       results.push(match);
+      matchedClientIds.add(match.clientId);
     }
   }
 
   // Sort by score descending
   return results.sort((a, b) => b.score - a.score);
+}
+
+// Find multiple high-confidence matches (for group trainings)
+function findMultipleClientMatches(
+  summary: string,
+  clients: Array<{ id: string; name: string }>,
+  aliasMap: Map<string, string[]>,
+  minScore: number = 70
+): { primary: ClientMatchResult | null; additional: ClientMatchResult[] } {
+  const allMatches = findClientMatches(summary, clients, aliasMap);
+  
+  // Filter matches above minimum score
+  const highConfidenceMatches = allMatches.filter(m => m.score >= minScore);
+  
+  if (highConfidenceMatches.length === 0) {
+    return { primary: null, additional: [] };
+  }
+  
+  // Primary is the first (highest score), additional are the rest
+  return {
+    primary: highConfidenceMatches[0],
+    additional: highConfidenceMatches.slice(1)
+  };
 }
 
 // Simple ICS parser
@@ -429,15 +454,22 @@ serve(async (req) => {
         // Process each event
         let syncedCount = 0;
         for (const event of filteredEvents) {
-          // Find matches with scoring
-          const matches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
-          const bestMatch = matches.length > 0 && matches[0].score >= 75 ? matches[0] : null;
-          const suggestions = matches.slice(0, 5).map(m => ({
+          // Find multiple client matches (for group trainings)
+          const { primary, additional } = clients 
+            ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
+            : { primary: null, additional: [] };
+          
+          // Get all matches for suggestions
+          const allMatches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
+          const suggestions = allMatches.slice(0, 5).map(m => ({
             client_id: m.clientId,
             name: m.clientName,
             score: m.score,
             match_type: m.matchType,
           }));
+
+          // Additional client IDs (for group trainings)
+          const additionalClientIds = additional.map(m => m.clientId);
 
           // Upsert event
           const { error: upsertError } = await supabase
@@ -450,7 +482,8 @@ serve(async (req) => {
               start_at: event.dtstart.toISOString(),
               end_at: event.dtend?.toISOString(),
               location: event.location,
-              matched_client_id: bestMatch?.clientId || null,
+              matched_client_id: primary?.clientId || null,
+              additional_matched_client_ids: additionalClientIds,
               match_suggestions: suggestions,
               updated_at: new Date().toISOString(),
             }, {
@@ -459,6 +492,9 @@ serve(async (req) => {
 
           if (!upsertError) {
             syncedCount++;
+            if (additionalClientIds.length > 0) {
+              console.log(`[ICS Sync] Event "${event.summary}" matched ${1 + additionalClientIds.length} clients`);
+            }
           }
         }
 
@@ -611,52 +647,56 @@ serve(async (req) => {
           duration = Math.round((end.getTime() - start.getTime()) / 60000);
         }
 
-        // Check if session already exists for this time and client
-        const { data: existingSession } = await supabase
-          .from('training_sessions')
-          .select('id')
-          .eq('client_id', event.matched_client_id)
-          .eq('date', event.start_at)
-          .single();
+        // Collect all client IDs (primary + additional)
+        const allClientIds: string[] = [event.matched_client_id];
+        if (event.additional_matched_client_ids && Array.isArray(event.additional_matched_client_ids)) {
+          allClientIds.push(...event.additional_matched_client_ids);
+        }
 
-        if (!existingSession) {
-          // Create training session
-          const { data: session, error: sessionError } = await supabase
+        // Create a session for each client
+        let sessionsCreatedForEvent = 0;
+        for (const clientId of allClientIds) {
+          // Check if session already exists for this time and client
+          const { data: existingSession } = await supabase
             .from('training_sessions')
-            .insert({
-              client_id: event.matched_client_id,
-              user_id: feed.user_id,
-              date: event.start_at,
-              duration,
-              status: 'scheduled',
-              notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
-            })
-            .select()
+            .select('id')
+            .eq('client_id', clientId)
+            .eq('date', event.start_at)
             .single();
 
-          if (!sessionError && session) {
-            // Update event with session reference
-            await supabase
-              .from('calendar_ics_events')
-              .update({
-                training_session_id: session.id,
-                is_processed: true,
-                updated_at: new Date().toISOString(),
+          if (!existingSession) {
+            // Create training session
+            const { data: session, error: sessionError } = await supabase
+              .from('training_sessions')
+              .insert({
+                client_id: clientId,
+                user_id: feed.user_id,
+                date: event.start_at,
+                duration,
+                status: 'scheduled',
+                notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
               })
-              .eq('id', event.id);
+              .select()
+              .single();
 
-            createdCount++;
+            if (!sessionError && session) {
+              sessionsCreatedForEvent++;
+              createdCount++;
+            }
           }
-        } else {
-          // Mark as processed without creating new session
-          await supabase
-            .from('calendar_ics_events')
-            .update({
-              training_session_id: existingSession.id,
-              is_processed: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', event.id);
+        }
+
+        // Mark event as processed
+        await supabase
+          .from('calendar_ics_events')
+          .update({
+            is_processed: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', event.id);
+
+        if (allClientIds.length > 1) {
+          console.log(`[ICS Sync] Created ${sessionsCreatedForEvent} sessions for group event "${event.summary}" with ${allClientIds.length} clients`);
         }
       }
 

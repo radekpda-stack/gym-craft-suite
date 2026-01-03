@@ -477,18 +477,29 @@ function EventsDialog({ feedId, open, onOpenChange }: {
             <div className="space-y-2">
               {events?.map((event: any) => {
                 const suggestions = (event.match_suggestions || []) as MatchSuggestion[];
+                const additionalClients = event.additional_clients || [];
+                const hasMultipleClients = event.matched_client && additionalClients.length > 0;
                 
                 return (
                   <div 
                     key={event.id}
                     className={cn(
                       "p-3 rounded-lg border",
-                      event.is_processed ? "bg-muted/50" : "bg-background"
+                      event.is_processed ? "bg-muted/50" : "bg-background",
+                      hasMultipleClients && "border-primary/30 bg-primary/5"
                     )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1.5 flex-1 min-w-0">
-                        <p className="font-medium truncate">{event.summary}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{event.summary}</p>
+                          {hasMultipleClients && (
+                            <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                              <Users className="h-3 w-3 mr-1" />
+                              Skupinový
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(event.start_at), 'EEEE d. MMMM yyyy, HH:mm', { locale: cs })}
                         </p>
@@ -507,12 +518,19 @@ function EventsDialog({ feedId, open, onOpenChange }: {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                         {event.matched_client ? (
-                          <Badge variant="secondary" className="gap-1">
-                            <Users className="h-3 w-3" />
-                            {event.matched_client.name}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1 justify-end">
+                            <Badge variant="secondary" className="gap-1">
+                              <Users className="h-3 w-3" />
+                              {event.matched_client.name}
+                            </Badge>
+                            {additionalClients.map((client: { id: string; name: string }) => (
+                              <Badge key={client.id} variant="secondary" className="gap-1">
+                                {client.name}
+                              </Badge>
+                            ))}
+                          </div>
                         ) : (
                           <Select
                             onValueChange={(value) => handleSelectClient(event.id, value)}
