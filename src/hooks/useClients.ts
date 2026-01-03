@@ -65,6 +65,7 @@ export function useClients() {
           created_at: demoClient.created_at,
           updated_at: demoClient.updated_at,
           user_id: 'demo-admin-0001',
+          training_start_date: (demoClient as any).training_start_date ?? null,
         }] as Client[];
       }
       
