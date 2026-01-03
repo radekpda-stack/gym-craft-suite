@@ -56,7 +56,7 @@ export function XPHistoryWidget({ clientId, compact = false }: XPHistoryWidgetPr
           >
             <span>{getXPSourceIcon(event.source_type)}</span>
             <span className="flex-1 truncate text-muted-foreground">
-              {getXPSourceLabel(event.source_type)}
+              {event.description || getXPSourceLabel(event.source_type)}
             </span>
             <span className="font-medium text-primary">+{event.xp_amount}</span>
           </motion.div>
@@ -94,7 +94,7 @@ export function XPHistoryWidget({ clientId, compact = false }: XPHistoryWidgetPr
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
-                  {getXPSourceLabel(event.source_type)}
+                  {event.description || getXPSourceLabel(event.source_type)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {formatDistanceToNow(parseISO(event.created_at), { addSuffix: true, locale: cs })}
