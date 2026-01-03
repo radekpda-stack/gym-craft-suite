@@ -5145,13 +5145,20 @@ export type Database = {
           admin_note: string | null
           approved_at: string | null
           approved_by: string | null
+          avatar_url: string | null
+          bio: string | null
+          certifications: string[] | null
           client_limit: number
           created_at: string | null
           display_name: string | null
           email: string
+          experience_years: number | null
           first_login_at: string | null
           id: string
           last_login_at: string | null
+          phone: string | null
+          social_links: Json | null
+          specializations: string[] | null
           subscription_type: string
           trial_until: string | null
           updated_at: string | null
@@ -5161,13 +5168,20 @@ export type Database = {
           admin_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
           client_limit?: number
           created_at?: string | null
           display_name?: string | null
           email: string
+          experience_years?: number | null
           first_login_at?: string | null
           id: string
           last_login_at?: string | null
+          phone?: string | null
+          social_links?: Json | null
+          specializations?: string[] | null
           subscription_type?: string
           trial_until?: string | null
           updated_at?: string | null
@@ -5177,13 +5191,20 @@ export type Database = {
           admin_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
           client_limit?: number
           created_at?: string | null
           display_name?: string | null
           email?: string
+          experience_years?: number | null
           first_login_at?: string | null
           id?: string
           last_login_at?: string | null
+          phone?: string | null
+          social_links?: Json | null
+          specializations?: string[] | null
           subscription_type?: string
           trial_until?: string | null
           updated_at?: string | null
