@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, format, differenceInDays, subDays } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, differenceInDays } from 'date-fns';
 
 export interface CashflowForecastData {
   thisWeek: {
@@ -42,39 +41,44 @@ export function useCashflowForecast() {
       const thisMonthStart = startOfMonth(now);
       const thisMonthEnd = endOfMonth(now);
 
-      const thisWeekResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price, base_price, status')
-        .eq('user_id', user.id)
-        .gte('date', thisWeekStart.toISOString())
-        .lte('date', thisWeekEnd.toISOString())
-        .in('status', ['scheduled', 'completed']);
-      const nextWeekResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price, base_price, status')
-        .eq('user_id', user.id)
-        .gte('date', nextWeekStart.toISOString())
-        .lte('date', nextWeekEnd.toISOString())
-        .in('status', ['scheduled', 'completed']);
-      const thisMonthScheduledResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price, base_price, status')
-        .eq('user_id', user.id)
-        .gte('date', thisMonthStart.toISOString())
-        .lte('date', thisMonthEnd.toISOString())
-        .in('status', ['scheduled', 'completed']);
-      const thisMonthCompletedResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price')
-        .eq('user_id', user.id)
-        .gte('date', thisMonthStart.toISOString())
-        .lte('date', thisMonthEnd.toISOString())
-        .eq('status', 'completed');
-      const unpaidResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price, date')
-        .eq('user_id', user.id)
-        .is('is_paid', false);
+      // Fetch all trainings in parallel
+      const [thisWeekResult, nextWeekResult, thisMonthScheduledResult, thisMonthCompletedResult, unpaidResult] = await Promise.all([
+        supabase
+          .from('training_sessions')
+          .select('id, final_price, status')
+          .eq('user_id', user.id)
+          .gte('date', thisWeekStart.toISOString())
+          .lte('date', thisWeekEnd.toISOString())
+          .in('status', ['scheduled', 'completed']),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price, status')
+          .eq('user_id', user.id)
+          .gte('date', nextWeekStart.toISOString())
+          .lte('date', nextWeekEnd.toISOString())
+          .in('status', ['scheduled', 'completed']),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price, status')
+          .eq('user_id', user.id)
+          .gte('date', thisMonthStart.toISOString())
+          .lte('date', thisMonthEnd.toISOString())
+          .in('status', ['scheduled', 'completed']),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price')
+          .eq('user_id', user.id)
+          .gte('date', thisMonthStart.toISOString())
+          .lte('date', thisMonthEnd.toISOString())
+          .eq('status', 'completed'),
+        // Unpaid = payment_status is 'pending' or null, and status is 'completed'
+        supabase
+          .from('training_sessions')
+          .select('id, final_price, date')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .or('payment_status.is.null,payment_status.eq.pending')
+      ]);
 
       const thisWeekTrainings = thisWeekResult.data || [];
       const nextWeekTrainings = nextWeekResult.data || [];
@@ -82,9 +86,9 @@ export function useCashflowForecast() {
       const thisMonthCompleted = thisMonthCompletedResult.data || [];
       const unpaidTrainings = unpaidResult.data || [];
 
-      // Calculate expected income (use final_price if available, else base_price)
-      const calcExpected = (trainings: any[]) => 
-        trainings.reduce((sum, t) => sum + (t.final_price || t.base_price || 0), 0);
+      // Calculate expected income (use final_price)
+      const calcExpected = (trainings: { final_price: number | null }[]) => 
+        trainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
 
       const thisWeekExpected = calcExpected(thisWeekTrainings);
       const nextWeekExpected = calcExpected(nextWeekTrainings);
