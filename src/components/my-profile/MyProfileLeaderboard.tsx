@@ -51,7 +51,7 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
 
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, name, gender')
+        .select('id, name, gender, is_self_profile')
         .in('id', clientIds);
 
       // Get leaderboard settings for all clients
@@ -60,15 +60,16 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
         .select('client_id, leaderboard_visible, leaderboard_nickname')
         .in('client_id', clientIds);
 
-      const clientMap = new Map(clients?.map(c => [c.id, { name: c.name, gender: c.gender }]) || []);
+      const clientMap = new Map(clients?.map(c => [c.id, { name: c.name, gender: c.gender, isSelfProfile: c.is_self_profile }]) || []);
       const settingsMap = new Map(leaderboardSettings?.map(s => [s.client_id, s]) || []);
 
       return Object.entries(workoutsByClient)
         .map(([id, count]) => {
           const settings = settingsMap.get(id);
           const clientInfo = clientMap.get(id);
-          // Default to anonymous (leaderboard_visible defaults to false/null)
-          const isVisible = settings?.leaderboard_visible === true;
+          // Trainer's self-profile is always visible, otherwise check settings
+          const isSelfProfile = clientInfo?.isSelfProfile === true;
+          const isVisible = isSelfProfile || settings?.leaderboard_visible === true;
           
           let displayName: string;
           if (isVisible) {
