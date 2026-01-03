@@ -100,7 +100,7 @@ function calculateBadgeProgress(
       
       switch (specialType) {
         case 'early_bird':
-          const beforeHour = ruleValue.before_hour || 8;
+          const beforeHour = ruleValue.before_hour || 9;
           current = allTimeWorkouts.filter(w => {
             const hour = new Date(w.performed_at).getHours();
             return hour < beforeHour;
@@ -112,6 +112,44 @@ function calculateBadgeProgress(
             const day = new Date(w.performed_at).getDay();
             return day === 0;
           }).length;
+          break;
+          
+        case 'weekend':
+          // Count weekend workouts (Saturday = 6, Sunday = 0)
+          current = allTimeWorkouts.filter(w => {
+            const day = new Date(w.performed_at).getDay();
+            return day === 0 || day === 6;
+          }).length;
+          break;
+          
+        case 'first_of_week':
+          // Count unique weeks with at least one workout
+          const weekFirsts = new Set<string>();
+          allTimeWorkouts.forEach(w => {
+            weekFirsts.add(getWeekKey(new Date(w.performed_at)));
+          });
+          current = weekFirsts.size;
+          break;
+          
+        case 'variety_week':
+          // Find if any week has 3+ different workout types
+          const weekTypes: Record<string, Set<string>> = {};
+          allTimeWorkouts.forEach(w => {
+            const weekKey = getWeekKey(new Date(w.performed_at));
+            if (!weekTypes[weekKey]) weekTypes[weekKey] = new Set();
+            if (w.workout_type) weekTypes[weekKey].add(w.workout_type);
+          });
+          current = Object.values(weekTypes).some(types => types.size >= 3) ? 1 : 0;
+          break;
+          
+        case 'double_day':
+          // Count days with 2+ workouts
+          const dayCounts: Record<string, number> = {};
+          allTimeWorkouts.forEach(w => {
+            const dateKey = new Date(w.performed_at).toISOString().split('T')[0];
+            dayCounts[dateKey] = (dayCounts[dateKey] || 0) + 1;
+          });
+          current = Object.values(dayCounts).filter(c => c >= 2).length;
           break;
           
         case 'comeback':
@@ -141,6 +179,12 @@ function calculateBadgeProgress(
           current = Math.max(0, ...Object.values(weekCounts));
           break;
       }
+      break;
+      
+    case 'xp_milestone':
+      // Will be handled separately with XP data
+      target = ruleValue.xp || 1000;
+      current = 0; // Will be set in the main loop
       break;
       
     case 'seasonal':
@@ -214,6 +258,15 @@ serve(async (req) => {
         .select('performed_at, workout_type, confirmed_by, xp')
         .eq('client_id', clientId);
       
+      // Get client's total XP for xp_milestone badges
+      const { data: clientXP } = await supabase
+        .from('client_xp')
+        .select('total_xp')
+        .eq('client_id', clientId)
+        .single();
+      
+      const totalXP = clientXP?.total_xp || 0;
+      
       const { data: trainingSessions } = await supabase
         .from('training_sessions')
         .select('date, training_type')
@@ -253,7 +306,18 @@ serve(async (req) => {
       const newlyEarnedBadges: { badge_id: string; badge_name: string; badge_rarity: string }[] = [];
       
       for (const badge of badges || []) {
-        const progress = calculateBadgeProgress(badge, allWorkouts, allWorkouts);
+        let progress = calculateBadgeProgress(badge, allWorkouts, allWorkouts);
+        
+        // Handle xp_milestone badges separately
+        if (badge.rule_type === 'xp_milestone') {
+          const targetXP = badge.rule_value.xp || 1000;
+          progress = {
+            current: Math.min(totalXP, targetXP),
+            target: targetXP,
+            earned: totalXP >= targetXP,
+          };
+        }
+        
         const wasEarned = existingBadgeMap.get(badge.id);
         const isNewlyEarned = progress.earned && !wasEarned;
         

@@ -13,34 +13,56 @@ export interface XPEvent {
 
 // Source type labels for display
 export const XP_SOURCE_LABELS: Record<string, string> = {
-  // Skutečné hodnoty z databáze
+  // Základní XP
   training_session: 'Trénink s trenérem',
   exercise_entry: 'Záznam cviku',
+  workout_confirmed: 'Dokončený trénink',
   
-  // Zachovat pro zpětnou kompatibilitu
-  training_completed: 'Trénink s trenérem',
-  workout_confirmed: 'Vlastní trénink',
+  // Bonusy
+  morning_bonus: 'Ranní trénink',
+  weekend_bonus: 'Víkendový trénink',
+  workout_type_bonus: 'Bonus za typ tréninku',
+  weekly_streak: 'Týdenní streak',
+  first_week_workout: 'První trénink v týdnu',
+  pr: 'Osobní rekord',
+  
+  // Ostatní
   challenge_completed: 'Výzva dokončena',
   badge_earned: 'Nový odznak',
   streak_bonus: 'Bonus za sérii',
   first_workout: 'První trénink',
   daily_bonus: 'Denní bonus',
   manual: 'Bonus od trenéra',
+  
+  // Zpětná kompatibilita
+  training_completed: 'Trénink s trenérem',
 };
 
 // Source type icons
 export const XP_SOURCE_ICONS: Record<string, string> = {
+  // Základní
   training_session: '🏋️',
   exercise_entry: '💪',
+  workout_confirmed: '✅',
   
-  training_completed: '🏋️',
-  workout_confirmed: '💪',
+  // Bonusy
+  morning_bonus: '🌅',
+  weekend_bonus: '📅',
+  workout_type_bonus: '🎯',
+  weekly_streak: '🔥',
+  first_week_workout: '🥇',
+  pr: '🏆',
+  
+  // Ostatní
   challenge_completed: '🏆',
   badge_earned: '🎖️',
   streak_bonus: '🔥',
   first_workout: '⭐',
   daily_bonus: '📅',
   manual: '🎁',
+  
+  // Zpětná kompatibilita
+  training_completed: '🏋️',
 };
 
 export function getXPSourceLabel(sourceType: string): string {

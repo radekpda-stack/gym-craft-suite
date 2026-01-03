@@ -18,6 +18,7 @@ const XP_CONFIG = {
   } as Record<string, number>,
   MORNING_BONUS: 8,  // start_time <= 09:00
   WEEKEND_BONUS: 8,  // Saturday/Sunday
+  FIRST_WEEK_WORKOUT: 5, // First workout of the week
   WEEKLY_STREAK: {
     3: 20,
     5: 40,
@@ -168,7 +169,14 @@ Deno.serve(async (req: Request) => {
     const weekKey = getWeekKey(workoutDate);
     await checkWeeklyStreak(supabase, client_id, weekKey, addEvent);
 
-    // 6. PR check (from client_prs if updated today)
+    // 6. First workout of the week bonus
+    const isFirstOfWeek = await checkFirstWorkoutOfWeek(supabase, client_id, weekKey, workout_id);
+    if (isFirstOfWeek) {
+      addEvent('first_week_workout', workout_id, XP_CONFIG.FIRST_WEEK_WORKOUT, 
+        'První trénink v týdnu', { week_key: weekKey });
+    }
+
+    // 7. PR check (from client_prs if updated today)
     if (todayPRs < XP_CONFIG.PR_DAILY_CAP) {
       const { data: recentPRs } = await supabase
         .from('client_prs')
@@ -405,4 +413,42 @@ function getWeekStartDate(weekKey: string): Date {
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - dayOfWeek + 1 + (weekNum - 1) * 7);
   return monday;
+}
+
+async function checkFirstWorkoutOfWeek(
+  supabase: any,
+  clientId: string,
+  weekKey: string,
+  currentWorkoutId: string
+): Promise<boolean> {
+  // Check if there's already a first_week_workout event for this week
+  const { data: existingClaim } = await supabase
+    .from('xp_events')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('source_type', 'first_week_workout')
+    .like('description', `%${weekKey}%`)
+    .limit(1);
+
+  if (existingClaim && existingClaim.length > 0) {
+    return false;
+  }
+
+  // Get week boundaries
+  const weekStart = getWeekStartDate(weekKey);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  // Check if this is the first workout in the week
+  const { data: weekWorkouts } = await supabase
+    .from('client_confirmed_workouts')
+    .select('id')
+    .eq('client_id', clientId)
+    .gte('performed_date', weekStart.toISOString().split('T')[0])
+    .lt('performed_date', weekEnd.toISOString().split('T')[0])
+    .order('performed_at', { ascending: true })
+    .limit(1);
+
+  // If this workout is the first one in the week
+  return weekWorkouts?.length > 0 && weekWorkouts[0].id === currentWorkoutId;
 }
