@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientAttendanceStats, useClientCreditStats, useClientRecentActivity, type PeriodDays } from '@/hooks/useClientPortalStats';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
+import { useClientOnboardingStatus } from '@/hooks/useClientOnboardingStatus';
 import { 
   Wallet, 
   Calendar, 
@@ -31,6 +32,8 @@ import { OverallPerformanceCard } from '@/components/client-portal/dashboard/Ove
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
 import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
+import { OnboardingChecklist } from '@/components/client-portal/common/OnboardingChecklist';
+import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -45,6 +48,7 @@ export default function ClientPortalOverview() {
   const { data: creditStats, isLoading: creditLoading, error: creditError } = useClientCreditStats(clientId ?? undefined, period);
   const { data: attendanceStats, isLoading: attendanceLoading, error: attendanceError } = useClientAttendanceStats(clientId ?? undefined, period);
   const { data: recentActivity, isLoading: activityLoading } = useClientRecentActivity(clientId ?? undefined, 5);
+  const { data: onboardingStatus } = useClientOnboardingStatus();
   
   const { trackPageMount } = useClientPortalPageTracking('client_portal_overview');
 
@@ -74,6 +78,19 @@ export default function ClientPortalOverview() {
         {/* Gamification Badge - Minimální zobrazení */}
         <GamificationBadge />
       </div>
+
+      {/* Onboarding Checklist - shows for new clients */}
+      {onboardingStatus && !onboardingStatus.isComplete && (
+        <OnboardingChecklist
+          hasAnonymousBenchmarks={onboardingStatus.hasAnonymousBenchmarks}
+          hasMeasurement={onboardingStatus.hasMeasurement}
+          hasTrackedExercise={onboardingStatus.hasTrackedExercise}
+          hasNutritionEntry={onboardingStatus.hasNutritionEntry}
+        />
+      )}
+
+      {/* Quick Actions */}
+      <ClientQuickActions />
 
       {/* Error Alert */}
       {hasError && (
