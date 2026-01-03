@@ -6,6 +6,251 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Czech nicknames database
+const CZECH_NICKNAMES: Record<string, string[]> = {
+  'jan': ['honza', 'jenda', 'jeník', 'honzík', 'jéňa', 'johny'],
+  'josef': ['pepa', 'pepík', 'pepča', 'jožka', 'joska'],
+  'petr': ['péťa', 'petřík', 'peťan', 'pedro'],
+  'marie': ['máňa', 'maruška', 'mařenka', 'mája', 'majka'],
+  'kateřina': ['káťa', 'katka', 'kačka', 'kačenka', 'kája'],
+  'tereza': ['terka', 'terezka', 'tery'],
+  'michaela': ['míša', 'míšenka', 'miki'],
+  'jiří': ['jirka', 'jiřík', 'jura', 'juraj'],
+  'tomáš': ['tomeš', 'tomík', 'tonda', 'tom'],
+  'martin': ['máťa', 'martínek', 'marty'],
+  'pavel': ['pája', 'pavlík', 'pašík'],
+  'lukáš': ['lukášek', 'luki', 'luky'],
+  'david': ['davídek', 'dáda', 'dave'],
+  'jakub': ['kuba', 'kubík', 'kubíček', 'kubo'],
+  'ondřej': ['ondra', 'ondráš', 'ondráček'],
+  'františek': ['franta', 'fanda', 'ferda', 'frank'],
+  'václav': ['vašek', 'véna', 'václavek', 'venca'],
+  'anna': ['anka', 'andula', 'anička', 'aňa'],
+  'eva': ['evička', 'evka', 'evina'],
+  'lucie': ['lucka', 'lucinka', 'lucy'],
+  'jana': ['janka', 'janička', 'jaňa'],
+  'hana': ['hanka', 'hanička', 'háňa'],
+  'petra': ['péťa', 'petruška', 'petruše'],
+  'veronika': ['věrka', 'nika', 'verča'],
+  'lenka': ['lenička', 'lenušká'],
+  'markéta': ['márka', 'markétka', 'maky'],
+  'zuzana': ['zuzka', 'zuzi', 'zuzanka'],
+  'barbora': ['bára', 'baru', 'barča', 'barbuška'],
+  'alexandra': ['saša', 'alex', 'sára'],
+  'monika': ['moňa', 'monča', 'moni'],
+  'andrea': ['andy', 'andrejka'],
+  'alena': ['alenka', 'ali', 'ajka'],
+  'daniel': ['dan', 'daník', 'danda'],
+  'marek': ['mareček', 'mára'],
+  'michal': ['míša', 'mišák', 'miki'],
+  'filip': ['filda', 'filípek', 'fil'],
+  'adam': ['adámek', 'ady'],
+  'vojtěch': ['vojta', 'vojtík', 'véja'],
+  'štěpán': ['štěpa', 'štěpánek', 'stevo'],
+  'matěj': ['máťa', 'matýsek', 'maty'],
+  'dominik': ['domča', 'dom', 'dodo'],
+  'radek': ['ráďa', 'radoušek'],
+  'jaroslav': ['jarda', 'slávek', 'jára'],
+  'zdeněk': ['zdenda', 'zdeňous', 'zděna'],
+  'vladimír': ['vláďa', 'vlado', 'vládík'],
+  'miroslav': ['míra', 'mirek', 'mířa'],
+  'oldřich': ['olda', 'olina'],
+  'stanislav': ['standa', 'staník', 'slávek'],
+  'ladislav': ['láďa', 'lado', 'laco'],
+  'richard': ['rišo', 'ríša', 'riki'],
+  'robert': ['robo', 'robík', 'bobby'],
+  'libor': ['líba', 'libíček'],
+  'jiřina': ['jířa', 'jiruna'],
+  'věra': ['věrka', 'věruška'],
+  'ivana': ['iva', 'ivča', 'ivuška'],
+  'helena': ['hela', 'helenka', 'lena'],
+  'ludmila': ['lída', 'lidka', 'míla'],
+  'milena': ['míla', 'miluška'],
+  'dagmar': ['dáša', 'dáda'],
+  'simona': ['simča', 'simi'],
+  'nikola': ['niki', 'nikolka'],
+  'kristýna': ['kiki', 'týna', 'kristy'],
+};
+
+// Normalize text - remove diacritics and convert to lowercase
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+// Calculate Levenshtein distance between two strings
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+// Get all possible name variations for a client
+function getNameVariations(name: string): string[] {
+  const normalized = normalizeText(name);
+  const parts = normalized.split(/\s+/);
+  const variations: string[] = [normalized];
+
+  for (const part of parts) {
+    variations.push(part);
+    
+    // Check if this part is a key in nicknames
+    const nicknamesForPart = CZECH_NICKNAMES[part];
+    if (nicknamesForPart) {
+      variations.push(...nicknamesForPart.map(normalizeText));
+    }
+    
+    // Check if this part is a nickname value
+    for (const [formalName, nicknames] of Object.entries(CZECH_NICKNAMES)) {
+      if (nicknames.map(normalizeText).includes(part)) {
+        variations.push(normalizeText(formalName));
+      }
+    }
+  }
+
+  return [...new Set(variations)];
+}
+
+// Extract potential name tokens from event summary
+function extractNameTokens(summary: string): string[] {
+  const normalized = normalizeText(summary);
+  // Remove common non-name words
+  const stopWords = ['trenink', 'training', 'trening', 'session', 'sezení', 'cviceni', 'cvičení', 'workout', 'osobni', 'osobní'];
+  const tokens = normalized.split(/[\s,\-–:]+/).filter(t => 
+    t.length > 1 && !stopWords.includes(t) && !/^\d+$/.test(t)
+  );
+  return tokens;
+}
+
+interface ClientMatchResult {
+  clientId: string;
+  clientName: string;
+  score: number;
+  matchType: 'exact_full' | 'exact_first' | 'exact_last' | 'nickname' | 'alias' | 'fuzzy';
+}
+
+// Score a client match against event summary
+function scoreClientMatch(
+  summary: string,
+  client: { id: string; name: string },
+  aliases: string[]
+): ClientMatchResult | null {
+  const normalizedSummary = normalizeText(summary);
+  const summaryTokens = extractNameTokens(summary);
+  const clientVariations = getNameVariations(client.name);
+  const normalizedClientName = normalizeText(client.name);
+  const nameParts = normalizedClientName.split(/\s+/);
+  const firstName = nameParts[0];
+  const lastName = nameParts[nameParts.length - 1];
+
+  let bestScore = 0;
+  let matchType: ClientMatchResult['matchType'] = 'fuzzy';
+
+  // Check for exact full name match
+  if (normalizedSummary.includes(normalizedClientName)) {
+    return { clientId: client.id, clientName: client.name, score: 100, matchType: 'exact_full' };
+  }
+
+  // Check aliases (from database)
+  for (const alias of aliases) {
+    if (normalizedSummary.includes(normalizeText(alias))) {
+      return { clientId: client.id, clientName: client.name, score: 95, matchType: 'alias' };
+    }
+  }
+
+  // Check for nickname matches
+  for (const variation of clientVariations) {
+    if (variation !== normalizedClientName && normalizedSummary.includes(variation)) {
+      if (bestScore < 90) {
+        bestScore = 90;
+        matchType = 'nickname';
+      }
+    }
+  }
+  if (bestScore >= 90) {
+    return { clientId: client.id, clientName: client.name, score: bestScore, matchType };
+  }
+
+  // Check for first name exact match
+  if (firstName.length > 2 && normalizedSummary.includes(firstName)) {
+    return { clientId: client.id, clientName: client.name, score: 75, matchType: 'exact_first' };
+  }
+
+  // Check for last name exact match
+  if (lastName.length > 2 && normalizedSummary.includes(lastName)) {
+    return { clientId: client.id, clientName: client.name, score: 65, matchType: 'exact_last' };
+  }
+
+  // Fuzzy matching on tokens
+  for (const token of summaryTokens) {
+    for (const variation of clientVariations) {
+      if (token.length >= 3 && variation.length >= 3) {
+        const distance = levenshteinDistance(token, variation);
+        const maxLen = Math.max(token.length, variation.length);
+        const similarity = 1 - distance / maxLen;
+        
+        if (similarity >= 0.8) { // 80% similar
+          const fuzzyScore = Math.round(50 + similarity * 30); // 50-80 range
+          if (fuzzyScore > bestScore) {
+            bestScore = fuzzyScore;
+            matchType = 'fuzzy';
+          }
+        }
+      }
+    }
+  }
+
+  if (bestScore >= 50) {
+    return { clientId: client.id, clientName: client.name, score: bestScore, matchType };
+  }
+
+  return null;
+}
+
+// Find best client matches for an event
+function findClientMatches(
+  summary: string, 
+  clients: Array<{ id: string; name: string }>,
+  aliasMap: Map<string, string[]>
+): ClientMatchResult[] {
+  const results: ClientMatchResult[] = [];
+
+  for (const client of clients) {
+    const aliases = aliasMap.get(client.id) || [];
+    const match = scoreClientMatch(summary, client, aliases);
+    if (match) {
+      results.push(match);
+    }
+  }
+
+  // Sort by score descending
+  return results.sort((a, b) => b.score - a.score);
+}
+
 // Simple ICS parser
 function parseICS(icsContent: string): Array<{
   uid: string;
@@ -77,20 +322,14 @@ function parseICS(icsContent: string): Array<{
 }
 
 function parseICSDate(value: string, keyPart: string): Date {
-  // Check for timezone info
-  const tzMatch = keyPart.match(/TZID=([^:;]+)/);
-  
-  // Format: YYYYMMDD or YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ
   const cleanValue = value.replace('Z', '');
   
   if (cleanValue.length === 8) {
-    // All-day event: YYYYMMDD
     const year = parseInt(cleanValue.substring(0, 4));
     const month = parseInt(cleanValue.substring(4, 6)) - 1;
     const day = parseInt(cleanValue.substring(6, 8));
     return new Date(year, month, day);
   } else if (cleanValue.length >= 15) {
-    // DateTime: YYYYMMDDTHHMMSS
     const year = parseInt(cleanValue.substring(0, 4));
     const month = parseInt(cleanValue.substring(4, 6)) - 1;
     const day = parseInt(cleanValue.substring(6, 8));
@@ -107,28 +346,6 @@ function parseICSDate(value: string, keyPart: string): Date {
   return new Date(value);
 }
 
-// Try to match event summary to a client name
-function findClientMatch(summary: string, clients: Array<{ id: string; name: string }>): string | null {
-  const normalizedSummary = summary.toLowerCase().trim();
-  
-  for (const client of clients) {
-    const normalizedName = client.name.toLowerCase().trim();
-    
-    // Direct match
-    if (normalizedSummary.includes(normalizedName)) {
-      return client.id;
-    }
-    
-    // Check if first name matches
-    const firstName = normalizedName.split(' ')[0];
-    if (firstName.length > 2 && normalizedSummary.includes(firstName)) {
-      return client.id;
-    }
-  }
-  
-  return null;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -140,7 +357,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
-    const { action, feedId, userId, icsUrl } = body;
+    const { action, feedId, userId, icsUrl, eventId, clientId } = body;
 
     console.log(`[ICS Sync] Action: ${action}, FeedId: ${feedId}, UserId: ${userId}`);
 
@@ -183,7 +400,7 @@ serve(async (req) => {
 
         // Filter events by sync_from_date if set
         const syncFromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date();
-        syncFromDate.setMonth(syncFromDate.getMonth() - 1); // Default: last month
+        syncFromDate.setMonth(syncFromDate.getMonth() - 1);
         
         const filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
         console.log(`[ICS Sync] ${filteredEvents.length} events after date filter`);
@@ -195,10 +412,32 @@ serve(async (req) => {
           .eq('user_id', feed.user_id)
           .eq('is_archived', false);
 
+        // Get all client aliases for this user
+        const { data: aliasesData } = await supabase
+          .from('client_name_aliases')
+          .select('client_id, alias')
+          .eq('user_id', feed.user_id);
+
+        // Build alias map
+        const aliasMap = new Map<string, string[]>();
+        for (const aliasRow of aliasesData || []) {
+          const existing = aliasMap.get(aliasRow.client_id) || [];
+          existing.push(aliasRow.alias);
+          aliasMap.set(aliasRow.client_id, existing);
+        }
+
         // Process each event
         let syncedCount = 0;
         for (const event of filteredEvents) {
-          const matchedClientId = clients ? findClientMatch(event.summary, clients) : null;
+          // Find matches with scoring
+          const matches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
+          const bestMatch = matches.length > 0 && matches[0].score >= 75 ? matches[0] : null;
+          const suggestions = matches.slice(0, 5).map(m => ({
+            client_id: m.clientId,
+            name: m.clientName,
+            score: m.score,
+            match_type: m.matchType,
+          }));
 
           // Upsert event
           const { error: upsertError } = await supabase
@@ -211,7 +450,8 @@ serve(async (req) => {
               start_at: event.dtstart.toISOString(),
               end_at: event.dtend?.toISOString(),
               location: event.location,
-              matched_client_id: matchedClientId,
+              matched_client_id: bestMatch?.clientId || null,
+              match_suggestions: suggestions,
               updated_at: new Date().toISOString(),
             }, {
               onConflict: 'feed_id,ics_uid',
@@ -264,6 +504,79 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    }
+
+    if (action === 'learn_alias') {
+      // Learn from a manual client assignment - extract pattern from event summary
+      const { data: event } = await supabase
+        .from('calendar_ics_events')
+        .select('summary, feed:calendar_ics_feeds(user_id)')
+        .eq('id', eventId)
+        .single();
+
+      if (!event || !clientId) {
+        return new Response(
+          JSON.stringify({ error: 'invalid_request' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const feed = event.feed as any;
+      const tokens = extractNameTokens(event.summary);
+      
+      // Get client name to avoid storing it as alias
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name')
+        .eq('id', clientId)
+        .single();
+
+      if (!client) {
+        return new Response(
+          JSON.stringify({ error: 'client_not_found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const clientNameParts = normalizeText(client.name).split(/\s+/);
+      const learnedAliases: string[] = [];
+
+      for (const token of tokens) {
+        // Don't store if it's already part of client name
+        if (clientNameParts.includes(token)) continue;
+        // Don't store if it's a known nickname
+        let isKnownNickname = false;
+        for (const nicknames of Object.values(CZECH_NICKNAMES)) {
+          if (nicknames.map(normalizeText).includes(token)) {
+            isKnownNickname = true;
+            break;
+          }
+        }
+        if (isKnownNickname) continue;
+
+        // Store as learned alias
+        const { error } = await supabase
+          .from('client_name_aliases')
+          .upsert({
+            client_id: clientId,
+            alias: token,
+            source: 'learned',
+            user_id: feed.user_id,
+          }, {
+            onConflict: 'client_id,alias',
+          });
+
+        if (!error) {
+          learnedAliases.push(token);
+        }
+      }
+
+      console.log(`[ICS Sync] Learned ${learnedAliases.length} aliases for client ${clientId}: ${learnedAliases.join(', ')}`);
+
+      return new Response(
+        JSON.stringify({ success: true, learned_aliases: learnedAliases }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (action === 'create_sessions_from_events') {
@@ -360,7 +673,6 @@ serve(async (req) => {
     }
 
     if (action === 'test_url') {
-      // Just test if the URL is accessible
       try {
         const response = await fetch(icsUrl, { method: 'HEAD' });
         
@@ -371,7 +683,6 @@ serve(async (req) => {
           );
         }
 
-        // Try to fetch and parse a bit
         const fullResponse = await fetch(icsUrl);
         const content = await fullResponse.text();
         
