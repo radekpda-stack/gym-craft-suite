@@ -12,7 +12,9 @@ import {
   Dumbbell,
   ArrowDownLeft,
   CalendarClock,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -21,12 +23,13 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toVocative } from '@/lib/czechVocative';
 
-// New dashboard widgets
+// Dashboard widgets
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
+import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
-import { GamificationProgressCard } from '@/components/client-portal/gamification/GamificationWidgets';
-import { PeriodChips, TrendBadge } from '@/components/client-portal/common/SharedComponents';
+import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
+import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -50,17 +53,25 @@ export default function ClientPortalOverview() {
 
   const hasError = creditError || attendanceError;
 
+  // Calculate credit trend
+  const creditTrend = creditStats?.netChange ?? 0;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold truncate">
-            Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
-          </h1>
-          <p className="text-muted-foreground text-sm">Jak ti to jde</p>
+      {/* Header with Gamification Badge */}
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">
+              Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
+            </h1>
+            <p className="text-muted-foreground text-sm">Jak ti to jde</p>
+          </div>
+          <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
         </div>
-        <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
+        
+        {/* Gamification Badge - Minimální zobrazení */}
+        <GamificationBadge />
       </div>
 
       {/* Error Alert */}
@@ -73,61 +84,68 @@ export default function ClientPortalOverview() {
         </Alert>
       )}
 
-      {/* Feedback Section - shows when feedback is available (24h+ after training) */}
-      <ClientPortalFeedbackSection />
-
-      {/* GAMIFICATION WIDGET - Trainings Counter, XP, Badges */}
-      <GamificationProgressCard />
-
-      {/* WIDGETS - Priority Order */}
-      {/* 1. Active Challenge (conditional - only shows if challenge exists) */}
-      <ActiveChallengeWidget />
-      
-      {/* 2. Next Training */}
-      <NextTrainingWidget />
-
-      {/* Simplified Credit & Attendance Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Credit Card - Simplified */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Link to="/client/credit">
-            <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 hover:border-primary/40 transition-colors cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Kredit</p>
-                      {creditLoading ? (
-                        <Skeleton className="h-7 w-20" />
-                      ) : (
-                        <p className="text-xl font-bold">
-                          {creditStats?.balance.toLocaleString('cs-CZ') ?? 0} Kč
-                        </p>
-                      )}
-                    </div>
+      {/* 1. KREDIT - Hlavní priorita, velká karta */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Link to="/client/credit">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border-primary/30 hover:border-primary/50 transition-colors cursor-pointer">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <Wallet className="w-6 h-6 text-primary" />
                   </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Kredit</p>
+                    {creditLoading ? (
+                      <Skeleton className="h-8 w-24" />
+                    ) : (
+                      <p className="text-2xl font-bold">
+                        {creditStats?.balance.toLocaleString('cs-CZ') ?? 0} Kč
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Trend za období */}
+                  {!creditLoading && creditTrend !== 0 && (
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                      creditTrend > 0 
+                        ? "bg-success/10 text-success" 
+                        : "bg-destructive/10 text-destructive"
+                    )}>
+                      {creditTrend > 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      <span>
+                        {creditTrend > 0 ? '+' : ''}{creditTrend.toLocaleString('cs-CZ')} Kč
+                      </span>
+                    </div>
+                  )}
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </motion.div>
 
-        {/* Attendance Card - Simplified */}
+      {/* 2. DOCHÁZKA + PROGRESS - Grid 2 sloupce */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Attendance Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          transition={{ delay: 0.15 }}
         >
           <Link to="/client/attendance">
-            <Card className="relative overflow-hidden bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20 hover:border-success/40 transition-colors cursor-pointer">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20 hover:border-success/40 transition-colors cursor-pointer h-full">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -151,7 +169,20 @@ export default function ClientPortalOverview() {
             </Card>
           </Link>
         </motion.div>
+
+        {/* Progress Link Card */}
+        <ProgressLinkCard delay={0.2} />
       </div>
+
+      {/* 3. DALŠÍ TRÉNINK */}
+      <NextTrainingWidget />
+
+      {/* 4. AKTIVNÍ VÝZVY */}
+      <ActiveChallengeWidget />
+
+      {/* Feedback Section - shows when feedback is available */}
+      <ClientPortalFeedbackSection />
+
       {/* Recent Activity */}
       {recentActivity && recentActivity.length > 0 && (
         <motion.div
