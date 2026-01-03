@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, subMonths, subDays } from 'date-fns';
+import { startOfMonth, subMonths, subDays, getDaysInMonth } from 'date-fns';
+import { useCapacitySettings, calculateMonthlyCapacity } from './useCapacitySettings';
 
 export interface BusinessHealthData {
   score: number; // 0-100
@@ -12,11 +13,19 @@ export interface BusinessHealthData {
   };
   status: 'excellent' | 'good' | 'warning' | 'critical';
   insights: string[];
+  capacityInfo?: {
+    maxSlots: number;
+    usedSlots: number;
+    hoursPerDay: number;
+    workingDays: number;
+  };
 }
 
 export function useBusinessHealthScore() {
+  const { settings, isLoading: settingsLoading } = useCapacitySettings();
+
   return useQuery({
-    queryKey: ['business-health-score'],
+    queryKey: ['business-health-score', settings],
     queryFn: async (): Promise<BusinessHealthData> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -25,7 +34,11 @@ export function useBusinessHealthScore() {
       const thisMonthStart = startOfMonth(now);
       const lastMonthStart = startOfMonth(subMonths(now, 1));
       const sixtyDaysAgo = subDays(now, 60);
-      const thirtyDaysAgo = subDays(now, 30);
+      const daysInCurrentMonth = getDaysInMonth(now);
+
+      // Calculate capacity from settings
+      const { workingDaysCount, hoursPerDay, totalSlots } = calculateMonthlyCapacity(settings, daysInCurrentMonth);
+      const maxCapacity = totalSlots;
 
       // Parallel queries
       const clientsResult = await supabase.from('clients').select('id, is_archived').eq('user_id', user.id);
@@ -69,10 +82,10 @@ export function useBusinessHealthScore() {
         : 0;
       const retentionScore = Math.min(100, retentionRate);
 
-      // 2. CAPACITY SCORE (25%)
-      const workingDaysThisMonth = 22;
-      const maxCapacity = workingDaysThisMonth * 8;
-      const capacityUtilization = Math.min(100, (thisMonthTrainings.length / maxCapacity) * 100);
+      // 2. CAPACITY SCORE (25%) - using settings
+      const capacityUtilization = maxCapacity > 0 
+        ? Math.min(100, (thisMonthTrainings.length / maxCapacity) * 100)
+        : 0;
       // Optimal is 60-80%, penalize both too low and too high
       let capacityScore = capacityUtilization;
       if (capacityUtilization > 80) {
@@ -167,8 +180,15 @@ export function useBusinessHealthScore() {
         },
         status,
         insights,
+        capacityInfo: {
+          maxSlots: maxCapacity,
+          usedSlots: thisMonthTrainings.length,
+          hoursPerDay,
+          workingDays: workingDaysCount,
+        },
       };
     },
     staleTime: 1000 * 60 * 5,
+    enabled: !settingsLoading,
   });
 }
