@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCapacitySettings, type CapacitySettings as CapacitySettingsType } from '@/hooks/useCapacitySettings';
+import { useCapacitySettings, calculateMonthlyCapacity, type CapacitySettings as CapacitySettingsType } from '@/hooks/useCapacitySettings';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Clock, Calendar, Zap } from 'lucide-react';
 
 const DAYS_LABELS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
@@ -17,6 +17,36 @@ const SLOT_DURATION_OPTIONS = [
   { value: 90, label: '90 min' },
 ];
 
+const PRESETS: { label: string; icon: React.ReactNode; settings: Partial<CapacitySettingsType> }[] = [
+  {
+    label: '6h denně vč. víkendů',
+    icon: <Calendar className="w-4 h-4" />,
+    settings: {
+      workingDays: [true, true, true, true, true, true, true],
+      workingHoursStart: '09:00',
+      workingHoursEnd: '15:00',
+    },
+  },
+  {
+    label: '8h pracovní dny',
+    icon: <Clock className="w-4 h-4" />,
+    settings: {
+      workingDays: [true, true, true, true, true, false, false],
+      workingHoursStart: '08:00',
+      workingHoursEnd: '16:00',
+    },
+  },
+  {
+    label: 'Part-time 4h',
+    icon: <Zap className="w-4 h-4" />,
+    settings: {
+      workingDays: [true, true, true, true, true, false, false],
+      workingHoursStart: '09:00',
+      workingHoursEnd: '13:00',
+    },
+  },
+];
+
 export function CapacitySettingsPanel() {
   const { settings, isLoading, saveSettings, isSaving } = useCapacitySettings();
   
@@ -25,6 +55,11 @@ export function CapacitySettingsPanel() {
   useEffect(() => {
     setLocalSettings(settings);
   }, [settings]);
+
+  // Calculate capacity preview
+  const capacityPreview = useMemo(() => {
+    return calculateMonthlyCapacity(localSettings, 30);
+  }, [localSettings]);
 
   const handleSave = () => {
     saveSettings(localSettings, {
@@ -50,6 +85,14 @@ export function CapacitySettingsPanel() {
     setLocalSettings({ ...localSettings, workingDays: newDays });
   };
 
+  const applyPreset = (preset: typeof PRESETS[0]) => {
+    setLocalSettings({ ...localSettings, ...preset.settings });
+    toast({
+      title: 'Preset aplikován',
+      description: preset.label,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -60,6 +103,37 @@ export function CapacitySettingsPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Capacity Preview */}
+      <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+        <div className="text-sm text-muted-foreground mb-1">Měsíční kapacita</div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-bold text-primary">{capacityPreview.totalSlots}</span>
+          <span className="text-muted-foreground">slotů/měsíc</span>
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          {capacityPreview.workingDaysCount} pracovních dní × {capacityPreview.hoursPerDay.toFixed(1)}h = {Math.round(capacityPreview.workingDaysCount * capacityPreview.hoursPerDay)} hodin
+        </div>
+      </div>
+
+      {/* Quick Presets */}
+      <div className="space-y-2">
+        <Label className="text-muted-foreground text-sm">Rychlé presety</Label>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((preset) => (
+            <Button
+              key={preset.label}
+              variant="outline"
+              size="sm"
+              onClick={() => applyPreset(preset)}
+              className="gap-2"
+            >
+              {preset.icon}
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* Working days */}
       <div className="space-y-3">
         <Label className="text-foreground">Pracovní dny</Label>

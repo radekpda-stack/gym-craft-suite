@@ -10,12 +10,37 @@ export interface CapacitySettings {
 }
 
 const DEFAULT_SETTINGS: CapacitySettings = {
-  workingDays: [true, true, true, true, true, true, true], // All 7 days
-  workingHoursStart: '08:00',
-  workingHoursEnd: '16:00', // 8 hours
+  workingDays: [true, true, true, true, true, true, true], // All 7 days including weekends
+  workingHoursStart: '09:00',
+  workingHoursEnd: '15:00', // 6 hours per day
   slotDurationMinutes: 60,
   includeBlockedTime: true,
 };
+
+// Helper function to calculate monthly capacity from settings
+export function calculateMonthlyCapacity(settings: CapacitySettings, daysInMonth: number = 30): { 
+  workingDaysCount: number; 
+  hoursPerDay: number; 
+  totalSlots: number; 
+} {
+  // Count how many days per week are working days
+  const workingDaysPerWeek = settings.workingDays.filter(Boolean).length;
+  
+  // Calculate hours per day
+  const [startHour, startMin] = settings.workingHoursStart.split(':').map(Number);
+  const [endHour, endMin] = settings.workingHoursEnd.split(':').map(Number);
+  const hoursPerDay = (endHour + endMin / 60) - (startHour + startMin / 60);
+  
+  // Calculate working days in month (approximate)
+  const weeksInMonth = daysInMonth / 7;
+  const workingDaysCount = Math.round(weeksInMonth * workingDaysPerWeek);
+  
+  // Calculate slots
+  const slotsPerDay = Math.floor((hoursPerDay * 60) / settings.slotDurationMinutes);
+  const totalSlots = workingDaysCount * slotsPerDay;
+  
+  return { workingDaysCount, hoursPerDay, totalSlots };
+}
 
 const SETTINGS_KEY = 'capacity_settings';
 

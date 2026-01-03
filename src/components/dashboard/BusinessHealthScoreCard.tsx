@@ -1,10 +1,12 @@
 import { memo } from 'react';
-import { Activity, TrendingUp, TrendingDown, Wallet, Users, Gauge } from 'lucide-react';
+import { Gauge, Settings, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBusinessHealthScore } from '@/hooks/useBusinessHealthScore';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
   const { data, isLoading } = useBusinessHealthScore();
@@ -49,6 +51,33 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
           <div className="flex items-center gap-2">
             <Gauge className={cn('w-5 h-5', statusColors[data.status])} />
             <span className="text-sm font-semibold">Business Health Score</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="space-y-2 text-xs">
+                    <p className="font-medium">Jak se počítá kapacita:</p>
+                    {data.capacityInfo && (
+                      <div className="space-y-1 text-muted-foreground">
+                        <p>• {data.capacityInfo.hoursPerDay.toFixed(1)}h denně</p>
+                        <p>• {data.capacityInfo.workingDays} pracovních dní/měsíc</p>
+                        <p>• Max. {data.capacityInfo.maxSlots} slotů/měsíc</p>
+                        <p>• Využito: {data.capacityInfo.usedSlots} slotů</p>
+                      </div>
+                    )}
+                    <Link 
+                      to="/settings" 
+                      className="flex items-center gap-1 text-primary hover:underline mt-2"
+                    >
+                      <Settings className="w-3 h-3" />
+                      Upravit kapacitu
+                    </Link>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', 
             data.status === 'excellent' && 'bg-success/20 text-success',
