@@ -10,12 +10,22 @@ export interface AttendanceStats {
   canceledPercentage: number;
   lateCancellationPercentage: number;
   attendancePercentage: number;
+  // New: separate counts for primary vs participant
+  asPrimaryCount: number;
+  asParticipantCount: number;
   monthlyData: {
     month: string;
     completed: number;
     canceled: number;
     lateCanceled: number;
   }[];
+}
+
+interface SessionWithRole {
+  status: string;
+  date: string;
+  is_late_cancellation?: boolean;
+  clientRole?: 'primary' | 'participant';
 }
 
 export function useClientAttendanceStats(clientId?: string) {
@@ -31,12 +41,16 @@ export function useClientAttendanceStats(clientId?: string) {
         canceledPercentage: 0,
         lateCancellationPercentage: 0,
         attendancePercentage: 100,
+        asPrimaryCount: 0,
+        asParticipantCount: 0,
         monthlyData: [],
       };
     }
 
+    const sessionsWithRole = sessions as SessionWithRole[];
+
     // Filter out scheduled (future) trainings for stats
-    const pastTrainings = sessions.filter(s => 
+    const pastTrainings = sessionsWithRole.filter(s => 
       s.status === 'completed' || s.status === 'canceled'
     );
 
@@ -44,6 +58,14 @@ export function useClientAttendanceStats(clientId?: string) {
     const canceledCount = pastTrainings.filter(s => s.status === 'canceled').length;
     const lateCancellationCount = pastTrainings.filter(s => 
       s.status === 'canceled' && s.is_late_cancellation
+    ).length;
+
+    // Count primary vs participant
+    const asPrimaryCount = pastTrainings.filter(s => 
+      s.status === 'completed' && (s.clientRole === 'primary' || !s.clientRole)
+    ).length;
+    const asParticipantCount = pastTrainings.filter(s => 
+      s.status === 'completed' && s.clientRole === 'participant'
     ).length;
 
     const totalTrainings = pastTrainings.length;
@@ -99,6 +121,8 @@ export function useClientAttendanceStats(clientId?: string) {
       canceledPercentage,
       lateCancellationPercentage,
       attendancePercentage,
+      asPrimaryCount,
+      asParticipantCount,
       monthlyData,
     };
   }, [sessions]);

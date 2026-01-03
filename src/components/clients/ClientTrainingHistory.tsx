@@ -16,6 +16,7 @@ import {
   Clock,
   Users,
   Loader2,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,9 +33,10 @@ interface TrainingSession {
   final_price?: number | null;
   payment_status?: string | null;
   participant_count?: number | null;
+  clientRole?: 'primary' | 'participant';
 }
 
-type FilterType = 'all' | 'completed' | 'cancelled_charged' | 'cancelled_free' | 'scheduled';
+type FilterType = 'all' | 'completed' | 'cancelled_charged' | 'cancelled_free' | 'scheduled' | 'as_payer' | 'as_participant';
 
 interface ClientTrainingHistoryProps {
   clientId: string;
@@ -47,6 +49,8 @@ interface ClientTrainingHistoryProps {
 
 const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'all', label: 'Vše' },
+  { value: 'as_payer', label: 'Jako plátce' },
+  { value: 'as_participant', label: 'Jako účastník' },
   { value: 'completed', label: 'Dokončeno' },
   { value: 'cancelled_charged', label: 'Zrušeno (strženo)' },
   { value: 'cancelled_free', label: 'Zrušeno (bez)' },
@@ -81,6 +85,12 @@ export function ClientTrainingHistory({
       case 'scheduled':
         result = result.filter(s => s.status === 'scheduled');
         break;
+      case 'as_payer':
+        result = result.filter(s => s.clientRole === 'primary' || !s.clientRole);
+        break;
+      case 'as_participant':
+        result = result.filter(s => s.clientRole === 'participant');
+        break;
     }
 
     // Sort by date descending
@@ -99,6 +109,10 @@ export function ClientTrainingHistory({
         return sessions.filter(s => s.status === 'canceled' && (!s.final_price || s.final_price === 0)).length;
       case 'scheduled':
         return sessions.filter(s => s.status === 'scheduled').length;
+      case 'as_payer':
+        return sessions.filter(s => s.clientRole === 'primary' || !s.clientRole).length;
+      case 'as_participant':
+        return sessions.filter(s => s.clientRole === 'participant').length;
       default:
         return sessions.length;
     }
@@ -142,6 +156,11 @@ export function ClientTrainingHistory({
 
   const getCreditImpact = (session: TrainingSession) => {
     if (session.status === 'scheduled') return null;
+    
+    // If client is participant (not payer), show dash
+    if (session.clientRole === 'participant') {
+      return <span className="text-muted-foreground">—</span>;
+    }
     
     const price = session.final_price || 0;
     if (price > 0) {
@@ -218,6 +237,14 @@ export function ClientTrainingHistory({
 
                 {/* Status */}
                 {getStatusBadge(session)}
+
+                {/* Participant badge */}
+                {session.clientRole === 'participant' && (
+                  <Badge className="bg-secondary text-secondary-foreground border-secondary/50 text-xs">
+                    <UserCheck className="w-3 h-3 mr-1" />
+                    Účast
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
