@@ -365,6 +365,134 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_ics_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_at: string | null
+          feed_id: string
+          ics_uid: string
+          id: string
+          is_processed: boolean | null
+          location: string | null
+          matched_client_id: string | null
+          start_at: string
+          summary: string | null
+          training_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          feed_id: string
+          ics_uid: string
+          id?: string
+          is_processed?: boolean | null
+          location?: string | null
+          matched_client_id?: string | null
+          start_at: string
+          summary?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          feed_id?: string
+          ics_uid?: string
+          id?: string
+          is_processed?: boolean | null
+          location?: string | null
+          matched_client_id?: string | null
+          start_at?: string
+          summary?: string | null
+          training_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_ics_events_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_ics_feeds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_ics_events_matched_client_id_fkey"
+            columns: ["matched_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_ics_events_matched_client_id_fkey"
+            columns: ["matched_client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "calendar_ics_events_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_ics_feeds: {
+        Row: {
+          auto_create_sessions: boolean | null
+          created_at: string
+          default_duration: number | null
+          events_synced: number | null
+          ics_url: string
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          name: string
+          sync_from_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_create_sessions?: boolean | null
+          created_at?: string
+          default_duration?: number | null
+          events_synced?: number | null
+          ics_url: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          sync_from_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_create_sessions?: boolean | null
+          created_at?: string
+          default_duration?: number | null
+          events_synced?: number | null
+          ics_url?: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          sync_from_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_shares: {
         Row: {
           created_at: string

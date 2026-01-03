@@ -49,6 +49,7 @@ import { ExercisesManagementSection } from '@/components/settings/exercises/Exer
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
+import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -351,6 +352,16 @@ export default function Settings() {
       case 'system':
         return (
           <>
+            <SettingsSection
+              title={language === 'cs' ? 'Import kalendáře' : 'Calendar Import'}
+              description={language === 'cs' 
+                ? 'Propojení s externím kalendářem (Apple, Google)' 
+                : 'Connect external calendar (Apple, Google)'}
+              icon={Calendar}
+            >
+              <CalendarSyncSettings />
+            </SettingsSection>
+
             <SettingsSection
               title={language === 'cs' ? 'Obnovení aplikace' : 'App Refresh'}
               description={language === 'cs' 
