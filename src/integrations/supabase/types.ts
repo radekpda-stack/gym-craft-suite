@@ -7263,7 +7263,7 @@ export type Database = {
       training_sessions: {
         Row: {
           canceled_at: string | null
-          client_id: string
+          client_id: string | null
           completion_quality: string | null
           created_at: string
           date: string
@@ -7290,6 +7290,7 @@ export type Database = {
           rir: number | null
           rpe: number | null
           session_notes: string | null
+          source_ics_event_id: string | null
           status: string
           subjective_difficulty: number | null
           subjective_rating: number | null
@@ -7306,7 +7307,7 @@ export type Database = {
         }
         Insert: {
           canceled_at?: string | null
-          client_id: string
+          client_id?: string | null
           completion_quality?: string | null
           created_at?: string
           date: string
@@ -7333,6 +7334,7 @@ export type Database = {
           rir?: number | null
           rpe?: number | null
           session_notes?: string | null
+          source_ics_event_id?: string | null
           status?: string
           subjective_difficulty?: number | null
           subjective_rating?: number | null
@@ -7349,7 +7351,7 @@ export type Database = {
         }
         Update: {
           canceled_at?: string | null
-          client_id?: string
+          client_id?: string | null
           completion_quality?: string | null
           created_at?: string
           date?: string
@@ -7376,6 +7378,7 @@ export type Database = {
           rir?: number | null
           rpe?: number | null
           session_notes?: string | null
+          source_ics_event_id?: string | null
           status?: string
           subjective_difficulty?: number | null
           subjective_rating?: number | null
@@ -7431,6 +7434,13 @@ export type Database = {
             columns: ["plan_workout_id"]
             isOneToOne: false
             referencedRelation: "plan_workouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_source_ics_event_id_fkey"
+            columns: ["source_ics_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_ics_events"
             referencedColumns: ["id"]
           },
           {

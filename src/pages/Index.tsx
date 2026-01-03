@@ -18,6 +18,7 @@ import { WinOfTheWeekCard } from '@/components/dashboard/WinOfTheWeekCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
 import { CapacityAlertsCard } from '@/components/dashboard/CapacityAlertsCard';
+import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 
 export default function Index() {
   usePageTracking('dashboard');
@@ -31,6 +32,11 @@ export default function Index() {
         {/* Header with date */}
         <SectionErrorBoundary section="Hlavička" compact>
           <DashboardHeader data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
+
+        {/* ⚠️ Unassigned Calendar Sessions */}
+        <SectionErrorBoundary section="Nepřiřazené tréninky" compact>
+          <UnassignedSessionsCard />
         </SectionErrorBoundary>
 
         {/* 📊 Business Health Score - NEW */}

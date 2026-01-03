@@ -202,6 +202,36 @@ export function useCreateSessionsFromEvents() {
   });
 }
 
+export function useSyncAndCreateSessions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedId: string) => {
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: {
+          action: 'sync_and_create_sessions',
+          feedId,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data as {
+        success: boolean;
+        events_synced: number;
+        sessions_created: number;
+        unmatched_count: number;
+        total_events: number;
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ics-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['training-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
 export function useTestICSUrl() {
   return useMutation({
     mutationFn: async (icsUrl: string) => {
