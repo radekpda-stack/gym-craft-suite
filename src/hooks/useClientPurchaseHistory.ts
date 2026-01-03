@@ -30,10 +30,10 @@ export function useClientPurchaseHistory(clientId: string | undefined) {
           payment_method,
           sales_order_items (
             id,
-            product_name,
+            name_snapshot,
             quantity,
             unit_price,
-            total_price
+            line_total
           )
         `)
         .eq('client_id', clientId)
@@ -48,10 +48,10 @@ export function useClientPurchaseHistory(clientId: string | undefined) {
         totalAmount: order.total_amount,
         paymentMethod: order.payment_method,
         items: (order.sales_order_items || []).map((item: any) => ({
-          productName: item.product_name,
+          productName: item.name_snapshot,
           quantity: item.quantity,
           unitPrice: item.unit_price,
-          total: item.total_price,
+          total: item.line_total,
         })),
       }));
     },
