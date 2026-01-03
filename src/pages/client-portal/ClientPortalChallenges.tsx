@@ -22,6 +22,8 @@ import { useClientChallengeHistory } from '@/hooks/useClientChallengeHistory';
 import { ChallengeHistory } from '@/components/client-portal/challenges/ChallengeHistory';
 import { AchievementsBadges } from '@/components/client-portal/challenges/AchievementsBadges';
 import { ChallengeSubmissionDialog } from '@/components/client-portal/challenges/ChallengeSubmissionDialog';
+import { SubmissionFeedback } from '@/components/client-portal/challenges/SubmissionFeedback';
+import { ChallengeProgressChart } from '@/components/client-portal/challenges/ChallengeProgressChart';
 import { formatChallengeScore, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
 import { format, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -39,6 +41,16 @@ export default function ClientPortalChallenges() {
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  
+  // Feedback state
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [lastSubmission, setLastSubmission] = useState<{
+    score: number;
+    previousBest: number | null;
+    percentile: number | null;
+    rank: number | null;
+    totalParticipants: number;
+  } | null>(null);
 
   const { data: leaderboard } = useChallengeLeaderboard(selectedChallenge);
 
@@ -81,17 +93,33 @@ export default function ClientPortalChallenges() {
     return null;
   };
 
-  const handleSubmit = async (score: number, note?: string) => {
+  const handleSubmit = async (score: number, note?: string, mediaUrls?: string[]) => {
     if (!selectedChallenge) return;
+
+    // Get previous best for feedback
+    const best = getClientBestSubmission(selectedChallenge);
+    const challenge = challenges.find(c => c.id === selectedChallenge);
+    const participants = participantCounts[selectedChallenge] || 0;
 
     try {
       await submitResult.mutateAsync({
         challengeId: selectedChallenge,
         score_primary: score,
         note,
+        media_urls: mediaUrls,
       });
       toast.success('Výsledek odeslán!');
       setSubmitDialogOpen(false);
+      
+      // Show feedback
+      setLastSubmission({
+        score,
+        previousBest: best?.score_primary || null,
+        percentile: null, // Could be calculated from leaderboard
+        rank: null,
+        totalParticipants: participants,
+      });
+      setFeedbackOpen(true);
     } catch (error) {
       toast.error('Nepodařilo se odeslat výsledek');
       throw error;
@@ -329,6 +357,16 @@ export default function ClientPortalChallenges() {
               </Accordion>
             )}
 
+            {/* Progress Chart */}
+            {getClientSubmissions(selectedChallengeData.id).length >= 2 && (
+              <ChallengeProgressChart
+                submissions={getClientSubmissions(selectedChallengeData.id)}
+                primaryMetric={selectedChallengeData.primary_metric}
+                scoringType={selectedChallengeData.scoring_type}
+                unitLabel={selectedChallengeData.unit_label}
+              />
+            )}
+
             {/* Leaderboard */}
             {privacySettings?.allow_challenges_participation && 
              (participantCounts[selectedChallengeData.id] || 0) >= minGroupSize &&
@@ -414,6 +452,23 @@ export default function ClientPortalChallenges() {
         onSubmit={handleSubmit}
         isPending={submitResult.isPending}
       />
+
+      {/* Feedback Dialog */}
+      {selectedChallengeData && lastSubmission && (
+        <SubmissionFeedback
+          open={feedbackOpen}
+          onOpenChange={setFeedbackOpen}
+          challengeTitle={selectedChallengeData.title}
+          submittedScore={lastSubmission.score}
+          primaryMetric={selectedChallengeData.primary_metric}
+          unitLabel={selectedChallengeData.unit_label}
+          scoringType={selectedChallengeData.scoring_type}
+          previousBest={lastSubmission.previousBest}
+          percentile={lastSubmission.percentile}
+          rank={lastSubmission.rank}
+          totalParticipants={lastSubmission.totalParticipants}
+        />
+      )}
     </div>
   );
 }

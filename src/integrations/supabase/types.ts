@@ -554,6 +554,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_winner: boolean | null
+          media_urls: string[] | null
           note: string | null
           result_display: string | null
           result_value: number | null
@@ -573,6 +574,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_winner?: boolean | null
+          media_urls?: string[] | null
           note?: string | null
           result_display?: string | null
           result_value?: number | null
@@ -592,6 +594,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_winner?: boolean | null
+          media_urls?: string[] | null
           note?: string | null
           result_display?: string | null
           result_value?: number | null
@@ -630,6 +633,7 @@ export type Database = {
       challenges: {
         Row: {
           allow_multiple_attempts: boolean | null
+          auto_award_winners: boolean | null
           created_at: string | null
           created_by_user_id: string
           description: string | null
@@ -652,9 +656,13 @@ export type Database = {
           unit_label: string | null
           updated_at: string | null
           vod_url: string | null
+          winner_xp_1st: number | null
+          winner_xp_2nd: number | null
+          winner_xp_3rd: number | null
         }
         Insert: {
           allow_multiple_attempts?: boolean | null
+          auto_award_winners?: boolean | null
           created_at?: string | null
           created_by_user_id: string
           description?: string | null
@@ -677,9 +685,13 @@ export type Database = {
           unit_label?: string | null
           updated_at?: string | null
           vod_url?: string | null
+          winner_xp_1st?: number | null
+          winner_xp_2nd?: number | null
+          winner_xp_3rd?: number | null
         }
         Update: {
           allow_multiple_attempts?: boolean | null
+          auto_award_winners?: boolean | null
           created_at?: string | null
           created_by_user_id?: string
           description?: string | null
@@ -702,6 +714,9 @@ export type Database = {
           unit_label?: string | null
           updated_at?: string | null
           vod_url?: string | null
+          winner_xp_1st?: number | null
+          winner_xp_2nd?: number | null
+          winner_xp_3rd?: number | null
         }
         Relationships: [
           {

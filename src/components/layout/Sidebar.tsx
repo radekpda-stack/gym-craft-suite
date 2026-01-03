@@ -41,6 +41,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
+import { usePendingSubmissionsCount } from '@/hooks/usePendingSubmissions';
+import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
   id: string;
@@ -48,6 +50,7 @@ interface NavItem {
   icon: LucideIcon;
   label: string;
   children?: NavItem[];
+  badge?: number;
 }
 
 interface NavSection {
@@ -90,14 +93,28 @@ const NavItemButton = memo(function NavItemButton({
       {isActive && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
       )}
-      <Icon className={cn(
-        'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
-        !isActive && 'group-hover:scale-105'
-      )} strokeWidth={1.5} />
+      <div className="relative">
+        <Icon className={cn(
+          'w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200',
+          !isActive && 'group-hover:scale-105'
+        )} strokeWidth={1.5} />
+        {item.badge && item.badge > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
+            {item.badge > 9 ? '9+' : item.badge}
+          </span>
+        )}
+      </div>
       {!collapsed && (
-        <span className="text-sm font-medium truncate">
-          {item.label}
-        </span>
+        <>
+          <span className="text-sm font-medium truncate flex-1">
+            {item.label}
+          </span>
+          {item.badge && item.badge > 0 && (
+            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+              {item.badge}
+            </Badge>
+          )}
+        </>
       )}
     </NavLink>
   );
@@ -240,6 +257,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
   const { isModuleEnabled } = useModuleSettings();
+  const pendingSubmissionsCount = usePendingSubmissionsCount();
 
   const isActive = (to: string) => {
     return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
@@ -272,7 +290,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
           ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
-          ...(isModuleEnabled('challenges') ? [{ id: 'challenges', to: '/challenges', icon: Trophy, label: 'Výzvy' }] : []),
+          ...(isModuleEnabled('challenges') ? [{ id: 'challenges', to: '/challenges', icon: Trophy, label: 'Výzvy', badge: pendingSubmissionsCount }] : []),
         ],
       },
       {
@@ -306,7 +324,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
 
     // Filter out sections that have no visible items
     return allSections.filter(section => section.items.length > 0);
-  }, [t, isModuleEnabled]);
+  }, [t, isModuleEnabled, pendingSubmissionsCount]);
 
   const handleSignOut = async () => {
     const { error } = await signOut();

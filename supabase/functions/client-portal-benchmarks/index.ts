@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
-    const { action, clientId, trainerId, exerciseName, metricType, groupKey, challengeId, minGroupSize, score_primary, score_secondary, note, video_url } = body;
+    const { action, clientId, trainerId, exerciseName, metricType, groupKey, challengeId, minGroupSize, score_primary, score_secondary, note, video_url, media_urls } = body;
 
     console.log(`[Benchmarks] Action: ${action}, ClientId: ${clientId}, ChallengeId: ${challengeId}, Exercise: ${exerciseName}`);
 
@@ -204,6 +204,7 @@ serve(async (req) => {
           score_secondary,
           note,
           video_url,
+          media_urls: media_urls || null,
           status: 'approved' // Auto-approve for MVP
         })
         .select()

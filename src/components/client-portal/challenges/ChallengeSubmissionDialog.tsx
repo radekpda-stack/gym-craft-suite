@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Trophy, Medal, Award, History, Info, Clock } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { Trophy, Medal, Award, History, Info, Clock, Camera, Video, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,12 +23,14 @@ import { formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Submission {
   id: string;
   score_primary: number;
   submitted_at: string | null;
   status: string;
+  media_urls?: string[] | null;
 }
 
 interface Challenge {
@@ -47,8 +49,14 @@ interface ChallengeSubmissionDialogProps {
   onOpenChange: (open: boolean) => void;
   challenge: Challenge | null;
   previousSubmissions: Submission[];
-  onSubmit: (score: number, note?: string) => Promise<void>;
+  onSubmit: (score: number, note?: string, mediaUrls?: string[]) => Promise<void>;
   isPending: boolean;
+}
+
+interface PendingFile {
+  file: File;
+  preview: string;
+  type: 'photo' | 'video';
 }
 
 export function ChallengeSubmissionDialog({
@@ -62,6 +70,10 @@ export function ChallengeSubmissionDialog({
   const [timeMs, setTimeMs] = useState<number | null>(null);
   const [numericScore, setNumericScore] = useState('');
   const [note, setNote] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const isTimeMetric = challenge?.primary_metric === 'time_seconds' || 
                        challenge?.primary_metric === 'time_ms';
@@ -78,25 +90,111 @@ export function ChallengeSubmissionDialog({
     return sorted[0];
   }, [previousSubmissions, challenge]);
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const remaining = 3 - pendingFiles.filter(f => f.type === 'photo').length;
+    const toAdd = Array.from(files).slice(0, remaining);
+
+    const newFiles = toAdd.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      type: 'photo' as const,
+    }));
+
+    setPendingFiles(prev => [...prev, ...newFiles]);
+    e.target.value = '';
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const videoCount = pendingFiles.filter(f => f.type === 'video').length;
+    if (videoCount >= 1) return;
+
+    const file = files[0];
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Video je příliš velké. Max 50MB.');
+      return;
+    }
+
+    setPendingFiles(prev => [...prev, {
+      file,
+      preview: URL.createObjectURL(file),
+      type: 'video',
+    }]);
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setPendingFiles(prev => {
+      const newFiles = [...prev];
+      URL.revokeObjectURL(newFiles[index].preview);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  const uploadFiles = async (): Promise<string[]> => {
+    if (pendingFiles.length === 0) return [];
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const uploadedUrls: string[] = [];
+
+    for (const { file, type } of pendingFiles) {
+      const timestamp = Date.now();
+      const ext = file.name.split('.').pop() || (type === 'video' ? 'mp4' : 'jpg');
+      const filePath = `${user.id}/${timestamp}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('challenge-media')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        continue;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('challenge-media')
+        .getPublicUrl(filePath);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    return uploadedUrls;
+  };
+
   const handleSubmit = async () => {
     if (!challenge) return;
 
     let score: number;
     if (isTimeMetric) {
       if (!timeMs) return;
-      // Convert ms to seconds for storage
       score = timeMs / 1000;
     } else {
       score = parseFloat(numericScore);
       if (isNaN(score) || score <= 0) return;
     }
 
-    await onSubmit(score, note || undefined);
-    
-    // Reset form
-    setTimeMs(null);
-    setNumericScore('');
-    setNote('');
+    setUploading(true);
+    try {
+      const mediaUrls = await uploadFiles();
+      await onSubmit(score, note || undefined, mediaUrls.length > 0 ? mediaUrls : undefined);
+      
+      // Reset form
+      pendingFiles.forEach(f => URL.revokeObjectURL(f.preview));
+      setPendingFiles([]);
+      setTimeMs(null);
+      setNumericScore('');
+      setNote('');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const getRankIcon = (rank: number) => {
@@ -181,6 +279,76 @@ export function ChallengeSubmissionDialog({
             )}
           </div>
 
+          {/* Media Upload */}
+          <div className="space-y-2">
+            <Label>Přidat důkaz (volitelné)</Label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoSelect}
+                className="hidden"
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoSelect}
+                className="hidden"
+              />
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={pendingFiles.filter(f => f.type === 'photo').length >= 3}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Fotka ({pendingFiles.filter(f => f.type === 'photo').length}/3)
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => videoInputRef.current?.click()}
+                disabled={pendingFiles.filter(f => f.type === 'video').length >= 1}
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Video ({pendingFiles.filter(f => f.type === 'video').length}/1)
+              </Button>
+            </div>
+
+            {pendingFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {pendingFiles.map((item, index) => (
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                    {item.type === 'photo' ? (
+                      <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={item.preview} className="w-full h-full object-cover" muted />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    {item.type === 'video' && (
+                      <div className="absolute bottom-1 left-1 px-1 py-0.5 bg-black/50 rounded text-[9px] text-white">
+                        VIDEO
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Note */}
           <div className="space-y-2">
             <Label htmlFor="note">Poznámka (volitelné)</Label>
@@ -244,11 +412,16 @@ export function ChallengeSubmissionDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading || isPending}>
             Zrušit
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || isPending}>
-            {isPending ? 'Odesílám...' : 'Odeslat'}
+          <Button onClick={handleSubmit} disabled={!isValid || isPending || uploading}>
+            {uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Nahrávám...
+              </>
+            ) : isPending ? 'Odesílám...' : 'Odeslat'}
           </Button>
         </DialogFooter>
       </DialogContent>
