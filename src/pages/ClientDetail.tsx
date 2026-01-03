@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ChevronLeft } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useClient, useUpdateClient } from '@/hooks/useClients';
+import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance, useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
 import { ClientFormValues } from '@/lib/validations/client';
@@ -65,6 +65,7 @@ export default function ClientDetail() {
   const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
   const { data: portalAccess } = useClientPortalAccess(id);
   const updateClient = useUpdateClient();
+  const archiveClient = useArchiveClient();
   const isMobile = useIsMobile();
   
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
@@ -122,19 +123,20 @@ export default function ClientDetail() {
       ? `${currentNotes}\n\n[${format(new Date(), 'd.M.yyyy HH:mm')}]\n${note}`
       : `[${format(new Date(), 'd.M.yyyy HH:mm')}]\n${note}`;
     
+    // Only send the notes field - prevents overwriting other fields like credit_balance
     await updateClient.mutateAsync({ 
       id: client.id, 
-      values: { notes: newNotes } as ClientFormValues 
+      values: { notes: newNotes }
     });
     toast({ title: 'Poznámka uložena' });
   };
 
   const handleArchive = async () => {
-    await updateClient.mutateAsync({ 
+    // Use dedicated archive mutation - prevents overwriting other fields
+    await archiveClient.mutateAsync({ 
       id: client.id, 
-      values: { is_archived: !client.is_archived } as ClientFormValues 
+      is_archived: !client.is_archived
     });
-    toast({ title: client.is_archived ? 'Klient obnoven' : 'Klient archivován' });
   };
 
   const handleSaveClient = async (data: ClientFormValues) => {
@@ -142,9 +144,10 @@ export default function ClientDetail() {
   };
 
   const handleUpdateTrainingStartDate = async (date: string | null) => {
+    // Only send training_start_date - prevents overwriting other fields like credit_balance
     const updated = await updateClient.mutateAsync({
       id: client.id,
-      values: { training_start_date: date } as any,
+      values: { training_start_date: date },
     });
 
     // Force UI to reflect the saved value immediately (even before refetch finishes)
