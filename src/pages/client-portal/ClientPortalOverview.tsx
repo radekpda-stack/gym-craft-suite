@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -9,9 +8,6 @@ import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { 
   Wallet, 
   Calendar, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus,
   ChevronRight,
   Dumbbell,
   ArrowDownLeft,
@@ -30,55 +26,13 @@ import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/Acti
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
 import { GamificationProgressCard } from '@/components/client-portal/gamification/GamificationWidgets';
+import { PeriodChips, TrendBadge } from '@/components/client-portal/common/SharedComponents';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
   { value: 30, label: '30 dní' },
   { value: 90, label: '90 dní' },
 ];
-
-function TrendBadge({ value, suffix = '' }: { value: number; suffix?: string }) {
-  if (value === 0) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <Minus className="w-3 h-3" />
-        beze změny
-      </span>
-    );
-  }
-  
-  const isPositive = value > 0;
-  return (
-    <span className={cn(
-      "inline-flex items-center gap-1 text-xs font-medium",
-      isPositive ? "text-success" : "text-destructive"
-    )}>
-      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-      {isPositive ? '+' : ''}{value}{suffix}
-    </span>
-  );
-}
-
-function PeriodChips({ value, onChange }: { value: PeriodDays; onChange: (v: PeriodDays) => void }) {
-  return (
-    <div className="flex gap-2">
-      {periodOptions.map(opt => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "px-3 py-1.5 text-xs font-medium rounded-full transition-all",
-            value === opt.value
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function ClientPortalOverview() {
   const { clientId, clientProfile } = useClientPortal();
@@ -106,7 +60,7 @@ export default function ClientPortalOverview() {
           </h1>
           <p className="text-muted-foreground text-sm">Jak ti to jde</p>
         </div>
-        <PeriodChips value={period} onChange={setPeriod} />
+        <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
       </div>
 
       {/* Error Alert */}

@@ -18,6 +18,7 @@ import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
 import { ClientNotificationCenter } from './ClientNotificationCenter';
 import { CredentialsReminderDialog } from './CredentialsReminderDialog';
+import { LogoutConfirmDialog } from './common/LogoutConfirmDialog';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -28,8 +29,8 @@ const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
+  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
-  { to: '/client/leaderboard', icon: Trophy, label: 'Žebříček', trackName: 'leaderboard' },
 ];
 
 // Conditional nav item
@@ -42,8 +43,8 @@ const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastav
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
+  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
-  { to: '/client/leaderboard', icon: Trophy, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
 ];
 
@@ -164,12 +165,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
           </div>
           <div className="flex items-center gap-2">
             <ClientNotificationCenter />
-            <button 
-              onClick={() => signOut()}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            <LogoutConfirmDialog onConfirm={signOut} />
           </div>
         </div>
       </header>
@@ -216,12 +212,10 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
               {clientProfile?.name?.charAt(0) ?? 'K'}
             </span>
           </div>
-          <button 
-            onClick={() => signOut()}
+          <LogoutConfirmDialog 
+            onConfirm={signOut}
             className="w-12 h-12 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          />
         </div>
       </aside>
 
