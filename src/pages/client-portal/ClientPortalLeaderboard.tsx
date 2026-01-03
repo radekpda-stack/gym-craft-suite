@@ -504,9 +504,16 @@ export default function ClientPortalLeaderboard() {
         <div>
           <h1 className="text-xl font-bold">Žebříček</h1>
           <p className="text-sm text-muted-foreground">
-            Porovnej se s ostatními
+            Srovnej svůj výkon s ostatními klienty trenéra
           </p>
         </div>
+      </div>
+
+      {/* Explanation tip */}
+      <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+        <p className="text-xs text-muted-foreground text-center">
+          💡 Žebříček ukazuje pořadí podle tréninků nebo výkonů u konkrétních cviků. Tvá data jsou ve výchozím nastavení anonymní.
+        </p>
       </div>
       
       {/* User's position summary - only for workout tabs */}

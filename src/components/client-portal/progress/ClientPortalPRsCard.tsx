@@ -177,6 +177,9 @@ export function ClientPortalPRsCard() {
             {allPRs.length} {allPRs.length === 1 ? 'rekord' : allPRs.length < 5 ? 'rekordy' : 'rekordů'}
           </Badge>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Tvé nejlepší výkony u jednotlivých cviků. Překonej sám sebe!
+        </p>
       </CardHeader>
       <CardContent className="space-y-2">
         {allPRs.map((pr) => (

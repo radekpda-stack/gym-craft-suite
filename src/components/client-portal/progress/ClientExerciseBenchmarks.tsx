@@ -88,7 +88,7 @@ export function ClientExerciseBenchmarks({ clientId }: ClientExerciseBenchmarksP
             </Badge>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Tvoje výkony ve srovnání s ostatními klienty trenéra
+            Tvoje maximální výkony ve srovnání s ostatními klienty. Percentil ukazuje, kolik procent klientů jsi překonal.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
