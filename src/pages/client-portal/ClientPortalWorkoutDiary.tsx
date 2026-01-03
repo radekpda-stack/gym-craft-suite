@@ -2,25 +2,36 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useCreateWorkoutLog, WorkoutExercise } from '@/hooks/useClientWorkoutLogs';
+import { useCreateWorkoutLog, useDeleteWorkoutLog, useUpdateWorkoutLog } from '@/hooks/useClientWorkoutLogs';
 import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
-import { useUnifiedDiary, UnifiedDiaryEntry, DiaryTag } from '@/hooks/useUnifiedDiary';
+import { useUnifiedDiary, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -33,47 +44,29 @@ import {
   Clock,
   Target,
   MessageSquare,
-  X,
   Trophy,
   User,
   Calendar,
   List,
-  ClipboardList
+  ClipboardList,
+  MoreVertical,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WorkoutTypeSelector, getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
-import { EnergyRating, getEnergyEmoji } from '@/components/client-portal/workout-diary/EnergyRating';
-import { ExerciseAutocomplete } from '@/components/client-portal/workout-diary/ExerciseAutocomplete';
+import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
+import { getEnergyEmoji } from '@/components/client-portal/workout-diary/EnergyRating';
 import { WorkoutStatsCard } from '@/components/client-portal/workout-diary/WorkoutStatsCard';
 import { DiaryCalendarView } from '@/components/client-portal/workout-diary/DiaryCalendarView';
 import { DiaryPlanView } from '@/components/client-portal/workout-diary/DiaryPlanView';
-
-interface ExerciseInput {
-  exercise_name: string;
-  exercise_id?: string;
-  sets: string;
-  reps: string;
-  weight_kg: string;
-  duration_seconds: string;
-  rpe: string;
-  notes: string;
-}
-
-const emptyExercise: ExerciseInput = {
-  exercise_name: '',
-  sets: '',
-  reps: '',
-  weight_kg: '',
-  duration_seconds: '',
-  rpe: '',
-  notes: '',
-};
+import { AddWorkoutDialog, ExerciseInput, emptyExercise } from '@/components/client-portal/workout-diary/AddWorkoutDialog';
 
 export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
   const { data: entries, isLoading } = useUnifiedDiary();
   const createLog = useCreateWorkoutLog();
+  const updateLog = useUpdateWorkoutLog();
+  const deleteLog = useDeleteWorkoutLog();
   const completeAssignedWorkout = useCompleteAssignedWorkout();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
 
@@ -96,8 +89,13 @@ export default function ClientPortalWorkoutDiary() {
   const [selectedDateEntries, setSelectedDateEntries] = useState<UnifiedDiaryEntry[]>([]);
   const [dateDetailOpen, setDateDetailOpen] = useState(false);
   
-  // For planned workout completion
+  // For planned workout completion or editing
   const [editingPlannedWorkoutId, setEditingPlannedWorkoutId] = useState<string | null>(null);
+  const [editingExistingLogId, setEditingExistingLogId] = useState<string | null>(null);
+  
+  // Delete confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [logToDelete, setLogToDelete] = useState<UnifiedDiaryEntry | null>(null);
   
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
@@ -115,26 +113,6 @@ export default function ClientPortalWorkoutDiary() {
     });
   };
 
-  const addExercise = () => {
-    setExercises(prev => [...prev, { ...emptyExercise }]);
-  };
-
-  const removeExercise = (index: number) => {
-    setExercises(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateExercise = (index: number, field: keyof ExerciseInput, value: string) => {
-    setExercises(prev => prev.map((ex, i) => 
-      i === index ? { ...ex, [field]: value } : ex
-    ));
-  };
-
-  const updateExerciseName = (index: number, name: string, exerciseId?: string) => {
-    setExercises(prev => prev.map((ex, i) => 
-      i === index ? { ...ex, exercise_name: name, exercise_id: exerciseId } : ex
-    ));
-  };
-
   const resetForm = () => {
     setWorkoutDate(format(new Date(), 'yyyy-MM-dd'));
     setWorkoutType(null);
@@ -145,7 +123,56 @@ export default function ClientPortalWorkoutDiary() {
     setWorkoutNotes('');
     setExercises([{ ...emptyExercise }]);
     setEditingPlannedWorkoutId(null);
+    setEditingExistingLogId(null);
     setIsDetailedMode(false);
+  };
+
+  // Edit existing workout
+  const handleEditWorkout = (entry: UnifiedDiaryEntry) => {
+    // Only allow editing self-logged workouts
+    if (entry.is_coached) return;
+    
+    setWorkoutDate(entry.date);
+    setWorkoutType(entry.workout_type || null);
+    setDurationMinutes(entry.duration_minutes?.toString() || '');
+    setWorkoutRpe(null);
+    setEnergyBefore(entry.energy_before || null);
+    setEnergyAfter(entry.energy_after || null);
+    setWorkoutNotes(entry.notes || '');
+    setEditingExistingLogId(entry.id);
+    setIsDetailedMode(true);
+    
+    if (entry.exercises && entry.exercises.length > 0) {
+      setExercises(entry.exercises.map(ex => ({
+        exercise_name: ex.exercise_name,
+        exercise_id: undefined,
+        sets: ex.sets?.toString() || '',
+        reps: ex.reps?.toString() || '',
+        weight_kg: ex.weight_kg?.toString() || '',
+        duration_seconds: ex.duration_seconds ? (ex.duration_seconds / 60).toString() : '',
+        rpe: ex.rpe?.toString() || '',
+        notes: ex.notes || '',
+      })));
+    } else {
+      setExercises([{ ...emptyExercise }]);
+    }
+    
+    setDialogOpen(true);
+  };
+
+  // Delete workout
+  const handleDeleteWorkout = (entry: UnifiedDiaryEntry) => {
+    if (entry.is_coached) return;
+    setLogToDelete(entry);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!logToDelete || !clientId) return;
+    await deleteLog.mutateAsync({ logId: logToDelete.id, clientId });
+    setDeleteConfirmOpen(false);
+    setLogToDelete(null);
+    trackPortalEvent('workout_deleted', { workout_type: logToDelete.workout_type });
   };
 
   const handleSaveWorkout = async () => {
@@ -168,7 +195,7 @@ export default function ClientPortalWorkoutDiary() {
 
     // In quick mode, allow saving without exercises
     // In detailed mode or when completing planned workout, require exercises
-    const requiresExercises = isDetailedMode || editingPlannedWorkoutId;
+    const requiresExercises = isDetailedMode || editingPlannedWorkoutId || editingExistingLogId;
     if (requiresExercises && validExercises.length === 0) {
       return;
     }
@@ -185,6 +212,23 @@ export default function ClientPortalWorkoutDiary() {
         energy_after: energyAfter || undefined,
       });
       trackPortalEvent('planned_workout_completed', { workout_type: workoutType });
+    } else if (editingExistingLogId) {
+      // Update existing workout log
+      await updateLog.mutateAsync({
+        logId: editingExistingLogId,
+        clientId,
+        date: workoutDate,
+        notes: workoutNotes || null,
+        workout_type: workoutType,
+        duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
+        energy_before: energyBefore,
+        energy_after: energyAfter,
+        exercises: validExercises,
+      });
+      trackPortalEvent('workout_updated', { 
+        exercise_count: validExercises.length, 
+        workout_type: workoutType
+      });
     } else {
       // Create new workout log
       await createLog.mutateAsync({
@@ -330,11 +374,14 @@ export default function ClientPortalWorkoutDiary() {
             <WorkoutStatsCard 
               logs={completedEntries.filter(e => !e.is_coached).map(e => ({
                 id: e.id,
-                client_id: '',
-                trainer_id: '',
                 date: e.date,
-                created_at: e.created_at,
-                updated_at: e.created_at,
+                duration_minutes: e.duration_minutes,
+                exercises: e.exercises?.map(ex => ({
+                  is_personal_record: ex.is_personal_record,
+                  weight_kg: ex.weight_kg,
+                  sets: ex.sets,
+                  reps: ex.reps,
+                })),
               }))} 
               weeklyGoal={4} 
             />
@@ -349,9 +396,12 @@ export default function ClientPortalWorkoutDiary() {
               <SelectContent>
                 <SelectItem value="all">Všechny typy</SelectItem>
                 <SelectItem value="strength">Síla</SelectItem>
+                <SelectItem value="cardio">Kardio</SelectItem>
                 <SelectItem value="run">Běh</SelectItem>
+                <SelectItem value="hiit">HIIT</SelectItem>
                 <SelectItem value="conditioning">Kondice</SelectItem>
                 <SelectItem value="mobility">Mobilita</SelectItem>
+                <SelectItem value="recovery">Regenerace</SelectItem>
                 <SelectItem value="other">Ostatní</SelectItem>
               </SelectContent>
             </Select>
@@ -477,6 +527,29 @@ export default function ClientPortalWorkoutDiary() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            {/* Edit/Delete dropdown for self-logged workouts */}
+                            {!entry.is_coached && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditWorkout(entry); }}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Upravit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteWorkout(entry); }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Smazat
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                             {isExpanded ? (
                               <ChevronUp className="w-5 h-5 text-muted-foreground" />
                             ) : (
@@ -582,277 +655,32 @@ export default function ClientPortalWorkoutDiary() {
       </Tabs>
 
       {/* Add Workout Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Dumbbell className="w-5 h-5" />
-              {editingPlannedWorkoutId ? 'Splnit plánovaný trénink' : 'Nový trénink'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Quick Mode - Simple Form */}
-            {!isDetailedMode && !editingPlannedWorkoutId ? (
-              <>
-                {/* Workout Type - Large buttons for quick selection */}
-                <div className="space-y-2">
-                  <Label>Co jsi dnes dělal/a?</Label>
-                  <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
-                </div>
-
-                {/* Duration - Simple */}
-                <div className="space-y-2">
-                  <Label htmlFor="workout-duration">Jak dlouho? (minuty)</Label>
-                  <Input
-                    id="workout-duration"
-                    type="number"
-                    placeholder="45"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(e.target.value)}
-                    className="text-lg h-12"
-                  />
-                </div>
-
-                {/* Energy after - Quick feeling */}
-                <EnergyRating 
-                  value={energyAfter} 
-                  onChange={setEnergyAfter}
-                  label="Jak se cítíš po tréninku?"
-                />
-
-                {/* Simple notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="workout-notes">Poznámka (volitelné)</Label>
-                  <Textarea
-                    id="workout-notes"
-                    placeholder="Co šlo dobře? Co tě potěšilo?"
-                    value={workoutNotes}
-                    onChange={(e) => setWorkoutNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-
-                {/* Toggle to detailed mode */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-muted-foreground"
-                  onClick={() => setIsDetailedMode(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Přidat cviky a více detailů
-                </Button>
-              </>
-            ) : (
-              /* Detailed Mode - Full Form */
-              <>
-                {/* Workout Type */}
-                <div className="space-y-2">
-                  <Label>Typ tréninku</Label>
-                  <WorkoutTypeSelector value={workoutType} onChange={setWorkoutType} />
-                </div>
-
-                {/* Date and Duration */}
-                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="workout-date">Datum</Label>
-                    <Input
-                      id="workout-date"
-                      type="date"
-                      value={workoutDate}
-                      onChange={(e) => setWorkoutDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="workout-duration">Délka (min)</Label>
-                    <Input
-                      id="workout-duration"
-                      type="number"
-                      placeholder="60"
-                      value={durationMinutes}
-                      onChange={(e) => setDurationMinutes(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Energy before/after */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <EnergyRating 
-                    value={energyBefore} 
-                    onChange={setEnergyBefore}
-                    label="Energie před"
-                  />
-                  <EnergyRating 
-                    value={energyAfter} 
-                    onChange={setEnergyAfter}
-                    label="Pocit po"
-                  />
-                </div>
-
-                {/* RPE Slider */}
-                <div className="space-y-3">
-                  <Label>Celková náročnost (RPE)</Label>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      value={workoutRpe ? [workoutRpe] : [5]}
-                      onValueChange={(val) => setWorkoutRpe(val[0])}
-                      min={1}
-                      max={10}
-                      step={1}
-                      className="flex-1"
-                    />
-                    <span className="text-lg font-bold w-8 text-center">{workoutRpe || 5}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    1 = velmi lehké, 10 = maximální úsilí
-                  </p>
-                </div>
-
-                {/* Exercises */}
-                <div className="space-y-3">
-                  <Label>Cviky</Label>
-                  {exercises.map((ex, idx) => (
-                    <div key={idx} className="p-3 border rounded-lg space-y-3 relative">
-                      {exercises.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 h-6 w-6"
-                          onClick={() => removeExercise(idx)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      <ExerciseAutocomplete
-                        value={ex.exercise_name}
-                        onChange={(name, exerciseId) => updateExerciseName(idx, name, exerciseId)}
-                      />
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Série</Label>
-                          <Input
-                            type="number"
-                            placeholder="3"
-                            value={ex.sets}
-                            onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Opakování</Label>
-                          <Input
-                            type="number"
-                            placeholder="10"
-                            value={ex.reps}
-                            onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Váha (kg)</Label>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            placeholder="50"
-                            value={ex.weight_kg}
-                            onChange={(e) => updateExercise(idx, 'weight_kg', e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Čas (min)</Label>
-                          <Input
-                            type="number"
-                            placeholder="10"
-                            value={ex.duration_seconds}
-                            onChange={(e) => updateExercise(idx, 'duration_seconds', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">RPE (1-10)</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="10"
-                            placeholder="7"
-                            value={ex.rpe}
-                            onChange={(e) => updateExercise(idx, 'rpe', e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <Input
-                        placeholder="Poznámka k cviku"
-                        value={ex.notes}
-                        onChange={(e) => updateExercise(idx, 'notes', e.target.value)}
-                      />
-                    </div>
-                  ))}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={addExercise}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Přidat další cvik
-                  </Button>
-                </div>
-
-                {/* Workout Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="workout-notes">Poznámky k tréninku</Label>
-                  <Textarea
-                    id="workout-notes"
-                    placeholder="Jak se cítíš? Co šlo dobře?"
-                    value={workoutNotes}
-                    onChange={(e) => setWorkoutNotes(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Toggle back to quick mode (only if not editing planned) */}
-                {!editingPlannedWorkoutId && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-muted-foreground"
-                    onClick={() => setIsDetailedMode(false)}
-                  >
-                    Zpět na rychlý záznam
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Zrušit
-            </Button>
-            <Button
-              onClick={handleSaveWorkout}
-              disabled={
-                (createLog.isPending || completeAssignedWorkout.isPending) || 
-                (isDetailedMode && !exercises.some(ex => ex.exercise_name.trim())) ||
-                (!isDetailedMode && !workoutType)
-              }
-            >
-              {(createLog.isPending || completeAssignedWorkout.isPending) 
-                ? 'Ukládám...' 
-                : editingPlannedWorkoutId 
-                  ? 'Označit jako splněný' 
-                  : '✓ Uložit'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddWorkoutDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        isDetailedMode={isDetailedMode}
+        setIsDetailedMode={setIsDetailedMode}
+        workoutDate={workoutDate}
+        setWorkoutDate={setWorkoutDate}
+        workoutType={workoutType}
+        setWorkoutType={setWorkoutType}
+        durationMinutes={durationMinutes}
+        setDurationMinutes={setDurationMinutes}
+        workoutRpe={workoutRpe}
+        setWorkoutRpe={setWorkoutRpe}
+        energyBefore={energyBefore}
+        setEnergyBefore={setEnergyBefore}
+        energyAfter={energyAfter}
+        setEnergyAfter={setEnergyAfter}
+        workoutNotes={workoutNotes}
+        setWorkoutNotes={setWorkoutNotes}
+        exercises={exercises}
+        setExercises={setExercises}
+        editingPlannedWorkoutId={editingPlannedWorkoutId}
+        editingExistingLogId={editingExistingLogId}
+        onSave={handleSaveWorkout}
+        isSaving={createLog.isPending || completeAssignedWorkout.isPending || updateLog.isPending}
+      />
 
       {/* Date Detail Dialog */}
       <Dialog open={dateDetailOpen} onOpenChange={setDateDetailOpen}>
@@ -917,6 +745,28 @@ export default function ClientPortalWorkoutDiary() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat trénink?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chceš smazat tento trénink z {logToDelete?.date ? format(parseISO(logToDelete.date), 'd. MMMM yyyy', { locale: cs }) : ''}? 
+              Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLog.isPending ? 'Mažu...' : 'Smazat'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

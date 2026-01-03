@@ -1,13 +1,15 @@
 import { cn } from '@/lib/utils';
-import { Dumbbell, Heart, Zap, Move, Coffee, Shuffle } from 'lucide-react';
+import { Dumbbell, Heart, Zap, Move, Coffee, Shuffle, Footprints, Activity } from 'lucide-react';
 
 export const WORKOUT_TYPES = [
-  { value: 'strength', label: 'Silový', icon: Dumbbell, color: 'text-blue-500' },
+  { value: 'strength', label: 'Síla', icon: Dumbbell, color: 'text-blue-500' },
   { value: 'cardio', label: 'Kardio', icon: Heart, color: 'text-red-500' },
+  { value: 'run', label: 'Běh', icon: Footprints, color: 'text-emerald-500' },
   { value: 'hiit', label: 'HIIT', icon: Zap, color: 'text-orange-500' },
+  { value: 'conditioning', label: 'Kondice', icon: Activity, color: 'text-cyan-500' },
   { value: 'mobility', label: 'Mobilita', icon: Move, color: 'text-green-500' },
   { value: 'recovery', label: 'Regenerace', icon: Coffee, color: 'text-purple-500' },
-  { value: 'mixed', label: 'Smíšený', icon: Shuffle, color: 'text-primary' },
+  { value: 'other', label: 'Ostatní', icon: Shuffle, color: 'text-muted-foreground' },
 ] as const;
 
 export type WorkoutType = typeof WORKOUT_TYPES[number]['value'];
@@ -19,7 +21,7 @@ interface WorkoutTypeSelectorProps {
 
 export function WorkoutTypeSelector({ value, onChange }: WorkoutTypeSelectorProps) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {WORKOUT_TYPES.map((type) => {
         const Icon = type.icon;
         const isSelected = value === type.value;
@@ -29,13 +31,13 @@ export function WorkoutTypeSelector({ value, onChange }: WorkoutTypeSelectorProp
             type="button"
             onClick={() => onChange(type.value)}
             className={cn(
-              "flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all",
+              "flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all",
               isSelected 
                 ? "border-primary bg-primary/10" 
                 : "border-border hover:border-primary/50 hover:bg-muted/50"
             )}
           >
-            <Icon className={cn("w-5 h-5", isSelected ? type.color : "text-muted-foreground")} />
+            <Icon className={cn("w-4 h-4", isSelected ? type.color : "text-muted-foreground")} />
             <span className={cn("text-xs font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>
               {type.label}
             </span>
