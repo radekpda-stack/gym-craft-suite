@@ -4,12 +4,12 @@ import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight,
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboard, useLeaderboardSettings, LeaderboardEntry } from '@/hooks/useClientGamification';
 import { 
-  useExercisesForComparison, 
   useStrengthExerciseLeaderboard,
   useCardioExerciseLeaderboard,
   ExerciseLeaderboardEntry,
   GenderFilter
 } from '@/hooks/useExerciseLeaderboard';
+import { useExercisesWithPercentiles, ExerciseWithPercentile } from '@/hooks/useExercisePercentiles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -227,6 +227,27 @@ function CardioMetricToggle({
   );
 }
 
+function getPercentileBadge(percentile: number | null) {
+  if (percentile === null) return null;
+  
+  if (percentile >= 75) return { 
+    label: `Top ${Math.round(100 - percentile)}%`, 
+    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+  };
+  if (percentile >= 50) return { 
+    label: 'Nad průměr', 
+    className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+  };
+  if (percentile >= 25) return { 
+    label: 'Průměr', 
+    className: 'bg-muted text-muted-foreground border-border' 
+  };
+  return { 
+    label: 'Pod průměrem', 
+    className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' 
+  };
+}
+
 function ExerciseComparisonTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
@@ -236,7 +257,8 @@ function ExerciseComparisonTab() {
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
   const [cardioMetric, setCardioMetric] = useState<'distance' | 'duration'>('distance');
   
-  const { data: exercises, isLoading: exercisesLoading } = useExercisesForComparison(trainerId);
+  // Use the new hook with percentiles
+  const { data: exercises, isLoading: exercisesLoading } = useExercisesWithPercentiles(trainerId);
   
   const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
     exerciseType === 'strength' ? selectedExercise : null,
@@ -254,7 +276,7 @@ function ExerciseComparisonTab() {
   const leaderboard = exerciseType === 'strength' ? strengthLeaderboard : cardioLeaderboard;
   const isLoading = exerciseType === 'strength' ? strengthLoading : cardioLoading;
   
-  const currentExercises = exerciseType === 'strength' 
+  const currentExercises: ExerciseWithPercentile[] = exerciseType === 'strength' 
     ? exercises?.strength || [] 
     : exercises?.cardio || [];
 
@@ -311,26 +333,34 @@ function ExerciseComparisonTab() {
             {currentExercises.length === 0 ? (
               <EmptyState message="Zatím nejsou k dispozici žádné cviky pro porovnání" />
             ) : (
-              currentExercises.map((ex) => (
-                <button
-                  key={ex.exercise_name}
-                  onClick={() => setSelectedExercise(ex.exercise_name)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    {exerciseType === 'strength' ? (
-                      <Dumbbell className="w-5 h-5 text-blue-500" />
-                    ) : (
-                      <Footprints className="w-5 h-5 text-green-500" />
-                    )}
-                    <span className="font-medium capitalize">{ex.exercise_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-sm">{ex.entry_count} záznamů</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </button>
-              ))
+              currentExercises.map((ex) => {
+                const badge = getPercentileBadge(ex.client_percentile);
+                return (
+                  <button
+                    key={ex.exercise_name}
+                    onClick={() => setSelectedExercise(ex.exercise_name)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {exerciseType === 'strength' ? (
+                        <Dumbbell className="w-5 h-5 text-blue-500 shrink-0" />
+                      ) : (
+                        <Footprints className="w-5 h-5 text-green-500 shrink-0" />
+                      )}
+                      <span className="font-medium capitalize truncate">{ex.exercise_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {badge && (
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0.5 border", badge.className)}>
+                          {badge.label}
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">{ex.entry_count}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                );
+              })
             )}
           </CardContent>
         </Card>

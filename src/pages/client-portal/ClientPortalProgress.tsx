@@ -16,6 +16,7 @@ import {
 } from '@/components/client-portal/progress';
 import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
 import { ClientPortalPRsCard } from '@/components/client-portal/progress/ClientPortalPRsCard';
+import { ClientExerciseBenchmarks } from '@/components/client-portal/progress/ClientExerciseBenchmarks';
 import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
 import { Bike, PersonStanding } from 'lucide-react';
 
@@ -124,6 +125,9 @@ export default function ClientPortalProgress() {
 
       {/* Personal Records */}
       <ClientPortalPRsCard />
+
+      {/* Client Benchmarks - Comparison with others */}
+      {clientId && <ClientExerciseBenchmarks clientId={clientId} />}
 
       {/* Summary cards */}
       {(showWeight || showBodyFat || showExercises) && (

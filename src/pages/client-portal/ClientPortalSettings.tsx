@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Trophy, User, Palette, Bell } from 'lucide-react';
+import { Key, Lock, Save, CheckCircle2, AlertCircle, Users, Shield, Trophy, User, Palette, Target, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,38 +146,71 @@ export default function ClientPortalSettings() {
           {/* Privacy Tab */}
           <TabsContent value="privacy" className="space-y-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Soukromí a srovnání
-                  </CardTitle>
-                  <CardDescription>
-                    Nastavení viditelnosti v žebříčku a srovnání s ostatními
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {(leaderboardLoading || privacyLoading) ? (
-                    <div className="h-24 bg-muted animate-pulse rounded-lg" />
-                  ) : (
-                    <>
-                      {/* Anonymity explanation */}
-                      <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
-                        <p className="text-sm text-muted-foreground">
-                          <Shield className="h-4 w-4 inline mr-1.5 text-primary" />
-                          <strong>Ve výchozím nastavení jsi anonymní</strong> – tvoje jméno nikdo nevidí.
-                        </p>
-                      </div>
+              {/* Info banner */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-6">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Ve výchozím nastavení jsi kompletně anonymní</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tvoje jméno ani výsledky nikdo nevidí. Můžeš si to změnit níže.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                      {/* Leaderboard visibility */}
-                      <div className="flex items-center justify-between p-4 rounded-lg border">
+              {(leaderboardLoading || privacyLoading) ? (
+                <div className="space-y-4">
+                  <div className="h-32 bg-muted animate-pulse rounded-lg" />
+                  <div className="h-32 bg-muted animate-pulse rounded-lg" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Section: Comparison */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-blue-500" />
+                        Srovnání výkonů
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Porovnej své výsledky s ostatními klienty anonymně
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                         <div className="flex-1 pr-4">
-                          <Label className="font-medium flex items-center gap-2">
-                            <Trophy className="w-4 h-4 text-primary" />
-                            Zobrazit mě v žebříčku
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Ostatní uvidí tvou přezdívku místo anonymního označení
+                          <Label className="font-medium text-sm">Povolit anonymní srovnání</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Uvidíš svůj percentil oproti ostatním klientům. Ostatní tě neuvidí.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={privacySettings?.allow_anonymous_benchmarks || false}
+                          onCheckedChange={(checked) => handlePrivacyToggle('allow_anonymous_benchmarks', checked)}
+                          disabled={updatePrivacy.isPending}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Section: Leaderboard */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        Žebříčky
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Viditelnost v žebříčku tréninků a výkonů
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex-1 pr-4">
+                          <Label className="font-medium text-sm">Zobrazit mě v žebříčku</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Tvoje přezdívka bude viditelná ostatním v žebříčku
                           </p>
                         </div>
                         <Switch
@@ -187,14 +220,9 @@ export default function ClientPortalSettings() {
                         />
                       </div>
 
-                      {(leaderboardSettings?.leaderboard_visible) && (
-                        <div className="p-4 rounded-lg border space-y-3">
-                          <div className="flex-1">
-                            <Label className="font-medium">Moje přezdívka</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Toto jméno uvidí ostatní
-                            </p>
-                          </div>
+                      {leaderboardSettings?.leaderboard_visible && (
+                        <div className="p-3 rounded-lg border border-border/50 space-y-2">
+                          <Label className="text-sm font-medium">Moje přezdívka</Label>
                           <div className="flex gap-2">
                             <Input
                               placeholder="Např. Silák, Běžec..."
@@ -204,36 +232,38 @@ export default function ClientPortalSettings() {
                             />
                             <Button
                               variant="outline"
+                              size="sm"
                               onClick={handleNicknameChange}
                               disabled={updateLeaderboard.isPending}
                             >
                               Uložit
                             </Button>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Anonymous benchmarks */}
-                      <div className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex-1">
-                          <Label className="font-medium">Porovnat mé výsledky</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Anonymní srovnání s ostatními klienty
+                          <p className="text-xs text-muted-foreground">
+                            Toto jméno uvidí ostatní v žebříčku
                           </p>
                         </div>
-                        <Switch
-                          checked={privacySettings?.allow_anonymous_benchmarks || false}
-                          onCheckedChange={(checked) => handlePrivacyToggle('allow_anonymous_benchmarks', checked)}
-                          disabled={updatePrivacy.isPending}
-                        />
-                      </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                      {/* Challenges participation */}
-                      <div className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex-1">
-                          <Label className="font-medium">Účast ve výzvách</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Zapojit se do skupinových výzev
+                  {/* Section: Challenges */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Target className="w-4 h-4 text-green-500" />
+                        Výzvy
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Zapoj se do skupinových výzev trenéra
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex-1 pr-4">
+                          <Label className="font-medium text-sm">Účast ve výzvách</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Můžeš se zapojit do skupinových výzev a soutěžit s ostatními
                           </p>
                         </div>
                         <Switch
@@ -242,15 +272,16 @@ export default function ClientPortalSettings() {
                           disabled={updatePrivacy.isPending}
                         />
                       </div>
+                    </CardContent>
+                  </Card>
 
-                      <p className="text-xs text-muted-foreground">
-                        <Users className="h-3 w-3 inline mr-1" />
-                        Srovnání je vždy anonymní. Nikdy nezobrazujeme tvoje jméno bez povolení.
-                      </p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+                  {/* Footer note */}
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 px-1">
+                    <Users className="h-3 w-3 shrink-0" />
+                    Srovnání je vždy anonymní. Nikdy nezobrazujeme tvoje jméno bez tvého povolení.
+                  </p>
+                </div>
+              )}
             </motion.div>
           </TabsContent>
 

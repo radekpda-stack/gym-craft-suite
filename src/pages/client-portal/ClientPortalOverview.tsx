@@ -27,6 +27,7 @@ import { toVocative } from '@/lib/czechVocative';
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
 import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
+import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
 import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
@@ -174,10 +175,13 @@ export default function ClientPortalOverview() {
         <ProgressLinkCard delay={0.2} />
       </div>
 
-      {/* 3. DALŠÍ TRÉNINK */}
+      {/* 3. CELKOVÝ VÝKON - Nová karta */}
+      {clientId && <OverallPerformanceCard clientId={clientId} />}
+
+      {/* 4. DALŠÍ TRÉNINK */}
       <NextTrainingWidget />
 
-      {/* 4. AKTIVNÍ VÝZVY */}
+      {/* 5. AKTIVNÍ VÝZVY */}
       <ActiveChallengeWidget />
 
       {/* Feedback Section - shows when feedback is available */}
