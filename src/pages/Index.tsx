@@ -15,6 +15,9 @@ import { LastTrainingWidget } from '@/components/dashboard/LastTrainingWidget';
 import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
 import { GoalTrackerCard } from '@/components/dashboard/GoalTrackerCard';
 import { WinOfTheWeekCard } from '@/components/dashboard/WinOfTheWeekCard';
+import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
+import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
+import { CapacityAlertsCard } from '@/components/dashboard/CapacityAlertsCard';
 
 export default function Index() {
   usePageTracking('dashboard');
@@ -28,6 +31,21 @@ export default function Index() {
         {/* Header with date */}
         <SectionErrorBoundary section="Hlavička" compact>
           <DashboardHeader data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
+
+        {/* 📊 Business Health Score - NEW */}
+        <SectionErrorBoundary section="Business Health" compact>
+          <BusinessHealthScoreCard />
+        </SectionErrorBoundary>
+
+        {/* 🏆 Win of the Week - NEW */}
+        <SectionErrorBoundary section="Úspěch týdne" compact>
+          <WinOfTheWeekCard />
+        </SectionErrorBoundary>
+
+        {/* 🎯 Goal Tracker - NEW */}
+        <SectionErrorBoundary section="Cíle" compact>
+          <GoalTrackerCard />
         </SectionErrorBoundary>
 
         {/* 🏆 Career Milestone Card */}
@@ -48,6 +66,11 @@ export default function Index() {
           </SectionErrorBoundary>
         )}
 
+        {/* 💵 Cashflow Forecast - NEW */}
+        <SectionErrorBoundary section="Cashflow" compact>
+          <CashflowForecastCard />
+        </SectionErrorBoundary>
+
         {/* 🏋️ Last Training Widget */}
         {data && (
           <SectionErrorBoundary section="Poslední trénink" compact>
@@ -65,6 +88,16 @@ export default function Index() {
             <TodayPlanCompact data={data} isLoading={isLoading} />
           </SectionErrorBoundary>
         )}
+
+        {/* 📈 Capacity Alerts - NEW */}
+        <SectionErrorBoundary section="Kapacita" compact>
+          <CapacityAlertsCard />
+        </SectionErrorBoundary>
+
+        {/* 👥 Client Progress - NEW */}
+        <SectionErrorBoundary section="Pokrok klientů" compact>
+          <ClientProgressCard />
+        </SectionErrorBoundary>
 
         {/* ⏳ Pending Performance Approvals */}
         {layout.showPendingApprovals && (
