@@ -8,7 +8,8 @@ import {
   Settings,
   Trophy,
   BookOpen,
-  Award
+  Award,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -29,6 +30,7 @@ const baseNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/progress', icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
+  { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
   { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
 ];
@@ -43,8 +45,8 @@ const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastav
 const mobileNavItems = [
   { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
   { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
+  { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
   { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-  { to: '/client/badges', icon: Award, label: 'Odznaky', trackName: 'badges' },
   { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
 ];
 

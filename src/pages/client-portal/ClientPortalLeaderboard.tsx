@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Dumbbell, Crown, Users } from 'lucide-react';
+import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboard, useLeaderboardSettings, LeaderboardEntry } from '@/hooks/useClientGamification';
+import { 
+  useExercisesForComparison, 
+  useStrengthExerciseLeaderboard,
+  useCardioExerciseLeaderboard,
+  ExerciseLeaderboardEntry
+} from '@/hooks/useExerciseLeaderboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; currentClientId?: string }) {
@@ -32,12 +41,10 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
         entry.rank <= 3 && "bg-gradient-to-r from-amber-500/5 to-transparent"
       )}
     >
-      {/* Rank */}
       <div className="w-8 flex items-center justify-center">
         {getRankIcon(entry.rank)}
       </div>
       
-      {/* Avatar & Name */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className={cn(
           "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
@@ -68,7 +75,6 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
         </div>
       </div>
       
-      {/* Score */}
       <div className="text-right shrink-0">
         <span className="font-bold text-lg">{entry.workout_count}</span>
       </div>
@@ -76,13 +82,84 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
   );
 }
 
-function EmptyState() {
+function ExerciseLeaderboardRow({ 
+  entry, 
+  currentClientId 
+}: { 
+  entry: ExerciseLeaderboardEntry; 
+  currentClientId?: string 
+}) {
+  const isCurrentUser = entry.client_id === currentClientId;
+  
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1: return <Crown className="w-5 h-5 text-amber-500" />;
+      case 2: return <Medal className="w-5 h-5 text-gray-400" />;
+      case 3: return <Medal className="w-5 h-5 text-amber-700" />;
+      default: return <span className="text-sm font-medium text-muted-foreground w-5 text-center">{rank}</span>;
+    }
+  };
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cn(
+        "flex items-center gap-4 p-3 rounded-xl transition-all",
+        isCurrentUser 
+          ? "bg-primary/10 border border-primary/20" 
+          : "hover:bg-muted/50",
+        entry.rank <= 3 && "bg-gradient-to-r from-amber-500/5 to-transparent"
+      )}
+    >
+      <div className="w-8 flex items-center justify-center">
+        {getRankIcon(entry.rank)}
+      </div>
+      
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+          entry.rank === 1 ? "bg-amber-500/20 text-amber-600" :
+          entry.rank === 2 ? "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
+          entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
+          "bg-muted text-muted-foreground"
+        )}>
+          {entry.nickname.charAt(0).toUpperCase()}
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "font-medium truncate",
+              isCurrentUser && "text-primary",
+              entry.is_anonymous && "italic text-muted-foreground"
+            )}>
+              {entry.nickname}
+            </span>
+            
+            {isCurrentUser && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">
+                Ty
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="text-right shrink-0">
+        <span className="font-bold text-lg">{entry.display_value}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function EmptyState({ message }: { message?: string }) {
   return (
     <Card>
       <CardContent className="py-12 text-center">
         <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
         <p className="text-muted-foreground mb-2">
-          Zatím tu nikdo není
+          {message || 'Zatím tu nikdo není'}
         </p>
         <p className="text-sm text-muted-foreground">
           Buď první, kdo se zapojí!
@@ -92,16 +169,204 @@ function EmptyState() {
   );
 }
 
+function ExerciseComparisonTab() {
+  const { clientId, clientAccount } = useClientPortal();
+  const trainerId = clientAccount?.trainer_id;
+  
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+  const [exerciseType, setExerciseType] = useState<'strength' | 'cardio'>('strength');
+  
+  const { data: exercises, isLoading: exercisesLoading } = useExercisesForComparison(trainerId);
+  
+  const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
+    exerciseType === 'strength' ? selectedExercise : null,
+    trainerId
+  );
+  
+  const { data: cardioLeaderboard, isLoading: cardioLoading } = useCardioExerciseLeaderboard(
+    exerciseType === 'cardio' ? selectedExercise : null,
+    trainerId
+  );
+  
+  const leaderboard = exerciseType === 'strength' ? strengthLeaderboard : cardioLeaderboard;
+  const isLoading = exerciseType === 'strength' ? strengthLoading : cardioLoading;
+  
+  const currentExercises = exerciseType === 'strength' 
+    ? exercises?.strength || [] 
+    : exercises?.cardio || [];
+
+  if (exercisesLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Exercise type toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={exerciseType === 'strength' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => { setExerciseType('strength'); setSelectedExercise(null); }}
+          className="gap-2"
+        >
+          <Dumbbell className="w-4 h-4" />
+          Síla
+        </Button>
+        <Button
+          variant={exerciseType === 'cardio' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => { setExerciseType('cardio'); setSelectedExercise(null); }}
+          className="gap-2"
+        >
+          <Heart className="w-4 h-4" />
+          Kardio
+        </Button>
+      </div>
+
+      {/* Exercise selection */}
+      {!selectedExercise ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Vyber cvik pro porovnání
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {currentExercises.length === 0 ? (
+              <EmptyState message="Zatím nejsou k dispozici žádné cviky pro porovnání" />
+            ) : (
+              currentExercises.map((ex) => (
+                <button
+                  key={ex.exercise_name}
+                  onClick={() => setSelectedExercise(ex.exercise_name)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    {exerciseType === 'strength' ? (
+                      <Dumbbell className="w-5 h-5 text-blue-500" />
+                    ) : (
+                      <Footprints className="w-5 h-5 text-green-500" />
+                    )}
+                    <span className="font-medium capitalize">{ex.exercise_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-sm">{ex.entry_count} záznamů</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </button>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Back button and title */}
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSelectedExercise(null)}
+            >
+              ← Zpět
+            </Button>
+            <h3 className="font-semibold capitalize">{selectedExercise}</h3>
+          </div>
+
+          {/* Leaderboard */}
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : !leaderboard ? (
+            <EmptyState message="Nedostatek dat pro zobrazení žebříčku (potřeba alespoň 2 účastníci)" />
+          ) : (
+            <>
+              {/* Your position */}
+              {leaderboard.client_rank && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <span className="text-xl font-bold text-primary">#{leaderboard.client_rank}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Tvoje pozice</p>
+                        <p className="text-sm text-muted-foreground">
+                          z {leaderboard.total_participants} účastníků
+                        </p>
+                      </div>
+                    </div>
+                    {leaderboard.client_percentile != null && (
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">
+                          Top {Math.round(100 - leaderboard.client_percentile)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {leaderboard.client_percentile != null && (
+                    <Progress value={100 - leaderboard.client_percentile} className="mt-3" />
+                  )}
+                </motion.div>
+              )}
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    {exerciseType === 'strength' ? (
+                      <>
+                        <Dumbbell className="w-4 h-4" />
+                        Nejlepší výkony (max. váha)
+                      </>
+                    ) : (
+                      <>
+                        <Footprints className="w-4 h-4" />
+                        Nejlepší výkony (vzdálenost)
+                      </>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  {leaderboard.leaderboard.map((entry) => (
+                    <ExerciseLeaderboardRow 
+                      key={entry.client_id} 
+                      entry={entry} 
+                      currentClientId={clientId ?? undefined}
+                    />
+                  ))}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ClientPortalLeaderboard() {
   const { clientId } = useClientPortal();
-  const [activeTab, setActiveTab] = useState<'workouts_month' | 'workouts_alltime'>('workouts_month');
+  const [activeTab, setActiveTab] = useState<'workouts_month' | 'workouts_alltime' | 'exercises'>('workouts_month');
   
   const { data: workoutsMonthData, isLoading: workoutsMonthLoading } = useLeaderboard('workouts_month');
   const { data: allTimeData, isLoading: allTimeLoading } = useLeaderboard('workouts_alltime');
   const { data: settings } = useLeaderboardSettings(clientId ?? undefined);
   
-  const isLoading = activeTab === 'workouts_month' ? workoutsMonthLoading : allTimeLoading;
-  const data = activeTab === 'workouts_month' ? workoutsMonthData : allTimeData;
+  const isLoading = activeTab === 'workouts_month' ? workoutsMonthLoading : 
+                    activeTab === 'workouts_alltime' ? allTimeLoading : false;
+  const data = activeTab === 'workouts_month' ? workoutsMonthData : 
+               activeTab === 'workouts_alltime' ? allTimeData : null;
   
   // Find current user's rank
   const currentUserEntry = data?.find(e => e.client_id === clientId);
@@ -121,8 +386,8 @@ export default function ClientPortalLeaderboard() {
         </div>
       </div>
       
-      {/* User's position summary */}
-      {currentUserEntry && (
+      {/* User's position summary - only for workout tabs */}
+      {activeTab !== 'exercises' && currentUserEntry && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,24 +423,29 @@ export default function ClientPortalLeaderboard() {
         </Card>
       )}
       
-      {/* Tabs - Simplified to 2 */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="workouts_month" className="gap-1.5">
             <Dumbbell className="w-4 h-4" />
-            Tento měsíc
+            <span className="hidden sm:inline">Měsíc</span>
           </TabsTrigger>
           <TabsTrigger value="workouts_alltime" className="gap-1.5">
             <Trophy className="w-4 h-4" />
-            Celkem
+            <span className="hidden sm:inline">Celkem</span>
+          </TabsTrigger>
+          <TabsTrigger value="exercises" className="gap-1.5">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Cviky</span>
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value={activeTab} className="mt-4">
+        {/* Workouts tabs */}
+        <TabsContent value="workouts_month" className="mt-4">
           {isLoading ? (
             <div className="space-y-3">
               {[1,2,3,4,5].map(i => (
-                <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />
+                <Skeleton key={i} className="h-16 rounded-xl" />
               ))}
             </div>
           ) : data?.length === 0 ? (
@@ -184,17 +454,8 @@ export default function ClientPortalLeaderboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  {activeTab === 'workouts_month' ? (
-                    <>
-                      <Dumbbell className="w-4 h-4" />
-                      Tréninky tento měsíc
-                    </>
-                  ) : (
-                    <>
-                      <Trophy className="w-4 h-4" />
-                      Celkový počet tréninků
-                    </>
-                  )}
+                  <Dumbbell className="w-4 h-4" />
+                  Tréninky tento měsíc
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
@@ -208,6 +469,41 @@ export default function ClientPortalLeaderboard() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="workouts_alltime" className="mt-4">
+          {allTimeLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
+          ) : allTimeData?.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  Celkový počet tréninků
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {allTimeData?.map((entry) => (
+                  <LeaderboardRow 
+                    key={entry.client_id} 
+                    entry={entry} 
+                    currentClientId={clientId ?? undefined}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        {/* Exercise comparison tab */}
+        <TabsContent value="exercises" className="mt-4">
+          <ExerciseComparisonTab />
         </TabsContent>
       </Tabs>
     </div>
