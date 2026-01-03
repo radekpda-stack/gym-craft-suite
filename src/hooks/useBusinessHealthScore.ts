@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, subMonths, subDays, getDaysInMonth } from 'date-fns';
-import { useCapacitySettings, calculateMonthlyCapacity } from './useCapacitySettings';
+import { calculateMonthlyCapacity, type CapacitySettings } from './useCapacitySettings';
+
+const DEFAULT_SETTINGS: CapacitySettings = {
+  workingDays: [true, true, true, true, true, true, true],
+  workingHoursStart: '09:00',
+  workingHoursEnd: '15:00',
+  slotDurationMinutes: 60,
+  includeBlockedTime: true,
+};
 
 export interface BusinessHealthData {
   score: number; // 0-100
@@ -22,10 +30,8 @@ export interface BusinessHealthData {
 }
 
 export function useBusinessHealthScore() {
-  const { settings, isLoading: settingsLoading } = useCapacitySettings();
-
   return useQuery({
-    queryKey: ['business-health-score', settings],
+    queryKey: ['business-health-score'],
     queryFn: async (): Promise<BusinessHealthData> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -35,6 +41,18 @@ export function useBusinessHealthScore() {
       const lastMonthStart = startOfMonth(subMonths(now, 1));
       const sixtyDaysAgo = subDays(now, 60);
       const daysInCurrentMonth = getDaysInMonth(now);
+
+      // Fetch capacity settings directly (not via hook)
+      const { data: settingsData } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'capacity_settings')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const settings: CapacitySettings = settingsData?.value && typeof settingsData.value === 'object'
+        ? settingsData.value as unknown as CapacitySettings
+        : DEFAULT_SETTINGS;
 
       // Calculate capacity from settings
       const { workingDaysCount, hoursPerDay, totalSlots } = calculateMonthlyCapacity(settings, daysInCurrentMonth);
@@ -61,11 +79,13 @@ export function useBusinessHealthScore() {
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .gte('date', sixtyDaysAgo.toISOString());
+      // Unpaid = payment_status is 'pending' or null, and status is 'completed'
       const unpaidResult = await supabase
         .from('training_sessions')
         .select('id, final_price')
         .eq('user_id', user.id)
-        .is('is_paid', false);
+        .eq('status', 'completed')
+        .or('payment_status.is.null,payment_status.eq.pending');
 
       const clients = clientsResult.data || [];
       const activeClients = clients.filter(c => !c.is_archived);
@@ -189,6 +209,5 @@ export function useBusinessHealthScore() {
       };
     },
     staleTime: 1000 * 60 * 5,
-    enabled: !settingsLoading,
   });
 }
