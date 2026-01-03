@@ -11,7 +11,8 @@ import {
   Award,
   Users,
   ShoppingBag,
-  Dumbbell
+  Dumbbell,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -41,6 +42,7 @@ function buildBaseNavItems(base: string): NavItem[] {
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
     { to: `${base}/homework`, icon: Dumbbell, label: 'Domácí', trackName: 'homework' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
+    { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
     { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
     { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
     { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
@@ -59,7 +61,7 @@ function buildMobileNavItems(base: string): NavItem[] {
   return [
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
-    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
+    { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
     { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
     { to: `${base}/settings`, icon: Settings, label: 'Více', trackName: 'settings' },
   ];
