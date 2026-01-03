@@ -11,10 +11,19 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, startOfWeek, subWeeks } from 'date-fns';
 
+export interface ScoreBreakdownItem {
+  label: string;
+  value: number;
+  type: 'base' | 'positive' | 'negative';
+}
+
 export interface ClientReadinessData {
   // Core metrics
   readinessScore: number; // 0-100
   readinessLevel: 'high' | 'medium' | 'low' | 'unknown';
+  
+  // Score breakdown for UI
+  scoreBreakdown: ScoreBreakdownItem[];
   
   // Time since last training
   daysSinceLastTraining: number | null;
@@ -114,21 +123,28 @@ export function useClientReadiness(clientId: string | undefined) {
         isRedFlag: lastFeedbackData.is_red_flag || false,
       } : null;
 
-      // Calculate readiness score
+      // Calculate readiness score with breakdown
       let readinessScore = 70; // Base score
       const warnings: string[] = [];
+      const scoreBreakdown: ScoreBreakdownItem[] = [
+        { label: 'Základní skóre', value: 70, type: 'base' }
+      ];
 
       // Adjust based on rest days
       if (daysSinceLastTraining !== null) {
         if (daysSinceLastTraining === 0) {
           readinessScore -= 15;
+          scoreBreakdown.push({ label: 'Trénink dnes', value: -15, type: 'negative' });
           warnings.push('Trénoval dnes');
         } else if (daysSinceLastTraining === 1) {
           readinessScore -= 5;
+          scoreBreakdown.push({ label: 'Krátký odpočinek (1 den)', value: -5, type: 'negative' });
         } else if (daysSinceLastTraining >= 2 && daysSinceLastTraining <= 3) {
           readinessScore += 10;
+          scoreBreakdown.push({ label: 'Optimální odpočinek', value: +10, type: 'positive' });
         } else if (daysSinceLastTraining >= 7) {
           readinessScore -= 10;
+          scoreBreakdown.push({ label: `Dlouhá pauza (${daysSinceLastTraining} dní)`, value: -10, type: 'negative' });
           warnings.push(`${daysSinceLastTraining} dní od posledního tréninku`);
         }
       }
@@ -137,27 +153,34 @@ export function useClientReadiness(clientId: string | undefined) {
       if (lastFeedbackParsed) {
         if (lastFeedbackParsed.pain >= 7) {
           readinessScore -= 25;
+          scoreBreakdown.push({ label: 'Vysoká bolest', value: -25, type: 'negative' });
           warnings.push('Vysoká bolest z posledního tréninku');
         } else if (lastFeedbackParsed.pain >= 5) {
           readinessScore -= 10;
+          scoreBreakdown.push({ label: 'Střední bolest', value: -10, type: 'negative' });
         }
 
         if (lastFeedbackParsed.soreness >= 8) {
           readinessScore -= 15;
+          scoreBreakdown.push({ label: 'Silná svalovka', value: -15, type: 'negative' });
           warnings.push('Silná svalovka');
         } else if (lastFeedbackParsed.soreness >= 6) {
           readinessScore -= 5;
+          scoreBreakdown.push({ label: 'Mírná svalovka', value: -5, type: 'negative' });
         }
 
         if (lastFeedbackParsed.bodyFeel >= 8) {
           readinessScore += 10;
+          scoreBreakdown.push({ label: 'Skvělý pocit z těla', value: +10, type: 'positive' });
         } else if (lastFeedbackParsed.bodyFeel <= 4) {
           readinessScore -= 10;
+          scoreBreakdown.push({ label: 'Špatný pocit z těla', value: -10, type: 'negative' });
           warnings.push('Špatný pocit z těla');
         }
 
         if (lastFeedbackParsed.isRedFlag) {
           readinessScore -= 20;
+          scoreBreakdown.push({ label: 'Red flag', value: -20, type: 'negative' });
           warnings.push('Red flag ve feedbacku');
         }
       }
@@ -191,6 +214,7 @@ export function useClientReadiness(clientId: string | undefined) {
       return {
         readinessScore,
         readinessLevel,
+        scoreBreakdown,
         daysSinceLastTraining,
         lastTrainingDate: lastTraining?.date || null,
         trainingStreak,
