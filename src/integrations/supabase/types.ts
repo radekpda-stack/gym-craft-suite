@@ -367,6 +367,7 @@ export type Database = {
       }
       calendar_ics_events: {
         Row: {
+          additional_matched_client_ids: string[] | null
           created_at: string
           description: string | null
           end_at: string | null
@@ -383,6 +384,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          additional_matched_client_ids?: string[] | null
           created_at?: string
           description?: string | null
           end_at?: string | null
@@ -399,6 +401,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          additional_matched_client_ids?: string[] | null
           created_at?: string
           description?: string | null
           end_at?: string | null

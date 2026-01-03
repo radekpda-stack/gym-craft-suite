@@ -61,14 +61,29 @@ export function useICSEvents(feedId: string | null) {
         .from('calendar_ics_events')
         .select(`
           *,
-          matched_client:clients(id, name)
+          matched_client:clients!calendar_ics_events_matched_client_id_fkey(id, name)
         `)
         .eq('feed_id', feedId!)
         .order('start_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      return data;
+
+      // Fetch additional client names for group trainings
+      const eventsWithAdditionalClients = await Promise.all(
+        (data || []).map(async (event) => {
+          if (event.additional_matched_client_ids && event.additional_matched_client_ids.length > 0) {
+            const { data: additionalClients } = await supabase
+              .from('clients')
+              .select('id, name')
+              .in('id', event.additional_matched_client_ids);
+            return { ...event, additional_clients: additionalClients || [] };
+          }
+          return { ...event, additional_clients: [] };
+        })
+      );
+
+      return eventsWithAdditionalClients;
     },
     enabled: !!feedId,
   });
