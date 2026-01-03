@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import { ExerciseRelationsManager } from '@/components/exercises/ExerciseRelationsManager';
 import type { ExerciseStats } from '@/hooks/useExerciseStats';
 
 interface ExerciseDetailOverviewProps {
@@ -458,6 +459,12 @@ export function ExerciseDetailOverview({
           </div>
         </CardContent>
       </Card>
+
+      {/* Exercise Relations */}
+      <ExerciseRelationsManager
+        exerciseId={exercise.id}
+        exerciseName={exercise.name_cs || exercise.name}
+      />
     </div>
   );
 }

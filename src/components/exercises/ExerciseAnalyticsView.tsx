@@ -6,6 +6,7 @@ import { VolumeTimelineCard } from './analytics/VolumeTimelineCard';
 import { LoadDistributionCard } from './analytics/LoadDistributionCard';
 import { MovementPatternsCard } from './analytics/MovementPatternsCard';
 import { TopExercisesCard } from './analytics/TopExercisesCard';
+import { PRTrendCard } from './analytics/PRTrendCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
@@ -49,6 +50,7 @@ export function ExerciseAnalyticsView() {
   };
 
   const periodLabel = PERIOD_OPTIONS.find(p => p.value === period)?.label || '30 dní';
+  const periodDays = typeof period === 'number' ? period : 90;
 
   return (
     <div className="space-y-4">
@@ -90,6 +92,15 @@ export function ExerciseAnalyticsView() {
             comparisonMode={comparisonMode}
             isLoading={isLoading}
             helpText={HELP_TEXTS.volume}
+          />
+        </AnalyticsGridItem>
+
+        {/* PR Trend Card */}
+        <AnalyticsGridItem>
+          <PRTrendCard
+            days={periodDays}
+            clientId={selectedClientId}
+            isLoading={isLoading}
           />
         </AnalyticsGridItem>
 
