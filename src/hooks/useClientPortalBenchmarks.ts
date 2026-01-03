@@ -105,12 +105,14 @@ export function useSubmitChallengeResult() {
       challengeId, 
       score_primary, 
       score_secondary,
-      note 
+      note,
+      media_urls 
     }: { 
       challengeId: string; 
       score_primary: number; 
       score_secondary?: number;
       note?: string;
+      media_urls?: string[];
     }) => {
       const response = await supabase.functions.invoke('client-portal-benchmarks', {
         body: {
@@ -121,6 +123,7 @@ export function useSubmitChallengeResult() {
           score_primary,
           score_secondary,
           note,
+          media_urls,
         },
       });
 
