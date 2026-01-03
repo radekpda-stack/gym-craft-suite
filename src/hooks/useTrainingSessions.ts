@@ -140,16 +140,62 @@ export function useTrainingSessions(clientId?: string) {
         return [demoSession] as TrainingSession[];
       }
       
-      let query = supabase
+      // If clientId is provided, we need to get sessions where client is:
+      // 1. Primary client (client_id = clientId) 
+      // 2. OR a participant (via training_participants table)
+      if (clientId) {
+        // First, get session IDs where client is a participant
+        const { data: participantSessions } = await supabase
+          .from("training_participants")
+          .select("training_session_id")
+          .eq("client_id", clientId);
+        
+        const participantSessionIds = participantSessions?.map(p => p.training_session_id) || [];
+        
+        // Get all sessions where client is primary
+        const { data: primarySessions, error: primaryError } = await supabase
+          .from("training_sessions")
+          .select("*")
+          .eq("client_id", clientId)
+          .order("date", { ascending: false });
+        
+        if (primaryError) throw primaryError;
+        
+        // Get sessions where client is participant but not primary
+        let participantOnlySessions: TrainingSession[] = [];
+        if (participantSessionIds.length > 0) {
+          const { data: partSessions, error: partError } = await supabase
+            .from("training_sessions")
+            .select("*")
+            .in("id", participantSessionIds)
+            .neq("client_id", clientId)
+            .order("date", { ascending: false });
+          
+          if (partError) throw partError;
+          participantOnlySessions = (partSessions || []) as TrainingSession[];
+        }
+        
+        // Combine and sort by date
+        const allSessions = [...(primarySessions || []), ...participantOnlySessions] as TrainingSession[];
+        
+        // Add clientRole to each session
+        const sessionsWithRole = allSessions.map(session => ({
+          ...session,
+          clientRole: session.client_id === clientId ? 'primary' : 'participant',
+        }));
+        
+        // Sort by date descending
+        sessionsWithRole.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        return sessionsWithRole as (TrainingSession & { clientRole: 'primary' | 'participant' })[];
+      }
+      
+      // If no clientId, get all sessions
+      const { data, error } = await supabase
         .from("training_sessions")
         .select("*")
         .order("date", { ascending: false });
-
-      if (clientId) {
-        query = query.eq("client_id", clientId);
-      }
-
-      const { data, error } = await query;
+        
       if (error) throw error;
       return data as TrainingSession[];
     },
@@ -269,6 +315,16 @@ export function useCreateTrainingSession() {
 
       if (parentError) throw parentError;
 
+      // Auto-add primary client as participant
+      await supabase
+        .from("training_participants")
+        .insert({
+          training_session_id: parentSession.id,
+          client_id: input.client_id,
+          price_share: 0, // Will be set when completing training
+          user_id: user.id,
+        });
+
       let createdCount = 1;
 
       // If there's recurrence, create child sessions
@@ -293,11 +349,27 @@ export function useCreateTrainingSession() {
             user_id: user.id,
           }));
 
-          const { error: childError } = await supabase
+          const { data: createdChildren, error: childError } = await supabase
             .from("training_sessions")
-            .insert(childSessions);
+            .insert(childSessions)
+            .select("id");
 
           if (childError) throw childError;
+          
+          // Add primary client as participant for each child session
+          if (createdChildren && createdChildren.length > 0) {
+            const childParticipants = createdChildren.map(child => ({
+              training_session_id: child.id,
+              client_id: input.client_id,
+              price_share: 0,
+              user_id: user.id,
+            }));
+            
+            await supabase
+              .from("training_participants")
+              .insert(childParticipants);
+          }
+          
           createdCount += childDates.length;
         }
       }
