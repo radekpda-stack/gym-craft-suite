@@ -10,6 +10,8 @@ import { QuickActionsGrid } from '@/components/dashboard/QuickActionsGrid';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
+import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
+import { LastTrainingWidget } from '@/components/dashboard/LastTrainingWidget';
 
 export default function Index() {
   usePageTracking('dashboard');
@@ -29,6 +31,28 @@ export default function Index() {
         {layout.showCareerMilestone && (
           <SectionErrorBoundary section="Kariérní statistiky" compact>
             <CareerMilestoneCard />
+          </SectionErrorBoundary>
+        )}
+
+        {/* 💰 Finance Summary Card */}
+        {data && (
+          <SectionErrorBoundary section="Finance" compact>
+            <FinanceSummaryCard 
+              finance={data.finance} 
+              weeklySummary={data.weeklySummary}
+              isLoading={isLoading}
+            />
+          </SectionErrorBoundary>
+        )}
+
+        {/* 🏋️ Last Training Widget */}
+        {data && (
+          <SectionErrorBoundary section="Poslední trénink" compact>
+            <LastTrainingWidget 
+              todaySchedule={data.todaySchedule}
+              weekSchedule={data.weekSchedule}
+              isLoading={isLoading}
+            />
           </SectionErrorBoundary>
         )}
         

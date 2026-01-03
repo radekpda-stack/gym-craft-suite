@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, StickyNote, Send } from 'lucide-react';
+import { Plus, Search, StickyNote, Send, Users, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CommandPalette } from '@/components/search/CommandPalette';
@@ -57,20 +57,30 @@ export function QuickActionsGrid() {
     setShowBroadcast(true);
     trackFeature('quick_action_broadcast', 'clients');
   };
+
+  const handleOpenClients = () => {
+    navigate('/clients');
+    trackFeature('quick_action_clients', 'clients');
+  };
+
+  const handleOpenStats = () => {
+    navigate('/statistics');
+    trackFeature('quick_action_stats', 'navigation');
+  };
   
   const actions: QuickAction[] = [
     {
       id: 'new-training',
-      label: 'Nový trénink',
+      label: 'Trénink',
       icon: <Plus className="w-4 h-4" />,
       primary: true,
       onClick: () => setShowTrainingSheet(true),
     },
     {
-      id: 'broadcast',
-      label: 'Zpráva',
-      icon: <Send className="w-4 h-4" />,
-      onClick: handleOpenBroadcast,
+      id: 'clients',
+      label: 'Klienti',
+      icon: <Users className="w-4 h-4" />,
+      onClick: handleOpenClients,
     },
     {
       id: 'search',
@@ -79,24 +89,36 @@ export function QuickActionsGrid() {
       onClick: handleOpenSearch,
     },
     {
+      id: 'broadcast',
+      label: 'Zpráva',
+      icon: <Send className="w-4 h-4" />,
+      onClick: handleOpenBroadcast,
+    },
+    {
       id: 'note',
       label: 'Poznámka',
       icon: <StickyNote className="w-4 h-4" />,
       onClick: handleOpenNote,
+    },
+    {
+      id: 'stats',
+      label: 'Statistiky',
+      icon: <BarChart3 className="w-4 h-4" />,
+      onClick: handleOpenStats,
     },
   ];
 
   return (
     <>
       <div className="glass rounded-2xl p-3">
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
           {actions.map(action => (
             <Button
               key={action.id}
               variant={action.primary ? 'default' : 'ghost'}
               onClick={action.onClick}
               className={`
-                flex flex-col items-center justify-center gap-1 h-auto py-2.5 px-1.5 min-w-0
+                flex flex-col items-center justify-center gap-0.5 h-auto py-2 px-1 min-w-0
                 ${action.primary 
                   ? 'bg-primary hover:bg-primary/90' 
                   : 'hover:bg-secondary/50'
@@ -104,7 +126,7 @@ export function QuickActionsGrid() {
               `}
             >
               <div className={`
-                p-2 rounded-xl shrink-0
+                p-1.5 sm:p-2 rounded-lg sm:rounded-xl shrink-0
                 ${action.primary 
                   ? 'bg-primary-foreground/20' 
                   : 'bg-secondary/50'
@@ -112,7 +134,7 @@ export function QuickActionsGrid() {
               `}>
                 {action.icon}
               </div>
-              <span className="text-[10px] sm:text-[11px] font-medium leading-tight text-center truncate w-full px-0.5">
+              <span className="text-[9px] sm:text-[10px] font-medium leading-tight text-center truncate w-full">
                 {action.label}
               </span>
             </Button>
