@@ -17,13 +17,24 @@ import {
   useChallengeLeaderboard,
   useClientPrivacySettings 
 } from '@/hooks/useClientPortalBenchmarks';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { useClientChallengeHistory } from '@/hooks/useClientChallengeHistory';
+import { 
+  useClientTeam, 
+  useCreateTeam, 
+  useJoinTeam, 
+  useLeaveTeam,
+  useTeamLeaderboard 
+} from '@/hooks/useTeamChallenges';
 import { ChallengeHistory } from '@/components/client-portal/challenges/ChallengeHistory';
 import { AchievementsBadges } from '@/components/client-portal/challenges/AchievementsBadges';
 import { ChallengeSubmissionDialog } from '@/components/client-portal/challenges/ChallengeSubmissionDialog';
 import { SubmissionFeedback } from '@/components/client-portal/challenges/SubmissionFeedback';
 import { ChallengeProgressChart } from '@/components/client-portal/challenges/ChallengeProgressChart';
+import { TeamJoinCreate } from '@/components/client-portal/challenges/TeamJoinCreate';
+import { TeamManagement } from '@/components/client-portal/challenges/TeamManagement';
+import { TeamLeaderboardClient } from '@/components/client-portal/challenges/TeamLeaderboardClient';
 import { formatChallengeScore, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
 import { format, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -41,6 +52,15 @@ export default function ClientPortalChallenges() {
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  
+  const { clientId } = useClientPortal();
+  
+  // Team hooks
+  const { data: clientTeamData, isLoading: teamLoading } = useClientTeam(selectedChallenge);
+  const { data: teamLeaderboard } = useTeamLeaderboard(selectedChallenge);
+  const createTeam = useCreateTeam();
+  const joinTeam = useJoinTeam();
+  const leaveTeam = useLeaveTeam();
   
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -149,6 +169,7 @@ export default function ClientPortalChallenges() {
     const best = getClientBestSubmission(challenge.id);
     const participants = participantCounts[challenge.id] || 0;
     const submissions = getClientSubmissions(challenge.id);
+    const isTeamChallenge = challenge.is_team_challenge;
 
     return (
       <Card 
@@ -162,7 +183,15 @@ export default function ClientPortalChallenges() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-lg">{challenge.title}</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {challenge.title}
+                {isTeamChallenge && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    Týmová
+                  </Badge>
+                )}
+              </CardTitle>
               <CardDescription className="line-clamp-2">
                 {challenge.description}
               </CardDescription>
@@ -305,6 +334,64 @@ export default function ClientPortalChallenges() {
                     Video instrukce
                   </a>
                 </Button>
+              </div>
+            )}
+
+            {/* Team Challenge Section */}
+            {(selectedChallengeData as any).is_team_challenge && (
+              <div className="space-y-4">
+                {!clientTeamData?.team ? (
+                  <TeamJoinCreate
+                    challengeId={selectedChallengeData.id}
+                    minSize={(selectedChallengeData as any).min_team_size || 2}
+                    maxSize={(selectedChallengeData as any).max_team_size || 4}
+                    onCreateTeam={async (teamName) => {
+                      const result = await createTeam.mutateAsync({
+                        challengeId: selectedChallengeData.id,
+                        teamName,
+                      });
+                      return { invite_code: result.invite_code };
+                    }}
+                    onJoinTeam={async (inviteCode) => {
+                      await joinTeam.mutateAsync({
+                        challengeId: selectedChallengeData.id,
+                        inviteCode,
+                      });
+                    }}
+                    isLoading={teamLoading}
+                  />
+                ) : (
+                  <>
+                    <TeamManagement
+                      team={clientTeamData.team}
+                      members={clientTeamData.members.map(m => ({
+                        ...m,
+                        pseudonym: `Člen ${m.client_id.slice(0, 4)}`,
+                        best_score: null,
+                      }))}
+                      currentClientId={clientId || ''}
+                      minSize={(selectedChallengeData as any).min_team_size || 2}
+                      maxSize={(selectedChallengeData as any).max_team_size || 4}
+                      primaryMetric={selectedChallengeData.primary_metric}
+                      scoringMode={(selectedChallengeData as any).team_scoring_mode || 'sum'}
+                      onLeaveTeam={async () => {
+                        await leaveTeam.mutateAsync({
+                          challengeId: selectedChallengeData.id,
+                          teamId: clientTeamData.team.id,
+                        });
+                      }}
+                      teamRank={teamLeaderboard?.my_team_rank}
+                    />
+                    {teamLeaderboard?.teams && teamLeaderboard.teams.length > 0 && (
+                      <TeamLeaderboardClient
+                        teams={teamLeaderboard.teams}
+                        primaryMetric={selectedChallengeData.primary_metric}
+                        scoringMode={(selectedChallengeData as any).team_scoring_mode || 'sum'}
+                        myTeamId={clientTeamData.team.id}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             )}
 

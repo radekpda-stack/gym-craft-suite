@@ -18,7 +18,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
-    const { action, clientId, trainerId, exerciseName, metricType, groupKey, challengeId, minGroupSize, score_primary, score_secondary, note, video_url, media_urls } = body;
+    const { 
+      action, clientId, trainerId, exerciseName, metricType, groupKey, 
+      challengeId, minGroupSize, score_primary, score_secondary, note, 
+      video_url, media_urls, teamName, inviteCode, teamId 
+    } = body;
 
     console.log(`[Benchmarks] Action: ${action}, ClientId: ${clientId}, ChallengeId: ${challengeId}, Exercise: ${exerciseName}`);
 
@@ -180,7 +184,6 @@ serve(async (req) => {
     }
 
     if (action === 'submit_challenge') {
-      // score_primary, score_secondary, note, video_url are already extracted from body above
       // Validate client can participate
       const { data: client } = await supabase
         .from('clients')
@@ -188,11 +191,42 @@ serve(async (req) => {
         .eq('id', clientId)
         .single();
 
+      // Get challenge to check if team challenge
+      const { data: challenge } = await supabase
+        .from('challenges')
+        .select('is_team_challenge')
+        .eq('id', challengeId)
+        .single();
+
       // Get or create pseudonym
       await supabase.rpc('get_or_create_challenge_pseudonym', {
         p_challenge_id: challengeId,
         p_client_id: clientId
       });
+
+      // Get client's team if this is a team challenge
+      let clientTeamId = null;
+      if (challenge?.is_team_challenge) {
+        const { data: membership } = await supabase
+          .from('challenge_team_members')
+          .select('team_id')
+          .eq('client_id', clientId)
+          .maybeSingle();
+        
+        if (membership) {
+          // Verify team belongs to this challenge
+          const { data: team } = await supabase
+            .from('challenge_teams')
+            .select('id')
+            .eq('id', membership.team_id)
+            .eq('challenge_id', challengeId)
+            .single();
+          
+          if (team) {
+            clientTeamId = team.id;
+          }
+        }
+      }
 
       // Insert submission
       const { data: submission, error } = await supabase
@@ -205,6 +239,7 @@ serve(async (req) => {
           note,
           video_url,
           media_urls: media_urls || null,
+          team_id: clientTeamId,
           status: 'approved' // Auto-approve for MVP
         })
         .select()
@@ -222,6 +257,227 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, submission }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // TEAM ACTIONS
+    if (action === 'create_team') {
+      // Generate unique invite code
+      const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+      // Create team
+      const { data: team, error: teamError } = await supabase
+        .from('challenge_teams')
+        .insert({
+          challenge_id: challengeId,
+          team_name: teamName,
+          captain_client_id: clientId,
+          invite_code: inviteCode,
+        })
+        .select()
+        .single();
+
+      if (teamError) {
+        console.error('[Benchmarks] Team creation error:', teamError);
+        return new Response(
+          JSON.stringify({ error: 'team_creation_failed', details: teamError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Add captain as first member
+      await supabase
+        .from('challenge_team_members')
+        .insert({
+          team_id: team.id,
+          client_id: clientId,
+          role: 'captain',
+        });
+
+      // Ensure pseudonym exists
+      await supabase.rpc('get_or_create_challenge_pseudonym', {
+        p_challenge_id: challengeId,
+        p_client_id: clientId
+      });
+
+      console.log('[Benchmarks] Team created:', team.id);
+
+      return new Response(
+        JSON.stringify({ success: true, team, invite_code: inviteCode }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'join_team') {
+      // Find team by invite code
+      const { data: team, error: teamError } = await supabase
+        .from('challenge_teams')
+        .select('*, challenge:challenges(*)')
+        .eq('invite_code', inviteCode)
+        .eq('challenge_id', challengeId)
+        .single();
+
+      if (teamError || !team) {
+        return new Response(
+          JSON.stringify({ error: 'team_not_found', message: 'Neplatný kód pozvánky' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if team is full
+      const challenge = team.challenge as any;
+      if (team.member_count >= (challenge.max_team_size || 4)) {
+        return new Response(
+          JSON.stringify({ error: 'team_full', message: 'Tým je již plný' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if client is already in a team for this challenge
+      const { data: existingMembership } = await supabase
+        .from('challenge_team_members')
+        .select('id, team:challenge_teams!inner(challenge_id)')
+        .eq('client_id', clientId)
+        .eq('team.challenge_id', challengeId)
+        .maybeSingle();
+
+      if (existingMembership) {
+        return new Response(
+          JSON.stringify({ error: 'already_in_team', message: 'Již jsi v týmu pro tuto výzvu' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Add member
+      const { error: memberError } = await supabase
+        .from('challenge_team_members')
+        .insert({
+          team_id: team.id,
+          client_id: clientId,
+          role: 'member',
+        });
+
+      if (memberError) {
+        console.error('[Benchmarks] Join team error:', memberError);
+        return new Response(
+          JSON.stringify({ error: 'join_failed', details: memberError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Ensure pseudonym exists
+      await supabase.rpc('get_or_create_challenge_pseudonym', {
+        p_challenge_id: challengeId,
+        p_client_id: clientId
+      });
+
+      // Update member count
+      await supabase
+        .from('challenge_teams')
+        .update({ member_count: team.member_count + 1 })
+        .eq('id', team.id);
+
+      console.log('[Benchmarks] Joined team:', team.id);
+
+      return new Response(
+        JSON.stringify({ success: true, team_id: team.id, team_name: team.team_name }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'leave_team') {
+      // Get membership
+      const { data: membership } = await supabase
+        .from('challenge_team_members')
+        .select('*, team:challenge_teams(*)')
+        .eq('client_id', clientId)
+        .eq('team_id', teamId)
+        .single();
+
+      if (!membership) {
+        return new Response(
+          JSON.stringify({ error: 'not_in_team' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const team = membership.team as any;
+
+      // If captain leaves, delete the whole team
+      if (membership.role === 'captain') {
+        await supabase
+          .from('challenge_teams')
+          .delete()
+          .eq('id', teamId);
+
+        console.log('[Benchmarks] Team deleted (captain left):', teamId);
+      } else {
+        // Remove member
+        await supabase
+          .from('challenge_team_members')
+          .delete()
+          .eq('id', membership.id);
+
+        // Update member count
+        await supabase
+          .from('challenge_teams')
+          .update({ member_count: Math.max(0, team.member_count - 1) })
+          .eq('id', teamId);
+
+        console.log('[Benchmarks] Left team:', teamId);
+      }
+
+      // Remove team_id from client's submissions
+      await supabase
+        .from('challenge_submissions')
+        .update({ team_id: null })
+        .eq('client_id', clientId)
+        .eq('team_id', teamId);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'get_team_leaderboard') {
+      // Get all teams for this challenge sorted by score
+      const { data: teams, error: teamsError } = await supabase
+        .from('challenge_teams')
+        .select('*')
+        .eq('challenge_id', challengeId)
+        .order('total_score', { ascending: false });
+
+      if (teamsError) {
+        return new Response(
+          JSON.stringify({ error: 'fetch_failed', details: teamsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Find client's team
+      const { data: clientMembership } = await supabase
+        .from('challenge_team_members')
+        .select('team_id')
+        .eq('client_id', clientId)
+        .maybeSingle();
+
+      const clientTeamId = clientMembership?.team_id;
+
+      const teamsWithRanks = (teams || []).map((team, index) => ({
+        rank: index + 1,
+        team_id: team.id,
+        team_name: team.team_name,
+        total_score: team.total_score || 0,
+        member_count: team.member_count || 0,
+        is_my_team: team.id === clientTeamId,
+      }));
+
+      const myTeamRank = teamsWithRanks.find(t => t.is_my_team)?.rank;
+
+      return new Response(
+        JSON.stringify({ teams: teamsWithRanks, my_team_rank: myTeamRank }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
