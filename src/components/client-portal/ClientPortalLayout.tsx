@@ -22,6 +22,8 @@ import { sessionManager } from '@/lib/analytics/SessionManager';
 import { ClientNotificationCenter } from './ClientNotificationCenter';
 import { CredentialsReminderDialog } from './CredentialsReminderDialog';
 import { LogoutConfirmDialog } from './common/LogoutConfirmDialog';
+import { useClientPortalDemo } from '@/hooks/useClientPortalDemo';
+import { DemoModeBanner } from './DemoModeBanner';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -68,15 +70,21 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const location = useLocation();
   const sessionInitialized = useRef(false);
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  
+  // Demo mode support
+  const { isDemo, demoClientProfile, demoClientId } = useClientPortalDemo();
+  const effectiveClientProfile = isDemo ? demoClientProfile : clientProfile;
+  const effectiveClientId = isDemo ? demoClientId : clientId;
+  const effectiveIsAuthenticated = isDemo ? true : isAuthenticated;
 
-  // Show credentials dialog when needed (after initial load)
+  // Show credentials dialog when needed (after initial load) - not in demo mode
   useEffect(() => {
-    if (shouldShowCredentialsReminder && !showCredentialsDialog) {
+    if (shouldShowCredentialsReminder && !showCredentialsDialog && !isDemo) {
       // Small delay to let the page render first
       const timer = setTimeout(() => setShowCredentialsDialog(true), 500);
       return () => clearTimeout(timer);
     }
-  }, [shouldShowCredentialsReminder, showCredentialsDialog]);
+  }, [shouldShowCredentialsReminder, showCredentialsDialog, isDemo]);
 
   // Check if nutrition campaign is active
   const { data: nutritionCampaign } = useClientNutritionCampaign(clientId ?? undefined);
@@ -89,16 +97,18 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     settingsNavItem,
   ];
 
-  // Initialize session tracking for client portal
+  // Initialize session tracking for client portal - skip in demo mode
   useEffect(() => {
+    if (isDemo) return;
     if (isAuthenticated && clientId && !sessionInitialized.current) {
       sessionInitialized.current = true;
       sessionManager.initialize(clientId).catch(console.debug);
     }
-  }, [isAuthenticated, clientId]);
+  }, [isAuthenticated, clientId, isDemo]);
 
-  // Track navigation
+  // Track navigation - skip in demo mode
   useEffect(() => {
+    if (isDemo) return;
     if (!isAuthenticated || !clientId) return;
     
     const currentNav = allNavItems.find(item => 
@@ -115,9 +125,10 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         }
       });
     }
-  }, [location.pathname, isAuthenticated, clientId, allNavItems]);
+  }, [location.pathname, isAuthenticated, clientId, allNavItems, isDemo]);
 
-  if (loading) {
+  // Skip loading check in demo mode
+  if (!isDemo && loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
@@ -132,44 +143,53 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  // Skip auth check in demo mode
+  if (!effectiveIsAuthenticated) {
     return <Navigate to="/client/login" state={{ from: location }} replace />;
   }
 
   return (
     <>
-      {/* Credentials Reminder Dialog */}
-      <CredentialsReminderDialog
-        open={showCredentialsDialog}
-        loginCount={loginCount}
-        currentEmail={user?.email}
-        onSuccess={() => {
-          setShowCredentialsDialog(false);
-          refetchClientAccount();
-        }}
-        onSkip={() => {
-          setShowCredentialsDialog(false);
-          dismissCredentialsReminder();
-        }}
-      />
+      {/* Demo Mode Banner */}
+      {isDemo && <DemoModeBanner />}
+      
+      {/* Credentials Reminder Dialog - not in demo mode */}
+      {!isDemo && (
+        <CredentialsReminderDialog
+          open={showCredentialsDialog}
+          loginCount={loginCount}
+          currentEmail={user?.email}
+          onSuccess={() => {
+            setShowCredentialsDialog(false);
+            refetchClientAccount();
+          }}
+          onSkip={() => {
+            setShowCredentialsDialog(false);
+            dismissCredentialsReminder();
+          }}
+        />
+      )}
 
-      <div className="min-h-screen bg-background pb-20 md:pb-0 md:pl-20">
+      <div className={cn(
+        "min-h-screen bg-background pb-20 md:pb-0 md:pl-20",
+        isDemo && "pt-10" // Add padding for demo banner
+      )}>
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b md:hidden">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-sm font-bold text-primary">
-                {clientProfile?.name?.charAt(0) ?? 'K'}
+                {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium">{clientProfile?.name ?? 'Klient'}</p>
+              <p className="text-sm font-medium">{effectiveClientProfile?.name ?? 'Klient'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ClientNotificationCenter />
-            <LogoutConfirmDialog onConfirm={signOut} />
+            {!isDemo && <ClientNotificationCenter />}
+            {!isDemo && <LogoutConfirmDialog onConfirm={signOut} />}
           </div>
         </div>
       </header>
@@ -210,16 +230,18 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </nav>
 
         <div className="flex flex-col items-center gap-4">
-          <ClientNotificationCenter />
+          {!isDemo && <ClientNotificationCenter />}
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-sm font-bold text-primary">
-              {clientProfile?.name?.charAt(0) ?? 'K'}
+              {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
             </span>
           </div>
-          <LogoutConfirmDialog 
-            onConfirm={signOut}
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-          />
+          {!isDemo && (
+            <LogoutConfirmDialog 
+              onConfirm={signOut}
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            />
+          )}
         </div>
       </aside>
 
