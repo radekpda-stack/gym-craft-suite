@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PortalUsageStats } from '@/components/client-portal/PortalUsageStats';
 import { PortalRecentActivity } from '@/components/client-portal/PortalRecentActivity';
 import { ClientAccessList } from '@/components/client-portal/ClientAccessList';
+import { ClientPortalQuickSearch } from '@/components/client-portal/ClientPortalQuickSearch';
 import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
 import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
@@ -106,7 +107,7 @@ export default function ClientPortalAdmin() {
           <PortalUsageStats />
           {/* Stack vertically for better readability on all devices */}
           <div className="space-y-6">
-            <ClientAccessList />
+            <ClientPortalQuickSearch />
             <PortalRecentActivity />
           </div>
         </TabsContent>
