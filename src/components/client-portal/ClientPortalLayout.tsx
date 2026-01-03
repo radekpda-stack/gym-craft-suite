@@ -29,30 +29,41 @@ interface ClientPortalLayoutProps {
   children: ReactNode;
 }
 
-// Base nav items (always visible)
-const baseNavItems = [
-  { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-  { to: '/client/homework', icon: Dumbbell, label: 'Domácí', trackName: 'homework' },
-  { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
-  { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
-  { to: '/client/challenges', icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-  { to: '/client/purchases', icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
-];
+type NavItem = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  trackName: string;
+};
 
-// Conditional nav item
-const nutritionNavItem = { to: '/client/nutrition', icon: Apple, label: 'Strava', trackName: 'nutrition' };
+function buildBaseNavItems(base: string): NavItem[] {
+  return [
+    { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
+    { to: `${base}/homework`, icon: Dumbbell, label: 'Domácí', trackName: 'homework' },
+    { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
+    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
+    { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
+  ];
+}
 
-// Settings nav item (always at the end)
-const settingsNavItem = { to: '/client/settings', icon: Settings, label: 'Nastavení', trackName: 'settings' };
+function buildNutritionNavItem(base: string): NavItem {
+  return { to: `${base}/nutrition`, icon: Apple, label: 'Strava', trackName: 'nutrition' };
+}
 
-// Mobile nav - core items only (5 items to prevent overflow)
-const mobileNavItems = [
-  { to: '/client', icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-  { to: '/client/diary', icon: BookOpen, label: 'Deník', trackName: 'diary' },
-  { to: '/client/leaderboard', icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
-  { to: '/client/purchases', icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
-  { to: '/client/settings', icon: Settings, label: 'Více', trackName: 'settings' },
-];
+function buildSettingsNavItem(base: string): NavItem {
+  return { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' };
+}
+
+function buildMobileNavItems(base: string): NavItem[] {
+  return [
+    { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
+    { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
+    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
+    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
+    { to: `${base}/settings`, icon: Settings, label: 'Více', trackName: 'settings' },
+  ];
+}
 
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const { 
@@ -68,6 +79,15 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     dismissCredentialsReminder,
   } = useClientPortal();
   const location = useLocation();
+
+  // Keep navigation inside the currently used portal prefix
+  // ("/zona" for short URL portal, "/client" for legacy portal)
+  const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
+  const baseNavItems = buildBaseNavItems(basePath);
+  const nutritionNavItem = buildNutritionNavItem(basePath);
+  const settingsNavItem = buildSettingsNavItem(basePath);
+  const mobileNavItems = buildMobileNavItems(basePath);
+
   const sessionInitialized = useRef(false);
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   
