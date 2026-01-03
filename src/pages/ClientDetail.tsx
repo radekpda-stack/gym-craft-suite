@@ -39,8 +39,10 @@ import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientWorkoutDiary } from '@/components/clients/ClientWorkoutDiary';
 import { ClientWeeklyGoals } from '@/components/clients/ClientWeeklyGoals';
+import { ClientQuickNav } from '@/components/clients/ClientQuickNav';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
+import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -67,7 +69,8 @@ export default function ClientDetail() {
   // Derived data
   const lastCompletedSession = sessions.find((s: any) => s.status === 'completed');
   const lastFeedback = feedbackData[0];
-  const hasRedFlag = feedbackData.some(f => f.is_red_flag);
+  const { evaluation: feedbackEval } = useFeedbackEvaluation(id);
+  const redFlagCount = feedbackEval?.redFlagCount ?? 0;
 
   if (clientLoading) {
     return <ClientDetailSkeleton />;
@@ -157,29 +160,33 @@ export default function ClientDetail() {
     adminSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Build accordion sections
+  // Calculate notes count
+  const notesCount = client.notes ? client.notes.split('\n\n').filter(n => n.startsWith('[')).length : 0;
+
+  // Build accordion sections with IDs for navigation
   const accordionSections = [
     {
       id: 'notes',
       icon: SECTION_ICONS.notes,
       title: 'Poznámka trenéra',
-      children: <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />,
+      badge: notesCount || undefined,
+      children: <div id="section-notes"><ClientNotesSection notes={client.notes} onAddNote={handleAddNote} /></div>,
     },
     {
       id: 'measurements',
       icon: SECTION_ICONS.measurements,
       title: 'Měření',
-      children: <ClientMeasurementsCard clientId={client.id} />,
+      children: <div id="section-measurements"><ClientMeasurementsCard clientId={client.id} /></div>,
     },
     {
       id: 'diagnostics',
       icon: SECTION_ICONS.diagnostics,
       title: 'Diagnostika',
       children: (
-        <>
+        <div id="section-diagnostics">
           <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
           <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
-        </>
+        </div>
       ),
     },
     {
@@ -188,7 +195,7 @@ export default function ClientDetail() {
       title: 'Feedback & Recovery',
       badge: feedbackData.length || undefined,
       children: (
-        <div className="space-y-4">
+        <div id="section-feedback" className="space-y-4">
           <ClientFeedbackRecovery clientId={client.id} />
           <ClientFeedbackCard 
             clientId={client.id} 
@@ -208,13 +215,13 @@ export default function ClientDetail() {
       id: 'media',
       icon: SECTION_ICONS.media,
       title: 'Média & Fotky',
-      children: <ClientMediaGallery clientId={client.id} />,
+      children: <div id="section-media"><ClientMediaGallery clientId={client.id} /></div>,
     },
     {
       id: 'timeline',
       icon: SECTION_ICONS.timeline,
       title: 'Časová osa',
-      children: <ClientTimeline clientId={client.id} defaultLimit={20} />,
+      children: <div id="section-timeline"><ClientTimeline clientId={client.id} defaultLimit={20} /></div>,
     },
   ];
 
@@ -230,41 +237,60 @@ export default function ClientDetail() {
         />
       )}
 
-      {/* SECTION 1: Sticky Header with contact + birth year + chodí od */}
+      {/* SECTION 1: Sticky Header with contact + birth year + chodí od + red flags */}
       <ClientHeaderCompact 
         client={client} 
         onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
+        redFlagCount={redFlagCount}
+        lastPortalLogin={portalAccess?.last_portal_login}
       />
 
-      {/* SECTION 2: 2 Quick Cards - Trainings, Credit */}
-      <ClientQuickCards
-        clientId={client.id}
-        clientName={client.name}
-        sessions={sessions}
-        creditBalance={creditBalance}
-        isSharedBudget={isSharedBudget}
-        budgetGroupName={sharedBudgetInfo?.groupName}
-        budgetMemberCount={sharedBudgetInfo?.members?.length}
-        onAddTraining={() => setIsTrainingDialogOpen(true)}
-        onAddCredit={() => setIsCreditModalOpen(true)}
+      {/* Quick Navigation */}
+      <ClientQuickNav
+        notesCount={notesCount}
+        feedbackCount={feedbackData.length}
+        redFlagCount={redFlagCount}
       />
+
+      {/* SECTION 2: 2 Quick Cards - Trainings, Credit + LTV */}
+      <div id="section-trainings">
+        <ClientQuickCards
+          clientId={client.id}
+          clientName={client.name}
+          sessions={sessions}
+          creditBalance={creditBalance}
+          isSharedBudget={isSharedBudget}
+          budgetGroupName={sharedBudgetInfo?.groupName}
+          budgetMemberCount={sharedBudgetInfo?.members?.length}
+          onAddTraining={() => setIsTrainingDialogOpen(true)}
+          onAddCredit={() => setIsCreditModalOpen(true)}
+        />
+      </div>
 
       {/* SECTION 2.5: Personal Records */}
-      <ClientPRsCard clientId={client.id} />
+      <div id="section-prs">
+        <ClientPRsCard clientId={client.id} />
+      </div>
 
       {/* SECTION 2.6: Weekly Goals */}
-      <ClientWeeklyGoals clientId={client.id} />
+      <div id="section-goals">
+        <ClientWeeklyGoals clientId={client.id} />
+      </div>
 
       {/* SECTION 2.7: Workout Diary */}
-      <ClientWorkoutDiary clientId={client.id} clientName={client.name} />
+      <div id="section-diary">
+        <ClientWorkoutDiary clientId={client.id} clientName={client.name} />
+      </div>
 
       {/* SECTION 3: Training History (Primary) */}
-      <ClientTrainingHistory
-        clientId={client.id}
-        sessions={sessions}
-        isSharedBudget={isSharedBudget}
-        budgetGroupName={sharedBudgetInfo?.groupName}
-      />
+      <div id="section-credit">
+        <ClientTrainingHistory
+          clientId={client.id}
+          sessions={sessions}
+          isSharedBudget={isSharedBudget}
+          budgetGroupName={sharedBudgetInfo?.groupName}
+        />
+      </div>
 
       {/* SECTION 4: Credit History (Primary) */}
       <ClientCreditHistory
@@ -285,6 +311,7 @@ export default function ClientDetail() {
           budgetGroupId={sharedBudgetInfo?.groupId}
           onArchive={handleArchive}
           defaultExpanded={false}
+          portalAccess={portalAccess}
         />
       </div>
 
