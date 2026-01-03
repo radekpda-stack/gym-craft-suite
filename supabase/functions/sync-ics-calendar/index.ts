@@ -408,9 +408,17 @@ serve(async (req) => {
         .eq('id', feedId);
 
       try {
+        // Convert webcal:// to https:// (webcal is just a URI scheme for calendar apps)
+        let fetchUrl = feed.ics_url;
+        if (fetchUrl.startsWith('webcal://')) {
+          fetchUrl = fetchUrl.replace('webcal://', 'https://');
+        } else if (fetchUrl.startsWith('webcals://')) {
+          fetchUrl = fetchUrl.replace('webcals://', 'https://');
+        }
+        
         // Fetch ICS content
-        console.log(`[ICS Sync] Fetching ICS from: ${feed.ics_url}`);
-        const icsResponse = await fetch(feed.ics_url);
+        console.log(`[ICS Sync] Fetching ICS from: ${fetchUrl}`);
+        const icsResponse = await fetch(fetchUrl);
         
         if (!icsResponse.ok) {
           throw new Error(`Failed to fetch ICS: ${icsResponse.status}`);
