@@ -218,10 +218,14 @@ export default function ClientPortalRewards() {
       {/* Info */}
       <Card className="bg-muted/50">
         <CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground text-center">
-            💡 Věrnostní body získáváš za nákupy v obchodě. 
-            Odměny budou brzy k dispozici!
-          </p>
+          <div className="space-y-2 text-sm text-muted-foreground text-center">
+            <p>
+              💡 Věrnostní body (LP) získáváš za tréninky, splněné výzvy a další aktivity.
+            </p>
+            <p>
+              Čím víc trénuješ, tím víc bodů získáš! Odměny budou brzy k dispozici.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

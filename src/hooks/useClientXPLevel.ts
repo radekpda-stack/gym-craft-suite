@@ -12,7 +12,7 @@ export interface ClientXPLevel {
   updated_at: string;
 }
 
-// Level names for display
+// Level names for display (extended to level 20)
 export const LEVEL_NAMES: Record<number, string> = {
   1: 'Nováček',
   2: 'Začátečník',
@@ -24,6 +24,16 @@ export const LEVEL_NAMES: Record<number, string> = {
   8: 'Mistr',
   9: 'Legenda',
   10: 'Hrdina',
+  11: 'Titán',
+  12: 'Gladiátor',
+  13: 'Válečník',
+  14: 'Elita',
+  15: 'Fénix',
+  16: 'Nesmrtelný',
+  17: 'Démon',
+  18: 'Bůh Fitness',
+  19: 'Olympionik',
+  20: 'Absolutní Šampion',
 };
 
 export function getLevelName(level: number): string {

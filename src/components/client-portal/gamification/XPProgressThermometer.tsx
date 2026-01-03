@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Flame, Trophy, Target, HelpCircle } from 'lucide-react';
+import { Zap, Flame, Trophy, Target, HelpCircle, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientXPLevel, useClientStreak, getLevelName } from '@/hooks/useClientXPLevel';
 import { useClientBadges } from '@/hooks/useClientGamification';
 import { useClientPRStats } from '@/hooks/useClientPRs';
@@ -54,9 +55,10 @@ export function XPProgressThermometer({ clientId }: XPProgressThermometerProps) 
     {
       icon: Flame,
       value: streak?.currentStreak ?? 0,
-      label: 'Dní v řadě',
+      label: 'Týdnů v řadě',
       color: 'text-orange-500',
       bgColor: 'bg-orange-500/10',
+      tooltip: 'Streak se počítá jako počet po sobě jdoucích týdnů, kdy jsi alespoň jednou trénoval/a.',
     },
     {
       icon: Zap,
@@ -159,14 +161,14 @@ export function XPProgressThermometer({ clientId }: XPProgressThermometerProps) 
                 const Icon = stat.icon;
                 const displayValue = stat.formatValue ? stat.formatValue(stat.value) : stat.value;
                 
-                return (
+                const content = (
                   <motion.div
                     key={stat.label}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-xl",
+                      "flex flex-col items-center justify-center p-3 rounded-xl cursor-default",
                       stat.bgColor
                     )}
                   >
@@ -175,6 +177,23 @@ export function XPProgressThermometer({ clientId }: XPProgressThermometerProps) 
                     <span className="text-[10px] text-muted-foreground">{stat.label}</span>
                   </motion.div>
                 );
+                
+                if (stat.tooltip) {
+                  return (
+                    <TooltipProvider key={stat.label}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {content}
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[200px] text-xs">
+                          <p>{stat.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                
+                return content;
               })}
             </div>
           </div>
