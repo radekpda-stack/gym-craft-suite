@@ -250,18 +250,43 @@ Deno.serve(async (req: Request) => {
         console.log(`[calculate-xp] Client ${client_id} leveled up from ${oldLevel} to ${newLevel}!`);
       }
 
-      // Check for newly earned badges
+      // Check for newly earned badges and award XP bonus
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { data: recentBadges } = await supabase
         .from('client_badges')
         .select('badge_id, earned_at, badge_definitions!inner(name, icon_key, rarity, xp_bonus)')
         .eq('client_id', client_id)
         .not('earned_at', 'is', null)
-        .order('earned_at', { ascending: false })
-        .limit(3);
+        .gte('earned_at', fiveMinutesAgo);
 
-      // Filter badges earned in last 5 minutes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const newBadges = recentBadges?.filter(b => b.earned_at && b.earned_at > fiveMinutesAgo) || [];
+      // Award XP for newly earned badges
+      for (const badge of recentBadges || []) {
+        const xpBonus = (badge.badge_definitions as any)?.xp_bonus || 0;
+        if (xpBonus > 0) {
+          // Check if XP was already awarded for this badge
+          const { data: existingBadgeXP } = await supabase
+            .from('xp_events')
+            .select('id')
+            .eq('client_id', client_id)
+            .eq('source_type', 'badge_earned')
+            .eq('source_id', badge.badge_id)
+            .single();
+
+          if (!existingBadgeXP) {
+            const badgeName = (badge.badge_definitions as any)?.name || badge.badge_id;
+            await supabase.from('xp_events').insert({
+              client_id,
+              source_type: 'badge_earned',
+              source_id: badge.badge_id,
+              xp_amount: xpBonus,
+              description: `Odznak: ${badgeName}`,
+            });
+            console.log(`[calculate-xp] Awarded ${xpBonus} XP for badge: ${badgeName}`);
+          }
+        }
+      }
+
+      const newBadges = recentBadges || [];
 
       // Track activity
       await supabase.from('client_portal_activity').insert({
