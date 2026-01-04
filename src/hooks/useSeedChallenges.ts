@@ -87,6 +87,139 @@ const MVP_CHALLENGES: SeedChallenge[] = [
     scoring_type: 'value_higher_better',
     unit_label: 'reps',
   },
+  // NEW CHALLENGES
+  {
+    title: 'Burpee AMRAP 5 min',
+    description: 'Kolik burpees zvládneš za 5 minut? Klasický test kondice.',
+    instructions: `• Plný burpee: hrudník na zem, výskok s tlesknutím nad hlavou
+• Čas běží nepřetržitě 5 minut
+• Pauzy povoleny, ale čas běží
+• Počítá se celkový počet dokončených opakování
+• Hrudník musí lehce klesat na zem`,
+    primary_metric: 'reps',
+    scoring_type: 'value_higher_better',
+    unit_label: 'reps',
+  },
+  {
+    title: 'Deadlift 1RM Test',
+    description: 'Zjisti své maximum v mrtvém tahu.',
+    instructions: `• Důkladný warm-up min 15 minut
+• Postupně zvyšuj váhu: 50% → 70% → 85% → 95% → pokus o max
+• Konvenční nebo sumo styl (zapiš do poznámky)
+• Počítá se nejvyšší úspěšně zvednutá váha
+• Bezpečnost: používej pojistky nebo spotter`,
+    primary_metric: 'weight_kg',
+    scoring_type: 'value_higher_better',
+    unit_label: 'kg',
+  },
+  {
+    title: 'KB Swing 100 reps',
+    description: '100 kettlebell swingů na čas.',
+    instructions: `• Váha: 16 kg (ženy) / 24 kg (muži)
+• Russian swing (do úrovně očí)
+• Pauzy povoleny, čas běží
+• Počítá se čas dokončení 100 swingů
+• Kettlebell musí dosáhnout min. úrovně ramen`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'time_lower_better',
+    unit_label: 'sec',
+  },
+  {
+    title: 'Box Jump Max Height',
+    description: 'Maximální výška skoku na bednu.',
+    instructions: `• Warm-up a postupné zvyšování výšky
+• Měkké dosednutí, plné napnutí v horní pozici
+• Seskok nebo sestup dolů (ne skok dozadu)
+• Počítá se nejvyšší úspěšná výška
+• 3 pokusy na každou výšku`,
+    primary_metric: 'distance_m',
+    scoring_type: 'value_higher_better',
+    unit_label: 'cm',
+  },
+  {
+    title: 'Assault Bike Calorie Burn',
+    description: '30 kalorií na assault bike na čas.',
+    instructions: `• Start z klidu
+• Spálení 30 kalorií co nejrychleji
+• Celé tělo musí pracovat (ruce i nohy)
+• Počítá se čas dokončení
+• Warm-up 2-3 min před pokusem`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'time_lower_better',
+    unit_label: 'sec',
+  },
+  {
+    title: 'Push-up Max in 1 Min',
+    description: 'Maximální počet kliků za 1 minutu.',
+    instructions: `• Plný rozsah pohybu: hrudník k zemi, plné napnutí paží
+• Žádné kolena na zemi
+• Pauzy povoleny, ale čas běží
+• Počítá se počet čistých opakování
+• Doporučeno: video pro kontrolu techniky`,
+    primary_metric: 'reps',
+    scoring_type: 'value_higher_better',
+    unit_label: 'reps',
+  },
+  {
+    title: 'Farmers Carry Distance',
+    description: 'Maximální vzdálenost s kettlebelly za 2 minuty.',
+    instructions: `• Váha: 2x 16 kg (ženy) / 2x 24 kg (muži)
+• Chůze po označené trase (např. 20m tam a zpět)
+• Položení = konec pokusu
+• Čas 2 minuty, počítá se vzdálenost
+• Rovná záda, ramena dozadu`,
+    primary_metric: 'distance_m',
+    scoring_type: 'value_higher_better',
+    unit_label: 'm',
+  },
+  {
+    title: 'Double Under Challenge',
+    description: '50 double unders na čas.',
+    instructions: `• Double unders = 2 protočení švihadla na 1 skok
+• Počítá se čas dokončení 50 opakování
+• Single unders se nepočítají
+• Zakopnutí = pokračuj, čas běží
+• Pro pokročilé skákače`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'time_lower_better',
+    unit_label: 'sec',
+  },
+  {
+    title: 'Turkish Get-up Challenge',
+    description: '10 turkish get-upů na čas (5+5).',
+    instructions: `• Váha: 8 kg (ženy) / 16 kg (muži)
+• 5 na každou stranu, střídej
+• Počítá se čas dokončení 10 opakování
+• Kontrolované pohyby, bezpečnost první
+• Kettlebell musí zůstat stabilní nad hlavou`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'time_lower_better',
+    unit_label: 'sec',
+  },
+  {
+    title: 'Row 2000m',
+    description: 'Veslování na 2000 metrů na čas. Ultimátní test vytrvalosti.',
+    instructions: `• Start z klidu
+• Damper nastavení dle preference (4-7)
+• Warm-up min 5 minut
+• Počítá se čas dokončení 2000m
+• Pacing strategie: vydrž první půlku!`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'time_lower_better',
+    unit_label: 'sec',
+  },
+  {
+    title: 'Squat Hold Challenge',
+    description: 'Maximální výdrž v dolní pozici dřepu.',
+    instructions: `• Pozice: hluboký dřep, stehna pod paralelu
+• Paty na zemi, rovná záda
+• Ruce mohou být před tělem pro rovnováhu
+• Čas běží do ztráty pozice
+• Držení tyče nebo lavičky = neplatné`,
+    primary_metric: 'time_seconds',
+    scoring_type: 'value_higher_better',
+    unit_label: 'sec',
+  },
 ];
 
 export function useSeedChallenges() {
