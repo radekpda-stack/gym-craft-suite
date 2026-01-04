@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays, subMonths, format, startOfMonth } from "date-fns";
 
-export type SalesPeriod = '30days' | '6months' | '12months';
+export type SalesPeriod = '30days' | '6months' | '12months' | 'all';
 
 export interface SalesStats {
   totalRevenue: number;
@@ -73,7 +73,7 @@ export function useSalesTrend(period: SalesPeriod) {
   return useQuery({
     queryKey: ["sales_trend", period],
     queryFn: async () => {
-      let startDate: Date;
+      let startDate: Date | null = null;
       let groupByFormat: string;
       
       switch (period) {
@@ -89,14 +89,22 @@ export function useSalesTrend(period: SalesPeriod) {
           startDate = subMonths(new Date(), 12);
           groupByFormat = 'yyyy-MM';
           break;
+        case 'all':
+          startDate = null;
+          groupByFormat = 'yyyy-MM';
+          break;
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("credit_transactions")
         .select("amount, created_at")
-        .eq("type", "product")
-        .gte("created_at", startDate.toISOString())
-        .order("created_at", { ascending: true });
+        .eq("type", "product");
+      
+      if (startDate) {
+        query = query.gte("created_at", startDate.toISOString());
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: true });
 
       if (error) throw error;
 

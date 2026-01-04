@@ -106,6 +106,21 @@ export function useProfitByPeriod(period: ProfitPeriod) {
         });
       }
 
+      if (period === "all") {
+        // Find oldest transaction date or default to 24 months
+        const oldestDate = transactions && transactions.length > 0
+          ? new Date(transactions[0].created_at)
+          : subMonths(now, 24);
+        
+        const months = eachMonthOfInterval({ start: startOfMonth(oldestDate), end: now });
+        return months.map(month => {
+          const monthStart = startOfMonth(month);
+          const monthEnd = endOfMonth(month);
+          const label = format(month, "MMM yy", { locale: cs });
+          return calculatePeriodData(monthStart, monthEnd, label);
+        });
+      }
+
       return [];
     },
   });

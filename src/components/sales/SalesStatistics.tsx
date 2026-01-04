@@ -45,13 +45,14 @@ import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { ProductSalesDetailModal } from './ProductSalesDetailModal';
 
-type Period = 'today' | 'week' | 'month' | 'year';
+type Period = 'today' | 'week' | 'month' | 'year' | 'all';
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: 'today', label: 'Dnes' },
   { value: 'week', label: 'Tento týden' },
   { value: 'month', label: 'Tento měsíc' },
   { value: 'year', label: 'Tento rok' },
+  { value: 'all', label: 'Vše' },
 ];
 
 const CHART_COLORS = [
@@ -87,7 +88,7 @@ function useCombinedSalesStats(period: Period) {
     queryKey: ['combined_sales_stats', period],
     queryFn: async () => {
       const now = new Date();
-      let fromDate: Date;
+      let fromDate: Date | null = null;
 
       switch (period) {
         case 'today':
@@ -102,14 +103,22 @@ function useCombinedSalesStats(period: Period) {
         case 'year':
           fromDate = subMonths(now, 12);
           break;
+        case 'all':
+          fromDate = null;
+          break;
       }
 
       // Try new sales_orders first
-      const { data: orders } = await supabase
+      let ordersQuery = supabase
         .from('sales_orders')
         .select('id, total_amount, payment_method, payment_status, created_at')
-        .gte('created_at', fromDate.toISOString())
         .eq('payment_status', 'completed');
+      
+      if (fromDate) {
+        ordersQuery = ordersQuery.gte('created_at', fromDate.toISOString());
+      }
+      
+      const { data: orders } = await ordersQuery;
 
       // Get order items if we have orders - include product for purchase_price
       let orderItems: any[] = [];
@@ -124,11 +133,16 @@ function useCombinedSalesStats(period: Period) {
       // Fallback to credit_transactions if no orders
       let legacySales: any[] = [];
       if (!orders || orders.length === 0) {
-        const { data: transactions } = await supabase
+        let legacyQuery = supabase
           .from('credit_transactions')
           .select('*, products(id, name, price, category, purchase_price)')
-          .eq('type', 'product')
-          .gte('created_at', fromDate.toISOString());
+          .eq('type', 'product');
+        
+        if (fromDate) {
+          legacyQuery = legacyQuery.gte('created_at', fromDate.toISOString());
+        }
+        
+        const { data: transactions } = await legacyQuery;
         legacySales = transactions || [];
       }
 

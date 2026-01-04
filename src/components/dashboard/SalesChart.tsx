@@ -65,7 +65,7 @@ export function SalesChart() {
           </div>
         </div>
         <div className="flex gap-1 flex-wrap">
-          {(['30days', '6months', '12months'] as SalesPeriod[]).map((p) => (
+          {(['30days', '6months', '12months', 'all'] as SalesPeriod[]).map((p) => (
             <Button
               key={p}
               variant={period === p ? 'default' : 'ghost'}
@@ -73,7 +73,7 @@ export function SalesChart() {
               onClick={() => setPeriod(p)}
               className="text-xs"
             >
-              {p === '30days' ? '30 dní' : p === '6months' ? '6 měsíců' : '12 měsíců'}
+              {p === '30days' ? '30 dní' : p === '6months' ? '6 měsíců' : p === '12months' ? '12 měsíců' : 'Vše'}
             </Button>
           ))}
         </div>
