@@ -74,7 +74,7 @@ export function SalesRegister() {
   const sortedProducts = useMemo(() => {
     let result = [...products];
 
-    // Filter out of stock if enabled
+    // Filter out of stock if enabled (only applies to inventory items)
     if (hideOutOfStock) {
       result = result.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
     }
