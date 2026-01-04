@@ -290,15 +290,13 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
           ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
-          ...(isModuleEnabled('challenges') ? [{ id: 'challenges', to: '/challenges', icon: Trophy, label: 'Výzvy', badge: pendingSubmissionsCount }] : []),
         ],
       },
       {
         label: 'Záznamy',
         items: [
-          { id: 'exercises', to: '/exercises', icon: Target, label: 'Cviky' },
+          { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
           { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-          ...(isModuleEnabled('tests') ? [{ id: 'tests', to: '/tests', icon: ClipboardCheck, label: 'Testy' }] : []),
           ...(isModuleEnabled('nutrition') ? [{
             id: 'nutrition',
             to: '/nutrition',

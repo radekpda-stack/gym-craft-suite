@@ -44,11 +44,10 @@ const AppUsageStats = lazy(() => import("./pages/AppUsageStats"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const PreDiagnosticFormPage = lazy(() => import("./pages/PreDiagnosticFormPage"));
 const ClientIntakePage = lazy(() => import("./pages/ClientIntakePage"));
-const Exercises = lazy(() => import("./pages/Exercises"));
+const PerformanceHub = lazy(() => import("./pages/PerformanceHub"));
 const ExerciseDetail = lazy(() => import("./pages/ExerciseDetail"));
 const ExerciseAnalytics = lazy(() => import("./pages/ExerciseAnalytics"));
 const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
-const Tests = lazy(() => import("./pages/Tests"));
 const TestDetail = lazy(() => import("./pages/TestDetail"));
 const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
 const NutritionPage = lazy(() => import("./pages/NutritionPage"));
@@ -56,7 +55,6 @@ const NutritionCampaignDetail = lazy(() => import("./pages/NutritionCampaignDeta
 const NutritionClientDetail = lazy(() => import("./pages/NutritionClientDetail"));
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
-const Challenges = lazy(() => import("./pages/Challenges"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
 
 // Lazy loaded pages - Client Portal
@@ -185,17 +183,19 @@ const App = () => (
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/statistics/analytics" element={<FinanceAnalytics />} />
                           <Route path="/clients/analytics" element={<ClientAnalytics />} />
-                          <Route path="/exercises" element={<Exercises />} />
+                          <Route path="/performance" element={<PerformanceHub />} />
+                          <Route path="/exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
                           <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
                           <Route path="/exercises/:id" element={<ExerciseDetail />} />
-                          <Route path="/tests" element={<Tests />} />
+                          <Route path="/tests" element={<Navigate to="/performance?tab=tests" replace />} />
                           <Route path="/tests/:id" element={<TestDetail />} />
+                          <Route path="/challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
                           <Route path="/nutrition" element={<NutritionPage />} />
                           <Route path="/nutrition/client/:clientId" element={<NutritionClientDetail />} />
                           <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />
-                          <Route path="/challenges" element={<Challenges />} />
+                          
                           <Route path="/my-profile" element={<MyProfile />} />
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
                           <Route path="*" element={<NotFound />} />
