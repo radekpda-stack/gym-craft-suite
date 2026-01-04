@@ -37,7 +37,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time'>('date');
-  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editEntry, setEditEntry] = useState<{ id: string; metricCategory: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-history', exerciseId, clientId, sortBy],
@@ -318,7 +318,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditEntryId(row.id);
+                        setEditEntry({ id: row.id, metricCategory: data?.metricCategory ?? 'strength' });
                       }}
                       aria-label="Upravit záznam"
                       title="Upravit záznam"
@@ -368,9 +368,10 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       </Card>
 
       <EditExerciseEntryDialog
-        entryId={editEntryId}
-        open={!!editEntryId}
-        onOpenChange={(open) => !open && setEditEntryId(null)}
+        entryId={editEntry?.id ?? null}
+        metricCategory={editEntry?.metricCategory ?? null}
+        open={!!editEntry}
+        onOpenChange={(open) => !open && setEditEntry(null)}
       />
     </>
   );

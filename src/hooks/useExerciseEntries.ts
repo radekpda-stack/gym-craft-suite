@@ -199,8 +199,15 @@ export function useExerciseEntries(clientId?: string) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      // Broad invalidation to refresh all screens that may show the edited entry
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise-entry', vars?.id] });
+
       toast({ title: 'Záznam aktualizován', description: 'Změny byly uloženy.' });
     },
     onError: () => {
