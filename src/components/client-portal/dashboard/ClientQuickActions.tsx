@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Dumbbell, Scale, CalendarDays, Utensils, MessageCircle, Award, Trophy } from 'lucide-react';
+import { Dumbbell, Scale, CalendarDays, MessageCircle, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -55,14 +55,6 @@ const quickActions: QuickAction[] = [
     path: '/attendance',
     color: 'text-indigo-500',
     bgColor: 'bg-indigo-500/10 hover:bg-indigo-500/20',
-  },
-  {
-    id: 'rewards',
-    label: 'Odměny',
-    icon: <Award className="w-5 h-5" />,
-    path: '/rewards',
-    color: 'text-pink-500',
-    bgColor: 'bg-pink-500/10 hover:bg-pink-500/20',
   },
 ];
 
