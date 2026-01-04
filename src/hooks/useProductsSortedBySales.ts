@@ -20,6 +20,7 @@ interface DbProduct {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  xp_bonus: number;
 }
 
 export function useProductsSortedBySales(activeOnly = false) {
