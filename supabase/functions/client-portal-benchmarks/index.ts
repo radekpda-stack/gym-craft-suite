@@ -201,9 +201,11 @@ serve(async (req) => {
           ? data.monthlyWorkouts 
           : data.totalWorkouts;
 
+        // Only show nickname if client opted in AND has set a nickname
+        // Never show real name - always use anonymous name as fallback
         let nickname: string;
-        if (isVisible) {
-          nickname = clientSettings?.leaderboard_nickname || client?.name || 'Aktivní sportovec';
+        if (isVisible && clientSettings?.leaderboard_nickname) {
+          nickname = clientSettings.leaderboard_nickname;
         } else {
           nickname = generateAnonymousName(cid);
         }
@@ -455,8 +457,9 @@ serve(async (req) => {
 
             return {
               client_id: cid,
-              nickname: isVisible 
-                ? (setting?.leaderboard_nickname || client?.name || 'Anonym')
+              // Only show nickname if client opted in AND has set a nickname
+              nickname: (isVisible && setting?.leaderboard_nickname) 
+                ? setting.leaderboard_nickname
                 : generateAnonymousName(cid),
               best_value: data.weight,
               display_value: `${data.weight} kg`,
@@ -544,8 +547,9 @@ serve(async (req) => {
 
             return {
               client_id: cid,
-              nickname: isVisible 
-                ? (setting?.leaderboard_nickname || client?.name || 'Anonym')
+              // Only show nickname if client opted in AND has set a nickname
+              nickname: (isVisible && setting?.leaderboard_nickname) 
+                ? setting.leaderboard_nickname
                 : generateAnonymousName(cid),
               best_value: data.value,
               display_value: displayValue,
