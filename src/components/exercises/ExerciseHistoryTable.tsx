@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { History, Loader2, ChevronLeft, ChevronRight, Trophy, ExternalLink } from 'lucide-react';
+import { History, Loader2, ChevronLeft, ChevronRight, Trophy, ExternalLink, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { detectExerciseMetricCategory, getPerformanceDisplay, getRpeBgColor } from '@/lib/exerciseMetrics';
-import { formatTimeMs, getTimeMs } from '@/lib/timeUtils';
+import { formatTimeMs } from '@/lib/timeUtils';
+import { EditExerciseEntryDialog } from './EditExerciseEntryDialog';
 
 interface ExerciseHistoryTableProps {
   exerciseId: string;
@@ -36,6 +37,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time'>('date');
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-history', exerciseId, clientId, sortBy],
@@ -187,8 +189,9 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   const isTimeBased = data.isTimeBased;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <History className="h-5 w-5 text-primary" />
@@ -235,6 +238,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                     <TableHead className="max-w-[150px]">Poznámka</TableHead>
                   </>
                 )}
+                <TableHead className="w-[40px]"></TableHead>
                 <TableHead className="w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -308,6 +312,21 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                     </>
                   )}
                   <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditEntryId(row.id);
+                      }}
+                      aria-label="Upravit záznam"
+                      title="Upravit záznam"
+                    >
+                      <Edit2 className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </TableCell>
+                  <TableCell>
                     <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   </TableCell>
                 </TableRow>
@@ -346,6 +365,13 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+
+      <EditExerciseEntryDialog
+        entryId={editEntryId}
+        open={!!editEntryId}
+        onOpenChange={(open) => !open && setEditEntryId(null)}
+      />
+    </>
   );
 }

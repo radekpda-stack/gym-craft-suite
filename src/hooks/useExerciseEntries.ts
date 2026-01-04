@@ -14,6 +14,8 @@ export interface ExerciseEntry {
   weight_kg: number | null;
   is_bodyweight: boolean;
   time_seconds: number | null;
+  /** High-precision time in milliseconds (preferred when available) */
+  time_ms?: number | null;
   tempo: string | null;
   notes: string | null;
   is_pr: boolean;

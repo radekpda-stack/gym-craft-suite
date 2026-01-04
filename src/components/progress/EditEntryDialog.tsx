@@ -54,22 +54,24 @@ export function EditEntryDialog({ entry, open, onOpenChange }: EditEntryDialogPr
   
   const handleSave = async () => {
     if (!entry) return;
-    
+
     const timeSeconds = msToSeconds(timeMs);
-    
+
     await updateEntry.mutateAsync({
       id: entry.id,
+      date,
       sets,
       reps: reps ? parseInt(reps, 10) : null,
       weight_kg: weightKg ? parseFloat(weightKg) : null,
-      time_seconds: timeSeconds,
       is_bodyweight: isBodyweight,
+      // Save both legacy seconds and high-precision ms
+      time_seconds: timeSeconds,
+      time_ms: timeMs,
       tempo: tempo || null,
       notes: notes || null,
       distance_meters: distanceMeters ? parseInt(distanceMeters, 10) : null,
-      date,
     });
-    
+
     onOpenChange(false);
   };
   
