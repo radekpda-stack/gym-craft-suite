@@ -43,6 +43,7 @@ import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientChatSection } from '@/components/clients/ClientChatSection';
+import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
@@ -253,6 +254,12 @@ export default function ClientDetail() {
       icon: SECTION_ICONS.measurements,
       title: 'Osobní rekordy',
       children: <div id="section-prs"><ClientPRsCard clientId={client.id} /></div>,
+    },
+    {
+      id: 'training-analytics',
+      icon: SECTION_ICONS.feedback,
+      title: 'Analytika tréninků',
+      children: <div id="section-training-analytics"><ClientTagAnalyticsCard clientId={client.id} /></div>,
     },
     {
       id: 'nutrition',
