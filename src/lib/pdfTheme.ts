@@ -1,4 +1,4 @@
-// PDF Theme utilities for dynamic colors based on app theme
+// PDF Theme utilities - Elegant dark colors on white background
 
 export type ThemeId = 
   | 'theme-nike' 
@@ -21,81 +21,30 @@ export interface PdfColors {
   border: [number, number, number];
 }
 
-// HSL to RGB conversion
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  s /= 100;
-  l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color);
-  };
-  return [f(0), f(8), f(4)];
-}
-
-// Theme color mappings
-const themeColors: Record<ThemeId, { primary: [number, number, number]; primaryDark: [number, number, number]; primaryLight: [number, number, number]; border: [number, number, number] }> = {
-  // Nike - Orange (HSL: 24 95% 53%)
-  'theme-nike': {
-    primary: hslToRgb(24, 95, 53),
-    primaryDark: hslToRgb(24, 95, 43),
-    primaryLight: hslToRgb(24, 95, 63),
-    border: hslToRgb(24, 50, 80),
-  },
-  // Nike Volt - Neon Green (HSL: 66 100% 50%)
-  'theme-nike-volt': {
-    primary: hslToRgb(66, 100, 50),
-    primaryDark: hslToRgb(66, 100, 40),
-    primaryLight: hslToRgb(66, 100, 60),
-    border: hslToRgb(66, 50, 80),
-  },
-  // Arctic Pro - Cyan (HSL: 190 100% 50%)
-  'theme-arctic-pro': {
-    primary: hslToRgb(190, 100, 50),
-    primaryDark: hslToRgb(190, 100, 40),
-    primaryLight: hslToRgb(190, 100, 60),
-    border: hslToRgb(190, 50, 80),
-  },
-  // Light Minimal - Blue (HSL: 221 83% 53%)
-  'theme-light-minimal': {
-    primary: hslToRgb(221, 83, 53),
-    primaryDark: hslToRgb(221, 83, 43),
-    primaryLight: hslToRgb(221, 83, 63),
-    border: hslToRgb(221, 50, 85),
-  },
-  // Frost Minimal - Sky Blue (HSL: 199 89% 48%)
-  'theme-frost-minimal': {
-    primary: hslToRgb(199, 89, 48),
-    primaryDark: hslToRgb(199, 89, 38),
-    primaryLight: hslToRgb(199, 89, 58),
-    border: hslToRgb(199, 50, 80),
-  },
-  // Default (Arctic Pro)
-  'default': {
-    primary: hslToRgb(190, 100, 50),
-    primaryDark: hslToRgb(190, 100, 40),
-    primaryLight: hslToRgb(190, 100, 60),
-    border: hslToRgb(190, 50, 80),
-  },
-};
-
 /**
- * Get PDF colors based on the current app theme
+ * Elegant PDF colors - dark, sophisticated, luxurious
+ * Consistent across all themes for professional look
  */
-export function getPdfColorsFromTheme(themeId?: string): PdfColors {
-  const theme = (themeId as ThemeId) || 'default';
-  const colors = themeColors[theme] || themeColors['default'];
-
+export function getPdfColorsFromTheme(_themeId?: string): PdfColors {
+  // Elegant dark color palette - consistent for all themes
   return {
-    ...colors,
-    // Standard colors for light PDF background
-    text: [15, 23, 42], // slate-900
-    textMuted: [100, 116, 139], // slate-500
-    textLight: [148, 163, 184], // slate-400
-    background: [250, 250, 250], // neutral-50
-    backgroundAlt: [245, 245, 245], // neutral-100
+    // Dark slate as primary - sophisticated and elegant
+    primary: [30, 41, 59],       // slate-800 - deep, elegant
+    primaryDark: [15, 23, 42],   // slate-900 - darkest
+    primaryLight: [51, 65, 85],  // slate-700 - slightly lighter
+    
+    // Text colors - crisp and readable
+    text: [15, 23, 42],          // slate-900 - main text
+    textMuted: [71, 85, 105],    // slate-600 - secondary text
+    textLight: [100, 116, 139],  // slate-500 - light text
+    
+    // Backgrounds - clean white base
+    background: [248, 250, 252], // slate-50 - subtle off-white
+    backgroundAlt: [241, 245, 249], // slate-100 - alternating rows
     white: [255, 255, 255],
+    
+    // Borders - subtle and refined
+    border: [226, 232, 240],     // slate-200
   };
 }
 

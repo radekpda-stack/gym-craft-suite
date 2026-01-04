@@ -123,8 +123,8 @@ const FONTS = {
   tiny: 8,
 };
 
-// Font family to use (helvetica is built-in and reliable)
-const FONT_FAMILY = "helvetica";
+// Font family to use (Roboto with Czech diacritics support)
+const FONT_FAMILY = "Roboto";
 
 // Fallback for filename (remove diacritics for safe filenames)
 function sanitizeFilename(text: string): string {
