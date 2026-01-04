@@ -23,7 +23,6 @@ import {
   Boxes,
   Dumbbell,
   Paintbrush,
-  UserCircle,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -32,7 +31,7 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
-import { TrainerProfileSettings } from '@/components/settings/TrainerProfileSettings';
+
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { DataExport } from '@/components/settings/DataExport';
@@ -118,16 +117,6 @@ export default function Settings() {
       case 'account':
         return (
           <>
-            <SettingsSection
-              title={language === 'cs' ? 'Můj profil trenéra' : 'My Trainer Profile'}
-              description={language === 'cs' 
-                ? 'Vaše osobní údaje, fotka a odbornost' 
-                : 'Your personal details, photo and expertise'}
-              icon={UserCircle}
-            >
-              <TrainerProfileSettings />
-            </SettingsSection>
-
             <SettingsSection
               title={language === 'cs' ? 'Změna hesla' : 'Change Password'}
               description={language === 'cs' 
