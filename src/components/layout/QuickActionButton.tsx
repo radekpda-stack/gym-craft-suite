@@ -49,7 +49,7 @@ export function QuickActionButton() {
 
   // These pages have their own context-aware FAB.
   // Rendering both FABs causes overlap on mobile.
-  const hiddenRoutes = ['/calendar', '/trainings', '/exercises'];
+  const hiddenRoutes = ['/calendar', '/trainings', '/exercises', '/performance'];
   if (hiddenRoutes.some(route => location.pathname.startsWith(route))) {
     return null;
   }

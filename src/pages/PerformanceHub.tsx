@@ -65,7 +65,7 @@ export default function PerformanceHub() {
         </TabsList>
 
         <TabsContent value="exercises" className="mt-6">
-          <ExercisesContent />
+          <ExercisesContent isActive={activeTab === 'exercises'} />
         </TabsContent>
 
         {testsEnabled && (

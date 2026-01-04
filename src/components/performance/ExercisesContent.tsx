@@ -9,7 +9,11 @@ import { QuickLogDialog } from '@/components/exercises/QuickLogDialog';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-export function ExercisesContent() {
+interface ExercisesContentProps {
+  isActive?: boolean;
+}
+
+export function ExercisesContent({ isActive = true }: ExercisesContentProps) {
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<string>('list');
   const [showCreateExercise, setShowCreateExercise] = useState(false);
@@ -65,8 +69,8 @@ export function ExercisesContent() {
         onOpenChange={setShowQuickLog}
       />
 
-      {/* Floating Action Button with multiple actions */}
-      {activeTab === 'list' && (
+      {/* Floating Action Button - only show when this tab is active */}
+      {isActive && activeTab === 'list' && (
         <FloatingActionButton
           actions={[
             {
