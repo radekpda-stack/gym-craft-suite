@@ -490,8 +490,20 @@ serve(async (req) => {
         const syncFromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date();
         syncFromDate.setMonth(syncFromDate.getMonth() - 1);
         
-        const filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
+        // Filter by date first
+        let filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
         console.log(`[ICS Sync] ${filteredEvents.length} events after date filter`);
+        
+        // Filter by import tag if configured
+        const importFilterTag = feed.import_filter_tag?.trim();
+        if (importFilterTag) {
+          const tagLower = importFilterTag.toLowerCase();
+          filteredEvents = filteredEvents.filter(e => {
+            const summary = (e.summary || '').toLowerCase();
+            return summary.includes(tagLower);
+          });
+          console.log(`[ICS Sync] ${filteredEvents.length} events after tag filter "${importFilterTag}"`);
+        }
 
         const { data: clients } = await supabase
           .from('clients')

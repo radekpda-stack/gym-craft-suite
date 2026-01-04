@@ -472,6 +472,7 @@ export type Database = {
           events_synced: number | null
           ics_url: string
           id: string
+          import_filter_tag: string | null
           is_active: boolean | null
           last_sync_at: string | null
           last_sync_error: string | null
@@ -488,6 +489,7 @@ export type Database = {
           events_synced?: number | null
           ics_url: string
           id?: string
+          import_filter_tag?: string | null
           is_active?: boolean | null
           last_sync_at?: string | null
           last_sync_error?: string | null
@@ -504,6 +506,7 @@ export type Database = {
           events_synced?: number | null
           ics_url?: string
           id?: string
+          import_filter_tag?: string | null
           is_active?: boolean | null
           last_sync_at?: string | null
           last_sync_error?: string | null
