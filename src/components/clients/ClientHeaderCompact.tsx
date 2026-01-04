@@ -27,6 +27,7 @@ import {
   Copy,
   AlertTriangle,
   Globe,
+  FileText,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,9 @@ import { Client } from '@/hooks/useClients';
 import { toast } from '@/hooks/use-toast';
 import { ClientDaysSinceBadge } from './ClientDaysSinceBadge';
 import { ClientStreakBadge } from './ClientStreakBadge';
+import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientHeaderCompactProps {
   client: Client;
@@ -54,6 +58,18 @@ export function ClientHeaderCompact({
   redFlagCount = 0,
   lastPortalLogin,
 }: ClientHeaderCompactProps) {
+  // Check if client is in a budget group
+  const { data: budgetGroup } = useQuery({
+    queryKey: ['client-budget-group', client.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('client_budget_members')
+        .select('group_id, client_budget_groups(id, name)')
+        .eq('client_id', client.id)
+        .maybeSingle();
+      return data;
+    },
+  });
   const [isEditingStartDate, setIsEditingStartDate] = useState(false);
   const [startDateInput, setStartDateInput] = useState('');
 
@@ -193,11 +209,37 @@ export function ClientHeaderCompact({
               size="icon"
               className="h-8 w-8"
               onClick={() => handleCopyContact(client.phone || client.email || '', client.phone ? 'Telefon' : 'Email')}
-              title="Kopírovat kontakt"
+            title="Kopírovat kontakt"
             >
               <Copy className="w-3 h-3 text-muted-foreground" />
             </Button>
           )}
+          
+          {/* Export PDF button */}
+          <CreditStatementDialog
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email || undefined}
+            clientPhone={client.phone || undefined}
+            isSharedBudget={!!budgetGroup}
+            budgetGroupId={budgetGroup?.group_id}
+            trigger={
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                  >
+                    <FileText className="w-4 h-4 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Export výpisu do PDF</p>
+                </TooltipContent>
+              </Tooltip>
+            }
+          />
         </div>
       </div>
 
