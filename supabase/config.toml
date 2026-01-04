@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.scheduled-calendar-sync]
 verify_jwt = false
+
+[functions.calculate-nutrition-xp]
+verify_jwt = true

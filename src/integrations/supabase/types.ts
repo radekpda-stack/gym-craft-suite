@@ -5180,6 +5180,48 @@ export type Database = {
           },
         ]
       }
+      nutrition_xp_claims: {
+        Row: {
+          claim_date: string
+          claim_type: string
+          client_id: string
+          created_at: string | null
+          id: string
+          xp_amount: number
+        }
+        Insert: {
+          claim_date: string
+          claim_type: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          xp_amount: number
+        }
+        Update: {
+          claim_date?: string
+          claim_type?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_xp_claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_xp_claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       plan_days: {
         Row: {
           created_at: string | null

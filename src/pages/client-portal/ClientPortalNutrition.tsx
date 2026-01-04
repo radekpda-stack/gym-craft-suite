@@ -23,6 +23,7 @@ import {
   useAddFoodEntry,
 } from '@/hooks/useClientPortalNutrition';
 import { MEAL_LABELS } from '@/components/client-portal/nutrition/constants';
+import { useNutritionXP } from '@/hooks/useNutritionXP';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
@@ -206,6 +207,7 @@ export default function ClientPortalNutrition() {
   const addCoffee = useAddCoffeeEntry();
   const addFood = useAddFoodEntry();
   const deleteEntry = useDeleteNutritionEntryPortal();
+  const nutritionXP = useNutritionXP();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -227,6 +229,9 @@ export default function ClientPortalNutrition() {
       });
       toast.success('+300 ml vody');
       trackPortalEvent('client_portal_quick_water');
+      
+      // Calculate XP for the entry
+      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'drink' });
     } catch (error) {
       toast.error('Nepodařilo se přidat');
     }
@@ -246,6 +251,9 @@ export default function ClientPortalNutrition() {
       });
       toast.success('Káva přidána');
       trackPortalEvent('client_portal_quick_coffee');
+      
+      // Calculate XP for the entry
+      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
     } catch (error) {
       toast.error('Nepodařilo se přidat');
     }
@@ -290,6 +298,9 @@ export default function ClientPortalNutrition() {
       });
       toast.success(`${food.description} přidáno`);
       trackPortalEvent('client_portal_quick_readd_food');
+      
+      // Calculate XP for the entry
+      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'food' });
     } catch (error) {
       toast.error('Nepodařilo se přidat');
     }
