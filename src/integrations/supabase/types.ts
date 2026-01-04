@@ -7587,9 +7587,14 @@ export type Database = {
           id: string
           is_public: boolean | null
           name: string
+          rest_interval_seconds: number | null
+          rounds: number | null
           tags: string[] | null
+          time_cap_seconds: number | null
           updated_at: string
           user_id: string
+          work_interval_seconds: number | null
+          workout_format: string | null
         }
         Insert: {
           category?: string | null
@@ -7599,9 +7604,14 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name: string
+          rest_interval_seconds?: number | null
+          rounds?: number | null
           tags?: string[] | null
+          time_cap_seconds?: number | null
           updated_at?: string
           user_id: string
+          work_interval_seconds?: number | null
+          workout_format?: string | null
         }
         Update: {
           category?: string | null
@@ -7611,9 +7621,14 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name?: string
+          rest_interval_seconds?: number | null
+          rounds?: number | null
           tags?: string[] | null
+          time_cap_seconds?: number | null
           updated_at?: string
           user_id?: string
+          work_interval_seconds?: number | null
+          workout_format?: string | null
         }
         Relationships: []
       }
