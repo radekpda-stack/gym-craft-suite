@@ -183,13 +183,13 @@ const App = () => (
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/statistics/analytics" element={<FinanceAnalytics />} />
                           <Route path="/clients/analytics" element={<ClientAnalytics />} />
-                          <Route path="/performance" element={<PerformanceHub />} />
-                          <Route path="/exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
-                          <Route path="/exercises/analytics" element={<ExerciseAnalytics />} />
-                          <Route path="/exercises/:id" element={<ExerciseDetail />} />
-                          <Route path="/tests" element={<Navigate to="/performance?tab=tests" replace />} />
-                          <Route path="/tests/:id" element={<TestDetail />} />
-                          <Route path="/challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
+                          <Route path="performance" element={<PerformanceHub />} />
+                          <Route path="exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
+                          <Route path="exercises/analytics" element={<ExerciseAnalytics />} />
+                          <Route path="exercises/:id" element={<ExerciseDetail />} />
+                          <Route path="tests" element={<Navigate to="/performance?tab=tests" replace />} />
+                          <Route path="tests/:id" element={<TestDetail />} />
+                          <Route path="challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
                           <Route path="/nutrition" element={<NutritionPage />} />
                           <Route path="/nutrition/client/:clientId" element={<NutritionClientDetail />} />
                           <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
