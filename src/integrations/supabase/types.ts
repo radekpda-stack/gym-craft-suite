@@ -2005,6 +2005,54 @@ export type Database = {
           },
         ]
       }
+      client_section_usage: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          last_opened: string
+          open_count: number
+          section_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          last_opened?: string
+          open_count?: number
+          section_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          last_opened?: string
+          open_count?: number
+          section_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_section_usage_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_section_usage_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_tags: {
         Row: {
           client_id: string
