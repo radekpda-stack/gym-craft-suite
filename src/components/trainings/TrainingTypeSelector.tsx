@@ -269,8 +269,9 @@ export function TrainingTypeBadge({ type }: { type?: string | null }) {
     if (customType) {
       return (
         <span className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white",
-          customType.color
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white/80",
+          customType.color,
+          "opacity-70"
         )}>
           {customType.name}
         </span>
@@ -284,8 +285,9 @@ export function TrainingTypeBadge({ type }: { type?: string | null }) {
 
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white",
-      config.color
+      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white/80",
+      config.color,
+      "opacity-70"
     )}>
       <Icon className="w-3 h-3" />
       {config.label}

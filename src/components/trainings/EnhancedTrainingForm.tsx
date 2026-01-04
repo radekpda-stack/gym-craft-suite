@@ -5,7 +5,8 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Tag, Search, Check, AlertTriangle } from "lucide-react";
+import { Loader2, Tag, Search, Check, AlertTriangle, Dumbbell } from "lucide-react";
+import { TrainingTypeSelector } from "./TrainingTypeSelector";
 import {
   Form,
   FormControl,
@@ -369,6 +370,26 @@ export function EnhancedTrainingForm({
           )}
         </div>
 
+
+        {/* Training Type */}
+        <FormField
+          control={form.control}
+          name="training_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Dumbbell className="w-4 h-4" />
+                Typ tréninku
+              </FormLabel>
+              <FormControl>
+                <TrainingTypeSelector
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         {/* Training Tags */}
         <div className="space-y-2">
