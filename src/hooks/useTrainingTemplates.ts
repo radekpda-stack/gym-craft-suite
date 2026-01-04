@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+export type WorkoutFormat = 'standard' | 'amrap' | 'emom' | 'for_time' | 'tabata' | 'circuit';
+
 export interface TrainingTemplate {
   id: string;
   user_id: string;
@@ -14,6 +16,11 @@ export interface TrainingTemplate {
   tags: string[];
   created_at: string;
   updated_at: string;
+  workout_format: WorkoutFormat;
+  time_cap_seconds: number | null;
+  rounds: number | null;
+  work_interval_seconds: number | null;
+  rest_interval_seconds: number | null;
   exercises?: TrainingTemplateExercise[];
 }
 
@@ -43,6 +50,11 @@ export interface CreateTemplateInput {
   estimated_duration?: number;
   is_public?: boolean;
   tags?: string[];
+  workout_format?: WorkoutFormat;
+  time_cap_seconds?: number;
+  rounds?: number;
+  work_interval_seconds?: number;
+  rest_interval_seconds?: number;
   exercises?: Omit<TrainingTemplateExercise, 'id' | 'template_id' | 'created_at'>[];
 }
 
@@ -125,6 +137,11 @@ export function useCreateTrainingTemplate() {
           estimated_duration: templateData.estimated_duration || null,
           is_public: templateData.is_public || false,
           tags: templateData.tags || [],
+          workout_format: templateData.workout_format || 'standard',
+          time_cap_seconds: templateData.time_cap_seconds || null,
+          rounds: templateData.rounds || null,
+          work_interval_seconds: templateData.work_interval_seconds || null,
+          rest_interval_seconds: templateData.rest_interval_seconds || null,
         })
         .select()
         .single();
@@ -188,6 +205,11 @@ export function useUpdateTrainingTemplate() {
           estimated_duration: templateData.estimated_duration,
           is_public: templateData.is_public,
           tags: templateData.tags,
+          workout_format: templateData.workout_format,
+          time_cap_seconds: templateData.time_cap_seconds,
+          rounds: templateData.rounds,
+          work_interval_seconds: templateData.work_interval_seconds,
+          rest_interval_seconds: templateData.rest_interval_seconds,
         })
         .eq('id', id)
         .select()
@@ -296,6 +318,11 @@ export function useDuplicateTrainingTemplate() {
           estimated_duration: original.estimated_duration,
           is_public: false,
           tags: original.tags,
+          workout_format: original.workout_format || 'standard',
+          time_cap_seconds: original.time_cap_seconds,
+          rounds: original.rounds,
+          work_interval_seconds: original.work_interval_seconds,
+          rest_interval_seconds: original.rest_interval_seconds,
         })
         .select()
         .single();
