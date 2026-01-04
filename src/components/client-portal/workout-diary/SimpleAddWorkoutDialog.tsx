@@ -17,7 +17,8 @@ import {
   Sparkles,
   ArrowLeft,
   Send,
-  Check
+  Check,
+  PersonStanding
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,10 +26,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Simplified workout types with large icons
 const SIMPLE_WORKOUT_TYPES = [
   { value: 'strength', label: 'Posilovna', icon: Dumbbell, color: 'text-orange-500 bg-orange-500/10' },
-  { value: 'cardio', label: 'Kardio', icon: Bike, color: 'text-blue-500 bg-blue-500/10' },
   { value: 'run', label: 'Běh', icon: Footprints, color: 'text-emerald-500 bg-emerald-500/10' },
-  { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-purple-500 bg-purple-500/10' },
+  { value: 'cycling', label: 'Kolo', icon: Bike, color: 'text-blue-500 bg-blue-500/10' },
+  { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-teal-500 bg-teal-500/10' },
   { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-cyan-500 bg-cyan-500/10' },
+  { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-purple-500 bg-purple-500/10' },
   { value: 'other', label: 'Jiné', icon: Sparkles, color: 'text-pink-500 bg-pink-500/10' },
 ];
 
