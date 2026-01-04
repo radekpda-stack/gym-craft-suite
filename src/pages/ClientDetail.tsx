@@ -20,7 +20,7 @@ import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
 import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
 import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFinanceCard';
-import { ClientSecondaryAccordions, SECTION_ICONS } from '@/components/clients/ClientSecondaryAccordions';
+import { ClientGroupedSections, SectionGroup } from '@/components/clients/ClientGroupedSections';
 
 // Audit components
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
@@ -190,100 +190,124 @@ export default function ClientDetail() {
   // Calculate notes count
   const notesCount = client.notes ? client.notes.split('\n\n').filter(n => n.startsWith('[')).length : 0;
 
-  // Build accordion sections - reorganized and consolidated
-  const accordionSections = [
+  // Build grouped sections - 5 thematic groups with intelligent ordering
+  const sectionGroups: SectionGroup[] = [
     {
-      id: 'chat',
-      icon: SECTION_ICONS.chat,
-      title: 'Chat s klientem',
-      badge: unreadChatCount || undefined,
-      children: (
-        <div id="section-chat" ref={chatSectionRef}>
-          <ClientChatSection clientId={client.id} clientName={client.name} />
-        </div>
-      ),
+      id: 'performance',
+      icon: null, // Uses default from component
+      title: 'Výkon',
+      sections: [
+        {
+          id: 'prs',
+          title: 'Osobní rekordy',
+          children: <div id="section-prs"><ClientPRsCard clientId={client.id} /></div>,
+        },
+        {
+          id: 'training-analytics',
+          title: 'Analytika tréninků',
+          children: <div id="section-training-analytics"><ClientTagAnalyticsCard clientId={client.id} /></div>,
+        },
+        {
+          id: 'feedback',
+          title: 'Feedback & Recovery',
+          badge: feedbackData.length || undefined,
+          children: (
+            <div id="section-feedback" className="space-y-4">
+              <ClientFeedbackRecovery clientId={client.id} />
+              <ClientFeedbackCard 
+                clientId={client.id} 
+                clientName={client.name}
+                lastCompletedTrainingId={lastCompletedSession?.id}
+              />
+            </div>
+          ),
+        },
+      ],
     },
     {
-      id: 'notes',
-      icon: SECTION_ICONS.notes,
-      title: 'Poznámky & Komunikace',
-      badge: notesCount || undefined,
-      children: (
-        <div id="section-notes" className="space-y-4">
-          <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
-          <ClientCommunicationLog clientId={client.id} />
-        </div>
-      ),
+      id: 'communication',
+      icon: null,
+      title: 'Komunikace',
+      sections: [
+        {
+          id: 'chat',
+          title: 'Chat s klientem',
+          badge: unreadChatCount || undefined,
+          children: (
+            <div id="section-chat" ref={chatSectionRef}>
+              <ClientChatSection clientId={client.id} clientName={client.name} />
+            </div>
+          ),
+        },
+        {
+          id: 'notes',
+          title: 'Poznámky & Log hovorů',
+          badge: notesCount || undefined,
+          children: (
+            <div id="section-notes" className="space-y-4">
+              <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
+              <ClientCommunicationLog clientId={client.id} />
+            </div>
+          ),
+        },
+      ],
     },
     {
-      id: 'measurements',
-      icon: SECTION_ICONS.measurements,
-      title: 'Měření',
-      children: <div id="section-measurements"><ClientMeasurementsCard clientId={client.id} /></div>,
+      id: 'health',
+      icon: null,
+      title: 'Zdraví',
+      sections: [
+        {
+          id: 'diagnostics',
+          title: 'Diagnostika & Mapa bolesti',
+          children: (
+            <div id="section-diagnostics" className="space-y-4">
+              <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
+              <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
+              <ClientPainMapPreview clientId={client.id} />
+            </div>
+          ),
+        },
+        {
+          id: 'injuries',
+          title: 'Historie zranění',
+          children: <div id="section-injuries"><ClientInjuryHistory clientId={client.id} /></div>,
+        },
+      ],
     },
     {
-      id: 'diagnostics',
-      icon: SECTION_ICONS.diagnostics,
-      title: 'Diagnostika & Mapa bolesti',
-      children: (
-        <div id="section-diagnostics" className="space-y-4">
-          <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
-          <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
-          <ClientPainMapPreview clientId={client.id} />
-        </div>
-      ),
+      id: 'body',
+      icon: null,
+      title: 'Tělo',
+      sections: [
+        {
+          id: 'measurements',
+          title: 'Měření',
+          children: <div id="section-measurements"><ClientMeasurementsCard clientId={client.id} /></div>,
+        },
+        {
+          id: 'nutrition',
+          title: 'Výživa & Výzvy',
+          children: <ClientNutritionCard clientId={client.id} clientName={client.name} />,
+        },
+        {
+          id: 'media',
+          title: 'Média & Fotky',
+          children: <div id="section-media"><ClientMediaGallery clientId={client.id} /></div>,
+        },
+      ],
     },
     {
-      id: 'feedback',
-      icon: SECTION_ICONS.feedback,
-      title: 'Feedback & Recovery',
-      badge: feedbackData.length || undefined,
-      children: (
-        <div id="section-feedback" className="space-y-4">
-          <ClientFeedbackRecovery clientId={client.id} />
-          <ClientFeedbackCard 
-            clientId={client.id} 
-            clientName={client.name}
-            lastCompletedTrainingId={lastCompletedSession?.id}
-          />
-        </div>
-      ),
-    },
-    {
-      id: 'prs',
-      icon: SECTION_ICONS.measurements,
-      title: 'Osobní rekordy',
-      children: <div id="section-prs"><ClientPRsCard clientId={client.id} /></div>,
-    },
-    {
-      id: 'training-analytics',
-      icon: SECTION_ICONS.feedback,
-      title: 'Analytika tréninků',
-      children: <div id="section-training-analytics"><ClientTagAnalyticsCard clientId={client.id} /></div>,
-    },
-    {
-      id: 'nutrition',
-      icon: SECTION_ICONS.challenges,
-      title: 'Výživa & Výzvy',
-      children: <ClientNutritionCard clientId={client.id} clientName={client.name} />,
-    },
-    {
-      id: 'media',
-      icon: SECTION_ICONS.media,
-      title: 'Média & Fotky',
-      children: <div id="section-media"><ClientMediaGallery clientId={client.id} /></div>,
-    },
-    {
-      id: 'injuries',
-      icon: SECTION_ICONS.diagnostics,
-      title: 'Historie zranění',
-      children: <div id="section-injuries"><ClientInjuryHistory clientId={client.id} /></div>,
-    },
-    {
-      id: 'timeline',
-      icon: SECTION_ICONS.timeline,
-      title: 'Časová osa',
-      children: <div id="section-timeline"><ClientTimeline clientId={client.id} defaultLimit={20} /></div>,
+      id: 'history',
+      icon: null,
+      title: 'Historie',
+      sections: [
+        {
+          id: 'timeline',
+          title: 'Časová osa',
+          children: <div id="section-timeline"><ClientTimeline clientId={client.id} defaultLimit={20} /></div>,
+        },
+      ],
     },
   ];
 
@@ -342,10 +366,11 @@ export default function ClientDetail() {
         />
       </div>
 
-      {/* SECTION 5: Secondary sections in Accordions */}
-      <ClientSecondaryAccordions 
-        sections={accordionSections} 
-        defaultOpenSections={defaultOpenSections}
+      {/* SECTION 5: Grouped sections with intelligent ordering */}
+      <ClientGroupedSections 
+        clientId={client.id}
+        groups={sectionGroups} 
+        defaultOpenGroups={['performance']}
       />
 
       {/* SECTION 6: Admin Section (Klientská zóna) */}
