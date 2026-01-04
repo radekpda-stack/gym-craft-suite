@@ -71,6 +71,7 @@ const ClientPortalChallenges = lazy(() => import("./pages/client-portal/ClientPo
 const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/ClientPortalWorkoutDiary"));
 const ClientPortalBadges = lazy(() => import("./pages/client-portal/ClientPortalBadges"));
 const ClientPortalLeaderboard = lazy(() => import("./pages/client-portal/ClientPortalLeaderboard"));
+const ClientPortalCompetitions = lazy(() => import("./pages/client-portal/ClientPortalCompetitions"));
 const ClientPortalRewards = lazy(() => import("./pages/client-portal/ClientPortalRewards"));
 const ClientPortalPurchases = lazy(() => import("./pages/client-portal/ClientPortalPurchases"));
 const ClientPortalHomework = lazy(() => import("./pages/client-portal/ClientPortalHomework"));
@@ -132,7 +133,9 @@ const App = () => (
                 <Route path="challenges" element={<ClientPortalChallenges />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
                 <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
+                <Route path="competitions" element={<ClientPortalCompetitions />} />
                 <Route path="odmeny" element={<ClientPortalRewards />} />
+                <Route path="rewards" element={<ClientPortalRewards />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
                 <Route path="chat" element={<ClientPortalChat />} />
@@ -151,6 +154,8 @@ const App = () => (
                 <Route path="challenges" element={<ClientPortalChallenges />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
                 <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
+                <Route path="competitions" element={<ClientPortalCompetitions />} />
+                <Route path="rewards" element={<ClientPortalRewards />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
                 <Route path="chat" element={<ClientPortalChat />} />
