@@ -58,7 +58,8 @@ export function ClientChatSection({ clientId, clientName }: ClientChatSectionPro
         markAsRead.mutate({ conversationId });
       }
     }
-  }, [clientId, trainerId, messages, markAsRead]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, trainerId, messages?.length]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || !clientId || !trainerId) return;
