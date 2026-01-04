@@ -3,13 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Trophy, TrendingUp, BarChart3, BookOpen, Plus } from 'lucide-react';
+import { User, Trophy, TrendingUp, BarChart3, BookOpen, Plus, UserCircle } from 'lucide-react';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { MyProfileProgress } from '@/components/my-profile/MyProfileProgress';
 import { TrainerLeaderboards } from '@/components/my-profile/TrainerLeaderboards';
 import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutDiary';
 import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
 import { MyProfileInput } from '@/components/my-profile/MyProfileInput';
+import { TrainerProfileSettings } from '@/components/settings/TrainerProfileSettings';
 
 export default function MyProfile() {
   const { loading: authLoading } = useAuth();
@@ -46,6 +47,10 @@ export default function MyProfile() {
             <BarChart3 className="w-3.5 h-3.5" />
             Přehled
           </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs">
+            <UserCircle className="w-3.5 h-3.5" />
+            Profil
+          </TabsTrigger>
           <TabsTrigger value="input" className="flex items-center gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" />
             Zadávání
@@ -70,6 +75,10 @@ export default function MyProfile() {
 
         <TabsContent value="overview" className="mt-6">
           <MyProfileOverview clientId={profile.clientId} />
+        </TabsContent>
+
+        <TabsContent value="profile" className="mt-6">
+          <TrainerProfileSettings />
         </TabsContent>
 
         <TabsContent value="input" className="mt-6">
