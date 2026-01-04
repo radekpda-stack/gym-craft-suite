@@ -126,10 +126,17 @@ function applyThemeToDOM(themeId: ThemeId) {
   // Helpful for debugging + CSS targeting if needed
   root.setAttribute('data-theme', themeId);
   root.setAttribute('data-color-mode', isLight ? 'light' : 'dark');
+  body?.setAttribute('data-theme', themeId);
+  body?.setAttribute('data-color-mode', isLight ? 'light' : 'dark');
 
   // Hint to the browser for native controls
   root.style.colorScheme = isLight ? 'light' : 'dark';
 
+  // Force style recalculation in stubborn environments
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  root.offsetHeight;
+
+  // Helpful runtime logging (kept lightweight)
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
     console.debug('[theme] applied', {
@@ -198,6 +205,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Always ensure DOM matches the current resolved theme (extra safety)
+  useEffect(() => {
+    applyThemeToDOM(currentTheme);
+  }, [currentTheme]);
 
   // Listen for system preference changes when in 'system' mode
   useEffect(() => {
