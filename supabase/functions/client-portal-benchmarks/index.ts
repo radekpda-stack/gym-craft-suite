@@ -201,10 +201,13 @@ serve(async (req) => {
           ? data.monthlyWorkouts 
           : data.totalWorkouts;
 
-        // Only show nickname if client opted in AND has set a nickname
-        // Never show real name - always use anonymous name as fallback
+        // Trainer (is_self_profile) is ALWAYS visible with their name or custom nickname
+        // Regular clients need to opt-in AND have a nickname set
         let nickname: string;
-        if (isVisible && clientSettings?.leaderboard_nickname) {
+        if (isSelfProfile) {
+          // Trainer is always visible - use nickname if set, otherwise use name
+          nickname = clientSettings?.leaderboard_nickname || client?.name || 'Trenér';
+        } else if (isVisible && clientSettings?.leaderboard_nickname) {
           nickname = clientSettings.leaderboard_nickname;
         } else {
           nickname = generateAnonymousName(cid);
@@ -216,7 +219,7 @@ serve(async (req) => {
           workout_count: workoutCount,
           is_verified: isVerified,
           rank: 0,
-          is_anonymous: !isVisible,
+          is_anonymous: !isVisible && !isSelfProfile, // Trainer is never anonymous
           gender: client?.gender || null,
           is_current_client: cid === clientId,
         };
@@ -455,16 +458,23 @@ serve(async (req) => {
             const isSelfProfile = client?.is_self_profile === true;
             const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
 
+            // Trainer (is_self_profile) is ALWAYS visible with their name or custom nickname
+            let nickname: string;
+            if (isSelfProfile) {
+              nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+            } else if (isVisible && setting?.leaderboard_nickname) {
+              nickname = setting.leaderboard_nickname;
+            } else {
+              nickname = generateAnonymousName(cid);
+            }
+
             return {
               client_id: cid,
-              // Only show nickname if client opted in AND has set a nickname
-              nickname: (isVisible && setting?.leaderboard_nickname) 
-                ? setting.leaderboard_nickname
-                : generateAnonymousName(cid),
+              nickname,
               best_value: data.weight,
               display_value: `${data.weight} kg`,
               achieved_at: data.date,
-              is_anonymous: !isVisible,
+              is_anonymous: !isVisible && !isSelfProfile, // Trainer is never anonymous
               is_current_client: cid === clientId,
               rank: 0,
             };
@@ -545,16 +555,23 @@ serve(async (req) => {
               displayValue = formatDuration(data.value);
             }
 
+            // Trainer (is_self_profile) is ALWAYS visible with their name or custom nickname
+            let nickname: string;
+            if (isSelfProfile) {
+              nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+            } else if (isVisible && setting?.leaderboard_nickname) {
+              nickname = setting.leaderboard_nickname;
+            } else {
+              nickname = generateAnonymousName(cid);
+            }
+
             return {
               client_id: cid,
-              // Only show nickname if client opted in AND has set a nickname
-              nickname: (isVisible && setting?.leaderboard_nickname) 
-                ? setting.leaderboard_nickname
-                : generateAnonymousName(cid),
+              nickname,
               best_value: data.value,
               display_value: displayValue,
               achieved_at: data.date,
-              is_anonymous: !isVisible,
+              is_anonymous: !isVisible && !isSelfProfile, // Trainer is never anonymous
               is_current_client: cid === clientId,
               rank: 0,
             };
