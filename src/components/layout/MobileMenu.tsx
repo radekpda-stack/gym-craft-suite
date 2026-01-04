@@ -75,16 +75,14 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         items: [
           { to: '/clients', icon: Users, label: 'Klienti' },
           ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
-          ...(isModuleEnabled('challenges') ? [{ to: '/challenges', icon: Trophy, label: 'Výzvy' }] : []),
           { to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
         ],
       },
       {
         label: 'Záznamy',
         items: [
-          { to: '/exercises', icon: Target, label: 'Cviky' },
+          { to: '/performance', icon: Zap, label: 'Výkonnost' },
           { to: '/records', icon: Activity, label: 'Záznamy' },
-          ...(isModuleEnabled('tests') ? [{ to: '/tests', icon: ClipboardCheck, label: 'Testy' }] : []),
         ],
       },
       ...(isModuleEnabled('nutrition') ? [{
