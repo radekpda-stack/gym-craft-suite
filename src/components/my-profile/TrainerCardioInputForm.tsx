@@ -55,6 +55,17 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
       const distanceMeters = parseInt(distance);
       const durationSeconds = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0) + (parseInt(centiseconds) || 0) / 100;
 
+      // Calculate pace per 500m (for rowing, skierg) or per km (for running)
+      let pacePer500m: number | null = null;
+      let pacePerKm: number | null = null;
+      
+      if (distanceMeters > 0 && durationSeconds > 0) {
+        // Pace per 500m = (time in seconds / distance in meters) * 500
+        pacePer500m = (durationSeconds / distanceMeters) * 500;
+        // Pace per km = (time in seconds / distance in meters) * 1000
+        pacePerKm = (durationSeconds / distanceMeters) * 1000;
+      }
+
       // Check if this is a PR
       const { data: existingEntries } = await supabase
         .from('cardio_entries')
@@ -67,6 +78,25 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
         .limit(1);
 
       const isNewPR = !existingEntries?.length || durationSeconds < existingEntries[0].duration_seconds;
+
+      // Also save to exercise_entries for unified tracking with pace
+      const { error: exerciseError } = await supabase
+        .from('exercise_entries')
+        .insert({
+          user_id: user.id,
+          client_id: clientId,
+          exercise_name: exerciseData?.name || exercise,
+          date,
+          distance_meters: distanceMeters,
+          time_seconds: durationSeconds,
+          pace_sec_per_500m: pacePer500m,
+          pace_sec_per_km: pacePerKm,
+          sets: 1,
+          notes: notes || null,
+          is_pr: isNewPR,
+        });
+
+      if (exerciseError) throw exerciseError;
 
       const { data, error } = await supabase
         .from('cardio_entries')
@@ -84,7 +114,7 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
         .single();
 
       if (error) throw error;
-      return { ...data, isNewPR };
+      return { ...data, isNewPR, pacePer500m };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cardio-entries'] });
@@ -126,6 +156,25 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
     const cs = parseInt(centiseconds) || 0;
     if (m === 0 && s === 0) return null;
     return `${m}:${s.toString().padStart(2, '0')}.${cs.toString().padStart(1, '0')}`;
+  };
+
+  // Calculate pace preview
+  const calculatePacePreview = () => {
+    const m = parseInt(minutes) || 0;
+    const s = parseInt(seconds) || 0;
+    const cs = parseInt(centiseconds) || 0;
+    const distanceMeters = parseInt(distance) || 0;
+    
+    if ((m === 0 && s === 0) || distanceMeters === 0) return null;
+    
+    const totalSeconds = m * 60 + s + cs / 100;
+    const pacePer500m = (totalSeconds / distanceMeters) * 500;
+    
+    const paceMinutes = Math.floor(pacePer500m / 60);
+    const paceSeconds = Math.floor(pacePer500m % 60);
+    const paceDecimal = Math.round((pacePer500m % 1) * 10);
+    
+    return `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')}.${paceDecimal}`;
   };
 
   const isValid = exercise && distance && (minutes || seconds);
@@ -225,9 +274,18 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
             </div>
           </div>
           {formatTimePreview() && (
-            <p className="text-sm text-muted-foreground text-center">
-              Čas: <span className="font-mono font-medium">{formatTimePreview()}</span>
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground text-center">
+                Čas: <span className="font-mono font-medium">{formatTimePreview()}</span>
+              </p>
+              {calculatePacePreview() && (
+                <p className="text-sm text-center">
+                  <span className="text-muted-foreground">Tempo: </span>
+                  <span className="font-mono font-medium text-primary">{calculatePacePreview()}</span>
+                  <span className="text-muted-foreground text-xs"> /500m</span>
+                </p>
+              )}
+            </div>
           )}
         </div>
 
