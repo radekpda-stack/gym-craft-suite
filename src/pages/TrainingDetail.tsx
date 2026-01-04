@@ -72,8 +72,12 @@ export default function TrainingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: training, isLoading: trainingLoading } = useTrainingSession(id);
-  const { data: client } = useClient(training?.client_id);
+  const { data: client, isLoading: clientLoading } = useClient(training?.client_id);
   const { data: clients = [] } = useClients();
+  
+  // Get fresh client credit balance - fallback to clients list if single client query not ready
+  const clientCreditBalance = client?.credit_balance ?? 
+    clients.find(c => c.id === training?.client_id)?.credit_balance ?? 0;
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
   const { data: allTags = [] } = useTags();
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
@@ -281,7 +285,6 @@ export default function TrainingDetail() {
       
       // Check if using partial credit (hybrid payment)
       const isPartialCredit = paymentMethod === 'credit_partial';
-      const clientCreditBalance = client?.credit_balance ?? 0;
       const creditToUse = isPartialCredit ? Math.min(clientCreditBalance, correctPrice) : 0;
       
       // Use atomic RPC - single transaction for everything
@@ -518,7 +521,7 @@ export default function TrainingDetail() {
                 value={paymentMethod}
                 onChange={setPaymentMethod}
                 disabled={isSubmitting || completeTrainingAtomic.isPending}
-                clientCreditBalance={client?.credit_balance ?? 0}
+                clientCreditBalance={clientCreditBalance}
                 trainingPrice={getExpectedPrice()}
                 partialMethod={partialPaymentMethod}
                 onPartialMethodChange={setPartialPaymentMethod}
