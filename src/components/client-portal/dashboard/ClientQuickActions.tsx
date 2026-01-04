@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Dumbbell, Scale, CalendarDays, Trophy } from 'lucide-react';
+import { Dumbbell, Scale, CalendarDays, Trophy, Utensils, MessageCircle, BarChart3, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -8,12 +8,13 @@ interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  path: string; // relative path without prefix
+  path: string;
   color: string;
   bgColor: string;
 }
 
 const quickActions: QuickAction[] = [
+  // Primary actions - daily use
   {
     id: 'workout',
     label: 'Trénink',
@@ -23,6 +24,31 @@ const quickActions: QuickAction[] = [
     bgColor: 'bg-primary/10 hover:bg-primary/20',
   },
   {
+    id: 'nutrition',
+    label: 'Strava',
+    icon: <Utensils className="w-5 h-5" />,
+    path: '/diary?tab=nutrition',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/10 hover:bg-orange-500/20',
+  },
+  {
+    id: 'chat',
+    label: 'Chat',
+    icon: <MessageCircle className="w-5 h-5" />,
+    path: '/chat',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10 hover:bg-blue-500/20',
+  },
+  {
+    id: 'leaderboard',
+    label: 'Žebříček',
+    icon: <BarChart3 className="w-5 h-5" />,
+    path: '/leaderboard',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10 hover:bg-amber-500/20',
+  },
+  // Secondary actions
+  {
     id: 'measurement',
     label: 'Měření',
     icon: <Scale className="w-5 h-5" />,
@@ -31,20 +57,28 @@ const quickActions: QuickAction[] = [
     bgColor: 'bg-success/10 hover:bg-success/20',
   },
   {
-    id: 'plan',
+    id: 'attendance',
     label: 'Docházka',
     icon: <CalendarDays className="w-5 h-5" />,
     path: '/attendance',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10 hover:bg-blue-500/20',
+    color: 'text-indigo-500',
+    bgColor: 'bg-indigo-500/10 hover:bg-indigo-500/20',
   },
   {
     id: 'challenges',
     label: 'Výzvy',
     icon: <Trophy className="w-5 h-5" />,
     path: '/challenges',
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/10 hover:bg-amber-500/20',
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10 hover:bg-purple-500/20',
+  },
+  {
+    id: 'rewards',
+    label: 'Odměny',
+    icon: <Award className="w-5 h-5" />,
+    path: '/rewards',
+    color: 'text-pink-500',
+    bgColor: 'bg-pink-500/10 hover:bg-pink-500/20',
   },
 ];
 

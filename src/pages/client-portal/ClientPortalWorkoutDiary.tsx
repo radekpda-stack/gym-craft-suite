@@ -1,4 +1,5 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ const NutritionTabContent = lazy(() => import('./ClientPortalNutritionTab'));
 
 export default function ClientPortalWorkoutDiary() {
   const { clientId, clientAccount } = useClientPortal();
+  const [searchParams] = useSearchParams();
   const { data: entries, isLoading } = useUnifiedDiary();
   const { data: plannedWorkouts, isLoading: loadingPlanned } = usePlannedWorkouts();
   const createLog = useCreateWorkoutLog();
@@ -52,7 +54,17 @@ export default function ClientPortalWorkoutDiary() {
   const completeAssignedWorkout = useCompleteAssignedWorkout();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_workout_diary');
 
-  const [activeTab, setActiveTab] = useState<'workouts' | 'nutrition'>('workouts');
+  // Initialize tab from URL query parameter
+  const initialTab = searchParams.get('tab') === 'nutrition' ? 'nutrition' : 'workouts';
+  const [activeTab, setActiveTab] = useState<'workouts' | 'nutrition'>(initialTab);
+
+  // Update tab when URL changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'nutrition') {
+      setActiveTab('nutrition');
+    }
+  }, [searchParams]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [trainerSectionExpanded, setTrainerSectionExpanded] = useState(true);
   
