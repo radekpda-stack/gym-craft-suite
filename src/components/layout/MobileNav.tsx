@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
-  ClipboardList,
+  CalendarDays,
   Users,
   ShoppingCart,
   MoreHorizontal,
@@ -15,7 +15,7 @@ import { useUnreadMessageCount } from '@/hooks/useChatMessages';
 import { Badge } from '@/components/ui/badge';
 
 const mainNavItems = [
-  { to: '/trainings', icon: ClipboardList, label: 'Tréninky' },
+  { to: '/schedule', icon: CalendarDays, label: 'Rozvrh' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/sales', icon: ShoppingCart, label: 'Prodeje' },
 ];

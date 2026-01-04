@@ -134,8 +134,8 @@ export default function TrainingDetail() {
           <h2 className="text-2xl font-bold text-foreground">
             Trénink nenalezen
           </h2>
-          <Link to="/trainings" className="text-primary mt-2 inline-block">
-            Zpět na seznam tréninků
+          <Link to="/schedule" className="text-primary mt-2 inline-block">
+            Zpět na rozvrh
           </Link>
         </div>
       </div>
@@ -215,7 +215,7 @@ export default function TrainingDetail() {
       );
     }
     
-    navigate('/trainings');
+    navigate('/schedule');
   };
 
   const openCompleteDialog = () => {
@@ -382,7 +382,7 @@ export default function TrainingDetail() {
       {/* Breadcrumbs */}
       <PageBreadcrumbs
         items={[
-          { label: 'Tréninky', href: '/trainings' },
+          { label: 'Rozvrh', href: '/schedule' },
           { label: client?.name || format(new Date(training.date), 'd.M.yyyy', { locale: cs }) },
         ]}
       />
@@ -599,7 +599,7 @@ export default function TrainingDetail() {
           onClose={() => {
             setShowSummaryOverlay(false);
             setCompletedSessionId(null);
-            navigate('/trainings');
+            navigate('/schedule');
           }}
           summary={trainingSummary}
           clientName={client?.name || 'Klient'}

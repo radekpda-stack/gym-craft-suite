@@ -146,7 +146,7 @@ function WeekMiniOverview({ weekSchedule }: { weekSchedule: ScheduleItem[] }) {
       {weekDays.map((day, idx) => (
         <button
           key={idx}
-          onClick={() => navigate('/calendar')}
+          onClick={() => navigate('/schedule')}
           className={cn(
             'flex flex-col items-center py-2 rounded-lg transition-colors',
             'hover:bg-secondary/50',
@@ -375,10 +375,10 @@ export const TrainingsCalendarCard = memo(function TrainingsCalendarCard({
           <Button
             variant="outline"
             className="w-full gap-2"
-            onClick={() => navigate('/calendar')}
+            onClick={() => navigate('/schedule')}
           >
             <Calendar className="w-4 h-4" />
-            Otevřít kalendář
+            Otevřít rozvrh
           </Button>
         </div>
       </div>

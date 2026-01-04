@@ -87,7 +87,7 @@ export function TodayPlanCard({ data, isLoading }: TodayPlanCardProps) {
           
           {hasMore && (
             <button
-              onClick={() => navigate('/calendar')}
+              onClick={() => navigate('/schedule')}
               className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               +{data.todaySchedule.length - 5} další →

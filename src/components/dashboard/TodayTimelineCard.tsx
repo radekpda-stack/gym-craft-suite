@@ -179,7 +179,7 @@ export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
               
               {hasMore && (
                 <button
-                  onClick={() => navigate('/calendar')}
+                  onClick={() => navigate('/schedule')}
                   className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
                 >
                   +{data.todaySchedule.length - 6} další
@@ -221,11 +221,11 @@ export function TodayTimelineCard({ data, isLoading }: TodayTimelineCardProps) {
           
           {/* Quick calendar access */}
           <button
-            onClick={() => navigate('/calendar')}
+            onClick={() => navigate('/schedule')}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-border/50 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors"
           >
             <Calendar className="w-4 h-4" />
-            Celý kalendář
+            Celý rozvrh
           </button>
         </div>
       </div>
