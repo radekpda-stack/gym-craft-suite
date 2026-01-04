@@ -204,13 +204,16 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
           <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Pohybové vzorce
+            <span className="text-xs text-muted-foreground/70 ml-auto">
+              {data.movementPatterns.length} vzorců
+            </span>
           </p>
-          <div className="h-40">
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={data.movementPatterns.slice(0, 6)} 
+                data={data.movementPatterns.slice(0, 8)} 
                 layout="vertical"
-                margin={{ left: 60, right: 20 }}
+                margin={{ left: 80, right: 30, top: 5, bottom: 5 }}
               >
                 <XAxis 
                   type="number" 
@@ -218,14 +221,15 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                   tickFormatter={(v) => `${v}%`}
+                  domain={[0, 'auto']}
                 />
                 <YAxis 
                   type="category" 
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                  width={55}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                  width={75}
                 />
                 <Tooltip
                   contentStyle={{
@@ -233,13 +237,16 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`${value}%`, 'Podíl']}
+                  formatter={(value: number, name: string, props: any) => [
+                    `${value}% (${props.payload.count}×)`, 
+                    'Podíl'
+                  ]}
                 />
                 <Bar 
                   dataKey="percentage" 
                   radius={[0, 4, 4, 0]}
                 >
-                  {data.movementPatterns.slice(0, 6).map((entry, index) => (
+                  {data.movementPatterns.slice(0, 8).map((entry, index) => (
                     <Cell 
                       key={entry.pattern} 
                       fill={PATTERN_COLORS[index % PATTERN_COLORS.length]}
