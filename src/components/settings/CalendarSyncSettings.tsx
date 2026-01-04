@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { 
   Calendar, Plus, RefreshCw, Trash2, CheckCircle2, XCircle, 
   Clock, Users, ExternalLink, Loader2, AlertTriangle, Settings2,
-  GraduationCap, Sparkles
+  GraduationCap, Sparkles, Pause, Play
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ import {
   useCreateSessionsFromEvents,
   useTestICSUrl,
   useUpdateEventClientMatch,
+  useUpdateICSFeed,
   ICSFeed,
 } from '@/hooks/useCalendarSync';
 import { useClients } from '@/hooks/useClients';
@@ -160,9 +162,14 @@ export function CalendarSyncSettings() {
 function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => void }) {
   const syncFeed = useSyncICSFeed();
   const deleteFeed = useDeleteICSFeed();
+  const updateFeed = useUpdateICSFeed();
   const createSessions = useCreateSessionsFromEvents();
 
   const handleSync = async () => {
+    if (!feed.is_active) {
+      toast.error('Synchronizace je pozastavena');
+      return;
+    }
     try {
       const result = await syncFeed.mutateAsync(feed.id);
       toast.success(`Synchronizováno ${result.events_synced} událostí`);
@@ -191,25 +198,44 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
     }
   };
 
+  const handleToggleActive = async () => {
+    try {
+      await updateFeed.mutateAsync({ 
+        id: feed.id, 
+        is_active: !feed.is_active 
+      });
+      toast.success(feed.is_active ? 'Synchronizace pozastavena' : 'Synchronizace obnovena');
+    } catch (error) {
+      toast.error('Nepodařilo se změnit stav synchronizace');
+    }
+  };
+
   return (
-    <div className="border rounded-lg p-4">
+    <div className={cn(
+      "border rounded-lg p-4 transition-opacity",
+      !feed.is_active && "opacity-60 bg-muted/30"
+    )}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
             <span className="font-medium">{feed.name}</span>
-            {feed.last_sync_status === 'success' && (
+            {!feed.is_active ? (
+              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                <Pause className="h-3 w-3 mr-1" />
+                Pozastaveno
+              </Badge>
+            ) : feed.last_sync_status === 'success' ? (
               <Badge variant="outline" className="text-green-600">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Aktivní
               </Badge>
-            )}
-            {feed.last_sync_status === 'error' && (
+            ) : feed.last_sync_status === 'error' ? (
               <Badge variant="outline" className="text-destructive">
                 <XCircle className="h-3 w-3 mr-1" />
                 Chyba
               </Badge>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             {feed.last_sync_at && (
@@ -231,6 +257,22 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
           )}
         </div>
         <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={feed.is_active}
+                    onCheckedChange={handleToggleActive}
+                    disabled={updateFeed.isPending}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {feed.is_active ? 'Pozastavit synchronizaci' : 'Obnovit synchronizaci'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant="outline"
             size="sm"
