@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Dumbbell, Wallet, ShoppingBag } from 'lucide-react';
+import { Search, Plus, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialo
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { HorizontalChipScroller } from '@/components/ui/HorizontalChipScroller';
 import { toast } from '@/hooks/use-toast';
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval, format, parseISO } from 'date-fns';
@@ -42,31 +41,6 @@ export default function Trainings() {
 
   // Persistent page state
   const { timeFilter, statusFilter, setTimeFilter, setStatusFilter } = useTrainingsPageState();
-
-  // FAB Actions - Only on mobile
-  const fabActions: FABAction[] = [
-    {
-      id: 'new-training',
-      icon: <Dumbbell className="h-5 w-5" />,
-      label: 'Nový trénink',
-      onClick: () => setIsCreateSheetOpen(true),
-      variant: 'primary',
-    },
-    {
-      id: 'quick-sale',
-      icon: <ShoppingBag className="h-5 w-5" />,
-      label: 'Rychlý prodej',
-      onClick: () => navigate('/sales?action=quick-sale'),
-      variant: 'default',
-    },
-    {
-      id: 'top-up-credit',
-      icon: <Wallet className="h-5 w-5" />,
-      label: 'Dobít kredit',
-      onClick: () => navigate('/clients?action=top-up'),
-      variant: 'success',
-    },
-  ];
 
   const { data: clients = [] } = useClients();
   const { data: sessions = [], isLoading } = useTrainingSessions();
@@ -475,16 +449,9 @@ export default function Trainings() {
         open={cancelDialog.open}
         onOpenChange={(open) => setCancelDialog({ open, session: open ? cancelDialog.session : null })}
         session={cancelDialog.session}
-        clientName={cancelDialog.session ? clients.find(c => c.id === cancelDialog.session?.client_id)?.name : undefined}
-        trainingPrice={getCancelTrainingPrice()}
         onConfirm={handleConfirmCancel}
-        isLoading={cancelTraining.isPending}
+        trainingPrice={getCancelTrainingPrice()}
       />
-
-      {/* Mobile FAB Menu */}
-      <div className="sm:hidden">
-        <FloatingActionButton actions={fabActions} />
-      </div>
     </div>
   );
 }

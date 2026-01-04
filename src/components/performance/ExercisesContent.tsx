@@ -1,23 +1,14 @@
 import { useState } from 'react';
-import { Plus, List, BarChart3, Trophy } from 'lucide-react';
+import { List, BarChart3 } from 'lucide-react';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
 import { ExerciseAnalyticsView } from '@/components/exercises/ExerciseAnalyticsView';
-import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
-import { QuickLogDialog } from '@/components/exercises/QuickLogDialog';
-import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-interface ExercisesContentProps {
-  isActive?: boolean;
-}
-
-export function ExercisesContent({ isActive = true }: ExercisesContentProps) {
+export function ExercisesContent() {
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<string>('list');
-  const [showCreateExercise, setShowCreateExercise] = useState(false);
-  const [showQuickLog, setShowQuickLog] = useState(false);
 
   const { data: exercises = [], isLoading } = useExercisesWithUsage();
 
@@ -56,39 +47,6 @@ export function ExercisesContent({ isActive = true }: ExercisesContentProps) {
           <ExerciseAnalyticsView />
         </TabsContent>
       </Tabs>
-
-      {/* Create Exercise Dialog */}
-      <ExerciseFormDialog
-        open={showCreateExercise}
-        onOpenChange={setShowCreateExercise}
-      />
-
-      {/* Quick Log Dialog */}
-      <QuickLogDialog
-        open={showQuickLog}
-        onOpenChange={setShowQuickLog}
-      />
-
-      {/* Floating Action Button - only show when this tab is active */}
-      {isActive && activeTab === 'list' && (
-        <FloatingActionButton
-          actions={[
-            {
-              id: 'quick-log',
-              icon: <Trophy className="h-5 w-5" />,
-              label: 'Zapsat výkon',
-              onClick: () => setShowQuickLog(true),
-            },
-            {
-              id: 'new-exercise',
-              icon: <Plus className="h-5 w-5" />,
-              label: 'Nový cvik',
-              onClick: () => setShowCreateExercise(true),
-              variant: 'primary',
-            },
-          ]}
-        />
-      )}
     </div>
   );
 }
