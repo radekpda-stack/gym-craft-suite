@@ -82,21 +82,23 @@ export default {
         "status-error": "hsl(var(--status-error))",
       },
       borderRadius: {
-        lg: "0.5rem",      /* 8px - Angular */
-        md: "0.375rem",    /* 6px */
-        sm: "0.25rem",     /* 4px */
-        xl: "0.5rem",      /* 8px */
-        "2xl": "0.75rem",  /* 12px */
-        "3xl": "1rem",     /* 16px */
+        // Use CSS variable so each theme can control roundness
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 0.125rem)",
+        sm: "calc(var(--radius) - 0.25rem)",
+        xl: "calc(var(--radius) + 0.25rem)",
+        "2xl": "calc(var(--radius) + 0.5rem)",
+        "3xl": "calc(var(--radius) + 0.75rem)",
       },
       boxShadow: {
-        'sm': '0 1px 2px 0 hsl(210 27% 6% / 0.4)',
-        'md': '0 2px 8px -2px hsl(210 27% 6% / 0.5)',
-        'lg': '0 4px 16px -4px hsl(210 27% 6% / 0.6)',
-        'glow': '0 0 24px hsl(190 100% 50% / 0.25)',
-        'glow-sm': '0 0 12px hsl(190 100% 50% / 0.2)',
-        'glow-cyan': '0 0 20px hsl(190 100% 50% / 0.25)',
-        'glow-cyan-lg': '0 0 30px hsl(190 100% 50% / 0.35)',
+        // Use CSS variables so each theme can tune shadows
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        glow: "0 0 24px hsl(var(--primary) / 0.25)",
+        "glow-sm": "0 0 12px hsl(var(--primary) / 0.2)",
+        "glow-cyan": "0 0 20px hsl(var(--primary) / 0.25)",
+        "glow-cyan-lg": "0 0 30px hsl(var(--primary) / 0.35)",
       },
       keyframes: {
         "accordion-down": {

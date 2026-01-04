@@ -234,7 +234,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
         if (!error && data?.value) {
           const dbTheme = data.value as string;
-          
+
           if (dbTheme === 'system') {
             setThemePreference('system');
             const resolved = getSystemResolvedTheme();
@@ -256,6 +256,31 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     syncFromDatabase();
+  }, []);
+
+  // Keep UI in sync if something else changes localStorage (other tab / embedded portal)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== THEME_STORAGE_KEY) return;
+
+      const next = e.newValue;
+      if (next === 'system') {
+        setThemePreference('system');
+        const resolved = getSystemResolvedTheme();
+        setCurrentTheme(resolved);
+        applyThemeToDOM(resolved);
+        return;
+      }
+
+      if (next && VALID_THEME_IDS.includes(next as ThemeId)) {
+        setThemePreference(next as ThemeId);
+        setCurrentTheme(next as ThemeId);
+        applyThemeToDOM(next as ThemeId);
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   // Save theme to database
