@@ -5,11 +5,12 @@ import { EditEntryDialog } from '@/components/progress/EditEntryDialog';
 
 interface EditExerciseEntryDialogProps {
   entryId: string | null;
+  metricCategory?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditExerciseEntryDialog({ entryId, open, onOpenChange }: EditExerciseEntryDialogProps) {
+export function EditExerciseEntryDialog({ entryId, metricCategory, open, onOpenChange }: EditExerciseEntryDialogProps) {
   const { data: entry } = useQuery({
     queryKey: ['exercise-entry', entryId],
     queryFn: async () => {
@@ -30,6 +31,7 @@ export function EditExerciseEntryDialog({ entryId, open, onOpenChange }: EditExe
   return (
     <EditEntryDialog
       entry={entry ?? null}
+      metricCategory={metricCategory ?? undefined}
       open={open}
       onOpenChange={onOpenChange}
     />
