@@ -12,7 +12,7 @@ import { Loader2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/formatters';
 
-export type ProfitPeriod = '30days' | '6months' | '12months';
+export type ProfitPeriod = '30days' | '6months' | '12months' | 'all';
 
 export interface ProfitDataPoint {
   label: string;
@@ -32,6 +32,7 @@ const PERIOD_OPTIONS: { value: ProfitPeriod; label: string }[] = [
   { value: '30days', label: '30 dní' },
   { value: '6months', label: '6 měsíců' },
   { value: '12months', label: '12 měsíců' },
+  { value: 'all', label: 'Vše' },
 ];
 
 export function ProfitChart({ data, isLoading, period, onPeriodChange }: ProfitChartProps) {
