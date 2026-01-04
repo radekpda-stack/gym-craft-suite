@@ -16,7 +16,6 @@ export function ThemeSettings() {
     <div className="space-y-6">
       <div className="text-xs text-muted-foreground">
         Aktivní téma: <span className="text-foreground font-medium">{currentTheme}</span>
-        <span className="ml-2 text-muted-foreground/70">(html: {typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '—'})</span>
       </div>
       {/* Theme Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

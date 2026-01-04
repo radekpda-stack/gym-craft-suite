@@ -103,7 +103,7 @@ export function TrendBadge({ value, suffix = '', className }: TrendBadgeProps) {
   );
 }
 
-type ThemeOption = 'light' | 'dark' | 'system';
+export type ThemeOption = 'light' | 'dark' | 'system';
 
 interface ThemeSwitcherProps {
   value: ThemeOption;
@@ -143,4 +143,13 @@ export function ThemeSwitcher({ value, onChange, className }: ThemeSwitcherProps
       })}
     </div>
   );
+}
+
+/**
+ * Helper to convert ThemePreference to ThemeOption for ThemeSwitcher
+ */
+export function themePreferenceToOption(pref: string, currentTheme: string): ThemeOption {
+  if (pref === 'system') return 'system';
+  if (currentTheme === 'light-minimal' || currentTheme === 'frost-minimal') return 'light';
+  return 'dark';
 }
