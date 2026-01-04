@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, X, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,6 +17,7 @@ import {
   useMarkAllNotificationsRead,
   useDeleteNotification,
 } from "@/hooks/useNotifications";
+import { useTrainerConversations } from "@/hooks/useChatMessages";
 import { formatDistanceToNow } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -75,15 +76,20 @@ function extractTrainingId(message: string): string | null {
 
 interface NotificationCenterProps {
   onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
-export function NotificationCenter({ onOpenChange }: NotificationCenterProps = {}) {
+export function NotificationCenter({ onOpenChange, children }: NotificationCenterProps = {}) {
   const navigate = useNavigate();
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
+  
+  // Chat conversations with unread messages
+  const { data: conversations = [] } = useTrainerConversations();
+  const unreadConversations = conversations.filter(c => c.unreadCount > 0);
 
   // Feedback dialog state
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -168,16 +174,18 @@ export function NotificationCenter({ onOpenChange }: NotificationCenterProps = {
     <>
       <Sheet open={sheetOpen} onOpenChange={handleSheetOpenChange}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <Badge 
-                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-destructive text-destructive-foreground text-xs"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Badge>
-            )}
-          </Button>
+          {children || (
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <Badge 
+                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-destructive text-destructive-foreground text-xs"
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Badge>
+              )}
+            </Button>
+          )}
         </SheetTrigger>
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader className="flex flex-row items-center justify-between">
@@ -196,16 +204,57 @@ export function NotificationCenter({ onOpenChange }: NotificationCenterProps = {
           </SheetHeader>
 
           <ScrollArea className="h-[calc(100vh-120px)] mt-4">
+            {/* Unread chat messages section */}
+            {unreadConversations.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 px-1">Nepřečtené zprávy</h4>
+                <div className="space-y-2">
+                  {unreadConversations.map((conv) => (
+                    <Link
+                      key={conv.conversationId}
+                      to={`/clients/${conv.clientId}`}
+                      onClick={() => setSheetOpen(false)}
+                      className="flex items-start gap-3 p-3 rounded-xl border bg-secondary border-primary/20 hover:border-primary/40 transition-colors"
+                    >
+                      <div className="mt-0.5 text-primary">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-sm">{conv.clientName}</h4>
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            {conv.unreadCount}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                          {conv.lastMessage}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(conv.lastMessageAt), {
+                            addSuffix: true,
+                            locale: cs,
+                          })}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {notifications.length > 0 && (
+                  <div className="border-b my-4" />
+                )}
+              </div>
+            )}
+            
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : notifications.length === 0 && unreadConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Bell className="w-12 h-12 mb-4 opacity-50" />
                 <p>Žádné notifikace</p>
               </div>
-            ) : (
+            ) : notifications.length > 0 ? (
               <div className="space-y-2">
                 {notifications.map((notification) => {
                   const Icon = notificationIcons[notification.type] || Bell;
@@ -339,7 +388,7 @@ export function NotificationCenter({ onOpenChange }: NotificationCenterProps = {
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </ScrollArea>
         </SheetContent>
       </Sheet>
