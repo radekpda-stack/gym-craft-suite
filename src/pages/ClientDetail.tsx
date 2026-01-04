@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
@@ -54,6 +54,7 @@ export default function ClientDetail() {
   usePageTracking('client_detail');
   const queryClient = useQueryClient();
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
@@ -73,6 +74,23 @@ export default function ClientDetail() {
   
   // Ref for scrolling to admin section
   const adminSectionRef = useRef<HTMLDivElement>(null);
+  const chatSectionRef = useRef<HTMLDivElement>(null);
+
+  // Check for tab URL param to auto-open sections
+  const tabParam = searchParams.get('tab');
+  const defaultOpenSections = tabParam ? [tabParam] : [];
+
+  // Scroll to chat section when opened via URL param
+  useEffect(() => {
+    if (tabParam === 'chat' && chatSectionRef.current) {
+      // Small delay to allow accordion to open first
+      setTimeout(() => {
+        chatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      // Clear the param after handling
+      setSearchParams({});
+    }
+  }, [tabParam, setSearchParams]);
 
   // Derived data
   const lastCompletedSession = sessions.find((s: any) => s.status === 'completed');
@@ -181,7 +199,7 @@ export default function ClientDetail() {
       title: 'Chat s klientem',
       badge: unreadChatCount || undefined,
       children: (
-        <div id="section-chat">
+        <div id="section-chat" ref={chatSectionRef}>
           <ClientChatSection clientId={client.id} clientName={client.name} />
         </div>
       ),
@@ -330,7 +348,10 @@ export default function ClientDetail() {
       </div>
 
       {/* SECTION 5: Secondary sections in Accordions */}
-      <ClientSecondaryAccordions sections={accordionSections} />
+      <ClientSecondaryAccordions 
+        sections={accordionSections} 
+        defaultOpenSections={defaultOpenSections}
+      />
 
       {/* SECTION 6: Admin Section (Klientská zóna) */}
       <div ref={adminSectionRef}>
