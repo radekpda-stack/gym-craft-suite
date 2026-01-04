@@ -7,12 +7,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
 
 const TRAINING_TYPE_LABELS: Record<string, string> = {
-  individual: 'Individuální',
-  group: 'Skupinový',
-  pair: 'Párový',
-  online: 'Online',
-  outdoor: 'Venkovní',
-  other: 'Ostatní',
+  strength: 'Silový',
+  conditioning: 'Kondiční',
+  hiit: 'HIIT',
+  cardio: 'Kardio',
+  running: 'Běh',
+  mobility: 'Mobilita',
+  flexibility: 'Flexibilita',
+  regeneration: 'Regenerace',
+  functional: 'Funkční',
+  diagnostic: 'Diagnostický',
+  other: 'Jiný',
 };
 
 const COLORS = [
