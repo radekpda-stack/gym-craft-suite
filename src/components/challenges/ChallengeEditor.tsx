@@ -32,13 +32,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Challenge, useCreateChallenge, useUpdateChallenge } from '@/hooks/useChallenges';
 import { useExercises } from '@/hooks/useExercises';
+import { TrainingTemplate } from '@/hooks/useTrainingTemplates';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown, Dumbbell, Users } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Dumbbell, Users, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { TemplateSelectorForChallenge } from './TemplateSelectorForChallenge';
 
 interface ChallengeEditorProps {
   open: boolean;
@@ -66,6 +73,8 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
   const [tieBreaker, setTieBreaker] = useState<string>('earliest_submission');
   const [exerciseId, setExerciseId] = useState<string | null>(null);
   const [exerciseOpen, setExerciseOpen] = useState(false);
+  const [templateSectionOpen, setTemplateSectionOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   
   // Team challenge settings
   const [isTeamChallenge, setIsTeamChallenge] = useState(false);
@@ -89,6 +98,7 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRankingMode(challenge.ranking_mode || 'top3');
       setTieBreaker(challenge.tie_breaker || 'earliest_submission');
       setExerciseId((challenge as any).exercise_id || null);
+      setSelectedTemplateId(challenge.training_template_id || null);
       // Team settings
       setIsTeamChallenge((challenge as any).is_team_challenge || false);
       setMinTeamSize((challenge as any).min_team_size || 2);
@@ -110,12 +120,60 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setRankingMode('top3');
       setTieBreaker('earliest_submission');
       setExerciseId(null);
+      setSelectedTemplateId(null);
       setIsTeamChallenge(false);
       setMinTeamSize(2);
       setMaxTeamSize(4);
       setTeamScoringMode('sum');
     }
   }, [challenge, open]);
+
+  const handleTemplateSelect = (template: TrainingTemplate | null) => {
+    if (template) {
+      setSelectedTemplateId(template.id);
+      // Auto-fill form from template
+      if (!title) setTitle(template.name);
+      if (!description) setDescription(template.description || '');
+      
+      // Set metrics based on workout format
+      if (template.workout_format === 'amrap') {
+        setPrimaryMetric('rounds');
+        setScoringType('value_higher_better');
+      } else if (template.workout_format === 'for_time' || template.workout_format === 'circuit') {
+        setPrimaryMetric('time_seconds');
+        setScoringType('time_lower_better');
+      } else if (template.workout_format === 'emom' || template.workout_format === 'tabata') {
+        setPrimaryMetric('reps');
+        setScoringType('value_higher_better');
+      }
+      
+      // Generate instructions from exercises
+      const exercises = template.exercises || [];
+      if (exercises.length > 0 && !instructions) {
+        const exerciseList = exercises.map((ex: any, idx: number) => {
+          let line = `${idx + 1}. `;
+          if (ex.reps) line += `${ex.reps}x `;
+          if (ex.time_seconds) line += `${ex.time_seconds}s `;
+          if (ex.distance_meters) line += `${ex.distance_meters}m `;
+          line += ex.exercise_name;
+          if (ex.weight_kg) line += ` (${ex.weight_kg}kg)`;
+          return line;
+        }).join('\n');
+        
+        let instructionText = '';
+        if (template.workout_format === 'amrap' && template.time_cap_seconds) {
+          instructionText = `AMRAP ${Math.floor(template.time_cap_seconds / 60)} min:\n${exerciseList}`;
+        } else if (template.workout_format === 'for_time' && template.rounds) {
+          instructionText = `${template.rounds} kol na čas:\n${exerciseList}`;
+        } else {
+          instructionText = exerciseList;
+        }
+        setInstructions(instructionText);
+      }
+    } else {
+      setSelectedTemplateId(null);
+    }
+  };
 
   const handleSave = () => {
     const data = {
@@ -133,6 +191,7 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       ranking_mode: rankingMode as Challenge['ranking_mode'],
       tie_breaker: tieBreaker as Challenge['tie_breaker'],
       exercise_id: exerciseId,
+      training_template_id: selectedTemplateId,
       is_team_challenge: isTeamChallenge,
       min_team_size: minTeamSize,
       max_team_size: maxTeamSize,
@@ -163,6 +222,25 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Template Selector Section */}
+          <Collapsible open={templateSectionOpen} onOpenChange={setTemplateSectionOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  {selectedTemplateId ? 'Propojena s tréninkem' : 'Propojit s tréninkem (volitelné)'}
+                </span>
+                {templateSectionOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <TemplateSelectorForChallenge
+                selectedTemplateId={selectedTemplateId}
+                onSelect={handleTemplateSelect}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="space-y-2">
             <Label htmlFor="title">Název výzvy *</Label>
             <Input
