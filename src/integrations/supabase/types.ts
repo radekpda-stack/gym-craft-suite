@@ -905,6 +905,7 @@ export type Database = {
           team_scoring_mode: string | null
           tie_breaker: string | null
           title: string
+          training_template_id: string | null
           unit_label: string | null
           updated_at: string | null
           vod_url: string | null
@@ -938,6 +939,7 @@ export type Database = {
           team_scoring_mode?: string | null
           tie_breaker?: string | null
           title: string
+          training_template_id?: string | null
           unit_label?: string | null
           updated_at?: string | null
           vod_url?: string | null
@@ -971,6 +973,7 @@ export type Database = {
           team_scoring_mode?: string | null
           tie_breaker?: string | null
           title?: string
+          training_template_id?: string | null
           unit_label?: string | null
           updated_at?: string | null
           vod_url?: string | null
@@ -984,6 +987,13 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenges_training_template_id_fkey"
+            columns: ["training_template_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -8402,6 +8412,32 @@ export type Database = {
       rpc_refund_sale: {
         Args: { p_order_id: string; p_user_id: string }
         Returns: Json
+      }
+      seed_circuit_templates_for_user: {
+        Args: { p_user_id: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          estimated_duration: number | null
+          id: string
+          is_public: boolean | null
+          name: string
+          rest_interval_seconds: number | null
+          rounds: number | null
+          tags: string[] | null
+          time_cap_seconds: number | null
+          updated_at: string
+          user_id: string
+          work_interval_seconds: number | null
+          workout_format: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "training_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       update_client_balance_atomic: {
         Args: { p_client_id: string; p_delta: number }

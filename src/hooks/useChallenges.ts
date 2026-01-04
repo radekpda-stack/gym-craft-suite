@@ -25,6 +25,8 @@ export interface Challenge {
   // New fields for universal metrics
   ranking_mode: 'top1' | 'top3';
   tie_breaker: 'earliest_submission' | 'coach_confirmed_first' | 'same_rank';
+  // Training template link
+  training_template_id: string | null;
 }
 
 export interface ChallengeSubmission {
@@ -110,6 +112,7 @@ export function useCreateChallenge() {
         created_by_user_id: user!.id,
         ranking_mode: challenge.ranking_mode || 'top3',
         tie_breaker: challenge.tie_breaker || 'earliest_submission',
+        training_template_id: challenge.training_template_id || null,
       };
 
       const { data, error } = await supabase
