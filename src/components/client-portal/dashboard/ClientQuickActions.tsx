@@ -24,14 +24,6 @@ const quickActions: QuickAction[] = [
     bgColor: 'bg-primary/10 hover:bg-primary/20',
   },
   {
-    id: 'nutrition',
-    label: 'Strava',
-    icon: <Utensils className="w-5 h-5" />,
-    path: '/diary?tab=nutrition',
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-500/10 hover:bg-orange-500/20',
-  },
-  {
     id: 'chat',
     label: 'Chat',
     icon: <MessageCircle className="w-5 h-5" />,
