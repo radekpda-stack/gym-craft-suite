@@ -10,6 +10,9 @@ import {
   Wallet,
   ShoppingBag,
   Trophy,
+  UserPlus,
+  ClipboardList,
+  Package,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,6 +22,10 @@ import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnostic
 import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 import { AddPerformanceSheet } from '@/components/performance/AddPerformanceSheet';
+import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
+import { PreDiagnosticInviteDialog } from '@/components/pre-diagnostic/PreDiagnosticInviteDialog';
+import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
+import { QuickLogDialog } from '@/components/exercises/QuickLogDialog';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
@@ -35,28 +42,61 @@ interface QuickAction {
   color: string;
 }
 
-const quickActionsConfig: QuickAction[] = [
+// All available actions
+const allActionsConfig: QuickAction[] = [
   { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-pink-500' },
   { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
   { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
   { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
   { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
   { id: 'performance', icon: Trophy, label: 'Zapsat výkon', color: 'bg-emerald-500' },
+  { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
+  { id: 'prediagnostic', icon: ClipboardList, label: 'Pozvat klienta', color: 'bg-violet-500' },
+  { id: 'exercise', icon: Dumbbell, label: 'Nový cvik', color: 'bg-primary' },
+  { id: 'stock', icon: Package, label: 'Přidat zboží', color: 'bg-cyan-500' },
 ];
+
+// Route-specific action configurations
+const routeActionsConfig: Record<string, string[]> = {
+  '/': ['sale', 'credit', 'training', 'diagnostic', 'measurement', 'performance'], // Dashboard - full actions
+  '/clients': ['client', 'credit', 'prediagnostic'],
+  '/trainings': ['training', 'sale', 'credit'],
+  '/calendar': ['training'],
+  '/performance': ['exercise', 'performance'],
+  '/sales': ['sale', 'stock'],
+  '/records': ['measurement', 'diagnostic'],
+};
+
+// Routes where FAB should be hidden completely
+const hiddenRoutes = ['/statistics', '/nutrition', '/settings'];
+
+function getActionsForRoute(pathname: string): QuickAction[] {
+  // Check hidden routes first
+  if (hiddenRoutes.some(route => pathname.startsWith(route))) {
+    return [];
+  }
+
+  // Find matching route config
+  for (const [route, actionIds] of Object.entries(routeActionsConfig)) {
+    if (pathname === route || (route !== '/' && pathname.startsWith(route))) {
+      return actionIds
+        .map(id => allActionsConfig.find(a => a.id === id))
+        .filter((a): a is QuickAction => a !== undefined);
+    }
+  }
+
+  // Default to dashboard actions for unknown routes
+  return routeActionsConfig['/']
+    .map(id => allActionsConfig.find(a => a.id === id))
+    .filter((a): a is QuickAction => a !== undefined);
+}
 
 export function QuickActionButton() {
   const location = useLocation();
-
-  // These pages have their own context-aware FAB.
-  // Rendering both FABs causes overlap on mobile.
-  const hiddenRoutes = ['/calendar', '/trainings', '/exercises', '/performance'];
-  if (hiddenRoutes.some(route => location.pathname.startsWith(route))) {
-    return null;
-  }
-
+  const navigate = useNavigate();
+  
   const [isOpen, setIsOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
-  const navigate = useNavigate();
   
   const { data: clients = [] } = useClients();
   const createTraining = useCreateTrainingSession();
@@ -65,17 +105,38 @@ export function QuickActionButton() {
   const createMeasurement = useCreateMeasurement();
   const { preferences } = useLayoutPreferences();
 
-  // Filter and order actions based on user preferences
+  // Get actions based on current route
+  const routeActions = useMemo(() => {
+    return getActionsForRoute(location.pathname);
+  }, [location.pathname]);
+
+  // For dashboard, apply user preferences ordering
   const visibleActions = useMemo(() => {
-    return preferences.quickActionOrder
-      .filter(id => !preferences.hiddenQuickActions.includes(id))
-      .map(id => quickActionsConfig.find(a => a.id === id))
-      .filter((a): a is QuickAction => a !== undefined);
-  }, [preferences.quickActionOrder, preferences.hiddenQuickActions]);
+    if (location.pathname === '/') {
+      // Apply user preferences for dashboard
+      return preferences.quickActionOrder
+        .filter(id => !preferences.hiddenQuickActions.includes(id))
+        .map(id => allActionsConfig.find(a => a.id === id))
+        .filter((a): a is QuickAction => a !== undefined);
+    }
+    return routeActions;
+  }, [location.pathname, routeActions, preferences.quickActionOrder, preferences.hiddenQuickActions]);
+
+  // Don't render if no actions for this route
+  if (visibleActions.length === 0) {
+    return null;
+  }
 
   const handleAction = (actionId: string) => {
     featureTracker.track(`fab_action_${actionId}`, 'navigation');
     setIsOpen(false);
+    
+    // Handle navigation-based actions
+    if (actionId === 'stock') {
+      navigate('/sales?tab=stock&action=add');
+      return;
+    }
+    
     setActiveSheet(actionId);
   };
 
@@ -111,13 +172,11 @@ export function QuickActionButton() {
     }
   };
 
-
   const handleCreateMeasurement = async (data: any): Promise<string | void> => {
     const result = await createMeasurement.mutateAsync(data);
     setActiveSheet(null);
     return result?.id;
   };
-
 
   return (
     <>
@@ -198,7 +257,6 @@ export function QuickActionButton() {
       </div>
 
       {/* Sheets/Dialogs */}
-
       <CreateTrainingDialog
         open={activeSheet === 'training'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
@@ -230,6 +288,29 @@ export function QuickActionButton() {
       />
 
       <AddPerformanceSheet
+        open={activeSheet === 'performance'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+      />
+
+      <CreateClientSheet
+        open={activeSheet === 'client'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+        onSubmit={async () => {
+          setActiveSheet(null);
+        }}
+      />
+
+      <PreDiagnosticInviteDialog
+        open={activeSheet === 'prediagnostic'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+      />
+
+      <ExerciseFormDialog
+        open={activeSheet === 'exercise'}
+        onOpenChange={(open) => !open && setActiveSheet(null)}
+      />
+
+      <QuickLogDialog
         open={activeSheet === 'performance'}
         onOpenChange={(open) => !open && setActiveSheet(null)}
       />
