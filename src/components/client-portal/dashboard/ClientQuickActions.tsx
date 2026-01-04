@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Dumbbell, Scale, CalendarDays, Trophy, Utensils, MessageCircle, BarChart3, Award } from 'lucide-react';
+import { Dumbbell, Scale, CalendarDays, Utensils, MessageCircle, Award, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
-  // Primary actions - daily use
+  // Primary actions - daily use (row 1)
   {
     id: 'workout',
     label: 'Trénink',
@@ -40,14 +40,14 @@ const quickActions: QuickAction[] = [
     bgColor: 'bg-blue-500/10 hover:bg-blue-500/20',
   },
   {
-    id: 'leaderboard',
-    label: 'Žebříček',
-    icon: <BarChart3 className="w-5 h-5" />,
-    path: '/leaderboard',
+    id: 'competitions',
+    label: 'Soutěže',
+    icon: <Trophy className="w-5 h-5" />,
+    path: '/competitions',
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 hover:bg-amber-500/20',
   },
-  // Secondary actions
+  // Secondary actions (row 2)
   {
     id: 'measurement',
     label: 'Měření',
@@ -63,14 +63,6 @@ const quickActions: QuickAction[] = [
     path: '/attendance',
     color: 'text-indigo-500',
     bgColor: 'bg-indigo-500/10 hover:bg-indigo-500/20',
-  },
-  {
-    id: 'challenges',
-    label: 'Výzvy',
-    icon: <Trophy className="w-5 h-5" />,
-    path: '/challenges',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10 hover:bg-purple-500/20',
   },
   {
     id: 'rewards',
@@ -121,3 +113,4 @@ export function ClientQuickActions() {
     </motion.div>
   );
 }
+
