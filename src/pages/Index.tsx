@@ -4,18 +4,16 @@ import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { ActionBlock } from '@/components/dashboard/ActionBlock';
-import { TodayPlanCompact } from '@/components/dashboard/TodayPlanCompact';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
-import { LastTrainingWidget } from '@/components/dashboard/LastTrainingWidget';
 import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
 import { CapacityAlertsCard } from '@/components/dashboard/CapacityAlertsCard';
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
+import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
 
 export default function Index() {
   usePageTracking('dashboard');
@@ -64,23 +62,10 @@ export default function Index() {
           <CashflowForecastCard />
         </SectionErrorBoundary>
 
-        {/* 🏋️ Last Training Widget */}
-        {data && (
-          <SectionErrorBoundary section="Poslední trénink" compact>
-            <LastTrainingWidget 
-              todaySchedule={data.todaySchedule}
-              weekSchedule={data.weekSchedule}
-              isLoading={isLoading}
-            />
-          </SectionErrorBoundary>
-        )}
-        
-        {/* 📅 Today's Plan - compact timeline */}
-        {layout.showTodayPlan && (
-          <SectionErrorBoundary section="Dnešní plán">
-            <TodayPlanCompact data={data} isLoading={isLoading} />
-          </SectionErrorBoundary>
-        )}
+        {/* 📅 Trainings & Calendar - Combined Card */}
+        <SectionErrorBoundary section="Tréninky" compact>
+          <TrainingsCalendarCard data={data} isLoading={isLoading} />
+        </SectionErrorBoundary>
 
         {/* 📈 Capacity Alerts - NEW */}
         <SectionErrorBoundary section="Kapacita" compact>
