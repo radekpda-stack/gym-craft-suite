@@ -374,10 +374,13 @@ export type Database = {
           feed_id: string
           ics_uid: string
           id: string
+          import_approved: boolean | null
           is_processed: boolean | null
           location: string | null
           match_suggestions: Json | null
           matched_client_id: string | null
+          potential_duplicate_session_id: string | null
+          skip_import: boolean | null
           start_at: string
           summary: string | null
           training_session_id: string | null
@@ -391,10 +394,13 @@ export type Database = {
           feed_id: string
           ics_uid: string
           id?: string
+          import_approved?: boolean | null
           is_processed?: boolean | null
           location?: string | null
           match_suggestions?: Json | null
           matched_client_id?: string | null
+          potential_duplicate_session_id?: string | null
+          skip_import?: boolean | null
           start_at: string
           summary?: string | null
           training_session_id?: string | null
@@ -408,10 +414,13 @@ export type Database = {
           feed_id?: string
           ics_uid?: string
           id?: string
+          import_approved?: boolean | null
           is_processed?: boolean | null
           location?: string | null
           match_suggestions?: Json | null
           matched_client_id?: string | null
+          potential_duplicate_session_id?: string | null
+          skip_import?: boolean | null
           start_at?: string
           summary?: string | null
           training_session_id?: string | null
@@ -438,6 +447,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "calendar_ics_events_potential_duplicate_session_id_fkey"
+            columns: ["potential_duplicate_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "calendar_ics_events_training_session_id_fkey"

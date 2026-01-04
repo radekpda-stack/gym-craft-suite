@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Calendar, Plus, RefreshCw, Trash2, CheckCircle2, XCircle, 
   Clock, Users, ExternalLink, Loader2, AlertTriangle, Settings2,
-  GraduationCap, Sparkles, Pause, Play
+  GraduationCap, Sparkles, Pause, Play, FileCheck
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,8 +49,10 @@ import {
   useUpdateICSFeed,
   ICSFeed,
 } from '@/hooks/useCalendarSync';
+import { useImportStats } from '@/hooks/useCalendarImport';
 import { useClients } from '@/hooks/useClients';
 import { ClientMatchSuggestions, MatchSuggestion } from './ClientMatchSuggestions';
+import { CalendarImportReview } from './CalendarImportReview';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -59,7 +61,8 @@ import { cn } from '@/lib/utils';
 export function CalendarSyncSettings() {
   const { data: feeds, isLoading } = useICSFeeds();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedFeedId, setSelectedFeedId] = useState<string | null>(null);
+  const [selectedFeed, setSelectedFeed] = useState<ICSFeed | null>(null);
+  const [eventsDialogFeedId, setEventsDialogFeedId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -111,7 +114,8 @@ export function CalendarSyncSettings() {
                 <FeedCard 
                   key={feed.id} 
                   feed={feed} 
-                  onViewEvents={() => setSelectedFeedId(feed.id)}
+                  onOpenImportReview={() => setSelectedFeed(feed)}
+                  onViewEvents={() => setEventsDialogFeedId(feed.id)}
                 />
               ))}
             </div>
@@ -148,22 +152,33 @@ export function CalendarSyncSettings() {
 
       <AddFeedDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
       
-      {selectedFeedId && (
+      {/* New import review dialog */}
+      {selectedFeed && (
+        <CalendarImportReview
+          feedId={selectedFeed.id}
+          feedName={selectedFeed.name}
+          isOpen={!!selectedFeed}
+          onClose={() => setSelectedFeed(null)}
+        />
+      )}
+      
+      {/* Legacy events dialog for viewing all events */}
+      {eventsDialogFeedId && (
         <EventsDialog 
-          feedId={selectedFeedId} 
-          open={!!selectedFeedId} 
-          onOpenChange={(open) => !open && setSelectedFeedId(null)} 
+          feedId={eventsDialogFeedId} 
+          open={!!eventsDialogFeedId} 
+          onOpenChange={(open) => !open && setEventsDialogFeedId(null)} 
         />
       )}
     </div>
   );
 }
 
-function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => void }) {
+function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; onOpenImportReview: () => void; onViewEvents: () => void }) {
+  const { data: stats } = useImportStats(feed.id);
   const syncFeed = useSyncICSFeed();
   const deleteFeed = useDeleteICSFeed();
   const updateFeed = useUpdateICSFeed();
-  const createSessions = useCreateSessionsFromEvents();
 
   const handleSync = async () => {
     if (!feed.is_active) {
@@ -175,16 +190,6 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
       toast.success(`Synchronizováno ${result.events_synced} událostí`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Synchronizace selhala';
-      toast.error(message);
-    }
-  };
-
-  const handleCreateSessions = async () => {
-    try {
-      const result = await createSessions.mutateAsync(feed.id);
-      toast.success(`Vytvořeno ${result.sessions_created} tréninků`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Vytvoření tréninků selhalo';
       toast.error(message);
     }
   };
@@ -315,17 +320,27 @@ function FeedCard({ feed, onViewEvents }: { feed: ICSFeed; onViewEvents: () => v
       </div>
       
       {feed.events_synced > 0 && (
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 pt-4 border-t flex items-center gap-3">
           <Button 
-            onClick={handleCreateSessions}
-            disabled={createSessions.isPending}
+            onClick={onOpenImportReview}
+            variant="default"
           >
-            {createSessions.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
+            <FileCheck className="h-4 w-4 mr-2" />
+            Zkontrolovat a importovat
+            {stats && stats.readyToImport > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {stats.readyToImport}
+              </Badge>
             )}
-            Vytvořit tréninky z událostí
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewEvents}
+          >
+            <Settings2 className="h-4 w-4 mr-1" />
+            Všechny události
           </Button>
         </div>
       )}
