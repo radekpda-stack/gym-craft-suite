@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Lock, Check, Sparkles, Zap, Info } from 'lucide-react';
+import { Award, Lock, Check, Sparkles, Info } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useBadgeDefinitions, useClientBadges, BadgeDefinition } from '@/hooks/useClientGamification';
-import { useRecentXPGains, getXPSourceLabel, getXPSourceIcon } from '@/hooks/useXPHistory';
+import { XPHistoryCard } from '@/components/client-portal/gamification/XPHistoryCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { format, parseISO, formatDistanceToNow } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { getBadgeIcon } from '@/hooks/useBadgeNotifications';
 
@@ -105,7 +105,6 @@ export default function ClientPortalBadges() {
   const { clientId } = useClientPortal();
   const { data: definitions, isLoading: definitionsLoading } = useBadgeDefinitions();
   const { data: clientBadges, isLoading: badgesLoading } = useClientBadges(clientId ?? undefined);
-  const { events: xpEvents, isLoading: xpLoading } = useRecentXPGains(clientId ?? undefined);
   
   const [filter, setFilter] = useState<'all' | 'earned' | 'locked'>('all');
   
@@ -187,41 +186,8 @@ export default function ClientPortalBadges() {
         </div>
       </div>
 
-      {/* XP History Summary */}
-      {xpEvents.length > 0 && (
-        <Card className="bg-gradient-to-br from-yellow-500/10 via-background to-yellow-500/5 border-yellow-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Zap className="w-4 h-4 text-yellow-500" />
-              Poslední XP
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {xpEvents.slice(0, 3).map((event, index) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center text-sm">
-                  {getXPSourceIcon(event.source_type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {getXPSourceLabel(event.source_type)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(parseISO(event.created_at), { addSuffix: true, locale: cs })}
-                  </p>
-                </div>
-                <span className="text-sm font-bold text-primary">+{event.xp_amount}</span>
-              </motion.div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* XP History */}
+      <XPHistoryCard limit={5} className="bg-gradient-to-br from-yellow-500/10 via-background to-yellow-500/5 border-yellow-500/20" />
       
       {/* Filters - Simplified */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
