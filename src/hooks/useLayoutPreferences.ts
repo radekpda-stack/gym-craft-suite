@@ -46,12 +46,12 @@ const DEFAULT_DASHBOARD_SECTIONS_ORDER = [
 ];
 
 const DEFAULT_QUICK_ACTION_ORDER = [
-  'client',
-  'training',
-  'measurement',
-  'diagnostic',
-  'credit',
   'sale',
+  'credit',
+  'training',
+  'diagnostic',
+  'measurement',
+  'performance',
 ];
 
 const DEFAULT_HIDDEN_QUICK_ACTIONS: string[] = [];

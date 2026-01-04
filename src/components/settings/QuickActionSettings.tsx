@@ -18,12 +18,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   GripVertical,
-  UserPlus,
   Dumbbell,
   Activity,
   Stethoscope,
   Wallet,
   ShoppingBag,
+  Trophy,
   RotateCcw,
   LucideIcon,
 } from 'lucide-react';
@@ -40,12 +40,12 @@ interface QuickActionItem {
 }
 
 const quickActionsConfig: QuickActionItem[] = [
-  { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
-  { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
-  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
-  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
-  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
   { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-pink-500' },
+  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
+  { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
+  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
+  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
+  { id: 'performance', icon: Trophy, label: 'Zapsat výkon', color: 'bg-emerald-500' },
 ];
 
 interface SortableItemProps {

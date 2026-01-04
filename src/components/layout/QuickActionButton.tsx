@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus,
   X,
-  UserPlus,
   Dumbbell,
   Activity,
   Stethoscope,
@@ -14,14 +13,13 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
 import { CreateMeasurementSheet } from '@/components/measurements/CreateMeasurementSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
 import { UnifiedCreditModal } from '@/components/credit/UnifiedCreditModal';
 import { NewSaleDialog } from '@/components/sales/NewSaleDialog';
 import { AddPerformanceSheet } from '@/components/performance/AddPerformanceSheet';
-import { useClients, useCreateClient } from '@/hooks/useClients';
+import { useClients } from '@/hooks/useClients';
 import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices } from '@/hooks/useAppSettings';
@@ -38,13 +36,12 @@ interface QuickAction {
 }
 
 const quickActionsConfig: QuickAction[] = [
-  { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
-  { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
-  { id: 'performance', icon: Trophy, label: 'Přidat výkon', color: 'bg-emerald-500' },
-  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
-  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
-  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
   { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-pink-500' },
+  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
+  { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
+  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
+  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
+  { id: 'performance', icon: Trophy, label: 'Zapsat výkon', color: 'bg-emerald-500' },
 ];
 
 export function QuickActionButton() {
@@ -62,7 +59,6 @@ export function QuickActionButton() {
   const navigate = useNavigate();
   
   const { data: clients = [] } = useClients();
-  const createClient = useCreateClient();
   const createTraining = useCreateTrainingSession();
   const addTrainingTags = useAddTrainingSessionTags();
   const trainingPrices = useTrainingPrices();
@@ -115,10 +111,6 @@ export function QuickActionButton() {
     }
   };
 
-  const handleCreateClient = async (data: any) => {
-    await createClient.mutateAsync(data);
-    setActiveSheet(null);
-  };
 
   const handleCreateMeasurement = async (data: any): Promise<string | void> => {
     const result = await createMeasurement.mutateAsync(data);
@@ -206,12 +198,6 @@ export function QuickActionButton() {
       </div>
 
       {/* Sheets/Dialogs */}
-      <CreateClientSheet
-        open={activeSheet === 'client'}
-        onOpenChange={(open) => !open && setActiveSheet(null)}
-        onSubmit={handleCreateClient}
-        isLoading={createClient.isPending}
-      />
 
       <CreateTrainingDialog
         open={activeSheet === 'training'}
