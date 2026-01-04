@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFeatureStats, ALL_FEATURES, CATEGORY_LABELS, StatsPeriod, useClearFeatureStats } from '@/hooks/useFeatureStats';
 import { useClientPortalAnalyticsStats, useInactivePortalClients, PortalStatsPeriod } from '@/hooks/useClientPortalAnalyticsStats';
+import { useFormAnalyticsStats, FormStatsPeriod } from '@/hooks/useFormAnalyticsStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +37,9 @@ import {
   Monitor,
   Smartphone,
   Tablet,
-  Activity
+  Activity,
+  FileText,
+  XCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -95,6 +98,12 @@ export function FeatureUsageStats() {
   const { 
     data: inactiveClients = [] 
   } = useInactivePortalClients(period as PortalStatsPeriod);
+
+  // Form analytics
+  const { 
+    data: formStats, 
+    isLoading: formLoading 
+  } = useFormAnalyticsStats(period as FormStatsPeriod);
 
   const getDeviceIcon = (device: string) => {
     switch (device) {
@@ -262,9 +271,10 @@ export function FeatureUsageStats() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
+        <TabsList className="grid w-full grid-cols-6 mb-4">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
-          <TabsTrigger value="portal">Klientská zóna</TabsTrigger>
+          <TabsTrigger value="portal">Klient. zóna</TabsTrigger>
+          <TabsTrigger value="forms">Formuláře</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="details">Detail</TabsTrigger>
           <TabsTrigger value="unused">Nepoužívané</TabsTrigger>
@@ -694,6 +704,264 @@ export function FeatureUsageStats() {
             <Card className="glass">
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">Zatím nejsou k dispozici žádná data o klientské zóně.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* FORMS TAB */}
+        <TabsContent value="forms" className="space-y-6">
+          {formLoading ? (
+            <div className="space-y-4">
+              <div className="h-32 bg-muted animate-pulse rounded-xl" />
+              <div className="h-64 bg-muted animate-pulse rounded-xl" />
+            </div>
+          ) : formStats && formStats.totalForms > 0 ? (
+            <>
+              {/* Form Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Celkem formulářů</span>
+                    </div>
+                    <div className="text-2xl font-bold">{formStats.totalForms}</div>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-muted-foreground">Dokončených</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-600">{formStats.completedForms}</div>
+                    <p className="text-xs text-muted-foreground">{formStats.overallCompletionRate}% úspěšnost</p>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-sm text-muted-foreground">Opuštěných</span>
+                    </div>
+                    <div className="text-2xl font-bold text-red-600">{formStats.abandonedForms}</div>
+                  </CardContent>
+                </Card>
+                <Card className="glass">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Ø čas vyplnění</span>
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {formStats.avgCompletionTimeSeconds > 60 
+                        ? `${Math.round(formStats.avgCompletionTimeSeconds / 60)}m`
+                        : `${formStats.avgCompletionTimeSeconds}s`
+                      }
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Problematic Fields */}
+              {formStats.topProblematicFields.length > 0 && (
+                <Card className="glass border-amber-500/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-500" />
+                      Problematická pole (zdržují vyplnění)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[200px]">
+                      <div className="space-y-2">
+                        {formStats.topProblematicFields.map((field, i) => (
+                          <div 
+                            key={field.fieldName}
+                            className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10"
+                          >
+                            <div>
+                              <p className="font-medium">{field.fieldName}</p>
+                              <div className="flex gap-3 text-xs text-muted-foreground">
+                                <span>Ø {Math.round(field.avgTimeMs / 1000)}s</span>
+                                {field.validationErrors > 0 && (
+                                  <span className="text-red-500">{field.validationErrors} chyb</span>
+                                )}
+                                {field.skipRate > 0 && (
+                                  <span className="text-amber-600">{field.skipRate}% přeskočeno</span>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/50">
+                              {field.occurrences}× zobrazeno
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Form Types Breakdown */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Typy formulářů</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[250px]">
+                      <div className="space-y-3">
+                        {formStats.byFormType.map((formType) => (
+                          <div 
+                            key={formType.formType}
+                            className="p-3 rounded-lg bg-muted/50"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium capitalize">{formType.formType.replace(/_/g, ' ')}</span>
+                              <Badge variant="secondary">{formType.totalForms}×</Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Dokončeno:</span>
+                                <span className="ml-1 font-medium text-green-600">{formType.completionRate}%</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Ø čas:</span>
+                                <span className="ml-1 font-medium">
+                                  {formType.avgTimeSeconds > 60 
+                                    ? `${Math.round(formType.avgTimeSeconds / 60)}m`
+                                    : `${formType.avgTimeSeconds}s`
+                                  }
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Ø chyby:</span>
+                                <span className="ml-1 font-medium">{formType.avgValidationErrors}</span>
+                              </div>
+                            </div>
+                            {formType.problemFields.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border">
+                                <p className="text-xs text-amber-600 mb-1">Problémová pole:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {formType.problemFields.slice(0, 3).map(f => (
+                                    <Badge key={f.fieldName} variant="outline" className="text-xs">
+                                      {f.fieldName}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Zařízení</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {formStats.byDevice.map((device) => (
+                        <div key={device.device} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            {device.device === 'mobile' && <Smartphone className="h-4 w-4" />}
+                            {device.device === 'tablet' && <Tablet className="h-4 w-4" />}
+                            {device.device === 'desktop' && <Monitor className="h-4 w-4" />}
+                            <span className="capitalize">{device.device}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-muted-foreground">{device.count}×</span>
+                            <Badge 
+                              variant={device.completionRate >= 70 ? "default" : device.completionRate >= 50 ? "secondary" : "destructive"}
+                            >
+                              {device.completionRate}% dokončeno
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                      {formStats.byDevice.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Zatím žádná data</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Daily Trend */}
+              {formStats.dailyTrend.length > 1 && (
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Trend vyplňování formulářů</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={formStats.dailyTrend}>
+                          <defs>
+                            <linearGradient id="colorFormCompleted" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis 
+                            dataKey="date" 
+                            tickFormatter={(value) => format(new Date(value), 'd.M.', { locale: cs })}
+                            fontSize={12}
+                            stroke="hsl(var(--muted-foreground))"
+                          />
+                          <YAxis 
+                            fontSize={12}
+                            stroke="hsl(var(--muted-foreground))"
+                            allowDecimals={false}
+                          />
+                          <Tooltip 
+                            labelFormatter={(value) => format(new Date(value), 'd. MMMM yyyy', { locale: cs })}
+                            formatter={(value: number, name: string) => [
+                              value, 
+                              name === 'completed' ? 'Dokončeno' : name === 'abandoned' ? 'Opuštěno' : 'Celkem'
+                            ]}
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="completed" 
+                            stroke="hsl(var(--chart-2))" 
+                            fillOpacity={1}
+                            fill="url(#colorFormCompleted)"
+                            name="completed"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="abandoned" 
+                            stroke="hsl(350, 70%, 50%)" 
+                            fillOpacity={0.3}
+                            fill="hsl(350, 70%, 50%)"
+                            name="abandoned"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card className="glass">
+              <CardContent className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground mb-2">Zatím nejsou k dispozici žádná data o formulářích.</p>
+                <p className="text-sm text-muted-foreground">
+                  Data se začnou sbírat, jakmile klienti začnou vyplňovat formuláře (feedback, diagnostika, atd.).
+                </p>
               </CardContent>
             </Card>
           )}

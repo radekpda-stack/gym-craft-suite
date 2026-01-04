@@ -4264,6 +4264,87 @@ export type Database = {
         }
         Relationships: []
       }
+      form_field_analytics: {
+        Row: {
+          client_id: string | null
+          completed_fields: number | null
+          created_at: string
+          device_type: string | null
+          fields_data: Json | null
+          form_abandoned_at: string | null
+          form_completed_at: string | null
+          form_instance_id: string | null
+          form_started_at: string
+          form_type: string
+          id: string
+          session_id: string | null
+          skipped_fields: number | null
+          total_fields: number | null
+          total_time_seconds: number | null
+          updated_at: string
+          user_id: string
+          validation_error_count: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          client_id?: string | null
+          completed_fields?: number | null
+          created_at?: string
+          device_type?: string | null
+          fields_data?: Json | null
+          form_abandoned_at?: string | null
+          form_completed_at?: string | null
+          form_instance_id?: string | null
+          form_started_at?: string
+          form_type: string
+          id?: string
+          session_id?: string | null
+          skipped_fields?: number | null
+          total_fields?: number | null
+          total_time_seconds?: number | null
+          updated_at?: string
+          user_id: string
+          validation_error_count?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          client_id?: string | null
+          completed_fields?: number | null
+          created_at?: string
+          device_type?: string | null
+          fields_data?: Json | null
+          form_abandoned_at?: string | null
+          form_completed_at?: string | null
+          form_instance_id?: string | null
+          form_started_at?: string
+          form_type?: string
+          id?: string
+          session_id?: string | null
+          skipped_fields?: number | null
+          total_fields?: number | null
+          total_time_seconds?: number | null
+          updated_at?: string
+          user_id?: string
+          validation_error_count?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       health_conditions: {
         Row: {
           category: string

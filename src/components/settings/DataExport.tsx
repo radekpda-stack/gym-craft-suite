@@ -73,46 +73,69 @@ export function DataExport() {
 
   const fetchTableData = async (
     tableName: string,
-    dateField?: string
+    dateField?: string,
+    filterField?: string,
+    filterValue?: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any[]> => {
-    // Tables that have user_id
+    // Tables that have user_id directly
     const tablesWithUserId = [
       'clients', 'training_sessions', 'credit_transactions', 
-      'diagnostics', 'measurements', 'stat_events', 'feedback_requests'
+      'diagnostics', 'measurements', 'stat_events', 'feedback_requests',
+      'cardio_entries', 'client_workout_logs', 'client_assigned_workouts',
+      'products', 'form_field_analytics'
     ];
     
-    // Build query based on table type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (supabase.from(tableName as any) as any).select('*');
+    
+    // Apply user_id filter for tables that have it
     if (tablesWithUserId.includes(tableName)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase.from(tableName as any) as any).select('*').eq('user_id', user?.id);
-      
-      if (useCustomRange && dateField) {
-        query = query.gte(dateField, startDate).lte(dateField, endDate);
-      }
-      
-      const { data, error } = await query;
-      if (error) {
-        console.error(`Error fetching ${tableName}:`, error);
-        return [];
-      }
-      return data || [];
-    } else {
-      // For tables without direct user_id access, we need special handling
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase.from(tableName as any) as any).select('*');
-      
-      if (useCustomRange && dateField) {
-        query = query.gte(dateField, startDate).lte(dateField, endDate);
-      }
-      
-      const { data, error } = await query.limit(10000);
-      if (error) {
-        console.error(`Error fetching ${tableName}:`, error);
-        return [];
-      }
-      return data || [];
+      query = query.eq('user_id', user?.id);
     }
+    
+    // Apply trainer_id filter for some tables
+    if (['client_tracked_exercises'].includes(tableName)) {
+      query = query.eq('trainer_id', user?.id);
+    }
+    
+    // Apply custom filter if provided
+    if (filterField && filterValue) {
+      query = query.eq(filterField, filterValue);
+    }
+    
+    // Apply date range filter
+    if (useCustomRange && dateField) {
+      query = query.gte(dateField, startDate).lte(dateField, endDate);
+    }
+    
+    const { data, error } = await query.limit(50000);
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      return [];
+    }
+    return data || [];
+  };
+
+  // Fetch related data (e.g., client_workout_exercises via workout_log_ids)
+  const fetchRelatedData = async (
+    tableName: string,
+    foreignKey: string,
+    parentIds: string[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any[]> => {
+    if (parentIds.length === 0) return [];
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from(tableName as any) as any)
+      .select('*')
+      .in(foreignKey, parentIds);
+    
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      return [];
+    }
+    return data || [];
   };
 
   const createCombinedExport = (files: { name: string; content: string }[]): string => {
@@ -146,20 +169,35 @@ export function DataExport() {
     const files: { name: string; content: string }[] = [];
 
     try {
-      const tables = [
+      // === CORE TABLES ===
+      const coreTables = [
         { name: 'clients', dateField: 'created_at' },
         { name: 'training_sessions', dateField: 'date' },
         { name: 'credit_transactions', dateField: 'created_at' },
+        { name: 'exercise_entries', dateField: 'date' },
         { name: 'diagnostics', dateField: 'date' },
         { name: 'measurements', dateField: 'date' },
-        { name: 'stat_events', dateField: 'recorded_at' },
         { name: 'feedback_requests', dateField: 'created_at' },
-        { name: 'exercise_entries', dateField: 'date' },
+        { name: 'stat_events', dateField: 'recorded_at' },
       ];
 
-      for (let i = 0; i < tables.length; i++) {
-        const table = tables[i];
-        setProgress({ step: t.downloading + ' ' + table.name, current: i + 1, total: tables.length });
+      // === EXTENDED TABLES (new) ===
+      const extendedTables = [
+        { name: 'cardio_entries', dateField: 'date' },
+        { name: 'client_workout_logs', dateField: 'date' },
+        { name: 'client_assigned_workouts', dateField: 'created_at' },
+        { name: 'products', dateField: 'created_at' },
+        { name: 'form_field_analytics', dateField: 'created_at' },
+      ];
+
+      // === RELATED TABLES (via client_id or other FK) ===
+      const allTables = [...coreTables, ...extendedTables];
+      const totalSteps = allTables.length + 4; // +4 for related tables and metadata
+
+      // Fetch core + extended tables
+      for (let i = 0; i < allTables.length; i++) {
+        const table = allTables[i];
+        setProgress({ step: t.downloading + ' ' + table.name, current: i + 1, total: totalSteps });
         
         const data = await fetchTableData(table.name, table.dateField);
         
@@ -171,9 +209,72 @@ export function DataExport() {
         }
       }
 
+      // Fetch client IDs for related data
+      const clients = await fetchTableData('clients');
+      const clientIds = clients.map((c: { id: string }) => c.id);
+
+      // === CLIENT PORTAL ACTIVITY ===
+      setProgress({ step: t.downloading + ' client_portal_activity', current: allTables.length + 1, total: totalSteps });
+      const portalActivity = await fetchRelatedData('client_portal_activity', 'client_id', clientIds);
+      if (formats.includes('csv')) {
+        files.push({ name: 'client_portal_activity.csv', content: convertToCSV(portalActivity) });
+      }
+      if (formats.includes('json')) {
+        files.push({ name: 'client_portal_activity.json', content: JSON.stringify(portalActivity, null, 2) });
+      }
+
+      // === CLIENT WORKOUT EXERCISES (via workout_log_id) ===
+      setProgress({ step: t.downloading + ' client_workout_exercises', current: allTables.length + 2, total: totalSteps });
+      const workoutLogs = await fetchTableData('client_workout_logs', 'date');
+      const workoutLogIds = workoutLogs.map((w: { id: string }) => w.id);
+      const workoutExercises = await fetchRelatedData('client_workout_exercises', 'workout_log_id', workoutLogIds);
+      if (formats.includes('csv')) {
+        files.push({ name: 'client_workout_exercises.csv', content: convertToCSV(workoutExercises) });
+      }
+      if (formats.includes('json')) {
+        files.push({ name: 'client_workout_exercises.json', content: JSON.stringify(workoutExercises, null, 2) });
+      }
+
+      // === CHALLENGES & SUBMISSIONS ===
+      setProgress({ step: t.downloading + ' challenges', current: allTables.length + 3, total: totalSteps });
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('created_by_user_id', user.id);
+      
+      if (challenges && challenges.length > 0) {
+        if (formats.includes('csv')) {
+          files.push({ name: 'challenges.csv', content: convertToCSV(challenges) });
+        }
+        if (formats.includes('json')) {
+          files.push({ name: 'challenges.json', content: JSON.stringify(challenges, null, 2) });
+        }
+
+        // Get submissions for these challenges
+        const challengeIds = challenges.map(c => c.id);
+        const submissions = await fetchRelatedData('challenge_submissions', 'challenge_id', challengeIds);
+        if (submissions.length > 0) {
+          if (formats.includes('csv')) {
+            files.push({ name: 'challenge_submissions.csv', content: convertToCSV(submissions) });
+          }
+          if (formats.includes('json')) {
+            files.push({ name: 'challenge_submissions.json', content: JSON.stringify(submissions, null, 2) });
+          }
+        }
+      }
+
       // Create metadata
-      const clientCount = (await fetchTableData('clients')).length;
+      setProgress({ step: t.downloading + ' metadata', current: totalSteps, total: totalSteps });
+      const clientCount = clients.length;
       const trainingCount = (await fetchTableData('training_sessions')).length;
+      
+      const allExportedTables = [
+        ...allTables.map(t => t.name),
+        'client_portal_activity',
+        'client_workout_exercises',
+        'challenges',
+        'challenge_submissions',
+      ];
       
       const metadata = {
         app_version: '1.0.0',
@@ -183,9 +284,12 @@ export function DataExport() {
         statistics: {
           clients: clientCount,
           trainings: trainingCount,
+          portal_activities: portalActivity.length,
+          workout_logs: workoutLogs.length,
+          challenges: challenges?.length || 0,
         },
         formats_included: formats,
-        tables_exported: tables.map(t => t.name),
+        tables_exported: allExportedTables,
         completeness_estimate: '100%',
       };
       
@@ -349,15 +453,22 @@ export function DataExport() {
         <p className="flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
           {language === 'cs' 
-            ? 'Export obsahuje: klienty, tréninky, cvičení, kredit, diagnostiku, měření, feedback, stat_events'
-            : 'Export includes: clients, trainings, exercises, credit, diagnostics, measurements, feedback, stat_events'
+            ? 'Základní data: klienti, tréninky, cvičení, kredit, diagnostika, měření, feedback'
+            : 'Core data: clients, trainings, exercises, credit, diagnostics, measurements, feedback'
+          }
+        </p>
+        <p className="flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+          {language === 'cs' 
+            ? 'Rozšířená data: kardio, domácí tréninky, výzvy, klientská zóna, form analytics'
+            : 'Extended data: cardio, home workouts, challenges, client portal, form analytics'
           }
         </p>
         <p className="flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
           {language === 'cs'
-            ? 'Soubor metadata.json obsahuje souhrn exportu'
-            : 'File metadata.json contains export summary'
+            ? 'Produkty a prodeje jsou také zahrnuty'
+            : 'Products and sales are also included'
           }
         </p>
       </div>
