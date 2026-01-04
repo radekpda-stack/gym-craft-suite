@@ -4,17 +4,15 @@ import {
   Apple, 
   ChevronRight, 
   Calendar,
-  CheckCircle2,
   Clock,
-  AlertCircle,
-  Plus,
+  Droplets,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useAllNutritionSessions } from '@/hooks/useAllNutritionSessions';
-import { format, differenceInDays } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format, isToday, isYesterday, differenceInDays, subDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -24,30 +22,86 @@ interface ClientNutritionCardProps {
   defaultOpen?: boolean;
 }
 
+// Hook to get client nutrition stats
+function useClientNutritionStats(clientId: string) {
+  return useQuery({
+    queryKey: ['client-nutrition-card-stats', clientId],
+    queryFn: async () => {
+      const weekAgo = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+
+      // Get active session
+      const { data: session } = await supabase
+        .from('nutrition_log_sessions')
+        .select('id, status, created_at')
+        .eq('client_id', clientId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Get recent entries
+      const [foodResult, drinksResult, coffeeResult] = await Promise.all([
+        supabase
+          .from('nutrition_food_entries')
+          .select('id, entry_date')
+          .eq('client_id', clientId)
+          .gte('entry_date', weekAgo),
+        supabase
+          .from('nutrition_drink_entries')
+          .select('id, entry_date, drink_type, amount_ml')
+          .eq('client_id', clientId)
+          .gte('entry_date', weekAgo),
+        supabase
+          .from('nutrition_coffee_entries')
+          .select('id, entry_date')
+          .eq('client_id', clientId)
+          .gte('entry_date', weekAgo),
+      ]);
+
+      const food = foodResult.data || [];
+      const drinks = drinksResult.data || [];
+      const coffee = coffeeResult.data || [];
+
+      const allDates = [
+        ...food.map(e => e.entry_date),
+        ...drinks.map(e => e.entry_date),
+        ...coffee.map(e => e.entry_date),
+      ].sort().reverse();
+
+      const lastEntryDate = allDates[0] || null;
+      const weekEntries = food.length + drinks.length + coffee.length;
+      const waterMl = drinks
+        .filter(d => d.drink_type === 'water')
+        .reduce((sum, d) => sum + (d.amount_ml || 0), 0);
+
+      return {
+        hasActiveSession: !!session,
+        sessionId: session?.id,
+        lastEntryDate,
+        weekEntries,
+        foodCount: food.length,
+        drinkCount: drinks.length,
+        coffeeCount: coffee.length,
+        waterMl,
+      };
+    },
+  });
+}
+
 export function ClientNutritionCard({ clientId, clientName, defaultOpen = false }: ClientNutritionCardProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const { data: allSessions = [], isLoading } = useAllNutritionSessions();
+  const { data: stats, isLoading } = useClientNutritionStats(clientId);
 
-  // Filter sessions for this client
-  const clientSessions = allSessions.filter(s => s.client_id === clientId);
-  const activeSessions = clientSessions.filter(s => s.status === 'active');
-  const completedSessions = clientSessions.filter(s => s.status === 'completed');
-  
-  const activeSession = activeSessions[0];
-  const totalSessions = clientSessions.length;
-
-  // Calculate days and progress for active session
-  const daysTotal = activeSession 
-    ? differenceInDays(new Date(activeSession.end_date), new Date(activeSession.start_date))
-    : 0;
-  const daysPassed = activeSession 
-    ? differenceInDays(new Date(), new Date(activeSession.start_date))
-    : 0;
-  const fillRate = daysTotal > 0 ? Math.round((activeSession?.entries_count || 0) / Math.max(daysPassed, 1) * 100) : 0;
-  const daysRemaining = activeSession 
-    ? differenceInDays(new Date(activeSession.end_date), new Date())
-    : 0;
+  const formatLastEntry = (dateStr: string | null) => {
+    if (!dateStr) return 'Žádné záznamy';
+    const date = new Date(dateStr);
+    if (isToday(date)) return 'Dnes';
+    if (isYesterday(date)) return 'Včera';
+    const days = differenceInDays(new Date(), date);
+    if (days < 7) return `Před ${days} dny`;
+    return format(date, 'd. M.', { locale: cs });
+  };
 
   if (isLoading) {
     return (
@@ -58,6 +112,8 @@ export function ClientNutritionCard({ clientId, clientName, defaultOpen = false 
     );
   }
 
+  const hasData = stats && stats.weekEntries > 0;
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
@@ -65,26 +121,26 @@ export function ClientNutritionCard({ clientId, clientName, defaultOpen = false 
           <div className="flex items-center gap-3">
             <div className={cn(
               'p-2 rounded-xl',
-              activeSession ? 'bg-success/10' : 'bg-secondary/50'
+              stats?.hasActiveSession ? 'bg-success/10' : 'bg-secondary/50'
             )}>
               <Apple className={cn(
                 'w-5 h-5',
-                activeSession ? 'text-success' : 'text-muted-foreground'
+                stats?.hasActiveSession ? 'text-success' : 'text-muted-foreground'
               )} />
             </div>
             <div className="text-left">
               <p className="font-medium text-foreground">Výživa</p>
               <p className="text-sm text-muted-foreground">
-                {activeSession 
-                  ? `Aktivní kampaň • ${activeSession.entries_count} záznamů`
-                  : totalSessions > 0 
-                    ? `${completedSessions.length} dokončených kampaní`
-                    : 'Žádné kampaně'}
+                {stats?.hasActiveSession 
+                  ? `Aktivně zapisuje • ${stats.weekEntries} záznamů tento týden`
+                  : hasData 
+                    ? `Posl. záznam: ${formatLastEntry(stats?.lastEntryDate || null)}`
+                    : 'Zatím nezačal zapisovat'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {activeSession && (
+            {stats?.hasActiveSession && (
               <Badge variant="secondary" className="bg-success/20 text-success border-0">
                 Aktivní
               </Badge>
@@ -96,104 +152,55 @@ export function ClientNutritionCard({ clientId, clientName, defaultOpen = false 
 
       <CollapsibleContent>
         <div className="mt-2 p-4 glass rounded-2xl space-y-4">
-          {activeSession ? (
+          {hasData ? (
             <>
-              {/* Active campaign stats */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Záznamy</span>
-                  <span className="text-sm font-medium">{activeSession.entries_count} položek</span>
+              {/* Stats for this week */}
+              <p className="text-xs text-muted-foreground">Tento týden</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-3 rounded-xl bg-orange-500/10 text-center">
+                  <p className="text-xl font-bold text-orange-500">{stats?.foodCount}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Jídel</p>
                 </div>
-                <Progress value={Math.min(fillRate, 100)} className="h-2" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-secondary/50 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Zbývá</p>
-                    <p className="font-medium text-foreground">
-                      {daysRemaining > 0 ? `${daysRemaining} dní` : 'Končí dnes'}
-                    </p>
-                  </div>
+                <div className="p-3 rounded-xl bg-blue-500/10 text-center">
+                  <p className="text-xl font-bold text-blue-500">{Math.round((stats?.waterMl || 0) / 100) / 10}l</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Vody</p>
                 </div>
-                <div className="p-3 rounded-xl bg-secondary/50 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Trvání</p>
-                    <p className="font-medium text-foreground">{daysTotal} dní</p>
-                  </div>
+                <div className="p-3 rounded-xl bg-amber-600/10 text-center">
+                  <p className="text-xl font-bold text-amber-600">{stats?.coffeeCount}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Kávy</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(activeSession.start_date), 'd. MMM', { locale: cs })} - {format(new Date(activeSession.end_date), 'd. MMM yyyy', { locale: cs })}
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Poslední: {formatLastEntry(stats?.lastEntryDate || null)}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="gap-1 text-xs"
-                  onClick={() => navigate(`/nutrition/campaigns/${activeSession.id}`)}
+                  onClick={() => navigate(`/nutrition/client/${clientId}`)}
                 >
-                  Detail kampaně
+                  Zobrazit deník
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </>
-          ) : totalSessions > 0 ? (
-            <>
-              {/* Show recent completed campaigns */}
-              <p className="text-xs text-muted-foreground">Poslední kampaně</p>
-              <div className="space-y-2">
-                {clientSessions.slice(0, 3).map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => navigate(`/nutrition/campaigns/${session.id}`)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      {session.status === 'completed' ? (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {format(new Date(session.start_date), 'd. MMM', { locale: cs })} - {format(new Date(session.end_date), 'd. MMM', { locale: cs })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {session.entries_count} záznamů
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => navigate('/nutrition')}
-              >
-                <Plus className="w-4 h-4" />
-                Nová kampaň
-              </Button>
-            </>
           ) : (
             <div className="text-center py-6">
               <Apple className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground mb-3">Zatím žádné nutriční kampaně</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                Klient zatím nezapisuje stravu
+              </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => navigate('/nutrition')}
+                onClick={() => navigate(`/nutrition/client/${clientId}`)}
               >
-                <Plus className="w-4 h-4" />
-                Vytvořit kampaň
+                <Calendar className="w-4 h-4" />
+                Zobrazit deník
               </Button>
             </div>
           )}

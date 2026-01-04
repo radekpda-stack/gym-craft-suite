@@ -4815,6 +4815,7 @@ export type Database = {
           session_id: string
           sugar: boolean | null
           sugar_spoons: number | null
+          trainer_comment: string | null
           user_id: string | null
         }
         Insert: {
@@ -4832,6 +4833,7 @@ export type Database = {
           session_id: string
           sugar?: boolean | null
           sugar_spoons?: number | null
+          trainer_comment?: string | null
           user_id?: string | null
         }
         Update: {
@@ -4849,6 +4851,7 @@ export type Database = {
           session_id?: string
           sugar?: boolean | null
           sugar_spoons?: number | null
+          trainer_comment?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -4890,6 +4893,7 @@ export type Database = {
           id: string
           note: string | null
           session_id: string
+          trainer_comment: string | null
           user_id: string | null
         }
         Insert: {
@@ -4906,6 +4910,7 @@ export type Database = {
           id?: string
           note?: string | null
           session_id: string
+          trainer_comment?: string | null
           user_id?: string | null
         }
         Update: {
@@ -4922,6 +4927,7 @@ export type Database = {
           id?: string
           note?: string | null
           session_id?: string
+          trainer_comment?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -4971,6 +4977,7 @@ export type Database = {
           quality: string | null
           satiation: string | null
           session_id: string
+          trainer_comment: string | null
           units_count: number | null
           units_label: string | null
           user_id: string | null
@@ -4997,6 +5004,7 @@ export type Database = {
           quality?: string | null
           satiation?: string | null
           session_id: string
+          trainer_comment?: string | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null
@@ -5023,6 +5031,7 @@ export type Database = {
           quality?: string | null
           satiation?: string | null
           session_id?: string
+          trainer_comment?: string | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null

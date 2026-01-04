@@ -71,6 +71,8 @@ export function useAddFoodEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
     },
   });
 }
@@ -115,6 +117,8 @@ export function useAddDrinkEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-drink-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
     },
   });
 }
@@ -161,6 +165,8 @@ export function useAddCoffeeEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-coffee-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
     },
   });
 }
@@ -200,6 +206,8 @@ export function useQuickAddWater() {
     onSuccess: (_, { sessionId, clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
     },
   });
 }
@@ -353,6 +361,8 @@ export function useDeleteNutritionEntryPortal() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: [`nutrition-${type}-entries`, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
     },
   });
 }

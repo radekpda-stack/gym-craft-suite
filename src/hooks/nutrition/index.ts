@@ -4,4 +4,3 @@
 
 export { useNutritionLogSession, useNutritionLogSessions, useCreateNutritionLogSession, useDeleteNutritionEntry, useNutritionEntries } from '../useNutritionLog';
 export { useNutritionEvaluation } from '../useNutritionEvaluation';
-export { useAllNutritionSessions } from '../useAllNutritionSessions';
