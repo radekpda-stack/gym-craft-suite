@@ -3,7 +3,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Loader2, Tag, Search, Check, AlertTriangle, Dumbbell } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
@@ -36,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { DateTimePicker, DurationPicker } from "@/components/ui/date-time-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
@@ -83,18 +82,16 @@ export function EnhancedTrainingForm({
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [priceOverrideEnabled, setPriceOverrideEnabled] = useState(false);
   
-  // Helper to format date as local datetime string
+  // Helper to format date as local datetime string - set to current hour with :00 minutes
   const getLocalDateTimeString = () => {
     const now = new Date();
-    // Round to next hour
+    // Set minutes to :00 for faster entry
     now.setMinutes(0, 0, 0);
-    now.setHours(now.getHours() + 1);
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return `${year}-${month}-${day}T${hours}:00`;
   };
 
   const form = useForm<EnhancedTrainingFormValues>({
@@ -278,53 +275,34 @@ export function EnhancedTrainingForm({
           )}
         />
 
-        {/* 3 & 4. Participant count + Duration in row */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="participant_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Počet osob</FormLabel>
-                <Select 
-                  onValueChange={(v) => field.onChange(parseInt(v))} 
-                  value={field.value?.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger className="bg-secondary border-border h-11">
-                      <SelectValue placeholder="1" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-popover border-border">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Délka</FormLabel>
+        {/* Participant count */}
+        <FormField
+          control={form.control}
+          name="participant_count"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Počet osob</FormLabel>
+              <Select 
+                onValueChange={(v) => field.onChange(parseInt(v))} 
+                value={field.value?.toString()}
+              >
                 <FormControl>
-                  <DurationPicker
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <SelectTrigger className="bg-secondary border-border h-11">
+                    <SelectValue placeholder="1" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                <SelectContent className="bg-popover border-border">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* 5. Price - Auto with override option */}
         <div className="space-y-2">
@@ -403,24 +381,6 @@ export function EnhancedTrainingForm({
           />
         </div>
 
-        {/* Notes */}
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Poznámky</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Poznámky k tréninku..."
-                  className="bg-secondary border-border min-h-[80px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
           {isLoading ? (
