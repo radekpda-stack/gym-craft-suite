@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPurchaseHistory, useClientPurchaseStats } from '@/hooks/useClientPurchaseHistory';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { ShoppingBag, Package, Calendar, CreditCard, Banknote, Wallet, Building2 } from 'lucide-react';
+import { ShoppingBag, Package, Calendar, CreditCard, Banknote, Wallet, Building2, Percent } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/formatters';
@@ -150,11 +150,51 @@ export default function ClientPortalPurchases() {
                             {item.quantity > 1 && (
                               <span className="text-muted-foreground">×{item.quantity}</span>
                             )}
+                            {/* Item discount badge */}
+                            {item.discountAmount && item.discountAmount > 0 && (
+                              <Badge variant="secondary" className="gap-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <Percent className="w-3 h-3" />
+                                {item.discountType === 'percent' && item.discountValue
+                                  ? `-${item.discountValue}%`
+                                  : `-${formatCurrency(item.discountAmount)}`}
+                              </Badge>
+                            )}
                           </div>
-                          <span className="font-medium">{formatCurrency(item.total)}</span>
+                          <div className="text-right">
+                            {item.discountAmount && item.discountAmount > 0 ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs text-muted-foreground line-through">
+                                  {formatCurrency(item.total)}
+                                </span>
+                                <span className="font-medium text-green-600 dark:text-green-400">
+                                  {formatCurrency(item.totalAfterDiscount || item.total - item.discountAmount)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-medium">{formatCurrency(item.total)}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
+
+                    {/* Order-level discount */}
+                    {purchase.totalDiscount && purchase.totalDiscount > 0 && (
+                      <div className="flex items-center justify-between text-sm py-2 border-t border-dashed">
+                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                          <Percent className="w-4 h-4" />
+                          <span>
+                            Sleva na objednávku
+                            {purchase.orderDiscountType === 'percent' && purchase.orderDiscountValue
+                              ? ` (${purchase.orderDiscountValue}%)`
+                              : ''}
+                          </span>
+                        </div>
+                        <span className="font-medium text-green-600 dark:text-green-400">
+                          -{formatCurrency(purchase.totalDiscount)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Total */}
                     <div className="flex items-center justify-between pt-3 border-t">
