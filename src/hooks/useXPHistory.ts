@@ -26,6 +26,9 @@ export const XP_SOURCE_LABELS: Record<string, string> = {
   first_week_workout: 'První trénink v týdnu',
   pr: 'Osobní rekord',
   
+  // Nákupy
+  purchase: 'Nákup ve fitku',
+  
   // Nutriční deník
   nutrition_entry: 'Nutriční záznam',
   nutrition_day_complete: 'Kompletní nutriční den',
@@ -58,6 +61,9 @@ export const XP_SOURCE_ICONS: Record<string, string> = {
   weekly_streak: '🔥',
   first_week_workout: '🥇',
   pr: '🏆',
+  
+  // Nákupy
+  purchase: '🛒',
   
   // Nutriční deník
   nutrition_entry: '🍎',
