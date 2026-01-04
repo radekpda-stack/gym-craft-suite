@@ -106,16 +106,16 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         : 'strength';
 
       // Process exercise entries
-      const rows = (exerciseEntries || []).map(entry => {
+      let rows = (exerciseEntries || []).map(entry => {
         const weight = entry.weight_kg || 0;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
         const timeSeconds = entry.time_seconds;
-        const timeMs = (entry as any).time_ms;
-        
+        const timeMs = (entry as any).time_ms as number | null | undefined;
+
         // Determine entry type
-        const hasTime = timeSeconds && timeSeconds > 0;
+        const hasTime = !!timeSeconds && timeSeconds > 0;
         const hasWeight = weight > 0;
 
         // Get performance display using fallback logic
@@ -130,7 +130,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
 
         return {
           id: entry.id,
-          type: hasTime ? 'time' as const : 'strength' as const,
+          type: hasTime ? ('time' as const) : ('strength' as const),
           date: entry.date,
           clientId: entry.client_id,
           clientName: (entry.clients as any)?.name || 'Neznámý',
@@ -139,9 +139,10 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           sets: hasWeight ? sets : null,
           volume: hasWeight ? volume : null,
           timeSeconds: hasTime ? timeSeconds : null,
-          timeMs: hasTime ? timeMs : null,
+          timeMs: hasTime ? (timeMs ?? null) : null,
           notes: entry.notes,
-          isPR: entry.is_pr,
+          // NOTE: we will re-compute PR in UI so edits reflect immediately
+          isPR: false,
           trainingType: entry.training_type,
           rpe: (entry as any).rpe,
           level: (entry as any).level,
@@ -149,6 +150,36 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           performanceDisplay,
         };
       });
+
+      // Recompute true PRs from current rows so trophies update after edits
+      const prIds = new Set<string>();
+      const groups = new Map<string, typeof rows>();
+      for (const r of rows) {
+        // Group by client only (exercise is fixed by exerciseId)
+        const key = r.clientId;
+        const list = groups.get(key) ?? [];
+        list.push(r);
+        groups.set(key, list);
+      }
+
+      for (const [, list] of groups) {
+        const timeRows = list.filter(r => r.timeSeconds && r.timeSeconds > 0);
+        const weightRows = list.filter(r => r.weight && r.weight > 0);
+
+        if (isTimeBased && timeRows.length) {
+          const best = timeRows
+            .map(r => ({ id: r.id, v: r.timeMs ?? (r.timeSeconds! * 1000), date: r.date }))
+            .sort((a, b) => a.v - b.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+          if (best) prIds.add(best.id);
+        } else if (!isTimeBased && weightRows.length) {
+          const best = weightRows
+            .map(r => ({ id: r.id, v: r.weight!, date: r.date }))
+            .sort((a, b) => b.v - a.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+          if (best) prIds.add(best.id);
+        }
+      }
+
+      rows = rows.map(r => ({ ...r, isPR: prIds.has(r.id) }));
 
       return { rows, isTimeBased, metricCategory };
     },
