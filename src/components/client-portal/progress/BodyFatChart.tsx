@@ -111,9 +111,9 @@ export function BodyFatChart({ data, isLoading }: BodyFatChartProps) {
                 type="monotone" 
                 dataKey="value" 
                 stroke="hsl(var(--chart-2))" 
-                strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-2))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, fill: 'hsl(var(--chart-2))' }}
+                strokeWidth={2.5}
+                dot={{ fill: 'hsl(var(--chart-2))', strokeWidth: 2, stroke: 'hsl(var(--background))', r: 5 }}
+                activeDot={{ r: 7, fill: 'hsl(var(--chart-2))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
