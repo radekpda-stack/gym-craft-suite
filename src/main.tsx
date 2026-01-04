@@ -9,7 +9,21 @@ initClientErrorReporter();
 const initTheme = () => {
   const stored = localStorage.getItem('app-theme');
   const validThemes = ['nike', 'nike-volt', 'arctic-pro', 'light-minimal', 'frost-minimal'] as const;
-  const theme = stored && (validThemes as readonly string[]).includes(stored) ? stored : 'arctic-pro';
+  const lightThemes = ['light-minimal', 'frost-minimal'];
+  const defaultDark = 'arctic-pro';
+  const defaultLight = 'frost-minimal';
+  
+  let theme: string;
+  
+  if (stored === 'system') {
+    // Detect system preference
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+    theme = prefersDark ? defaultDark : defaultLight;
+  } else if (stored && (validThemes as readonly string[]).includes(stored)) {
+    theme = stored;
+  } else {
+    theme = defaultDark;
+  }
 
   // Clear any previous theme classes (in case of hot reload / embedded contexts)
   const root = document.documentElement;
@@ -22,7 +36,7 @@ const initTheme = () => {
   root.classList.add(`theme-${theme}`);
   body?.classList.add(`theme-${theme}`);
 
-  const isLight = theme === 'light-minimal' || theme === 'frost-minimal';
+  const isLight = lightThemes.includes(theme);
   root.classList.toggle('dark', !isLight);
   root.classList.toggle('light', isLight);
   body?.classList.toggle('dark', !isLight);

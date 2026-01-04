@@ -16,13 +16,13 @@ import { useClientPrivacySettings, useUpdateClientPrivacySettings } from '@/hook
 import { ClientProfileSection } from '@/components/client-portal/ClientProfileSection';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboardSettings, useUpdateLeaderboardSettings } from '@/hooks/useClientGamification';
-import { ThemeSwitcher } from '@/components/client-portal/common/SharedComponents';
-import { useTheme, themes, ThemeId } from '@/hooks/useTheme';
+import { ThemeSwitcher, ThemeOption, themePreferenceToOption } from '@/components/client-portal/common/SharedComponents';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function ClientPortalSettings() {
   const { user } = useClientPortalAuth();
   const { clientId } = useClientPortal();
-  const { currentTheme, setTheme: setAppTheme } = useTheme();
+  const { currentTheme, themePreference, setTheme: setAppTheme } = useTheme();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -303,9 +303,11 @@ export default function ClientPortalSettings() {
                   <div className="space-y-3">
                     <Label>Barevný režim</Label>
                     <ThemeSwitcher 
-                      value={currentTheme === 'light-minimal' || currentTheme === 'frost-minimal' ? 'light' : 'dark'} 
-                      onChange={(t) => {
-                        if (t === 'light') {
+                      value={themePreferenceToOption(themePreference, currentTheme)} 
+                      onChange={(t: ThemeOption) => {
+                        if (t === 'system') {
+                          setAppTheme('system');
+                        } else if (t === 'light') {
                           setAppTheme('frost-minimal');
                         } else {
                           setAppTheme('arctic-pro');

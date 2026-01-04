@@ -41,13 +41,24 @@
       // Apply theme immediately before React loads to prevent flash
       (function() {
         var THEME_KEY = 'app-theme';
-        var DEFAULT = 'arctic-pro';
+        var DEFAULT_DARK = 'arctic-pro';
+        var DEFAULT_LIGHT = 'frost-minimal';
         var VALID = ['nike', 'nike-volt', 'arctic-pro', 'light-minimal', 'frost-minimal'];
         var LIGHT_THEMES = ['light-minimal', 'frost-minimal'];
         
         try {
           var stored = localStorage.getItem(THEME_KEY);
-          var theme = (stored && VALID.indexOf(stored) !== -1) ? stored : DEFAULT;
+          var theme;
+          
+          if (stored === 'system') {
+            // Detect system preference
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            theme = prefersDark ? DEFAULT_DARK : DEFAULT_LIGHT;
+          } else if (stored && VALID.indexOf(stored) !== -1) {
+            theme = stored;
+          } else {
+            theme = DEFAULT_DARK;
+          }
           
           document.documentElement.classList.add('theme-' + theme);
           
@@ -57,7 +68,7 @@
             document.documentElement.classList.add('dark');
           }
         } catch (e) {
-          document.documentElement.classList.add('theme-' + DEFAULT, 'dark');
+          document.documentElement.classList.add('theme-' + DEFAULT_DARK, 'dark');
         }
       })();
     </script>

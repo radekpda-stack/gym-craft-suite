@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// 'system' is a special meta-theme that maps to light/dark based on OS preference
 export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal';
+export type ThemePreference = ThemeId | 'system';
 
 export interface Theme {
   id: ThemeId;
@@ -83,7 +85,21 @@ export const themes: Theme[] = [
 const THEME_STORAGE_KEY = 'app-theme';
 const THEME_DB_KEY = 'user_theme';
 const DEFAULT_THEME: ThemeId = 'arctic-pro';
+const DEFAULT_LIGHT_THEME: ThemeId = 'frost-minimal';
+const DEFAULT_DARK_THEME: ThemeId = 'arctic-pro';
 const VALID_THEME_IDS = themes.map(t => t.id);
+
+// Check if a theme preference is 'system'
+function isSystemPreference(pref: string | null): boolean {
+  return pref === 'system';
+}
+
+// Get the resolved theme based on OS preference
+function getSystemResolvedTheme(): ThemeId {
+  if (typeof window === 'undefined') return DEFAULT_THEME;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return prefersDark ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME;
+}
 
 // Apply theme to DOM - this is the core function
 function applyThemeToDOM(themeId: ThemeId) {
@@ -125,12 +141,13 @@ function applyThemeToDOM(themeId: ThemeId) {
   }
 }
 
-// Get initial theme from localStorage (fast, synchronous)
-function getInitialTheme(): ThemeId {
+// Get initial theme preference from localStorage (fast, synchronous)
+function getInitialPreference(): ThemePreference {
   if (typeof window === 'undefined') return DEFAULT_THEME;
   
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'system') return 'system';
     if (stored && VALID_THEME_IDS.includes(stored as ThemeId)) {
       return stored as ThemeId;
     }
@@ -141,8 +158,18 @@ function getInitialTheme(): ThemeId {
   return DEFAULT_THEME;
 }
 
+// Get the actual theme to apply (resolves 'system' to actual theme)
+function getResolvedTheme(pref: ThemePreference): ThemeId {
+  if (pref === 'system') {
+    return getSystemResolvedTheme();
+  }
+  return pref;
+}
+
 // Initialize theme on module load (before React)
-const initialTheme = getInitialTheme();
+const initialPreference = getInitialPreference();
+const initialTheme = getResolvedTheme(initialPreference);
+
 // Apply theme immediately to prevent flash of wrong theme
 if (typeof document !== 'undefined') {
   applyThemeToDOM(initialTheme);
@@ -150,12 +177,14 @@ if (typeof document !== 'undefined') {
 
 interface ThemeContextType {
   currentTheme: ThemeId;
-  setTheme: (themeId: ThemeId, showToast?: boolean) => void;
+  themePreference: ThemePreference;
+  setTheme: (themeId: ThemePreference, showToast?: boolean) => void;
   resetTheme: () => void;
   themes: Theme[];
   currentThemeData: Theme | undefined;
   isLoading: boolean;
   isSyncing: boolean;
+  isSystemMode: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -165,9 +194,26 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [themePreference, setThemePreference] = useState<ThemePreference>(initialPreference);
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(initialTheme);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Listen for system preference changes when in 'system' mode
+  useEffect(() => {
+    if (themePreference !== 'system') return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      const newTheme = e.matches ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME;
+      setCurrentTheme(newTheme);
+      applyThemeToDOM(newTheme);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [themePreference]);
 
   // Sync theme from database on mount (for logged-in users)
   useEffect(() => {
@@ -188,7 +234,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
         if (!error && data?.value) {
           const dbTheme = data.value as string;
-          if (VALID_THEME_IDS.includes(dbTheme as ThemeId)) {
+          
+          if (dbTheme === 'system') {
+            setThemePreference('system');
+            const resolved = getSystemResolvedTheme();
+            setCurrentTheme(resolved);
+            localStorage.setItem(THEME_STORAGE_KEY, 'system');
+            applyThemeToDOM(resolved);
+          } else if (VALID_THEME_IDS.includes(dbTheme as ThemeId)) {
+            setThemePreference(dbTheme as ThemeId);
             setCurrentTheme(dbTheme as ThemeId);
             localStorage.setItem(THEME_STORAGE_KEY, dbTheme);
             applyThemeToDOM(dbTheme as ThemeId);
@@ -205,7 +259,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, []);
 
   // Save theme to database
-  const saveToDatabase = useCallback(async (themeId: ThemeId) => {
+  const saveToDatabase = useCallback(async (pref: ThemePreference) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -217,7 +271,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         .upsert({
           user_id: user.id,
           key: THEME_DB_KEY,
-          value: themeId,
+          value: pref,
           description: 'User preferred theme',
         }, {
           onConflict: 'user_id,key',
@@ -233,29 +287,40 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, []);
 
-  const setTheme = useCallback((themeId: ThemeId, showToast = true) => {
-    if (!VALID_THEME_IDS.includes(themeId)) {
-      console.warn('Invalid theme ID:', themeId);
+  const setTheme = useCallback((pref: ThemePreference, showToast = true) => {
+    // Validate
+    if (pref !== 'system' && !VALID_THEME_IDS.includes(pref)) {
+      console.warn('Invalid theme preference:', pref);
       return;
     }
     
-    setCurrentTheme(themeId);
+    setThemePreference(pref);
+    
+    const resolvedTheme = getResolvedTheme(pref);
+    setCurrentTheme(resolvedTheme);
     
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, themeId);
+      localStorage.setItem(THEME_STORAGE_KEY, pref);
     } catch (e) {
       console.warn('Failed to save theme to localStorage:', e);
     }
     
-    applyThemeToDOM(themeId);
-    saveToDatabase(themeId);
+    applyThemeToDOM(resolvedTheme);
+    saveToDatabase(pref);
 
     if (showToast) {
-      const themeData = themes.find(t => t.id === themeId);
-      toast({
-        title: 'Vzhled změněn',
-        description: themeData?.nameCs || themeData?.name,
-      });
+      if (pref === 'system') {
+        toast({
+          title: 'Vzhled změněn',
+          description: 'Automatický režim (podle systému)',
+        });
+      } else {
+        const themeData = themes.find(t => t.id === pref);
+        toast({
+          title: 'Vzhled změněn',
+          description: themeData?.nameCs || themeData?.name,
+        });
+      }
     }
   }, [saveToDatabase]);
 
@@ -265,6 +330,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     } catch (e) {
       console.warn('Failed to remove theme from localStorage:', e);
     }
+    setThemePreference(DEFAULT_THEME);
     setCurrentTheme(DEFAULT_THEME);
     applyThemeToDOM(DEFAULT_THEME);
     saveToDatabase(DEFAULT_THEME);
@@ -277,12 +343,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const value: ThemeContextType = {
     currentTheme,
+    themePreference,
     setTheme,
     resetTheme,
     themes,
     currentThemeData: themes.find(t => t.id === currentTheme),
     isLoading,
     isSyncing,
+    isSystemMode: themePreference === 'system',
   };
 
   return React.createElement(ThemeContext.Provider, { value }, children);
@@ -296,13 +364,14 @@ export function useTheme(): ThemeContextType {
     console.warn('useTheme used outside ThemeProvider, using fallback');
     return {
       currentTheme: initialTheme,
-      setTheme: (themeId: ThemeId) => {
+      themePreference: initialPreference,
+      setTheme: (pref: ThemePreference) => {
         try {
-          localStorage.setItem(THEME_STORAGE_KEY, themeId);
+          localStorage.setItem(THEME_STORAGE_KEY, pref);
         } catch (e) {
           // ignore
         }
-        applyThemeToDOM(themeId);
+        applyThemeToDOM(getResolvedTheme(pref));
       },
       resetTheme: () => {
         try {
@@ -316,6 +385,7 @@ export function useTheme(): ThemeContextType {
       currentThemeData: themes.find(t => t.id === initialTheme),
       isLoading: false,
       isSyncing: false,
+      isSystemMode: initialPreference === 'system',
     };
   }
   
