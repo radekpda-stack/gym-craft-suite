@@ -53,6 +53,7 @@ const TestDetail = lazy(() => import("./pages/TestDetail"));
 const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
 const NutritionPage = lazy(() => import("./pages/NutritionPage"));
 const NutritionCampaignDetail = lazy(() => import("./pages/NutritionCampaignDetail"));
+const NutritionClientDetail = lazy(() => import("./pages/NutritionClientDetail"));
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const Challenges = lazy(() => import("./pages/Challenges"));
@@ -185,6 +186,7 @@ const App = () => (
                           <Route path="/tests" element={<Tests />} />
                           <Route path="/tests/:id" element={<TestDetail />} />
                           <Route path="/nutrition" element={<NutritionPage />} />
+                          <Route path="/nutrition/client/:clientId" element={<NutritionClientDetail />} />
                           <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
                           <Route path="/training-templates" element={<TrainingTemplates />} />
                           <Route path="/client-portal" element={<ClientPortalAdmin />} />

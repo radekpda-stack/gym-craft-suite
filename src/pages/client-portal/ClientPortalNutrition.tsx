@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientNutritionCampaign, useClientNutritionByDate, useClientNutritionCompletedDays, useClientNutritionSessions } from '@/hooks/useClientPortalData';
-import { useQuickAddWater, useDeleteNutritionEntryPortal, useCreateClientNutritionSession } from '@/hooks/useClientPortalNutrition';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, CheckCircle2, AlertCircle, Clock, Plus, Droplets, UtensilsCrossed, History, Loader2, PlayCircle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Apple, Plus, Droplets, UtensilsCrossed, History, Loader2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,58 +14,168 @@ import { NutritionDailySummary } from '@/components/client-portal/nutrition/Nutr
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { NutritionHistory } from '@/components/client-portal/nutrition/NutritionHistory';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { type MealTypeId } from '@/components/client-portal/nutrition/constants';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  useQuickAddWater, 
+  useDeleteNutritionEntryPortal 
+} from '@/hooks/useClientPortalNutrition';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
   entry: any;
 } | null;
 
+// Hook to get or create ongoing nutrition session
+function useOngoingNutritionSession(clientId: string | undefined, trainerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['client-ongoing-nutrition-session', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+
+      // First check if there's an active session
+      const { data: existingSession, error } = await supabase
+        .from('nutrition_log_sessions')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return existingSession;
+    },
+    enabled: !!clientId,
+  });
+
+  const createSession = useMutation({
+    mutationFn: async () => {
+      if (!clientId || !trainerId) throw new Error('Missing IDs');
+
+      // Create ongoing session (1 year duration, effectively unlimited)
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      const { data, error } = await supabase
+        .from('nutrition_log_sessions')
+        .insert({
+          client_id: clientId,
+          user_id: trainerId,
+          start_date: format(startDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+          status: 'active',
+          is_self_service: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-ongoing-nutrition-session', clientId] });
+    },
+  });
+
+  return { session: query.data, isLoading: query.isLoading, createSession };
+}
+
+// Hook to get nutrition data for a specific date
+function useNutritionByDate(clientId: string | undefined, sessionId: string | undefined, date: string) {
+  return useQuery({
+    queryKey: ['client-nutrition-by-date', clientId, sessionId, date],
+    queryFn: async () => {
+      if (!clientId || !sessionId) return { food: [], drinks: [], coffee: [] };
+
+      const [foodResult, drinksResult, coffeeResult] = await Promise.all([
+        supabase
+          .from('nutrition_food_entries')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('entry_date', date)
+          .order('entry_time', { ascending: true }),
+        supabase
+          .from('nutrition_drink_entries')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('entry_date', date)
+          .order('entry_time', { ascending: true }),
+        supabase
+          .from('nutrition_coffee_entries')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('entry_date', date)
+          .order('entry_time', { ascending: true }),
+      ]);
+
+      return {
+        food: foodResult.data || [],
+        drinks: drinksResult.data || [],
+        coffee: coffeeResult.data || [],
+      };
+    },
+    enabled: !!clientId && !!sessionId,
+  });
+}
+
+// Hook to get completed days
+function useCompletedDays(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-nutrition-completed-days', sessionId],
+    queryFn: async () => {
+      if (!sessionId) return [];
+
+      const { data, error } = await supabase
+        .from('nutrition_food_entries')
+        .select('entry_date')
+        .eq('session_id', sessionId);
+
+      if (error) throw error;
+      return [...new Set((data || []).map(e => e.entry_date))];
+    },
+    enabled: !!sessionId,
+  });
+}
+
 export default function ClientPortalNutrition() {
   const { clientId, clientAccount } = useClientPortal();
-  const { data: campaign, isLoading } = useClientNutritionCampaign(clientId ?? undefined);
-  const { data: allSessions, isLoading: sessionsLoading } = useClientNutritionSessions(clientId ?? undefined);
+  const trainerId = clientAccount?.trainer_id;
+  
+  const { session, isLoading, createSession } = useOngoingNutritionSession(clientId ?? undefined, trainerId);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   
-  const { data: dayData, isLoading: dayLoading } = useClientNutritionByDate(
+  const { data: dayData, isLoading: dayLoading } = useNutritionByDate(
     clientId ?? undefined, 
-    campaign?.id,
+    session?.id,
     selectedDateStr
   );
-  const { data: completedDays = [] } = useClientNutritionCompletedDays(campaign?.id);
+  const { data: completedDays = [] } = useCompletedDays(session?.id);
   const quickWater = useQuickAddWater();
   const deleteEntry = useDeleteNutritionEntryPortal();
-  const createSession = useCreateClientNutritionSession();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
   const [prefilledMealType, setPrefilledMealType] = useState<MealTypeId | undefined>();
-  const [activeTab, setActiveTab] = useState('current');
-
-  const progressPercent = campaign ? (campaign.daysCompleted / campaign.totalDays) * 100 : 0;
+  const [activeTab, setActiveTab] = useState('today');
 
   useEffect(() => {
     trackPageMount();
   }, [trackPageMount]);
 
-  useEffect(() => {
-    if (campaign) {
-      trackPortalEvent('client_portal_view_campaign', { 
-        is_active: campaign.isActive,
-        progress_percent: progressPercent
-      });
-    }
-  }, [campaign, progressPercent, trackPortalEvent]);
-
   const handleQuickWater = async () => {
-    if (!campaign || !clientId) return;
+    if (!session || !clientId) return;
     
     try {
       await quickWater.mutateAsync({
-        sessionId: campaign.id,
+        sessionId: session.id,
         clientId,
         amount: 300,
       });
@@ -80,13 +187,13 @@ export default function ClientPortalNutrition() {
   };
 
   const handleDeleteEntry = async (type: 'food' | 'drink' | 'coffee', entryId: string) => {
-    if (!campaign || !clientId) return;
+    if (!session || !clientId) return;
     
     try {
       await deleteEntry.mutateAsync({
         type,
         entryId,
-        sessionId: campaign.id,
+        sessionId: session.id,
         clientId,
       });
       toast.success('Záznam smazán');
@@ -102,257 +209,223 @@ export default function ClientPortalNutrition() {
   };
 
   const handleStartTracking = async () => {
-    const trainerId = clientAccount?.trainer_id;
-    const clientName = (clientAccount as any)?.clients?.name || 'Klient';
-    if (!clientId || !trainerId) return;
-    
     try {
-      await createSession.mutateAsync({
-        clientId,
-        trainerId,
-        clientName,
-        durationDays: 7,
-      });
-      toast.success('Sledování stravy zahájeno na 7 dní');
+      await createSession.mutateAsync();
+      toast.success('Nutriční deník aktivován');
       trackPortalEvent('client_portal_start_nutrition_tracking');
     } catch (error) {
-      toast.error('Nepodařilo se zahájit sledování');
+      toast.error('Nepodařilo se aktivovat deník');
     }
   };
 
   // Calculate water from drinks
   const waterMl = dayData?.drinks
-    ?.filter(d => d.drink_type?.toLowerCase().includes('voda') || d.drink_type?.toLowerCase().includes('water'))
+    ?.filter(d => d.drink_type?.toLowerCase().includes('water') || d.drink_type === 'water')
     .reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0;
 
-  const hasHistory = allSessions && allSessions.length > 1;
+  // Count entries for stats
+  const totalEntries = completedDays.length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Strava</h1>
-        <p className="text-muted-foreground">Nutriční deník</p>
+        <h1 className="text-2xl font-bold">Nutriční deník</h1>
+        <p className="text-muted-foreground">Zapisuj svůj jídelníček</p>
       </div>
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
-      ) : !campaign ? (
+      ) : !session ? (
         <Card className="border-dashed">
           <CardContent className="pt-6 text-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
               <Apple className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold mb-2">Nemáš aktivní nutriční kampaň</h3>
+            <h3 className="font-semibold mb-2">Začni sledovat svou stravu</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Můžeš začít sledovat stravu sám/sama, nebo požádat trenéra.
+              Zapisuj co jíš a piješ. Trenér uvidí tvé záznamy.
             </p>
-            <div className="flex flex-col gap-2 max-w-xs mx-auto">
-              <Button 
-                onClick={handleStartTracking}
-                disabled={createSession.isPending}
-                className="gap-2"
-              >
-                {createSession.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <PlayCircle className="w-4 h-4" />
-                )}
-                Začít sledovat stravu (7 dní)
-              </Button>
-            </div>
+            <Button 
+              onClick={handleStartTracking}
+              disabled={createSession.isPending}
+              className="gap-2"
+            >
+              {createSession.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Apple className="w-4 h-4" />
+              )}
+              Začít zapisovat
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        <>
-          {/* Tabs for Current/History when there's history */}
-          {hasHistory ? (
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full">
-                <TabsTrigger value="current" className="flex-1 gap-2">
-                  <Apple className="h-4 w-4" />
-                  Aktuální kampaň
-                </TabsTrigger>
-                <TabsTrigger value="history" className="flex-1 gap-2">
-                  <History className="h-4 w-4" />
-                  Historie
-                </TabsTrigger>
-              </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="today" className="flex-1 gap-2">
+              <Calendar className="h-4 w-4" />
+              Dnešní zápis
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 gap-2">
+              <History className="h-4 w-4" />
+              Historie
+            </TabsTrigger>
+          </TabsList>
 
-              <TabsContent value="current" className="space-y-6 mt-4">
-                {renderCurrentCampaign()}
-              </TabsContent>
+          <TabsContent value="today" className="space-y-6 mt-4">
+            {/* Week Strip Navigation */}
+            <WeekStrip
+              currentDate={selectedDate}
+              completedDays={completedDays.map(d => new Date(d))}
+              onDaySelect={setSelectedDate}
+            />
 
-              <TabsContent value="history" className="mt-4">
-                <NutritionHistory 
-                  sessions={allSessions || []} 
-                  isLoading={sessionsLoading}
-                  currentSessionId={campaign?.id}
-                />
-              </TabsContent>
-            </Tabs>
-          ) : (
-            renderCurrentCampaign()
-          )}
-        </>
+            {/* Daily Summary */}
+            {dayData && (
+              <NutritionDailySummary
+                foodCount={dayData.food?.length || 0}
+                drinkCount={dayData.drinks?.length || 0}
+                coffeeCount={dayData.coffee?.length || 0}
+                waterMl={waterMl}
+                campaignProgress={totalEntries}
+                campaignTotal={0}
+              />
+            )}
+
+            {/* Quick Actions */}
+            <div className="space-y-3">
+              <Button 
+                onClick={() => setShowAddForm(true)} 
+                className="w-full gap-2"
+                size="lg"
+              >
+                <Plus className="w-5 h-5" />
+                Přidat záznam
+              </Button>
+              
+              <div className="grid grid-cols-4 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('breakfast')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Snídaně</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('lunch')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Oběd</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleQuickMeal('dinner')}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  <span className="text-xs">Večeře</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleQuickWater}
+                  disabled={quickWater.isPending}
+                  className="flex-col h-auto py-2 gap-1"
+                >
+                  <Droplets className="w-4 h-4" />
+                  <span className="text-xs">+300ml</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Add Form */}
+            {showAddForm && session && clientId && (
+              <FoodLogForm
+                sessionId={session.id}
+                clientId={clientId}
+                selectedDate={selectedDate}
+                prefilledMealType={prefilledMealType}
+                campaignStartDate={session.start_date}
+                campaignEndDate={session.end_date}
+                onClose={() => {
+                  setShowAddForm(false);
+                  setPrefilledMealType(undefined);
+                }}
+              />
+            )}
+
+            {/* Day's Entries */}
+            {dayData && (
+              <TodayEntries
+                food={dayData.food}
+                drinks={dayData.drinks}
+                coffee={dayData.coffee}
+                isLoading={dayLoading}
+                selectedDate={selectedDate}
+                onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
+                onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
+                onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}
+                onDeleteFood={(id) => handleDeleteEntry('food', id)}
+                onDeleteDrink={(id) => handleDeleteEntry('drink', id)}
+                onDeleteCoffee={(id) => handleDeleteEntry('coffee', id)}
+              />
+            )}
+
+            {/* Edit Dialog */}
+            {editingEntry && session && clientId && (
+              <EditEntryDialog
+                open={!!editingEntry}
+                onOpenChange={(open) => !open && setEditingEntry(null)}
+                type={editingEntry.type}
+                entry={editingEntry.entry}
+                sessionId={session.id}
+                clientId={clientId}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Historie záznamů</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {completedDays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Zatím nemáš žádné záznamy
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {completedDays.sort().reverse().slice(0, 14).map((dateStr) => (
+                      <button
+                        key={dateStr}
+                        onClick={() => {
+                          setSelectedDate(new Date(dateStr));
+                          setActiveTab('today');
+                        }}
+                        className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                      >
+                        <span className="text-sm font-medium">
+                          {format(new Date(dateStr), 'd. M. yyyy')}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Zobrazit →
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
-
-  function renderCurrentCampaign() {
-    if (!campaign) return null;
-
-    return (
-      <>
-        {/* Campaign Status */}
-        <Card className={cn(
-          campaign.isActive && "border-success/50 bg-success/5",
-          campaign.isExpired && "border-warning/50 bg-warning/5"
-        )}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              {campaign.isActive ? (
-                <CheckCircle2 className="w-4 h-4 text-success" />
-              ) : campaign.isExpired ? (
-                <AlertCircle className="w-4 h-4 text-warning" />
-              ) : (
-                <Clock className="w-4 h-4 text-muted-foreground" />
-              )}
-              {campaign.isActive ? 'Aktivní kampaň' : campaign.isExpired ? 'Kampaň vypršela' : 'Dokončeno'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Vyplněno</span>
-                  <span className="font-medium">{campaign.daysCompleted} / {campaign.totalDays} dní</span>
-                </div>
-                <Progress value={progressPercent} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Week Strip Navigation */}
-        {campaign.isActive && (
-          <WeekStrip
-            currentDate={selectedDate}
-            completedDays={completedDays}
-            onDaySelect={setSelectedDate}
-          />
-        )}
-
-        {/* Daily Summary */}
-        {campaign.isActive && dayData && (
-          <NutritionDailySummary
-            foodCount={dayData.food?.length || 0}
-            drinkCount={dayData.drinks?.length || 0}
-            coffeeCount={dayData.coffee?.length || 0}
-            waterMl={waterMl}
-            campaignProgress={campaign.daysCompleted}
-            campaignTotal={campaign.totalDays}
-          />
-        )}
-
-        {/* Quick Actions */}
-        {campaign.isActive && (
-          <div className="space-y-3">
-            <Button 
-              onClick={() => setShowAddForm(true)} 
-              className="w-full gap-2"
-              size="lg"
-            >
-              <Plus className="w-5 h-5" />
-              Přidat záznam
-            </Button>
-            
-            <div className="grid grid-cols-4 gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickMeal('breakfast')}
-                className="flex-col h-auto py-2 gap-1"
-              >
-                <UtensilsCrossed className="w-4 h-4" />
-                <span className="text-xs">Snídaně</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickMeal('lunch')}
-                className="flex-col h-auto py-2 gap-1"
-              >
-                <UtensilsCrossed className="w-4 h-4" />
-                <span className="text-xs">Oběd</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickMeal('dinner')}
-                className="flex-col h-auto py-2 gap-1"
-              >
-                <UtensilsCrossed className="w-4 h-4" />
-                <span className="text-xs">Večeře</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleQuickWater}
-                disabled={quickWater.isPending}
-                className="flex-col h-auto py-2 gap-1"
-              >
-                <Droplets className="w-4 h-4" />
-                <span className="text-xs">+300ml</span>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Add Form */}
-        {showAddForm && campaign.isActive && clientId && (
-          <FoodLogForm
-            sessionId={campaign.id}
-            clientId={clientId}
-            selectedDate={selectedDate}
-            prefilledMealType={prefilledMealType}
-            campaignStartDate={campaign.start_date}
-            campaignEndDate={campaign.end_date}
-            onClose={() => {
-              setShowAddForm(false);
-              setPrefilledMealType(undefined);
-            }}
-          />
-        )}
-
-        {/* Day's Entries */}
-        {campaign.isActive && dayData && (
-          <TodayEntries
-            food={dayData.food}
-            drinks={dayData.drinks}
-            coffee={dayData.coffee}
-            isLoading={dayLoading}
-            selectedDate={selectedDate}
-            onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
-            onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
-            onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}
-            onDeleteFood={(id) => handleDeleteEntry('food', id)}
-            onDeleteDrink={(id) => handleDeleteEntry('drink', id)}
-            onDeleteCoffee={(id) => handleDeleteEntry('coffee', id)}
-          />
-        )}
-
-        {/* Edit Dialog */}
-        {editingEntry && campaign && clientId && (
-          <EditEntryDialog
-            open={!!editingEntry}
-            onOpenChange={(open) => !open && setEditingEntry(null)}
-            type={editingEntry.type}
-            entry={editingEntry.entry}
-            sessionId={campaign.id}
-            clientId={clientId}
-          />
-        )}
-      </>
-    );
-  }
 }
