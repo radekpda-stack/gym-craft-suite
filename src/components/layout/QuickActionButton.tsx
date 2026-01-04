@@ -60,8 +60,7 @@ const allActionsConfig: QuickAction[] = [
 const routeActionsConfig: Record<string, string[]> = {
   '/': ['sale', 'credit', 'training', 'diagnostic', 'measurement', 'performance'], // Dashboard - full actions
   '/clients': ['client', 'credit', 'prediagnostic'],
-  '/trainings': ['training', 'sale', 'credit'],
-  '/calendar': ['training'],
+  '/schedule': ['training', 'sale', 'credit'],
   '/performance': ['exercise', 'performance'],
   '/sales': ['sale', 'stock'],
   '/records': ['measurement', 'diagnostic'],

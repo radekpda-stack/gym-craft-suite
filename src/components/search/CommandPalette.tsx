@@ -4,11 +4,10 @@ import {
   Search,
   Users,
   Dumbbell,
-  Calendar,
+  CalendarDays,
   Settings,
   Stethoscope,
   Activity,
-  // Sparkles, // Hidden - AI feature disabled
   Command,
   LayoutDashboard,
 } from 'lucide-react';
@@ -54,11 +53,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const pages = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { name: 'Klienti', icon: Users, path: '/clients' },
-    { name: 'Tréninky', icon: Dumbbell, path: '/trainings' },
-    { name: 'Kalendář', icon: Calendar, path: '/calendar' },
+    { name: 'Rozvrh', icon: CalendarDays, path: '/schedule' },
     { name: 'Diagnostika', icon: Stethoscope, path: '/diagnostics' },
     { name: 'Měření', icon: Activity, path: '/measurements' },
-    // { name: 'AI Asistent', icon: Sparkles, path: '/ai-assistant' }, // Hidden - AI feature disabled
     { name: 'Nastavení', icon: Settings, path: '/settings' },
   ];
 
@@ -121,7 +118,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   <CommandItem
                     key={training.id}
                     value={`${client?.name} ${new Date(training.date).toLocaleDateString('cs-CZ')}`}
-                    onSelect={() => runCommand(() => navigate('/calendar'), 'training')}
+                    onSelect={() => runCommand(() => navigate('/schedule'), 'training')}
                   >
                     <Dumbbell className="mr-2 h-4 w-4" />
                     <span className="flex-1">{client?.name}</span>

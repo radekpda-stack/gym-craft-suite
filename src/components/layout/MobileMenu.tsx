@@ -6,24 +6,17 @@ import {
   LayoutDashboard,
   UserCircle,
   Users,
-  Dumbbell,
   Activity,
-  Calendar,
+  CalendarDays,
   Settings,
   LogOut,
   X,
   Zap,
   MessageSquare,
   ShoppingBag,
-  ClipboardList,
   LucideIcon,
   Utensils,
-  FileText,
-  PieChart,
   LayoutTemplate,
-  ClipboardCheck,
-  Target,
-  Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -65,8 +58,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       {
         label: 'Plánování',
         items: [
-          { to: '/calendar', icon: Calendar, label: 'Kalendář' },
-          { to: '/trainings', icon: Dumbbell, label: 'Tréninky' },
+          { to: '/schedule', icon: CalendarDays, label: 'Rozvrh' },
           ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
         ],
       },

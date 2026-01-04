@@ -71,7 +71,7 @@ export function CapacityKPICard() {
   return (
     <div 
       className="glass rounded-xl p-3 sm:p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
-      onClick={() => navigate('/calendar')}
+      onClick={() => navigate('/schedule')}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs sm:text-sm text-muted-foreground font-medium">

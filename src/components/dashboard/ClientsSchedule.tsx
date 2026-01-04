@@ -176,7 +176,7 @@ export function ClientsSchedule() {
                 variant="ghost"
                 size="sm"
                 className="w-full text-muted-foreground"
-                onClick={() => navigate('/calendar')}
+                onClick={() => navigate('/schedule')}
               >
                 Zobrazit všechny ({data.length})
               </Button>

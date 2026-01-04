@@ -33,6 +33,7 @@ const Trainings = lazy(() => import("./pages/Trainings"));
 const TrainingDetail = lazy(() => import("./pages/TrainingDetail"));
 const Records = lazy(() => import("./pages/Records"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const SchedulePage = lazy(() => import("./pages/SchedulePage"));
 const CanceledTrainings = lazy(() => import("./pages/CanceledTrainings"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
@@ -170,10 +171,11 @@ const App = () => (
                           <Route path="/" element={<Index />} />
                           <Route path="/clients" element={<Clients />} />
                           <Route path="/clients/:id" element={<ClientDetail />} />
-                          <Route path="/trainings" element={<Trainings />} />
+                          <Route path="/trainings" element={<Navigate to="/schedule" replace />} />
                           <Route path="/trainings/:id" element={<TrainingDetail />} />
                           <Route path="/records" element={<Records />} />
-                          <Route path="/calendar" element={<CalendarPage />} />
+                          <Route path="/calendar" element={<Navigate to="/schedule" replace />} />
+                          <Route path="/schedule" element={<SchedulePage />} />
                           <Route path="/canceled" element={<CanceledTrainings />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/feedback-overview" element={<FeedbackOverview />} />

@@ -61,8 +61,8 @@ export function useAppShortcuts(callbacks: {
     },
     {
       key: 't',
-      action: () => navigate('/trainings'),
-      description: 'Přejít na Tréninky',
+      action: () => navigate('/schedule'),
+      description: 'Přejít na Rozvrh',
     },
     // AI shortcut hidden for future use
     // {

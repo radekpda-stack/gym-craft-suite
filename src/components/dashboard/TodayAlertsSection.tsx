@@ -179,14 +179,14 @@ export function TodayAlertsSection({ data, isLoading }: TodayAlertsSectionProps)
             label="Tréninky"
             value={`${todayTrainings.completed}/${todayTrainings.scheduled + todayTrainings.completed}`}
             severity={todayTrainings.scheduled > 0 ? 'default' : 'success'}
-            onClick={() => navigate('/trainings')}
+            onClick={() => navigate('/schedule')}
           />
           <StatCard
             icon={MessageSquare}
             label="Feedback"
             value={missingFeedback.count}
             severity={missingFeedback.count > 2 ? 'error' : missingFeedback.count > 0 ? 'warning' : 'success'}
-            onClick={() => navigate('/trainings')}
+            onClick={() => navigate('/schedule')}
           />
           <StatCard
             icon={Wallet}
@@ -200,7 +200,7 @@ export function TodayAlertsSection({ data, isLoading }: TodayAlertsSectionProps)
             label="Nezaplaceno"
             value={unpaidTrainings.count}
             severity={unpaidTrainings.count > 0 ? 'error' : 'success'}
-            onClick={() => navigate('/trainings')}
+            onClick={() => navigate('/schedule')}
           />
         </div>
         
@@ -224,7 +224,7 @@ export function TodayAlertsSection({ data, isLoading }: TodayAlertsSectionProps)
                 variant="ghost"
                 size="sm"
                 className="w-full text-muted-foreground"
-                onClick={() => navigate('/trainings')}
+                onClick={() => navigate('/schedule')}
               >
                 Zobrazit všechny ({alerts.length})
               </Button>

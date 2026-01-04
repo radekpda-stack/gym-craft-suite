@@ -104,7 +104,7 @@ export function TodayCards({ data, isLoading }: TodayCardsProps) {
           value={`${todayTrainings.completed}/${trainingsTotal}`}
           subtitle={todayTrainings.scheduled > 0 ? `${todayTrainings.scheduled} zbývá` : 'Vše hotovo'}
           status={trainingsStatus}
-          onClick={() => navigate('/trainings')}
+          onClick={() => navigate('/schedule')}
         />
         
         <StatusCard

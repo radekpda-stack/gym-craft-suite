@@ -167,7 +167,7 @@ function TimelineView({
         ))}
         {items.length > 8 && (
           <button
-            onClick={() => navigate('/calendar')}
+            onClick={() => navigate('/schedule')}
             className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             +{items.length - 8} další

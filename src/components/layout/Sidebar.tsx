@@ -279,8 +279,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       {
         label: 'Plánování',
         items: [
-          { id: 'calendar', to: '/calendar', icon: Calendar, label: t.nav.calendar },
-          { id: 'trainings', to: '/trainings', icon: Dumbbell, label: t.nav.trainings },
+          { id: 'schedule', to: '/schedule', icon: Calendar, label: 'Rozvrh' },
           ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
           ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Feedbacky' }] : []),
         ],

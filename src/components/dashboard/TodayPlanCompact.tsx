@@ -223,7 +223,7 @@ export function TodayPlanCompact({ data, isLoading }: TodayPlanCompactProps) {
               
               {data.todaySchedule.length > 6 && (
                 <button
-                  onClick={() => navigate('/calendar')}
+                  onClick={() => navigate('/schedule')}
                   className="flex items-center gap-1 px-3 py-2 rounded-xl bg-secondary/30 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
                 >
                   +{data.todaySchedule.length - 6}
@@ -238,10 +238,10 @@ export function TodayPlanCompact({ data, isLoading }: TodayPlanCompactProps) {
         <Button
           variant="outline"
           className="w-full gap-2"
-          onClick={() => navigate('/calendar')}
+          onClick={() => navigate('/schedule')}
         >
           <Calendar className="w-4 h-4" />
-          Celý kalendář
+          Celý rozvrh
         </Button>
       </div>
     </div>
