@@ -26,6 +26,12 @@ export const XP_SOURCE_LABELS: Record<string, string> = {
   first_week_workout: 'První trénink v týdnu',
   pr: 'Osobní rekord',
   
+  // Nutriční deník
+  nutrition_entry: 'Nutriční záznam',
+  nutrition_day_complete: 'Kompletní nutriční den',
+  nutrition_streak_day: 'Nutriční streak',
+  nutrition_week_complete: 'Nutriční týden',
+  
   // Ostatní
   challenge_completed: 'Výzva dokončena',
   badge_earned: 'Nový odznak',
@@ -52,6 +58,12 @@ export const XP_SOURCE_ICONS: Record<string, string> = {
   weekly_streak: '🔥',
   first_week_workout: '🥇',
   pr: '🏆',
+  
+  // Nutriční deník
+  nutrition_entry: '🍎',
+  nutrition_day_complete: '🥗',
+  nutrition_streak_day: '🔥',
+  nutrition_week_complete: '📆',
   
   // Ostatní
   challenge_completed: '🏆',

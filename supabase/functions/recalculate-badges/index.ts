@@ -22,6 +22,14 @@ interface WorkoutData {
   xp: number;
 }
 
+interface NutritionData {
+  totalEntries: number;
+  completeDays: number;
+  streak: number;
+  hydration2lDays: number;
+  breakfastCount: number;
+}
+
 // Calculate week number (Monday-start) in Europe/Prague timezone
 function getWeekKey(date: Date): string {
   // Adjust to Monday start
@@ -71,7 +79,8 @@ function isInTimeWindow(workoutDate: Date, startAt: string | null, endAt: string
 function calculateBadgeProgress(
   badge: BadgeDefinition,
   workouts: WorkoutData[],
-  allTimeWorkouts: WorkoutData[]
+  allTimeWorkouts: WorkoutData[],
+  nutritionData?: NutritionData
 ): { current: number; target: number; earned: boolean } {
   const ruleValue = badge.rule_value;
   let current = 0;
@@ -92,6 +101,36 @@ function calculateBadgeProgress(
       target = ruleValue.count || 20;
       const workoutType = ruleValue.type;
       current = allTimeWorkouts.filter(w => w.workout_type === workoutType).length;
+      break;
+      
+    // Nutrition badge types
+    case 'nutrition_entries_count':
+      target = ruleValue.count || 1;
+      current = nutritionData?.totalEntries || 0;
+      break;
+      
+    case 'nutrition_days_complete':
+      target = ruleValue.count || 1;
+      current = nutritionData?.completeDays || 0;
+      break;
+      
+    case 'nutrition_streak_days':
+      target = ruleValue.days || 3;
+      current = nutritionData?.streak || 0;
+      break;
+      
+    case 'nutrition_special':
+      const specialNutritionType = ruleValue.special_type;
+      target = ruleValue.count || 1;
+      
+      switch (specialNutritionType) {
+        case 'hydration_2l':
+          current = nutritionData?.hydration2lDays || 0;
+          break;
+        case 'breakfast_count':
+          current = nutritionData?.breakfastCount || 0;
+          break;
+      }
       break;
       
     case 'special':
@@ -273,6 +312,9 @@ serve(async (req) => {
         .eq('client_id', clientId)
         .eq('status', 'completed');
       
+      // Fetch nutrition data for nutrition badges
+      const nutritionData = await fetchNutritionData(supabase, clientId);
+      
       // Combine workouts
       const allWorkouts: WorkoutData[] = [
         ...(confirmedWorkouts || []).map(w => ({
@@ -289,7 +331,7 @@ serve(async (req) => {
         })),
       ].sort((a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime());
       
-      console.log(`Client ${clientId}: ${allWorkouts.length} workouts`);
+      console.log(`Client ${clientId}: ${allWorkouts.length} workouts, ${nutritionData.totalEntries} nutrition entries`);
       
       // Get existing badges to detect newly earned ones
       const { data: existingBadges } = await supabase
@@ -306,7 +348,7 @@ serve(async (req) => {
       const newlyEarnedBadges: { badge_id: string; badge_name: string; badge_rarity: string }[] = [];
       
       for (const badge of badges || []) {
-        let progress = calculateBadgeProgress(badge, allWorkouts, allWorkouts);
+        let progress = calculateBadgeProgress(badge, allWorkouts, allWorkouts, nutritionData);
         
         // Handle xp_milestone badges separately
         if (badge.rule_type === 'xp_milestone') {
@@ -427,3 +469,82 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to fetch nutrition data for badges
+async function fetchNutritionData(supabase: any, clientId: string): Promise<NutritionData> {
+  try {
+    // Get all nutrition entries counts
+    const [foodResult, drinkResult, coffeeResult] = await Promise.all([
+      supabase.from('nutrition_food_entries').select('id, entry_date, meal_type', { count: 'exact' }).eq('client_id', clientId),
+      supabase.from('nutrition_drink_entries').select('id, entry_date, drink_type, amount_ml', { count: 'exact' }).eq('client_id', clientId),
+      supabase.from('nutrition_coffee_entries').select('id, entry_date', { count: 'exact' }).eq('client_id', clientId),
+    ]);
+
+    const totalEntries = (foodResult.count || 0) + (drinkResult.count || 0) + (coffeeResult.count || 0);
+
+    // Calculate complete days (3+ food entries + 500ml water)
+    const foodEntries = foodResult.data || [];
+    const drinkEntries = drinkResult.data || [];
+
+    // Group by date
+    const dateStats: Record<string, { foodCount: number; waterMl: number }> = {};
+    
+    foodEntries.forEach((e: any) => {
+      if (!dateStats[e.entry_date]) dateStats[e.entry_date] = { foodCount: 0, waterMl: 0 };
+      dateStats[e.entry_date].foodCount++;
+    });
+
+    drinkEntries.forEach((e: any) => {
+      if (!dateStats[e.entry_date]) dateStats[e.entry_date] = { foodCount: 0, waterMl: 0 };
+      if (e.drink_type === 'water') {
+        dateStats[e.entry_date].waterMl += e.amount_ml || 0;
+      }
+    });
+
+    // Count complete days (3+ food, 500+ ml water)
+    const completeDays = Object.values(dateStats).filter(d => d.foodCount >= 3 && d.waterMl >= 500).length;
+
+    // Count days with 2L+ water
+    const hydration2lDays = Object.values(dateStats).filter(d => d.waterMl >= 2000).length;
+
+    // Count breakfast entries
+    const breakfastCount = foodEntries.filter((e: any) => e.meal_type === 'breakfast').length;
+
+    // Calculate streak
+    const allDates = new Set<string>();
+    [...foodEntries, ...drinkEntries, ...(coffeeResult.data || [])].forEach((e: any) => {
+      allDates.add(e.entry_date);
+    });
+
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+
+      if (allDates.has(dateStr)) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    return {
+      totalEntries,
+      completeDays,
+      streak,
+      hydration2lDays,
+      breakfastCount,
+    };
+  } catch (error) {
+    console.error('Error fetching nutrition data:', error);
+    return {
+      totalEntries: 0,
+      completeDays: 0,
+      streak: 0,
+      hydration2lDays: 0,
+      breakfastCount: 0,
+    };
+  }
+}

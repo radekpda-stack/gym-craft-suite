@@ -21,6 +21,7 @@ import {
   DrinkEntryInput,
   CoffeeEntryInput 
 } from '@/hooks/useClientPortalNutrition';
+import { useNutritionXP } from '@/hooks/useNutritionXP';
 import {
   MEAL_TYPES,
   PORTION_SIZES,
@@ -84,6 +85,7 @@ export function FoodLogForm({
   const addFood = useAddFoodEntry();
   const addDrink = useAddDrinkEntry();
   const addCoffee = useAddCoffeeEntry();
+  const nutritionXP = useNutritionXP();
 
   const isLoading = addFood.isPending || addDrink.isPending || addCoffee.isPending;
 
@@ -147,6 +149,11 @@ export function FoodLogForm({
         },
       });
       toast.success('Záznam přidán');
+      
+      // Calculate XP for the entry
+      const dateStr = format(entryDate, 'yyyy-MM-dd');
+      nutritionXP.mutate({ clientId, date: dateStr, entryType: 'food' });
+      
       onClose?.();
     } catch (error) {
       toast.error('Nepodařilo se uložit');
@@ -167,6 +174,11 @@ export function FoodLogForm({
         },
       });
       toast.success('Záznam přidán');
+      
+      // Calculate XP for the entry
+      const dateStr = format(entryDate, 'yyyy-MM-dd');
+      nutritionXP.mutate({ clientId, date: dateStr, entryType: 'drink' });
+      
       onClose?.();
     } catch (error) {
       toast.error('Nepodařilo se uložit');
@@ -185,6 +197,11 @@ export function FoodLogForm({
         },
       });
       toast.success('Záznam přidán');
+      
+      // Calculate XP for the entry
+      const dateStr = format(entryDate, 'yyyy-MM-dd');
+      nutritionXP.mutate({ clientId, date: dateStr, entryType: 'coffee' });
+      
       onClose?.();
     } catch (error) {
       toast.error('Nepodařilo se uložit');
