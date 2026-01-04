@@ -112,9 +112,9 @@ export function WeightChart({ data, isLoading }: WeightChartProps) {
                 type="monotone" 
                 dataKey="value" 
                 stroke="hsl(var(--primary))" 
-                strokeWidth={2}
-                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, fill: 'hsl(var(--primary))' }}
+                strokeWidth={2.5}
+                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))', r: 5 }}
+                activeDot={{ r: 7, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
