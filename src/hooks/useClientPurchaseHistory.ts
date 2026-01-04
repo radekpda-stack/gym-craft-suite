@@ -28,7 +28,7 @@ export function useClientPurchaseHistory(clientId: string | undefined) {
           created_at,
           total_amount,
           payment_method,
-          sales_order_items (
+          sales_order_items!sales_order_items_order_id_fkey (
             id,
             name_snapshot,
             quantity,
