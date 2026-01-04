@@ -200,7 +200,7 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
         </div>
 
         {/* Movement Patterns - Horizontal Bar */}
-        <div>
+        <div className="pb-4">
           <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Pohybové vzorce
@@ -208,12 +208,12 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
               {data.movementPatterns.length} vzorců
             </span>
           </p>
-          <div className="h-48">
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={data.movementPatterns.slice(0, 8)} 
                 layout="vertical"
-                margin={{ left: 80, right: 30, top: 5, bottom: 5 }}
+                margin={{ left: 90, right: 30, top: 5, bottom: 20 }}
               >
                 <XAxis 
                   type="number" 
@@ -228,8 +228,8 @@ export function AnalyticsMainCard({ data, onShowDetail }: AnalyticsMainCardProps
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                  width={75}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  width={85}
                 />
                 <Tooltip
                   contentStyle={{

@@ -91,6 +91,7 @@ const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
   pull_vertical: 'Tah vert.',
   carry: 'Přenášení',
   rotation: 'Rotace',
+  diagonal_press: 'Diagonální tlak',
   core_anti_extension: 'Core anti-ext.',
   core_anti_rotation: 'Core anti-rot.',
   core_anti_lateral_flexion: 'Core lat. flex.',

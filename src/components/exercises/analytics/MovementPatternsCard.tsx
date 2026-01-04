@@ -50,9 +50,9 @@ export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, i
       isEmpty={isEmpty}
       helpText={helpText}
     >
-      <div className="h-[180px] flex flex-col justify-center space-y-2">
+      <div className="h-[200px] flex flex-col justify-start space-y-2 overflow-hidden">
         {coverage < 100 && totalEntries > 0 && (
-          <div className="text-xs text-muted-foreground mb-2">
+          <div className="text-xs text-muted-foreground mb-1 shrink-0">
             Data z {coverage}% záznamů ({totalCounted} z {totalEntries})
           </div>
         )}
