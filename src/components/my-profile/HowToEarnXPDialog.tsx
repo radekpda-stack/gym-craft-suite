@@ -13,8 +13,9 @@ import {
   Trophy, 
   Award,
   Zap,
-  ShoppingBag,
-  Droplets
+  Apple,
+  Droplets,
+  Coffee
 } from 'lucide-react';
 
 interface HowToEarnXPDialogProps {
@@ -23,26 +24,27 @@ interface HowToEarnXPDialogProps {
 }
 
 const XP_RULES = [
+  // Tréninky
   {
     icon: Dumbbell,
     label: 'Dokončený trénink',
-    xp: '20 XP',
+    xp: '30 XP',
     description: 'Za každý potvrzený trénink',
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
   },
   {
     icon: Flame,
-    label: 'HIIT bonus',
-    xp: '+10 XP',
-    description: 'Za HIIT nebo kruhový trénink',
+    label: 'Bonus za typ tréninku',
+    xp: '+6–15 XP',
+    description: 'HIIT +15, Silový/Kondiční +12, Cardio +10',
     color: 'text-red-500',
     bgColor: 'bg-red-500/10',
   },
   {
     icon: Sun,
     label: 'Ranní bonus',
-    xp: '+5 XP',
+    xp: '+8 XP',
     description: 'Za trénink před 9:00',
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10',
@@ -50,50 +52,59 @@ const XP_RULES = [
   {
     icon: Calendar,
     label: 'Víkendový bonus',
-    xp: '+5 XP',
-    description: 'Za trénink o víkendu',
+    xp: '+8 XP',
+    description: 'Za trénink v sobotu nebo neděli',
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
   },
   {
     icon: Link,
     label: 'Týdenní série',
-    xp: '10-50 XP',
-    description: '2+ tréninky = 10 XP, 4+ = 25 XP, 6+ = 50 XP',
+    xp: '20–70 XP',
+    description: '3 tréninky = 20 XP, 5 = 40 XP, 8 = 70 XP',
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
   },
   {
     icon: Trophy,
     label: 'Osobní rekord',
-    xp: '+15 XP',
-    description: 'Za překonání osobního rekordu (max 3×/den)',
+    xp: '+25 XP',
+    description: 'Za překonání osobního rekordu (max 2×/den)',
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10',
   },
   {
     icon: Award,
-    label: 'Badge bonus',
-    xp: '+5-50 XP',
-    description: 'Za získání nového odznaku',
+    label: 'Nový odznak',
+    xp: '+10–150 XP',
+    description: 'Bonus závisí na vzácnosti odznaku',
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10',
   },
+  // Nutriční deník
   {
-    icon: ShoppingBag,
-    label: 'Nákup produktů',
-    xp: '+5-15 XP',
-    description: 'Za nákup produktů ve fitku (pitný režim, suplementy)',
+    icon: Apple,
+    label: 'Nutriční záznam',
+    xp: '2 XP',
+    description: 'Za každý záznam jídla, pití nebo kávy',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/10',
+  },
+  {
+    icon: Droplets,
+    label: 'Kompletní nutriční den',
+    xp: '+10 XP',
+    description: '3+ jídla a 500ml vody za den',
     color: 'text-cyan-500',
     bgColor: 'bg-cyan-500/10',
   },
   {
-    icon: Droplets,
-    label: 'Pitný režim bonus',
-    xp: '+3 XP',
-    description: 'Za nákup nápoje při tréninku',
-    color: 'text-sky-500',
-    bgColor: 'bg-sky-500/10',
+    icon: Coffee,
+    label: 'Nutriční streak',
+    xp: '+3–20 XP',
+    description: 'Bonus za pravidelné záznamy více dní v řadě',
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-600/10',
   },
 ];
 
