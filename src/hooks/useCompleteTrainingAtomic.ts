@@ -162,14 +162,16 @@ export function useCompleteTrainingAtomic() {
       // Invalidate all relevant queries atomically
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["training_session"] });
+      // Invalidate both clients list and individual client queries
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["training_participants"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget"] });
-      queryClient.invalidateQueries({ queryKey: ["client"] });
       queryClient.invalidateQueries({ queryKey: ["unpaid-trainings"] });
       queryClient.invalidateQueries({ queryKey: ["today-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"] });
       
       if (result.idempotent) {
         toast({ 
