@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
@@ -20,40 +20,31 @@ import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
 import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
 import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFinanceCard';
-import { ClientGroupedSections, SectionGroup } from '@/components/clients/ClientGroupedSections';
+import { 
+  ClientDashboardGrid,
+  PerformanceCard,
+  CommunicationCard,
+  HealthCard,
+  BodyCard,
+  HistoryCard,
+  SettingsCard,
+} from '@/components/clients/dashboard';
 
 // Audit components
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
-import { ClientPainMapPreview } from '@/components/clients/ClientPainMapPreview';
-import { ClientCommunicationLog } from '@/components/clients/ClientCommunicationLog';
-import { ClientInjuryHistory } from '@/components/clients/ClientInjuryHistory';
 
-// Accordion section components
+// Action components
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
-import { ClientDiagnosticsSection } from '@/components/clients/ClientDiagnosticsSection';
-import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
-import { ClientMeasurementsCard } from '@/components/clients/ClientMeasurementsCard';
-import { ClientNutritionCard } from '@/components/clients/ClientNutritionCard';
-import { ClientNotesSection } from '@/components/clients/ClientNotesSection';
-import { ClientMediaGallery } from '@/components/clients/ClientMediaGallery';
-import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
-import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
-import { ClientTimeline } from '@/components/clients/ClientTimeline';
-import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
-import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
-import { ClientChatSection } from '@/components/clients/ClientChatSection';
-import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
-import { useUnreadMessageCount } from '@/hooks/useChatMessages';
+
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
   const queryClient = useQueryClient();
   const { id } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
@@ -62,7 +53,7 @@ export default function ClientDetail() {
   const { data: creditTransactions = [] } = useCreditTransactions(id);
   const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
   const { data: portalAccess } = useClientPortalAccess(id);
-  const { data: unreadChatCount = 0 } = useUnreadMessageCount(undefined, id);
+  // unreadChatCount now handled by CommunicationCard internally
   const updateClient = useUpdateClient();
   const archiveClient = useArchiveClient();
   const isMobile = useIsMobile();
@@ -71,25 +62,8 @@ export default function ClientDetail() {
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
   
-  // Ref for scrolling to admin section
+  // Ref for scrolling (kept for future use)
   const adminSectionRef = useRef<HTMLDivElement>(null);
-  const chatSectionRef = useRef<HTMLDivElement>(null);
-
-  // Check for tab URL param to auto-open sections
-  const tabParam = searchParams.get('tab');
-  const defaultOpenSections = tabParam ? [tabParam] : [];
-
-  // Scroll to chat section when opened via URL param
-  useEffect(() => {
-    if (tabParam === 'chat' && chatSectionRef.current) {
-      // Small delay to allow accordion to open first
-      setTimeout(() => {
-        chatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-      // Clear the param after handling
-      setSearchParams({});
-    }
-  }, [tabParam, setSearchParams]);
 
   // Derived data
   const lastCompletedSession = sessions.find((s: any) => s.status === 'completed');
@@ -183,131 +157,69 @@ export default function ClientDetail() {
     toast({ title: 'Datum aktualizováno' });
   };
 
-  const scrollToAdminSection = () => {
-    adminSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
-  // Calculate notes count
-  const notesCount = client.notes ? client.notes.split('\n\n').filter(n => n.startsWith('[')).length : 0;
+  // Dashboard cards for the new Smart Dashboard layout
 
-  // Build grouped sections - 5 thematic groups with intelligent ordering
-  const sectionGroups: SectionGroup[] = [
+  // Dashboard cards for the new Smart Dashboard layout
+  const dashboardCards = [
     {
       id: 'performance',
-      icon: null, // Uses default from component
-      title: 'Výkon',
-      sections: [
-        {
-          id: 'prs',
-          title: 'Osobní rekordy',
-          children: <div id="section-prs"><ClientPRsCard clientId={client.id} /></div>,
-        },
-        {
-          id: 'training-analytics',
-          title: 'Analytika tréninků',
-          children: <div id="section-training-analytics"><ClientTagAnalyticsCard clientId={client.id} /></div>,
-        },
-        {
-          id: 'feedback',
-          title: 'Feedback & Recovery',
-          badge: feedbackData.length || undefined,
-          children: (
-            <div id="section-feedback" className="space-y-4">
-              <ClientFeedbackRecovery clientId={client.id} />
-              <ClientFeedbackCard 
-                clientId={client.id} 
-                clientName={client.name}
-                lastCompletedTrainingId={lastCompletedSession?.id}
-              />
-            </div>
-          ),
-        },
-      ],
+      component: (
+        <PerformanceCard
+          clientId={client.id}
+          clientName={client.name}
+          lastCompletedTrainingId={lastCompletedSession?.id}
+        />
+      ),
     },
     {
       id: 'communication',
-      icon: null,
-      title: 'Komunikace',
-      sections: [
-        {
-          id: 'chat',
-          title: 'Chat s klientem',
-          badge: unreadChatCount || undefined,
-          children: (
-            <div id="section-chat" ref={chatSectionRef}>
-              <ClientChatSection clientId={client.id} clientName={client.name} />
-            </div>
-          ),
-        },
-        {
-          id: 'notes',
-          title: 'Poznámky & Log hovorů',
-          badge: notesCount || undefined,
-          children: (
-            <div id="section-notes" className="space-y-4">
-              <ClientNotesSection notes={client.notes} onAddNote={handleAddNote} />
-              <ClientCommunicationLog clientId={client.id} />
-            </div>
-          ),
-        },
-      ],
+      component: (
+        <CommunicationCard
+          clientId={client.id}
+          clientName={client.name}
+          notes={client.notes}
+          onAddNote={handleAddNote}
+        />
+      ),
     },
     {
       id: 'health',
-      icon: null,
-      title: 'Zdraví',
-      sections: [
-        {
-          id: 'diagnostics',
-          title: 'Diagnostika & Mapa bolesti',
-          children: (
-            <div id="section-diagnostics" className="space-y-4">
-              <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
-              <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
-              <ClientPainMapPreview clientId={client.id} />
-            </div>
-          ),
-        },
-        {
-          id: 'injuries',
-          title: 'Historie zranění',
-          children: <div id="section-injuries"><ClientInjuryHistory clientId={client.id} /></div>,
-        },
-      ],
+      component: (
+        <HealthCard
+          clientId={client.id}
+          clientName={client.name}
+        />
+      ),
     },
     {
       id: 'body',
-      icon: null,
-      title: 'Tělo',
-      sections: [
-        {
-          id: 'measurements',
-          title: 'Měření',
-          children: <div id="section-measurements"><ClientMeasurementsCard clientId={client.id} /></div>,
-        },
-        {
-          id: 'nutrition',
-          title: 'Výživa & Výzvy',
-          children: <ClientNutritionCard clientId={client.id} clientName={client.name} />,
-        },
-        {
-          id: 'media',
-          title: 'Média & Fotky',
-          children: <div id="section-media"><ClientMediaGallery clientId={client.id} /></div>,
-        },
-      ],
+      component: (
+        <BodyCard
+          clientId={client.id}
+          clientName={client.name}
+        />
+      ),
     },
     {
       id: 'history',
-      icon: null,
-      title: 'Historie',
-      sections: [
-        {
-          id: 'timeline',
-          title: 'Časová osa',
-          children: <div id="section-timeline"><ClientTimeline clientId={client.id} defaultLimit={20} /></div>,
-        },
-      ],
+      component: (
+        <HistoryCard
+          clientId={client.id}
+        />
+      ),
+    },
+    {
+      id: 'settings',
+      component: (
+        <SettingsCard
+          client={client}
+          isSharedBudget={isSharedBudget}
+          budgetGroupId={sharedBudgetInfo?.groupId}
+          onArchive={handleArchive}
+          portalAccess={portalAccess}
+        />
+      ),
     },
   ];
 
@@ -366,24 +278,11 @@ export default function ClientDetail() {
         />
       </div>
 
-      {/* SECTION 5: Grouped sections with intelligent ordering */}
-      <ClientGroupedSections 
+      {/* SECTION 5: Smart Dashboard with cards */}
+      <ClientDashboardGrid
         clientId={client.id}
-        groups={sectionGroups} 
-        defaultOpenGroups={['performance']}
+        cards={dashboardCards}
       />
-
-      {/* SECTION 6: Admin Section (Klientská zóna) */}
-      <div ref={adminSectionRef}>
-        <ClientAdminBlock
-          client={client}
-          isSharedBudget={isSharedBudget}
-          budgetGroupId={sharedBudgetInfo?.groupId}
-          onArchive={handleArchive}
-          defaultExpanded={false}
-          portalAccess={portalAccess}
-        />
-      </div>
 
       {/* Full Profile Dialog/Sheet */}
       {showClientDetails && (
