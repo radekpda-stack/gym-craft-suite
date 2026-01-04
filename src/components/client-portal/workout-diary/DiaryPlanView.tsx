@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +18,14 @@ import { cn } from '@/lib/utils';
 import { usePlannedWorkouts, useUpcomingCoachedSessions, UnifiedDiaryEntry } from '@/hooks/useUnifiedDiary';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from './WorkoutTypeSelector';
 import { motion } from 'framer-motion';
+import { PlannedWorkoutDetailSheet } from './PlannedWorkoutDetailSheet';
 
 interface DiaryPlanViewProps {
   onStartWorkout: (entry: UnifiedDiaryEntry) => void;
 }
 
 export function DiaryPlanView({ onStartWorkout }: DiaryPlanViewProps) {
+  const [selectedWorkout, setSelectedWorkout] = useState<UnifiedDiaryEntry | null>(null);
   const { data: plannedWorkouts, isLoading: loadingPlanned } = usePlannedWorkouts();
   const { data: upcomingSessions, isLoading: loadingSessions } = useUpcomingCoachedSessions();
 
@@ -74,11 +77,14 @@ export function DiaryPlanView({ onStartWorkout }: DiaryPlanViewProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className={cn(
-                    "overflow-hidden transition-all hover:shadow-md",
-                    isToday && "ring-2 ring-primary",
-                    isOverdue && "border-destructive/50"
-                  )}>
+                  <Card 
+                    className={cn(
+                      "overflow-hidden transition-all hover:shadow-md cursor-pointer",
+                      isToday && "ring-2 ring-primary",
+                      isOverdue && "border-destructive/50"
+                    )}
+                    onClick={() => setSelectedWorkout(workout)}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
@@ -141,7 +147,10 @@ export function DiaryPlanView({ onStartWorkout }: DiaryPlanViewProps) {
                         </div>
                         <Button 
                           size="sm" 
-                          onClick={() => onStartWorkout(workout)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartWorkout(workout);
+                          }}
                           className="shrink-0"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -229,6 +238,17 @@ export function DiaryPlanView({ onStartWorkout }: DiaryPlanViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Workout detail sheet */}
+      <PlannedWorkoutDetailSheet
+        open={!!selectedWorkout}
+        onOpenChange={(open) => !open && setSelectedWorkout(null)}
+        workout={selectedWorkout}
+        onStartWorkout={(workout) => {
+          setSelectedWorkout(null);
+          onStartWorkout(workout);
+        }}
+      />
     </div>
   );
 }
