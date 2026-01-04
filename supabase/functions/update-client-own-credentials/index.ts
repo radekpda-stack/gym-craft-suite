@@ -182,6 +182,17 @@ Deno.serve(async (req) => {
       console.error('Notification error:', notifError);
     }
 
+    // Delete the credentials_change_required notification for this client (since they changed their credentials)
+    const { error: deleteNotifError } = await supabaseAdmin
+      .from('client_portal_notifications')
+      .delete()
+      .eq('client_id', clientAccount.client_id)
+      .eq('type', 'credentials_change_required');
+
+    if (deleteNotifError) {
+      console.error('Delete notification error:', deleteNotifError);
+    }
+
     // Log audit event
     await supabaseAdmin.from('audit_events').insert({
       action: 'client_credentials_self_update',
