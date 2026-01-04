@@ -407,79 +407,187 @@ serve(async (req) => {
       let unit = 'kg';
 
       if (exerciseType === 'strength') {
-        // Get all exercise entries for this exercise
-        const { data: entries } = await supabase
-          .from('exercise_entries')
-          .select('client_id, weight_kg, date')
-          .eq('user_id', trainerId)
-          .ilike('exercise_name', exerciseName)
-          .not('weight_kg', 'is', null)
-          .order('weight_kg', { ascending: false });
+        // First check if this is a time-based exercise by looking at the exercise or entries
+        // Get exercise info if available
+        const { data: exerciseInfo } = await supabase
+          .from('exercises')
+          .select('is_time_based, category')
+          .ilike('name_cs', exerciseName)
+          .maybeSingle();
 
-        if (!entries?.length) {
-          return new Response(
-            JSON.stringify({ 
-              leaderboard: [], 
-              total_participants: 0, 
-              client_rank: null,
-              client_percentile: null,
-              exercise_name: exerciseName,
-              metric: 'weight',
-              unit: 'kg'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        const isTimeBased = exerciseInfo?.is_time_based === true ||
+          exerciseInfo?.category === 'cardio' ||
+          exerciseInfo?.category === 'conditioning' ||
+          exerciseName.toLowerCase().includes('skierg') ||
+          exerciseName.toLowerCase().includes('veslo') ||
+          exerciseName.toLowerCase().includes('rower') ||
+          exerciseName.toLowerCase().includes('běh') ||
+          exerciseName.toLowerCase().includes('run');
 
-        // Get unique clients and their best performance
-        const clientBests = new Map<string, { weight: number; date: string }>();
-        entries.forEach((e: any) => {
-          const existing = clientBests.get(e.client_id);
-          if (!existing || (e.weight_kg && e.weight_kg > existing.weight)) {
-            clientBests.set(e.client_id, { weight: e.weight_kg, date: e.date });
+        if (isTimeBased) {
+          // TIME-BASED: get entries with time_seconds, sort ascending (lower is better)
+          metric = 'time';
+          unit = 's';
+
+          const { data: entries } = await supabase
+            .from('exercise_entries')
+            .select('client_id, time_seconds, time_ms, date')
+            .eq('user_id', trainerId)
+            .ilike('exercise_name', exerciseName)
+            .not('time_seconds', 'is', null);
+
+          if (!entries?.length) {
+            return new Response(
+              JSON.stringify({ 
+                leaderboard: [], 
+                total_participants: 0, 
+                client_rank: null,
+                client_percentile: null,
+                exercise_name: exerciseName,
+                metric: 'time',
+                unit: 's'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
-        });
 
-        // Filter by gender if needed
-        let filteredClientIds = Array.from(clientBests.keys());
-        if (genderFilter && genderFilter !== 'all') {
-          filteredClientIds = filteredClientIds.filter(cid => {
-            const client = clientsMap.get(cid);
-            return client?.gender === genderFilter;
-          });
-        }
-
-        // Build leaderboard
-        leaderboard = filteredClientIds
-          .map(cid => {
-            const data = clientBests.get(cid)!;
-            const client = clientsMap.get(cid);
-            const setting = settingsMap.get(cid);
-            const isSelfProfile = client?.is_self_profile === true;
-            const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
-
-            // Trainer (is_self_profile) is ALWAYS visible with their name or custom nickname
-            let nickname: string;
-            if (isSelfProfile) {
-              nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
-            } else if (isVisible && setting?.leaderboard_nickname) {
-              nickname = setting.leaderboard_nickname;
-            } else {
-              nickname = generateAnonymousName(cid);
+          // Get unique clients and their BEST (lowest) time
+          const clientBests = new Map<string, { timeMs: number; date: string }>();
+          entries.forEach((e: any) => {
+            if (!e.time_seconds || e.time_seconds <= 0) return;
+            
+            // Prefer time_ms for precision, fallback to time_seconds * 1000
+            const timeMs = e.time_ms ?? (e.time_seconds * 1000);
+            const existing = clientBests.get(e.client_id);
+            
+            // Lower time is better
+            if (!existing || timeMs < existing.timeMs) {
+              clientBests.set(e.client_id, { timeMs, date: e.date });
             }
+          });
 
-            return {
-              client_id: cid,
-              nickname,
-              best_value: data.weight,
-              display_value: `${data.weight} kg`,
-              achieved_at: data.date,
-              is_anonymous: !isVisible && !isSelfProfile, // Trainer is never anonymous
-              is_current_client: cid === clientId,
-              rank: 0,
-            };
-          })
-          .sort((a, b) => b.best_value - a.best_value);
+          // Filter by gender if needed
+          let filteredClientIds = Array.from(clientBests.keys());
+          if (genderFilter && genderFilter !== 'all') {
+            filteredClientIds = filteredClientIds.filter(cid => {
+              const client = clientsMap.get(cid);
+              return client?.gender === genderFilter;
+            });
+          }
+
+          // Build leaderboard
+          leaderboard = filteredClientIds
+            .map(cid => {
+              const data = clientBests.get(cid)!;
+              const client = clientsMap.get(cid);
+              const setting = settingsMap.get(cid);
+              const isSelfProfile = client?.is_self_profile === true;
+              const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
+
+              // Format time for display (mm:ss.SS)
+              const totalSeconds = data.timeMs / 1000;
+              const mins = Math.floor(totalSeconds / 60);
+              const secs = totalSeconds % 60;
+              const displayValue = `${mins}:${secs.toFixed(2).padStart(5, '0')}`;
+
+              let nickname: string;
+              if (isSelfProfile) {
+                nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+              } else if (isVisible && setting?.leaderboard_nickname) {
+                nickname = setting.leaderboard_nickname;
+              } else {
+                nickname = generateAnonymousName(cid);
+              }
+
+              return {
+                client_id: cid,
+                nickname,
+                best_value: data.timeMs,
+                display_value: displayValue,
+                achieved_at: data.date,
+                is_anonymous: !isVisible && !isSelfProfile,
+                is_current_client: cid === clientId,
+                rank: 0,
+              };
+            })
+            // ASCENDING sort for time (lower is better)
+            .sort((a, b) => a.best_value - b.best_value);
+
+        } else {
+          // WEIGHT-BASED: original logic
+          const { data: entries } = await supabase
+            .from('exercise_entries')
+            .select('client_id, weight_kg, date')
+            .eq('user_id', trainerId)
+            .ilike('exercise_name', exerciseName)
+            .not('weight_kg', 'is', null)
+            .order('weight_kg', { ascending: false });
+
+          if (!entries?.length) {
+            return new Response(
+              JSON.stringify({ 
+                leaderboard: [], 
+                total_participants: 0, 
+                client_rank: null,
+                client_percentile: null,
+                exercise_name: exerciseName,
+                metric: 'weight',
+                unit: 'kg'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Get unique clients and their best performance (highest weight)
+          const clientBests = new Map<string, { weight: number; date: string }>();
+          entries.forEach((e: any) => {
+            const existing = clientBests.get(e.client_id);
+            if (!existing || (e.weight_kg && e.weight_kg > existing.weight)) {
+              clientBests.set(e.client_id, { weight: e.weight_kg, date: e.date });
+            }
+          });
+
+          // Filter by gender if needed
+          let filteredClientIds = Array.from(clientBests.keys());
+          if (genderFilter && genderFilter !== 'all') {
+            filteredClientIds = filteredClientIds.filter(cid => {
+              const client = clientsMap.get(cid);
+              return client?.gender === genderFilter;
+            });
+          }
+
+          // Build leaderboard
+          leaderboard = filteredClientIds
+            .map(cid => {
+              const data = clientBests.get(cid)!;
+              const client = clientsMap.get(cid);
+              const setting = settingsMap.get(cid);
+              const isSelfProfile = client?.is_self_profile === true;
+              const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
+
+              let nickname: string;
+              if (isSelfProfile) {
+                nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+              } else if (isVisible && setting?.leaderboard_nickname) {
+                nickname = setting.leaderboard_nickname;
+              } else {
+                nickname = generateAnonymousName(cid);
+              }
+
+              return {
+                client_id: cid,
+                nickname,
+                best_value: data.weight,
+                display_value: `${data.weight} kg`,
+                achieved_at: data.date,
+                is_anonymous: !isVisible && !isSelfProfile,
+                is_current_client: cid === clientId,
+                rank: 0,
+              };
+            })
+            // DESCENDING sort for weight (higher is better)
+            .sort((a, b) => b.best_value - a.best_value);
+        }
 
       } else {
         // CARDIO
