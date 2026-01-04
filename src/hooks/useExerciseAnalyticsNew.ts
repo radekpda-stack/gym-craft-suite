@@ -82,21 +82,21 @@ const MUSCLE_GROUP_LABELS: Record<string, string> = {
 };
 
 const MOVEMENT_PATTERN_LABELS: Record<string, string> = {
-  squat: 'Squat',
-  hinge: 'Hinge',
-  lunge: 'Lunge',
-  push_horizontal: 'Push',
-  push_vertical: 'Push',
-  pull_horizontal: 'Pull',
-  pull_vertical: 'Pull',
-  carry: 'Carry',
-  rotation: 'Rotation',
-  core_anti_extension: 'Core',
-  core_anti_rotation: 'Core',
-  core_anti_lateral_flexion: 'Core',
-  locomotion: 'Locomotion',
-  conditioning: 'Conditioning',
-  mobility: 'Mobility',
+  squat: 'Dřep',
+  hinge: 'Hip hinge',
+  lunge: 'Výpad',
+  push_horizontal: 'Tlak horiz.',
+  push_vertical: 'Tlak vert.',
+  pull_horizontal: 'Tah horiz.',
+  pull_vertical: 'Tah vert.',
+  carry: 'Přenášení',
+  rotation: 'Rotace',
+  core_anti_extension: 'Core anti-ext.',
+  core_anti_rotation: 'Core anti-rot.',
+  core_anti_lateral_flexion: 'Core lat. flex.',
+  locomotion: 'Lokomoce',
+  conditioning: 'Kondice',
+  mobility: 'Mobilita',
 };
 
 // Fallback mapping: category → movement pattern
