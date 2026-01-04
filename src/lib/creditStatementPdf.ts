@@ -123,8 +123,8 @@ const FONTS = {
   tiny: 8,
 };
 
-// Font family to use
-const FONT_FAMILY = "Inter";
+// Font family to use (helvetica is built-in and reliable)
+const FONT_FAMILY = "helvetica";
 
 // Fallback for filename (remove diacritics for safe filenames)
 function sanitizeFilename(text: string): string {
