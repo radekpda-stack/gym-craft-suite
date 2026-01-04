@@ -126,7 +126,34 @@ export function ClientHeaderCompact({
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
+            {/* Export PDF button - next to name */}
+            <CreditStatementDialog
+              clientId={client.id}
+              clientName={client.name}
+              clientEmail={client.email || undefined}
+              clientPhone={client.phone || undefined}
+              isSharedBudget={!!budgetGroup}
+              budgetGroupId={budgetGroup?.group_id}
+              trigger={
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                    >
+                      <FileText className="w-4 h-4 text-primary" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Export výpisu do PDF</p>
+                  </TooltipContent>
+                </Tooltip>
+              }
+            />
+          </div>
           
           {/* Age + Birth year */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -214,32 +241,6 @@ export function ClientHeaderCompact({
               <Copy className="w-3 h-3 text-muted-foreground" />
             </Button>
           )}
-          
-          {/* Export PDF button */}
-          <CreditStatementDialog
-            clientId={client.id}
-            clientName={client.name}
-            clientEmail={client.email || undefined}
-            clientPhone={client.phone || undefined}
-            isSharedBudget={!!budgetGroup}
-            budgetGroupId={budgetGroup?.group_id}
-            trigger={
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                  >
-                    <FileText className="w-4 h-4 text-primary" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Export výpisu do PDF</p>
-                </TooltipContent>
-              </Tooltip>
-            }
-          />
         </div>
       </div>
 
