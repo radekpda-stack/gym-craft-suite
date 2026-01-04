@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Trophy, Clock, Send, ChevronRight, Medal, Award, Users, History } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import { AchievementsBadges } from '@/components/client-portal/challenges/Achiev
 import { ChallengeSubmissionDialog } from '@/components/client-portal/challenges/ChallengeSubmissionDialog';
 import { SubmissionFeedback } from '@/components/client-portal/challenges/SubmissionFeedback';
 import { ChallengeProgressChart } from '@/components/client-portal/challenges/ChallengeProgressChart';
+import { ChallengeHeroCard } from '@/components/client-portal/challenges/ChallengeHeroCard';
 import { TeamJoinCreate } from '@/components/client-portal/challenges/TeamJoinCreate';
 import { TeamManagement } from '@/components/client-portal/challenges/TeamManagement';
 import { TeamLeaderboardClient } from '@/components/client-portal/challenges/TeamLeaderboardClient';
@@ -87,6 +88,13 @@ export default function ClientPortalChallenges() {
     const completed = challenges.filter(c => !isAfter(new Date(c.end_at), now));
     return { activeChallenges: active, completedChallenges: completed };
   }, [challenges]);
+
+  // Auto-select first active challenge
+  useEffect(() => {
+    if (activeChallenges.length > 0 && !selectedChallenge) {
+      setSelectedChallenge(activeChallenges[0].id);
+    }
+  }, [activeChallenges, selectedChallenge]);
 
   const getClientSubmissions = (challengeId: string) => {
     return clientSubmissions.filter(s => s.challenge_id === challengeId);
@@ -299,7 +307,95 @@ export default function ClientPortalChallenges() {
               <p className="text-sm text-muted-foreground">Tvůj trenér brzy vyhlásí novou výzvu!</p>
             </Card>
           ) : (
-            activeChallenges.map(challenge => renderChallengeCard(challenge, true))
+            <div className="space-y-4">
+              {/* Hero card for first challenge */}
+              {activeChallenges[0] && (
+                <ChallengeHeroCard
+                  challenge={activeChallenges[0]}
+                  clientBest={getClientBestSubmission(activeChallenges[0].id)}
+                  submissionCount={getClientSubmissions(activeChallenges[0].id).length}
+                  leaderboard={selectedChallenge === activeChallenges[0].id ? leaderboard?.leaderboard : null}
+                  participantCount={participantCounts[activeChallenges[0].id] || 0}
+                  clientRank={selectedChallenge === activeChallenges[0].id ? leaderboard?.client_rank : null}
+                  onSubmit={() => {
+                    setSelectedChallenge(activeChallenges[0].id);
+                    setSubmitDialogOpen(true);
+                  }}
+                  showLeaderboard={
+                    !!privacySettings?.allow_challenges_participation && 
+                    (participantCounts[activeChallenges[0].id] || 0) >= minGroupSize &&
+                    (displayMode === 'leaderboard_only' || displayMode === 'both')
+                  }
+                />
+              )}
+              
+              {/* Additional challenges as smaller cards */}
+              {activeChallenges.length > 1 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Další aktivní výzvy</h3>
+                  {activeChallenges.slice(1).map(challenge => renderChallengeCard(challenge, true))}
+                </div>
+              )}
+
+              {/* Progress chart if user has multiple submissions */}
+              {activeChallenges[0] && getClientSubmissions(activeChallenges[0].id).length >= 2 && (
+                <ChallengeProgressChart
+                  submissions={getClientSubmissions(activeChallenges[0].id)}
+                  primaryMetric={activeChallenges[0].primary_metric}
+                  scoringType={activeChallenges[0].scoring_type}
+                  unitLabel={activeChallenges[0].unit_label}
+                />
+              )}
+
+              {/* My attempts for main challenge */}
+              {activeChallenges[0] && getClientSubmissions(activeChallenges[0].id).length > 1 && (
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="my-attempts" className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline">
+                      <span className="flex items-center gap-2">
+                        <History className="h-4 w-4" />
+                        Všechny moje pokusy ({getClientSubmissions(activeChallenges[0].id).length})
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2 pt-2">
+                        {getClientSubmissions(activeChallenges[0].id)
+                          .sort((a, b) => new Date(b.submitted_at || '').getTime() - new Date(a.submitted_at || '').getTime())
+                          .map((sub) => {
+                            const best = getClientBestSubmission(activeChallenges[0].id);
+                            const isBest = best?.id === sub.id;
+                            return (
+                              <div 
+                                key={sub.id}
+                                className={cn(
+                                  "flex items-center justify-between p-3 rounded-lg",
+                                  isBest ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isBest && <Trophy className="h-4 w-4 text-amber-500" />}
+                                  <span className="font-medium">
+                                    {formatChallengeScore(sub.score_primary, activeChallenges[0].primary_metric)}
+                                  </span>
+                                  {getMetricLabel(activeChallenges[0].primary_metric, activeChallenges[0].unit_label) && (
+                                    <span className="text-sm text-muted-foreground">
+                                      {getMetricLabel(activeChallenges[0].primary_metric, activeChallenges[0].unit_label)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {sub.submitted_at && format(new Date(sub.submitted_at), 'd. M. yyyy', { locale: cs })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
+            </div>
           )}
         </TabsContent>
 
