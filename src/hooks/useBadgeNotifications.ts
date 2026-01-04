@@ -75,6 +75,7 @@ export function useBadgeNotifications(clientId?: string) {
  * Hook to get badge icon from icon_key
  */
 export const BADGE_ICONS: Record<string, string> = {
+  // Milestones
   dot: '●',
   bars_1: '▮',
   bars_2: '▮▮',
@@ -85,12 +86,16 @@ export const BADGE_ICONS: Record<string, string> = {
   badge_150: '150',
   badge_200: '200',
   crown: '👑',
+  
+  // Streaks
   link_2: '🔗',
   link_4: '⛓',
   link_8: '⛓️',
   link_12: '🔒',
   link_20: '🏆',
   infinity: '∞',
+  
+  // Special
   type_tag: '🏷️',
   sunrise: '🌅',
   calendar_sun: '📅',
@@ -99,6 +104,8 @@ export const BADGE_ICONS: Record<string, string> = {
   five: '5️⃣',
   group: '👥',
   spark: '✨',
+  
+  // Seasonal
   leaf: '🌿',
   sun: '☀️',
   reset: '🔄',
@@ -109,10 +116,29 @@ export const BADGE_ICONS: Record<string, string> = {
   egg: '🥚',
   hammer: '🔨',
   flag: '🇨🇿',
+  
+  // Shop
   shopping_bag: '🛍️',
+  
+  // Nutrition
+  apple: '🍎',
+  utensils: '🍴',
+  salad: '🥗',
+  trophy: '🏆',
+  'calendar-check': '📅✓',
+  'calendar-range': '📆',
+  'calendar-heart': '❤️📅',
+  flame: '🔥',
+  fire: '🔥',
+  'fire-extinguisher': '🧯',
   droplets: '💧',
   pill: '💊',
   star: '⭐',
+  
+  // LP/Loyalty
+  coins: '🪙',
+  gem: '💎',
+  medal: '🥇',
 };
 
 export function getBadgeIcon(iconKey: string): string {

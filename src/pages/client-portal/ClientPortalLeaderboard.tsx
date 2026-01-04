@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight, Timer, Route } from 'lucide-react';
+import { Trophy, Medal, Dumbbell, Crown, Users, Heart, Footprints, ChevronRight, Timer, Route, Zap } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useLeaderboard, useLeaderboardSettings, LeaderboardEntry } from '@/hooks/useClientGamification';
+import { useXPLeaderboard, XPLeaderboardEntry } from '@/hooks/useXPLeaderboard';
 import { 
   useStrengthExerciseLeaderboard,
   useCardioExerciseLeaderboard,
@@ -84,7 +85,77 @@ function LeaderboardRow({ entry, currentClientId }: { entry: LeaderboardEntry; c
   );
 }
 
-function ExerciseLeaderboardRow({ 
+function XPLeaderboardRow({ entry, currentClientId }: { entry: XPLeaderboardEntry; currentClientId?: string }) {
+  const isCurrentUser = entry.client_id === currentClientId;
+  
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1: return <Crown className="w-5 h-5 text-amber-500" />;
+      case 2: return <Medal className="w-5 h-5 text-gray-400" />;
+      case 3: return <Medal className="w-5 h-5 text-amber-700" />;
+      default: return <span className="text-sm font-medium text-muted-foreground w-5 text-center">{rank}</span>;
+    }
+  };
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cn(
+        "flex items-center gap-4 p-3 rounded-xl transition-all",
+        isCurrentUser 
+          ? "bg-yellow-500/10 border border-yellow-500/20" 
+          : "hover:bg-muted/50",
+        entry.rank <= 3 && "bg-gradient-to-r from-yellow-500/5 to-transparent"
+      )}
+    >
+      <div className="w-8 flex items-center justify-center">
+        {getRankIcon(entry.rank)}
+      </div>
+      
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+          entry.rank === 1 ? "bg-amber-500/20 text-amber-600" :
+          entry.rank === 2 ? "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
+          entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
+          "bg-muted text-muted-foreground"
+        )}>
+          {entry.nickname.charAt(0).toUpperCase()}
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "font-medium truncate",
+              isCurrentUser && "text-yellow-600",
+              entry.is_anonymous && "italic text-muted-foreground"
+            )}>
+              {entry.nickname}
+            </span>
+            
+            {isCurrentUser && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0 bg-yellow-500/10 text-yellow-600">
+                Ty
+              </Badge>
+            )}
+            
+            <Badge variant="outline" className="text-[10px] px-1.5 shrink-0">
+              Lvl {entry.level}
+            </Badge>
+          </div>
+        </div>
+      </div>
+      
+      <div className="text-right shrink-0 flex items-center gap-1">
+        <Zap className="w-4 h-4 text-yellow-500" />
+        <span className="font-bold text-lg">{entry.total_xp}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function ExerciseLeaderboardRow({
   entry, 
   currentClientId 
 }: { 
@@ -480,13 +551,15 @@ function ExerciseComparisonTab() {
 
 export default function ClientPortalLeaderboard() {
   const { clientId } = useClientPortal();
-  const [activeTab, setActiveTab] = useState<'workouts_month' | 'workouts_alltime' | 'exercises'>('workouts_month');
+  const [activeTab, setActiveTab] = useState<'xp' | 'workouts_month' | 'workouts_alltime' | 'exercises'>('xp');
   
+  const { data: xpData, isLoading: xpLoading } = useXPLeaderboard();
   const { data: workoutsMonthData, isLoading: workoutsMonthLoading } = useLeaderboard('workouts_month');
   const { data: allTimeData, isLoading: allTimeLoading } = useLeaderboard('workouts_alltime');
   const { data: settings } = useLeaderboardSettings(clientId ?? undefined);
   
-  const isLoading = activeTab === 'workouts_month' ? workoutsMonthLoading : 
+  const isLoading = activeTab === 'xp' ? xpLoading :
+                    activeTab === 'workouts_month' ? workoutsMonthLoading : 
                     activeTab === 'workouts_alltime' ? allTimeLoading : false;
   const data = activeTab === 'workouts_month' ? workoutsMonthData : 
                activeTab === 'workouts_alltime' ? allTimeData : null;
@@ -516,8 +589,8 @@ export default function ClientPortalLeaderboard() {
         </p>
       </div>
       
-      {/* User's position summary - only for workout tabs */}
-      {activeTab !== 'exercises' && currentUserEntry && (
+      {/* User's position summary - for workout tabs */}
+      {(activeTab === 'workouts_month' || activeTab === 'workouts_alltime') && currentUserEntry && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -541,6 +614,39 @@ export default function ClientPortalLeaderboard() {
           </div>
         </motion.div>
       )}
+
+      {/* User's XP position */}
+      {activeTab === 'xp' && xpData?.clientRank && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <span className="text-xl font-bold text-yellow-600">#{xpData.clientRank}</span>
+              </div>
+              <div>
+                <p className="font-medium">Tvoje pozice</p>
+                <p className="text-sm text-muted-foreground">
+                  z {xpData.totalParticipants} účastníků
+                </p>
+              </div>
+            </div>
+            {xpData.clientPercentile !== null && (
+              <div className="text-right">
+                <p className="text-xl font-bold text-yellow-600">
+                  Top {Math.round(100 - xpData.clientPercentile)}%
+                </p>
+              </div>
+            )}
+          </div>
+          {xpData.clientPercentile !== null && (
+            <Progress value={100 - xpData.clientPercentile} className="mt-3 bg-yellow-500/10" />
+          )}
+        </motion.div>
+      )}
       
       {/* Visibility info */}
       {(!settings || !settings.leaderboard_visible) && (
@@ -555,7 +661,11 @@ export default function ClientPortalLeaderboard() {
       
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-4">
+          <TabsTrigger value="xp" className="gap-1.5">
+            <Zap className="w-4 h-4" />
+            <span className="hidden sm:inline">XP</span>
+          </TabsTrigger>
           <TabsTrigger value="workouts_month" className="gap-1.5">
             <Dumbbell className="w-4 h-4" />
             <span className="hidden sm:inline">Měsíc</span>
@@ -570,6 +680,37 @@ export default function ClientPortalLeaderboard() {
           </TabsTrigger>
         </TabsList>
         
+        {/* XP Leaderboard tab */}
+        <TabsContent value="xp" className="mt-4">
+          {xpLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
+          ) : !xpData?.leaderboard.length ? (
+            <EmptyState />
+          ) : (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  XP Žebříček
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {xpData.leaderboard.map((entry) => (
+                  <XPLeaderboardRow 
+                    key={entry.client_id} 
+                    entry={entry} 
+                    currentClientId={clientId ?? undefined}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         {/* Workouts tabs */}
         <TabsContent value="workouts_month" className="mt-4">
           {isLoading ? (

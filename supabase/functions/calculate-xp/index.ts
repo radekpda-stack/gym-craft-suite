@@ -361,7 +361,6 @@ async function checkWeeklyStreak(
     .from('client_confirmed_workouts')
     .select('id')
     .eq('client_id', clientId)
-    .eq('confirmed_by', 'trainer')
     .gte('performed_date', weekStart.toISOString().split('T')[0])
     .lt('performed_date', weekEnd.toISOString().split('T')[0]);
 
