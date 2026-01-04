@@ -3,10 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Trophy, TrendingUp, Flame, BarChart3, BookOpen, Plus } from 'lucide-react';
+import { User, Trophy, TrendingUp, BarChart3, BookOpen, Plus } from 'lucide-react';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { MyProfileProgress } from '@/components/my-profile/MyProfileProgress';
-import { MyProfileChallenges } from '@/components/my-profile/MyProfileChallenges';
 import { TrainerLeaderboards } from '@/components/my-profile/TrainerLeaderboards';
 import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutDiary';
 import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
@@ -40,17 +39,6 @@ export default function MyProfile() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-          <User className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">{profile.clientName}</h1>
-          <p className="text-sm text-muted-foreground">Můj profil</p>
-        </div>
-      </div>
-
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full flex flex-wrap gap-1 h-auto bg-muted/50 p-1">
@@ -69,10 +57,6 @@ export default function MyProfile() {
           <TabsTrigger value="progress" className="flex items-center gap-1.5 text-xs">
             <TrendingUp className="w-3.5 h-3.5" />
             Pokrok
-          </TabsTrigger>
-          <TabsTrigger value="challenges" className="flex items-center gap-1.5 text-xs">
-            <Flame className="w-3.5 h-3.5" />
-            Výzvy
           </TabsTrigger>
           <TabsTrigger value="leaderboard" className="flex items-center gap-1.5 text-xs">
             <BarChart3 className="w-3.5 h-3.5" />
@@ -98,10 +82,6 @@ export default function MyProfile() {
 
         <TabsContent value="progress" className="mt-6">
           <MyProfileProgress clientId={profile.clientId} trainerId={profile.trainerId} />
-        </TabsContent>
-
-        <TabsContent value="challenges" className="mt-6">
-          <MyProfileChallenges clientId={profile.clientId} />
         </TabsContent>
 
         <TabsContent value="leaderboard" className="mt-6">
