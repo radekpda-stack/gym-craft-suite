@@ -23,6 +23,7 @@ import {
   Boxes,
   Dumbbell,
   Paintbrush,
+  FileText,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -31,6 +32,7 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
+import { PdfSettings } from '@/components/settings/PdfSettings';
 
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
@@ -191,6 +193,16 @@ export default function Settings() {
               }}
             >
               <CompanyProfileSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'PDF dokumenty' : 'PDF Documents'}
+              description={language === 'cs' 
+                ? 'Vzhled a obsah generovaných PDF' 
+                : 'Appearance and content of generated PDFs'}
+              icon={FileText}
+            >
+              <PdfSettings />
             </SettingsSection>
 
             <SettingsSection

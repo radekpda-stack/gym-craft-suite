@@ -2,7 +2,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { cs, enUS } from "date-fns/locale";
-import { loadRobotoFonts, registerRobotoFont } from "./pdfFonts";
+import { loadPdfFonts, registerInterFont } from "./pdfFonts";
+import { getPdfColorsFromTheme, PdfColors, ThemeId } from "./pdfTheme";
+import { PdfSettings } from "@/hooks/usePdfSettings";
 
 export interface CreditStatementItem {
   date: Date;
@@ -34,6 +36,8 @@ export interface CreditStatementData {
 
 export interface CreditStatementOptions {
   language: "cs" | "en";
+  themeId?: ThemeId;
+  pdfSettings?: PdfSettings;
 }
 
 const translations = {
@@ -109,20 +113,6 @@ const translations = {
   },
 };
 
-// App brand colors - Orange primary (HSL 24 100% 50% converted to RGB)
-const COLORS = {
-  primary: [255, 115, 0] as [number, number, number],
-  primaryDark: [230, 100, 0] as [number, number, number],
-  primaryLight: [255, 145, 51] as [number, number, number],
-  text: [15, 23, 42] as [number, number, number],
-  textMuted: [100, 116, 139] as [number, number, number],
-  textLight: [148, 163, 184] as [number, number, number],
-  background: [250, 245, 240] as [number, number, number],
-  backgroundAlt: [255, 248, 240] as [number, number, number],
-  white: [255, 255, 255] as [number, number, number],
-  border: [255, 200, 150] as [number, number, number],
-};
-
 // Font sizes (unified)
 const FONTS = {
   title: 20,
@@ -132,6 +122,9 @@ const FONTS = {
   small: 9,
   tiny: 8,
 };
+
+// Font family to use
+const FONT_FAMILY = "Inter";
 
 // Fallback for filename (remove diacritics for safe filenames)
 function sanitizeFilename(text: string): string {
@@ -151,9 +144,21 @@ export async function generateCreditStatementPdf(
   const t = translations[options.language];
   const locale = options.language === "cs" ? cs : enUS;
   const dateFormat = options.language === "cs" ? "d. M. yyyy" : "MMM d, yyyy";
+  
+  // Get theme colors
+  const COLORS = getPdfColorsFromTheme(options.themeId);
+  
+  // Get PDF settings (with defaults)
+  const pdfSettings: PdfSettings = options.pdfSettings || {
+    showLogo: true,
+    showCompanyInfo: true,
+    showSummary: true,
+    showClientContact: true,
+    customFooter: "",
+  };
 
   // Load fonts first
-  await loadRobotoFonts();
+  await loadPdfFonts();
 
   const doc = new jsPDF({
     orientation: "portrait",
@@ -161,8 +166,8 @@ export async function generateCreditStatementPdf(
     format: "a4",
   });
 
-  // Register Roboto font for Czech diacritics support
-  registerRobotoFont(doc);
+  // Register Inter font for consistent look with app
+  registerInterFont(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -191,9 +196,9 @@ export async function generateCreditStatementPdf(
 
   yPos = 20;
 
-  // Company logo (if available)
+  // Company logo (if available and enabled)
   let logoEndX = margin;
-  if (data.companyLogoUrl) {
+  if (data.companyLogoUrl && pdfSettings.showLogo) {
     try {
       // Load image as base64
       const response = await fetch(data.companyLogoUrl);
@@ -216,27 +221,27 @@ export async function generateCreditStatementPdf(
   // Title
   doc.setFontSize(FONTS.title);
   doc.setTextColor(...COLORS.primaryDark);
-  doc.setFont("Roboto", "bold");
-  doc.text(t.title, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
+  doc.setFont(FONT_FAMILY, "bold");
+  doc.text(t.title, logoEndX + (data.companyLogoUrl && pdfSettings.showLogo ? 5 : 0), yPos);
   yPos += 10;
 
-  // Company info (if available)
-  if (data.companyName) {
+  // Company info (if available and enabled)
+  if (data.companyName && pdfSettings.showCompanyInfo) {
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.textMuted);
-    doc.setFont("Roboto", "normal");
-    doc.text(data.companyName, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
+    doc.setFont(FONT_FAMILY, "normal");
+    doc.text(data.companyName, logoEndX + (data.companyLogoUrl && pdfSettings.showLogo ? 5 : 0), yPos);
     yPos += 5;
     if (data.companyId) {
-      doc.text(`IČ: ${data.companyId}`, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
+      doc.text(`IČ: ${data.companyId}`, logoEndX + (data.companyLogoUrl && pdfSettings.showLogo ? 5 : 0), yPos);
       yPos += 5;
     }
     if (data.companyAddress) {
-      doc.text(data.companyAddress, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
+      doc.text(data.companyAddress, logoEndX + (data.companyLogoUrl && pdfSettings.showLogo ? 5 : 0), yPos);
       yPos += 5;
     }
     if (data.companyContact) {
-      doc.text(data.companyContact, logoEndX + (data.companyLogoUrl ? 5 : 0), yPos);
+      doc.text(data.companyContact, logoEndX + (data.companyLogoUrl && pdfSettings.showLogo ? 5 : 0), yPos);
       yPos += 5;
     }
     yPos += 3;
@@ -254,12 +259,13 @@ export async function generateCreditStatementPdf(
   
   doc.setFontSize(FONTS.heading);
   doc.setTextColor(...COLORS.text);
-  doc.setFont("Roboto", "bold");
+  doc.setFont(FONT_FAMILY, "bold");
   doc.text(`${t.client}:`, margin + 5, yPos + 5);
-  doc.setFont("Roboto", "normal");
+  doc.setFont(FONT_FAMILY, "normal");
   doc.text(data.clientName, margin + 25, yPos + 5);
 
-  if (data.clientEmail || data.clientPhone) {
+  // Client contact info (if enabled)
+  if (pdfSettings.showClientContact && (data.clientEmail || data.clientPhone)) {
     doc.setFontSize(FONTS.small);
     doc.setTextColor(...COLORS.textMuted);
     const contactInfo = [data.clientEmail, data.clientPhone]
@@ -291,51 +297,53 @@ export async function generateCreditStatementPdf(
   const cancellationTotal = cancellationItems.reduce((sum, i) => sum + i.totalPrice, 0);
   const grandTotal = trainingTotal + productTotal + cancellationTotal;
 
-  // Summary box with primary color accent - enhanced with breakdown
-  const summaryHeight = data.isGroupBudget ? 28 : 20;
-  doc.setFillColor(...COLORS.primary);
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, summaryHeight, 3, 3, 'F');
-  
-  doc.setFontSize(FONTS.heading);
-  doc.setTextColor(...COLORS.white);
-  doc.setFont("Roboto", "bold");
-  doc.text(t.summary + (data.isGroupBudget ? ` (${t.groupBudget})` : ''), margin + 5, yPos + 7);
+  // Summary box with primary color accent (if enabled)
+  if (pdfSettings.showSummary) {
+    const summaryHeight = data.isGroupBudget ? 28 : 20;
+    doc.setFillColor(...COLORS.primary);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, summaryHeight, 3, 3, 'F');
+    
+    doc.setFontSize(FONTS.heading);
+    doc.setTextColor(...COLORS.white);
+    doc.setFont(FONT_FAMILY, "bold");
+    doc.text(t.summary + (data.isGroupBudget ? ` (${t.groupBudget})` : ''), margin + 5, yPos + 7);
 
-  doc.setFontSize(FONTS.small);
-  doc.setFont("Roboto", "normal");
-  // Summary line with breakdown
-  const summaryParts = [];
-  if (trainingItems.length > 0) summaryParts.push(`${trainingItems.length}× ${t.training.toLowerCase()}`);
-  if (productItems.length > 0) summaryParts.push(`${productItems.length}× ${t.product.toLowerCase()}`);
-  if (cancellationItems.length > 0) summaryParts.push(`${cancellationItems.length}× ${t.lateCancellation.toLowerCase()}`);
-  doc.text(summaryParts.join(' · '), margin + 5, yPos + 14);
-  
-  doc.setFontSize(FONTS.body);
-  doc.setFont("Roboto", "bold");
-  doc.text(
-    `${t.totalDeducted}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
-    pageWidth - margin - 5,
-    yPos + 14,
-    { align: "right" }
-  );
+    doc.setFontSize(FONTS.small);
+    doc.setFont(FONT_FAMILY, "normal");
+    // Summary line with breakdown
+    const summaryParts = [];
+    if (trainingItems.length > 0) summaryParts.push(`${trainingItems.length}× ${t.training.toLowerCase()}`);
+    if (productItems.length > 0) summaryParts.push(`${productItems.length}× ${t.product.toLowerCase()}`);
+    if (cancellationItems.length > 0) summaryParts.push(`${cancellationItems.length}× ${t.lateCancellation.toLowerCase()}`);
+    doc.text(summaryParts.join(' · '), margin + 5, yPos + 14);
+    
+    doc.setFontSize(FONTS.body);
+    doc.setFont(FONT_FAMILY, "bold");
+    doc.text(
+      `${t.totalDeducted}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
+      pageWidth - margin - 5,
+      yPos + 14,
+      { align: "right" }
+    );
 
-  if (data.isGroupBudget) {
-    doc.setFontSize(FONTS.tiny);
-    doc.setFont("Roboto", "normal");
-    const breakdown = [];
-    if (trainingTotal > 0) breakdown.push(`${t.training}: ${Math.round(trainingTotal).toLocaleString('cs-CZ')} ${t.currency}`);
-    if (productTotal > 0) breakdown.push(`${t.product}: ${Math.round(productTotal).toLocaleString('cs-CZ')} ${t.currency}`);
-    if (cancellationTotal > 0) breakdown.push(`${t.lateCancellation}: ${Math.round(cancellationTotal).toLocaleString('cs-CZ')} ${t.currency}`);
-    doc.text(breakdown.join(' · '), margin + 5, yPos + 21);
+    if (data.isGroupBudget) {
+      doc.setFontSize(FONTS.tiny);
+      doc.setFont(FONT_FAMILY, "normal");
+      const breakdown = [];
+      if (trainingTotal > 0) breakdown.push(`${t.training}: ${Math.round(trainingTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+      if (productTotal > 0) breakdown.push(`${t.product}: ${Math.round(productTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+      if (cancellationTotal > 0) breakdown.push(`${t.lateCancellation}: ${Math.round(cancellationTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+      doc.text(breakdown.join(' · '), margin + 5, yPos + 21);
+    }
+
+    yPos += summaryHeight + 8;
   }
-
-  yPos += summaryHeight + 8;
 
   // Items table
   if (data.items.length === 0) {
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.textMuted);
-    doc.setFont("Roboto", "normal");
+    doc.setFont(FONT_FAMILY, "normal");
     doc.text(t.noItems, margin, yPos);
   } else {
     const getTypeName = (type: CreditStatementItem["type"]) => {
@@ -397,24 +405,24 @@ export async function generateCreditStatementPdf(
         fontSize: FONTS.small,
         fontStyle: "bold",
         halign: "left",
-        font: "Roboto",
+        font: FONT_FAMILY,
       },
       bodyStyles: {
         fontSize: FONTS.small,
         textColor: COLORS.text,
         cellPadding: 3,
-        font: "Roboto",
+        font: FONT_FAMILY,
       },
       alternateRowStyles: {
-        fillColor: [255, 250, 245],
+        fillColor: [250, 250, 250],
       },
       columnStyles,
       margin: { left: margin, right: margin },
       styles: {
         overflow: 'linebreak',
-        lineColor: [255, 200, 150],
+        lineColor: COLORS.border,
         lineWidth: 0.1,
-        font: "Roboto",
+        font: FONT_FAMILY,
       },
     });
 
@@ -433,7 +441,7 @@ export async function generateCreditStatementPdf(
 
     let subtotalY = finalY + 4;
     doc.setFontSize(FONTS.small);
-    doc.setFont("Roboto", "normal");
+    doc.setFont(FONT_FAMILY, "normal");
 
     if (trainingTotal > 0) {
       doc.setTextColor(...COLORS.textMuted);
@@ -493,7 +501,7 @@ export async function generateCreditStatementPdf(
     
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.white);
-    doc.setFont("Roboto", "bold");
+    doc.setFont(FONT_FAMILY, "bold");
     doc.text(
       `${t.grandTotal}:`,
       pageWidth - margin - 65,
@@ -506,12 +514,13 @@ export async function generateCreditStatementPdf(
       { align: "right" }
     );
 
-    // Footer text
+    // Footer text - use custom footer if provided
     const footerY = Math.min(subtotalY + 20, pageHeight - 25);
     doc.setFontSize(FONTS.tiny);
     doc.setTextColor(...COLORS.textLight);
-    doc.setFont("Roboto", "normal");
-    doc.text(t.footer, margin, footerY);
+    doc.setFont(FONT_FAMILY, "normal");
+    const footerText = pdfSettings.customFooter?.trim() || t.footer;
+    doc.text(footerText, margin, footerY);
   }
 
   // Add page numbers

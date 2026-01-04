@@ -28,6 +28,8 @@ import {
 } from "@/lib/creditStatementPdf";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCurrentThemeId } from "@/lib/pdfTheme";
+import { usePdfSettings } from "@/hooks/usePdfSettings";
 
 interface CreditStatementDialogProps {
   clientId: string;
@@ -57,6 +59,9 @@ export function CreditStatementDialog({
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
   const [includeCanceled, setIncludeCanceled] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Get PDF settings
+  const { data: pdfSettings } = usePdfSettings();
 
   // Fetch last credit topup date
   const { data: lastTopup } = useQuery({
@@ -234,7 +239,12 @@ export function CreditStatementDialog({
       };
 
       // Generate and download PDF (async - loads fonts)
-      await downloadCreditStatementPdf(statementData, { language });
+      const currentTheme = getCurrentThemeId();
+      await downloadCreditStatementPdf(statementData, { 
+        language,
+        themeId: currentTheme,
+        pdfSettings: pdfSettings,
+      });
 
       toast.success(
         language === "cs"
