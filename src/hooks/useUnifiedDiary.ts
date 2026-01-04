@@ -16,6 +16,7 @@ export interface DiaryExercise {
   weight_kg?: number | null;
   duration_seconds?: number | null;
   time_seconds?: number | null;
+  distance_meters?: number | null;
   rpe?: number | null;
   notes?: string | null;
   is_personal_record?: boolean;
@@ -271,6 +272,7 @@ export function usePlannedWorkouts() {
             reps,
             weight_kg,
             duration_seconds,
+            distance_meters,
             rpe,
             notes
           )
