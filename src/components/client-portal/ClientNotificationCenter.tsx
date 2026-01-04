@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -9,6 +10,7 @@ import {
   MessageSquare,
   ClipboardList,
   Trophy,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +35,7 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   trainer_pr_challenge: Trophy,
   beat_trainer: Trophy,
   broadcast: MessageSquare,
+  credentials_change_required: KeyRound,
   default: Bell,
 };
 
@@ -71,6 +74,8 @@ function NotificationItem({
               ? "bg-green-500/20 text-green-600"
               : notification.type === "broadcast"
               ? "bg-blue-500/20 text-blue-600"
+              : notification.type === "credentials_change_required"
+              ? "bg-orange-500/20 text-orange-600"
               : "bg-muted text-muted-foreground"
           )}
         >
@@ -130,6 +135,17 @@ function NotificationItem({
                 Zobrazit →
               </a>
             )}
+            {notification.type === "credentials_change_required" &&
+              !notification.action_completed && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-xs bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 text-orange-600"
+                  onClick={() => onAction?.(notification)}
+                >
+                  Nastavit
+                </Button>
+              )}
           </div>
         </div>
       </div>
@@ -145,6 +161,7 @@ export function ClientNotificationCenter({
   onFeedbackAction,
 }: ClientNotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: notifications, isLoading } = useClientPortalNotifications();
   const unreadCount = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
@@ -156,6 +173,11 @@ export function ClientNotificationCenter({
       notification.metadata?.training_session_id
     ) {
       onFeedbackAction?.(notification.metadata.training_session_id);
+      setIsOpen(false);
+    } else if (notification.type === "credentials_change_required") {
+      // Navigate to settings page with credentials section
+      const basePath = window.location.pathname.startsWith('/zona') ? '/zona' : '/client';
+      navigate(`${basePath}/settings`);
       setIsOpen(false);
     }
   };

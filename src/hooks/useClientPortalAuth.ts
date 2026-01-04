@@ -90,6 +90,32 @@ export function useClientPortalAuth() {
             activity_type: 'portal_login',
           }, { onConflict: 'client_id,activity_date,activity_type' })
           .then(() => {});
+
+        // Create credentials change notification on first login (if not already exists and not changed)
+        if (newLoginCount === 1 && !account.credentials_changed_at) {
+          supabase
+            .from('client_portal_notifications')
+            .select('id')
+            .eq('client_id', account.client_id)
+            .eq('type', 'credentials_change_required')
+            .maybeSingle()
+            .then(({ data: existingNotif }) => {
+              if (!existingNotif) {
+                supabase
+                  .from('client_portal_notifications')
+                  .insert({
+                    client_id: account.client_id,
+                    type: 'credentials_change_required',
+                    title: 'Změňte si přihlašovací údaje',
+                    message: 'Pro lepší bezpečnost si prosím nastavte vlastní email a heslo v nastavení.',
+                    action_url: '/client/settings',
+                    is_read: false,
+                    action_completed: false,
+                  })
+                  .then(() => {});
+              }
+            });
+        }
       } else {
         setIsClient(false);
         setClientAccount(null);
@@ -195,16 +221,16 @@ export function useClientPortalAuth() {
   // Loading until we have session info AND client data
   const isFullyLoaded = !loading && clientDataLoaded;
 
-  // Should show credentials reminder if:
-  // - Client has logged in less than 5 times AND hasn't changed credentials yet
-  // - Or if login count >= 5 and credentials not changed (force change)
+  // Should show credentials reminder dialog only for first 5 logins
+  // After 5 logins, the dialog stops appearing but notification remains in notification center
   const loginCount = clientAccount?.login_count ?? 0;
   const credentialsChanged = !!clientAccount?.credentials_changed_at;
   const shouldShowCredentialsReminder = 
     isClient && 
     !credentialsChanged && 
     !credentialsReminderDismissed &&
-    loginCount > 0; // Only show after first login is recorded
+    loginCount > 0 && 
+    loginCount <= 5; // Only show dialog for first 5 logins
 
   // Refetch client account data (used after credentials change)
   const refetchClientAccount = useCallback(async () => {
