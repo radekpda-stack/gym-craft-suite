@@ -41,15 +41,20 @@ function buildBaseNavItems(base: string): NavItem[] {
   return [
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
+    { to: `${base}/progress`, icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
     { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
     { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
     { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
+    { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
   ];
 }
 
 function buildNutritionNavItem(base: string): NavItem {
   return { to: `${base}/nutrition`, icon: Apple, label: 'Strava', trackName: 'nutrition' };
+}
+
+function buildPurchasesNavItem(base: string): NavItem {
+  return { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' };
 }
 
 function buildSettingsNavItem(base: string): NavItem {
@@ -86,6 +91,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
   const baseNavItems = buildBaseNavItems(basePath);
   const nutritionNavItem = buildNutritionNavItem(basePath);
+  const purchasesNavItem = buildPurchasesNavItem(basePath);
   const settingsNavItem = buildSettingsNavItem(basePath);
   const mobileNavItems = buildMobileNavItems(basePath);
 
@@ -115,6 +121,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const allNavItems = [
     ...baseNavItems,
     ...(hasActiveNutrition ? [nutritionNavItem] : []),
+    purchasesNavItem,
     settingsNavItem,
   ];
 

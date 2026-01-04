@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
-import { ClientPortalLayout } from '@/components/client-portal/ClientPortalLayout';
+
 import { useClientPrivacySettings, useUpdateClientPrivacySettings } from '@/hooks/useClientPortalBenchmarks';
 import { ClientProfileSection } from '@/components/client-portal/ClientProfileSection';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -112,39 +112,38 @@ export default function ClientPortalSettings() {
   };
 
   return (
-    <ClientPortalLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Key className="w-6 h-6" />
-            Nastavení
-          </h1>
-          <p className="text-muted-foreground mt-1">Správa vašeho účtu a preferencí</p>
-        </motion.div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Key className="w-6 h-6" />
+          Nastavení
+        </h1>
+        <p className="text-muted-foreground mt-1">Správa vašeho účtu a preferencí</p>
+      </motion.div>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profil</span>
-            </TabsTrigger>
-            <TabsTrigger value="privacy" className="gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Soukromí</span>
-            </TabsTrigger>
-            <TabsTrigger value="account" className="gap-2">
-              <Lock className="w-4 h-4" />
-              <span className="hidden sm:inline">Účet</span>
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="profile" className="gap-2">
+            <User className="w-4 h-4" />
+            <span className="hidden sm:inline">Profil</span>
+          </TabsTrigger>
+          <TabsTrigger value="privacy" className="gap-2">
+            <Shield className="w-4 h-4" />
+            <span className="hidden sm:inline">Soukromí</span>
+          </TabsTrigger>
+          <TabsTrigger value="account" className="gap-2">
+            <Lock className="w-4 h-4" />
+            <span className="hidden sm:inline">Účet</span>
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <ClientProfileSection />
-          </TabsContent>
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="space-y-6">
+          <ClientProfileSection />
+        </TabsContent>
 
-          {/* Privacy Tab */}
-          <TabsContent value="privacy" className="space-y-6">
+        {/* Privacy Tab */}
+        <TabsContent value="privacy" className="space-y-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               {/* Info banner */}
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-6">
@@ -283,10 +282,10 @@ export default function ClientPortalSettings() {
                 </div>
               )}
             </motion.div>
-          </TabsContent>
+        </TabsContent>
 
-          {/* Account Tab */}
-          <TabsContent value="account" className="space-y-6">
+        {/* Account Tab */}
+        <TabsContent value="account" className="space-y-6">
             {/* Appearance */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Card>
@@ -374,11 +373,10 @@ export default function ClientPortalSettings() {
                     </Button>
                   </form>
                 </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </ClientPortalLayout>
+            </Card>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

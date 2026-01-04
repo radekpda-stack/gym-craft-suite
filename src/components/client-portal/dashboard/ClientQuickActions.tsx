@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Dumbbell, Scale, CalendarDays, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -8,7 +8,7 @@ interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  to: string;
+  path: string; // relative path without prefix
   color: string;
   bgColor: string;
 }
@@ -18,7 +18,7 @@ const quickActions: QuickAction[] = [
     id: 'workout',
     label: 'Trénink',
     icon: <Dumbbell className="w-5 h-5" />,
-    to: '/client/workouts',
+    path: '/diary',
     color: 'text-primary',
     bgColor: 'bg-primary/10 hover:bg-primary/20',
   },
@@ -26,15 +26,15 @@ const quickActions: QuickAction[] = [
     id: 'measurement',
     label: 'Měření',
     icon: <Scale className="w-5 h-5" />,
-    to: '/client/progress',
+    path: '/progress',
     color: 'text-success',
     bgColor: 'bg-success/10 hover:bg-success/20',
   },
   {
     id: 'plan',
-    label: 'Plán',
+    label: 'Docházka',
     icon: <CalendarDays className="w-5 h-5" />,
-    to: '/client/attendance',
+    path: '/attendance',
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10 hover:bg-blue-500/20',
   },
@@ -42,13 +42,16 @@ const quickActions: QuickAction[] = [
     id: 'challenges',
     label: 'Výzvy',
     icon: <Trophy className="w-5 h-5" />,
-    to: '/client/challenges',
+    path: '/challenges',
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 hover:bg-amber-500/20',
   },
 ];
 
 export function ClientQuickActions() {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -63,7 +66,7 @@ export function ClientQuickActions() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.05 + index * 0.05 }}
         >
-          <Link to={action.to}>
+          <Link to={`${basePath}${action.path}`}>
             <Button
               variant="ghost"
               className={cn(
