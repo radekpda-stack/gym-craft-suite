@@ -18,7 +18,7 @@ import {
   useMarkAllNotificationsRead,
   useDeleteNotification,
 } from "@/hooks/useNotifications";
-import { useTrainerConversations } from "@/hooks/useChatMessages";
+import { useTrainerConversations, useMarkMessagesAsRead, useMarkAllMessagesAsRead } from "@/hooks/useChatMessages";
 import { formatDistanceToNow, isToday, isYesterday, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -124,6 +124,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const deleteNotification = useDeleteNotification();
   
   const { data: conversations = [] } = useTrainerConversations();
+  const markMessagesRead = useMarkMessagesAsRead();
+  const markAllMessagesRead = useMarkAllMessagesAsRead();
   const unreadConversations = conversations.filter(c => c.unreadCount > 0);
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
@@ -192,10 +194,21 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     setExpandedCategories(newExpanded);
   };
 
-  // Handle chat notification click - navigate to client with chat open
-  const handleChatClick = (clientId: string) => {
+  // Handle chat notification click - navigate to client with chat open and mark as read
+  const handleChatClick = (clientId: string, conversationId: string) => {
+    markMessagesRead.mutate({ conversationId });
     setSheetOpen(false);
     navigate(`/clients/${clientId}?tab=chat`);
+  };
+
+  // Mark all notifications AND messages as read
+  const handleMarkAllAsRead = () => {
+    if (unreadCount > 0) {
+      markAllRead.mutate();
+    }
+    if (unreadConversations.length > 0) {
+      markAllMessagesRead.mutate();
+    }
   };
 
   const handleFeedbackNotificationClick = async (notification: typeof notifications[0]) => {
@@ -363,8 +376,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => markAllRead.mutate()}
-                disabled={markAllRead.isPending}
+                onClick={handleMarkAllAsRead}
+                disabled={markAllRead.isPending || markAllMessagesRead.isPending}
                 className="text-xs h-8"
               >
                 <Check className="w-3.5 h-3.5 mr-1" />
@@ -405,7 +418,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                     {unreadConversations.map((conv) => (
                       <div
                         key={conv.conversationId}
-                        onClick={() => handleChatClick(conv.clientId)}
+                        onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
                         className="flex items-start gap-3 p-3 rounded-xl border bg-secondary/50 border-primary/20 hover:border-primary/40 cursor-pointer transition-colors"
                       >
                         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary shrink-0">
