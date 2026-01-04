@@ -3,7 +3,6 @@ import { NavLink, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   TrendingUp, 
-  Apple, 
   LogOut,
   Settings,
   Trophy,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientNutritionCampaign } from '@/hooks/useClientPortalData';
 import { motion } from 'framer-motion';
 import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
@@ -49,9 +47,7 @@ function buildBaseNavItems(base: string): NavItem[] {
   ];
 }
 
-function buildNutritionNavItem(base: string): NavItem {
-  return { to: `${base}/nutrition`, icon: Apple, label: 'Strava', trackName: 'nutrition' };
-}
+// Nutrition nav item removed - now accessible via Diary tab
 
 function buildPurchasesNavItem(base: string): NavItem {
   return { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' };
@@ -90,7 +86,6 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   // ("/zona" for short URL portal, "/client" for legacy portal)
   const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
   const baseNavItems = buildBaseNavItems(basePath);
-  const nutritionNavItem = buildNutritionNavItem(basePath);
   const purchasesNavItem = buildPurchasesNavItem(basePath);
   const settingsNavItem = buildSettingsNavItem(basePath);
   const mobileNavItems = buildMobileNavItems(basePath);
@@ -113,14 +108,9 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     }
   }, [shouldShowCredentialsReminder, showCredentialsDialog, isDemo]);
 
-  // Check if nutrition campaign is active
-  const { data: nutritionCampaign } = useClientNutritionCampaign(clientId ?? undefined);
-  const hasActiveNutrition = nutritionCampaign?.isActive;
-
-  // Build desktop nav items dynamically
+  // Build desktop nav items dynamically (nutrition is now in diary tab)
   const allNavItems = [
     ...baseNavItems,
-    ...(hasActiveNutrition ? [nutritionNavItem] : []),
     purchasesNavItem,
     settingsNavItem,
   ];
