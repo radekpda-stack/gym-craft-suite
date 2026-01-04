@@ -143,7 +143,7 @@ export default function ClientPortalWorkoutDiary() {
       <div>
         <h1 className="text-2xl font-bold">Můj deník</h1>
         <p className="text-muted-foreground text-sm">
-          Zaznamenej si své tréninky
+          Tréninky od trenéra a záznamy tvých vlastních aktivit
         </p>
       </div>
 

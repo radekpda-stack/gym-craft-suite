@@ -40,7 +40,6 @@ type NavItem = {
 function buildBaseNavItems(base: string): NavItem[] {
   return [
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-    { to: `${base}/homework`, icon: Dumbbell, label: 'Domácí', trackName: 'homework' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
     { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
     { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
