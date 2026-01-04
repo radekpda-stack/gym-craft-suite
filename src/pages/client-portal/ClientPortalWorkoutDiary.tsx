@@ -94,25 +94,55 @@ export default function ClientPortalWorkoutDiary() {
     feeling: number;
     notes: string;
     date: string;
+    distanceKm?: number;
+    paceMinPerKm?: string;
+    exercises?: Array<{
+      exercise_name: string;
+      exercise_id?: string | null;
+      sets?: number;
+      reps?: number;
+      weight_kg?: number;
+    }>;
   }) => {
     if (!clientId || !clientAccount?.trainer_id) return;
+
+    // Build notes with cardio metrics if provided
+    let fullNotes = data.notes || '';
+    if (data.distanceKm || data.paceMinPerKm) {
+      const cardioInfo = [];
+      if (data.distanceKm) cardioInfo.push(`${data.distanceKm} km`);
+      if (data.paceMinPerKm) cardioInfo.push(`@ ${data.paceMinPerKm} min/km`);
+      fullNotes = cardioInfo.join(' ') + (fullNotes ? `\n${fullNotes}` : '');
+    }
+
+    // Prepare exercises array
+    const exercisesToSave = data.exercises?.map((ex, idx) => ({
+      exercise_name: ex.exercise_name,
+      exercise_id: ex.exercise_id || null,
+      sets: ex.sets || null,
+      reps: ex.reps || null,
+      weight_kg: ex.weight_kg || null,
+      sort_order: idx,
+    })) || [];
 
     await createLog.mutateAsync({
       client_id: clientId,
       trainer_id: clientAccount.trainer_id,
       date: data.date,
-      notes: data.notes || undefined,
+      notes: fullNotes || undefined,
       workout_type: data.workoutType,
       duration_minutes: data.durationMinutes,
       energy_after: data.feeling,
-      exercises: [],
+      exercises: exercisesToSave,
     });
 
     toast.success('Trénink odeslán trenérovi! 💪');
     trackPortalEvent('workout_logged', { 
       workout_type: data.workoutType,
       duration: data.durationMinutes,
-      feeling: data.feeling
+      feeling: data.feeling,
+      has_exercises: exercisesToSave.length > 0,
+      has_cardio_metrics: !!(data.distanceKm || data.paceMinPerKm),
     });
   };
 
