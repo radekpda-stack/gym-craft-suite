@@ -16,7 +16,6 @@ async function fetchIcs(url: string): Promise<string> {
   const fetchUrl = normalizeIcsUrl(url);
   const res = await fetch(fetchUrl, {
     headers: {
-      // Some calendar providers (incl. iCloud) behave better with explicit headers.
       'Accept': 'text/calendar, text/plain;q=0.9, */*;q=0.8',
       'User-Agent': 'Mozilla/5.0 (compatible; LovableCalendarSync/1.0)',
     },
@@ -98,6 +97,10 @@ const CZECH_NICKNAMES: Record<string, string[]> = {
   'simona': ['simča', 'simi'],
   'nikola': ['niki', 'nikolka'],
   'kristýna': ['kiki', 'týna', 'kristy'],
+  'táňa': ['taťána', 'taťana', 'tatana', 'tatiana'],
+  'taťána': ['táňa', 'tatana', 'tatiana'],
+  'linda': ['lindička', 'linduška'],
+  'zdeňka': ['zdenička', 'zdeňulka'],
 };
 
 // Normalize text - remove diacritics and convert to lowercase
@@ -126,15 +129,45 @@ function levenshteinDistance(a: string, b: string): number {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
         );
       }
     }
   }
 
   return matrix[b.length][a.length];
+}
+
+// Extract name from common calendar event formats like "8.00 Jméno" or "Jméno 14:00"
+function extractNameFromTimePattern(summary: string): string | null {
+  const normalized = summary.trim();
+  
+  // Pattern: "HH:MM Jméno" or "HH.MM Jméno" or "H:MM Jméno"
+  const timeFirstPattern = /^(\d{1,2}[.:]\d{2})\s+(.+)$/i;
+  const timeFirstMatch = normalized.match(timeFirstPattern);
+  if (timeFirstMatch) {
+    const potentialName = timeFirstMatch[2].trim();
+    // Remove common suffixes like "platit", "?"
+    return potentialName.replace(/\s*(platit|\?|!)$/i, '').trim();
+  }
+  
+  // Pattern: "Jméno HH:MM" or "Jméno HH.MM"
+  const timeLastPattern = /^(.+?)\s+(\d{1,2}[.:]\d{2})$/i;
+  const timeLastMatch = normalized.match(timeLastPattern);
+  if (timeLastMatch) {
+    return timeLastMatch[1].trim();
+  }
+  
+  // Pattern: "Jméno - poznámka"
+  const dashPattern = /^([^-]+)\s*-\s*.+$/;
+  const dashMatch = normalized.match(dashPattern);
+  if (dashMatch) {
+    return dashMatch[1].trim();
+  }
+  
+  return null;
 }
 
 // Get all possible name variations for a client
@@ -146,13 +179,11 @@ function getNameVariations(name: string): string[] {
   for (const part of parts) {
     variations.push(part);
     
-    // Check if this part is a key in nicknames
     const nicknamesForPart = CZECH_NICKNAMES[part];
     if (nicknamesForPart) {
       variations.push(...nicknamesForPart.map(normalizeText));
     }
     
-    // Check if this part is a nickname value
     for (const [formalName, nicknames] of Object.entries(CZECH_NICKNAMES)) {
       if (nicknames.map(normalizeText).includes(part)) {
         variations.push(normalizeText(formalName));
@@ -166,10 +197,9 @@ function getNameVariations(name: string): string[] {
 // Extract potential name tokens from event summary
 function extractNameTokens(summary: string): string[] {
   const normalized = normalizeText(summary);
-  // Remove common non-name words
-  const stopWords = ['trenink', 'training', 'trening', 'session', 'sezení', 'cviceni', 'cvičení', 'workout', 'osobni', 'osobní'];
+  const stopWords = ['trenink', 'training', 'trening', 'session', 'sezení', 'cviceni', 'cvičení', 'workout', 'osobni', 'osobní', 'platit', 'zaplaceno'];
   const tokens = normalized.split(/[\s,\-–:]+/).filter(t => 
-    t.length > 1 && !stopWords.includes(t) && !/^\d+$/.test(t)
+    t.length > 1 && !stopWords.includes(t) && !/^\d+$/.test(t) && !/^\d{1,2}\.\d{2}$/.test(t)
   );
   return tokens;
 }
@@ -178,7 +208,7 @@ interface ClientMatchResult {
   clientId: string;
   clientName: string;
   score: number;
-  matchType: 'exact_full' | 'exact_first' | 'exact_last' | 'nickname' | 'alias' | 'fuzzy';
+  matchType: 'exact_full' | 'exact_first' | 'exact_last' | 'nickname' | 'alias' | 'fuzzy' | 'time_pattern';
 }
 
 // Score a client match against event summary
@@ -207,6 +237,22 @@ function scoreClientMatch(
   for (const alias of aliases) {
     if (normalizedSummary.includes(normalizeText(alias))) {
       return { clientId: client.id, clientName: client.name, score: 95, matchType: 'alias' };
+    }
+  }
+
+  // Check for time pattern extraction (e.g., "8.00 Jméno")
+  const extractedName = extractNameFromTimePattern(summary);
+  if (extractedName) {
+    const normalizedExtracted = normalizeText(extractedName);
+    // Check if extracted name matches client
+    if (normalizedExtracted === firstName || normalizedExtracted === lastName || normalizedExtracted === normalizedClientName) {
+      return { clientId: client.id, clientName: client.name, score: 92, matchType: 'time_pattern' };
+    }
+    // Check against nicknames
+    for (const variation of clientVariations) {
+      if (normalizedExtracted === variation) {
+        return { clientId: client.id, clientName: client.name, score: 88, matchType: 'time_pattern' };
+      }
     }
   }
 
@@ -241,8 +287,8 @@ function scoreClientMatch(
         const maxLen = Math.max(token.length, variation.length);
         const similarity = 1 - distance / maxLen;
         
-        if (similarity >= 0.8) { // 80% similar
-          const fuzzyScore = Math.round(50 + similarity * 30); // 50-80 range
+        if (similarity >= 0.8) {
+          const fuzzyScore = Math.round(50 + similarity * 30);
           if (fuzzyScore > bestScore) {
             bestScore = fuzzyScore;
             matchType = 'fuzzy';
@@ -277,7 +323,6 @@ function findClientMatches(
     }
   }
 
-  // Sort by score descending
   return results.sort((a, b) => b.score - a.score);
 }
 
@@ -289,15 +334,12 @@ function findMultipleClientMatches(
   minScore: number = 70
 ): { primary: ClientMatchResult | null; additional: ClientMatchResult[] } {
   const allMatches = findClientMatches(summary, clients, aliasMap);
-  
-  // Filter matches above minimum score
   const highConfidenceMatches = allMatches.filter(m => m.score >= minScore);
   
   if (highConfidenceMatches.length === 0) {
     return { primary: null, additional: [] };
   }
   
-  // Primary is the first (highest score), additional are the rest
   return {
     primary: highConfidenceMatches[0],
     additional: highConfidenceMatches.slice(1)
@@ -410,12 +452,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
-    const { action, feedId, userId, icsUrl, eventId, clientId } = body;
+    const { action, feedId, userId, icsUrl, eventId, clientId, eventIds } = body;
 
     console.log(`[ICS Sync] Action: ${action}, FeedId: ${feedId}, UserId: ${userId}`);
 
+    // ===========================================
+    // ACTION: sync_feed - Only sync events, NO session creation
+    // ===========================================
     if (action === 'sync_feed') {
-      // Get feed info
       const { data: feed, error: feedError } = await supabase
         .from('calendar_ics_feeds')
         .select('*')
@@ -429,44 +473,37 @@ serve(async (req) => {
         );
       }
 
-      // Update sync status to pending
       await supabase
         .from('calendar_ics_feeds')
         .update({ last_sync_status: 'pending' })
         .eq('id', feedId);
 
       try {
-        // Fetch ICS content
         const fetchUrl = normalizeIcsUrl(feed.ics_url);
         console.log(`[ICS Sync] Fetching ICS from: ${fetchUrl}`);
         const icsContent = await fetchIcs(fetchUrl);
         console.log(`[ICS Sync] Fetched ${icsContent.length} bytes`);
 
-        // Parse ICS
         const events = parseICS(icsContent);
         console.log(`[ICS Sync] Parsed ${events.length} events`);
 
-        // Filter events by sync_from_date if set
         const syncFromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date();
         syncFromDate.setMonth(syncFromDate.getMonth() - 1);
         
         const filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
         console.log(`[ICS Sync] ${filteredEvents.length} events after date filter`);
 
-        // Get user's clients for matching
         const { data: clients } = await supabase
           .from('clients')
           .select('id, name')
           .eq('user_id', feed.user_id)
           .eq('is_archived', false);
 
-        // Get all client aliases for this user
         const { data: aliasesData } = await supabase
           .from('client_name_aliases')
           .select('client_id, alias')
           .eq('user_id', feed.user_id);
 
-        // Build alias map
         const aliasMap = new Map<string, string[]>();
         for (const aliasRow of aliasesData || []) {
           const existing = aliasMap.get(aliasRow.client_id) || [];
@@ -474,15 +511,19 @@ serve(async (req) => {
           aliasMap.set(aliasRow.client_id, existing);
         }
 
-        // Process each event
+        // Check for potential duplicates
+        const { data: existingSessions } = await supabase
+          .from('training_sessions')
+          .select('id, client_id, date')
+          .eq('user_id', feed.user_id)
+          .gte('date', syncFromDate.toISOString());
+
         let syncedCount = 0;
         for (const event of filteredEvents) {
-          // Find multiple client matches (for group trainings)
           const { primary, additional } = clients 
             ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
             : { primary: null, additional: [] };
           
-          // Get all matches for suggestions
           const allMatches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
           const suggestions = allMatches.slice(0, 5).map(m => ({
             client_id: m.clientId,
@@ -491,10 +532,25 @@ serve(async (req) => {
             match_type: m.matchType,
           }));
 
-          // Additional client IDs (for group trainings)
           const additionalClientIds = additional.map(m => m.clientId);
 
-          // Upsert event
+          // Check for potential duplicate session
+          let potentialDuplicateId: string | null = null;
+          if (primary && existingSessions) {
+            const eventTime = event.dtstart.getTime();
+            const thirtyMinutes = 30 * 60 * 1000;
+            
+            const duplicate = existingSessions.find(s => {
+              if (s.client_id !== primary.clientId) return false;
+              const sessionTime = new Date(s.date).getTime();
+              return Math.abs(sessionTime - eventTime) <= thirtyMinutes;
+            });
+            
+            if (duplicate) {
+              potentialDuplicateId = duplicate.id;
+            }
+          }
+
           const { error: upsertError } = await supabase
             .from('calendar_ics_events')
             .upsert({
@@ -508,6 +564,7 @@ serve(async (req) => {
               matched_client_id: primary?.clientId || null,
               additional_matched_client_ids: additionalClientIds,
               match_suggestions: suggestions,
+              potential_duplicate_session_id: potentialDuplicateId,
               updated_at: new Date().toISOString(),
             }, {
               onConflict: 'feed_id,ics_uid',
@@ -515,13 +572,12 @@ serve(async (req) => {
 
           if (!upsertError) {
             syncedCount++;
-            if (additionalClientIds.length > 0) {
-              console.log(`[ICS Sync] Event "${event.summary}" matched ${1 + additionalClientIds.length} clients`);
+            if (potentialDuplicateId) {
+              console.log(`[ICS Sync] Event "${event.summary}" has potential duplicate`);
             }
           }
         }
 
-        // Update feed status
         await supabase
           .from('calendar_ics_feeds')
           .update({
@@ -533,7 +589,7 @@ serve(async (req) => {
           })
           .eq('id', feedId);
 
-        console.log(`[ICS Sync] Successfully synced ${syncedCount} events`);
+        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (NO sessions created)`);
 
         return new Response(
           JSON.stringify({ 
@@ -565,8 +621,10 @@ serve(async (req) => {
       }
     }
 
+    // ===========================================
+    // ACTION: learn_alias - Learn from manual assignment
+    // ===========================================
     if (action === 'learn_alias') {
-      // Learn from a manual client assignment - extract pattern from event summary
       const { data: event } = await supabase
         .from('calendar_ics_events')
         .select('summary, feed:calendar_ics_feeds(user_id)')
@@ -583,7 +641,13 @@ serve(async (req) => {
       const feed = event.feed as any;
       const tokens = extractNameTokens(event.summary);
       
-      // Get client name to avoid storing it as alias
+      // Also try to extract name from time pattern
+      const extractedName = extractNameFromTimePattern(event.summary);
+      if (extractedName) {
+        const extractedTokens = normalizeText(extractedName).split(/\s+/);
+        tokens.push(...extractedTokens);
+      }
+      
       const { data: client } = await supabase
         .from('clients')
         .select('name')
@@ -600,10 +664,10 @@ serve(async (req) => {
       const clientNameParts = normalizeText(client.name).split(/\s+/);
       const learnedAliases: string[] = [];
 
-      for (const token of tokens) {
-        // Don't store if it's already part of client name
+      for (const token of [...new Set(tokens)]) {
         if (clientNameParts.includes(token)) continue;
-        // Don't store if it's a known nickname
+        if (token.length < 2) continue;
+        
         let isKnownNickname = false;
         for (const nicknames of Object.values(CZECH_NICKNAMES)) {
           if (nicknames.map(normalizeText).includes(token)) {
@@ -613,7 +677,6 @@ serve(async (req) => {
         }
         if (isKnownNickname) continue;
 
-        // Store as learned alias
         const { error } = await supabase
           .from('client_name_aliases')
           .upsert({
@@ -638,8 +701,201 @@ serve(async (req) => {
       );
     }
 
+    // ===========================================
+    // ACTION: create_approved_sessions - Create sessions ONLY for approved events
+    // ===========================================
+    if (action === 'create_approved_sessions') {
+      // Get events that are approved for import and not yet processed
+      const { data: events, error: eventsError } = await supabase
+        .from('calendar_ics_events')
+        .select(`
+          *,
+          feed:calendar_ics_feeds(user_id, default_duration)
+        `)
+        .eq('feed_id', feedId)
+        .eq('import_approved', true)
+        .eq('is_processed', false)
+        .eq('skip_import', false)
+        .not('matched_client_id', 'is', null)
+        .order('start_at', { ascending: true });
+
+      if (eventsError) {
+        return new Response(
+          JSON.stringify({ error: 'fetch_failed', details: eventsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let createdCount = 0;
+      let skippedDuplicates = 0;
+
+      for (const event of events || []) {
+        const feed = event.feed as any;
+        
+        let duration = feed.default_duration || 60;
+        if (event.end_at && event.start_at) {
+          const start = new Date(event.start_at);
+          const end = new Date(event.end_at);
+          duration = Math.round((end.getTime() - start.getTime()) / 60000);
+        }
+
+        const allClientIds: string[] = [event.matched_client_id];
+        if (event.additional_matched_client_ids && Array.isArray(event.additional_matched_client_ids)) {
+          allClientIds.push(...event.additional_matched_client_ids);
+        }
+
+        let sessionsCreatedForEvent = 0;
+        for (const cId of allClientIds) {
+          // Check for existing session by ICS event
+          const { data: existingBySource } = await supabase
+            .from('training_sessions')
+            .select('id')
+            .eq('source_ics_event_id', event.id)
+            .eq('client_id', cId)
+            .maybeSingle();
+
+          if (existingBySource) {
+            skippedDuplicates++;
+            continue;
+          }
+
+          // Check for existing session by time (within 30 min)
+          const eventTime = new Date(event.start_at).getTime();
+          const thirtyMinutes = 30 * 60 * 1000;
+          const startRange = new Date(eventTime - thirtyMinutes).toISOString();
+          const endRange = new Date(eventTime + thirtyMinutes).toISOString();
+
+          const { data: existingByTime } = await supabase
+            .from('training_sessions')
+            .select('id')
+            .eq('client_id', cId)
+            .gte('date', startRange)
+            .lte('date', endRange)
+            .maybeSingle();
+
+          if (existingByTime) {
+            skippedDuplicates++;
+            continue;
+          }
+
+          // Create training session
+          const { error: sessionError } = await supabase
+            .from('training_sessions')
+            .insert({
+              client_id: cId,
+              user_id: feed.user_id,
+              date: event.start_at,
+              duration,
+              status: 'scheduled',
+              notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
+              source_ics_event_id: event.id,
+            });
+
+          if (!sessionError) {
+            sessionsCreatedForEvent++;
+            createdCount++;
+          }
+        }
+
+        // Mark event as processed
+        await supabase
+          .from('calendar_ics_events')
+          .update({
+            is_processed: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', event.id);
+
+        if (allClientIds.length > 1) {
+          console.log(`[ICS Sync] Created ${sessionsCreatedForEvent} sessions for group event "${event.summary}"`);
+        }
+      }
+
+      console.log(`[ICS Sync] Created ${createdCount} training sessions, skipped ${skippedDuplicates} duplicates`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          sessions_created: createdCount,
+          events_processed: events?.length || 0,
+          duplicates_skipped: skippedDuplicates,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
+    // ACTION: approve_events - Mark specific events as approved for import
+    // ===========================================
+    if (action === 'approve_events') {
+      if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'event_ids_required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error } = await supabase
+        .from('calendar_ics_events')
+        .update({ 
+          import_approved: true,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', eventIds);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: 'update_failed', details: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`[ICS Sync] Approved ${eventIds.length} events for import`);
+
+      return new Response(
+        JSON.stringify({ success: true, approved_count: eventIds.length }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
+    // ACTION: skip_events - Mark specific events to be skipped
+    // ===========================================
+    if (action === 'skip_events') {
+      if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'event_ids_required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error } = await supabase
+        .from('calendar_ics_events')
+        .update({ 
+          skip_import: true,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', eventIds);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: 'update_failed', details: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`[ICS Sync] Marked ${eventIds.length} events to skip`);
+
+      return new Response(
+        JSON.stringify({ success: true, skipped_count: eventIds.length }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
+    // ACTION: create_sessions_from_events (legacy - for backwards compatibility)
+    // ===========================================
     if (action === 'create_sessions_from_events') {
-      // Get unprocessed events with matched clients
       const { data: events, error: eventsError } = await supabase
         .from('calendar_ics_events')
         .select(`
@@ -662,7 +918,6 @@ serve(async (req) => {
       for (const event of events || []) {
         const feed = event.feed as any;
         
-        // Calculate duration
         let duration = feed.default_duration || 60;
         if (event.end_at && event.start_at) {
           const start = new Date(event.start_at);
@@ -670,29 +925,25 @@ serve(async (req) => {
           duration = Math.round((end.getTime() - start.getTime()) / 60000);
         }
 
-        // Collect all client IDs (primary + additional)
         const allClientIds: string[] = [event.matched_client_id];
         if (event.additional_matched_client_ids && Array.isArray(event.additional_matched_client_ids)) {
           allClientIds.push(...event.additional_matched_client_ids);
         }
 
-        // Create a session for each client
         let sessionsCreatedForEvent = 0;
-        for (const clientId of allClientIds) {
-          // Check if session already exists for this time and client
+        for (const cId of allClientIds) {
           const { data: existingSession } = await supabase
             .from('training_sessions')
             .select('id')
-            .eq('client_id', clientId)
+            .eq('client_id', cId)
             .eq('date', event.start_at)
             .single();
 
           if (!existingSession) {
-            // Create training session
             const { data: session, error: sessionError } = await supabase
               .from('training_sessions')
               .insert({
-                client_id: clientId,
+                client_id: cId,
                 user_id: feed.user_id,
                 date: event.start_at,
                 duration,
@@ -710,7 +961,6 @@ serve(async (req) => {
           }
         }
 
-        // Mark event as processed
         await supabase
           .from('calendar_ics_events')
           .update({
@@ -736,281 +986,9 @@ serve(async (req) => {
       );
     }
 
-    // NEW: Auto-create sessions from all events (including unmatched ones)
-    if (action === 'sync_and_create_sessions') {
-      // Get feed info
-      const { data: feed, error: feedError } = await supabase
-        .from('calendar_ics_feeds')
-        .select('*')
-        .eq('id', feedId)
-        .single();
-
-      if (feedError || !feed) {
-        return new Response(
-          JSON.stringify({ error: 'feed_not_found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Update sync status to pending
-      await supabase
-        .from('calendar_ics_feeds')
-        .update({ last_sync_status: 'pending' })
-        .eq('id', feedId);
-
-      try {
-        // Fetch ICS content
-        const fetchUrl = normalizeIcsUrl(feed.ics_url);
-        console.log(`[ICS Sync Auto] Fetching ICS from: ${fetchUrl}`);
-        const icsContent = await fetchIcs(fetchUrl);
-        console.log(`[ICS Sync Auto] Fetched ${icsContent.length} bytes`);
-
-        // Parse ICS
-        const events = parseICS(icsContent);
-        console.log(`[ICS Sync Auto] Parsed ${events.length} events`);
-
-        // Filter events by sync_from_date if set
-        const syncFromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date();
-        syncFromDate.setMonth(syncFromDate.getMonth() - 1);
-        
-        const filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
-        console.log(`[ICS Sync Auto] ${filteredEvents.length} events after date filter`);
-
-        // Get user's clients for matching
-        const { data: clients } = await supabase
-          .from('clients')
-          .select('id, name')
-          .eq('user_id', feed.user_id)
-          .eq('is_archived', false);
-
-        // Get all client aliases for this user
-        const { data: aliasesData } = await supabase
-          .from('client_name_aliases')
-          .select('client_id, alias')
-          .eq('user_id', feed.user_id);
-
-        // Build alias map
-        const aliasMap = new Map<string, string[]>();
-        for (const aliasRow of aliasesData || []) {
-          const existing = aliasMap.get(aliasRow.client_id) || [];
-          existing.push(aliasRow.alias);
-          aliasMap.set(aliasRow.client_id, existing);
-        }
-
-        // Process each event
-        let syncedCount = 0;
-        let sessionsCreated = 0;
-        let unmatchedCount = 0;
-        const unmatchedSessions: Array<{ sessionId: string; summary: string; startAt: string }> = [];
-
-        for (const event of filteredEvents) {
-          // Find multiple client matches (for group trainings)
-          const { primary, additional } = clients 
-            ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
-            : { primary: null, additional: [] };
-          
-          // Get all matches for suggestions
-          const allMatches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
-          const suggestions = allMatches.slice(0, 5).map(m => ({
-            client_id: m.clientId,
-            name: m.clientName,
-            score: m.score,
-            match_type: m.matchType,
-          }));
-
-          // Additional client IDs (for group trainings)
-          const additionalClientIds = additional.map(m => m.clientId);
-
-          // Upsert event
-          const { data: savedEvent, error: upsertError } = await supabase
-            .from('calendar_ics_events')
-            .upsert({
-              feed_id: feedId,
-              ics_uid: event.uid,
-              summary: event.summary,
-              description: event.description,
-              start_at: event.dtstart.toISOString(),
-              end_at: event.dtend?.toISOString(),
-              location: event.location,
-              matched_client_id: primary?.clientId || null,
-              additional_matched_client_ids: additionalClientIds,
-              match_suggestions: suggestions,
-              updated_at: new Date().toISOString(),
-            }, {
-              onConflict: 'feed_id,ics_uid',
-            })
-            .select('id')
-            .single();
-
-          if (upsertError) {
-            console.error(`[ICS Sync Auto] Error upserting event "${event.summary}":`, upsertError);
-            continue;
-          }
-
-          syncedCount++;
-          const eventId = savedEvent?.id;
-
-          // Calculate duration
-          let duration = feed.default_duration || 60;
-          if (event.dtend && event.dtstart) {
-            duration = Math.round((event.dtend.getTime() - event.dtstart.getTime()) / 60000);
-          }
-
-          // Check if session already exists for this ICS event
-          const { data: existingSession } = await supabase
-            .from('training_sessions')
-            .select('id')
-            .eq('source_ics_event_id', eventId)
-            .maybeSingle();
-
-          if (existingSession) {
-            // Event already processed, skip
-            continue;
-          }
-
-          if (primary) {
-            // Create sessions for matched clients
-            const allClientIds = [primary.clientId, ...additionalClientIds];
-            
-            for (const clientId of allClientIds) {
-              // Check if session already exists for this time and client
-              const { data: existingClientSession } = await supabase
-                .from('training_sessions')
-                .select('id')
-                .eq('client_id', clientId)
-                .eq('date', event.dtstart.toISOString())
-                .maybeSingle();
-
-              if (!existingClientSession) {
-                const { error: sessionError } = await supabase
-                  .from('training_sessions')
-                  .insert({
-                    client_id: clientId,
-                    user_id: feed.user_id,
-                    date: event.dtstart.toISOString(),
-                    duration,
-                    status: 'scheduled',
-                    notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
-                    source_ics_event_id: eventId,
-                  });
-
-                if (!sessionError) {
-                  sessionsCreated++;
-                }
-              }
-            }
-          } else {
-            // No match - create session without client_id
-            const { data: newSession, error: sessionError } = await supabase
-              .from('training_sessions')
-              .insert({
-                client_id: null,
-                user_id: feed.user_id,
-                date: event.dtstart.toISOString(),
-                duration,
-                status: 'scheduled',
-                notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
-                source_ics_event_id: eventId,
-              })
-              .select('id')
-              .single();
-
-            if (!sessionError && newSession) {
-              sessionsCreated++;
-              unmatchedCount++;
-              unmatchedSessions.push({
-                sessionId: newSession.id,
-                summary: event.summary,
-                startAt: event.dtstart.toISOString(),
-              });
-            }
-          }
-
-          // Mark event as processed
-          await supabase
-            .from('calendar_ics_events')
-            .update({
-              is_processed: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', eventId);
-        }
-
-        // Create notifications for unmatched sessions
-        if (unmatchedSessions.length > 0) {
-          const notifications = unmatchedSessions.map(s => ({
-            user_id: feed.user_id,
-            type: 'calendar_unmatched',
-            title: 'Trénink bez přiřazeného klienta',
-            message: `"${s.summary}" - ${new Date(s.startAt).toLocaleString('cs-CZ', { 
-              day: 'numeric', 
-              month: 'short', 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}`,
-            entity_type: 'training_session',
-            entity_id: s.sessionId,
-            severity: 'warning',
-            is_read: false,
-          }));
-
-          const { error: notifError } = await supabase
-            .from('notifications')
-            .insert(notifications);
-
-          if (notifError) {
-            console.error(`[ICS Sync Auto] Error creating notifications:`, notifError);
-          } else {
-            console.log(`[ICS Sync Auto] Created ${notifications.length} notifications for unmatched sessions`);
-          }
-        }
-
-        // Update feed status
-        await supabase
-          .from('calendar_ics_feeds')
-          .update({
-            last_sync_at: new Date().toISOString(),
-            last_sync_status: 'success',
-            last_sync_error: null,
-            events_synced: syncedCount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', feedId);
-
-        console.log(`[ICS Sync Auto] Successfully synced ${syncedCount} events, created ${sessionsCreated} sessions (${unmatchedCount} unmatched)`);
-
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            events_synced: syncedCount,
-            sessions_created: sessionsCreated,
-            unmatched_count: unmatchedCount,
-            total_events: events.length,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
-      } catch (syncError) {
-        const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown error';
-        console.error(`[ICS Sync Auto] Sync error:`, syncError);
-
-        await supabase
-          .from('calendar_ics_feeds')
-          .update({
-            last_sync_at: new Date().toISOString(),
-            last_sync_status: 'error',
-            last_sync_error: errorMessage,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', feedId);
-
-        return new Response(
-          JSON.stringify({ error: 'sync_failed', message: errorMessage }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
+    // ===========================================
+    // ACTION: test_url - Test ICS URL validity
+    // ===========================================
     if (action === 'test_url') {
       try {
         const fetchUrl = normalizeIcsUrl(icsUrl);
