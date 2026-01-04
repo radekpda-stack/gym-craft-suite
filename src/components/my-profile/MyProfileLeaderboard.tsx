@@ -67,16 +67,20 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
         .map(([id, count]) => {
           const settings = settingsMap.get(id);
           const clientInfo = clientMap.get(id);
-          // Trainer's self-profile is always visible, otherwise check settings
+          
+          // Trainer's self-profile can see their own name, otherwise only nickname
           const isSelfProfile = clientInfo?.isSelfProfile === true;
-          const isVisible = isSelfProfile || settings?.leaderboard_visible === true;
+          const isVisible = settings?.leaderboard_visible === true;
           
           let displayName: string;
-          if (isVisible) {
-            // Use nickname if available, otherwise real name
-            displayName = settings?.leaderboard_nickname || clientInfo?.name || 'Neznámý';
+          if (isSelfProfile) {
+            // Trainer sees their own name
+            displayName = clientInfo?.name || 'Trenér';
+          } else if (isVisible && settings?.leaderboard_nickname) {
+            // Client opted in AND has set a nickname - show it
+            displayName = settings.leaderboard_nickname;
           } else {
-            // Anonymous name
+            // Anonymous name - never show real client name
             displayName = generateAnonymousName(id);
           }
 
@@ -91,7 +95,7 @@ export function MyProfileLeaderboard({ clientId }: MyProfileLeaderboardProps) {
             clientId: id,
             name: displayName,
             count,
-            isAnonymous: !isVisible,
+            isAnonymous: !(isVisible && settings?.leaderboard_nickname),
             gender,
           };
         })

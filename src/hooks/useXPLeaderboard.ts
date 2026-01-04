@@ -62,11 +62,17 @@ export function useXPLeaderboard() {
         .map(c => {
           const settings = c.client_leaderboard_settings?.[0];
           const xpData = c.client_xp?.[0];
-          const isAnonymous = !settings?.leaderboard_nickname;
+          const isVisible = settings?.leaderboard_visible === true;
           
-          // Generate anonymous name
-          let nickname = settings?.leaderboard_nickname || '';
-          if (!nickname) {
+          // Only show nickname if client opted in AND has set a nickname
+          // Never show real name - always use anonymous name as fallback
+          let nickname: string;
+          const hasNickname = isVisible && settings?.leaderboard_nickname;
+          
+          if (hasNickname) {
+            nickname = settings.leaderboard_nickname!;
+          } else {
+            // Generate anonymous name
             const adjectives = ['Rychlý', 'Silný', 'Vytrvalý', 'Odhodlaný', 'Aktivní', 'Energický', 'Fit', 'Sportovní'];
             const animals = ['Lev', 'Orel', 'Vlk', 'Tygr', 'Medvěd', 'Sokol', 'Jelen', 'Panter'];
             const hash = c.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -81,7 +87,7 @@ export function useXPLeaderboard() {
             total_xp: xpData?.total_xp || 0,
             level: xpData?.level || 1,
             rank: 0, // Will be set after sorting
-            is_anonymous: isAnonymous,
+            is_anonymous: !hasNickname,
             gender: c.gender as 'male' | 'female' | null,
           };
         })
