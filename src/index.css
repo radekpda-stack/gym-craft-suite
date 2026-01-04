@@ -57,7 +57,7 @@
   /* ========================================
      NIKE THEME - Bold dark with warm orange
      ======================================== */
-  :root.theme-nike {
+  :root.theme-nike, html.theme-nike, body.theme-nike {
     --background: 0 0% 4%;
     --foreground: 0 0% 98%;
     --card: 0 0% 9%;
@@ -104,7 +104,7 @@
   /* ========================================
      NIKE VOLT THEME - Electric dark with neon green
      ======================================== */
-  :root.theme-nike-volt {
+  :root.theme-nike-volt, html.theme-nike-volt, body.theme-nike-volt {
     --background: 0 0% 4%;
     --foreground: 0 0% 98%;
     --card: 0 0% 9%;
@@ -151,7 +151,7 @@
   /* ========================================
      ARCTIC PRO THEME - Cool dark with cyan
      ======================================== */
-  :root.theme-arctic-pro {
+  :root.theme-arctic-pro, html.theme-arctic-pro, body.theme-arctic-pro {
     --background: 210 27% 6%;
     --foreground: 195 30% 94%;
     --card: 210 33% 9%;
@@ -198,7 +198,7 @@
   /* ========================================
      LIGHT MINIMAL THEME - Clean with blue
      ======================================== */
-  :root.theme-light-minimal {
+  :root.theme-light-minimal, html.theme-light-minimal, body.theme-light-minimal {
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -245,7 +245,7 @@
   /* ========================================
      FROST MINIMAL THEME - Elegant icy blue
      ======================================== */
-  :root.theme-frost-minimal {
+  :root.theme-frost-minimal, html.theme-frost-minimal, body.theme-frost-minimal {
     --background: 200 60% 97%;
     --foreground: 210 50% 15%;
     --card: 0 0% 100%;
