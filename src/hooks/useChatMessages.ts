@@ -139,6 +139,32 @@ export function useMarkMessagesAsRead() {
     onSuccess: (_, { conversationId }) => {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer-conversations'] });
+    },
+  });
+}
+
+export function useMarkAllMessagesAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('trainer_id', user.id)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer-conversations'] });
     },
   });
 }
