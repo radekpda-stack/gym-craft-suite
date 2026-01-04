@@ -1,24 +1,68 @@
-import { useState, useEffect } from 'react';
-import { Bell, Mail, AlertCircle, Calendar } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
-import { useLanguage } from '@/lib/i18n';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import { useLanguage } from "@/lib/i18n";
+import { 
+  Loader2, 
+  CreditCard, 
+  Dumbbell, 
+  MessageSquare, 
+  Cake, 
+  Mail
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
-interface NotificationPreferences {
-  lowCreditAlerts: boolean;
-  trainingReminders: boolean;
+export interface NotificationPreferences {
+  // Global
   emailNotifications: boolean;
-  reminderHoursBefore: number;
+  
+  // Finance & Packages
+  lowCreditAlerts: boolean;
+  packageAlerts: boolean;
+  
+  // Trainings
+  trainingReminders: boolean;
+  incompleteTrainingAlerts: boolean;
+  
+  // Feedback
+  feedbackAlerts: boolean;
+  feedbackRedFlags: boolean;
+  
+  // Clients
+  birthdayAlerts: boolean;
+  milestoneAlerts: boolean;
+  anniversaryAlerts: boolean;
+  
+  // Chat
+  chatNotifications: boolean;
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
+  emailNotifications: true,
   lowCreditAlerts: true,
+  packageAlerts: true,
   trainingReminders: true,
-  emailNotifications: false,
-  reminderHoursBefore: 24,
+  incompleteTrainingAlerts: true,
+  feedbackAlerts: true,
+  feedbackRedFlags: true,
+  birthdayAlerts: true,
+  milestoneAlerts: true,
+  anniversaryAlerts: false,
+  chatNotifications: true,
 };
+
+interface NotificationCategory {
+  title: string;
+  icon: React.ElementType;
+  items: {
+    key: keyof NotificationPreferences;
+    label: string;
+    description: string;
+  }[];
+}
 
 export function NotificationSettings() {
   const { language } = useLanguage();
@@ -30,113 +74,180 @@ export function NotificationSettings() {
 
   useEffect(() => {
     if (settings?.notification_preferences) {
-      setPreferences({ ...DEFAULT_PREFERENCES, ...settings.notification_preferences });
+      setPreferences({
+        ...DEFAULT_PREFERENCES,
+        ...settings.notification_preferences,
+      });
     }
   }, [settings]);
 
-  const handleChange = (key: keyof NotificationPreferences, value: boolean | number) => {
-    setPreferences(prev => ({ ...prev, [key]: value }));
+  const handleChange = (key: keyof NotificationPreferences, value: boolean) => {
+    setPreferences((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
   const handleSave = () => {
     updateSetting.mutate(
-      { key: 'notification_preferences', value: preferences },
-      { onSuccess: () => setHasChanges(false) }
+      { key: "notification_preferences", value: preferences },
+      {
+        onSuccess: () => setHasChanges(false),
+      }
     );
   };
 
+  const categories: NotificationCategory[] = [
+    {
+      title: language === 'cs' ? "Komunikace" : "Communication",
+      icon: MessageSquare,
+      items: [
+        {
+          key: "chatNotifications",
+          label: language === 'cs' ? "Zprávy od klientů" : "Client messages",
+          description: language === 'cs' ? "Notifikace o nových zprávách v chatu" : "Notifications about new chat messages",
+        },
+        {
+          key: "emailNotifications",
+          label: language === 'cs' ? "E-mailové notifikace" : "Email notifications",
+          description: language === 'cs' ? "Dostávat důležité notifikace na e-mail" : "Receive important notifications via email",
+        },
+      ],
+    },
+    {
+      title: language === 'cs' ? "Finance a balíčky" : "Finance & Packages",
+      icon: CreditCard,
+      items: [
+        {
+          key: "lowCreditAlerts",
+          label: language === 'cs' ? "Nízký kredit" : "Low credit",
+          description: language === 'cs' ? "Upozornění při nízkém kreditu klienta" : "Alert when client has low credit",
+        },
+        {
+          key: "packageAlerts",
+          label: language === 'cs' ? "Balíčky" : "Packages",
+          description: language === 'cs' ? "Upozornění na docházející nebo expirující balíčky" : "Alerts for expiring packages",
+        },
+      ],
+    },
+    {
+      title: language === 'cs' ? "Tréninky" : "Trainings",
+      icon: Dumbbell,
+      items: [
+        {
+          key: "trainingReminders",
+          label: language === 'cs' ? "Připomínky tréninků" : "Training reminders",
+          description: language === 'cs' ? "Připomenutí nadcházejících tréninků" : "Reminders for upcoming trainings",
+        },
+        {
+          key: "incompleteTrainingAlerts",
+          label: language === 'cs' ? "Nedokončené tréninky" : "Incomplete trainings",
+          description: language === 'cs' ? "Upozornění na tréninky, které nebyly dokončeny" : "Alerts for trainings not completed",
+        },
+      ],
+    },
+    {
+      title: "Feedback",
+      icon: MessageSquare,
+      items: [
+        {
+          key: "feedbackAlerts",
+          label: language === 'cs' ? "Nový feedback" : "New feedback",
+          description: language === 'cs' ? "Notifikace o novém feedbacku od klientů" : "Notifications about new client feedback",
+        },
+        {
+          key: "feedbackRedFlags",
+          label: language === 'cs' ? "Problémový feedback" : "Problem feedback",
+          description: language === 'cs' ? "Upozornění na red flags (únava, bolest, nízké hodnocení)" : "Alerts for red flags (fatigue, pain, low ratings)",
+        },
+      ],
+    },
+    {
+      title: language === 'cs' ? "Klienti" : "Clients",
+      icon: Cake,
+      items: [
+        {
+          key: "birthdayAlerts",
+          label: language === 'cs' ? "Narozeniny" : "Birthdays",
+          description: language === 'cs' ? "Připomenutí narozenin klientů" : "Client birthday reminders",
+        },
+        {
+          key: "milestoneAlerts",
+          label: language === 'cs' ? "Milníky" : "Milestones",
+          description: language === 'cs' ? "Úspěchy klientů (100, 500, 1000 tréninků)" : "Client achievements (100, 500, 1000 trainings)",
+        },
+        {
+          key: "anniversaryAlerts",
+          label: language === 'cs' ? "Výročí" : "Anniversaries",
+          description: language === 'cs' ? "Výročí spolupráce s klientem" : "Client collaboration anniversaries",
+        },
+      ],
+    },
+  ];
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        {/* Low Credit Alerts */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">
-                {language === 'cs' ? 'Upozornění na nízký kredit' : 'Low credit alerts'}
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {language === 'cs' 
-                  ? 'Zobrazit varování když klient má málo kreditu' 
-                  : 'Show warning when client has low credit'}
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={preferences.lowCreditAlerts}
-            onCheckedChange={(checked) => handleChange('lowCreditAlerts', checked)}
-          />
-        </div>
-
-        {/* Training Reminders */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Calendar className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">
-                {language === 'cs' ? 'Připomínky tréninků' : 'Training reminders'}
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {language === 'cs' 
-                  ? 'Připomenout nadcházející tréninky' 
-                  : 'Remind about upcoming trainings'}
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={preferences.trainingReminders}
-            onCheckedChange={(checked) => handleChange('trainingReminders', checked)}
-          />
-        </div>
-
-        {/* Email Notifications */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <Mail className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">
-                {language === 'cs' ? 'E-mailové notifikace' : 'Email notifications'}
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {language === 'cs' 
-                  ? 'Zasílat důležité aktualizace e-mailem' 
-                  : 'Send important updates via email'}
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={preferences.emailNotifications}
-            onCheckedChange={(checked) => handleChange('emailNotifications', checked)}
-          />
-        </div>
-      </div>
+      {categories.map((category) => {
+        const CategoryIcon = category.icon;
+        return (
+          <Card key={category.title}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CategoryIcon className="w-4 h-4 text-primary" />
+                </div>
+                <CardTitle className="text-base">{category.title}</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {category.items.map((item, index) => (
+                <div key={item.key}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor={item.key} className="text-sm font-medium">
+                        {item.label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {item.description}
+                      </p>
+                    </div>
+                    <Switch
+                      id={item.key}
+                      checked={preferences[item.key]}
+                      onCheckedChange={(checked) => handleChange(item.key, checked)}
+                    />
+                  </div>
+                  {index < category.items.length - 1 && (
+                    <Separator className="mt-4" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {hasChanges && (
-        <div className="flex justify-end pt-2">
+        <div className="sticky bottom-4">
           <Button 
-            onClick={handleSave}
+            onClick={handleSave} 
             disabled={updateSetting.isPending}
-            size="sm"
+            className="w-full"
           >
-            {updateSetting.isPending 
-              ? (language === 'cs' ? 'Ukládám...' : 'Saving...') 
-              : (language === 'cs' ? 'Uložit změny' : 'Save changes')}
+            {updateSetting.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {language === 'cs' ? 'Ukládám...' : 'Saving...'}
+              </>
+            ) : (
+              language === 'cs' ? "Uložit změny" : "Save changes"
+            )}
           </Button>
         </div>
       )}

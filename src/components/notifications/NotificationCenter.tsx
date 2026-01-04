@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
+import { NotificationSettingsDialog } from "./NotificationSettingsDialog";
 
 const notificationIcons: Record<string, typeof Bell> = {
   low_credit: CreditCard,
@@ -134,6 +135,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [feedbackMeta, setFeedbackMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["messages"]));
 
   const handleSheetOpenChange = (open: boolean) => {
@@ -372,18 +374,28 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
           <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0">
             <SheetTitle className="text-lg">Notifikace</SheetTitle>
-            {totalUnread > 0 && (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={handleMarkAllAsRead}
-                disabled={markAllRead.isPending || markAllMessagesRead.isPending}
-                className="text-xs h-8"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSettingsOpen(true)}
               >
-                <Check className="w-3.5 h-3.5 mr-1" />
-                Vše přečteno
+                <Settings className="w-4 h-4" />
               </Button>
-            )}
+              {totalUnread > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  disabled={markAllRead.isPending || markAllMessagesRead.isPending}
+                  className="text-xs h-8"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                  Vše přečteno
+                </Button>
+              )}
+            </div>
           </SheetHeader>
 
           <ScrollArea className="flex-1">
@@ -521,6 +533,11 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         }}
         clientName={feedbackMeta.clientName}
         trainingDate={feedbackMeta.trainingDate}
+      />
+
+      <NotificationSettingsDialog 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen} 
       />
     </>
   );
