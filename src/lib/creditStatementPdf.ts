@@ -12,6 +12,7 @@ export interface CreditStatementItem {
   unitPrice: number;
   totalPrice: number;
   note?: string;
+  clientName?: string; // For group budgets
 }
 
 export interface CreditStatementData {
@@ -23,6 +24,7 @@ export interface CreditStatementData {
   items: CreditStatementItem[];
   creditAtStart?: number;
   creditAtEnd?: number;
+  isGroupBudget?: boolean;
   companyName?: string;
   companyId?: string;
   companyAddress?: string;
@@ -38,6 +40,7 @@ const translations = {
   cs: {
     title: "Výpis čerpání kreditu",
     client: "Klient",
+    member: "Člen",
     period: "Období",
     issueDate: "Datum vystavení",
     summary: "Souhrn",
@@ -64,10 +67,15 @@ const translations = {
     footer: "Tento výpis slouží pro kontrolu čerpání kreditu.",
     page: "Strana",
     of: "z",
+    trainingsCount: "Tréninků",
+    productsCount: "Produktů",
+    cancellationsCount: "Zrušení",
+    groupBudget: "Skupinový rozpočet",
   },
   en: {
     title: "Credit Usage Statement",
     client: "Client",
+    member: "Member",
     period: "Period",
     issueDate: "Issue date",
     summary: "Summary",
@@ -94,6 +102,10 @@ const translations = {
     footer: "This statement is provided for credit usage review.",
     page: "Page",
     of: "of",
+    trainingsCount: "Trainings",
+    productsCount: "Products",
+    cancellationsCount: "Cancellations",
+    groupBudget: "Group budget",
   },
 };
 
@@ -271,30 +283,34 @@ export async function generateCreditStatementPdf(
   yPos += 28;
 
   // Summary section
-  const trainingTotal = data.items
-    .filter((i) => i.type === "training")
-    .reduce((sum, i) => sum + i.totalPrice, 0);
-  const productTotal = data.items
-    .filter((i) => i.type === "product")
-    .reduce((sum, i) => sum + i.totalPrice, 0);
-  const cancellationTotal = data.items
-    .filter((i) => i.type === "late_cancellation")
-    .reduce((sum, i) => sum + i.totalPrice, 0);
+  const trainingItems = data.items.filter((i) => i.type === "training");
+  const productItems = data.items.filter((i) => i.type === "product");
+  const cancellationItems = data.items.filter((i) => i.type === "late_cancellation");
+  const trainingTotal = trainingItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const productTotal = productItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const cancellationTotal = cancellationItems.reduce((sum, i) => sum + i.totalPrice, 0);
   const grandTotal = trainingTotal + productTotal + cancellationTotal;
 
-  // Summary box with primary color accent
+  // Summary box with primary color accent - enhanced with breakdown
+  const summaryHeight = data.isGroupBudget ? 28 : 20;
   doc.setFillColor(...COLORS.primary);
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 3, 3, 'F');
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, summaryHeight, 3, 3, 'F');
   
   doc.setFontSize(FONTS.heading);
   doc.setTextColor(...COLORS.white);
   doc.setFont("Roboto", "bold");
-  doc.text(t.summary, margin + 5, yPos + 7);
+  doc.text(t.summary + (data.isGroupBudget ? ` (${t.groupBudget})` : ''), margin + 5, yPos + 7);
 
-  doc.setFontSize(FONTS.body);
+  doc.setFontSize(FONTS.small);
   doc.setFont("Roboto", "normal");
-  doc.text(`${t.totalItems}: ${data.items.length}`, margin + 5, yPos + 14);
+  // Summary line with breakdown
+  const summaryParts = [];
+  if (trainingItems.length > 0) summaryParts.push(`${trainingItems.length}× ${t.training.toLowerCase()}`);
+  if (productItems.length > 0) summaryParts.push(`${productItems.length}× ${t.product.toLowerCase()}`);
+  if (cancellationItems.length > 0) summaryParts.push(`${cancellationItems.length}× ${t.lateCancellation.toLowerCase()}`);
+  doc.text(summaryParts.join(' · '), margin + 5, yPos + 14);
   
+  doc.setFontSize(FONTS.body);
   doc.setFont("Roboto", "bold");
   doc.text(
     `${t.totalDeducted}: ${Math.round(grandTotal).toLocaleString('cs-CZ')} ${t.currency}`,
@@ -303,7 +319,17 @@ export async function generateCreditStatementPdf(
     { align: "right" }
   );
 
-  yPos += 28;
+  if (data.isGroupBudget) {
+    doc.setFontSize(FONTS.tiny);
+    doc.setFont("Roboto", "normal");
+    const breakdown = [];
+    if (trainingTotal > 0) breakdown.push(`${t.training}: ${Math.round(trainingTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+    if (productTotal > 0) breakdown.push(`${t.product}: ${Math.round(productTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+    if (cancellationTotal > 0) breakdown.push(`${t.lateCancellation}: ${Math.round(cancellationTotal).toLocaleString('cs-CZ')} ${t.currency}`);
+    doc.text(breakdown.join(' · '), margin + 5, yPos + 21);
+  }
+
+  yPos += summaryHeight + 8;
 
   // Items table
   if (data.items.length === 0) {
@@ -325,29 +351,44 @@ export async function generateCreditStatementPdf(
 
     const tableData = data.items
       .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .map((item) => [
-        format(item.date, dateFormat, { locale }),
-        getTypeName(item.type),
-        item.description,
-        item.quantity.toString(),
-        `${Math.round(item.unitPrice).toLocaleString('cs-CZ')} ${t.currency}`,
-        `${Math.round(item.totalPrice).toLocaleString('cs-CZ')} ${t.currency}`,
-        item.note || "",
-      ]);
+      .map((item) => {
+        const baseRow = [
+          format(item.date, dateFormat, { locale }),
+          getTypeName(item.type),
+          item.description,
+          `${Math.round(item.totalPrice).toLocaleString('cs-CZ')} ${t.currency}`,
+        ];
+        if (data.isGroupBudget) {
+          // Insert client name after date
+          baseRow.splice(1, 0, item.clientName || '-');
+        }
+        return baseRow;
+      });
+
+    // Define headers based on whether it's a group budget
+    const headers = data.isGroupBudget
+      ? [t.date, t.member, t.type, t.description, t.total]
+      : [t.date, t.type, t.description, t.total];
+
+    // Column styles for group vs individual
+    const columnStyles = data.isGroupBudget
+      ? {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 28 },
+          2: { cellWidth: 22 },
+          3: { cellWidth: "auto" as const },
+          4: { cellWidth: 28, halign: "right" as const },
+        }
+      : {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 24 },
+          2: { cellWidth: "auto" as const },
+          3: { cellWidth: 28, halign: "right" as const },
+        };
 
     autoTable(doc, {
       startY: yPos,
-      head: [
-        [
-          t.date,
-          t.type,
-          t.description,
-          t.quantity,
-          t.unitPrice,
-          t.total,
-          t.note,
-        ],
-      ],
+      head: [headers],
       body: tableData,
       theme: "striped",
       headStyles: {
@@ -367,15 +408,7 @@ export async function generateCreditStatementPdf(
       alternateRowStyles: {
         fillColor: [255, 250, 245],
       },
-      columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 24 },
-        2: { cellWidth: "auto" },
-        3: { cellWidth: 16, halign: "center" },
-        4: { cellWidth: 24, halign: "right" },
-        5: { cellWidth: 24, halign: "right" },
-        6: { cellWidth: 28 },
-      },
+      columnStyles,
       margin: { left: margin, right: margin },
       styles: {
         overflow: 'linebreak',

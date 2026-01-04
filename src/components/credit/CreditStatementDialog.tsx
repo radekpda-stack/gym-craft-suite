@@ -120,20 +120,28 @@ export function CreditStatementDialog({
       // Fetch training sessions paid from credit
       const trainingsQuery = supabase
         .from("training_sessions")
-        .select("id, date, final_price, status, is_late_cancellation, notes, clients(name)")
+        .select("id, date, final_price, status, is_late_cancellation, notes, client_id, clients(name)")
         .gte("date", periodStart.toISOString())
         .lte("date", periodEnd.toISOString())
         .in("payment_status", ["paid_credit"]);
 
+      // Get members for budget groups
+      let memberClientIds: string[] = [];
+      let clientNamesMap: Record<string, string> = {};
+      
       if (budgetGroupId) {
-        // Get all clients in the budget group
+        // Get all clients in the budget group with their names
         const { data: members } = await supabase
           .from("client_budget_members")
-          .select("client_id")
+          .select("client_id, clients(name)")
           .eq("group_id", budgetGroupId);
         
         if (members?.length) {
-          trainingsQuery.in("client_id", members.map(m => m.client_id));
+          memberClientIds = members.map(m => m.client_id);
+          members.forEach(m => {
+            clientNamesMap[m.client_id] = (m.clients as any)?.name || 'Neznámý';
+          });
+          trainingsQuery.in("client_id", memberClientIds);
         }
       } else {
         trainingsQuery.eq("client_id", clientId);
@@ -148,7 +156,7 @@ export function CreditStatementDialog({
       // Fetch product transactions
       const productsQuery = supabase
         .from("credit_transactions")
-        .select("created_at, amount, description, products(name)")
+        .select("created_at, amount, description, client_id, products(name)")
         .eq("type", "product_sale")
         .gte("created_at", periodStart.toISOString())
         .lte("created_at", periodEnd.toISOString());
@@ -168,6 +176,9 @@ export function CreditStatementDialog({
       trainings?.forEach((training) => {
         if (training.final_price && training.final_price > 0) {
           const isLateCancellation = training.is_late_cancellation && training.status === "canceled";
+          const trainingClientName = budgetGroupId 
+            ? (clientNamesMap[training.client_id] || (training.clients as any)?.name)
+            : undefined;
           items.push({
             date: new Date(training.date),
             type: isLateCancellation ? "late_cancellation" : "training",
@@ -182,6 +193,7 @@ export function CreditStatementDialog({
             unitPrice: training.final_price,
             totalPrice: training.final_price,
             note: training.notes || undefined,
+            clientName: trainingClientName,
           });
         }
       });
@@ -190,6 +202,9 @@ export function CreditStatementDialog({
       products?.forEach((product) => {
         if (product.amount && product.amount < 0) {
           const productName = (product.products as any)?.name || product.description || (language === "cs" ? "Zboží" : "Product");
+          const productClientName = budgetGroupId && product.client_id
+            ? clientNamesMap[product.client_id]
+            : undefined;
           items.push({
             date: new Date(product.created_at),
             type: "product",
@@ -197,6 +212,7 @@ export function CreditStatementDialog({
             quantity: 1,
             unitPrice: Math.abs(product.amount),
             totalPrice: Math.abs(product.amount),
+            clientName: productClientName,
           });
         }
       });
@@ -209,6 +225,7 @@ export function CreditStatementDialog({
         periodStart,
         periodEnd,
         items,
+        isGroupBudget: !!budgetGroupId,
         companyName: companySettings?.name,
         companyId: companySettings?.id,
         companyAddress: companySettings?.address,
