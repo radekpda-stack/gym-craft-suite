@@ -93,4 +93,5 @@ export const SECTION_ICONS = {
   finance: <Wallet className="w-5 h-5" />,
   timeline: <Clock className="w-5 h-5" />,
   admin: <Shield className="w-5 h-5" />,
+  chat: <MessageSquare className="w-5 h-5" />,
 };

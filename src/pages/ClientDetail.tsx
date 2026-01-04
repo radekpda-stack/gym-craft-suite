@@ -44,9 +44,11 @@ import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientQuickNav } from '@/components/clients/ClientQuickNav';
+import { ClientChatSection } from '@/components/clients/ClientChatSection';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
+import { useUnreadMessageCount } from '@/hooks/useChatMessages';
 
 export default function ClientDetail() {
   usePageTracking('client_detail');
@@ -60,6 +62,7 @@ export default function ClientDetail() {
   const { data: creditTransactions = [] } = useCreditTransactions(id);
   const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
   const { data: portalAccess } = useClientPortalAccess(id);
+  const { data: unreadChatCount = 0 } = useUnreadMessageCount(undefined, id);
   const updateClient = useUpdateClient();
   const archiveClient = useArchiveClient();
   const isMobile = useIsMobile();
@@ -172,6 +175,17 @@ export default function ClientDetail() {
 
   // Build accordion sections - reorganized and consolidated
   const accordionSections = [
+    {
+      id: 'chat',
+      icon: SECTION_ICONS.chat,
+      title: 'Chat s klientem',
+      badge: unreadChatCount || undefined,
+      children: (
+        <div id="section-chat">
+          <ClientChatSection clientId={client.id} clientName={client.name} />
+        </div>
+      ),
+    },
     {
       id: 'notes',
       icon: SECTION_ICONS.notes,
