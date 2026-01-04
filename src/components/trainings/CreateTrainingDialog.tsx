@@ -46,6 +46,7 @@ export function CreateTrainingDialog({
         notes: data.notes,
         status: 'scheduled',
         participant_count: data.participant_count,
+        training_type: data.training_type || undefined,
       });
       
       // Save tags if any were selected

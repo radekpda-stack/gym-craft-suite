@@ -60,6 +60,7 @@ export interface CreateTrainingInput {
   participant_count?: number;
   recurrence_type?: RecurrenceType;
   recurrence_end_date?: string;
+  training_type?: string;
 }
 
 export interface UpdateTrainingInput {
@@ -309,6 +310,7 @@ export function useCreateTrainingSession() {
           recurrence_type: hasRecurrence ? recurrenceType : null,
           recurrence_end_date: hasRecurrence ? input.recurrence_end_date : null,
           user_id: user.id,
+          training_type: input.training_type || null,
         })
         .select()
         .single();
