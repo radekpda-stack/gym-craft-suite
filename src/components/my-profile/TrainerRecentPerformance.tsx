@@ -24,52 +24,103 @@ export function TrainerRecentPerformance({ clientId }: TrainerRecentPerformanceP
   const { data: recentEntries, isLoading } = useQuery({
     queryKey: ['trainer-recent-performance', clientId],
     queryFn: async () => {
-      // Fetch recent strength entries
-      const { data: strengthData, error: strengthError } = await supabase
+      // Fetch recent exercise entries (both strength and cardio-style)
+      const { data: exerciseData, error: exerciseError } = await supabase
         .from('exercise_entries')
-        .select('id, exercise_name, date, weight_kg, reps, sets, is_pr')
+        .select('id, exercise_name, date, weight_kg, reps, sets, is_pr, distance_meters, time_seconds, avg_watts, pace_sec_per_500m')
         .eq('client_id', clientId)
         .order('date', { ascending: false })
         .limit(5);
 
-      if (strengthError) throw strengthError;
+      if (exerciseError) throw exerciseError;
 
-      // Fetch recent cardio entries
+      // Fetch recent cardio entries from dedicated cardio table
       const { data: cardioData, error: cardioError } = await supabase
         .from('cardio_entries')
-        .select('id, exercise_name, date, distance_meters, duration_seconds, is_pr')
+        .select('id, exercise_name, date, distance_meters, duration_seconds, avg_watts, is_pr')
         .eq('client_id', clientId)
         .order('date', { ascending: false })
         .limit(5);
 
       if (cardioError) throw cardioError;
 
-      // Combine and sort
-      const strengthEntries: RecentEntry[] = (strengthData || []).map(e => ({
-        id: e.id,
-        type: 'strength' as const,
-        exerciseName: e.exercise_name,
-        date: e.date,
-        details: `${e.weight_kg || 0}kg × ${e.reps || 0} × ${e.sets || 0}`,
-        isPR: e.is_pr || false,
-      }));
+      // Helper to format time from seconds
+      const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${String(Math.round(secs)).padStart(2, '0')}`;
+      };
 
+      // Process exercise entries - detect if it's cardio-style (has distance/time but no meaningful weight)
+      const exerciseEntries: RecentEntry[] = (exerciseData || []).map(e => {
+        const hasCardioMetrics = (e.distance_meters && e.distance_meters > 0) || (e.time_seconds && e.time_seconds > 0);
+        const hasStrengthMetrics = e.weight_kg && e.weight_kg > 0;
+        
+        // Determine if this is a cardio-style entry
+        const isCardioStyle = hasCardioMetrics && !hasStrengthMetrics;
+        
+        let details = '';
+        if (isCardioStyle) {
+          // Format as cardio: distance • time • watts
+          const parts: string[] = [];
+          if (e.distance_meters && e.distance_meters > 0) {
+            parts.push(e.distance_meters >= 1000 
+              ? `${(e.distance_meters / 1000).toFixed(1)}km` 
+              : `${e.distance_meters}m`
+            );
+          }
+          if (e.time_seconds && e.time_seconds > 0) {
+            parts.push(formatTime(e.time_seconds));
+          }
+          if (e.avg_watts && e.avg_watts > 0) {
+            parts.push(`${Math.round(e.avg_watts)}W`);
+          }
+          if (e.pace_sec_per_500m && e.pace_sec_per_500m > 0) {
+            parts.push(`pace ${formatTime(e.pace_sec_per_500m)}/500m`);
+          }
+          details = parts.join(' • ');
+        } else {
+          // Format as strength: weight × reps × sets
+          details = `${e.weight_kg || 0}kg × ${e.reps || 0} × ${e.sets || 0}`;
+        }
+        
+        return {
+          id: e.id,
+          type: isCardioStyle ? 'cardio' as const : 'strength' as const,
+          exerciseName: e.exercise_name,
+          date: e.date,
+          details,
+          isPR: e.is_pr || false,
+        };
+      });
+
+      // Process dedicated cardio entries
       const cardioEntries: RecentEntry[] = (cardioData || []).map(e => {
-        const distance = e.distance_meters ? `${(e.distance_meters / 1000).toFixed(1)}km` : '';
-        const duration = e.duration_seconds 
-          ? `${Math.floor(e.duration_seconds / 60)}:${String(e.duration_seconds % 60).padStart(2, '0')}`
-          : '';
+        const parts: string[] = [];
+        if (e.distance_meters && e.distance_meters > 0) {
+          parts.push(e.distance_meters >= 1000 
+            ? `${(e.distance_meters / 1000).toFixed(1)}km` 
+            : `${e.distance_meters}m`
+          );
+        }
+        if (e.duration_seconds && e.duration_seconds > 0) {
+          parts.push(formatTime(e.duration_seconds));
+        }
+        if (e.avg_watts && e.avg_watts > 0) {
+          parts.push(`${Math.round(e.avg_watts)}W`);
+        }
+        
         return {
           id: e.id,
           type: 'cardio' as const,
           exerciseName: e.exercise_name,
           date: e.date,
-          details: [distance, duration].filter(Boolean).join(' • '),
+          details: parts.join(' • '),
           isPR: e.is_pr || false,
         };
       });
 
-      const combined = [...strengthEntries, ...cardioEntries]
+      const combined = [...exerciseEntries, ...cardioEntries]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
 
