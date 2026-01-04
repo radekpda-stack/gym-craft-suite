@@ -21,7 +21,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ExerciseEntryWithClient, useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { ExerciseEntry, ExerciseEntryWithClient, useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { EditEntryDialog } from './EditEntryDialog';
 
 interface ProgressListProps {
   entries: ExerciseEntryWithClient[];
@@ -93,6 +94,7 @@ function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
 
 export function ProgressList({ entries, showClient = true }: ProgressListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editEntry, setEditEntry] = useState<ExerciseEntry | null>(null);
   const { deleteEntry } = useExerciseEntries();
 
   const handleDelete = async () => {
@@ -194,6 +196,10 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditEntry(entry)}>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Upravit
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => setDeleteId(entry.id)}
@@ -231,6 +237,12 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditEntryDialog
+        entry={editEntry}
+        open={!!editEntry}
+        onOpenChange={(open) => !open && setEditEntry(null)}
+      />
     </>
   );
 }
