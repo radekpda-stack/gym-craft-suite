@@ -137,20 +137,14 @@ export function ClientHeaderCompact({
               isSharedBudget={!!budgetGroup}
               budgetGroupId={budgetGroup?.group_id}
               trigger={
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                    >
-                      <FileText className="w-4 h-4 text-primary" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Export výpisu do PDF</p>
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="gap-1.5 text-xs font-medium shrink-0"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  PDF výpis
+                </Button>
               }
             />
           </div>
