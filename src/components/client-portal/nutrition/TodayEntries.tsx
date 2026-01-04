@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, isToday } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Utensils, Droplets, Coffee, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Utensils, Droplets, Coffee, MoreVertical, Pencil, Trash2, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -126,32 +126,41 @@ export function TodayEntries({
           {food.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10"
             >
-              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Utensils className="w-4 h-4 text-orange-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {MEAL_LABELS[entry.meal_type] || entry.meal_type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.entry_time?.slice(0, 5)}
-                  </span>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Utensils className="w-4 h-4 text-orange-500" />
                 </div>
-                <p className="text-sm truncate">{entry.description}</p>
-                {entry.portion_size && (
-                  <span className="text-xs text-muted-foreground">
-                    {entry.portion_size === 'small' ? 'Malá' : entry.portion_size === 'large' ? 'Velká' : 'Střední'} porce
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {MEAL_LABELS[entry.meal_type] || entry.meal_type}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {entry.entry_time?.slice(0, 5)}
+                    </span>
+                  </div>
+                  <p className="text-sm truncate">{entry.description}</p>
+                  {entry.portion_size && (
+                    <span className="text-xs text-muted-foreground">
+                      {entry.portion_size === 'small' ? 'Malá' : entry.portion_size === 'large' ? 'Velká' : 'Střední'} porce
+                    </span>
+                  )}
+                </div>
+                {(canEdit || canDelete) && (
+                  <EntryMenu
+                    onEdit={onEditFood ? () => onEditFood(entry) : undefined}
+                    onDelete={() => setDeleteDialog({ type: 'food', id: entry.id })}
+                  />
                 )}
               </div>
-              {(canEdit || canDelete) && (
-                <EntryMenu
-                  onEdit={onEditFood ? () => onEditFood(entry) : undefined}
-                  onDelete={() => setDeleteDialog({ type: 'food', id: entry.id })}
-                />
+              {/* Trainer Comment */}
+              {entry.trainer_comment && (
+                <div className="flex items-start gap-2 ml-11 p-2 rounded-md bg-primary/5 border border-primary/10">
+                  <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-primary">{entry.trainer_comment}</p>
+                </div>
               )}
             </div>
           ))}
@@ -160,31 +169,40 @@ export function TodayEntries({
           {drinks.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Droplets className="w-4 h-4 text-blue-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {DRINK_LABELS[entry.drink_type] || entry.drink_type}
-                  </span>
-                  {entry.amount_ml && (
-                    <span className="text-xs text-muted-foreground">
-                      {entry.amount_ml} ml
-                    </span>
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Droplets className="w-4 h-4 text-blue-500" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {DRINK_LABELS[entry.drink_type] || entry.drink_type}
+                    </span>
+                    {entry.amount_ml && (
+                      <span className="text-xs text-muted-foreground">
+                        {entry.amount_ml} ml
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {entry.entry_time?.slice(0, 5)}
+                </span>
+                {(canEdit || canDelete) && (
+                  <EntryMenu
+                    onEdit={onEditDrink ? () => onEditDrink(entry) : undefined}
+                    onDelete={() => setDeleteDialog({ type: 'drink', id: entry.id })}
+                  />
+                )}
               </div>
-              <span className="text-xs text-muted-foreground shrink-0">
-                {entry.entry_time?.slice(0, 5)}
-              </span>
-              {(canEdit || canDelete) && (
-                <EntryMenu
-                  onEdit={onEditDrink ? () => onEditDrink(entry) : undefined}
-                  onDelete={() => setDeleteDialog({ type: 'drink', id: entry.id })}
-                />
+              {/* Trainer Comment */}
+              {entry.trainer_comment && (
+                <div className="flex items-start gap-2 ml-11 p-2 rounded-md bg-primary/5 border border-primary/10">
+                  <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-primary">{entry.trainer_comment}</p>
+                </div>
               )}
             </div>
           ))}
@@ -193,31 +211,40 @@ export function TodayEntries({
           {coffee.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-amber-600/5 border border-amber-600/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-amber-600/5 border border-amber-600/10"
             >
-              <div className="w-8 h-8 rounded-full bg-amber-600/10 flex items-center justify-center shrink-0">
-                <Coffee className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {COFFEE_LABELS[entry.coffee_type] || entry.coffee_type}
-                  </span>
-                  {entry.count > 1 && (
-                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                      ×{entry.count}
-                    </span>
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-600/10 flex items-center justify-center shrink-0">
+                  <Coffee className="w-4 h-4 text-amber-600" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {COFFEE_LABELS[entry.coffee_type] || entry.coffee_type}
+                    </span>
+                    {entry.count > 1 && (
+                      <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                        ×{entry.count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {entry.entry_time?.slice(0, 5)}
+                </span>
+                {(canEdit || canDelete) && (
+                  <EntryMenu
+                    onEdit={onEditCoffee ? () => onEditCoffee(entry) : undefined}
+                    onDelete={() => setDeleteDialog({ type: 'coffee', id: entry.id })}
+                  />
+                )}
               </div>
-              <span className="text-xs text-muted-foreground shrink-0">
-                {entry.entry_time?.slice(0, 5)}
-              </span>
-              {(canEdit || canDelete) && (
-                <EntryMenu
-                  onEdit={onEditCoffee ? () => onEditCoffee(entry) : undefined}
-                  onDelete={() => setDeleteDialog({ type: 'coffee', id: entry.id })}
-                />
+              {/* Trainer Comment */}
+              {entry.trainer_comment && (
+                <div className="flex items-start gap-2 ml-11 p-2 rounded-md bg-primary/5 border border-primary/10">
+                  <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-primary">{entry.trainer_comment}</p>
+                </div>
               )}
             </div>
           ))}
