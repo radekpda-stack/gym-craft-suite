@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, UtensilsCrossed, Coffee, Loader2, Check, MessageSquare } from 'lucide-react';
+import { Apple, Plus, Droplets, UtensilsCrossed, Coffee, Loader2, Check, MessageSquare, Clock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
@@ -20,7 +20,9 @@ import {
   useDeleteNutritionEntryPortal,
   useAddDrinkEntry,
   useAddCoffeeEntry,
+  useAddFoodEntry,
 } from '@/hooks/useClientPortalNutrition';
+import { MEAL_LABELS } from '@/components/client-portal/nutrition/constants';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
@@ -146,6 +148,44 @@ function useCompletedDays(sessionId: string | undefined) {
   });
 }
 
+// Hook to get recent unique food entries for quick re-add
+function useRecentFoodEntries(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-recent-food-entries', clientId],
+    queryFn: async () => {
+      if (!clientId) return [];
+
+      const { data, error } = await supabase
+        .from('nutrition_food_entries')
+        .select('description, meal_type, portion_size')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Get unique descriptions (case-insensitive)
+      const seen = new Set<string>();
+      const unique: { description: string; meal_type: string; portion_size: string }[] = [];
+      
+      for (const entry of data || []) {
+        const key = entry.description.toLowerCase().trim();
+        if (!seen.has(key) && unique.length < 5) {
+          seen.add(key);
+          unique.push({
+            description: entry.description,
+            meal_type: entry.meal_type,
+            portion_size: entry.portion_size || 'medium',
+          });
+        }
+      }
+
+      return unique;
+    },
+    enabled: !!clientId,
+  });
+}
+
 export default function ClientPortalNutrition() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
@@ -160,9 +200,11 @@ export default function ClientPortalNutrition() {
     selectedDateStr
   );
   const { data: completedDays = [] } = useCompletedDays(session?.id);
+  const { data: recentFoods = [] } = useRecentFoodEntries(clientId ?? undefined);
   const quickWater = useQuickAddWater();
   const addDrink = useAddDrinkEntry();
   const addCoffee = useAddCoffeeEntry();
+  const addFood = useAddFoodEntry();
   const deleteEntry = useDeleteNutritionEntryPortal();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
@@ -229,6 +271,28 @@ export default function ClientPortalNutrition() {
   const handleQuickMeal = (mealType: MealTypeId) => {
     setPrefilledMealType(mealType);
     setShowAddForm(true);
+  };
+
+  // Quick re-add recent food
+  const handleQuickReaddFood = async (food: { description: string; meal_type: string; portion_size: string }) => {
+    if (!session || !clientId) return;
+    
+    try {
+      await addFood.mutateAsync({
+        sessionId: session.id,
+        clientId,
+        date: selectedDate,
+        entry: {
+          meal_type: food.meal_type as MealTypeId,
+          description: food.description,
+          portion_size: food.portion_size as any,
+        },
+      });
+      toast.success(`${food.description} přidáno`);
+      trackPortalEvent('client_portal_quick_readd_food');
+    } catch (error) {
+      toast.error('Nepodařilo se přidat');
+    }
   };
 
   const handleStartTracking = async () => {
@@ -392,6 +456,31 @@ export default function ClientPortalNutrition() {
                   <span className="font-medium">+1 Káva</span>
                 </Button>
               </div>
+
+              {/* Recent Foods - Quick Re-add */}
+              {recentFoods.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Nedávná jídla</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentFoods.map((food, idx) => (
+                      <Button
+                        key={idx}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleQuickReaddFood(food)}
+                        disabled={addFood.isPending}
+                        className="h-auto py-1.5 px-3 text-xs bg-muted/50 hover:bg-muted"
+                      >
+                        <RotateCcw className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                        <span className="truncate max-w-[120px]">{food.description}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Add Other Button */}
               <Button 

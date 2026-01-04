@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Utensils, Droplets, Coffee, X, Loader2, Calendar } from 'lucide-react';
+import { Utensils, Droplets, Coffee, X, Loader2, Calendar, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
@@ -68,6 +69,7 @@ export function FoodLogForm({
   const [quality, setQuality] = useState<QualityId | undefined>();
   const [satiation, setSatiation] = useState<SatiationId | undefined>();
   const [note, setNote] = useState('');
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
 
   // Drink form state
   const [drinkType, setDrinkType] = useState<DrinkTypeId>('water');
@@ -328,59 +330,70 @@ export function FoodLogForm({
                 </div>
               </div>
 
-              {/* Quality (optional) */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Kvalita jídla (volitelné)</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {QUALITY_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setQuality(quality === option.id ? undefined : option.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
-                        quality === option.id 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted/50 hover:bg-muted"
-                      )}
-                    >
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Optional Details - Collapsible */}
+              <Collapsible open={showMoreDetails} onOpenChange={setShowMoreDetails}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+                    <span className="text-xs">Více detailů (volitelné)</span>
+                    {showMoreDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  {/* Quality (optional) */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Kvalita jídla</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {QUALITY_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setQuality(quality === option.id ? undefined : option.id)}
+                          className={cn(
+                            "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                            quality === option.id 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-muted/50 hover:bg-muted"
+                          )}
+                        >
+                          <span>{option.icon}</span>
+                          <span>{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Satiation (optional) */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Jak jsi se najedl/a? (volitelné)</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {SATIATION_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setSatiation(satiation === option.id ? undefined : option.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
-                        satiation === option.id 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted/50 hover:bg-muted"
-                      )}
-                    >
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  {/* Satiation (optional) */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Jak jsi se najedl/a?</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {SATIATION_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setSatiation(satiation === option.id ? undefined : option.id)}
+                          className={cn(
+                            "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                            satiation === option.id 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-muted/50 hover:bg-muted"
+                          )}
+                        >
+                          <span>{option.icon}</span>
+                          <span>{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Note (optional) */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Poznámka (volitelné)</Label>
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="např. domácí příprava, restaurace..."
-                />
-              </div>
+                  {/* Note (optional) */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Poznámka</Label>
+                    <Input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="např. domácí příprava, restaurace..."
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
