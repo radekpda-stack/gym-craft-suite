@@ -15,6 +15,7 @@ export interface ICSFeed {
   sync_from_date: string | null;
   auto_create_sessions: boolean;
   default_duration: number;
+  import_filter_tag: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +101,7 @@ export function useCreateICSFeed() {
       sync_from_date?: string;
       auto_create_sessions?: boolean;
       default_duration?: number;
+      import_filter_tag?: string;
     }) => {
       const { data: feed, error } = await supabase
         .from('calendar_ics_feeds')

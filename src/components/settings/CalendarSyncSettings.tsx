@@ -179,6 +179,7 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
   const syncFeed = useSyncICSFeed();
   const deleteFeed = useDeleteICSFeed();
   const updateFeed = useUpdateICSFeed();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSync = async () => {
     if (!feed.is_active) {
@@ -241,6 +242,11 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
                 Chyba
               </Badge>
             ) : null}
+            {feed.import_filter_tag && (
+              <Badge variant="secondary" className="text-xs">
+                Filtr: {feed.import_filter_tag}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             {feed.last_sync_at && (
@@ -293,10 +299,15 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
           <Button
             variant="outline"
             size="sm"
-            onClick={onViewEvents}
+            onClick={() => setSettingsOpen(true)}
           >
             <Settings2 className="h-4 w-4" />
           </Button>
+          <FeedSettingsDialog 
+            feed={feed} 
+            open={settingsOpen} 
+            onOpenChange={setSettingsOpen} 
+          />
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="sm" className="text-destructive">
@@ -348,9 +359,84 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
   );
 }
 
+function FeedSettingsDialog({ feed, open, onOpenChange }: { feed: ICSFeed; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [name, setName] = useState(feed.name);
+  const [importFilterTag, setImportFilterTag] = useState(feed.import_filter_tag || '');
+  const updateFeed = useUpdateICSFeed();
+
+  const handleSave = async () => {
+    try {
+      await updateFeed.mutateAsync({
+        id: feed.id,
+        name,
+        import_filter_tag: importFilterTag.trim() || null,
+      });
+      toast.success('Nastavení uloženo');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Nepodařilo se uložit nastavení');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nastavení kalendáře</DialogTitle>
+          <DialogDescription>
+            Upravte název a filtrační značku pro tento kalendář
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="feedName">Název</Label>
+            <Input
+              id="feedName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Apple Calendar"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="feedFilterTag">Filtrační značka</Label>
+            <Input
+              id="feedFilterTag"
+              value={importFilterTag}
+              onChange={(e) => setImportFilterTag(e.target.value)}
+              placeholder="#PT nebo [T]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Pokud je vyplněno, importují se pouze události obsahující tuto značku v názvu.
+              Nechte prázdné pro import všech událostí.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Zrušit
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={!name || updateFeed.isPending}
+          >
+            {updateFeed.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : null}
+            Uložit
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState('Apple Calendar');
   const [icsUrl, setIcsUrl] = useState('');
+  const [importFilterTag, setImportFilterTag] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     valid: boolean;
@@ -385,11 +471,13 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
       await createFeed.mutateAsync({
         name,
         ics_url: icsUrl,
+        import_filter_tag: importFilterTag.trim() || undefined,
       });
       toast.success('Kalendář přidán');
       onOpenChange(false);
       setName('Apple Calendar');
       setIcsUrl('');
+      setImportFilterTag('');
       setTestResult(null);
     } catch (error) {
       toast.error('Nepodařilo se přidat kalendář');
@@ -464,6 +552,20 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
               )}
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="importFilterTag">Filtrační značka (volitelné)</Label>
+            <Input
+              id="importFilterTag"
+              value={importFilterTag}
+              onChange={(e) => setImportFilterTag(e.target.value)}
+              placeholder="#PT nebo [T]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Pokud je vyplněno, importují se pouze události obsahující tuto značku v názvu. 
+              Např. <code className="bg-muted px-1 rounded">#PT Milan</code> se importuje, <code className="bg-muted px-1 rounded">Veterina</code> ne.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
