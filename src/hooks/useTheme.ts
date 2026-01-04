@@ -136,16 +136,15 @@ function applyThemeToDOM(themeId: ThemeId) {
   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   root.offsetHeight;
 
-  // Helpful runtime logging (kept lightweight)
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug('[theme] applied', {
-      themeId,
-      htmlClass: root.className,
-      bodyClass: body?.className,
-      background: getComputedStyle(root).getPropertyValue('--background')?.trim(),
-    });
-  }
+  // Runtime logging (prod-safe, low volume): helps confirm DOM + CSS vars really changed
+  // eslint-disable-next-line no-console
+  console.info('[theme] applied', {
+    themeId,
+    htmlClass: root.className,
+    dataTheme: root.getAttribute('data-theme'),
+    background: getComputedStyle(root).getPropertyValue('--background')?.trim(),
+    primary: getComputedStyle(root).getPropertyValue('--primary')?.trim(),
+  });
 }
 
 // Get initial theme preference from localStorage (fast, synchronous)
