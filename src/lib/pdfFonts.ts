@@ -11,10 +11,10 @@ let fontCache: {
 let fontsLoaded = false;
 let fontLoadAttempted = false;
 
-// Roboto fonts from jsDelivr CDN (reliable, supports Czech)
+// Roboto TTF fonts from Google Fonts CDN (jsPDF requires TTF format)
 const FONT_URLS = {
-  regular: "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-latin-ext-400-normal.woff",
-  bold: "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-latin-ext-700-normal.woff",
+  regular: "https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.ttf",
+  bold: "https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuaabWmT.ttf",
 };
 
 /**
@@ -38,19 +38,25 @@ export async function loadPdfFonts(): Promise<void> {
   }
   
   if (fontLoadAttempted) {
-    return;
+    // Reset if previous attempt failed
+    if (!fontsLoaded) {
+      fontLoadAttempted = false;
+    } else {
+      return;
+    }
   }
   
   fontLoadAttempted = true;
 
   try {
+    console.log("Loading PDF fonts...");
     const [regularResponse, boldResponse] = await Promise.all([
       fetch(FONT_URLS.regular),
       fetch(FONT_URLS.bold),
     ]);
 
     if (!regularResponse.ok || !boldResponse.ok) {
-      throw new Error("Font fetch failed");
+      throw new Error(`Font fetch failed: regular=${regularResponse.status}, bold=${boldResponse.status}`);
     }
 
     const [regularBuffer, boldBuffer] = await Promise.all([
@@ -64,6 +70,7 @@ export async function loadPdfFonts(): Promise<void> {
     };
     
     fontsLoaded = true;
+    console.log("PDF fonts loaded successfully");
   } catch (error) {
     console.warn("Failed to load PDF fonts, using fallback:", error);
     fontsLoaded = false;
@@ -88,16 +95,17 @@ export function registerInterFont(doc: jsPDF): void {
   }
 
   try {
-    // Add regular font
-    doc.addFileToVFS("Roboto-Regular.woff", fontCache.regular);
-    doc.addFont("Roboto-Regular.woff", "Roboto", "normal");
+    // Add regular font (TTF format)
+    doc.addFileToVFS("Roboto-Regular.ttf", fontCache.regular);
+    doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
 
-    // Add bold font
-    doc.addFileToVFS("Roboto-Bold.woff", fontCache.bold);
-    doc.addFont("Roboto-Bold.woff", "Roboto", "bold");
+    // Add bold font (TTF format)
+    doc.addFileToVFS("Roboto-Bold.ttf", fontCache.bold);
+    doc.addFont("Roboto-Bold.ttf", "Roboto", "bold");
 
     // Set as default
     doc.setFont("Roboto");
+    console.log("Roboto font registered successfully");
   } catch (error) {
     console.warn("Failed to register fonts:", error);
     doc.setFont("helvetica");
