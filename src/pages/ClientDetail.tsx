@@ -23,7 +23,6 @@ import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFi
 import { ClientSecondaryAccordions, SECTION_ICONS } from '@/components/clients/ClientSecondaryAccordions';
 
 // Audit components
-import { ClientReadinessCard } from '@/components/clients/ClientReadinessCard';
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
 import { ClientPainMapPreview } from '@/components/clients/ClientPainMapPreview';
@@ -43,7 +42,6 @@ import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecov
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientAdminBlock } from '@/components/clients/ClientAdminBlock';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
-import { ClientQuickNav } from '@/components/clients/ClientQuickNav';
 import { ClientChatSection } from '@/components/clients/ClientChatSection';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
 import { useClientFeedback } from '@/hooks/useTrainingFeedback';
@@ -308,18 +306,8 @@ export default function ClientDetail() {
         healthRestrictions={client.health_restrictions} 
       />
 
-      {/* NEW: Readiness + Periodization Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <ClientReadinessCard clientId={client.id} />
-        <ClientPeriodizationCard clientId={client.id} />
-      </div>
-
-      {/* Quick Navigation */}
-      <ClientQuickNav
-        notesCount={notesCount}
-        feedbackCount={feedbackData.length}
-        redFlagCount={redFlagCount}
-      />
+      {/* Periodization Card */}
+      <ClientPeriodizationCard clientId={client.id} />
 
       {/* SECTION 2: 2 Quick Cards - Trainings, Credit + LTV */}
       <div id="section-trainings">
