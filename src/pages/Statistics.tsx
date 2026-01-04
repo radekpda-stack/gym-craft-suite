@@ -1,12 +1,13 @@
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BarChart3, DollarSign, Dumbbell, Users, Activity } from 'lucide-react';
+import { ArrowLeft, BarChart3, DollarSign, Dumbbell, Users, Activity, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FinanceStatsSection } from '@/components/statistics/FinanceStatsSection';
 import { ExerciseStatsSection } from '@/components/statistics/ExerciseStatsSection';
 import { ClientStatsSection } from '@/components/statistics/ClientStatsSection';
 import { TrainingStatsSection } from '@/components/statistics/TrainingStatsSection';
+import { LifetimeStatsSection } from '@/components/statistics/LifetimeStatsSection';
 
 export default function Statistics() {
   usePageTracking('statistics');
@@ -32,8 +33,12 @@ export default function Statistics() {
       </div>
 
       {/* Category Tabs */}
-      <Tabs defaultValue="finance" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-auto p-1 mb-6">
+      <Tabs defaultValue="career" className="w-full">
+        <TabsList className="w-full grid grid-cols-5 h-auto p-1 mb-6">
+          <TabsTrigger value="career" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
+            <Trophy className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Kariéra</span>
+          </TabsTrigger>
           <TabsTrigger value="finance" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <DollarSign className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Finance</span>
@@ -51,6 +56,10 @@ export default function Statistics() {
             <span className="hidden sm:inline">Klienti</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="career" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+          <LifetimeStatsSection />
+        </TabsContent>
 
         <TabsContent value="finance" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
           <FinanceStatsSection />
