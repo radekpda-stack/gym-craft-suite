@@ -150,7 +150,7 @@ export function getPerformanceDisplay(
       };
     }
     
-    // Priority 2: Pace /500m
+    // Priority 2: Pace /500m (stored)
     if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) {
       const mins = Math.floor(entry.pace_sec_per_500m / 60);
       const secs = (entry.pace_sec_per_500m % 60).toFixed(1);
@@ -162,13 +162,23 @@ export function getPerformanceDisplay(
       };
     }
     
-    // Priority 3: Calculate pace from time if distance is 500m
-    if (entry.time_seconds && entry.time_seconds > 0 && entry.distance_meters === 500) {
+    // Priority 3: Calculate pace from time and distance
+    if (entry.time_seconds && entry.time_seconds > 0) {
+      // Get distance - default to 500m for rower/skierg if not specified
+      const distance = entry.distance_meters && entry.distance_meters > 0 
+        ? entry.distance_meters 
+        : 500; // Default to 500m
+      
+      // Calculate pace per 500m
+      const paceSeconds = (entry.time_seconds / distance) * 500;
+      const mins = Math.floor(paceSeconds / 60);
+      const secs = (paceSeconds % 60).toFixed(1);
+      
       return {
-        value: formatTimeSeconds(entry.time_seconds),
-        label: 'Čas',
-        unit: '',
-        raw: entry.time_seconds,
+        value: `${mins}:${parseFloat(secs).toFixed(1).padStart(4, '0')}`,
+        label: 'Tempo',
+        unit: '/500m',
+        raw: paceSeconds,
       };
     }
     
