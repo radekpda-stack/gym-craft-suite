@@ -19,7 +19,7 @@ import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 // Components
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
 import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
-import { ClientPaceFinanceCard } from '@/components/clients/ClientPaceFinanceCard';
+import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFinanceCard';
 import { 
   ClientDashboardGrid,
   PerformanceCard,
@@ -252,25 +252,24 @@ export default function ClientDetail() {
       {/* Periodization Card */}
       <ClientPeriodizationCard clientId={client.id} />
 
-      {/* SECTION 2: 2 Quick Cards - Trainings, Credit + LTV */}
+      {/* SECTION 2: 2 Quick Cards - Pace Trend, Credit + LTV */}
       <div id="section-trainings">
         <ClientQuickCards
           clientId={client.id}
           clientName={client.name}
-          sessions={sessions}
           creditBalance={creditBalance}
           isSharedBudget={isSharedBudget}
           budgetGroupName={sharedBudgetInfo?.groupName}
           budgetMemberCount={sharedBudgetInfo?.members?.length}
-          onAddTraining={() => setIsTrainingDialogOpen(true)}
           onAddCredit={() => setIsCreditModalOpen(true)}
         />
       </div>
 
-      {/* SECTION 3: Pace Trend & Finance History */}
+      {/* SECTION 3: Training & Finance History */}
       <div id="section-history">
-        <ClientPaceFinanceCard
+        <ClientTrainingFinanceCard
           clientId={client.id}
+          sessions={sessions}
           transactions={allTransactions as any}
           isSharedBudget={isSharedBudget}
           budgetGroupName={sharedBudgetInfo?.groupName}
