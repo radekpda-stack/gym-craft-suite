@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { addDays, subDays, isSameDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
@@ -23,6 +23,8 @@ import { FreeSlotIndicator } from '@/components/calendar/FreeSlotIndicator';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +87,7 @@ export default function SchedulePage() {
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
+  const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
   const { data: sharedTrainings = [] } = useSharedTrainings();
@@ -280,6 +283,15 @@ export default function SchedulePage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-foreground">Rozvrh</h1>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCalendarSettingsOpen(true)}
+              className="h-8 w-8 rounded-full"
+              title="Nastavení kalendáře"
+            >
+              <Settings2 className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -513,6 +525,19 @@ export default function SchedulePage() {
           currentPaymentStatus={paymentDialog.session.payment_status || 'pending'}
         />
       )}
+
+      {/* Calendar Settings Dialog */}
+      <Dialog open={calendarSettingsOpen} onOpenChange={setCalendarSettingsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5" />
+              Nastavení kalendáře
+            </DialogTitle>
+          </DialogHeader>
+          <CalendarSyncSettings />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
