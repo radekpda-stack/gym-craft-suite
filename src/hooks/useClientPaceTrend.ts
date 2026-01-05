@@ -9,7 +9,7 @@ export interface PaceDataPoint {
   category: ExerciseMetricCategory;
   timeSeconds: number;
   distanceMeters: number;
-  paceNormalized: number; // Pace per 500m (rower/skierg) or per 1km (running)
+  paceNormalized: number; // Pace per 500m for all cardio
   paceDisplay: string;
   isPR: boolean;
 }
@@ -123,23 +123,16 @@ export function useClientPaceTrend(clientId?: string) {
         let paceNormalized: number;
         let paceDisplay: string;
 
-        if (category === 'treadmill') {
-          // Pace per km for running
-          if (entry.pace_sec_per_km && entry.pace_sec_per_km > 0) {
-            paceNormalized = entry.pace_sec_per_km;
-          } else {
-            paceNormalized = (timeSeconds / distanceMeters) * 1000;
-          }
-          paceDisplay = formatPace(paceNormalized, '/km');
+        // Pace per 500m for all cardio (unified)
+        if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) {
+          paceNormalized = entry.pace_sec_per_500m;
+        } else if (category === 'treadmill' && entry.pace_sec_per_km && entry.pace_sec_per_km > 0) {
+          // Convert km pace to 500m pace
+          paceNormalized = entry.pace_sec_per_km / 2;
         } else {
-          // Pace per 500m for rower/skierg
-          if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) {
-            paceNormalized = entry.pace_sec_per_500m;
-          } else {
-            paceNormalized = (timeSeconds / distanceMeters) * 500;
-          }
-          paceDisplay = formatPace(paceNormalized, '/500m');
+          paceNormalized = (timeSeconds / distanceMeters) * 500;
         }
+        paceDisplay = formatPace(paceNormalized, '/500m');
 
         const dataPoint: PaceDataPoint = {
           date: entry.date,

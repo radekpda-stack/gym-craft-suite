@@ -19,7 +19,7 @@ import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 // Components
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
 import { ClientQuickCards } from '@/components/clients/ClientQuickCards';
-import { ClientTrainingFinanceCard } from '@/components/clients/ClientTrainingFinanceCard';
+import { ClientPaceFinanceCard } from '@/components/clients/ClientPaceFinanceCard';
 import { 
   ClientDashboardGrid,
   PerformanceCard,
@@ -267,11 +267,10 @@ export default function ClientDetail() {
         />
       </div>
 
-      {/* SECTION 3: Unified Training & Finance History */}
+      {/* SECTION 3: Pace Trend & Finance History */}
       <div id="section-history">
-        <ClientTrainingFinanceCard
+        <ClientPaceFinanceCard
           clientId={client.id}
-          sessions={sessions}
           transactions={allTransactions as any}
           isSharedBudget={isSharedBudget}
           budgetGroupName={sharedBudgetInfo?.groupName}

@@ -34,7 +34,7 @@ const CATEGORY_CONFIG = {
   treadmill: {
     label: 'Běh',
     icon: Footprints,
-    unit: '/km',
+    unit: '/500m',
   },
 };
 
