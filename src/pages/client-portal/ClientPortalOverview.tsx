@@ -93,6 +93,9 @@ export default function ClientPortalOverview() {
       {/* Quick Actions */}
       <ClientQuickActions />
 
+      {/* PRIORITY: Feedback Section - shows prominently when feedback is available */}
+      <ClientPortalFeedbackSection />
+
       {/* Error Alert */}
       {hasError && (
         <Alert variant="destructive">
@@ -204,9 +207,6 @@ export default function ClientPortalOverview() {
 
       {/* 5. AKTIVNÍ VÝZVY */}
       <ActiveChallengeWidget />
-
-      {/* Feedback Section - shows when feedback is available */}
-      <ClientPortalFeedbackSection />
 
       {/* Recent Activity */}
       {recentActivity && recentActivity.length > 0 && (
