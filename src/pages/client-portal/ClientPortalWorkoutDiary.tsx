@@ -189,9 +189,9 @@ export default function ClientPortalWorkoutDiary() {
     <div className="space-y-4 pb-20">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Můj deník</h1>
+        <h1 className="text-2xl font-bold">📓 Můj deník</h1>
         <p className="text-muted-foreground text-sm">
-          Sleduj své tréninky a stravu
+          Zaznamenávej, co děláš mimo tréninky se mnou. Trenér uvidí tvou aktivitu a může ti lépe poradit.
         </p>
       </div>
 
@@ -211,9 +211,7 @@ export default function ClientPortalWorkoutDiary() {
         {/* Workouts Tab */}
         <TabsContent value="workouts" className="mt-4 space-y-4">
           {/* Stats Card */}
-          {workoutDates.length > 0 && (
-            <SimpleStatsCard workoutDates={workoutDates} />
-          )}
+          <SimpleStatsCard workoutDates={workoutDates} />
 
           {/* Trainer-assigned workouts section */}
           {hasPlannedWorkouts && (
@@ -249,6 +247,13 @@ export default function ClientPortalWorkoutDiary() {
                     transition={{ duration: 0.2 }}
                   >
                     <div className="px-4 pb-4 space-y-3">
+                      {/* Tip for clients */}
+                      <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg text-sm">
+                        <span className="text-lg">💡</span>
+                        <p className="text-muted-foreground">
+                          Tyto tréninky ti naplánoval trenér. Až je dokončíš, klikni na <strong>"Splnit"</strong>.
+                        </p>
+                      </div>
                       {plannedWorkouts.map((workout) => {
                         const Icon = getWorkoutTypeIcon(workout.workout_type);
                         const isOverdue = workout.scheduled_for && isBefore(parseISO(workout.scheduled_for), startOfDay(new Date()));
@@ -343,25 +348,46 @@ export default function ClientPortalWorkoutDiary() {
 
           {/* Workout List */}
           {completedEntries.length === 0 && !hasPlannedWorkouts ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Dumbbell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="font-medium mb-2">Zatím žádné záznamy</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Začni zaznamenávat své tréninky
-                </p>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Přidat první trénink
-                </Button>
-              </CardContent>
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+                <CardContent className="py-10 text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-full bg-primary/10 animate-pulse" />
+                    </div>
+                    <Dumbbell className="w-14 h-14 mx-auto mb-4 text-primary relative z-10" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">✨ Tvůj deník je zatím prázdný</h3>
+                  <p className="text-muted-foreground mb-4 max-w-xs mx-auto">
+                    Zaznamenávej sem aktivity, které děláš mimo tréninky se mnou
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 mb-6 text-sm">
+                    <Badge variant="secondary" className="gap-1">🏃 Běh</Badge>
+                    <Badge variant="secondary" className="gap-1">🚴 Kolo</Badge>
+                    <Badge variant="secondary" className="gap-1">🏊 Plavání</Badge>
+                    <Badge variant="secondary" className="gap-1">💪 Posilka</Badge>
+                    <Badge variant="secondary" className="gap-1">🧘 Protažení</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Trenér uvidí tvou snahu a může ti lépe přizpůsobit tréninkový plán! 💪
+                  </p>
+                  <Button size="lg" onClick={() => setDialogOpen(true)} className="animate-pulse">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Přidat první aktivitu
+                  </Button>
+                </CardContent>
+              </div>
             </Card>
           ) : completedEntries.length > 0 && (
             <>
-              <h3 className="text-lg font-semibold flex items-center gap-2 pt-2">
-                <Dumbbell className="w-5 h-5" />
-                Moje tréninky
-              </h3>
+              <div className="pt-2">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  🏃 Moje záznamy
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Aktivity, které jsi zaznamenal/a sám/a
+                </p>
+              </div>
               <div className="space-y-3">
                 {completedEntries.map((entry) => (
                   <SimpleWorkoutCard
