@@ -77,7 +77,7 @@ export function ClientActionsBar({
       if (error) throw error;
       
       const link = `${window.location.origin}/feedback/${data.token}`;
-      setGeneratedLink({ type: 'feedback', url: link, label: 'Feedback odkaz' });
+      setGeneratedLink({ type: 'feedback', url: link, label: 'Odkaz na zpětnou vazbu' });
       await navigator.clipboard.writeText(link);
       toast({ title: 'Odkaz zkopírován do schránky' });
       trackFeature('feedback_link_generated', 'feedback');
@@ -144,8 +144,8 @@ export function ClientActionsBar({
           className="gap-2 touch-target"
         >
           <Link2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Feedback</span>
-          <span className="sm:hidden">FB</span>
+          <span className="hidden sm:inline">Zpětná vazba</span>
+          <span className="sm:hidden">ZV</span>
         </Button>
         
         {/* Nutrition Link */}

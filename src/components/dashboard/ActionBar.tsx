@@ -56,8 +56,8 @@ export function ActionBar() {
     },
     {
       id: 'links',
-      label: 'Feedback',
-      shortLabel: 'FB',
+      label: 'Zpětná vazba',
+      shortLabel: 'ZV',
       icon: Link2,
       onClick: () => navigate('/trainings?filter=completed'),
     },

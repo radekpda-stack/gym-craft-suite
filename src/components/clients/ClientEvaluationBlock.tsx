@@ -122,7 +122,7 @@ export function ClientEvaluationBlock({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <MessageSquare className={cn('w-5 h-5', feedbackConfig.textClass)} />
-            <span className="font-semibold text-sm">Feedback</span>
+            <span className="font-semibold text-sm">Zpětná vazba</span>
           </div>
           <div className="flex items-center gap-2">
             <StatusLabel status={feedbackStatus} label={statusLabels[feedbackEval.status]} />

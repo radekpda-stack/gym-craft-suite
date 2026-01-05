@@ -412,7 +412,7 @@ export default function FeedbackOverview() {
     <div className="space-y-6 animate-fade-in">
       <PageBreadcrumbs
         items={[
-          { label: 'Přehled feedbacků' },
+          { label: 'Přehled zpětné vazby' },
         ]}
       />
 
@@ -464,7 +464,7 @@ export default function FeedbackOverview() {
             <TabsContent value="to_send" className="space-y-4">
               <Card className="glass">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Tréninky čekající na odeslání feedbacku</CardTitle>
+                  <CardTitle className="text-base">Tréninky čekající na odeslání zpětné vazby</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {pendingLoading ? (
@@ -786,7 +786,7 @@ export default function FeedbackOverview() {
                   ) : (
                     <div className="text-center py-12">
                       <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="text-muted-foreground">Žádné feedbacky pro vybrané období</p>
+                      <p className="text-muted-foreground">Žádné zpětné vazby pro vybrané období</p>
                     </div>
                   )}
                 </CardContent>

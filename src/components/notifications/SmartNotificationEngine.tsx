@@ -292,8 +292,8 @@ async function checkPendingFeedback(userId: string) {
       user_id: userId,
       type: 'feedback_pending',
       title: pendingTrainings.length === 1 
-        ? '1 trénink čeká na odeslání feedbacku' 
-        : `${pendingTrainings.length} tréninků čeká na odeslání feedbacku`,
+        ? '1 trénink čeká na odeslání zpětné vazby' 
+        : `${pendingTrainings.length} tréninků čeká na odeslání zpětné vazby`,
       message: 'Klikněte pro zobrazení přehledu a odeslání.',
       entity_type: 'feedback',
     });

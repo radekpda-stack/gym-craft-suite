@@ -65,7 +65,7 @@ export function QuickActionsBar() {
     },
     {
       id: 'feedback',
-      label: 'Feedback',
+      label: 'Zpětná vazba',
       icon: Link,
       variant: 'secondary' as const,
       onClick: handleCopyFeedbackLink,

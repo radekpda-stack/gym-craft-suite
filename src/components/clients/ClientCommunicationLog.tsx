@@ -28,7 +28,7 @@ interface ClientCommunicationLogProps {
 
 const TYPE_CONFIG: Record<CommunicationType, { icon: typeof MessageSquare; color: string; label: string }> = {
   note: { icon: MessageSquare, color: 'text-blue-500', label: 'Poznámka' },
-  feedback_request: { icon: Send, color: 'text-primary', label: 'Feedback' },
+  feedback_request: { icon: Send, color: 'text-primary', label: 'Zpětná vazba' },
   portal_login: { icon: Globe, color: 'text-green-500', label: 'Portál' },
   training_complete: { icon: Clock, color: 'text-orange-500', label: 'Trénink' },
   credit_added: { icon: CreditCard, color: 'text-emerald-500', label: 'Kredit' },

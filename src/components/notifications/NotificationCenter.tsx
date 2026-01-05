@@ -75,7 +75,7 @@ const NOTIFICATION_CATEGORIES = {
     types: [] as string[], // Handled separately
   },
   feedback: {
-    label: "Feedback",
+    label: "Zpětná vazba",
     icon: MessageSquare,
     color: "text-green-500",
     types: ["feedback_received", "feedback_red_flag", "feedback_trend_alert"],

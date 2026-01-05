@@ -183,7 +183,7 @@ export function TodayAlertsSection({ data, isLoading }: TodayAlertsSectionProps)
           />
           <StatCard
             icon={MessageSquare}
-            label="Feedback"
+            label="Zpětná vazba"
             value={missingFeedback.count}
             severity={missingFeedback.count > 2 ? 'error' : missingFeedback.count > 0 ? 'warning' : 'success'}
             onClick={() => navigate('/schedule')}

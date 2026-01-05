@@ -125,7 +125,7 @@ export function ClientHealthSnapshot({
 
           {/* Feedback Trend - simplified */}
           <div className="flex items-center justify-between py-1">
-            <span className="text-sm text-muted-foreground">Feedback</span>
+            <span className="text-sm text-muted-foreground">Zpětná vazba</span>
             <span className={cn('font-medium flex items-center gap-1.5', feedbackDisplay.className)}>
               <span className="text-base">{feedbackDisplay.arrow}</span>
               {feedbackDisplay.label}

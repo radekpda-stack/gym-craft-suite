@@ -183,7 +183,7 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
   const contentChipOptions = [
     { value: 'all', label: 'Vše' },
     { value: 'training_completed', label: 'Tréninky' },
-    { value: 'feedback_received', label: 'Feedback' },
+    { value: 'feedback_received', label: 'Zpětná vazba' },
     { value: 'measurement', label: 'Měření' },
     { value: 'diagnostic', label: 'Diagnostiky' },
     { value: 'media_uploaded', label: 'Média' },
