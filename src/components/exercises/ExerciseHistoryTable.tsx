@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,13 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { History, Loader2, ChevronLeft, ChevronRight, Trophy, ExternalLink, Edit2 } from 'lucide-react';
+import { History, Loader2, ChevronLeft, ChevronRight, Trophy, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { detectExerciseMetricCategory, getPerformanceDisplay, getRpeBgColor } from '@/lib/exerciseMetrics';
 import { formatTimeMs } from '@/lib/timeUtils';
 import { EditExerciseEntryDialog } from './EditExerciseEntryDialog';
+import { ExerciseEntryDetailSheet } from './ExerciseEntryDetailSheet';
 
 interface ExerciseHistoryTableProps {
   exerciseId: string;
@@ -34,10 +34,10 @@ function formatTimeDisplay(seconds: number, ms?: number | null): string {
 }
 
 export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: ExerciseHistoryTableProps) {
-  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time'>('date');
   const [editEntry, setEditEntry] = useState<{ id: string; metricCategory: string } | null>(null);
+  const [detailEntryId, setDetailEntryId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-history', exerciseId, clientId, sortBy],
@@ -270,7 +270,6 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   </>
                 )}
                 <TableHead className="w-[40px]"></TableHead>
-                <TableHead className="w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -278,7 +277,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                 <TableRow 
                   key={row.id} 
                   className="hover:bg-muted/50 cursor-pointer"
-                  onClick={() => navigate(`/clients/${row.clientId}`)}
+                  onClick={() => setDetailEntryId(row.id)}
                 >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1">
@@ -357,9 +356,6 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       <Edit2 className="w-4 h-4 text-muted-foreground" />
                     </Button>
                   </TableCell>
-                  <TableCell>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -403,6 +399,13 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         metricCategory={editEntry?.metricCategory ?? null}
         open={!!editEntry}
         onOpenChange={(open) => !open && setEditEntry(null)}
+      />
+
+      <ExerciseEntryDetailSheet
+        entryId={detailEntryId}
+        exerciseId={exerciseId}
+        open={!!detailEntryId}
+        onOpenChange={(open) => !open && setDetailEntryId(null)}
       />
     </>
   );
