@@ -12,7 +12,8 @@ import {
   WeightChart, 
   BodyFatChart, 
   CombinedCardioChart, 
-  AllExercisesChart 
+  AllExercisesChart,
+  ClientPortalPaceTrendCard
 } from '@/components/client-portal/progress';
 import { ProgressSummaryCards } from '@/components/client-portal/progress/ProgressSummaryCards';
 import { ClientPortalPRsCard } from '@/components/client-portal/progress/ClientPortalPRsCard';
@@ -128,6 +129,9 @@ export default function ClientPortalProgress() {
 
       {/* Client Benchmarks - Comparison with others */}
       {clientId && <ClientExerciseBenchmarks clientId={clientId} />}
+
+      {/* Pace Trend Chart - Elegant tempo progression */}
+      <ClientPortalPaceTrendCard />
 
       {/* Info tip for new users */}
       {!isDataLoading && (showWeight || showBodyFat || showExercises) && (

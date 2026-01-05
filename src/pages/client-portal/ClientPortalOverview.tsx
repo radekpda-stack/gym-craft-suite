@@ -29,6 +29,7 @@ import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/Acti
 import { NextTrainingWidget } from '@/components/client-portal/dashboard/NextTrainingWidget';
 import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
+import { PaceTrendWidget } from '@/components/client-portal/dashboard/PaceTrendWidget';
 import { ClientPortalFeedbackSection } from '@/components/client-portal/ClientPortalFeedbackSection';
 import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
@@ -194,6 +195,9 @@ export default function ClientPortalOverview() {
 
       {/* 3. CELKOVÝ VÝKON - Nová karta */}
       {clientId && <OverallPerformanceCard clientId={clientId} />}
+
+      {/* 3.5 VÝVOJ TEMPA - Kompaktní widget */}
+      <PaceTrendWidget />
 
       {/* 4. DALŠÍ TRÉNINK */}
       <NextTrainingWidget />
