@@ -44,6 +44,7 @@ import { Client, useClients } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
 import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
+import { MultiParticipantFeedbackSection } from '@/components/feedback/MultiParticipantFeedbackSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { ClientProfilePanel } from '@/components/trainings/ClientProfilePanel';
@@ -525,25 +526,43 @@ export function TrainingDetailView({
       </div>
 
       {/* Feedback Section - Only for completed trainings */}
-      {training.status === 'completed' && client && (
-        <TrainingFeedbackSection
-          trainingId={training.id}
-          trainingDate={training.date}
-          trainingStatus={training.status}
-          clientId={client.id}
-          clientName={client.name}
-          feedbackEnabled={client.feedback_enabled !== false}
-          existingFeedback={feedbackRequest?.status === 'completed'}
-          feedbackRequest={feedbackRequest ? {
-            id: feedbackRequest.id,
-            token: feedbackRequest.token,
-            status: feedbackRequest.status,
-            expires_at: feedbackRequest.expires_at,
-            sent_at: feedbackRequest.sent_at,
-            opened_at: feedbackRequest.opened_at || null,
-            reminder_count: feedbackRequest.reminder_count || 0,
-          } : undefined}
-        />
+      {training.status === 'completed' && participants.length > 0 && (
+        participants.length > 1 ? (
+          <MultiParticipantFeedbackSection
+            trainingId={training.id}
+            trainingDate={training.date}
+            trainingStatus={training.status}
+            participants={participants.map(p => {
+              const clientData = allClients.find(c => c.id === p.client_id);
+              return {
+                client_id: p.client_id,
+                name: p.name,
+                email: clientData?.email,
+                feedback_enabled: clientData?.feedback_enabled !== false,
+              };
+            })}
+            feedbackEnabled={true}
+          />
+        ) : client && (
+          <TrainingFeedbackSection
+            trainingId={training.id}
+            trainingDate={training.date}
+            trainingStatus={training.status}
+            clientId={client.id}
+            clientName={client.name}
+            feedbackEnabled={client.feedback_enabled !== false}
+            existingFeedback={feedbackRequest?.status === 'completed'}
+            feedbackRequest={feedbackRequest ? {
+              id: feedbackRequest.id,
+              token: feedbackRequest.token,
+              status: feedbackRequest.status,
+              expires_at: feedbackRequest.expires_at,
+              sent_at: feedbackRequest.sent_at,
+              opened_at: feedbackRequest.opened_at || null,
+              reminder_count: feedbackRequest.reminder_count || 0,
+            } : undefined}
+          />
+        )
       )}
 
       {/* Delete Confirmation Dialog */}
