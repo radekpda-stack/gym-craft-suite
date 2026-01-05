@@ -37,6 +37,8 @@ interface CreditLedgerExportDialogProps {
   clientEmail?: string;
   trigger?: React.ReactNode;
   isGroupBudget?: boolean;
+  /** Alias for isGroupBudget */
+  isSharedBudget?: boolean;
   budgetGroupId?: string;
   groupName?: string;
 }
@@ -67,9 +69,12 @@ export function CreditLedgerExportDialog({
   clientEmail,
   trigger,
   isGroupBudget,
+  isSharedBudget,
   budgetGroupId,
   groupName,
 }: CreditLedgerExportDialogProps) {
+  // Use either isGroupBudget or isSharedBudget
+  const isGroup = isGroupBudget || isSharedBudget;
   const [open, setOpen] = useState(false);
   const [customStart, setCustomStart] = useState<Date>(subMonths(new Date(), 1));
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
