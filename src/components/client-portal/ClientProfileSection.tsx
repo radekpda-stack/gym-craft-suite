@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, Phone, Briefcase, Moon, Heart, Save, Calendar, Clock,
-  Mail, UserCircle, Dumbbell, Target
+  Mail, UserCircle, Dumbbell, Target, Hand, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,8 @@ export function ClientProfileSection() {
     health_restrictions: '',
     current_activities: [] as string[],
     training_goals: [] as string[],
+    handedness: '',
+    sports_history: '',
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -71,6 +73,8 @@ export function ClientProfileSection() {
         health_restrictions: profile.health_restrictions || '',
         current_activities: profile.current_activities || [],
         training_goals: profile.training_goals || [],
+        handedness: profile.handedness || '',
+        sports_history: profile.sports_history || '',
       });
     }
   }, [profile]);
@@ -100,6 +104,8 @@ export function ClientProfileSection() {
         health_restrictions: formData.health_restrictions || null,
         current_activities: formData.current_activities.length > 0 ? formData.current_activities : null,
         training_goals: formData.training_goals.length > 0 ? formData.training_goals : null,
+        handedness: formData.handedness || null,
+        sports_history: formData.sports_history || null,
       });
       setHasChanges(false);
       toast.success('Profil byl uložen');
@@ -243,6 +249,28 @@ export function ClientProfileSection() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Handedness */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Hand className="w-4 h-4" />
+                Dominantní ruka
+              </Label>
+              <Select
+                value={formData.handedness || 'none'}
+                onValueChange={(v) => handleChange('handedness', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="max-w-xs">
+                  <SelectValue placeholder="Vyberte dominantní ruku" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nevybráno</SelectItem>
+                  <SelectItem value="right">Pravák</SelectItem>
+                  <SelectItem value="left">Levák</SelectItem>
+                  <SelectItem value="ambidextrous">Obouruký</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Section: Work & Lifestyle */}
@@ -324,28 +352,50 @@ export function ClientProfileSection() {
             </div>
           </div>
 
-          {/* Section: Current Activities */}
+          {/* Section: Sports & Activities */}
           <div className="space-y-4 pt-4 border-t border-border">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
               <Dumbbell className="w-4 h-4" />
-              Co dělám mimo tréninky
+              Sport a pohyb
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {CURRENT_ACTIVITIES.map((activity) => (
-                <div key={activity.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`activity-${activity.value}`}
-                    checked={formData.current_activities.includes(activity.value)}
-                    onCheckedChange={() => handleArrayToggle('current_activities', activity.value)}
-                  />
-                  <label
-                    htmlFor={`activity-${activity.value}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {activity.label}
-                  </label>
-                </div>
-              ))}
+
+            {/* Sports History */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Sportovní historie
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Jaké sporty jste dělali, jak dlouho, na jaké úrovni
+              </p>
+              <Textarea
+                placeholder="Např. 10 let fotbal (závodně), 3 roky plavání, běhání rekreačně..."
+                value={formData.sports_history}
+                onChange={(e) => handleChange('sports_history', e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Current Activities */}
+            <div className="space-y-2">
+              <Label>Co dělám mimo tréninky</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {CURRENT_ACTIVITIES.map((activity) => (
+                  <div key={activity.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`activity-${activity.value}`}
+                      checked={formData.current_activities.includes(activity.value)}
+                      onCheckedChange={() => handleArrayToggle('current_activities', activity.value)}
+                    />
+                    <label
+                      htmlFor={`activity-${activity.value}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {activity.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -35,6 +35,7 @@ import { GamificationBadge } from '@/components/client-portal/gamification/Gamif
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 import { OnboardingChecklist } from '@/components/client-portal/common/OnboardingChecklist';
 import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
+import { ProfileCompletionCard } from '@/components/client-portal/dashboard/ProfileCompletionCard';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -79,6 +80,9 @@ export default function ClientPortalOverview() {
         {/* Gamification Badge - Minimální zobrazení */}
         <GamificationBadge />
       </div>
+
+      {/* Profile Completion Card - shows for incomplete profiles */}
+      <ProfileCompletionCard />
 
       {/* Onboarding Checklist - shows for new clients */}
       {onboardingStatus && !onboardingStatus.isComplete && (
