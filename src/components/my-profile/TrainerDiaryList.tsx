@@ -70,8 +70,25 @@ function formatDuration(seconds: number): string {
 
 function formatPace(seconds: number): string {
   const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const secs = Math.round(seconds % 60);
   return `${mins}:${String(secs).padStart(2, '0')} /km`;
+}
+
+// Calculate pace per km from time and distance if not stored
+function calculatePacePerKm(entry: TrainerDiaryEntry): number | null {
+  // If pace is already stored, return it
+  if (entry.pace_per_km && entry.pace_per_km > 0) {
+    return entry.pace_per_km;
+  }
+  
+  // Calculate from time and distance
+  if (entry.duration_seconds && entry.duration_seconds > 0 && 
+      entry.distance_meters && entry.distance_meters > 0) {
+    // pace = (time in seconds / distance in meters) * 1000
+    return (entry.duration_seconds / entry.distance_meters) * 1000;
+  }
+  
+  return null;
 }
 
 function formatDistance(meters: number): string {
@@ -178,12 +195,15 @@ function DiaryEntryCard({ entry, onDelete, isDeleting }: DiaryEntryCardProps) {
             </div>
           )}
           
-          {entry.pace_per_km && (
-            <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <span>{formatPace(entry.pace_per_km)}</span>
-            </div>
-          )}
+          {(() => {
+            const pace = calculatePacePerKm(entry);
+            return pace ? (
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <span>{formatPace(pace)}</span>
+              </div>
+            ) : null;
+          })()}
           
           {entry.speed_kmh && (
             <div className="flex items-center gap-2 text-sm">
