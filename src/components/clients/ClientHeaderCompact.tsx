@@ -14,6 +14,7 @@
  * - Training streak badge
  */
 import { useState } from 'react';
+import { CreditLedgerExportDialog } from '@/components/credit/CreditLedgerExportDialog';
 import { Link } from 'react-router-dom';
 import { 
   ChevronLeft, 
@@ -130,7 +131,7 @@ export function ClientHeaderCompact({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
-            {/* Export PDF button + settings - next to name */}
+            {/* Export PDF buttons + settings - next to name */}
             <div className="flex items-center gap-1">
               <CreditStatementDialog
                 clientId={client.id}
@@ -147,6 +148,23 @@ export function ClientHeaderCompact({
                   >
                     <FileText className="w-3.5 h-3.5" />
                     PDF výpis
+                  </Button>
+                }
+              />
+              <CreditLedgerExportDialog
+                clientId={client.id}
+                clientName={client.name}
+                clientEmail={client.email || undefined}
+                isSharedBudget={!!budgetGroup}
+                budgetGroupId={budgetGroup?.group_id}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="gap-1.5 text-xs font-medium shrink-0"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Výpis kreditu
                   </Button>
                 }
               />
