@@ -246,30 +246,30 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         </Select>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-3 px-3">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Datum</TableHead>
-                {!clientId && <TableHead>Klient</TableHead>}
+                <TableHead className="w-[80px] sm:w-[100px]">Datum</TableHead>
+                {!clientId && <TableHead className="min-w-[80px]">Klient</TableHead>}
                 {isTimeBased ? (
                   <>
-                    <TableHead className="text-right">Čas</TableHead>
-                    <TableHead className="text-right">Tempo/Výkon</TableHead>
-                    <TableHead className="text-center w-[70px]">Lvl/Mag</TableHead>
-                    <TableHead className="text-center w-[50px]">RPE</TableHead>
-                    <TableHead className="max-w-[120px]">Poznámka</TableHead>
+                    <TableHead className="text-right min-w-[70px]">Čas</TableHead>
+                    <TableHead className="text-right min-w-[80px] hidden sm:table-cell">Tempo</TableHead>
+                    <TableHead className="text-center w-[60px] hidden md:table-cell">Lvl</TableHead>
+                    <TableHead className="text-center w-[45px] hidden sm:table-cell">RPE</TableHead>
+                    <TableHead className="max-w-[100px] hidden lg:table-cell">Pozn.</TableHead>
                   </>
                 ) : (
                   <>
-                    <TableHead className="text-right">Série</TableHead>
-                    <TableHead className="text-right">Výkon</TableHead>
-                    <TableHead className="text-right">Objem</TableHead>
-                    <TableHead className="text-center w-[50px]">RPE</TableHead>
-                    <TableHead className="max-w-[150px]">Poznámka</TableHead>
+                    <TableHead className="text-right min-w-[60px]">Série</TableHead>
+                    <TableHead className="text-right min-w-[70px]">Výkon</TableHead>
+                    <TableHead className="text-right min-w-[70px] hidden sm:table-cell">Objem</TableHead>
+                    <TableHead className="text-center w-[45px] hidden sm:table-cell">RPE</TableHead>
+                    <TableHead className="max-w-[100px] hidden lg:table-cell">Pozn.</TableHead>
                   </>
                 )}
-                <TableHead className="w-[40px]"></TableHead>
+                <TableHead className="w-[36px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -290,15 +290,15 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   )}
                   {isTimeBased ? (
                     <>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium whitespace-nowrap">
                         {row.timeMs ? formatTimeDisplay(row.timeSeconds || 0, row.timeMs) : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="text-right text-sm hidden sm:table-cell">
                         {row.performanceDisplay?.value 
                           ? `${row.performanceDisplay.value}${row.performanceDisplay.unit ? ` ${row.performanceDisplay.unit}` : ''}`
                           : '-'}
                       </TableCell>
-                      <TableCell className="text-center text-xs text-muted-foreground">
+                      <TableCell className="text-center text-xs text-muted-foreground hidden md:table-cell">
                         {row.level || row.resistance ? (
                           <span>
                             {row.level ? `L${row.level}` : ''}
@@ -307,36 +307,36 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                           </span>
                         ) : '-'}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center hidden sm:table-cell">
                         {row.rpe ? (
                           <Badge className={cn("text-xs px-1.5 py-0.5", getRpeBgColor(row.rpe))}>
                             {row.rpe}
                           </Badge>
                         ) : <span className="text-muted-foreground">-</span>}
                       </TableCell>
-                      <TableCell className="max-w-[120px] truncate text-muted-foreground text-sm">
+                      <TableCell className="max-w-[100px] truncate text-muted-foreground text-sm hidden lg:table-cell">
                         {row.notes || '-'}
                       </TableCell>
                     </>
                   ) : (
                     <>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground whitespace-nowrap">
                         {row.sets && row.reps ? `${row.sets}×${row.reps}` : '-'}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium whitespace-nowrap">
                         {row.weight ? `${row.weight} kg` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
                         {row.volume ? `${row.volume} kg` : '-'}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center hidden sm:table-cell">
                         {row.rpe ? (
                           <Badge className={cn("text-xs px-1.5 py-0.5", getRpeBgColor(row.rpe))}>
                             {row.rpe}
                           </Badge>
                         ) : <span className="text-muted-foreground">-</span>}
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate text-muted-foreground text-sm">
+                      <TableCell className="max-w-[100px] truncate text-muted-foreground text-sm hidden lg:table-cell">
                         {row.notes || '-'}
                       </TableCell>
                     </>
