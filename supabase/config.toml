@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.calculate-nutrition-xp]
 verify_jwt = true
+
+[functions.garmin-ocr]
+verify_jwt = true
