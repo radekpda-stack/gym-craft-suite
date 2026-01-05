@@ -113,18 +113,28 @@ const translations = {
   },
 };
 
-// Font sizes (unified)
-const FONTS = {
-  title: 20,
-  subtitle: 14,
-  heading: 12,
-  body: 10,
-  small: 9,
-  tiny: 8,
+// Font sizes based on setting
+const getFontSizes = (size: 'small' | 'medium' | 'large') => {
+  const multiplier = size === 'small' ? 0.9 : size === 'large' ? 1.1 : 1;
+  return {
+    title: Math.round(20 * multiplier),
+    subtitle: Math.round(14 * multiplier),
+    heading: Math.round(12 * multiplier),
+    body: Math.round(10 * multiplier),
+    small: Math.round(9 * multiplier),
+    tiny: Math.round(8 * multiplier),
+  };
 };
 
-// Font family to use (Roboto with Czech diacritics support)
-const FONT_FAMILY = "Roboto";
+// Get font family name for jsPDF
+const getFontFamily = (fontFamily: string): string => {
+  switch (fontFamily) {
+    case 'helvetica': return 'helvetica';
+    case 'times': return 'times';
+    case 'courier': return 'courier';
+    default: return 'Roboto';
+  }
+};
 
 // Fallback for filename (remove diacritics for safe filenames)
 function sanitizeFilename(text: string): string {
@@ -149,13 +159,25 @@ export async function generateCreditStatementPdf(
   const COLORS = getPdfColorsFromTheme(options.themeId);
   
   // Get PDF settings (with defaults)
-  const pdfSettings: PdfSettings = options.pdfSettings || {
+  const pdfSettings: PdfSettings = {
     showLogo: true,
     showCompanyInfo: true,
     showSummary: true,
     showClientContact: true,
     customFooter: "",
+    fontFamily: 'roboto',
+    fontSize: 'medium',
+    useThemeColors: true,
+    primaryColor: '#1e293b',
+    textColor: '#0f172a',
+    tableHeaderColor: '#0f172a',
+    customTitle: '',
+    ...options.pdfSettings,
   };
+
+  // Compute font sizes and family based on settings
+  const FONTS = getFontSizes(pdfSettings.fontSize);
+  const FONT_FAMILY = getFontFamily(pdfSettings.fontFamily);
 
   // Load fonts first
   await loadPdfFonts();
