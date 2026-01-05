@@ -10,15 +10,22 @@ import { useGarminOCR, useCreateDiaryEntry, useUploadDiaryScreenshot, type Garmi
 import { format } from 'date-fns';
 
 const ACTIVITY_TYPES = [
-  { value: 'running', label: 'Běh', icon: '🏃' },
-  { value: 'cycling', label: 'Cyklistika', icon: '🚴' },
-  { value: 'swimming', label: 'Plavání', icon: '🏊' },
-  { value: 'strength', label: 'Síla', icon: '🏋️' },
-  { value: 'hiit', label: 'HIIT', icon: '⚡' },
-  { value: 'walking', label: 'Chůze', icon: '🚶' },
-  { value: 'hiking', label: 'Turistika', icon: '🥾' },
-  { value: 'other', label: 'Jiné', icon: '🎯' },
+  { value: 'running', label: 'Běh', icon: '🏃', metrics: ['duration', 'distance', 'pace', 'heartRate', 'calories', 'elevation', 'cadence'] },
+  { value: 'cycling', label: 'Cyklistika', icon: '🚴', metrics: ['duration', 'distance', 'speed', 'heartRate', 'calories', 'elevation', 'cadence', 'power'] },
+  { value: 'swimming', label: 'Plavání', icon: '🏊', metrics: ['duration', 'distance', 'pace', 'heartRate', 'calories', 'strokes'] },
+  { value: 'strength', label: 'Síla', icon: '🏋️', metrics: ['duration', 'heartRate', 'calories'] },
+  { value: 'hiit', label: 'HIIT', icon: '⚡', metrics: ['duration', 'heartRate', 'calories'] },
+  { value: 'walking', label: 'Chůze', icon: '🚶', metrics: ['duration', 'distance', 'pace', 'heartRate', 'calories', 'elevation'] },
+  { value: 'hiking', label: 'Turistika', icon: '🥾', metrics: ['duration', 'distance', 'pace', 'heartRate', 'calories', 'elevation'] },
+  { value: 'rowing', label: 'Veslování', icon: '🚣', metrics: ['duration', 'distance', 'pace500', 'heartRate', 'calories', 'power', 'cadence', 'strokes'] },
+  { value: 'skierg', label: 'SkiErg', icon: '⛷️', metrics: ['duration', 'distance', 'pace500', 'heartRate', 'calories', 'power', 'cadence'] },
+  { value: 'other', label: 'Jiné', icon: '🎯', metrics: ['duration', 'distance', 'heartRate', 'calories'] },
 ];
+
+// Get current activity config
+const getActivityConfig = (activityType: string) => {
+  return ACTIVITY_TYPES.find(a => a.value === activityType) || ACTIVITY_TYPES[ACTIVITY_TYPES.length - 1];
+};
 
 interface FormData {
   date: string;
@@ -27,12 +34,15 @@ interface FormData {
   durationSeconds: number | null;
   distanceMeters: number | null;
   pacePerKm: number | null;
+  pace500m: number | null;
   speedKmh: number | null;
   avgHeartRate: number | null;
   maxHeartRate: number | null;
   calories: number | null;
   cadence: number | null;
   elevationGain: number | null;
+  power: number | null;
+  strokes: number | null;
   notes: string;
 }
 
@@ -43,12 +53,15 @@ const initialFormData: FormData = {
   durationSeconds: null,
   distanceMeters: null,
   pacePerKm: null,
+  pace500m: null,
   speedKmh: null,
   avgHeartRate: null,
   maxHeartRate: null,
   calories: null,
   cadence: null,
   elevationGain: null,
+  power: null,
+  strokes: null,
   notes: '',
 };
 
@@ -319,101 +332,186 @@ export function TrainerDiaryInput() {
             />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="duration">Čas (MM:SS nebo HH:MM:SS)</Label>
-              <Input
-                id="duration"
-                value={formatDuration(formData.durationSeconds)}
-                onChange={(e) => setFormData(prev => ({ ...prev, durationSeconds: parseDuration(e.target.value) }))}
-                placeholder="45:00"
-              />
-            </div>
+          {/* Dynamic metrics based on activity type */}
+          {(() => {
+            const config = getActivityConfig(formData.activityType);
+            const metrics = config.metrics;
             
-            <div className="space-y-2">
-              <Label htmlFor="distance">Vzdálenost (km)</Label>
-              <Input
-                id="distance"
-                type="number"
-                step="0.01"
-                value={formData.distanceMeters ? (formData.distanceMeters / 1000).toFixed(2) : ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, distanceMeters: e.target.value ? parseFloat(e.target.value) * 1000 : null }))}
-                placeholder="10.5"
-              />
-            </div>
-            
-            {(formData.activityType === 'running' || formData.activityType === 'walking') && (
-              <div className="space-y-2">
-                <Label htmlFor="pace">Tempo (/km)</Label>
-                <Input
-                  id="pace"
-                  value={formatPace(formData.pacePerKm)}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pacePerKm: parsePace(e.target.value) }))}
-                  placeholder="5:30"
-                />
-              </div>
-            )}
-            
-            {formData.activityType === 'cycling' && (
-              <div className="space-y-2">
-                <Label htmlFor="speed">Rychlost (km/h)</Label>
-                <Input
-                  id="speed"
-                  type="number"
-                  step="0.1"
-                  value={formData.speedKmh || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, speedKmh: e.target.value ? parseFloat(e.target.value) : null }))}
-                  placeholder="25.5"
-                />
-              </div>
-            )}
-          </div>
+            return (
+              <div className="space-y-4">
+                {/* Primary metrics row */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Duration - always shown */}
+                  {metrics.includes('duration') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="duration">Čas (MM:SS nebo HH:MM:SS)</Label>
+                      <Input
+                        id="duration"
+                        value={formatDuration(formData.durationSeconds)}
+                        onChange={(e) => setFormData(prev => ({ ...prev, durationSeconds: parseDuration(e.target.value) }))}
+                        placeholder="45:00"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Distance */}
+                  {metrics.includes('distance') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="distance">Vzdálenost (km)</Label>
+                      <Input
+                        id="distance"
+                        type="number"
+                        step="0.01"
+                        value={formData.distanceMeters ? (formData.distanceMeters / 1000).toFixed(2) : ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, distanceMeters: e.target.value ? parseFloat(e.target.value) * 1000 : null }))}
+                        placeholder="10.5"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Pace /km for running, walking, hiking, swimming */}
+                  {metrics.includes('pace') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="pace">Tempo (/km)</Label>
+                      <Input
+                        id="pace"
+                        value={formatPace(formData.pacePerKm)}
+                        onChange={(e) => setFormData(prev => ({ ...prev, pacePerKm: parsePace(e.target.value) }))}
+                        placeholder="5:30"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Pace /500m for rowing, skierg */}
+                  {metrics.includes('pace500') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="pace500">Tempo (/500m)</Label>
+                      <Input
+                        id="pace500"
+                        value={formatPace(formData.pace500m)}
+                        onChange={(e) => setFormData(prev => ({ ...prev, pace500m: parsePace(e.target.value) }))}
+                        placeholder="1:45"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Speed for cycling */}
+                  {metrics.includes('speed') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="speed">Rychlost (km/h)</Label>
+                      <Input
+                        id="speed"
+                        type="number"
+                        step="0.1"
+                        value={formData.speedKmh || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, speedKmh: e.target.value ? parseFloat(e.target.value) : null }))}
+                        placeholder="25.5"
+                      />
+                    </div>
+                  )}
+                </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="avgHr">Průměrný tep</Label>
-              <Input
-                id="avgHr"
-                type="number"
-                value={formData.avgHeartRate || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, avgHeartRate: e.target.value ? parseInt(e.target.value) : null }))}
-                placeholder="145"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="maxHr">Max tep</Label>
-              <Input
-                id="maxHr"
-                type="number"
-                value={formData.maxHeartRate || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxHeartRate: e.target.value ? parseInt(e.target.value) : null }))}
-                placeholder="175"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="calories">Kalorie</Label>
-              <Input
-                id="calories"
-                type="number"
-                value={formData.calories || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, calories: e.target.value ? parseInt(e.target.value) : null }))}
-                placeholder="450"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="elevation">Převýšení (m)</Label>
-              <Input
-                id="elevation"
-                type="number"
-                value={formData.elevationGain || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, elevationGain: e.target.value ? parseInt(e.target.value) : null }))}
-                placeholder="120"
-              />
-            </div>
-          </div>
+                {/* Secondary metrics row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Heart rate */}
+                  {metrics.includes('heartRate') && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="avgHr">Průměrný tep</Label>
+                        <Input
+                          id="avgHr"
+                          type="number"
+                          value={formData.avgHeartRate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, avgHeartRate: e.target.value ? parseInt(e.target.value) : null }))}
+                          placeholder="145"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="maxHr">Max tep</Label>
+                        <Input
+                          id="maxHr"
+                          type="number"
+                          value={formData.maxHeartRate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, maxHeartRate: e.target.value ? parseInt(e.target.value) : null }))}
+                          placeholder="175"
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Calories */}
+                  {metrics.includes('calories') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="calories">Kalorie</Label>
+                      <Input
+                        id="calories"
+                        type="number"
+                        value={formData.calories || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, calories: e.target.value ? parseInt(e.target.value) : null }))}
+                        placeholder="450"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Elevation */}
+                  {metrics.includes('elevation') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="elevation">Převýšení (m)</Label>
+                      <Input
+                        id="elevation"
+                        type="number"
+                        value={formData.elevationGain || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, elevationGain: e.target.value ? parseInt(e.target.value) : null }))}
+                        placeholder="120"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Power */}
+                  {metrics.includes('power') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="power">Výkon (W)</Label>
+                      <Input
+                        id="power"
+                        type="number"
+                        value={formData.power || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, power: e.target.value ? parseInt(e.target.value) : null }))}
+                        placeholder="200"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Cadence */}
+                  {metrics.includes('cadence') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="cadence">Kadence</Label>
+                      <Input
+                        id="cadence"
+                        type="number"
+                        value={formData.cadence || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, cadence: e.target.value ? parseInt(e.target.value) : null }))}
+                        placeholder="180"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Strokes (swimming, rowing) */}
+                  {metrics.includes('strokes') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="strokes">Záběry</Label>
+                      <Input
+                        id="strokes"
+                        type="number"
+                        value={formData.strokes || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, strokes: e.target.value ? parseInt(e.target.value) : null }))}
+                        placeholder="1200"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Poznámky</Label>
