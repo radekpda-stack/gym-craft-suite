@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Dumbbell, Scale, CalendarDays, MessageCircle, Trophy } from 'lucide-react';
+import { Dumbbell, Scale, MessageCircle, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,6 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
-  // Primary actions - daily use (row 1)
   {
     id: 'workout',
     label: 'Trénink',
@@ -39,22 +38,13 @@ const quickActions: QuickAction[] = [
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 hover:bg-amber-500/20',
   },
-  // Secondary actions (row 2)
   {
-    id: 'measurement',
-    label: 'Měření',
+    id: 'progress',
+    label: 'Pokrok',
     icon: <Scale className="w-5 h-5" />,
     path: '/progress',
     color: 'text-success',
     bgColor: 'bg-success/10 hover:bg-success/20',
-  },
-  {
-    id: 'attendance',
-    label: 'Docházka',
-    icon: <CalendarDays className="w-5 h-5" />,
-    path: '/attendance',
-    color: 'text-indigo-500',
-    bgColor: 'bg-indigo-500/10 hover:bg-indigo-500/20',
   },
 ];
 
