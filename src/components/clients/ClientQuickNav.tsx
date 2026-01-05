@@ -55,7 +55,7 @@ export function ClientQuickNav({
     { id: 'notes', icon: <StickyNote className="w-4 h-4" />, label: 'Poznámky', badge: notesCount },
     { id: 'measurements', icon: <Ruler className="w-4 h-4" />, label: 'Měření', badge: measurementsCount },
     { id: 'diagnostics', icon: <Stethoscope className="w-4 h-4" />, label: 'Diagnostika', badge: diagnosticsCount },
-    { id: 'feedback', icon: <MessageSquare className="w-4 h-4" />, label: 'Feedback', badge: feedbackCount },
+    { id: 'feedback', icon: <MessageSquare className="w-4 h-4" />, label: 'Zpětná vazba', badge: feedbackCount },
     { id: 'media', icon: <Image className="w-4 h-4" />, label: 'Média', badge: mediaCount },
     { id: 'timeline', icon: <Clock className="w-4 h-4" />, label: 'Časová osa' },
   ], [notesCount, measurementsCount, diagnosticsCount, feedbackCount, mediaCount]);

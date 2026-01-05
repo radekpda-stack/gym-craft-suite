@@ -145,17 +145,17 @@ export function NotificationSettings() {
       ],
     },
     {
-      title: "Feedback",
+      title: "Zpětná vazba",
       icon: MessageSquare,
       items: [
         {
           key: "feedbackAlerts",
-          label: language === 'cs' ? "Nový feedback" : "New feedback",
-          description: language === 'cs' ? "Notifikace o novém feedbacku od klientů" : "Notifications about new client feedback",
+          label: language === 'cs' ? "Nová zpětná vazba" : "New feedback",
+          description: language === 'cs' ? "Notifikace o nové zpětné vazbě od klientů" : "Notifications about new client feedback",
         },
         {
           key: "feedbackRedFlags",
-          label: language === 'cs' ? "Problémový feedback" : "Problem feedback",
+          label: language === 'cs' ? "Problémová zpětná vazba" : "Problem feedback",
           description: language === 'cs' ? "Upozornění na red flags (únava, bolest, nízké hodnocení)" : "Alerts for red flags (fatigue, pain, low ratings)",
         },
       ],

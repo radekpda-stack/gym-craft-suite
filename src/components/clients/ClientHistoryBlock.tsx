@@ -123,7 +123,7 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
         id: f.id,
         type: 'feedback' as const,
         date: format(new Date(f.completed_at || f.created_at), 'd.M.yyyy', { locale: cs }),
-        title: f.status === 'completed' ? 'Feedback vyplněn' : 'Čeká na vyplnění',
+        title: f.status === 'completed' ? 'Zpětná vazba vyplněna' : 'Čeká na vyplnění',
         subtitle: undefined,
         status: f.status === 'completed' ? ('completed' as const) : ('pending' as const),
         // NOTE: For completed feedback we open a detail dialog instead of navigating to training.
@@ -332,7 +332,7 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-1.5"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Feedback</span>
+              <span>Zpětná vazba</span>
             </TabsTrigger>
             <TabsTrigger
               value="nutrition"
@@ -386,7 +386,7 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
                   <HistoryListItem key={item.id} item={item} />
                 ))
               ) : (
-                <EmptyState icon={MessageSquare} message="Zatím žádný feedback" />
+                <EmptyState icon={MessageSquare} message="Zatím žádná zpětná vazba" />
               )}
             </div>
           </TabsContent>

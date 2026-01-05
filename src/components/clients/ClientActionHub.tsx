@@ -120,7 +120,7 @@ export function ClientActionHub({
     if (recentCompleted && !hasFeedbackForRecent && client.feedback_enabled !== false) {
       return {
         type: 'feedback',
-        label: 'Vyžádat feedback',
+        label: 'Vyžádat zpětnou vazbu',
         sublabel: 'Chybí zpětná vazba z tréninku',
         icon: <Send className="w-6 h-6" />,
         variant: 'warning',
@@ -363,7 +363,7 @@ export function ClientActionHub({
             className="flex flex-col items-center gap-1.5 h-auto py-3 px-2"
           >
             <MessageSquare className="w-5 h-5 text-primary" />
-            <span className="text-[11px]">Feedback</span>
+            <span className="text-[11px]">Zpětná vazba</span>
           </Button>
           
           {client.payment_mode !== 'cash_only' && (

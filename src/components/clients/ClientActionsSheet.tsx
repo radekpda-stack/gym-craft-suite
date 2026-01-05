@@ -211,7 +211,7 @@ export function ClientActionsSheet({
             />
             <ActionButton 
               icon={Link2} 
-              label="Feedback" 
+              label="Zpětná vazba" 
               onClick={handleGenerateFeedbackLink}
               disabled={isGenerating === 'feedback' || !lastCompletedTrainingId}
             />

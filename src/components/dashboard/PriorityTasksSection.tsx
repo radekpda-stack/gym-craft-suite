@@ -25,7 +25,7 @@ interface PriorityTasksSectionProps {
 const TASK_TYPE_CONFIG = {
   overload: { icon: AlertTriangle, label: 'Přetížení' },
   credit: { icon: Wallet, label: 'Kredit' },
-  feedback: { icon: MessageSquare, label: 'Feedback' },
+  feedback: { icon: MessageSquare, label: 'Zpětná vazba' },
   unpaid: { icon: Clock, label: 'Platba' },
 } as const;
 

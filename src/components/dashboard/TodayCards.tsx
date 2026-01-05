@@ -109,7 +109,7 @@ export function TodayCards({ data, isLoading }: TodayCardsProps) {
         
         <StatusCard
           icon={MessageSquare}
-          title="Chybí feedback"
+          title="Chybí zpětná vazba"
           value={missingFeedback.count}
           subtitle={missingFeedback.count > 0 ? 'Poslat odkaz' : 'Vše vyplněno'}
           status={feedbackStatus}

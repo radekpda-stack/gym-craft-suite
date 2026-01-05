@@ -33,7 +33,7 @@ const TASK_TYPE_CONFIG: Record<TaskType, { icon: typeof AlertTriangle; label: st
   'training-today': { icon: Calendar, label: 'Dnes' },
   'overload': { icon: AlertTriangle, label: 'Přetížení' },
   'health-issue': { icon: Heart, label: 'Zdraví' },
-  'feedback': { icon: MessageSquare, label: 'Feedback' },
+  'feedback': { icon: MessageSquare, label: 'Zpětná vazba' },
   'credit': { icon: Wallet, label: 'Kredit' },
   'no-training': { icon: Clock, label: 'Neaktivní' },
   'unpaid': { icon: Wallet, label: 'Platba' },

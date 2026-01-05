@@ -112,7 +112,7 @@ export function ClientFeedbackCard({
               )} />
             </div>
             <div className="text-left">
-              <p className="font-medium text-foreground">Feedback</p>
+              <p className="font-medium text-foreground">Zpětná vazba</p>
               <p className="text-sm text-muted-foreground">
                 {totalFeedbacks > 0 
                   ? `${totalFeedbacks} odpovědí${pendingRequests > 0 ? ` • ${pendingRequests} čeká` : ''}`
