@@ -136,6 +136,7 @@ export function ClientTrainingFinanceCard({
       case 'cash':
       case 'transfer':
       case 'package':
+      case 'payment':
         return 'topup';
       case 'training':
       case 'deduction':
@@ -251,6 +252,8 @@ export function ClientTrainingFinanceCard({
         return 'Dobití převodem';
       case 'package':
         return 'Balíček';
+      case 'payment':
+        return 'Platba';
       case 'training':
         return 'Trénink';
       case 'deduction':
