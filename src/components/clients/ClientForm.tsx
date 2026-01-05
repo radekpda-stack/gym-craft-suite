@@ -23,6 +23,7 @@ import { DatePicker } from "@/components/ui/date-time-picker";
 import { clientFormSchema, ClientFormValues } from "@/lib/validations/client";
 import { Client } from "@/hooks/useClients";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { useFormTracking } from "@/hooks/useFormTracking";
 
 interface ClientFormProps {
   onSubmit: (data: ClientFormValues) => Promise<void>;
@@ -44,6 +45,12 @@ const SUGGESTED_GOALS = [
 export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "Vytvořit klienta" }: ClientFormProps) {
   const [newGoal, setNewGoal] = useState("");
   
+  // Form analytics tracking
+  const { getFieldProps, completeForm, trackValidationErrors } = useFormTracking({
+    formType: 'client_form',
+    formInstanceId: defaultValues?.id,
+  });
+  
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
@@ -62,6 +69,13 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
       sports_history: defaultValues?.sports_history || "",
     },
   });
+
+  // Track validation errors
+  useEffect(() => {
+    if (Object.keys(form.formState.errors).length > 0) {
+      trackValidationErrors(form.formState.errors);
+    }
+  }, [form.formState.errors, trackValidationErrors]);
 
   // Track unsaved changes
   const isDirty = form.formState.isDirty;
@@ -107,6 +121,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
 
   const handleSubmit = async (data: ClientFormValues) => {
     await onSubmit(data);
+    completeForm(); // Track form completion
     form.reset(data); // Mark as clean after successful submit
   };
 
@@ -124,6 +139,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
                   placeholder="Jan Novák"
                   className="bg-secondary border-border"
                   {...field}
+                  {...getFieldProps('name')}
                 />
               </FormControl>
               <FormMessage />
@@ -144,6 +160,7 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
                     placeholder="jan@example.com"
                     className="bg-secondary border-border"
                     {...field}
+                    {...getFieldProps('email')}
                   />
                 </FormControl>
                 <FormMessage />

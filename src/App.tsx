@@ -17,6 +17,7 @@ import { UndoToast } from "@/components/ui/UndoToast";
 import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
 import { PageLoader } from "@/components/PageLoader";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { InteractionTracker } from "@/lib/analytics/interaction";
 
 // Eagerly loaded (critical path)
 import UnifiedLogin from "./pages/UnifiedLogin";
@@ -99,6 +100,7 @@ const App = () => (
               <Sonner />
               <UndoToast />
             <BrowserRouter>
+            <InteractionTracker>
             <DemoProvider>
             <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -211,6 +213,7 @@ const App = () => (
             </Routes>
             </Suspense>
             </DemoProvider>
+            </InteractionTracker>
           </BrowserRouter>
           </TooltipProvider>
         </UndoProvider>
