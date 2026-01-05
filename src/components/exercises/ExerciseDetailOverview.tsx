@@ -195,7 +195,7 @@ export function ExerciseDetailOverview({
               <Card className="p-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                   <Timer className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">Nejlepší čas</span>
+                  <span className="text-xs truncate">Nejlepší</span>
                   <StatInfoTooltip
                     title="Nejlepší čas"
                     description="Nejkratší zaznamenaný čas"
@@ -216,7 +216,7 @@ export function ExerciseDetailOverview({
               <Card className="p-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                   <Target className="w-3.5 h-3.5" />
-                  <span className="text-xs">Průměrný čas</span>
+                  <span className="text-xs truncate">Průměr</span>
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-xl font-bold">
@@ -230,7 +230,7 @@ export function ExerciseDetailOverview({
                 <Card className="p-3">
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                     <Zap className="w-3.5 h-3.5 text-warning" />
-                    <span className="text-xs">Max výkon</span>
+                    <span className="text-xs truncate">Max W</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-bold">{stats.bestWatts}</span>
@@ -244,7 +244,7 @@ export function ExerciseDetailOverview({
                 <Card className="p-3">
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                     <Gauge className="w-3.5 h-3.5 text-success" />
-                    <span className="text-xs">Nejlepší tempo</span>
+                    <span className="text-xs truncate">Tempo</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-bold">{formatPace500m(stats.bestPace500m)}</span>
@@ -270,7 +270,7 @@ export function ExerciseDetailOverview({
                 <Card className="p-3">
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                     <Activity className="w-3.5 h-3.5" />
-                    <span className="text-xs">Prům. kadence</span>
+                    <span className="text-xs truncate">Kadence</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-bold">{stats.averageCadence}</span>
@@ -281,7 +281,7 @@ export function ExerciseDetailOverview({
                 <Card className="p-3">
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                     <Trophy className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs">PR záznamy</span>
+                    <span className="text-xs truncate">PRs</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-bold">

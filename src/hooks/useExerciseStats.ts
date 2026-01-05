@@ -229,7 +229,7 @@ export function useExerciseStats(exerciseId: string | null) {
         clientPerformances.sort((a, b) => (b.maxWeight || 0) - (a.maxWeight || 0));
       }
 
-      // PR History - include both weight and time PRs
+      // PR History - include both weight and time PRs, sorted by performance
       const prHistory: PRRecord[] = entries
         .filter((e) => e.is_pr && (e.weight_kg || e.time_seconds))
         .map((e) => ({
@@ -241,6 +241,17 @@ export function useExerciseStats(exerciseId: string | null) {
           reps: e.reps || 0,
           date: e.date,
         }))
+        .sort((a, b) => {
+          if (isTimeBased) {
+            // For time-based: lower time is better (ascending)
+            if (!a.timeSeconds) return 1;
+            if (!b.timeSeconds) return -1;
+            return a.timeSeconds - b.timeSeconds;
+          } else {
+            // For strength: higher weight is better (descending)
+            return (b.weight || 0) - (a.weight || 0);
+          }
+        })
         .slice(0, 50);
 
       // Global stats - Strength

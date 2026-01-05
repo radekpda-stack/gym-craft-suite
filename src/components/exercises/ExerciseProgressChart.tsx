@@ -233,7 +233,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                           />
                         );
                       }
-                      return <circle cx={cx} cy={cy} r={3} fill={COLORS[0]} />;
+                      // Hide non-PR dots for cleaner chart
+                      return null;
                     }}
                   />
                 </LineChart>
@@ -298,7 +299,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                           />
                         );
                       }
-                      return <circle cx={cx} cy={cy} r={3} fill="hsl(var(--warning))" />;
+                      // Hide non-PR dots for cleaner chart
+                      return null;
                     }}
                   />
                 </LineChart>
