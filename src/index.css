@@ -197,98 +197,98 @@
 
   /* ========================================
      LIGHT MINIMAL THEME - "Warm Sand"
-     Elegant warm tones with coral accents
+     Elegant refined with subtle warm accents
      ======================================== */
   :root.theme-light-minimal, html.theme-light-minimal, body.theme-light-minimal {
-    --background: 35 35% 97%;
-    --foreground: 20 25% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 20 25% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 20 25% 12%;
-    --primary: 15 80% 52%;
+    --background: 40 25% 97%;
+    --foreground: 25 20% 18%;
+    --card: 40 15% 99%;
+    --card-foreground: 25 20% 18%;
+    --popover: 40 15% 99%;
+    --popover-foreground: 25 20% 18%;
+    --primary: 18 55% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 35 25% 92%;
-    --secondary-foreground: 20 25% 20%;
-    --muted: 35 20% 94%;
-    --muted-foreground: 20 18% 38%;
-    --accent: 15 70% 48%;
+    --secondary: 40 18% 93%;
+    --secondary-foreground: 25 20% 25%;
+    --muted: 40 15% 95%;
+    --muted-foreground: 25 12% 42%;
+    --accent: 18 45% 45%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 75% 50%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 65% 38%;
+    --success: 155 50% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 20 25% 12%;
-    --status-ok: 152 65% 38%;
-    --status-warning: 38 92% 50%;
-    --status-error: 0 75% 50%;
-    --border: 35 20% 86%;
-    --input: 35 15% 95%;
-    --ring: 15 80% 52%;
+    --warning: 40 75% 50%;
+    --warning-foreground: 25 20% 18%;
+    --status-ok: 155 50% 38%;
+    --status-warning: 40 75% 50%;
+    --status-error: 0 65% 50%;
+    --border: 40 15% 88%;
+    --input: 40 12% 96%;
+    --ring: 18 55% 48%;
     --radius: 0.625rem;
-    --sidebar-background: 35 30% 96%;
-    --sidebar-foreground: 20 25% 12%;
-    --sidebar-primary: 15 80% 52%;
+    --sidebar-background: 40 20% 96%;
+    --sidebar-foreground: 25 20% 18%;
+    --sidebar-primary: 18 55% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 25% 92%;
-    --sidebar-accent-foreground: 20 25% 20%;
-    --sidebar-border: 35 20% 86%;
-    --sidebar-ring: 15 80% 52%;
-    --text-primary: 20 25% 12%;
-    --text-secondary: 20 15% 35%;
-    --text-muted: 20 10% 50%;
-    --shadow-sm: 0 1px 3px 0 hsl(20 20% 20% / 0.06), 0 1px 2px -1px hsl(20 20% 20% / 0.04);
-    --shadow-md: 0 4px 8px -1px hsl(20 20% 20% / 0.08), 0 2px 4px -2px hsl(20 20% 20% / 0.05);
-    --shadow-lg: 0 12px 20px -4px hsl(20 20% 20% / 0.10), 0 4px 8px -4px hsl(20 20% 20% / 0.06);
+    --sidebar-accent: 40 18% 93%;
+    --sidebar-accent-foreground: 25 20% 25%;
+    --sidebar-border: 40 15% 88%;
+    --sidebar-ring: 18 55% 48%;
+    --text-primary: 25 20% 18%;
+    --text-secondary: 25 12% 38%;
+    --text-muted: 25 8% 52%;
+    --shadow-sm: 0 1px 3px 0 hsl(25 15% 30% / 0.05), 0 1px 2px -1px hsl(25 15% 30% / 0.03);
+    --shadow-md: 0 4px 10px -2px hsl(25 15% 30% / 0.08), 0 2px 4px -2px hsl(25 15% 30% / 0.04);
+    --shadow-lg: 0 12px 24px -6px hsl(25 15% 30% / 0.10), 0 4px 8px -4px hsl(25 15% 30% / 0.05);
   }
 
   /* ========================================
      FROST MINIMAL THEME - "Nordic Ice"
-     Clean professional with blue accents
+     Clean elegant with refined blue accents
      ======================================== */
   :root.theme-frost-minimal, html.theme-frost-minimal, body.theme-frost-minimal {
-    --background: 210 20% 98%;
-    --foreground: 210 25% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 210 25% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 210 25% 10%;
-    --primary: 210 90% 52%;
+    --background: 215 25% 97%;
+    --foreground: 215 20% 15%;
+    --card: 210 15% 99%;
+    --card-foreground: 215 20% 15%;
+    --popover: 210 15% 99%;
+    --popover-foreground: 215 20% 15%;
+    --primary: 215 65% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 15% 93%;
-    --secondary-foreground: 210 25% 18%;
-    --muted: 210 12% 95%;
-    --muted-foreground: 210 20% 42%;
-    --accent: 210 80% 48%;
+    --secondary: 215 15% 93%;
+    --secondary-foreground: 215 20% 22%;
+    --muted: 215 12% 95%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 215 55% 45%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 75% 50%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: 160 70% 40%;
+    --success: 162 50% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 210 25% 10%;
-    --status-ok: 160 70% 40%;
-    --status-warning: 38 92% 50%;
-    --status-error: 0 75% 50%;
-    --border: 210 15% 88%;
-    --input: 210 12% 95%;
-    --ring: 210 90% 52%;
+    --warning: 42 75% 50%;
+    --warning-foreground: 215 20% 15%;
+    --status-ok: 162 50% 40%;
+    --status-warning: 42 75% 50%;
+    --status-error: 0 65% 50%;
+    --border: 215 15% 90%;
+    --input: 215 12% 96%;
+    --ring: 215 65% 48%;
     --radius: 0.5rem;
-    --sidebar-background: 210 18% 97%;
-    --sidebar-foreground: 210 25% 10%;
-    --sidebar-primary: 210 90% 52%;
+    --sidebar-background: 215 20% 96%;
+    --sidebar-foreground: 215 20% 15%;
+    --sidebar-primary: 215 65% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 93%;
-    --sidebar-accent-foreground: 210 25% 18%;
-    --sidebar-border: 210 15% 88%;
-    --sidebar-ring: 210 90% 52%;
-    --text-primary: 210 25% 10%;
-    --text-secondary: 210 18% 35%;
-    --text-muted: 210 12% 50%;
-    --shadow-sm: 0 1px 3px 0 hsl(210 30% 40% / 0.06), 0 1px 2px -1px hsl(210 30% 40% / 0.04);
-    --shadow-md: 0 4px 8px -1px hsl(210 30% 40% / 0.10), 0 2px 4px -2px hsl(210 30% 40% / 0.06);
-    --shadow-lg: 0 12px 20px -4px hsl(210 30% 40% / 0.12), 0 4px 8px -4px hsl(210 30% 40% / 0.08);
+    --sidebar-accent: 215 15% 93%;
+    --sidebar-accent-foreground: 215 20% 22%;
+    --sidebar-border: 215 15% 90%;
+    --sidebar-ring: 215 65% 48%;
+    --text-primary: 215 20% 15%;
+    --text-secondary: 215 15% 40%;
+    --text-muted: 215 10% 55%;
+    --shadow-sm: 0 1px 3px 0 hsl(215 25% 35% / 0.05), 0 1px 2px -1px hsl(215 25% 35% / 0.03);
+    --shadow-md: 0 4px 10px -2px hsl(215 25% 35% / 0.08), 0 2px 4px -2px hsl(215 25% 35% / 0.04);
+    --shadow-lg: 0 12px 24px -6px hsl(215 25% 35% / 0.10), 0 4px 8px -4px hsl(215 25% 35% / 0.05);
   }
 }
 
