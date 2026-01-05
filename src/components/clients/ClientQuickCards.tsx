@@ -2,18 +2,14 @@
  * ClientQuickCards Component
  * 
  * 2 quick cards showing key information:
- * A) Next/Last Training (PT session)
+ * A) Pace Trend Chart (cardio progress)
  * B) Credit balance with finance info (unpaid trainings, packages, LTV)
  */
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { 
-  Calendar, 
   CreditCard, 
   Users, 
   Plus,
-  CalendarClock,
-  CheckCircle,
   AlertTriangle,
   Package,
   ChevronDown,
@@ -26,41 +22,31 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
-import { format, differenceInDays, isFuture } from 'date-fns';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useClientPackages } from '@/hooks/useClientPackages';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { useClientLTV } from '@/hooks/useClientLTV';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
-interface TrainingSession {
-  id: string;
-  date: string;
-  status: string;
-  duration?: number;
-}
+import { ClientPaceTrendCard } from './ClientPaceTrendCard';
 
 interface QuickCardsProps {
   clientId: string;
   clientName: string;
-  sessions: TrainingSession[];
   creditBalance: number;
   isSharedBudget: boolean;
   budgetGroupName?: string | null;
   budgetMemberCount?: number;
-  onAddTraining: () => void;
   onAddCredit: () => void;
 }
 
 export function ClientQuickCards({
   clientId,
-  sessions,
   creditBalance,
   isSharedBudget,
   budgetGroupName,
   budgetMemberCount,
-  onAddTraining,
   onAddCredit,
 }: QuickCardsProps) {
   const [showDetails, setShowDetails] = useState(false);
@@ -76,33 +62,6 @@ export function ClientQuickCards({
   const activePackages = packages.filter(p => p.is_active);
   const recentTransactions = transactions.slice(0, 3);
   const hasFinanceDetails = unpaidCount > 0 || activePackages.length > 0 || recentTransactions.length > 0;
-  
-  // Find next scheduled and last completed training
-  const { nextSession, lastSession } = useMemo(() => {
-    const scheduled = sessions
-      .filter(s => s.status === 'scheduled' && isFuture(new Date(s.date)))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const completed = sessions
-      .filter(s => s.status === 'completed')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    return {
-      nextSession: scheduled[0] || null,
-      lastSession: completed[0] || null,
-    };
-  }, [sessions]);
-
-  const formatSessionDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const days = differenceInDays(date, new Date());
-    
-    if (days === 0) return `Dnes v ${format(date, 'HH:mm')}`;
-    if (days === 1) return `Zítra v ${format(date, 'HH:mm')}`;
-    if (days === -1) return 'Včera';
-    if (days > 1 && days < 7) return format(date, "EEEE 'v' HH:mm", { locale: cs });
-    return format(date, "d.M. 'v' HH:mm", { locale: cs });
-  };
 
   const getCreditStatusColor = () => {
     if (creditBalance <= 0) return 'text-destructive';
@@ -118,66 +77,9 @@ export function ClientQuickCards({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {/* CARD A: Trainings */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm font-medium">Tréninky</span>
-          </div>
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={onAddTraining}>
-            <Plus className="w-3 h-3" />
-            Přidat
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {/* Next session */}
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-xs text-muted-foreground">Další sezení</span>
-              {nextSession ? (
-                <Link 
-                  to={`/trainings/${nextSession.id}`}
-                  className="block text-sm font-medium text-foreground hover:text-primary transition-colors"
-                >
-                  {formatSessionDate(nextSession.date)}
-                </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Nenaplánováno</p>
-              )}
-            </div>
-            {nextSession && (
-              <Link to={`/trainings/${nextSession.id}`}>
-                <Badge variant="outline" className="text-xs gap-1">
-                  <CalendarClock className="w-3 h-3" />
-                  Přesunout
-                </Badge>
-              </Link>
-            )}
-          </div>
-
-          {/* Last session */}
-          <div className="pt-2 border-t border-border/50">
-            <span className="text-xs text-muted-foreground">Poslední sezení</span>
-            {lastSession ? (
-              <div className="flex items-center gap-2">
-                <Link 
-                  to={`/trainings/${lastSession.id}`}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                >
-                  {format(new Date(lastSession.date), "d.M.yyyy", { locale: cs })}
-                </Link>
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Dokončeno
-                </Badge>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">Zatím žádný</p>
-            )}
-          </div>
-        </div>
+      {/* CARD A: Pace Trend */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <ClientPaceTrendCard clientId={clientId} />
       </div>
 
       {/* CARD B: Credit with Finance */}
