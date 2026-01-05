@@ -227,23 +227,33 @@ export function SimpleAddWorkoutDialog({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="grid grid-cols-2 gap-3 py-4"
+              className="py-4"
             >
-              {SIMPLE_WORKOUT_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => handleSelectType(type.value)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-2 p-6 rounded-xl transition-all",
-                    "border-2 hover:scale-[1.02] active:scale-[0.98]",
-                    type.color,
-                    "border-transparent hover:border-current/30"
-                  )}
-                >
-                  <type.icon className="w-10 h-10" />
-                  <span className="font-medium text-foreground">{type.label}</span>
-                </button>
-              ))}
+              {/* Tip */}
+              <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm mb-4">
+                <span className="text-lg">💡</span>
+                <p className="text-muted-foreground">
+                  Vyber typ aktivity, kterou chceš zapsat. Trenér uvidí, co děláš i mimo společné tréninky.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {SIMPLE_WORKOUT_TYPES.map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => handleSelectType(type.value)}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-2 p-6 rounded-xl transition-all",
+                      "border-2 hover:scale-[1.02] active:scale-[0.98]",
+                      type.color,
+                      "border-transparent hover:border-current/30"
+                    )}
+                  >
+                    <type.icon className="w-10 h-10" />
+                    <span className="font-medium text-foreground">{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </motion.div>
           )}
 
@@ -269,7 +279,8 @@ export function SimpleAddWorkoutDialog({
 
               {/* Duration */}
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground text-center">Jak dlouho? (minuty)</p>
+                <p className="text-sm font-medium text-center">Jak dlouho? (minuty)</p>
+                <p className="text-xs text-muted-foreground text-center -mt-2">Stiskni počet minut</p>
                 <div className="flex justify-center gap-2 flex-wrap">
                   {DURATION_OPTIONS.map((min) => (
                     <button
@@ -290,7 +301,8 @@ export function SimpleAddWorkoutDialog({
 
               {/* Feeling */}
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground text-center">Jak se cítíš po tréninku?</p>
+                <p className="text-sm font-medium text-center">Jak se cítíš po tréninku?</p>
+                <p className="text-xs text-muted-foreground text-center -mt-2">Čím víc vpravo, tím lépe</p>
                 <div className="flex justify-center gap-2">
                   {FEELING_EMOJIS.map((f) => (
                     <button
@@ -308,6 +320,10 @@ export function SimpleAddWorkoutDialog({
                       {f.emoji}
                     </button>
                   ))}
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground px-2">
+                  <span>Hrozně</span>
+                  <span>Skvěle!</span>
                 </div>
               </div>
 
@@ -523,6 +539,13 @@ export function SimpleAddWorkoutDialog({
 
               {/* Notes */}
               <div className="space-y-2">
+                {/* Tip */}
+                <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg text-sm mb-2">
+                  <span className="text-lg">💡</span>
+                  <p className="text-muted-foreground">
+                    Napiš trenérovi, jak se ti dařilo, nebo co bys rád/a zlepšil/a
+                  </p>
+                </div>
                 <Textarea
                   placeholder="Co šlo dobře? Co tě potěšilo? (volitelné)"
                   value={notes}

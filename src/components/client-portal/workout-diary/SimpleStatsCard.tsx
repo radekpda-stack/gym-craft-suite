@@ -66,8 +66,22 @@ export function SimpleStatsCard({ workoutDates }: SimpleStatsCardProps) {
     return weeks;
   }, [workoutDates]);
 
+  // Motivational messages
+  const getStreakMessage = () => {
+    if (stats.streak >= 7) return '🔥 Týdenní série! Skvělá práce!';
+    if (stats.streak >= 3) return '💪 Jsi na dobré cestě!';
+    if (stats.streak > 0) return 'Pokračuj v sérii!';
+    return 'Začni novou sérii';
+  };
+
+  const getMonthMessage = () => {
+    if (stats.thisMonthCount >= 10) return '🏆 Výborný měsíc!';
+    if (stats.thisMonthCount >= 5) return '👍 Dobrá práce!';
+    return 'Počet záznamů tento měsíc';
+  };
+
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardContent className="pt-4 pb-4">
         <div className="flex items-center justify-between gap-4">
           {/* Stats */}
@@ -75,32 +89,45 @@ export function SimpleStatsCard({ workoutDates }: SimpleStatsCardProps) {
             {/* Streak */}
             <div className="flex items-center gap-2">
               <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center",
+                "w-12 h-12 rounded-xl flex items-center justify-center",
                 stats.streak > 0 ? "bg-orange-500/10 text-orange-500" : "bg-muted text-muted-foreground"
               )}>
-                <Flame className="w-5 h-5" />
+                <Flame className="w-6 h-6" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{stats.streak}</div>
-                <div className="text-xs text-muted-foreground">dní v řadě</div>
+                <div className="text-xs text-muted-foreground leading-tight">
+                  dní v řadě
+                </div>
+                <div className="text-[10px] text-muted-foreground/70 hidden sm:block">
+                  {getStreakMessage()}
+                </div>
               </div>
             </div>
 
             {/* This month */}
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <Trophy className="w-5 h-5" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Trophy className="w-6 h-6" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{stats.thisMonthCount}</div>
-                <div className="text-xs text-muted-foreground">tento měsíc</div>
+                <div className="text-xs text-muted-foreground leading-tight">
+                  tento měsíc
+                </div>
+                <div className="text-[10px] text-muted-foreground/70 hidden sm:block">
+                  {getMonthMessage()}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Activity grid */}
           <div className="hidden sm:flex flex-col gap-0.5">
-            <div className="flex gap-0.5 mb-1">
+            <div className="text-[10px] text-muted-foreground mb-1 text-center font-medium">
+              Posledních 5 týdnů
+            </div>
+            <div className="flex gap-0.5 mb-0.5">
               {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((day) => (
                 <div key={day} className="w-4 h-3 text-[9px] text-muted-foreground text-center">
                   {day}
@@ -113,7 +140,7 @@ export function SimpleStatsCard({ workoutDates }: SimpleStatsCardProps) {
                   <div
                     key={dayIdx}
                     className={cn(
-                      "w-4 h-4 rounded-sm",
+                      "w-4 h-4 rounded-sm transition-colors",
                       hasWorkout 
                         ? "bg-primary" 
                         : "bg-muted"
