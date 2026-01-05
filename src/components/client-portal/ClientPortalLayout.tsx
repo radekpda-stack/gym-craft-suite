@@ -23,6 +23,7 @@ import { CredentialsReminderDialog } from './CredentialsReminderDialog';
 import { LogoutConfirmDialog } from './common/LogoutConfirmDialog';
 import { useClientPortalDemo } from '@/hooks/useClientPortalDemo';
 import { DemoModeBanner } from './DemoModeBanner';
+import { AvatarCelebration } from './celebrations';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -196,11 +197,13 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b md:hidden">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-bold text-primary">
-                {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
-              </span>
-            </div>
+            <AvatarCelebration>
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">
+                  {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
+                </span>
+              </div>
+            </AvatarCelebration>
             <div>
               <p className="text-sm font-medium">{effectiveClientProfile?.name ?? 'Klient'}</p>
             </div>
@@ -249,11 +252,13 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
 
         <div className="flex flex-col items-center gap-4">
           {!isDemo && <ClientNotificationCenter />}
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-bold text-primary">
-              {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
-            </span>
-          </div>
+          <AvatarCelebration>
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-sm font-bold text-primary">
+                {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
+              </span>
+            </div>
+          </AvatarCelebration>
           {!isDemo && (
             <LogoutConfirmDialog 
               onConfirm={signOut}
