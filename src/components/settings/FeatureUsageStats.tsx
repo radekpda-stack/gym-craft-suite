@@ -3,6 +3,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFeatureStats, ALL_FEATURES, CATEGORY_LABELS, StatsPeriod, useClearFeatureStats } from '@/hooks/useFeatureStats';
 import { useClientPortalAnalyticsStats, useInactivePortalClients, PortalStatsPeriod } from '@/hooks/useClientPortalAnalyticsStats';
 import { useFormAnalyticsStats, FormStatsPeriod } from '@/hooks/useFormAnalyticsStats';
+import { useClearAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { AdvancedAnalytics } from './AdvancedAnalytics';
 
 const COLORS = [
   'hsl(var(--primary))',
@@ -145,9 +147,12 @@ export function FeatureUsageStats() {
     toast.success('Statistiky exportovány');
   };
 
+  const clearAdvanced = useClearAdvancedAnalytics();
+
   const handleClear = async () => {
     try {
       await clearStats();
+      await clearAdvanced();
       toast.success('Statistiky vymazány');
     } catch (error) {
       toast.error('Chyba při mazání statistik');
@@ -271,14 +276,19 @@ export function FeatureUsageStats() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-4">
+        <TabsList className="grid w-full grid-cols-7 mb-4">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
+          <TabsTrigger value="advanced">Rozšířené</TabsTrigger>
           <TabsTrigger value="portal">Klient. zóna</TabsTrigger>
           <TabsTrigger value="forms">Formuláře</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="details">Detail</TabsTrigger>
           <TabsTrigger value="unused">Nepoužívané</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="advanced">
+          <AdvancedAnalytics />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Trend Chart */}

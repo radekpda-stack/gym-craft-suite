@@ -4092,6 +4092,69 @@ export type Database = {
           },
         ]
       }
+      feature_sessions: {
+        Row: {
+          active_duration_ms: number | null
+          click_count: number | null
+          created_at: string
+          duration_ms: number | null
+          ended_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          exit_to: string | null
+          exit_type: string | null
+          feature_category: string
+          feature_name: string
+          id: string
+          input_count: number | null
+          metadata: Json | null
+          scroll_depth_percent: number | null
+          session_id: string | null
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          active_duration_ms?: number | null
+          click_count?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          exit_to?: string | null
+          exit_type?: string | null
+          feature_category: string
+          feature_name: string
+          id?: string
+          input_count?: number | null
+          metadata?: Json | null
+          scroll_depth_percent?: number | null
+          session_id?: string | null
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          active_duration_ms?: number | null
+          click_count?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          exit_to?: string | null
+          exit_type?: string | null
+          feature_category?: string
+          feature_name?: string
+          id?: string
+          input_count?: number | null
+          metadata?: Json | null
+          scroll_depth_percent?: number | null
+          session_id?: string | null
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feature_usage: {
         Row: {
           active_duration_ms: number | null
@@ -4445,6 +4508,69 @@ export type Database = {
           synonyms?: string[] | null
           usage_count?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      interaction_events: {
+        Row: {
+          created_at: string
+          element_id: string | null
+          element_path: string | null
+          element_text: string | null
+          element_type: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          route: string
+          route_params: Json | null
+          session_id: string | null
+          time_on_page_ms: number | null
+          timestamp: string
+          user_id: string
+          viewport_height: number | null
+          viewport_width: number | null
+          x_position: number | null
+          y_position: number | null
+        }
+        Insert: {
+          created_at?: string
+          element_id?: string | null
+          element_path?: string | null
+          element_text?: string | null
+          element_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          route: string
+          route_params?: Json | null
+          session_id?: string | null
+          time_on_page_ms?: number | null
+          timestamp?: string
+          user_id: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+          x_position?: number | null
+          y_position?: number | null
+        }
+        Update: {
+          created_at?: string
+          element_id?: string | null
+          element_path?: string | null
+          element_text?: string | null
+          element_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          route?: string
+          route_params?: Json | null
+          session_id?: string | null
+          time_on_page_ms?: number | null
+          timestamp?: string
+          user_id?: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+          x_position?: number | null
+          y_position?: number | null
         }
         Relationships: []
       }
@@ -5380,6 +5506,63 @@ export type Database = {
           },
         ]
       }
+      performance_metrics: {
+        Row: {
+          cls: number | null
+          connection_type: string | null
+          created_at: string
+          device_type: string | null
+          dom_ready_ms: number | null
+          fcp_ms: number | null
+          fid_ms: number | null
+          id: string
+          lcp_ms: number | null
+          page_load_ms: number | null
+          route: string
+          session_id: string | null
+          time_to_interactive_ms: number | null
+          timestamp: string
+          ttfb_ms: number | null
+          user_id: string | null
+        }
+        Insert: {
+          cls?: number | null
+          connection_type?: string | null
+          created_at?: string
+          device_type?: string | null
+          dom_ready_ms?: number | null
+          fcp_ms?: number | null
+          fid_ms?: number | null
+          id?: string
+          lcp_ms?: number | null
+          page_load_ms?: number | null
+          route: string
+          session_id?: string | null
+          time_to_interactive_ms?: number | null
+          timestamp?: string
+          ttfb_ms?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          cls?: number | null
+          connection_type?: string | null
+          created_at?: string
+          device_type?: string | null
+          dom_ready_ms?: number | null
+          fcp_ms?: number | null
+          fid_ms?: number | null
+          id?: string
+          lcp_ms?: number | null
+          page_load_ms?: number | null
+          route?: string
+          session_id?: string | null
+          time_to_interactive_ms?: number | null
+          timestamp?: string
+          ttfb_ms?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       plan_days: {
         Row: {
           created_at: string | null
@@ -6060,6 +6243,60 @@ export type Database = {
         }
         Relationships: []
       }
+      rage_clicks: {
+        Row: {
+          click_count: number
+          created_at: string
+          element_id: string | null
+          element_path: string | null
+          element_text: string | null
+          element_type: string | null
+          id: string
+          previous_actions: Json | null
+          route: string
+          session_id: string | null
+          time_span_ms: number
+          timestamp: string
+          user_id: string
+          x_position: number | null
+          y_position: number | null
+        }
+        Insert: {
+          click_count: number
+          created_at?: string
+          element_id?: string | null
+          element_path?: string | null
+          element_text?: string | null
+          element_type?: string | null
+          id?: string
+          previous_actions?: Json | null
+          route: string
+          session_id?: string | null
+          time_span_ms: number
+          timestamp?: string
+          user_id: string
+          x_position?: number | null
+          y_position?: number | null
+        }
+        Update: {
+          click_count?: number
+          created_at?: string
+          element_id?: string | null
+          element_path?: string | null
+          element_text?: string | null
+          element_type?: string | null
+          id?: string
+          previous_actions?: Json | null
+          route?: string
+          session_id?: string | null
+          time_span_ms?: number
+          timestamp?: string
+          user_id?: string
+          x_position?: number | null
+          y_position?: number | null
+        }
+        Relationships: []
+      }
       red_flag_resolutions: {
         Row: {
           client_id: string
@@ -6305,6 +6542,60 @@ export type Database = {
             referencedColumns: ["group_id"]
           },
         ]
+      }
+      scroll_analytics: {
+        Row: {
+          content_height: number | null
+          created_at: string
+          id: string
+          max_scroll_percent: number | null
+          route: string
+          scroll_count: number | null
+          scroll_up_count: number | null
+          session_id: string | null
+          time_to_100_percent_ms: number | null
+          time_to_25_percent_ms: number | null
+          time_to_50_percent_ms: number | null
+          time_to_75_percent_ms: number | null
+          timestamp: string
+          user_id: string
+          viewport_height: number | null
+        }
+        Insert: {
+          content_height?: number | null
+          created_at?: string
+          id?: string
+          max_scroll_percent?: number | null
+          route: string
+          scroll_count?: number | null
+          scroll_up_count?: number | null
+          session_id?: string | null
+          time_to_100_percent_ms?: number | null
+          time_to_25_percent_ms?: number | null
+          time_to_50_percent_ms?: number | null
+          time_to_75_percent_ms?: number | null
+          timestamp?: string
+          user_id: string
+          viewport_height?: number | null
+        }
+        Update: {
+          content_height?: number | null
+          created_at?: string
+          id?: string
+          max_scroll_percent?: number | null
+          route?: string
+          scroll_count?: number | null
+          scroll_up_count?: number | null
+          session_id?: string | null
+          time_to_100_percent_ms?: number | null
+          time_to_25_percent_ms?: number | null
+          time_to_50_percent_ms?: number | null
+          time_to_75_percent_ms?: number | null
+          timestamp?: string
+          user_id?: string
+          viewport_height?: number | null
+        }
+        Relationships: []
       }
       session_completion_log: {
         Row: {
@@ -7942,6 +8233,57 @@ export type Database = {
           device_name?: string | null
           id?: string
           last_seen?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_journeys: {
+        Row: {
+          abandoned_at: string | null
+          completed_at: string | null
+          completed_steps: number | null
+          created_at: string
+          id: string
+          journey_name: string | null
+          journey_type: string | null
+          metadata: Json | null
+          session_id: string | null
+          started_at: string
+          steps: Json
+          success: boolean | null
+          total_steps: number | null
+          user_id: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          completed_at?: string | null
+          completed_steps?: number | null
+          created_at?: string
+          id?: string
+          journey_name?: string | null
+          journey_type?: string | null
+          metadata?: Json | null
+          session_id?: string | null
+          started_at: string
+          steps?: Json
+          success?: boolean | null
+          total_steps?: number | null
+          user_id: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          completed_at?: string | null
+          completed_steps?: number | null
+          created_at?: string
+          id?: string
+          journey_name?: string | null
+          journey_type?: string | null
+          metadata?: Json | null
+          session_id?: string | null
+          started_at?: string
+          steps?: Json
+          success?: boolean | null
+          total_steps?: number | null
           user_id?: string
         }
         Relationships: []
