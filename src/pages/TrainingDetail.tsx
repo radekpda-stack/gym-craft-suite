@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -122,6 +122,13 @@ export default function TrainingDetail() {
   const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
   const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
   const { data: trainingSummary } = useTrainingSummary(completedSessionId || undefined, training?.client_id);
+
+  // Auto-enable price split when there are 2+ participants
+  useEffect(() => {
+    // Count participants: existing participants + 1 (main client)
+    const totalParticipants = existingParticipants.length + 1;
+    setUsePriceSplit(totalParticipants >= 2);
+  }, [existingParticipants.length]);
 
   if (trainingLoading) {
     return <TrainingDetailSkeleton />;
