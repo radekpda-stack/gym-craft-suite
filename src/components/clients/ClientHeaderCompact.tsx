@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Globe,
   FileText,
+  Settings,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,7 @@ import { toast } from '@/hooks/use-toast';
 import { ClientDaysSinceBadge } from './ClientDaysSinceBadge';
 import { ClientStreakBadge } from './ClientStreakBadge';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
+import { PdfSettingsDialog } from '@/components/credit/PdfSettingsDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -128,25 +130,34 @@ export function ClientHeaderCompact({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
-            {/* Export PDF button - next to name */}
-            <CreditStatementDialog
-              clientId={client.id}
-              clientName={client.name}
-              clientEmail={client.email || undefined}
-              clientPhone={client.phone || undefined}
-              isSharedBudget={!!budgetGroup}
-              budgetGroupId={budgetGroup?.group_id}
-              trigger={
-                <Button
-                  variant="outline"
-                  size="xs"
-                  className="gap-1.5 text-xs font-medium shrink-0"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  PDF výpis
-                </Button>
-              }
-            />
+            {/* Export PDF button + settings - next to name */}
+            <div className="flex items-center gap-1">
+              <CreditStatementDialog
+                clientId={client.id}
+                clientName={client.name}
+                clientEmail={client.email || undefined}
+                clientPhone={client.phone || undefined}
+                isSharedBudget={!!budgetGroup}
+                budgetGroupId={budgetGroup?.group_id}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="gap-1.5 text-xs font-medium shrink-0"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    PDF výpis
+                  </Button>
+                }
+              />
+              <PdfSettingsDialog
+                trigger={
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                }
+              />
+            </div>
           </div>
           
           {/* Age + Birth year */}
