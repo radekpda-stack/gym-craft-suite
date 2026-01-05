@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Tag, Search, Check, AlertTriangle, Dumbbell } from "lucide-react";
@@ -40,6 +40,7 @@ import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
 import { useSharedBudgetBalance } from "@/hooks/useSharedBudgetBalance";
+import { useFormTracking } from "@/hooks/useFormTracking";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
@@ -81,6 +82,11 @@ export function EnhancedTrainingForm({
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [priceOverrideEnabled, setPriceOverrideEnabled] = useState(false);
+  
+  // Form analytics tracking
+  const { getFieldProps, completeForm, trackValidationErrors } = useFormTracking({
+    formType: 'training_form',
+  });
   
   // Helper to format date as local datetime string - set to current hour with :00 minutes
   const getLocalDateTimeString = () => {
@@ -148,6 +154,7 @@ export function EnhancedTrainingForm({
       price_override: finalPrice,
     };
     await onSubmit(submitData, selectedTagIds);
+    completeForm(); // Track form completion
   };
 
   // Credit status indicator

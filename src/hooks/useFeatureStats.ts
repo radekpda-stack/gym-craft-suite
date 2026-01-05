@@ -65,6 +65,7 @@ export const ALL_FEATURES = [
   { name: 'page_view_challenges', category: 'navigation', label: 'Výzvy' },
   { name: 'page_view_exercises', category: 'navigation', label: 'Cviky' },
   { name: 'page_view_exercise_detail', category: 'navigation', label: 'Detail cviku' },
+  { name: 'page_view_tests', category: 'navigation', label: 'Testy' },
   { name: 'page_view_nutrition_campaigns', category: 'navigation', label: 'Nutriční kampaně' },
   { name: 'page_view_nutrition_overview', category: 'navigation', label: 'Přehled stravy' },
   { name: 'page_view_client_portal_admin', category: 'navigation', label: 'Admin klientské zóny' },
@@ -72,6 +73,9 @@ export const ALL_FEATURES = [
   { name: 'page_view_app_usage_stats', category: 'navigation', label: 'Statistika využívání' },
   { name: 'page_view_business_analytics', category: 'navigation', label: 'Byznys analytika' },
   { name: 'page_view_capacity_stats', category: 'navigation', label: 'Statistiky kapacity' },
+  { name: 'page_view_schedule', category: 'navigation', label: 'Rozvrh' },
+  { name: 'page_view_nutrition', category: 'navigation', label: 'Strava' },
+  { name: 'page_view_nutrition_client_detail', category: 'navigation', label: 'Strava - detail klienta' },
   
   // ==============================
   // CALENDAR
@@ -784,6 +788,20 @@ export function useClearFeatureStats() {
       .eq('user_id', user.id);
     if (formError) throw formError;
 
+    // Clear advanced analytics tables
+    const advancedTables = [
+      'interaction_events',
+      'feature_sessions',
+      'user_journeys',
+      'scroll_analytics',
+      'rage_clicks',
+      'performance_metrics',
+    ];
+    
+    for (const table of advancedTables) {
+      await (supabase.from(table as any) as any).delete().eq('user_id', user.id);
+    }
+
     // Refresh UI
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-top'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-categories'] });
@@ -794,5 +812,12 @@ export function useClearFeatureStats() {
     await queryClient.invalidateQueries({ queryKey: ['client-portal-analytics-detailed'] });
     await queryClient.invalidateQueries({ queryKey: ['inactive-portal-clients'] });
     await queryClient.invalidateQueries({ queryKey: ['form-analytics-stats'] });
+    await queryClient.invalidateQueries({ queryKey: ['globally-tracked-features'] });
+    await queryClient.invalidateQueries({ queryKey: ['click-analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['rage-click-analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['scroll-analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-time-analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['journey-analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['performance-analytics'] });
   };
 }

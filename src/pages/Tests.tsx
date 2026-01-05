@@ -13,6 +13,7 @@ import { useTestStats } from '@/hooks/useTestStats';
 import { TestCard } from '@/components/tests/TestCard';
 import { TestHistoryTable } from '@/components/tests/TestHistoryTable';
 import { NewTestDialog } from '@/components/tests/NewTestDialog';
+import { usePageTracking } from '@/hooks/useFeatureTracking';
 import type { TestDefinition, TestDueStatus } from '@/types/tests';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ const categoryLabels: Record<string, string> = {
 const categoryOrder = ['cardio', 'strength', 'endurance', 'grip_core', 'mobility'];
 
 export default function Tests() {
+  usePageTracking('tests');
   const navigate = useNavigate();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [newTestOpen, setNewTestOpen] = useState(false);
