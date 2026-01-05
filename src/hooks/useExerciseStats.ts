@@ -279,8 +279,23 @@ export function useExerciseStats(exerciseId: string | null) {
         : null;
       const bestWatts = allWatts.length > 0 ? Math.max(...allWatts) : null;
 
-      // Extended cardio stats - Pace
-      const allPaces = entries.filter((e) => (e as any).pace_sec_per_500m && (e as any).pace_sec_per_500m > 0).map((e) => (e as any).pace_sec_per_500m as number);
+      // Extended cardio stats - Pace (calculate from time/distance if not stored)
+      const allPaces = entries
+        .map((e) => {
+          // Use stored pace if available
+          if ((e as any).pace_sec_per_500m && (e as any).pace_sec_per_500m > 0) {
+            return (e as any).pace_sec_per_500m as number;
+          }
+          // Calculate pace from time and distance
+          const timeMs = (e as any).time_ms || (e.time_seconds ? e.time_seconds * 1000 : null);
+          const distance = (e as any).distance_meters;
+          if (timeMs && distance && distance > 0) {
+            return (timeMs / 1000 / distance) * 500; // pace per 500m in seconds
+          }
+          return null;
+        })
+        .filter((p): p is number => p !== null && p > 0);
+      
       const averagePace500m = allPaces.length > 0 
         ? Math.round(allPaces.reduce((a, b) => a + b, 0) / allPaces.length)
         : null;
