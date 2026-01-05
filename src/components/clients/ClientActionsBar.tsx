@@ -7,6 +7,7 @@ import {
   FileText,
   Check,
   Copy,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +20,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
+import { PdfSettingsDialog } from '@/components/credit/PdfSettingsDialog';
 import { Client } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateNutritionLogSession } from '@/hooks/useNutritionLog';
@@ -170,22 +172,31 @@ export function ClientActionsBar({
           <span className="sm:hidden">Pozn.</span>
         </Button>
         
-        {/* Statement/PDF */}
-        <CreditStatementDialog
-          clientId={client.id}
-          clientName={client.name}
-          clientEmail={client.email || undefined}
-          clientPhone={client.phone || undefined}
-          isSharedBudget={isSharedBudget}
-          budgetGroupId={budgetGroupId}
-          trigger={
-            <Button variant="outline" className="gap-2 touch-target">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Vyúčtování</span>
-              <span className="sm:hidden">PDF</span>
-            </Button>
-          }
-        />
+        {/* Statement/PDF with Settings */}
+        <div className="flex gap-1">
+          <CreditStatementDialog
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email || undefined}
+            clientPhone={client.phone || undefined}
+            isSharedBudget={isSharedBudget}
+            budgetGroupId={budgetGroupId}
+            trigger={
+              <Button variant="outline" className="gap-2 touch-target flex-1">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Vyúčtování</span>
+                <span className="sm:hidden">PDF</span>
+              </Button>
+            }
+          />
+          <PdfSettingsDialog
+            trigger={
+              <Button variant="outline" size="icon" className="touch-target shrink-0">
+                <Settings className="w-4 h-4" />
+              </Button>
+            }
+          />
+        </div>
       </div>
       
       {/* Generated Link Display */}

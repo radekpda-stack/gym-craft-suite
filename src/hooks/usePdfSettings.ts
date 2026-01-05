@@ -3,12 +3,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { Json } from "@/integrations/supabase/types";
 
+export type FontFamily = 'roboto' | 'helvetica' | 'times' | 'courier';
+export type FontSize = 'small' | 'medium' | 'large';
+
 export interface PdfSettings {
+  // Content visibility
   showLogo: boolean;
   showCompanyInfo: boolean;
   showSummary: boolean;
   showClientContact: boolean;
   customFooter: string;
+  
+  // Typography
+  fontFamily: FontFamily;
+  fontSize: FontSize;
+  
+  // Colors
+  useThemeColors: boolean;
+  primaryColor: string;
+  textColor: string;
+  tableHeaderColor: string;
+  
+  // Document structure
+  customTitle: string;
 }
 
 const defaultPdfSettings: PdfSettings = {
@@ -17,6 +34,13 @@ const defaultPdfSettings: PdfSettings = {
   showSummary: true,
   showClientContact: true,
   customFooter: "",
+  fontFamily: 'roboto',
+  fontSize: 'medium',
+  useThemeColors: true,
+  primaryColor: '#1e293b',
+  textColor: '#0f172a',
+  tableHeaderColor: '#0f172a',
+  customTitle: '',
 };
 
 export function usePdfSettings() {
