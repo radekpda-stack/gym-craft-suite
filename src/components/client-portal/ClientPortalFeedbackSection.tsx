@@ -348,24 +348,42 @@ export function ClientPortalFeedbackSection({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardList className="w-5 h-5" />
-          Zpětná vazba čeká na vyplnění
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <AnimatePresence>
-            {availableFeedbacks.map((feedback) => (
-              <motion.div
-                key={feedback.training_session_id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors"
-              >
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="relative overflow-hidden border-2 border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent shadow-lg shadow-amber-500/10">
+        {/* Animated pulse ring */}
+        <div className="absolute -top-1 -right-1">
+          <span className="relative flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+          </span>
+        </div>
+        
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <motion.div
+              animate={{ rotate: [0, -10, 10, -10, 0] }}
+              transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+            >
+              <ClipboardList className="w-5 h-5" />
+            </motion.div>
+            Máš nevyplněnou zpětnou vazbu!
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <AnimatePresence>
+              {availableFeedbacks.map((feedback) => (
+                <motion.div
+                  key={feedback.training_session_id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="p-4 rounded-lg border border-amber-500/30 bg-card/80 backdrop-blur-sm hover:border-amber-500/50 transition-all hover:shadow-md"
+                >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">
@@ -399,5 +417,6 @@ export function ClientPortalFeedbackSection({
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
