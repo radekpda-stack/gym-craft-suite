@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { X, Plus, Loader2, AlertCircle, MessageSquare } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Plus, Loader2, AlertCircle, MessageSquare, Hand, Activity } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Form,
@@ -57,6 +58,8 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
       gender: defaultValues?.gender || undefined,
       createdAt: defaultValues?.created_at ? defaultValues.created_at.split('T')[0] : "",
       feedbackEnabled: defaultValues?.feedback_enabled !== false,
+      handedness: (defaultValues?.handedness as 'left' | 'right' | 'ambidextrous') || undefined,
+      sports_history: defaultValues?.sports_history || "",
     },
   });
 
@@ -78,6 +81,8 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
         gender: defaultValues.gender || undefined,
         createdAt: defaultValues.created_at ? defaultValues.created_at.split('T')[0] : "",
         feedbackEnabled: defaultValues.feedback_enabled !== false,
+        handedness: (defaultValues.handedness as 'left' | 'right' | 'ambidextrous') || undefined,
+        sports_history: defaultValues.sports_history || "",
       });
     }
   }, [defaultValues, form]);
@@ -323,6 +328,61 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
             </div>
           )}
         </div>
+
+        {/* Handedness & Sports History */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="handedness"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Hand className="w-4 h-4" />
+                  Dominantní ruka
+                </FormLabel>
+                <Select
+                  value={field.value || 'none'}
+                  onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="Vyberte" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nevybráno</SelectItem>
+                    <SelectItem value="right">Pravák</SelectItem>
+                    <SelectItem value="left">Levák</SelectItem>
+                    <SelectItem value="ambidextrous">Obouruký</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="sports_history"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Sportovní historie
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Např. 10 let fotbal, 3 roky plavání..."
+                  className="bg-secondary border-border min-h-[80px]"
+                  {...field}
+                  value={field.value || ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

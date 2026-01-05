@@ -53,11 +53,20 @@ export const clientFormSchema = z.object({
   feedbackEnabled: z
     .boolean()
     .default(true),
-  // Extended fields from diagnostics
-  handedness: z.string().optional().nullable(),
+  // Extended fields
+  handedness: z
+    .enum(["left", "right", "ambidextrous"])
+    .optional()
+    .nullable(),
+  sports_history: z
+    .string()
+    .trim()
+    .max(2000, { message: "Sportovní historie může mít maximálně 2000 znaků" })
+    .optional()
+    .nullable(),
+  // Extended fields from diagnostics (legacy)
   occupation: z.string().optional().nullable(),
   sitting_hours_daily: z.number().optional().nullable(),
-  sports_history: z.string().optional().nullable(),
   current_activities: z.array(z.string()).optional().nullable(),
   sleep_hours: z.number().optional().nullable(),
   stress_level: z.number().optional().nullable(),
