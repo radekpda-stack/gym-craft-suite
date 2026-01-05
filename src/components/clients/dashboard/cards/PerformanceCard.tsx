@@ -10,6 +10,7 @@ import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
+import { ClientPaceTrendCard } from '@/components/clients/ClientPaceTrendCard';
 
 interface PerformanceCardProps {
   clientId: string;
@@ -63,6 +64,10 @@ export function PerformanceCard({
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Osobní rekordy</h4>
           <ClientPRsCard clientId={clientId} />
+        </div>
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">Vývoj tempa (kardio)</h4>
+          <ClientPaceTrendCard clientId={clientId} />
         </div>
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Analytika tréninků</h4>
