@@ -283,29 +283,48 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           </CardHeader>
           <CardContent>
             {/* Bar chart for time */}
-            <div className="h-48 mb-4">
+            <div className="h-52 mb-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={timeChartData} layout="vertical">
+                <BarChart data={timeChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <defs>
+                    {timeChartData.map((_, index) => (
+                      <linearGradient key={`gradient-time-${index}`} id={`gradientTime${index}`} x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <XAxis 
                     type="number" 
-                    tick={{ fontSize: 11 }} 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
                     tickFormatter={(v) => formatTimeDisplay(v)}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} 
+                    width={90}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
                     formatter={(value: number, _, props) => [formatTimeDisplay(value), props.payload.fullName]}
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                   />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
                     {timeChartData.map((entry, index) => (
                       <Cell 
                         key={entry.clientId} 
-                        fill={COLORS[index % COLORS.length]}
-                        className="cursor-pointer"
+                        fill={`url(#gradientTime${index})`}
+                        className="cursor-pointer transition-opacity hover:opacity-80"
                         onClick={() => navigate(`/clients/${entry.clientId}`)}
                       />
                     ))}
@@ -388,25 +407,48 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           </CardHeader>
           <CardContent>
             {/* Bar chart */}
-            <div className="h-48 mb-4">
+            <div className="h-52 mb-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={strengthChartData} layout="vertical">
-                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v} kg`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                <BarChart data={strengthChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <defs>
+                    {strengthChartData.map((_, index) => (
+                      <linearGradient key={`gradient-strength-${index}`} id={`gradientStrength${index}`} x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <XAxis 
+                    type="number" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                    tickFormatter={(v) => `${v} kg`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} 
+                    width={90}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
                     formatter={(value: number, _, props) => [`${value} kg`, props.payload.fullName]}
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                   />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
                     {strengthChartData.map((entry, index) => (
                       <Cell 
                         key={entry.clientId} 
-                        fill={COLORS[index % COLORS.length]}
-                        className="cursor-pointer"
+                        fill={`url(#gradientStrength${index})`}
+                        className="cursor-pointer transition-opacity hover:opacity-80"
                         onClick={() => navigate(`/clients/${entry.clientId}`)}
                       />
                     ))}
