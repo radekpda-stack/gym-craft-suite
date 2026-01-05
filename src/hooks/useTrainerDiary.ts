@@ -3,6 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
+// Trainer's self-profile client_id
+const TRAINER_SELF_CLIENT_ID = "29d2692d-ece4-43f5-a770-fe46bc592917";
+
+// Map activity types to exercise names for cardio_entries
+const ACTIVITY_TO_EXERCISE: Record<string, string> = {
+  running: 'Běh',
+  cycling: 'Kolo',
+  swimming: 'Plavání',
+  hiit: 'HIIT',
+  walking: 'Chůze',
+  hiking: 'Turistika',
+  strength: 'Síla',
+  other: 'Jiné',
+};
 export interface TrainerDiaryEntry {
   id: string;
   user_id: string;
@@ -94,6 +108,7 @@ export function useCreateDiaryEntry() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // 1. Create the diary entry
       const { data, error } = await supabase
         .from('trainer_workout_diary')
         .insert([{
@@ -104,11 +119,58 @@ export function useCreateDiaryEntry() {
         .single();
 
       if (error) throw error;
+
+      // 2. Also create a cardio_entries record for the trainer's self-profile
+      // This syncs the data with the exercise database for statistics
+      if (entry.activity_type && entry.activity_type !== 'strength') {
+        const exerciseName = ACTIVITY_TO_EXERCISE[entry.activity_type] || entry.activity_type;
+        
+        // Calculate pace per km if not provided but we have time and distance
+        let pacePerKm = entry.pace_per_km;
+        if (!pacePerKm && entry.duration_seconds && entry.distance_meters && entry.distance_meters > 0) {
+          pacePerKm = (entry.duration_seconds / entry.distance_meters) * 1000;
+        }
+        
+        // Calculate average speed if not provided
+        let avgSpeedKmh = entry.speed_kmh;
+        if (!avgSpeedKmh && entry.duration_seconds && entry.distance_meters && entry.duration_seconds > 0) {
+          avgSpeedKmh = (entry.distance_meters / 1000) / (entry.duration_seconds / 3600);
+        }
+
+        const cardioEntry = {
+          client_id: TRAINER_SELF_CLIENT_ID,
+          user_id: user.id,
+          exercise_name: exerciseName,
+          date: entry.date,
+          duration_seconds: entry.duration_seconds || 0,
+          distance_meters: entry.distance_meters,
+          avg_heart_rate: entry.avg_heart_rate,
+          max_heart_rate: entry.max_heart_rate,
+          avg_speed_kmh: avgSpeedKmh,
+          notes: entry.notes,
+          is_test: false,
+          is_pr: false, // We could check for PR here if needed
+        };
+
+        const { error: cardioError } = await supabase
+          .from('cardio_entries')
+          .insert([cardioEntry]);
+
+        if (cardioError) {
+          console.error('Failed to create cardio entry for trainer:', cardioError);
+          // Don't throw - diary entry was created successfully
+        } else {
+          console.log('Created cardio entry for trainer self-profile');
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer-diary-entries'] });
-      toast.success('Záznam byl úspěšně uložen');
+      queryClient.invalidateQueries({ queryKey: ['cardio-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['cardio-stats'] });
+      toast.success('Záznam byl úspěšně uložen a synchronizován do statistik');
     },
     onError: (error) => {
       console.error('Failed to create diary entry:', error);
