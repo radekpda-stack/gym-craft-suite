@@ -475,7 +475,7 @@ export function useUpdateTrainingSession() {
         clientId = oldTraining.client_id;
         shouldSyncWorkout = true;
         
-        // Only deduct credit if trainingPrices provided (credit payment)
+        // Calculate price based on participant count - always set final_price
         if (trainingPrices) {
           const participantCount = input.participant_count || oldTraining.participant_count || 1;
           
@@ -487,37 +487,47 @@ export function useUpdateTrainingSession() {
             price = trainingPrices["1"];
           }
 
-          // Update payment status to paid_credit when completing with credit
+          // Always update final_price when completing training
+          // Payment status and method are set based on input or default to credit
+          const paymentStatus = input.payment_status || "paid_credit";
+          const paymentMethod = input.payment_method || "credit";
+          const shouldDeductCredit = paymentStatus === "paid_credit";
+
           await supabase
             .from("training_sessions")
             .update({
-              payment_status: "paid_credit",
+              payment_status: paymentStatus,
               final_price: price,
-              payment_method: "credit",
+              payment_method: paymentMethod,
             })
             .eq("id", id);
 
-          // Create credit transaction
-          const { error: transactionError } = await supabase
-            .from("credit_transactions")
-            .insert({
-              client_id: oldTraining.client_id,
-              amount: -price,
-              type: "training",
-              description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
-              training_session_id: id,
-              user_id: user.id,
-            });
+          // Only create credit transaction if paying by credit
+          if (shouldDeductCredit) {
+            const { error: transactionError } = await supabase
+              .from("credit_transactions")
+              .insert({
+                client_id: oldTraining.client_id,
+                amount: -price,
+                type: "training",
+                description: `Trénink (${participantCount} ${participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'})`,
+                training_session_id: id,
+                user_id: user.id,
+              });
 
-          if (transactionError) {
-            console.error("Error creating credit transaction:", transactionError);
-            throw transactionError;
+            if (transactionError) {
+              console.error("Error creating credit transaction:", transactionError);
+              throw transactionError;
+            }
+
+            // Use atomic credit update to prevent race conditions
+            const { balance } = await applyCreditDelta(oldTraining.client_id, -price);
+            newBalance = balance;
+            creditDeducted = true;
           }
-
-          // Use atomic credit update to prevent race conditions
-          const { balance } = await applyCreditDelta(oldTraining.client_id, -price);
-          newBalance = balance;
-          creditDeducted = true;
+        } else if (input.final_price) {
+          // If no trainingPrices but final_price is in input, use that
+          price = input.final_price;
         }
         
         // Auto-sync workout entries to exercise_entries when training is completed
