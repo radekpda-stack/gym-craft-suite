@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -102,10 +102,19 @@ export default function ClientDetail() {
     lastLogin: portalAccess.last_portal_login,
   } : null;
 
-  // All transactions (personal + group if shared)
-  const allTransactions = isSharedBudget 
-    ? [...creditTransactions, ...sharedTransactions]
-    : creditTransactions;
+  // All transactions (personal + group if shared, deduplicated)
+  const allTransactions = useMemo(() => {
+    if (!isSharedBudget) return creditTransactions;
+    
+    // Combine and deduplicate by transaction ID
+    const combined = [...creditTransactions, ...sharedTransactions];
+    const seen = new Set<string>();
+    return combined.filter(t => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [isSharedBudget, creditTransactions, sharedTransactions]);
 
   const handleAddNote = async (note: string) => {
     const currentNotes = client.notes || '';
