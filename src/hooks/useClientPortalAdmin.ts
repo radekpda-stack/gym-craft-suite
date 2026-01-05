@@ -198,11 +198,12 @@ export function usePortalRecentActivity(limit = 10) {
           client_id,
           activity_type,
           activity_date,
+          created_at,
           metadata,
           client:clients(name)
         `)
         .in('client_id', clientIds)
-        .order('activity_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
