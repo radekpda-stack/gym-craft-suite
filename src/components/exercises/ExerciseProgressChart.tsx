@@ -239,21 +239,21 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                     stroke="url(#timeLineGradient)" 
                     strokeWidth={3} 
                     dot={(props) => {
-                      const { cx, cy, payload } = props;
-                      if (payload.isPR) {
-                        return (
-                          <circle 
-                            cx={cx} 
-                            cy={cy} 
-                            r={8} 
-                            fill={COLORS[0]} 
-                            stroke="hsl(var(--background))" 
-                            strokeWidth={3}
-                            filter="url(#glow)"
-                          />
-                        );
-                      }
-                      return null;
+                      const { cx, cy, payload, index } = props;
+                      // Show dot for all points, highlight PRs
+                      const isPR = payload.isPR;
+                      return (
+                        <circle 
+                          key={`dot-${index}`}
+                          cx={cx} 
+                          cy={cy} 
+                          r={isPR ? 8 : 4} 
+                          fill={COLORS[0]} 
+                          stroke="hsl(var(--background))" 
+                          strokeWidth={isPR ? 3 : 2}
+                          filter={isPR ? "url(#glow)" : undefined}
+                        />
+                      );
                     }}
                     activeDot={{ r: 6, fill: COLORS[0], stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                   />
@@ -318,20 +318,19 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                     stroke="url(#wattsGradient)" 
                     strokeWidth={3} 
                     dot={(props) => {
-                      const { cx, cy, payload } = props;
-                      if (payload.isPR) {
-                        return (
-                          <circle 
-                            cx={cx} 
-                            cy={cy} 
-                            r={8} 
-                            fill="hsl(var(--warning))" 
-                            stroke="hsl(var(--background))" 
-                            strokeWidth={3}
-                          />
-                        );
-                      }
-                      return null;
+                      const { cx, cy, payload, index } = props;
+                      const isPR = payload.isPR;
+                      return (
+                        <circle 
+                          key={`dot-watts-${index}`}
+                          cx={cx} 
+                          cy={cy} 
+                          r={isPR ? 8 : 4} 
+                          fill="hsl(var(--warning))" 
+                          stroke="hsl(var(--background))" 
+                          strokeWidth={isPR ? 3 : 2}
+                        />
+                      );
                     }}
                     activeDot={{ r: 6, fill: 'hsl(var(--warning))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                   />
@@ -396,7 +395,20 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       dataKey="weight" 
                       stroke="url(#weightGradient)" 
                       strokeWidth={3} 
-                      dot={false}
+                      dot={(props) => {
+                        const { cx, cy, index } = props;
+                        return (
+                          <circle 
+                            key={`dot-weight-${index}`}
+                            cx={cx} 
+                            cy={cy} 
+                            r={4} 
+                            fill={COLORS[0]} 
+                            stroke="hsl(var(--background))" 
+                            strokeWidth={2}
+                          />
+                        );
+                      }}
                       activeDot={{ r: 6, fill: COLORS[0], stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                     />
                   </LineChart>
