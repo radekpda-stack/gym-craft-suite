@@ -124,20 +124,12 @@ export function useClientPaceTrend(clientId?: string) {
         let paceDisplay: string;
 
         if (category === 'treadmill') {
-          // Pace per 1km for running
-          if (entry.pace_sec_per_km && entry.pace_sec_per_km > 0) {
-            paceNormalized = entry.pace_sec_per_km;
-          } else {
-            paceNormalized = (timeSeconds / distanceMeters) * 1000;
-          }
+          // Pace per 1km for running - always calculate from time and distance
+          paceNormalized = (timeSeconds / distanceMeters) * 1000;
           paceDisplay = formatPace(paceNormalized, '/km');
         } else {
-          // Pace per 500m for rower/skierg
-          if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) {
-            paceNormalized = entry.pace_sec_per_500m;
-          } else {
-            paceNormalized = (timeSeconds / distanceMeters) * 500;
-          }
+          // Pace per 500m for rower/skierg - always calculate from time and distance
+          paceNormalized = (timeSeconds / distanceMeters) * 500;
           paceDisplay = formatPace(paceNormalized, '/500m');
         }
 
