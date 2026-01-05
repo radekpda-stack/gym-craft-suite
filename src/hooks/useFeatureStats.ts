@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, startOfDay, format } from 'date-fns';
 
@@ -701,8 +701,18 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
 }
 
 export function useClearFeatureStats() {
+  const queryClient = useQueryClient();
+  
   return async () => {
     const { error } = await supabase.from('feature_usage').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) throw error;
+    
+    // Invalidate all feature stats queries to refresh the UI
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-top'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-categories'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-trend'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-session'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-dau'] });
+    await queryClient.invalidateQueries({ queryKey: ['feature-stats-success'] });
   };
 }
