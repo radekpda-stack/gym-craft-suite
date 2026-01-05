@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer } from 'lucide-react';
+import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer, ChevronDown, ChevronRight, ExternalLink, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExerciseClientComparisonProps {
   exerciseId: string;
@@ -23,6 +26,21 @@ const COLORS = [
   'hsl(var(--chart-5))',
 ];
 
+interface TimeEntry {
+  date: string;
+  timeSeconds: number;
+  isPR: boolean;
+}
+
+interface StrengthEntry {
+  date: string;
+  weight: number;
+  reps: number;
+  sets: number;
+  volume: number;
+  isPR: boolean;
+}
+
 function formatTimeDisplay(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60);
@@ -31,6 +49,7 @@ function formatTimeDisplay(seconds: number): string {
 
 export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseClientComparisonProps) {
   const navigate = useNavigate();
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-client-comparison', exerciseId],
@@ -59,7 +78,8 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           client_id,
           clients(id, name)
         `)
-        .eq('exercise_id', exerciseId);
+        .eq('exercise_id', exerciseId)
+        .order('date', { ascending: false });
 
       // Process clients for strength
       const clientStrengthMap = new Map<string, {
@@ -72,6 +92,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         lastDate: string;
         recentWeights: number[];
         olderWeights: number[];
+        entries: StrengthEntry[];
       }>();
 
       // Process clients for time-based
@@ -84,6 +105,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         prCount: number;
         lastDate: string;
         times: number[];
+        entries: TimeEntry[];
       }>();
 
       (entries || []).forEach(entry => {
@@ -91,7 +113,9 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         const clientName = (entry.clients as any)?.name || 'Neznámý';
         const weight = entry.weight_kg || 0;
         const timeSeconds = entry.time_seconds;
-        const volume = weight * (entry.reps || 0) * (entry.sets || 1);
+        const reps = entry.reps || 0;
+        const sets = entry.sets || 1;
+        const volume = weight * reps * sets;
 
         // Process strength data
         if (weight > 0) {
@@ -106,6 +130,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               lastDate: entry.date,
               recentWeights: [],
               olderWeights: [],
+              entries: [],
             });
           }
 
@@ -115,6 +140,16 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           client.entryCount++;
           if (entry.is_pr) client.prCount++;
           if (entry.date > client.lastDate) client.lastDate = entry.date;
+
+          // Store individual entry
+          client.entries.push({
+            date: entry.date,
+            weight,
+            reps,
+            sets,
+            volume,
+            isPR: entry.is_pr || false,
+          });
 
           if (client.recentWeights.length < 5) {
             client.recentWeights.push(weight);
@@ -135,6 +170,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               prCount: 0,
               lastDate: entry.date,
               times: [],
+              entries: [],
             });
           }
 
@@ -146,6 +182,13 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           client.entryCount++;
           if (entry.is_pr) client.prCount++;
           if (entry.date > client.lastDate) client.lastDate = entry.date;
+
+          // Store individual entry
+          client.entries.push({
+            date: entry.date,
+            timeSeconds,
+            isPR: entry.is_pr || false,
+          });
         }
       });
 
@@ -205,6 +248,10 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
     },
     enabled: !!exerciseId,
   });
+
+  const toggleExpand = (clientId: string) => {
+    setExpandedClientId(prev => prev === clientId ? null : clientId);
+  };
 
   if (isLoading) {
     return (
@@ -276,7 +323,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               </CardTitle>
               <StatInfoTooltip
                 title="Porovnání času"
-                description="Porovnání nejlepšího času mezi všemi klienty."
+                description="Porovnání nejlepšího času mezi všemi klienty. Kliknutím na klienta zobrazíte všechny jeho pokusy."
                 calculation="Zobrazuje nejkratší zaznamenaný čas pro každého klienta."
               />
             </div>
@@ -325,7 +372,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                         key={entry.clientId} 
                         fill={`url(#gradientTime${index})`}
                         className="cursor-pointer transition-opacity hover:opacity-80"
-                        onClick={() => navigate(`/clients/${entry.clientId}`)}
+                        onClick={() => toggleExpand(entry.clientId)}
                       />
                     ))}
                   </Bar>
@@ -333,54 +380,155 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               </ResponsiveContainer>
             </div>
 
-            {/* Detailed table for time */}
+            {/* Detailed table for time with expandable rows */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium w-8"></th>
                     <th className="text-left py-2 px-2 font-medium">#</th>
                     <th className="text-left py-2 px-2 font-medium">Klient</th>
                     <th className="text-right py-2 px-2 font-medium">Nejlepší čas</th>
                     <th className="text-right py-2 px-2 font-medium">Průměr</th>
                     <th className="text-right py-2 px-2 font-medium">PRs</th>
                     <th className="text-center py-2 px-2 font-medium">Trend</th>
-                    <th className="text-right py-2 px-2 font-medium">Záznamy</th>
+                    <th className="text-right py-2 px-2 font-medium">Pokusy</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data?.timeClients.slice(0, 10).map((client, idx) => (
-                    <tr
-                      key={client.clientId}
-                      className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => navigate(`/clients/${client.clientId}`)}
-                    >
-                      <td className="py-3 px-2">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-muted text-muted-foreground">
-                          {idx + 1}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 font-medium">{client.clientName}</td>
-                      <td className="py-3 px-2 text-right font-bold">
-                        {client.bestTime ? formatTimeDisplay(client.bestTime) : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right text-muted-foreground">
-                        {client.averageTime ? formatTimeDisplay(client.averageTime) : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right">
-                        {client.prCount > 0 && (
-                          <Badge variant="outline" className="text-primary">
-                            <Trophy className="w-3 h-3 mr-1" />
-                            {client.prCount}
-                          </Badge>
+                    <>
+                      <tr
+                        key={client.clientId}
+                        className={cn(
+                          "border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors",
+                          expandedClientId === client.clientId && "bg-muted/30"
                         )}
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <TrendIcon trend={client.trend} />
-                      </td>
-                      <td className="py-3 px-2 text-right text-muted-foreground">
-                        {client.entryCount}
-                      </td>
-                    </tr>
+                        onClick={() => toggleExpand(client.clientId)}
+                      >
+                        <td className="py-3 px-2">
+                          {client.entryCount > 1 ? (
+                            expandedClientId === client.clientId ? (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            )
+                          ) : null}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                            idx === 0 ? "bg-amber-500/20 text-amber-500" :
+                            idx === 1 ? "bg-slate-400/20 text-slate-400" :
+                            idx === 2 ? "bg-orange-600/20 text-orange-600" :
+                            "bg-muted text-muted-foreground"
+                          )}>
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{client.clientName}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/clients/${client.clientId}`);
+                              }}
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-right font-bold text-primary">
+                          {client.bestTime ? formatTimeDisplay(client.bestTime) : '-'}
+                        </td>
+                        <td className="py-3 px-2 text-right text-muted-foreground">
+                          {client.averageTime ? formatTimeDisplay(client.averageTime) : '-'}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {client.prCount > 0 && (
+                            <Badge variant="outline" className="text-primary">
+                              <Trophy className="w-3 h-3 mr-1" />
+                              {client.prCount}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <TrendIcon trend={client.trend} />
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <Badge variant="secondary" className="font-mono">
+                            {client.entryCount}×
+                          </Badge>
+                        </td>
+                      </tr>
+                      
+                      {/* Expanded entries */}
+                      <AnimatePresence>
+                        {expandedClientId === client.clientId && client.entries.length > 0 && (
+                          <motion.tr
+                            key={`${client.clientId}-entries`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <td colSpan={8} className="p-0">
+                              <div className="bg-muted/20 border-l-2 border-primary/50 ml-4 p-3">
+                                <p className="text-xs text-muted-foreground mb-2 font-medium">
+                                  Všechny pokusy ({client.entries.length})
+                                </p>
+                                <div className="grid gap-2">
+                                  {client.entries.map((entry, entryIdx) => (
+                                    <div 
+                                      key={`${client.clientId}-entry-${entryIdx}`}
+                                      className={cn(
+                                        "flex items-center justify-between p-2 rounded-lg",
+                                        entry.isPR ? "bg-primary/10 border border-primary/30" : "bg-card"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm">
+                                          {format(new Date(entry.date), 'd. MMMM yyyy', { locale: cs })}
+                                        </span>
+                                        {entry.isPR && (
+                                          <Badge className="bg-primary/20 text-primary text-xs">
+                                            <Trophy className="w-3 h-3 mr-1" />
+                                            PR
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <span className={cn(
+                                        "font-mono font-bold",
+                                        entry.isPR ? "text-primary" : "text-foreground"
+                                      )}>
+                                        {formatTimeDisplay(entry.timeSeconds)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-2 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/clients/${client.clientId}`);
+                                  }}
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  Zobrazit kartu klienta
+                                </Button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )}
+                      </AnimatePresence>
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -400,7 +548,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               </CardTitle>
               <StatInfoTooltip
                 title="Porovnání max váhy"
-                description="Porovnání maximální váhy mezi všemi klienty."
+                description="Porovnání maximální váhy mezi všemi klienty. Kliknutím na klienta zobrazíte všechny jeho záznamy."
                 calculation="Zobrazuje nejvyšší váhu, kterou každý klient u tohoto cviku použil."
               />
             </div>
@@ -449,7 +597,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                         key={entry.clientId} 
                         fill={`url(#gradientStrength${index})`}
                         className="cursor-pointer transition-opacity hover:opacity-80"
-                        onClick={() => navigate(`/clients/${entry.clientId}`)}
+                        onClick={() => toggleExpand(entry.clientId)}
                       />
                     ))}
                   </Bar>
@@ -457,54 +605,154 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
               </ResponsiveContainer>
             </div>
 
-            {/* Detailed table */}
+            {/* Detailed table for strength with expandable rows */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium w-8"></th>
                     <th className="text-left py-2 px-2 font-medium">#</th>
                     <th className="text-left py-2 px-2 font-medium">Klient</th>
                     <th className="text-right py-2 px-2 font-medium">Max váha</th>
-                    <th className="text-right py-2 px-2 font-medium">Objem</th>
+                    <th className="text-right py-2 px-2 font-medium">Celk. objem</th>
                     <th className="text-right py-2 px-2 font-medium">PRs</th>
                     <th className="text-center py-2 px-2 font-medium">Trend</th>
-                    <th className="text-right py-2 px-2 font-medium">Poslední</th>
+                    <th className="text-right py-2 px-2 font-medium">Záznamy</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data?.strengthClients.slice(0, 10).map((client, idx) => (
-                    <tr
-                      key={client.clientId}
-                      className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => navigate(`/clients/${client.clientId}`)}
-                    >
-                      <td className="py-3 px-2">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-muted text-muted-foreground">
-                          {idx + 1}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 font-medium">{client.clientName}</td>
-                      <td className="py-3 px-2 text-right font-bold">
-                        {client.maxWeight} kg
-                      </td>
-                      <td className="py-3 px-2 text-right text-muted-foreground">
-                        {client.totalVolume > 0 ? `${Math.round(client.totalVolume / 1000)}t` : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right">
-                        {client.prCount > 0 && (
-                          <Badge variant="outline" className="text-primary">
-                            <Trophy className="w-3 h-3 mr-1" />
-                            {client.prCount}
-                          </Badge>
+                    <>
+                      <tr
+                        key={client.clientId}
+                        className={cn(
+                          "border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors",
+                          expandedClientId === client.clientId && "bg-muted/30"
                         )}
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <TrendIcon trend={client.trend} />
-                      </td>
-                      <td className="py-3 px-2 text-right text-muted-foreground text-xs">
-                        {format(new Date(client.lastDate), 'd.M.yyyy', { locale: cs })}
-                      </td>
-                    </tr>
+                        onClick={() => toggleExpand(client.clientId)}
+                      >
+                        <td className="py-3 px-2">
+                          {client.entryCount > 1 ? (
+                            expandedClientId === client.clientId ? (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            )
+                          ) : null}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                            idx === 0 ? "bg-amber-500/20 text-amber-500" :
+                            idx === 1 ? "bg-slate-400/20 text-slate-400" :
+                            idx === 2 ? "bg-orange-600/20 text-orange-600" :
+                            "bg-muted text-muted-foreground"
+                          )}>
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{client.clientName}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-right font-bold text-primary">
+                          {client.maxWeight} kg
+                        </td>
+                        <td className="py-3 px-2 text-right text-muted-foreground">
+                          {client.totalVolume.toLocaleString()} kg
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {client.prCount > 0 && (
+                            <Badge variant="outline" className="text-primary">
+                              <Trophy className="w-3 h-3 mr-1" />
+                              {client.prCount}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <TrendIcon trend={client.trend} />
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <Badge variant="secondary" className="font-mono">
+                            {client.entryCount}×
+                          </Badge>
+                        </td>
+                      </tr>
+                      
+                      {/* Expanded entries */}
+                      <AnimatePresence>
+                        {expandedClientId === client.clientId && client.entries.length > 0 && (
+                          <motion.tr
+                            key={`${client.clientId}-entries`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <td colSpan={8} className="p-0">
+                              <div className="bg-muted/20 border-l-2 border-primary/50 ml-4 p-3">
+                                <p className="text-xs text-muted-foreground mb-2 font-medium">
+                                  Všechny záznamy ({client.entries.length})
+                                </p>
+                                <div className="grid gap-2">
+                                  {client.entries.slice(0, 10).map((entry, entryIdx) => (
+                                    <div 
+                                      key={`${client.clientId}-entry-${entryIdx}`}
+                                      className={cn(
+                                        "flex items-center justify-between p-2 rounded-lg",
+                                        entry.isPR ? "bg-primary/10 border border-primary/30" : "bg-card"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm">
+                                          {format(new Date(entry.date), 'd. MMMM yyyy', { locale: cs })}
+                                        </span>
+                                        {entry.isPR && (
+                                          <Badge className="bg-primary/20 text-primary text-xs">
+                                            <Trophy className="w-3 h-3 mr-1" />
+                                            PR
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className="text-muted-foreground text-sm">
+                                          {entry.sets}×{entry.reps}
+                                        </span>
+                                        <span className={cn(
+                                          "font-mono font-bold",
+                                          entry.isPR ? "text-primary" : "text-foreground"
+                                        )}>
+                                          {entry.weight} kg
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {client.entries.length > 10 && (
+                                    <p className="text-xs text-muted-foreground text-center py-1">
+                                      ... a dalších {client.entries.length - 10} záznamů
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-2 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/clients/${client.clientId}`);
+                                  }}
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  Zobrazit kartu klienta
+                                </Button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )}
+                      </AnimatePresence>
+                    </>
                   ))}
                 </tbody>
               </table>
