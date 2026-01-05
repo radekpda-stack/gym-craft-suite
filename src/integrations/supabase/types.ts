@@ -7069,6 +7069,75 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_workout_diary: {
+        Row: {
+          activity_type: string
+          avg_heart_rate: number | null
+          cadence: number | null
+          calories: number | null
+          created_at: string
+          date: string
+          distance_meters: number | null
+          duration_seconds: number | null
+          elevation_gain: number | null
+          id: string
+          max_heart_rate: number | null
+          notes: string | null
+          pace_per_km: number | null
+          raw_ocr_data: Json | null
+          screenshot_url: string | null
+          source: string
+          speed_kmh: number | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_type?: string
+          avg_heart_rate?: number | null
+          cadence?: number | null
+          calories?: number | null
+          created_at?: string
+          date?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
+          elevation_gain?: number | null
+          id?: string
+          max_heart_rate?: number | null
+          notes?: string | null
+          pace_per_km?: number | null
+          raw_ocr_data?: Json | null
+          screenshot_url?: string | null
+          source?: string
+          speed_kmh?: number | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          avg_heart_rate?: number | null
+          cadence?: number | null
+          calories?: number | null
+          created_at?: string
+          date?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
+          elevation_gain?: number | null
+          id?: string
+          max_heart_rate?: number | null
+          notes?: string | null
+          pace_per_km?: number | null
+          raw_ocr_data?: Json | null
+          screenshot_url?: string | null
+          source?: string
+          speed_kmh?: number | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       training_feedback: {
         Row: {
           body_feel: number | null
