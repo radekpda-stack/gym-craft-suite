@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { subDays, startOfDay, format } from 'date-fns';
 
 export type StatsPeriod = '7d' | '30d' | '90d' | 'all';
@@ -702,17 +703,50 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
 
 export function useClearFeatureStats() {
   const queryClient = useQueryClient();
-  
+  const { user } = useAuth();
+
   return async () => {
-    const { error } = await supabase.from('feature_usage').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) throw error;
-    
-    // Invalidate all feature stats queries to refresh the UI
+    if (!user?.id) return;
+
+    // Clear app usage events
+    const { error: featureError } = await supabase
+      .from('feature_usage')
+      .delete()
+      .eq('user_id', user.id);
+    if (featureError) throw featureError;
+
+    // Clear client portal activity for this trainer's clients
+    const { data: clients, error: clientsError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id);
+    if (clientsError) throw clientsError;
+
+    const clientIds = (clients || []).map((c) => c.id);
+    if (clientIds.length > 0) {
+      const { error: portalError } = await supabase
+        .from('client_portal_activity')
+        .delete()
+        .in('client_id', clientIds);
+      if (portalError) throw portalError;
+    }
+
+    // Clear form analytics
+    const { error: formError } = await supabase
+      .from('form_field_analytics')
+      .delete()
+      .eq('user_id', user.id);
+    if (formError) throw formError;
+
+    // Refresh UI
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-top'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-categories'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-trend'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-session'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-dau'] });
     await queryClient.invalidateQueries({ queryKey: ['feature-stats-success'] });
+    await queryClient.invalidateQueries({ queryKey: ['client-portal-analytics-detailed'] });
+    await queryClient.invalidateQueries({ queryKey: ['inactive-portal-clients'] });
+    await queryClient.invalidateQueries({ queryKey: ['form-analytics-stats'] });
   };
 }
