@@ -52,6 +52,85 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'price_desc', label: 'Cena ↓' },
 ];
 
+// ProductCard component for reuse in grouped sections
+interface ProductCardProps {
+  product: Product;
+  cart: ReturnType<typeof useSalesCartWithDiscount>;
+  isLowStock: (product: Product) => boolean;
+  getProductIcon: (product: Product) => React.ReactNode;
+  getProductKindLabel: (product: Product) => string;
+}
+
+function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKindLabel }: ProductCardProps) {
+  const cartItem = cart.getItem(product.id);
+  const inCart = !!cartItem;
+  const lowStock = isLowStock(product);
+  const outOfStock = product.kind === 'inventory' && (product.stock_quantity || 0) <= 0;
+
+  return (
+    <button
+      onClick={() => !outOfStock && cart.addItem(product)}
+      disabled={outOfStock}
+      className={cn(
+        "relative p-3 sm:p-4 rounded-xl text-left transition-all",
+        "hover:scale-[1.02] active:scale-[0.98]",
+        outOfStock && "opacity-50 cursor-not-allowed",
+        inCart 
+          ? "bg-primary/20 ring-2 ring-primary" 
+          : "glass hover:bg-secondary/50",
+        lowStock && !outOfStock && "ring-1 ring-warning/50"
+      )}
+    >
+      {/* Product type badge */}
+      <div className="flex items-center gap-1.5 mb-2">
+        {getProductIcon(product)}
+        <span className="text-[10px] text-muted-foreground uppercase">
+          {getProductKindLabel(product)}
+        </span>
+      </div>
+
+      {/* Name & Price */}
+      <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
+      <p className="text-lg sm:text-xl font-bold text-primary mt-1">
+        {formatCurrency(product.price)}
+      </p>
+
+      {/* Credit delta for topups */}
+      {product.kind === 'credit_topup' && product.credit_delta > 0 && (
+        <p className="text-xs text-amber-600 mt-1">
+          +{formatCurrency(product.credit_delta)} kredit
+        </p>
+      )}
+
+      {/* Stock info for inventory */}
+      {product.kind === 'inventory' && (
+        <div className="flex items-center gap-1 mt-2">
+          {outOfStock ? (
+            <span className="text-xs text-destructive font-medium">Vyprodáno</span>
+          ) : (
+            <>
+              {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
+              <span className={cn(
+                "text-xs",
+                lowStock ? "text-warning font-medium" : "text-muted-foreground"
+              )}>
+                {product.stock_quantity || 0} ks
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* In cart indicator with count */}
+      {inCart && (
+        <Badge className="absolute -top-2 -right-2 bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
+          {cartItem.quantity}
+        </Badge>
+      )}
+    </button>
+  );
+}
+
 export function SalesRegister() {
   const queryClient = useQueryClient();
   const { data: products = [], isLoading: productsLoading } = useProductsSortedBySales(true);
@@ -70,8 +149,8 @@ export function SalesRegister() {
   // New cart hook with discount support
   const cart = useSalesCartWithDiscount({ clientId: noClient ? null : selectedClient || null });
 
-  // Sort and filter products
-  const sortedProducts = useMemo(() => {
+  // Sort and filter products, then group by kind
+  const groupedProducts = useMemo(() => {
     let result = [...products];
 
     // Filter out of stock if enabled (only applies to inventory items)
@@ -108,15 +187,25 @@ export function SalesRegister() {
       result.reverse();
     }
 
-    // Move out of stock to end if enabled
-    if (outOfStockLast) {
-      const inStock = result.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
-      const outOfStock = result.filter(p => p.kind === 'inventory' && (p.stock_quantity || 0) <= 0);
-      result = [...inStock, ...outOfStock];
-    }
+    // Move out of stock to end if enabled (within each group)
+    const sortWithStock = (items: Product[]) => {
+      if (outOfStockLast) {
+        const inStock = items.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
+        const outOfStock = items.filter(p => p.kind === 'inventory' && (p.stock_quantity || 0) <= 0);
+        return [...inStock, ...outOfStock];
+      }
+      return items;
+    };
 
-    return result;
+    // Group by kind
+    const services = sortWithStock(result.filter(p => p.kind === 'service'));
+    const inventory = sortWithStock(result.filter(p => p.kind === 'inventory'));
+    const creditTopups = sortWithStock(result.filter(p => p.kind === 'credit_topup'));
+
+    return { services, inventory, creditTopups };
   }, [products, sortBy, outOfStockLast, hideOutOfStock]);
+
+  const totalProducts = groupedProducts.services.length + groupedProducts.inventory.length + groupedProducts.creditTopups.length;
 
   // Sort clients by last activity
   const sortedClients = useMemo(() => {
@@ -366,7 +455,7 @@ export function SalesRegister() {
           </Popover>
         </div>
         
-        {sortedProducts.length === 0 ? (
+        {totalProducts === 0 ? (
           <div className="glass rounded-xl p-8 text-center">
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">Žádné produkty</p>
@@ -375,77 +464,75 @@ export function SalesRegister() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            {sortedProducts.map((product) => {
-              const cartItem = cart.getItem(product.id);
-              const inCart = !!cartItem;
-              const lowStock = isLowStock(product);
-              const outOfStock = product.kind === 'inventory' && (product.stock_quantity || 0) <= 0;
+          <div className="space-y-5">
+            {/* Services Section */}
+            {groupedProducts.services.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Wrench className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Služby</span>
+                  <span className="text-xs text-muted-foreground">({groupedProducts.services.length})</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                  {groupedProducts.services.map((product) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      cart={cart}
+                      isLowStock={isLowStock}
+                      getProductIcon={getProductIcon}
+                      getProductKindLabel={getProductKindLabel}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-              return (
-                <button
-                  key={product.id}
-                  onClick={() => !outOfStock && cart.addItem(product)}
-                  disabled={outOfStock}
-                  className={cn(
-                    "relative p-3 sm:p-4 rounded-xl text-left transition-all",
-                    "hover:scale-[1.02] active:scale-[0.98]",
-                    outOfStock && "opacity-50 cursor-not-allowed",
-                    inCart 
-                      ? "bg-primary/20 ring-2 ring-primary" 
-                      : "glass hover:bg-secondary/50",
-                    lowStock && !outOfStock && "ring-1 ring-warning/50"
-                  )}
-                >
-                  {/* Product type badge */}
-                  <div className="flex items-center gap-1.5 mb-2">
-                    {getProductIcon(product)}
-                    <span className="text-[10px] text-muted-foreground uppercase">
-                      {getProductKindLabel(product)}
-                    </span>
-                  </div>
+            {/* Products/Inventory Section */}
+            {groupedProducts.inventory.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-muted-foreground">Produkty</span>
+                  <span className="text-xs text-muted-foreground">({groupedProducts.inventory.length})</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                  {groupedProducts.inventory.map((product) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      cart={cart}
+                      isLowStock={isLowStock}
+                      getProductIcon={getProductIcon}
+                      getProductKindLabel={getProductKindLabel}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-                  {/* Name & Price */}
-                  <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
-                  <p className="text-lg sm:text-xl font-bold text-primary mt-1">
-                    {formatCurrency(product.price)}
-                  </p>
-
-                  {/* Credit delta for topups */}
-                  {product.kind === 'credit_topup' && product.credit_delta > 0 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      +{formatCurrency(product.credit_delta)} kredit
-                    </p>
-                  )}
-
-                  {/* Stock info for inventory */}
-                  {product.kind === 'inventory' && (
-                    <div className="flex items-center gap-1 mt-2">
-                      {outOfStock ? (
-                        <span className="text-xs text-destructive font-medium">Vyprodáno</span>
-                      ) : (
-                        <>
-                          {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
-                          <span className={cn(
-                            "text-xs",
-                            lowStock ? "text-warning font-medium" : "text-muted-foreground"
-                          )}>
-                            {product.stock_quantity || 0} ks
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* In cart indicator with count */}
-                  {inCart && (
-                    <Badge className="absolute -top-2 -right-2 bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
-                      {cartItem.quantity}
-                    </Badge>
-                  )}
-                </button>
-              );
-            })}
+            {/* Credit Topups Section */}
+            {groupedProducts.creditTopups.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Dobití kreditu</span>
+                  <span className="text-xs text-muted-foreground">({groupedProducts.creditTopups.length})</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                  {groupedProducts.creditTopups.map((product) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      cart={cart}
+                      isLowStock={isLowStock}
+                      getProductIcon={getProductIcon}
+                      getProductKindLabel={getProductKindLabel}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
