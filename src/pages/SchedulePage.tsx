@@ -13,6 +13,7 @@ import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useAddTrainingSessionParticipants } from '@/hooks/useTrainingSessionParticipants';
+import { useAddTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { AgendaItem } from '@/components/calendar/AgendaItem';
 import { SharedTrainingBlock } from '@/components/calendar/SharedTrainingBlock';
 import { ExternalEventBlock } from '@/components/calendar/ExternalEventBlock';
@@ -97,6 +98,7 @@ export default function SchedulePage() {
   const updateTraining = useUpdateTrainingSession();
   const cancelTraining = useCancelTrainingSession();
   const addTrainingParticipants = useAddTrainingSessionParticipants();
+  const addTrainingTags = useAddTrainingSessionTags();
   const { data: settings } = useAppSettings();
   const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
 
@@ -161,7 +163,7 @@ export default function SchedulePage() {
     setCurrentDate(new Date());
   };
 
-  const handleCreateTraining = async (data: TrainingFormValues) => {
+  const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     const result = await createTraining.mutateAsync({
       client_id: data.client_id,
       date: data.date,
@@ -169,6 +171,7 @@ export default function SchedulePage() {
       participant_count: data.participant_count,
       notes: data.notes,
       status: data.status,
+      training_type: data.training_type || undefined,
       trainingPrices,
     });
     
@@ -177,6 +180,14 @@ export default function SchedulePage() {
       await addTrainingParticipants.mutateAsync({
         trainingSessionId: result.session.id,
         clientIds: additionalClientIds,
+      });
+    }
+    
+    // Add tags if any selected
+    if (tagIds.length > 0 && result?.session?.id) {
+      await addTrainingTags.mutateAsync({
+        trainingSessionId: result.session.id,
+        tagIds,
       });
     }
     

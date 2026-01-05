@@ -5,7 +5,8 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Search, Check, ChevronDown, X, UserPlus } from "lucide-react";
+import { Loader2, Repeat, Search, Check, ChevronDown, X, UserPlus, Tags } from "lucide-react";
+import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -167,9 +168,13 @@ export function TrainingForm({
     form.setValue("additional_client_ids", current.filter(id => id !== clientId), { shouldDirty: true });
   };
 
+  // State for tags
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
   const handleSubmit = async (data: TrainingFormValues) => {
-    await onSubmit(data, []);
+    await onSubmit(data, selectedTagIds);
     form.reset(data); // Mark as clean after successful submit
+    setSelectedTagIds([]); // Reset tags after submit
   };
 
   return (
@@ -424,6 +429,19 @@ export function TrainingForm({
             </FormItem>
           )}
         />
+
+        {/* Tags Selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Tags className="w-4 h-4" />
+            Štítky tréninku
+          </label>
+          <TrainingTagsSelector
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+            showValidation={false}
+          />
+        </div>
 
         {/* Recurrence Settings */}
         {showRecurrence && form.watch("status") === "scheduled" && (
