@@ -463,14 +463,18 @@ function getPeriodStartDate(period: StatsPeriod): Date | null {
 
 export function useFeatureStats(period: StatsPeriod = '30d') {
   const startDate = getPeriodStartDate(period);
+  const { user } = useAuth();
 
-  // Top features query
+  // Top features query - filtered by user_id
   const { data: topFeatures, isLoading: loadingTop } = useQuery({
-    queryKey: ['feature-stats-top', period],
+    queryKey: ['feature-stats-top', period, user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+      
       let query = supabase
         .from('feature_usage')
-        .select('feature_name, feature_category');
+        .select('feature_name, feature_category')
+        .eq('user_id', user.id);
       
       if (startDate) {
         query = query.gte('created_at', startDate.toISOString());
@@ -501,16 +505,20 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
       });
 
       return result.sort((a, b) => b.count - a.count);
-    }
+    },
+    enabled: !!user?.id,
   });
 
-  // Category breakdown query
+  // Category breakdown query - filtered by user_id
   const { data: categoryBreakdown, isLoading: loadingCategories } = useQuery({
-    queryKey: ['feature-stats-categories', period],
+    queryKey: ['feature-stats-categories', period, user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+      
       let query = supabase
         .from('feature_usage')
-        .select('feature_category');
+        .select('feature_category')
+        .eq('user_id', user.id);
       
       if (startDate) {
         query = query.gte('created_at', startDate.toISOString());
@@ -531,19 +539,23 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
       });
 
       return result.sort((a, b) => b.count - a.count);
-    }
+    },
+    enabled: !!user?.id,
   });
 
-  // Trend data query
+  // Trend data query - filtered by user_id
   const { data: trendData, isLoading: loadingTrend } = useQuery({
-    queryKey: ['feature-stats-trend', period],
+    queryKey: ['feature-stats-trend', period, user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+      
       const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 30;
       const start = startOfDay(subDays(new Date(), days));
 
       const { data, error } = await supabase
         .from('feature_usage')
         .select('created_at')
+        .eq('user_id', user.id)
         .gte('created_at', start.toISOString());
 
       if (error) throw error;
@@ -568,16 +580,20 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
       });
 
       return result;
-    }
+    },
+    enabled: !!user?.id,
   });
 
-  // Session statistics
+  // Session statistics - filtered by user_id
   const { data: sessionStats, isLoading: loadingSessions } = useQuery({
-    queryKey: ['session-stats', period],
+    queryKey: ['session-stats', period, user?.id],
     queryFn: async (): Promise<SessionStats> => {
+      if (!user?.id) return { totalSessions: 0, avgDuration: 0, deviceBreakdown: [], browserBreakdown: [], osBreakdown: [] };
+      
       let query = supabase
         .from('user_sessions')
-        .select('duration_seconds, device_type, browser, os');
+        .select('duration_seconds, device_type, browser, os')
+        .eq('user_id', user.id);
       
       if (startDate) {
         query = query.gte('started_at', startDate.toISOString());
@@ -618,7 +634,8 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
         browserBreakdown: Array.from(browserCounts.entries()).map(([browser, count]) => ({ browser, count })).sort((a, b) => b.count - a.count),
         osBreakdown: Array.from(osCounts.entries()).map(([os, count]) => ({ os, count })).sort((a, b) => b.count - a.count),
       };
-    }
+    },
+    enabled: !!user?.id,
   });
 
   // Daily Active Users
@@ -658,13 +675,16 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
     }
   });
 
-  // Success rate
+  // Success rate - filtered by user_id
   const { data: successRate, isLoading: loadingSuccess } = useQuery({
-    queryKey: ['success-rate', period],
+    queryKey: ['success-rate', period, user?.id],
     queryFn: async () => {
+      if (!user?.id) return 100;
+      
       let query = supabase
         .from('feature_usage')
-        .select('success');
+        .select('success')
+        .eq('user_id', user.id);
       
       if (startDate) {
         query = query.gte('created_at', startDate.toISOString());
@@ -677,13 +697,39 @@ export function useFeatureStats(period: StatsPeriod = '30d') {
       const successful = data?.filter(r => r.success !== false).length || 0;
       
       return total > 0 ? Math.round((successful / total) * 100) : 100;
-    }
+    },
+    enabled: !!user?.id,
   });
 
-  // Unused features
-  const unusedFeatures = ALL_FEATURES.filter(
-    f => !topFeatures?.some(tf => tf.feature_name === f.name)
-  );
+  // Get globally available features (features that have been tracked at least once by anyone)
+  const { data: globallyTrackedFeatures } = useQuery({
+    queryKey: ['globally-tracked-features'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feature_usage')
+        .select('feature_name')
+        .limit(2000);
+      
+      if (error) throw error;
+      
+      // Get unique feature names that exist in DB
+      const uniqueNames = new Set((data || []).map(d => d.feature_name));
+      return Array.from(uniqueNames);
+    },
+    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+  });
+
+  // Unused features - only show features that:
+  // 1. Are in ALL_FEATURES list
+  // 2. Have been tracked globally (someone used them, so tracking is implemented)
+  // 3. But this user hasn't used them
+  const unusedFeatures = ALL_FEATURES.filter(f => {
+    const isTrackedGlobally = globallyTrackedFeatures?.includes(f.name) ?? false;
+    const isUsedByThisUser = topFeatures?.some(tf => tf.feature_name === f.name) ?? false;
+    
+    // Only show as unused if it's tracked globally but not used by this user
+    return isTrackedGlobally && !isUsedByThisUser;
+  });
 
   // Total usage count
   const totalUsage = topFeatures?.reduce((sum, f) => sum + f.count, 0) || 0;
