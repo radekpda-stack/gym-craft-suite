@@ -71,6 +71,21 @@ export default function ClientDetail() {
   const { evaluation: feedbackEval } = useFeedbackEvaluation(id);
   const redFlagCount = feedbackEval?.redFlagCount ?? 0;
 
+  // All transactions (personal + group if shared, deduplicated) - MUST be before early returns
+  const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
+  const allTransactions = useMemo(() => {
+    if (!isSharedBudget) return creditTransactions;
+    
+    // Combine and deduplicate by transaction ID
+    const combined = [...creditTransactions, ...sharedTransactions];
+    const seen = new Set<string>();
+    return combined.filter(t => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [isSharedBudget, creditTransactions, sharedTransactions]);
+
   if (clientLoading) {
     return <ClientDetailSkeleton />;
   }
@@ -88,8 +103,7 @@ export default function ClientDetail() {
     );
   }
 
-  // Shared budget info
-  const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
+  // Shared budget info (isSharedBudget already computed above for useMemo)
   const sharedBalance = sharedBudgetInfo?.sharedBalance ?? 0;
   const creditBalance = isSharedBudget ? sharedBalance : (client.credit_balance || 0);
   
@@ -101,20 +115,6 @@ export default function ClientDetail() {
     isActive: portalAccess.status === 'active' && !!portalAccess.auth_user_id,
     lastLogin: portalAccess.last_portal_login,
   } : null;
-
-  // All transactions (personal + group if shared, deduplicated)
-  const allTransactions = useMemo(() => {
-    if (!isSharedBudget) return creditTransactions;
-    
-    // Combine and deduplicate by transaction ID
-    const combined = [...creditTransactions, ...sharedTransactions];
-    const seen = new Set<string>();
-    return combined.filter(t => {
-      if (seen.has(t.id)) return false;
-      seen.add(t.id);
-      return true;
-    });
-  }, [isSharedBudget, creditTransactions, sharedTransactions]);
 
   const handleAddNote = async (note: string) => {
     const currentNotes = client.notes || '';
