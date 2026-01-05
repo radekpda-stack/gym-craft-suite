@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle, History } from 'lucide-react';
+import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle, History, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
@@ -20,14 +20,16 @@ import { cn } from '@/lib/utils';
 import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
 import { formatCurrency } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/empty-state';
+import { CreditLedgerExportDialog } from './CreditLedgerExportDialog';
 
 interface CreditManagementProps {
   clientId: string;
   clientName: string;
+  clientEmail?: string;
   currentBalance: number;
 }
 
-export function CreditManagement({ clientId, clientName, currentBalance }: CreditManagementProps) {
+export function CreditManagement({ clientId, clientName, clientEmail, currentBalance }: CreditManagementProps) {
   const { data: individualTransactions = [] } = useCreditTransactions(clientId);
   const { data: products = [] } = useProducts(true);
   const trainingPrices = useTrainingPrices();
@@ -417,6 +419,21 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <CreditLedgerExportDialog
+                  clientId={clientId}
+                  clientName={clientName}
+                  clientEmail={clientEmail}
+                  isGroupBudget={isShared}
+                  budgetGroupId={sharedBudgetInfo?.groupId || undefined}
+                  groupName={sharedBudgetInfo?.groupName || undefined}
+                  trigger={
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Výpis kreditu (PDF)
+                    </DropdownMenuItem>
+                  }
+                />
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => {
                   const data: TransactionExportData[] = transactions.map(t => ({
                     date: format(new Date(t.created_at), 'd.M.yyyy HH:mm'),
@@ -443,7 +460,7 @@ export function CreditManagement({ clientId, clientName, currentBalance }: Credi
                   exportTransactionsToPDF(data, `Transakce - ${exportName}`, `transakce-${exportName.toLowerCase().replace(/\s+/g, '-')}`);
                 }}>
                   <FileText className="w-4 h-4 mr-2" />
-                  Export do PDF
+                  Export do PDF (jednoduchý)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
