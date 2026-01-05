@@ -196,13 +196,31 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.timeData}>
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <defs>
+                    <linearGradient id="timeLineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={COLORS[0]} stopOpacity={0.6} />
+                      <stop offset="100%" stopColor={COLORS[0]} stopOpacity={1} />
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis 
+                    dataKey="dateLabel" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
                   <YAxis 
-                    tick={{ fontSize: 11 }} 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
                     axisLine={false} 
                     tickLine={false} 
                     tickFormatter={(v) => formatTimeDisplay(v)}
-                    reversed // Lower time is better, so reverse axis
+                    reversed
                     domain={['dataMin - 10', 'dataMax + 10']}
                   />
                   <Tooltip
@@ -210,6 +228,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
                     formatter={(value: number) => [formatTimeDisplay(value), 'Čas']}
                     labelFormatter={(label) => `Datum: ${label}`}
@@ -217,8 +236,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                   <Line 
                     type="monotone" 
                     dataKey="timeSeconds" 
-                    stroke={COLORS[0]} 
-                    strokeWidth={2} 
+                    stroke="url(#timeLineGradient)" 
+                    strokeWidth={3} 
                     dot={(props) => {
                       const { cx, cy, payload } = props;
                       if (payload.isPR) {
@@ -226,16 +245,17 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                           <circle 
                             cx={cx} 
                             cy={cy} 
-                            r={6} 
+                            r={8} 
                             fill={COLORS[0]} 
                             stroke="hsl(var(--background))" 
-                            strokeWidth={2}
+                            strokeWidth={3}
+                            filter="url(#glow)"
                           />
                         );
                       }
-                      // Hide non-PR dots for cleaner chart
                       return null;
                     }}
+                    activeDot={{ r: 6, fill: COLORS[0], stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -264,9 +284,20 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.wattsData}>
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <defs>
+                    <linearGradient id="wattsGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="hsl(var(--warning))" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="hsl(var(--warning))" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="dateLabel" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
                   <YAxis 
-                    tick={{ fontSize: 11 }} 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
                     axisLine={false} 
                     tickLine={false} 
                     tickFormatter={(v) => `${v} W`}
@@ -276,6 +307,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
                     formatter={(value: number) => [`${value} W`, 'Výkon']}
                     labelFormatter={(label) => `Datum: ${label}`}
@@ -283,8 +315,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                   <Line 
                     type="monotone" 
                     dataKey="avgWatts" 
-                    stroke="hsl(var(--warning))" 
-                    strokeWidth={2} 
+                    stroke="url(#wattsGradient)" 
+                    strokeWidth={3} 
                     dot={(props) => {
                       const { cx, cy, payload } = props;
                       if (payload.isPR) {
@@ -292,16 +324,16 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                           <circle 
                             cx={cx} 
                             cy={cy} 
-                            r={6} 
+                            r={8} 
                             fill="hsl(var(--warning))" 
                             stroke="hsl(var(--background))" 
-                            strokeWidth={2}
+                            strokeWidth={3}
                           />
                         );
                       }
-                      // Hide non-PR dots for cleaner chart
                       return null;
                     }}
+                    activeDot={{ r: 6, fill: 'hsl(var(--warning))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -332,17 +364,41 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.strengthData}>
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v} kg`} />
+                    <defs>
+                      <linearGradient id="weightGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={COLORS[0]} stopOpacity={0.6} />
+                        <stop offset="100%" stopColor={COLORS[0]} stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="dateLabel" 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                      axisLine={false} 
+                      tickLine={false} 
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tickFormatter={(v) => `${v} kg`} 
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--popover))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                       }}
                       formatter={(value: number) => [`${value} kg`, 'Váha']}
                     />
-                    <Line type="monotone" dataKey="weight" stroke={COLORS[0]} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weight" 
+                      stroke="url(#weightGradient)" 
+                      strokeWidth={3} 
+                      dot={false}
+                      activeDot={{ r: 6, fill: COLORS[0], stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -368,23 +424,40 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.strengthData}>
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v} kg`} />
+                    <defs>
+                      <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="dateLabel" 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                      axisLine={false} 
+                      tickLine={false} 
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tickFormatter={(v) => `${v} kg`} 
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--popover))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                       }}
                       formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Objem']}
                     />
-                    <defs>
-                      <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={COLORS[1]} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={COLORS[1]} stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="volume" stroke={COLORS[1]} fill="url(#volumeGradient)" strokeWidth={2} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="volume" 
+                      stroke="hsl(var(--success))" 
+                      fill="url(#volumeGradient)" 
+                      strokeWidth={3}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -411,17 +484,41 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data.strengthData.filter(d => d.estimated1RM)}>
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v} kg`} />
+                      <defs>
+                        <linearGradient id="rmGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="hsl(var(--warning))" stopOpacity={0.6} />
+                          <stop offset="100%" stopColor="hsl(var(--warning))" stopOpacity={1} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis 
+                        dataKey="dateLabel" 
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={(v) => `${v} kg`} 
+                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--popover))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         }}
                         formatter={(value: number) => [`${value} kg`, 'Odhad 1RM']}
                       />
-                      <Line type="monotone" dataKey="estimated1RM" stroke={COLORS[2]} strokeWidth={2} dot={{ r: 3 }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="estimated1RM" 
+                        stroke="url(#rmGradient)" 
+                        strokeWidth={3} 
+                        dot={false}
+                        activeDot={{ r: 6, fill: 'hsl(var(--warning))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
