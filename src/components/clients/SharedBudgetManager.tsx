@@ -3,7 +3,7 @@
  * Allows linking clients to shared budget groups
  */
 import { useState } from 'react';
-import { Users, Link, Unlink, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { Users, Link, Unlink, Plus, Loader2, AlertTriangle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,6 +49,8 @@ export function SharedBudgetManager({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [addToGroupId, setAddToGroupId] = useState<string | null>(null);
+  const [clientToAdd, setClientToAdd] = useState<string | null>(null);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim() || selectedClients.length < 2) return;
@@ -118,6 +120,39 @@ export function SharedBudgetManager({
         groupId,
         clientIds: newMemberIds,
       });
+    }
+  };
+
+  const handleAddToGroup = async () => {
+    if (!addToGroupId || !clientToAdd) return;
+    
+    const group = budgetGroups.find(g => g.id === addToGroupId);
+    if (!group) return;
+
+    const existingMemberIds = group.members.map(m => m.client_id);
+    const newMemberIds = [...existingMemberIds, clientToAdd];
+
+    try {
+      await updateMembers.mutateAsync({
+        groupId: addToGroupId,
+        clientIds: newMemberIds,
+      });
+      
+      setAddToGroupId(null);
+      setClientToAdd(null);
+      
+      toast({
+        title: "Klient přidán",
+        description: "Klient byl úspěšně přidán do skupiny.",
+      });
+    } catch (error: any) {
+      if (error?.message?.includes('unique') || error?.code === '23505') {
+        toast({
+          title: "Chyba",
+          description: "Klient už je členem jiné skupiny.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -289,7 +324,7 @@ export function SharedBudgetManager({
                     {formatCurrency(sharedBalance)}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                   {groupClients.map((client) => (
                     <div
                       key={client.id}
@@ -306,6 +341,15 @@ export function SharedBudgetManager({
                       </button>
                     </div>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full h-8 gap-1 text-xs"
+                    onClick={() => setAddToGroupId(group.id)}
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    Přidat
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Sdílený kredit • Osobní kredit členů se nepoužívá
@@ -323,6 +367,75 @@ export function SharedBudgetManager({
           </p>
         </div>
       )}
+
+      {/* Add to existing group dialog */}
+      <Dialog open={!!addToGroupId} onOpenChange={(open) => !open && setAddToGroupId(null)}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Přidat klienta do skupiny</DialogTitle>
+            <DialogDescription>
+              Vyberte klienta, kterého chcete přidat do skupiny "{budgetGroups.find(g => g.id === addToGroupId)?.name}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto py-4">
+            {ungroupedClients.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Všichni klienti už jsou v nějaké skupině.</p>
+              </div>
+            ) : (
+              ungroupedClients.map((client) => (
+                <label
+                  key={client.id}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                    clientToAdd === client.id
+                      ? "bg-primary/10 border-primary"
+                      : "bg-secondary/50 hover:bg-secondary"
+                  )}
+                  onClick={() => setClientToAdd(client.id)}
+                >
+                  <Checkbox
+                    checked={clientToAdd === client.id}
+                    onCheckedChange={() => setClientToAdd(clientToAdd === client.id ? null : client.id)}
+                  />
+                  <ClientAvatar name={client.name} size="sm" />
+                  <div className="flex-1">
+                    <span className="font-medium">{client.name}</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    (client.credit_balance || 0) >= 0 ? "text-success" : "text-destructive"
+                  )}>
+                    {formatCurrency(client.credit_balance || 0)}
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAddToGroupId(null); setClientToAdd(null); }}>
+              Zrušit
+            </Button>
+            <Button
+              onClick={handleAddToGroup}
+              disabled={!clientToAdd || updateMembers.isPending}
+            >
+              {updateMembers.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Přidávám...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Přidat do skupiny
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
