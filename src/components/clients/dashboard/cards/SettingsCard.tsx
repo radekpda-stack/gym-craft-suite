@@ -61,7 +61,6 @@ export function SettingsCard({
         budgetGroupId={budgetGroupId}
         onArchive={onArchive}
         defaultExpanded={true}
-        portalAccess={portalAccess}
       />
     </ClientDashboardCard>
   );

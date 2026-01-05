@@ -9,9 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { PaymentModeSelector, PaymentMode } from './PaymentModeSelector';
-import { ClientPortalSection } from './ClientPortalSection';
+import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 import { Client, useUpdatePaymentMode } from '@/hooks/useClients';
-import { ClientAccountInfo } from '@/hooks/useClientPortalAccess';
 
 interface ClientAdminBlockProps {
   client: Client;
@@ -19,7 +18,6 @@ interface ClientAdminBlockProps {
   budgetGroupId?: string;
   onArchive?: () => void;
   defaultExpanded?: boolean;
-  portalAccess?: ClientAccountInfo | null;
 }
 
 export function ClientAdminBlock({
@@ -28,7 +26,6 @@ export function ClientAdminBlock({
   budgetGroupId,
   onArchive,
   defaultExpanded = false,
-  portalAccess,
 }: ClientAdminBlockProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const updatePaymentMode = useUpdatePaymentMode();
@@ -60,11 +57,12 @@ export function ClientAdminBlock({
         {/* Expandable content */}
         {isExpanded && (
           <div className="p-4 pt-0 space-y-6">
-            {/* Client Portal Section */}
-            <ClientPortalSection
+            {/* Client Portal Section - Full version with settings */}
+            <ClientPortalAccessSection
               clientId={client.id}
+              clientName={client.name}
               clientEmail={client.email}
-              portalAccess={portalAccess ?? null}
+              showSettings={true}
             />
 
             <div className="border-t border-border/50 pt-4">

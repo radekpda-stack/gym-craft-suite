@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -16,12 +16,39 @@ import {
   Copy,
   Check,
   Pencil,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  Dumbbell,
+  Plus,
+  X,
+  Trophy,
+  BarChart3,
+  Scale,
+  Percent,
+  Timer,
+  PersonStanding,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,13 +61,39 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { CreateClientAccessDialog } from './CreateClientAccessDialog';
 import { EditCredentialsDialog } from './EditCredentialsDialog';
+import {
+  useClientTrackedExercisesAdmin,
+  useAddTrackedExercise,
+  useRemoveTrackedExercise,
+  useClientPortalSettings,
+  useUpdateClientPortalSettings,
+} from '@/hooks/useClientTrackedExercisesAdmin';
+import { useExercises } from '@/hooks/useExercises';
+
+const PROGRESS_METRICS = [
+  { key: 'weight', label: 'Váha', icon: Scale },
+  { key: 'bodyFat', label: 'Tělesný tuk', icon: Percent },
+  { key: 'trackedExercises', label: 'Sledované cviky', icon: Dumbbell },
+  { key: 'rowing500m', label: 'Veslo 500m', icon: Timer },
+  { key: 'rowing1000m', label: 'Veslo 1000m', icon: Timer },
+  { key: 'running500m', label: 'Běh 500m', icon: PersonStanding },
+  { key: 'running1000m', label: 'Běh 1000m', icon: PersonStanding },
+] as const;
+
+const COMPARISON_DISPLAY_MODES = [
+  { value: 'percentile_only', label: 'Pouze percentil' },
+  { value: 'leaderboard_only', label: 'Pouze leaderboard' },
+  { value: 'both', label: 'Percentil i leaderboard' },
+] as const;
 
 interface ClientPortalAccessSectionProps {
   clientId: string;
   clientName: string;
   clientEmail: string | null;
+  showSettings?: boolean;
 }
 
 interface ClientAccountInfo {
@@ -58,6 +111,7 @@ export function ClientPortalAccessSection({
   clientId,
   clientName,
   clientEmail,
+  showSettings = true,
 }: ClientPortalAccessSectionProps) {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -67,6 +121,8 @@ export function ClientPortalAccessSection({
   const [removing, setRemoving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exercisesOpen, setExercisesOpen] = useState(false);
 
   const { data: accountInfo, isLoading } = useQuery({
     queryKey: ['client-portal-access', clientId],
@@ -315,6 +371,42 @@ export function ClientPortalAccessSection({
             </div>
           )}
 
+          {/* Portal Settings Collapsible - only when has access */}
+          {hasAccess && showSettings && (
+            <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-between mt-2">
+                  <span className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Nastavení portálu
+                  </span>
+                  <ChevronDown className={cn("w-4 h-4 transition-transform", settingsOpen && "rotate-180")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <PortalSettingsInline clientId={clientId} />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Tracked Exercises Collapsible - only when has access */}
+          {hasAccess && showSettings && (
+            <Collapsible open={exercisesOpen} onOpenChange={setExercisesOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4" />
+                    Sledované cviky
+                  </span>
+                  <ChevronDown className={cn("w-4 h-4 transition-transform", exercisesOpen && "rotate-180")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <TrackedExercisesInline clientId={clientId} />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-2 pt-2">
             {!hasAccess ? (
@@ -421,5 +513,305 @@ export function ClientPortalAccessSection({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// Inline Portal Settings Component
+function PortalSettingsInline({ clientId }: { clientId: string }) {
+  const { data: portalSettings, isLoading: isLoadingPortal } = useClientPortalSettings(clientId);
+  const updatePortalSettings = useUpdateClientPortalSettings();
+  
+  const [clientSettings, setClientSettings] = useState({
+    allow_challenges_participation: false,
+    allow_anonymous_benchmarks: false,
+  });
+  const [comparisonDisplayMode, setComparisonDisplayMode] = useState('both');
+  const [isLoadingClient, setIsLoadingClient] = useState(true);
+  const [isSavingClient, setIsSavingClient] = useState(false);
+  const [graphsOpen, setGraphsOpen] = useState(false);
+
+  useEffect(() => {
+    setIsLoadingClient(true);
+    supabase
+      .from('clients')
+      .select('allow_challenges_participation, allow_anonymous_benchmarks')
+      .eq('id', clientId)
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setClientSettings({
+            allow_challenges_participation: data.allow_challenges_participation ?? false,
+            allow_anonymous_benchmarks: data.allow_anonymous_benchmarks ?? false,
+          });
+        }
+        setIsLoadingClient(false);
+      });
+  }, [clientId]);
+
+  useEffect(() => {
+    if (portalSettings?.comparisonDisplayMode) {
+      setComparisonDisplayMode(portalSettings.comparisonDisplayMode);
+    }
+  }, [portalSettings]);
+
+  const currentMetrics = portalSettings?.progressMetrics || {
+    weight: true,
+    bodyFat: true,
+    trackedExercises: true,
+    rowing500m: true,
+    rowing1000m: true,
+    running500m: true,
+    running1000m: true,
+  };
+
+  const handleMetricToggle = (key: string) => {
+    updatePortalSettings.mutate({
+      clientId,
+      settings: {
+        ...portalSettings,
+        progressMetrics: {
+          ...currentMetrics,
+          [key]: !currentMetrics[key as keyof typeof currentMetrics],
+        },
+      },
+    });
+  };
+
+  const handleClientSettingToggle = async (key: 'allow_challenges_participation' | 'allow_anonymous_benchmarks', value: boolean) => {
+    setIsSavingClient(true);
+    const { error } = await supabase
+      .from('clients')
+      .update({ [key]: value })
+      .eq('id', clientId);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setClientSettings(prev => ({ ...prev, [key]: value }));
+    }
+    setIsSavingClient(false);
+  };
+
+  const handleComparisonDisplayModeChange = (value: string) => {
+    setComparisonDisplayMode(value);
+    updatePortalSettings.mutate({
+      clientId,
+      settings: {
+        ...portalSettings,
+        comparisonDisplayMode: value as 'percentile_only' | 'leaderboard_only' | 'both',
+      },
+    });
+  };
+
+  const isLoading = isLoadingClient || isLoadingPortal;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Challenges toggle */}
+      <div className="flex items-center justify-between p-2.5 border rounded-lg">
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm">Účast v Challenges</span>
+        </div>
+        <Switch
+          checked={clientSettings.allow_challenges_participation}
+          onCheckedChange={(checked) => handleClientSettingToggle('allow_challenges_participation', checked)}
+          disabled={isSavingClient}
+        />
+      </div>
+
+      {/* Anonymous benchmarks toggle */}
+      <div className="flex items-center justify-between p-2.5 border rounded-lg">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm">Anonymní benchmarky</span>
+        </div>
+        <Switch
+          checked={clientSettings.allow_anonymous_benchmarks}
+          onCheckedChange={(checked) => handleClientSettingToggle('allow_anonymous_benchmarks', checked)}
+          disabled={isSavingClient}
+        />
+      </div>
+
+      {/* Comparison display mode */}
+      <div className="p-2.5 border rounded-lg space-y-2">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm">Zobrazení porovnání</span>
+        </div>
+        <Select value={comparisonDisplayMode} onValueChange={handleComparisonDisplayModeChange}>
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {COMPARISON_DISPLAY_MODES.map(mode => (
+              <SelectItem key={mode.value} value={mode.value}>
+                {mode.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Graph visibility collapsible */}
+      <Collapsible open={graphsOpen} onOpenChange={setGraphsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full justify-between h-9">
+            <span className="flex items-center gap-2 text-sm">
+              <BarChart3 className="w-3.5 h-3.5" />
+              Viditelnost grafů
+            </span>
+            <ChevronDown className={cn("w-4 h-4 transition-transform", graphsOpen && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-1 space-y-1">
+          {PROGRESS_METRICS.map(metric => {
+            const Icon = metric.icon;
+            const isEnabled = currentMetrics[metric.key as keyof typeof currentMetrics] ?? true;
+            
+            return (
+              <div 
+                key={metric.key}
+                className="flex items-center justify-between p-2 rounded-lg border"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-sm">{metric.label}</span>
+                </div>
+                <Switch
+                  checked={isEnabled}
+                  onCheckedChange={() => handleMetricToggle(metric.key)}
+                  disabled={updatePortalSettings.isPending}
+                />
+              </div>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
+// Inline Tracked Exercises Component
+function TrackedExercisesInline({ clientId }: { clientId: string }) {
+  const { data: trackedExercises, isLoading } = useClientTrackedExercisesAdmin(clientId);
+  const { exercises: allExercises } = useExercises();
+  const addExercise = useAddTrackedExercise();
+  const removeExercise = useRemoveTrackedExercise();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddSection, setShowAddSection] = useState(false);
+
+  const trackedIds = new Set(trackedExercises?.map(e => e.exercise_id) || []);
+  
+  const filteredExercises = (allExercises || [])
+    .filter(e => !trackedIds.has(e.id))
+    .filter(e => 
+      (e.name_cs || e.name).toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .slice(0, 15);
+
+  const handleAddExercise = (exercise: { id: string; name: string; name_cs?: string }) => {
+    addExercise.mutate({
+      clientId,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name_cs || exercise.name,
+    });
+    setSearchQuery('');
+    setShowAddSection(false);
+  };
+
+  const handleRemoveExercise = (id: string) => {
+    removeExercise.mutate({ id, clientId });
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-16 w-full" />;
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm text-muted-foreground">
+        Sledovaných cviků: {trackedExercises?.length || 0}
+      </Label>
+
+      {trackedExercises?.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2 text-center border rounded-lg">
+          Žádné sledované cviky
+        </p>
+      ) : (
+        <div className="space-y-1 max-h-28 overflow-y-auto">
+          {trackedExercises?.map(exercise => (
+            <div 
+              key={exercise.id}
+              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+            >
+              <span className="text-sm truncate">{exercise.exercise_name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:text-destructive shrink-0"
+                onClick={() => handleRemoveExercise(exercise.id)}
+                disabled={removeExercise.isPending}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Collapsible open={showAddSection} onOpenChange={setShowAddSection}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full h-8">
+            <Plus className="w-3.5 h-3.5 mr-2" />
+            Přidat cvik
+            <ChevronDown className={cn("w-4 h-4 ml-auto transition-transform", showAddSection && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Hledat cvik..."
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+          
+          <ScrollArea className="h-32">
+            <div className="space-y-1">
+              {filteredExercises.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  {searchQuery ? 'Žádné výsledky' : 'Začněte psát pro vyhledání'}
+                </p>
+              ) : (
+                filteredExercises.map(exercise => (
+                  <button
+                    key={exercise.id}
+                    onClick={() => handleAddExercise(exercise)}
+                    disabled={addExercise.isPending}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted text-left transition-colors text-sm"
+                  >
+                    <Plus className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{exercise.name_cs || exercise.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   );
 }
