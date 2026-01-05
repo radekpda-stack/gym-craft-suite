@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ClipboardList, UserPlus, UserCheck, ChevronDown, ChevronUp, Eye, Trash2 } from 'lucide-react';
+import { differenceInYears } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { useUnassignedPreDiagnostics, useDeletePreDiagnostic, PreDiagnosticForm } from '@/hooks/usePreDiagnosticForms';
+import { useUnassignedPreDiagnostics, useDeletePreDiagnostic, PreDiagnosticForm, usePreDiagnosticAnswers } from '@/hooks/usePreDiagnosticForms';
 import { CreateClientFromPreDiagnosticDialog } from './CreateClientFromPreDiagnosticDialog';
 import { AssignPreDiagnosticDialog } from './AssignPreDiagnosticDialog';
 import { PreDiagnosticAnswersDialog } from './PreDiagnosticAnswersDialog';
@@ -22,6 +23,23 @@ import {
 
 interface UnassignedPreDiagnosticListProps {
   clients: Client[];
+}
+
+// Helper component to display age from pre-diagnostic answers
+function ClientAgeFromAnswers({ formId }: { formId: string }) {
+  const { data: answers } = usePreDiagnosticAnswers(formId);
+  
+  const birthDateAnswer = answers?.find(a => a.field_key === 'birth_date');
+  
+  if (!birthDateAnswer?.value) return null;
+  
+  const age = differenceInYears(new Date(), new Date(birthDateAnswer.value as string));
+  
+  return (
+    <span className="text-muted-foreground">
+      ({age} let)
+    </span>
+  );
 }
 
 export function UnassignedPreDiagnosticList({ clients }: UnassignedPreDiagnosticListProps) {
@@ -79,10 +97,11 @@ export function UnassignedPreDiagnosticList({ clients }: UnassignedPreDiagnostic
               className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/20 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-foreground truncate">
                     {form.client_name || 'Neznámé jméno'}
                   </span>
+                  <ClientAgeFromAnswers formId={form.id} />
                   <Badge variant="outline" className="shrink-0">
                     Nový klient
                   </Badge>
