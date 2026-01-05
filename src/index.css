@@ -196,97 +196,99 @@
   }
 
   /* ========================================
-     LIGHT MINIMAL THEME - Clean with blue
+     LIGHT MINIMAL THEME - Warm elegant cream
+     Clean, sophisticated with warm undertones
      ======================================== */
   :root.theme-light-minimal, html.theme-light-minimal, body.theme-light-minimal {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 93%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --background: 40 33% 98%;
+    --foreground: 20 14% 15%;
+    --card: 40 40% 99%;
+    --card-foreground: 20 14% 15%;
+    --popover: 40 40% 99%;
+    --popover-foreground: 20 14% 15%;
+    --primary: 24 85% 52%;
+    --primary-foreground: 40 40% 99%;
+    --secondary: 40 25% 94%;
+    --secondary-foreground: 20 14% 20%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 20 10% 45%;
+    --accent: 24 75% 48%;
+    --accent-foreground: 40 40% 99%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 160 84% 39%;
+    --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 11%;
-    --status-ok: 160 84% 39%;
+    --warning-foreground: 20 14% 15%;
+    --status-ok: 152 69% 40%;
     --status-warning: 38 92% 50%;
-    --status-error: 0 84% 60%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 60%;
-    --text-primary: 222 47% 11%;
-    --text-secondary: 215 16% 47%;
-    --text-muted: 215 16% 60%;
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1);
+    --status-error: 0 72% 51%;
+    --border: 40 15% 88%;
+    --input: 40 20% 95%;
+    --ring: 24 85% 52%;
+    --radius: 0.625rem;
+    --sidebar-background: 40 40% 99%;
+    --sidebar-foreground: 20 14% 15%;
+    --sidebar-primary: 24 85% 52%;
+    --sidebar-primary-foreground: 40 40% 99%;
+    --sidebar-accent: 40 25% 94%;
+    --sidebar-accent-foreground: 20 14% 20%;
+    --sidebar-border: 40 15% 88%;
+    --sidebar-ring: 24 85% 52%;
+    --text-primary: 20 14% 15%;
+    --text-secondary: 20 10% 40%;
+    --text-muted: 20 8% 55%;
+    --shadow-sm: 0 1px 3px 0 hsl(20 20% 20% / 0.04), 0 1px 2px -1px hsl(20 20% 20% / 0.03);
+    --shadow-md: 0 4px 6px -1px hsl(20 20% 20% / 0.06), 0 2px 4px -2px hsl(20 20% 20% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(20 20% 20% / 0.08), 0 4px 6px -4px hsl(20 20% 20% / 0.04);
   }
 
   /* ========================================
-     FROST MINIMAL THEME - Elegant icy blue
+     FROST MINIMAL THEME - Cool Nordic elegance
+     Refined icy tones with teal accent
      ======================================== */
   :root.theme-frost-minimal, html.theme-frost-minimal, body.theme-frost-minimal {
-    --background: 200 60% 97%;
-    --foreground: 210 50% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 210 50% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 210 50% 15%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 200 40% 94%;
-    --secondary-foreground: 210 50% 15%;
-    --muted: 200 30% 90%;
-    --muted-foreground: 210 20% 45%;
-    --accent: 199 89% 48%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --background: 200 30% 97%;
+    --foreground: 210 40% 12%;
+    --card: 200 20% 99%;
+    --card-foreground: 210 40% 12%;
+    --popover: 200 20% 99%;
+    --popover-foreground: 210 40% 12%;
+    --primary: 186 72% 42%;
+    --primary-foreground: 200 20% 99%;
+    --secondary: 200 25% 93%;
+    --secondary-foreground: 210 40% 15%;
+    --muted: 200 18% 90%;
+    --muted-foreground: 210 15% 42%;
+    --accent: 186 65% 38%;
+    --accent-foreground: 200 20% 99%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 160 84% 39%;
+    --success: 160 72% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 210 50% 15%;
-    --status-ok: 160 84% 39%;
+    --warning-foreground: 210 40% 12%;
+    --status-ok: 160 72% 40%;
     --status-warning: 38 92% 50%;
-    --status-error: 0 84% 60%;
-    --border: 200 30% 88%;
-    --input: 200 30% 92%;
-    --ring: 199 89% 48%;
+    --status-error: 0 72% 51%;
+    --border: 200 20% 87%;
+    --input: 200 20% 94%;
+    --ring: 186 72% 42%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 210 50% 15%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 40% 94%;
-    --sidebar-accent-foreground: 210 50% 15%;
-    --sidebar-border: 200 30% 88%;
-    --sidebar-ring: 199 89% 48%;
-    --text-primary: 210 50% 15%;
-    --text-secondary: 210 20% 45%;
-    --text-muted: 210 15% 55%;
-    --shadow-sm: 0 1px 2px 0 hsl(200 50% 50% / 0.08);
-    --shadow-md: 0 4px 6px -1px hsl(200 50% 50% / 0.12);
-    --shadow-lg: 0 10px 15px -3px hsl(200 50% 50% / 0.15);
+    --sidebar-background: 200 20% 99%;
+    --sidebar-foreground: 210 40% 12%;
+    --sidebar-primary: 186 72% 42%;
+    --sidebar-primary-foreground: 200 20% 99%;
+    --sidebar-accent: 200 25% 93%;
+    --sidebar-accent-foreground: 210 40% 15%;
+    --sidebar-border: 200 20% 87%;
+    --sidebar-ring: 186 72% 42%;
+    --text-primary: 210 40% 12%;
+    --text-secondary: 210 20% 38%;
+    --text-muted: 210 12% 52%;
+    --shadow-sm: 0 1px 3px 0 hsl(200 30% 40% / 0.05), 0 1px 2px -1px hsl(200 30% 40% / 0.03);
+    --shadow-md: 0 4px 6px -1px hsl(200 30% 40% / 0.08), 0 2px 4px -2px hsl(200 30% 40% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(200 30% 40% / 0.10), 0 4px 6px -4px hsl(200 30% 40% / 0.05);
   }
 }
 
