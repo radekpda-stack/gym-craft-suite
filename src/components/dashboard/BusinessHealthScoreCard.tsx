@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Gauge, Settings, Info } from 'lucide-react';
+import { Gauge, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,22 +58,19 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <div className="space-y-2 text-xs">
-                    <p className="font-medium">Jak se počítá kapacita:</p>
-                    {data.capacityInfo && (
-                      <div className="space-y-1 text-muted-foreground">
-                        <p>• {data.capacityInfo.hoursPerDay.toFixed(1)}h denně</p>
-                        <p>• {data.capacityInfo.workingDays} pracovních dní/měsíc</p>
-                        <p>• Max. {data.capacityInfo.maxSlots} slotů/měsíc</p>
-                        <p>• Využito: {data.capacityInfo.usedSlots} slotů</p>
+                    <p className="font-medium">Jak se počítá skóre:</p>
+                    <div className="space-y-1 text-muted-foreground">
+                      <p>• Retence: aktivní klienti za 60 dní</p>
+                      <p>• Zdraví kreditů: klienti s kladným kreditem</p>
+                      <p>• Trend příjmů: změna oproti minulému měsíci</p>
+                      <p>• Platební morálka: % zaplacených tréninků</p>
+                    </div>
+                    {data.creditInfo && (
+                      <div className="pt-1 border-t border-border/50 text-muted-foreground">
+                        <p>• {data.creditInfo.clientsWithCredit} s kreditem</p>
+                        <p>• {data.creditInfo.clientsInDebt} v dluhu</p>
                       </div>
                     )}
-                    <Link 
-                      to="/settings" 
-                      className="flex items-center gap-1 text-primary hover:underline mt-2"
-                    >
-                      <Settings className="w-3 h-3" />
-                      Upravit kapacitu
-                    </Link>
                   </div>
                 </TooltipContent>
               </Tooltip>
