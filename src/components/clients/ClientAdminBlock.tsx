@@ -72,6 +72,8 @@ export function ClientAdminBlock({
                 clientId={client.id}
                 currentPrice={client.custom_training_price}
                 currentNote={client.custom_price_note}
+                currentCreditLimit={client.custom_price_credit_limit}
+                currentCreditBalance={client.credit_balance}
               />
             </div>
 

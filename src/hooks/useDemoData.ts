@@ -34,6 +34,7 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     // Custom pricing
     custom_training_price: null,
     custom_price_note: null,
+    custom_price_credit_limit: null,
     // Extended personal data fields
     handedness: null,
     occupation: null,
