@@ -558,6 +558,9 @@ export function useUpdateTrainingSession() {
       return { data, creditDeducted, price, newBalance, clientId, shouldSyncWorkout };
     },
     onSuccess: (result) => {
+      // Invalidate the specific training session query (singular)
+      queryClient.invalidateQueries({ queryKey: ["training_session", result.data.id] });
+      // Invalidate the list of all training sessions
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
