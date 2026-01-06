@@ -13,6 +13,7 @@ import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditExerciseEntryDialog } from '@/components/exercises/EditExerciseEntryDialog';
+import { formatTimeMs, getTimeMs } from '@/lib/timeUtils';
 
 interface ExerciseClientComparisonProps {
   exerciseId: string;
@@ -30,7 +31,7 @@ const COLORS = [
 interface TimeEntry {
   id: string;
   date: string;
-  timeSeconds: number;
+  timeMs: number; // Store in milliseconds for precision
   isPR: boolean;
 }
 
@@ -42,12 +43,6 @@ interface StrengthEntry {
   sets: number;
   volume: number;
   isPR: boolean;
-}
-
-function formatTimeDisplay(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseClientComparisonProps) {
@@ -78,6 +73,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           reps,
           sets,
           time_seconds,
+          time_ms,
           date,
           is_pr,
           client_id,
@@ -100,16 +96,16 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         entries: StrengthEntry[];
       }>();
 
-      // Process clients for time-based
+      // Process clients for time-based (using milliseconds for precision)
       const clientTimeMap = new Map<string, {
         clientId: string;
         clientName: string;
-        bestTime: number | null;
-        averageTime: number | null;
+        bestTimeMs: number | null;
+        averageTimeMs: number | null;
         entryCount: number;
         prCount: number;
         lastDate: string;
-        times: number[];
+        timesMs: number[];
         entries: TimeEntry[];
       }>();
 
@@ -118,9 +114,13 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         const clientName = (entry.clients as any)?.name || 'Neznámý';
         const weight = entry.weight_kg || 0;
         const timeSeconds = entry.time_seconds;
+        const timeMs = entry.time_ms;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
+
+        // Get time in milliseconds (prefer time_ms, fallback to time_seconds * 1000)
+        const effectiveTimeMs = getTimeMs({ time_ms: timeMs, time_seconds: timeSeconds });
 
         // Process strength data
         if (weight > 0) {
@@ -164,46 +164,46 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           }
         }
 
-        // Process time data
-        if (timeSeconds && timeSeconds > 0) {
+        // Process time data (using milliseconds for precision)
+        if (effectiveTimeMs && effectiveTimeMs > 0) {
           if (!clientTimeMap.has(clientId)) {
             clientTimeMap.set(clientId, {
               clientId,
               clientName,
-              bestTime: null,
-              averageTime: null,
+              bestTimeMs: null,
+              averageTimeMs: null,
               entryCount: 0,
               prCount: 0,
               lastDate: entry.date,
-              times: [],
+              timesMs: [],
               entries: [],
             });
           }
 
           const client = clientTimeMap.get(clientId)!;
-          client.times.push(timeSeconds);
-          if (client.bestTime === null || timeSeconds < client.bestTime) {
-            client.bestTime = timeSeconds;
+          client.timesMs.push(effectiveTimeMs);
+          if (client.bestTimeMs === null || effectiveTimeMs < client.bestTimeMs) {
+            client.bestTimeMs = effectiveTimeMs;
           }
           client.entryCount++;
           if (entry.is_pr) client.prCount++;
           if (entry.date > client.lastDate) client.lastDate = entry.date;
 
-          // Store individual entry
+          // Store individual entry with ms precision
           client.entries.push({
             id: entry.id,
             date: entry.date,
-            timeSeconds,
+            timeMs: effectiveTimeMs,
             isPR: entry.is_pr || false,
           });
         }
       });
 
-      // Calculate averages and trends for time-based
+      // Calculate averages for time-based (in milliseconds)
       clientTimeMap.forEach((client) => {
-        if (client.times.length > 0) {
-          client.averageTime = Math.round(
-            client.times.reduce((a, b) => a + b, 0) / client.times.length
+        if (client.timesMs.length > 0) {
+          client.averageTimeMs = Math.round(
+            client.timesMs.reduce((a, b) => a + b, 0) / client.timesMs.length
           );
         }
       });
@@ -226,9 +226,9 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
       const timeClients = Array.from(clientTimeMap.values())
         .map(client => {
           let trend: 'up' | 'down' | 'stable' = 'stable';
-          if (client.times.length >= 2) {
-            const recentTimes = client.times.slice(0, 3);
-            const olderTimes = client.times.slice(3, 6);
+          if (client.timesMs.length >= 2) {
+            const recentTimes = client.timesMs.slice(0, 3);
+            const olderTimes = client.timesMs.slice(3, 6);
             if (recentTimes.length > 0 && olderTimes.length > 0) {
               const recentAvg = recentTimes.reduce((a, b) => a + b, 0) / recentTimes.length;
               const olderAvg = olderTimes.reduce((a, b) => a + b, 0) / olderTimes.length;
@@ -239,10 +239,10 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           return { ...client, trend };
         })
         .sort((a, b) => {
-          // Sort by best time (lower is better)
-          if (a.bestTime === null) return 1;
-          if (b.bestTime === null) return -1;
-          return a.bestTime - b.bestTime;
+          // Sort by best time (lower is better, using ms for precision)
+          if (a.bestTimeMs === null) return 1;
+          if (b.bestTimeMs === null) return -1;
+          return a.bestTimeMs - b.bestTimeMs;
         });
 
       return {
@@ -312,7 +312,8 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   const timeChartData = data?.timeClients.slice(0, 10).map((c, i) => ({
     name: c.clientName.length > 12 ? c.clientName.slice(0, 12) + '...' : c.clientName,
     fullName: c.clientName,
-    value: c.bestTime,
+    value: c.bestTimeMs ? c.bestTimeMs / 1000 : null, // Convert ms to seconds for chart
+    valueMs: c.bestTimeMs,
     clientId: c.clientId,
     rank: i,
   })) || [];
@@ -352,7 +353,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                   <XAxis 
                     type="number" 
                     tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
-                    tickFormatter={(v) => formatTimeDisplay(v)}
+                    tickFormatter={(v) => formatTimeMs(v * 1000)}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -371,7 +372,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                       borderRadius: '8px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
-                    formatter={(value: number, _, props) => [formatTimeDisplay(value), props.payload.fullName]}
+                    formatter={(_, __, props) => [formatTimeMs(props.payload.valueMs), props.payload.fullName]}
                     cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                   />
                   <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
@@ -451,10 +452,10 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                           </div>
                         </td>
                         <td className="py-3 px-2 text-right font-bold text-primary">
-                          {client.bestTime ? formatTimeDisplay(client.bestTime) : '-'}
+                          {client.bestTimeMs ? formatTimeMs(client.bestTimeMs) : '-'}
                         </td>
                         <td className="py-3 px-2 text-right text-muted-foreground">
-                          {client.averageTime ? formatTimeDisplay(client.averageTime) : '-'}
+                          {client.averageTimeMs ? formatTimeMs(client.averageTimeMs) : '-'}
                         </td>
                         <td className="py-3 px-2 text-right">
                           {client.prCount > 0 && (
@@ -519,7 +520,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                                           "font-mono font-bold",
                                           entry.isPR ? "text-primary" : "text-foreground"
                                         )}>
-                                          {formatTimeDisplay(entry.timeSeconds)}
+                                          {formatTimeMs(entry.timeMs)}
                                         </span>
                                         <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                       </div>
