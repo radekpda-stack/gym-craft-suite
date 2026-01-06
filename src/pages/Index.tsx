@@ -11,7 +11,7 @@ import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
 import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
-import { CapacityAlertsCard } from '@/components/dashboard/CapacityAlertsCard';
+
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
 
@@ -67,10 +67,6 @@ export default function Index() {
           <TrainingsCalendarCard data={data} isLoading={isLoading} />
         </SectionErrorBoundary>
 
-        {/* 📈 Capacity Alerts - NEW */}
-        <SectionErrorBoundary section="Kapacita" compact>
-          <CapacityAlertsCard />
-        </SectionErrorBoundary>
 
         {/* 👥 Client Progress - NEW */}
         <SectionErrorBoundary section="Pokrok klientů" compact>

@@ -3,7 +3,9 @@ import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Users, Banknote, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Calendar, Users, Banknote, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface DashboardHeaderProps {
   data: DashboardViewModel | undefined;
@@ -88,6 +90,18 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
             </h1>
           </div>
         </div>
+        
+        {/* Analytics button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
+        >
+          <Link to="/statistics">
+            <BarChart3 className="w-5 h-5 text-primary" />
+          </Link>
+        </Button>
       </div>
       
       {/* Quick metrics - now visible on mobile too */}
