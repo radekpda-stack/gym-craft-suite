@@ -30,6 +30,7 @@ export interface Client {
   // Custom pricing
   custom_training_price: number | null;
   custom_price_note: string | null;
+  custom_price_credit_limit: number | null;
   // Extended personal data fields
   handedness: string | null;
   occupation: string | null;
@@ -262,6 +263,7 @@ export function useUpdateClient() {
       values?: Partial<ClientFormValues> & { training_start_date?: string | null };
       custom_training_price?: number | null;
       custom_price_note?: string | null;
+      custom_price_credit_limit?: number | null;
     }) => {
       const values = rest.values || {};
       const hasCustomPriceUpdate = 'custom_training_price' in rest;
@@ -308,6 +310,7 @@ export function useUpdateClient() {
       // Custom pricing fields
       if (hasCustomPriceUpdate) updateData.custom_training_price = rest.custom_training_price;
       if ('custom_price_note' in rest) updateData.custom_price_note = rest.custom_price_note;
+      if ('custom_price_credit_limit' in rest) updateData.custom_price_credit_limit = rest.custom_price_credit_limit;
 
       // Don't update if no fields to update
       if (Object.keys(updateData).length === 0) {

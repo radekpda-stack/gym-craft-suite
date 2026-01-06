@@ -507,6 +507,34 @@ export default function TrainingDetail() {
               </div>
             )}
 
+            {/* Custom price exhausted warning */}
+            {participantPayments.length === 1 && (() => {
+              const clientData = clients.find(c => c.id === participantPayments[0].client_id);
+              if (!clientData?.custom_training_price || clientData.custom_price_credit_limit === null) return null;
+              
+              const participant = participantPayments[0];
+              if (participant.payment_method !== 'credit') return null;
+              
+              const newBalance = participant.credit_balance - participant.price_share;
+              const willExhaust = newBalance <= clientData.custom_price_credit_limit;
+              
+              if (!willExhaust) return null;
+              
+              return (
+                <Alert className="border-amber-500/30 bg-amber-500/10">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-600 dark:text-amber-400">
+                    <strong>Předplacený kredit bude vyčerpán!</strong>
+                    <br />
+                    <span className="text-sm">
+                      Po dokončení bude kredit {newBalance} Kč (limit: {clientData.custom_price_credit_limit} Kč).
+                      Zvažte vypnutí vlastního ceníku - další tréninky budou za standardní cenu.
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              );
+            })()}
+
             <div className="space-y-2">
               <Label>Poznámky (volitelné)</Label>
               <Textarea
