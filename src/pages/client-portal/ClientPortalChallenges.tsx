@@ -36,7 +36,7 @@ import { ChallengeHeroCard } from '@/components/client-portal/challenges/Challen
 import { TeamJoinCreate } from '@/components/client-portal/challenges/TeamJoinCreate';
 import { TeamManagement } from '@/components/client-portal/challenges/TeamManagement';
 import { TeamLeaderboardClient } from '@/components/client-portal/challenges/TeamLeaderboardClient';
-import { formatChallengeScore, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
+import { formatChallengeScore, formatChallengeScoreFull, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
 import { format, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -560,8 +560,8 @@ export default function ClientPortalChallenges() {
                   <Trophy className="h-4 w-4" />
                   Leaderboard (anonymní)
                 </h3>
-                <div className="space-y-2">
-                  {leaderboard.leaderboard.slice(0, 10).map((entry: any) => (
+                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {leaderboard.leaderboard.map((entry: any) => (
                     <div 
                       key={entry.rank}
                       className={cn(
@@ -577,8 +577,8 @@ export default function ClientPortalChallenges() {
                       <span className={cn("flex-1", entry.is_you && "font-semibold")}>
                         {entry.is_you ? 'Ty' : entry.pseudonym}
                       </span>
-                      <span className="font-mono font-medium">
-                        {formatChallengeScore(entry.score, selectedChallengeData.primary_metric)}
+                      <span className="font-mono font-medium tabular-nums">
+                        {formatChallengeScoreFull(entry.score, selectedChallengeData.primary_metric)}
                       </span>
                     </div>
                   ))}
