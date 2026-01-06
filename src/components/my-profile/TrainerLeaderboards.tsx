@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Dumbbell, Timer, Medal, TrendingUp, User } from 'lucide-react';
+import { Trophy, Dumbbell, Timer, Medal, TrendingUp, User, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { EditExerciseEntryDialog } from '@/components/exercises/EditExerciseEntryDialog';
 
 interface ExerciseLeaderboardEntry {
   rank: number;
@@ -19,6 +20,7 @@ interface ExerciseLeaderboardEntry {
   displayValue: string;
   date: string;
   isTrainer: boolean;
+  entryId: string;
 }
 
 interface ExerciseOption {
@@ -30,6 +32,8 @@ interface ExerciseOption {
 export function TrainerLeaderboards() {
   const { data: profile } = useMyProfile();
   const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editMetricCategory, setEditMetricCategory] = useState<string | null>(null);
 
   // Get available exercises (both trainer's and clients')
   const { data: exerciseOptions, isLoading: exercisesLoading } = useQuery({
@@ -119,7 +123,7 @@ export function TrainerLeaderboards() {
       // Get best entry for each client for this exercise
       const { data: entries } = await supabase
         .from('exercise_entries')
-        .select('client_id, exercise_name, weight_kg, reps, distance_meters, time_seconds, avg_watts, date, is_pr')
+        .select('id, client_id, exercise_name, weight_kg, reps, distance_meters, time_seconds, avg_watts, date, is_pr')
         .in('client_id', clientIds)
         .eq('exercise_name', selectedExercise)
         .eq('is_pr', true)
@@ -190,6 +194,7 @@ export function TrainerLeaderboards() {
           return {
             rank: 0,
             clientId,
+            entryId: entry.id,
             name: clientInfo?.name || 'Neznámý',
             value,
             displayValue,
@@ -304,10 +309,14 @@ export function TrainerLeaderboards() {
                   {leaderboardData.entries.map((entry) => (
                     <div
                       key={entry.clientId}
+                      onClick={() => {
+                        setEditEntryId(entry.entryId);
+                        setEditMetricCategory(leaderboardData.exerciseType);
+                      }}
                       className={cn(
-                        'flex items-center justify-between p-3 rounded-lg transition-colors',
+                        'flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer group',
                         entry.isTrainer 
-                          ? 'bg-primary/10 border border-primary/30' 
+                          ? 'bg-primary/10 border border-primary/30 hover:bg-primary/20' 
                           : 'bg-secondary/30 hover:bg-secondary/50',
                         entry.rank <= 3 && 'font-semibold'
                       )}
@@ -332,13 +341,16 @@ export function TrainerLeaderboards() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge variant="secondary" className="font-mono">
-                          {entry.displayValue}
-                        </Badge>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {format(new Date(entry.date), 'd.M.yyyy', { locale: cs })}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <Badge variant="secondary" className="font-mono">
+                            {entry.displayValue}
+                          </Badge>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {format(new Date(entry.date), 'd.M.yyyy', { locale: cs })}
+                          </p>
+                        </div>
+                        <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   ))}
@@ -415,6 +427,18 @@ export function TrainerLeaderboards() {
           </Card>
         </div>
       )}
+
+      <EditExerciseEntryDialog
+        entryId={editEntryId}
+        metricCategory={editMetricCategory}
+        open={!!editEntryId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditEntryId(null);
+            setEditMetricCategory(null);
+          }
+        }}
+      />
     </div>
   );
 }
