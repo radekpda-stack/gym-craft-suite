@@ -32,17 +32,21 @@ export function useFormTracking(options: UseFormTrackingOptions) {
   const fieldValuesRef = useRef<Record<string, boolean>>({});
 
   // Get props to spread on form fields
+  // IMPORTANT: These should be used BEFORE {...field} spread to not override react-hook-form handlers
+  // Or use the returned handlers to wrap original handlers
   const getFieldProps = useCallback((fieldName: string) => {
     return {
       onFocus: () => {
         analytics.trackFieldFocus(fieldName);
       },
-      onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      onBlurCapture: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        // Use capture phase to not interfere with form handlers
         const hasValue = e.target.value !== '' && e.target.value !== undefined;
         fieldValuesRef.current[fieldName] = hasValue;
         analytics.trackFieldBlur(fieldName, hasValue);
       },
-      onChange: () => {
+      onChangeCapture: () => {
+        // Use capture phase to not interfere with form handlers
         analytics.trackFieldChange(fieldName);
       },
     };
