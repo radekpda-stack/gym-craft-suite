@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { formatChallengeScore, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
+import { formatChallengeScore, formatChallengeScoreFull, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format, differenceInMilliseconds } from 'date-fns';
@@ -163,46 +163,46 @@ export function ChallengeHeroCard({
             )}
           </div>
 
-          {/* Right Column - Leaderboard TOP 3 */}
+          {/* Right Column - Leaderboard */}
           <div className="bg-muted/30 rounded-xl p-4 space-y-3">
             <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
               <Trophy className="h-4 w-4" />
-              Top 3 Leaderboard
+              Leaderboard
             </h3>
             
             {showLeaderboard && leaderboard && leaderboard.length > 0 ? (
               <div className="space-y-2">
-                {leaderboard.slice(0, 3).map((entry) => (
-                  <div 
-                    key={entry.rank}
-                    className={cn(
-                      "flex items-center gap-3 p-2.5 rounded-lg transition-all",
-                      getRankBg(entry.rank, entry.is_you)
-                    )}
-                  >
-                    <div className="w-7 flex justify-center shrink-0">
-                      {getRankIcon(entry.rank) || (
-                        <span className="text-muted-foreground font-medium">{entry.rank}.</span>
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {leaderboard.map((entry) => (
+                    <div 
+                      key={entry.rank}
+                      className={cn(
+                        "flex items-center gap-3 p-2.5 rounded-lg transition-all",
+                        getRankBg(entry.rank, entry.is_you)
                       )}
+                    >
+                      <div className="w-7 flex justify-center shrink-0">
+                        {getRankIcon(entry.rank) || (
+                          <span className="text-muted-foreground font-medium">{entry.rank}.</span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        "flex-1 truncate",
+                        entry.is_you && "font-semibold text-primary"
+                      )}>
+                        {entry.is_you ? 'Ty' : entry.pseudonym}
+                      </span>
+                      <span className="font-mono font-medium text-sm tabular-nums">
+                        {formatChallengeScoreFull(entry.score, challenge.primary_metric)}
+                      </span>
                     </div>
-                    <span className={cn(
-                      "flex-1 truncate",
-                      entry.is_you && "font-semibold text-primary"
-                    )}>
-                      {entry.is_you ? 'Ty' : entry.pseudonym}
-                    </span>
-                    <span className="font-mono font-medium text-sm tabular-nums">
-                      {formatChallengeScore(entry.score, challenge.primary_metric)}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
                 
-                {participantCount > 3 && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">
-                    <Users className="h-3 w-3 inline mr-1" />
-                    Celkem {participantCount} účastníků
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  <Users className="h-3 w-3 inline mr-1" />
+                  Celkem {participantCount} účastníků
+                </p>
               </div>
             ) : (
               <div className="py-6 text-center">

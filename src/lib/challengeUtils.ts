@@ -3,7 +3,7 @@
  */
 
 import { Trophy, Medal, Award } from 'lucide-react';
-import { formatTimeMs } from '@/lib/timeUtils';
+import { formatTimeMs, formatTimeMsFull } from '@/lib/timeUtils';
 
 /**
  * Format score based on metric type
@@ -15,6 +15,17 @@ export function formatChallengeScore(score: number, metric: string): string {
     return formatTimeMs(ms);
   }
   return score.toLocaleString('cs-CZ');
+}
+
+/**
+ * Format score for leaderboard (always show centiseconds for time)
+ */
+export function formatChallengeScoreFull(score: number, metric: string): string {
+  if (metric === 'time_seconds' || metric === 'time_ms') {
+    const ms = metric === 'time_seconds' ? score * 1000 : score;
+    return formatTimeMsFull(ms);
+  }
+  return formatChallengeScore(score, metric);
 }
 
 /**
