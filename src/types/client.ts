@@ -25,6 +25,7 @@ export interface Client {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  training_start_date: string | null;
   // Extended personal data fields
   handedness: string | null;
   occupation: string | null;
@@ -35,6 +36,10 @@ export interface Client {
   stress_level: number | null;
   dietary_restrictions: string[] | null;
   supplements: string[] | null;
+  // Custom pricing fields
+  custom_training_price: number | null;
+  custom_price_note: string | null;
+  custom_price_credit_limit: number | null;
   // Price transition fields
   grandfathered_credit: number | null;
   grandfathered_at: string | null;
