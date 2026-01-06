@@ -35,6 +35,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
+import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
@@ -428,21 +429,40 @@ export function TrainingDetailView({
         />
       )}
 
-      {/* TAGS - immediately after header */}
-      <div className="glass rounded-xl p-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <FileText className="w-4 h-4" />
-          <span className="text-sm font-medium">Tagy</span>
+      {/* TRAINING TYPE & TAGS - combined section for preparation */}
+      <div className="glass rounded-xl p-4 space-y-4">
+        {/* Training Type */}
+        <div>
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Dumbbell className="w-4 h-4" />
+            <span className="text-sm font-medium">Typ tréninku</span>
+          </div>
+          <TrainingTypeSelector
+            value={training.training_type}
+            onChange={async (value) => {
+              if (onFieldUpdate) {
+                await onFieldUpdate('training_type', value || '');
+              }
+            }}
+          />
         </div>
-        <TrainingTagsSelector
-          selectedTagIds={selectedTagIds}
-          onChange={(newTagIds) => {
-            setSelectedTagIds(newTagIds);
-            if (!isEditMode && onTagsChange) {
-              onTagsChange(newTagIds);
-            }
-          }}
-        />
+
+        {/* Tags */}
+        <div>
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <FileText className="w-4 h-4" />
+            <span className="text-sm font-medium">Tagy</span>
+          </div>
+          <TrainingTagsSelector
+            selectedTagIds={selectedTagIds}
+            onChange={(newTagIds) => {
+              setSelectedTagIds(newTagIds);
+              if (!isEditMode && onTagsChange) {
+                onTagsChange(newTagIds);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* EXERCISES - main content */}
