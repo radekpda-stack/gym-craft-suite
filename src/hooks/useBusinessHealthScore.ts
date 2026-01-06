@@ -1,31 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, subMonths, subDays, getDaysInMonth } from 'date-fns';
-import { calculateMonthlyCapacity, type CapacitySettings } from './useCapacitySettings';
-
-const DEFAULT_SETTINGS: CapacitySettings = {
-  workingDays: [true, true, true, true, true, true, true],
-  workingHoursStart: '09:00',
-  workingHoursEnd: '15:00',
-  slotDurationMinutes: 60,
-  includeBlockedTime: true,
-};
+import { startOfMonth, subMonths, subDays } from 'date-fns';
 
 export interface BusinessHealthData {
   score: number; // 0-100
   components: {
     retention: { score: number; weight: number; value: number; label: string };
-    capacity: { score: number; weight: number; value: number; label: string };
+    creditHealth: { score: number; weight: number; value: number; label: string };
     revenueTrend: { score: number; weight: number; value: number; label: string };
     payments: { score: number; weight: number; value: number; label: string };
   };
   status: 'excellent' | 'good' | 'warning' | 'critical';
   insights: string[];
-  capacityInfo?: {
-    maxSlots: number;
-    usedSlots: number;
-    hoursPerDay: number;
-    workingDays: number;
+  creditInfo?: {
+    clientsWithCredit: number;
+    clientsInDebt: number;
+    totalActiveClients: number;
   };
 }
 
@@ -40,52 +30,42 @@ export function useBusinessHealthScore() {
       const thisMonthStart = startOfMonth(now);
       const lastMonthStart = startOfMonth(subMonths(now, 1));
       const sixtyDaysAgo = subDays(now, 60);
-      const daysInCurrentMonth = getDaysInMonth(now);
-
-      // Fetch capacity settings directly (not via hook)
-      const { data: settingsData } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'capacity_settings')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const settings: CapacitySettings = settingsData?.value && typeof settingsData.value === 'object'
-        ? settingsData.value as unknown as CapacitySettings
-        : DEFAULT_SETTINGS;
-
-      // Calculate capacity from settings
-      const { workingDaysCount, hoursPerDay, totalSlots } = calculateMonthlyCapacity(settings, daysInCurrentMonth);
-      const maxCapacity = totalSlots;
 
       // Parallel queries
-      const clientsResult = await supabase.from('clients').select('id, is_archived').eq('user_id', user.id);
-      const thisMonthTrainingsResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price, client_id')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .gte('date', thisMonthStart.toISOString());
-      const lastMonthTrainingsResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .gte('date', lastMonthStart.toISOString())
-        .lt('date', thisMonthStart.toISOString());
-      const recentTrainingsResult = await supabase
-        .from('training_sessions')
-        .select('client_id, date')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .gte('date', sixtyDaysAgo.toISOString());
-      // Unpaid = payment_status is 'pending' or null, and status is 'completed'
-      const unpaidResult = await supabase
-        .from('training_sessions')
-        .select('id, final_price')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .or('payment_status.is.null,payment_status.eq.pending');
+      const [
+        clientsResult,
+        thisMonthTrainingsResult,
+        lastMonthTrainingsResult,
+        recentTrainingsResult,
+        unpaidResult,
+      ] = await Promise.all([
+        supabase.from('clients').select('id, is_archived, credit_balance').eq('user_id', user.id),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price, client_id')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .gte('date', thisMonthStart.toISOString()),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .gte('date', lastMonthStart.toISOString())
+          .lt('date', thisMonthStart.toISOString()),
+        supabase
+          .from('training_sessions')
+          .select('client_id, date')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .gte('date', sixtyDaysAgo.toISOString()),
+        supabase
+          .from('training_sessions')
+          .select('id, final_price')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .or('payment_status.is.null,payment_status.eq.pending'),
+      ]);
 
       const clients = clientsResult.data || [];
       const activeClients = clients.filter(c => !c.is_archived);
@@ -102,18 +82,17 @@ export function useBusinessHealthScore() {
         : 0;
       const retentionScore = Math.min(100, retentionRate);
 
-      // 2. CAPACITY SCORE (25%) - using settings
-      const capacityUtilization = maxCapacity > 0 
-        ? Math.min(100, (thisMonthTrainings.length / maxCapacity) * 100)
+      // 2. CREDIT HEALTH SCORE (25%) - NEW: replaces capacity
+      const clientsWithPositiveCredit = activeClients.filter(c => (c.credit_balance || 0) > 0).length;
+      const clientsInDebt = activeClients.filter(c => (c.credit_balance || 0) < 0).length;
+      const creditHealthRate = activeClients.length > 0 
+        ? (clientsWithPositiveCredit / activeClients.length) * 100 
+        : 100;
+      // Penalize for clients in debt
+      const debtPenalty = activeClients.length > 0 
+        ? (clientsInDebt / activeClients.length) * 30 
         : 0;
-      // Optimal is 60-80%, penalize both too low and too high
-      let capacityScore = capacityUtilization;
-      if (capacityUtilization > 80) {
-        capacityScore = 100 - (capacityUtilization - 80); // Penalty for overwork
-      } else if (capacityUtilization < 40) {
-        capacityScore = capacityUtilization * 1.5; // Lower score for underutilization
-      }
-      capacityScore = Math.max(0, Math.min(100, capacityScore));
+      const creditHealthScore = Math.max(0, Math.min(100, creditHealthRate - debtPenalty));
 
       // 3. REVENUE TREND SCORE (25%)
       const thisMonthRevenue = thisMonthTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
@@ -134,10 +113,10 @@ export function useBusinessHealthScore() {
       const paymentsScore = paidRate;
 
       // WEIGHTED TOTAL
-      const weights = { retention: 0.30, capacity: 0.25, revenueTrend: 0.25, payments: 0.20 };
+      const weights = { retention: 0.30, creditHealth: 0.25, revenueTrend: 0.25, payments: 0.20 };
       const totalScore = Math.round(
         retentionScore * weights.retention +
-        capacityScore * weights.capacity +
+        creditHealthScore * weights.creditHealth +
         revenueTrendScore * weights.revenueTrend +
         paymentsScore * weights.payments
       );
@@ -154,11 +133,11 @@ export function useBusinessHealthScore() {
       if (retentionScore < 70) {
         insights.push('Retence klientů je pod průměrem. Zvažte follow-up u neaktivních klientů.');
       }
-      if (capacityUtilization < 50) {
-        insights.push('Máte volnou kapacitu. Zkuste oslovit nové klienty.');
+      if (clientsInDebt > 0) {
+        insights.push(`${clientsInDebt} ${clientsInDebt === 1 ? 'klient je' : clientsInDebt < 5 ? 'klienti jsou' : 'klientů je'} v dluhu.`);
       }
-      if (capacityUtilization > 90) {
-        insights.push('Jste téměř plně vytíženi. Zvažte zvýšení cen nebo rozšíření kapacity.');
+      if (creditHealthRate >= 80 && clientsInDebt === 0) {
+        insights.push('Většina klientů má aktivní kredit - výborně!');
       }
       if (revenueTrendPercent < -10) {
         insights.push('Příjmy klesají oproti minulému měsíci.');
@@ -177,13 +156,13 @@ export function useBusinessHealthScore() {
             score: Math.round(retentionScore), 
             weight: weights.retention, 
             value: Math.round(retentionRate),
-            label: 'Retence klientů'
+            label: 'Retence'
           },
-          capacity: { 
-            score: Math.round(capacityScore), 
-            weight: weights.capacity, 
-            value: Math.round(capacityUtilization),
-            label: 'Využití kapacity'
+          creditHealth: { 
+            score: Math.round(creditHealthScore), 
+            weight: weights.creditHealth, 
+            value: Math.round(creditHealthRate),
+            label: 'Zdraví kreditů'
           },
           revenueTrend: { 
             score: Math.round(revenueTrendScore), 
@@ -200,11 +179,10 @@ export function useBusinessHealthScore() {
         },
         status,
         insights,
-        capacityInfo: {
-          maxSlots: maxCapacity,
-          usedSlots: thisMonthTrainings.length,
-          hoursPerDay,
-          workingDays: workingDaysCount,
+        creditInfo: {
+          clientsWithCredit: clientsWithPositiveCredit,
+          clientsInDebt,
+          totalActiveClients: activeClients.length,
         },
       };
     },
