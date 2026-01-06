@@ -7637,6 +7637,7 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
+          payment_method: string | null
           price_share: number
           training_session_id: string
           user_id: string | null
@@ -7645,6 +7646,7 @@ export type Database = {
           client_id: string
           created_at?: string
           id?: string
+          payment_method?: string | null
           price_share?: number
           training_session_id: string
           user_id?: string | null
@@ -7653,6 +7655,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           id?: string
+          payment_method?: string | null
           price_share?: number
           training_session_id?: string
           user_id?: string | null

@@ -1,0 +1,166 @@
+/**
+ * ParticipantPaymentCard Component
+ * 
+ * Compact card for each participant with individual payment method selection.
+ * Auto-fills payment method based on client preferences.
+ */
+import { Wallet, Banknote, CreditCard, Building2, Clock } from 'lucide-react';
+import { ClientAvatar } from '@/components/ui/client-avatar';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
+
+export type IndividualPaymentMethod = 'credit' | 'cash' | 'card' | 'bank' | 'pending';
+
+export interface ParticipantPayment {
+  client_id: string;
+  client_name: string;
+  price_share: number;
+  payment_method: IndividualPaymentMethod;
+  credit_balance: number;
+  payment_mode?: string | null; // client preference: 'credit', 'cash_only', 'mixed'
+}
+
+interface ParticipantPaymentCardProps {
+  participant: ParticipantPayment;
+  onChange: (clientId: string, method: IndividualPaymentMethod) => void;
+  disabled?: boolean;
+}
+
+const paymentOptions: { value: IndividualPaymentMethod; label: string; shortLabel: string; icon: typeof Wallet }[] = [
+  { value: 'credit', label: 'Z kreditu', shortLabel: 'Kredit', icon: Wallet },
+  { value: 'cash', label: 'Hotově', shortLabel: 'Hotově', icon: Banknote },
+  { value: 'card', label: 'Kartou', shortLabel: 'Kartou', icon: CreditCard },
+  { value: 'bank', label: 'Převodem', shortLabel: 'Převodem', icon: Building2 },
+  { value: 'pending', label: 'Později', shortLabel: 'Později', icon: Clock },
+];
+
+export function ParticipantPaymentCard({ 
+  participant, 
+  onChange, 
+  disabled 
+}: ParticipantPaymentCardProps) {
+  const { credit_balance, price_share, payment_method } = participant;
+  
+  const hasSufficientCredit = credit_balance >= price_share;
+  const hasCredit = credit_balance > 0;
+  const showCreditWarning = payment_method === 'credit' && !hasSufficientCredit;
+  const showCreditInfo = payment_method === 'credit' && hasSufficientCredit;
+
+  return (
+    <div className="p-3 rounded-xl border bg-card space-y-2">
+      {/* Header: Avatar, Name, Price */}
+      <div className="flex items-center gap-3">
+        <ClientAvatar name={participant.client_name} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{participant.client_name}</p>
+          {showCreditInfo && (
+            <p className="text-xs text-muted-foreground">
+              Kredit: {formatCurrency(credit_balance)} → {formatCurrency(credit_balance - price_share)}
+            </p>
+          )}
+          {showCreditWarning && (
+            <p className="text-xs text-warning">
+              Kredit: {formatCurrency(credit_balance)} (chybí {formatCurrency(price_share - credit_balance)})
+            </p>
+          )}
+        </div>
+        <div className="text-right">
+          <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
+        </div>
+      </div>
+
+      {/* Payment method buttons - segmented control style */}
+      <div className="flex gap-1">
+        {paymentOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = payment_method === option.value;
+          const isCreditDisabled = option.value === 'credit' && !hasCredit;
+          
+          return (
+            <button
+              key={option.value}
+              type="button"
+              disabled={disabled || isCreditDisabled}
+              onClick={() => onChange(participant.client_id, option.value)}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all",
+                isSelected 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                (disabled || isCreditDisabled) && "opacity-40 cursor-not-allowed"
+              )}
+              title={isCreditDisabled ? 'Klient nemá kredit' : option.label}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{option.shortLabel}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Get default payment method based on client preferences and credit balance
+ */
+export function getDefaultPaymentMethod(
+  paymentMode: string | null | undefined,
+  creditBalance: number,
+  priceShare: number
+): IndividualPaymentMethod {
+  // If client is cash only, default to cash
+  if (paymentMode === 'cash_only') {
+    return 'cash';
+  }
+  
+  // If client pays from credit and has sufficient balance
+  if ((paymentMode === 'credit' || paymentMode === 'mixed' || !paymentMode) && creditBalance >= priceShare) {
+    return 'credit';
+  }
+  
+  // If mixed and has some credit but not enough, still try credit
+  // (the UI will show warning)
+  if (paymentMode === 'mixed' && creditBalance > 0) {
+    return 'credit';
+  }
+  
+  // Default to cash
+  return 'cash';
+}
+
+/**
+ * Payment summary by method
+ */
+export interface PaymentSummary {
+  method: IndividualPaymentMethod;
+  label: string;
+  icon: typeof Wallet;
+  total: number;
+  count: number;
+}
+
+export function calculatePaymentSummary(participants: ParticipantPayment[]): PaymentSummary[] {
+  const summary: Record<IndividualPaymentMethod, { total: number; count: number }> = {
+    credit: { total: 0, count: 0 },
+    cash: { total: 0, count: 0 },
+    card: { total: 0, count: 0 },
+    bank: { total: 0, count: 0 },
+    pending: { total: 0, count: 0 },
+  };
+
+  participants.forEach(p => {
+    summary[p.payment_method].total += p.price_share;
+    summary[p.payment_method].count += 1;
+  });
+
+  return paymentOptions
+    .filter(opt => summary[opt.value].count > 0)
+    .map(opt => ({
+      method: opt.value,
+      label: opt.label,
+      icon: opt.icon,
+      total: summary[opt.value].total,
+      count: summary[opt.value].count,
+    }));
+}

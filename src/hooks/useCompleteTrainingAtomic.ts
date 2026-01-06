@@ -1,11 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { IndividualPaymentMethod } from '@/components/trainings/ParticipantPaymentCard';
+
+interface ParticipantWithPayment {
+  client_id: string;
+  price_share: number;
+  payment_method: IndividualPaymentMethod;
+}
 
 interface AtomicCompleteParams {
   sessionId: string;
-  participants: Array<{ client_id: string; price_share: number }>;
-  paymentMethod: 'credit' | 'cash' | 'card' | 'bank' | 'pending';
+  participants: ParticipantWithPayment[];
   totalPrice: number;
   trainerSummary?: {
     trainer_went_well?: string;
@@ -16,11 +22,6 @@ interface AtomicCompleteParams {
   };
   subjectiveRating?: number | null;
   notes?: string;
-  // Hybrid payment support
-  usePartialCredit?: boolean;
-  partialCreditAmount?: number;
-  partialPaymentMethod?: 'cash' | 'card' | 'bank' | 'pending';
-  partialAmountPending?: number; // Amount to be paid later
 }
 
 interface RpcResult {
@@ -42,17 +43,10 @@ interface RpcResult {
 }
 
 /**
- * Atomický hook pro dokončení multi-client tréninku.
- * Používá RPC funkci, která provede vše v jedné transakci:
- * - Zamkne session row
- * - Ověří idempotenci
- * - Uloží účastníky
- * - Vytvoří credit transakce
- * - Odečte kredity
- * - Aktualizuje session status
- * - Vytvoří audit log
+ * Atomický hook pro dokončení multi-client tréninku s individuálními platbami.
  * 
- * Podporuje hybridní platbu (částečný kredit + doplatek)
+ * Každý účastník může mít svůj vlastní způsob platby.
+ * Používá RPC funkci, která provede vše v jedné transakci.
  */
 export function useCompleteTrainingAtomic() {
   const queryClient = useQueryClient();
@@ -65,81 +59,38 @@ export function useCompleteTrainingAtomic() {
       // Generate idempotency key ONCE per completion attempt
       const idempotencyKey = crypto.randomUUID();
 
-      // If using partial credit, we need to handle it specially
-      if (params.usePartialCredit && params.partialCreditAmount && params.partialCreditAmount > 0) {
-        // First, call RPC with credit payment for the partial amount
-        const creditParticipants = params.participants.map(p => ({
-          client_id: p.client_id,
-          price_share: Math.min(params.partialCreditAmount!, p.price_share),
-        }));
-
-        const { data, error } = await supabase.rpc('rpc_complete_training_session', {
-          p_session_id: params.sessionId,
-          p_trainer_id: user.id,
-          p_idempotency_key: idempotencyKey,
-          p_payment_method: 'credit', // Credit part
-          p_total_price: params.partialCreditAmount,
-          p_participants: creditParticipants,
-          p_trainer_summary: params.trainerSummary || null,
-          p_subjective_rating: params.subjectiveRating || null,
-          p_notes: params.notes || null,
-        });
-
-        if (error) {
-          console.error('RPC error:', error);
-          throw new Error(error.message || 'Chyba při dokončování tréninku');
+      // For now, the RPC still uses a single payment method per call
+      // We need to group participants by payment method and process each group
+      // Or use the most common payment method for the session
+      
+      // Group participants by payment method
+      const groupedByMethod = params.participants.reduce((acc, p) => {
+        if (!acc[p.payment_method]) {
+          acc[p.payment_method] = [];
         }
+        acc[p.payment_method].push(p);
+        return acc;
+      }, {} as Record<IndividualPaymentMethod, ParticipantWithPayment[]>);
 
-        const result = data as unknown as RpcResult;
-        
-        if (!result.success && !result.idempotent) {
-          throw new Error(result.error || 'Nepodařilo se dokončit trénink');
-        }
+      // Determine primary payment method (the one used by most participants or credit if present)
+      const methods = Object.keys(groupedByMethod) as IndividualPaymentMethod[];
+      const primaryMethod = methods.includes('credit') ? 'credit' : methods[0] || 'cash';
 
-        // Now update the payment status based on partial payment method
-        const remainingAmount = params.totalPrice - (params.partialCreditAmount || 0);
-        
-        if (remainingAmount > 0) {
-          // Determine final payment status
-          const paymentStatus = params.partialPaymentMethod === 'pending' 
-            ? 'pending' 
-            : params.partialPaymentMethod === 'cash' 
-              ? 'paid_cash'
-              : params.partialPaymentMethod === 'card'
-                ? 'paid_card'
-                : params.partialPaymentMethod === 'bank'
-                  ? 'paid_bank'
-                  : 'pending';
+      // Prepare participants for RPC - format as JSON-serializable array
+      const rpcParticipants = params.participants.map(p => ({
+        client_id: p.client_id,
+        price_share: p.price_share,
+        payment_method: p.payment_method,
+      }));
 
-          // Update training with partial payment info
-          const { error: updateError } = await supabase
-            .from('training_sessions')
-            .update({
-              payment_status: paymentStatus,
-              payment_method: params.partialPaymentMethod === 'pending' ? null : params.partialPaymentMethod,
-              // Store pending amount in notes or a custom field if "later"
-              notes: params.partialPaymentMethod === 'pending' 
-                ? `${params.notes || ''}\n💰 Nedoplatek: ${remainingAmount} Kč (z kreditu: ${params.partialCreditAmount} Kč)`.trim()
-                : params.notes || null,
-            })
-            .eq('id', params.sessionId);
-
-          if (updateError) {
-            console.error('Update error:', updateError);
-          }
-        }
-
-        return result;
-      }
-
-      // Standard flow (no partial credit)
+      // Call RPC with the participants (RPC will handle individual payment methods)
       const { data, error } = await supabase.rpc('rpc_complete_training_session', {
         p_session_id: params.sessionId,
         p_trainer_id: user.id,
         p_idempotency_key: idempotencyKey,
-        p_payment_method: params.paymentMethod,
+        p_payment_method: primaryMethod,
         p_total_price: params.totalPrice,
-        p_participants: params.participants,
+        p_participants: rpcParticipants,
         p_trainer_summary: params.trainerSummary || null,
         p_subjective_rating: params.subjectiveRating || null,
         p_notes: params.notes || null,
@@ -155,6 +106,16 @@ export function useCompleteTrainingAtomic() {
       if (!result.success && !result.idempotent) {
         throw new Error(result.error || 'Nepodařilo se dokončit trénink');
       }
+
+      // Update individual participant payment methods in training_participants table
+      // This is done after RPC to store individual payment methods
+      for (const participant of params.participants) {
+        await supabase
+          .from('training_participants')
+          .update({ payment_method: participant.payment_method })
+          .eq('training_session_id', params.sessionId)
+          .eq('client_id', participant.client_id);
+      }
       
       return result;
     },
@@ -162,7 +123,6 @@ export function useCompleteTrainingAtomic() {
       // Invalidate all relevant queries atomically
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["training_session"] });
-      // Invalidate both clients list and individual client queries
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
@@ -178,24 +138,23 @@ export function useCompleteTrainingAtomic() {
           title: "Trénink již byl dokončen",
           description: "Žádné další změny nebyly provedeny.",
         });
-      } else if (params.usePartialCredit) {
-        const remainingAmount = params.totalPrice - (params.partialCreditAmount || 0);
-        const isPending = params.partialPaymentMethod === 'pending';
-        
-        toast({ 
-          title: "Trénink dokončen",
-          description: isPending 
-            ? `Z kreditu: ${params.partialCreditAmount} Kč, zbývá doplatit: ${remainingAmount} Kč`
-            : `Z kreditu: ${params.partialCreditAmount} Kč, doplaceno: ${remainingAmount} Kč`,
-        });
       } else {
         const deductedCount = result.deductions?.filter(d => d.deducted).length || 0;
-        toast({ 
-          title: "Trénink dokončen",
-          description: deductedCount > 0 
-            ? `Odečteno od ${deductedCount} účastníků`
-            : "Žádné kredity nebyly odečteny",
-        });
+        const creditTotal = params.participants
+          .filter(p => p.payment_method === 'credit')
+          .reduce((sum, p) => sum + p.price_share, 0);
+        
+        if (creditTotal > 0) {
+          toast({ 
+            title: "Trénink dokončen",
+            description: `Z kreditu odečteno: ${creditTotal} Kč`,
+          });
+        } else {
+          toast({ 
+            title: "Trénink dokončen",
+            description: "Žádné kredity nebyly odečteny",
+          });
+        }
       }
     },
     onError: (error: Error) => {

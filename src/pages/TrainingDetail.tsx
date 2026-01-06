@@ -1,11 +1,10 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
   Loader2,
   CheckCircle,
-  XCircle,
   AlertTriangle,
 } from 'lucide-react';
 import { TrainingDetailSkeleton } from '@/components/skeletons';
@@ -13,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { QuickActionsSection } from '@/components/trainings/QuickActionsSection';
 import {
@@ -30,8 +28,13 @@ import { useClient, useClients } from '@/hooks/useClients';
 import { useTags } from '@/hooks/useTags';
 import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
-import { PriceSplitManager, ParticipantShare } from '@/components/trainings/PriceSplitManager';
-import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption, PartialPaymentMethod } from '@/components/trainings/PaymentMethodSelector';
+import { 
+  ParticipantPaymentCard, 
+  ParticipantPayment, 
+  IndividualPaymentMethod,
+  getDefaultPaymentMethod,
+  calculatePaymentSummary,
+} from '@/components/trainings/ParticipantPaymentCard';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
@@ -58,13 +61,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingDetail() {
@@ -106,13 +102,9 @@ export default function TrainingDetail() {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   
-  // Complete dialog state
-  const [completeParticipants, setCompleteParticipants] = useState(1);
+  // Complete dialog state - now uses individual payments per participant
   const [completeNotes, setCompleteNotes] = useState('');
-  const [participantShares, setParticipantShares] = useState<ParticipantShare[]>([]);
-  const [usePriceSplit, setUsePriceSplit] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
-  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PartialPaymentMethod>('cash');
+  const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -122,12 +114,7 @@ export default function TrainingDetail() {
   const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
   const { data: trainingSummary } = useTrainingSummary(completedSessionId || undefined, training?.client_id);
 
-  // Auto-enable price split when there are 2+ participants
-  useEffect(() => {
-    // Count participants: existing participants + 1 (main client)
-    const totalParticipants = existingParticipants.length + 1;
-    setUsePriceSplit(totalParticipants >= 2);
-  }, [existingParticipants.length]);
+  // No longer need auto-enable price split - we always show participants with their payments
 
   if (trainingLoading) {
     return <TrainingDetailSkeleton />;
@@ -225,34 +212,49 @@ export default function TrainingDetail() {
   };
 
   const openCompleteDialog = () => {
-    const participantCount = training.participant_count || 1;
-    setCompleteParticipants(participantCount);
     setCompleteNotes(training.notes || '');
-    setUsePriceSplit(existingParticipants.length > 0 || participantCount > 1);
-    setPaymentMethod('credit');
     
-    // Initialize participant shares
+    // Build participant payments from existing participants or create with primary client
+    const participantCount = existingParticipants.length > 0 
+      ? existingParticipants.length 
+      : (training.participant_count || 1);
     const totalPrice = getTrainingPrice(participantCount, trainingPrices);
+    
+    let payments: ParticipantPayment[];
+    
     if (existingParticipants.length > 0) {
-      // Use existing participants
-      setParticipantShares(existingParticipants.map(p => {
+      // Use existing participants with their price shares
+      payments = existingParticipants.map(p => {
         const clientData = clients.find(c => c.id === p.client_id);
+        const creditBalance = clientData?.credit_balance ?? 0;
+        const paymentMode = clientData?.payment_mode;
+        
         return {
           client_id: p.client_id,
           client_name: clientData?.name || 'Neznámý',
           price_share: p.price_share,
-          percentage: totalPrice > 0 ? (p.price_share / totalPrice) * 100 : 0,
+          payment_method: getDefaultPaymentMethod(paymentMode, creditBalance, p.price_share),
+          credit_balance: creditBalance,
+          payment_mode: paymentMode,
         };
-      }));
+      });
     } else {
-      // Initialize with primary client
-      setParticipantShares([{
+      // Initialize with primary client only
+      const primaryClient = clients.find(c => c.id === training.client_id) || client;
+      const creditBalance = primaryClient?.credit_balance ?? 0;
+      const paymentMode = primaryClient?.payment_mode;
+      
+      payments = [{
         client_id: training.client_id,
-        client_name: client?.name || 'Klient',
+        client_name: primaryClient?.name || 'Klient',
         price_share: totalPrice,
-        percentage: 100,
-      }]);
+        payment_method: getDefaultPaymentMethod(paymentMode, creditBalance, totalPrice),
+        credit_balance: creditBalance,
+        payment_mode: paymentMode,
+      }];
     }
+    
+    setParticipantPayments(payments);
     setShowCompleteDialog(true);
   };
 
@@ -262,51 +264,22 @@ export default function TrainingDetail() {
     setIsSubmitting(true);
     
     try {
-      const participantCount = usePriceSplit ? participantShares.length : completeParticipants;
-      const paymentMethodValue = getPaymentMethodFromOption(paymentMethod);
+      const participantCount = participantPayments.length;
+      const totalPrice = participantPayments.reduce((sum, p) => sum + p.price_share, 0);
       
-      // Calculate the correct price for this participant count
-      const correctPrice = getTrainingPrice(participantCount, trainingPrices);
-      
-      // Build normalized participants array
-      let normalizedParticipants: Array<{ client_id: string; price_share: number }>;
-      
-      if (usePriceSplit && participantShares.length > 1) {
-        // Normalize participant shares to match the correct price
-        const currentSum = participantShares.reduce((sum, p) => sum + p.price_share, 0);
-        normalizedParticipants = currentSum !== correctPrice
-          ? participantShares.map(p => ({
-              client_id: p.client_id,
-              price_share: Math.round((p.price_share / currentSum) * correctPrice),
-            }))
-          : participantShares.map(p => ({
-              client_id: p.client_id,
-              price_share: p.price_share,
-            }));
-      } else {
-        // Single client - full price
-        normalizedParticipants = [{
-          client_id: training.client_id,
-          price_share: correctPrice,
-        }];
-      }
-      
-      // Check if using partial credit (hybrid payment)
-      const isPartialCredit = paymentMethod === 'credit_partial';
-      const creditToUse = isPartialCredit ? Math.min(clientCreditBalance, correctPrice) : 0;
+      // Build participants array with individual payment methods
+      const participantsWithPayments = participantPayments.map(p => ({
+        client_id: p.client_id,
+        price_share: p.price_share,
+        payment_method: p.payment_method,
+      }));
       
       // Use atomic RPC - single transaction for everything
       await completeTrainingAtomic.mutateAsync({
         sessionId: training.id,
-        participants: normalizedParticipants,
-        paymentMethod: isPartialCredit ? 'credit' : (paymentMethodValue as 'credit' | 'cash' | 'card' | 'bank' | 'pending'),
-        totalPrice: correctPrice,
+        participants: participantsWithPayments,
+        totalPrice,
         notes: completeNotes || undefined,
-        // Hybrid payment params
-        usePartialCredit: isPartialCredit,
-        partialCreditAmount: isPartialCredit ? creditToUse : undefined,
-        partialPaymentMethod: isPartialCredit ? (partialPaymentMethod === 'later' ? 'pending' : partialPaymentMethod) : undefined,
-        partialAmountPending: isPartialCredit && partialPaymentMethod === 'later' ? (correctPrice - creditToUse) : undefined,
       });
       
       // Track training completion
@@ -315,8 +288,7 @@ export default function TrainingDetail() {
           training_id: training.id,
           client_id: training.client_id,
           participant_count: participantCount,
-          payment_method: paymentMethodValue,
-          total_price: correctPrice,
+          total_price: totalPrice,
         }
       });
       
@@ -334,8 +306,17 @@ export default function TrainingDetail() {
   };
 
   const getExpectedPrice = () => {
-    const count = usePriceSplit ? participantShares.length : completeParticipants;
-    return getTrainingPrice(count, trainingPrices);
+    return participantPayments.reduce((sum, p) => sum + p.price_share, 0);
+  };
+  
+  // Calculate payment summary for display
+  const paymentSummary = calculatePaymentSummary(participantPayments);
+  
+  // Handler to update individual participant payment method
+  const handleParticipantPaymentChange = (clientId: string, method: IndividualPaymentMethod) => {
+    setParticipantPayments(prev => prev.map(p => 
+      p.client_id === clientId ? { ...p, payment_method: method } : p
+    ));
   };
 
   const openCancelDialog = () => {
@@ -446,95 +427,51 @@ export default function TrainingDetail() {
           <DialogHeader>
             <DialogTitle>Dokončit trénink</DialogTitle>
             <DialogDescription>
-              Vyplňte údaje a zvolte způsob platby.
+              Zkontrolujte účastníky a způsob platby.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Tag validation warning */}
             <TagValidationAlert validation={tagValidation} compact />
 
-            {/* Price split toggle */}
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
-              <div>
-                <Label htmlFor="price-split" className="font-medium">Rozdělit cenu mezi více klientů</Label>
-                <p className="text-sm text-muted-foreground">
-                  {usePriceSplit 
-                    ? "Můžete přidat více účastníků a rozdělit cenu"
-                    : "Celá cena bude odečtena hlavnímu klientovi"
-                  }
-                </p>
-              </div>
-              <Switch
-                id="price-split"
-                checked={usePriceSplit}
-                onCheckedChange={(checked) => {
-                  setUsePriceSplit(checked);
-                  if (!checked) {
-                    // Reset to single participant
-                    const totalPrice = getTrainingPrice(completeParticipants, trainingPrices);
-                    setParticipantShares([{
-                      client_id: training.client_id,
-                      client_name: client?.name || 'Klient',
-                      price_share: totalPrice,
-                      percentage: 100,
-                    }]);
-                  }
-                }}
-              />
+            {/* Participant payment cards */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">
+                Účastníci ({participantPayments.length})
+              </Label>
+              {participantPayments.map((participant) => (
+                <ParticipantPaymentCard
+                  key={participant.client_id}
+                  participant={participant}
+                  onChange={handleParticipantPaymentChange}
+                  disabled={isSubmitting || completeTrainingAtomic.isPending}
+                />
+              ))}
             </div>
 
-            {!usePriceSplit && (
-              <div className="space-y-2">
-                <Label>Počet účastníků</Label>
-                <Select 
-                  value={completeParticipants.toString()} 
-                  onValueChange={(v) => setCompleteParticipants(parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {usePriceSplit ? (
-              <PriceSplitManager
-                clients={clients}
-                totalPrice={getExpectedPrice()}
-                primaryClientId={training.client_id}
-                onChange={setParticipantShares}
-                initialParticipants={participantShares}
-                getPriceForCount={(count) => getTrainingPrice(count, trainingPrices)}
-              />
-            ) : (
-              <div className="p-4 rounded-lg bg-secondary/50 border">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Cena za trénink:</span>
+            {/* Payment summary */}
+            {paymentSummary.length > 0 && (
+              <div className="p-3 rounded-lg bg-secondary/50 border space-y-1">
+                {paymentSummary.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.method} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Icon className="w-4 h-4" />
+                        {item.label}:
+                      </span>
+                      <span className="font-medium">
+                        {item.total} Kč ({item.count} {item.count === 1 ? 'os.' : 'os.'})
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="border-t pt-2 mt-2 flex items-center justify-between">
+                  <span className="font-medium">Celkem:</span>
                   <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
                 </div>
               </div>
             )}
-
-            {/* Payment Method Selection */}
-            <div className="space-y-2">
-              <Label>Způsob platby</Label>
-              <PaymentMethodSelector
-                value={paymentMethod}
-                onChange={setPaymentMethod}
-                disabled={isSubmitting || completeTrainingAtomic.isPending}
-                clientCreditBalance={clientCreditBalance}
-                trainingPrice={getExpectedPrice()}
-                partialMethod={partialPaymentMethod}
-                onPartialMethodChange={setPartialPaymentMethod}
-              />
-            </div>
 
             <div className="space-y-2">
               <Label>Poznámky (volitelné)</Label>
@@ -542,7 +479,7 @@ export default function TrainingDetail() {
                 value={completeNotes}
                 onChange={(e) => setCompleteNotes(e.target.value)}
                 placeholder="Poznámky k tréninku..."
-                rows={3}
+                rows={2}
               />
             </div>
           </div>
@@ -555,7 +492,8 @@ export default function TrainingDetail() {
               disabled={
                 !tagValidation.isValid ||
                 isSubmitting ||
-                completeTrainingAtomic.isPending
+                completeTrainingAtomic.isPending ||
+                participantPayments.length === 0
               }
               title={!tagValidation.isValid ? "Doplňte povinné tagy" : undefined}
             >
@@ -567,10 +505,7 @@ export default function TrainingDetail() {
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  {paymentMethod === 'credit' ? 'Dokončit a odečíst kredit' : 
-                   paymentMethod === 'credit_partial' ? (partialPaymentMethod === 'later' ? 'Dokončit (kredit + doplatek později)' : 'Dokončit (kredit + doplatek)') :
-                   paymentMethod === 'later' ? 'Dokončit (platba později)' :
-                   'Dokončit trénink'}
+                  Dokončit trénink
                 </>
               )}
             </Button>
