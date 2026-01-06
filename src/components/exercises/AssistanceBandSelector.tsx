@@ -54,17 +54,24 @@ const BAND_OPTIONS: { id: BandType; label: string; color: string; bgColor: strin
   },
 ];
 
-// Helper to check if exercise is a pull-up type
+// Helper to check if exercise supports assistance bands (pull-ups, chin-ups, dips)
 export function isPullUpExercise(exerciseName: string): boolean {
   const name = exerciseName.toLowerCase();
   return (
+    // Pull-ups
     name.includes('shyb') ||
     name.includes('pull-up') ||
     name.includes('pullup') ||
     name.includes('pull up') ||
+    // Chin-ups (podhmat)
     name.includes('chin-up') ||
     name.includes('chinup') ||
-    name.includes('chin up')
+    name.includes('chin up') ||
+    name.includes('podhmat') ||
+    // Dips
+    name.includes('dip') ||
+    name.includes('kliky na bradlech') ||
+    name.includes('bradla')
   );
 }
 
