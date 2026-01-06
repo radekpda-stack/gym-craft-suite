@@ -249,14 +249,29 @@ export default function TrainingDetail() {
     
     if (existingParticipants.length > 0) {
       // Use existing participants with their price shares
-      // If custom price and single participant, override the price share
-      payments = existingParticipants.map(p => {
+      // Calculate price per person for fallback if price_share is 0
+      const pricePerPerson = Math.round(totalPrice / existingParticipants.length);
+      
+      payments = existingParticipants.map((p, index) => {
         const clientData = clients.find(c => c.id === p.client_id);
         const creditBalance = getEffectiveCreditBalance(p.client_id);
         const paymentMode = clientData?.payment_mode;
-        const priceShare = (hasCustomPrice && existingParticipants.length === 1) 
-          ? totalPrice 
-          : p.price_share;
+        
+        // Determine price share:
+        // 1. If custom price and single participant, use custom price
+        // 2. If stored price_share is valid (> 0), use it
+        // 3. Otherwise calculate from total price
+        let priceShare: number;
+        if (hasCustomPrice && existingParticipants.length === 1) {
+          priceShare = totalPrice;
+        } else if (p.price_share > 0) {
+          priceShare = p.price_share;
+        } else {
+          // Fallback: distribute total price evenly (last person gets remainder)
+          priceShare = index === existingParticipants.length - 1 
+            ? totalPrice - (pricePerPerson * (existingParticipants.length - 1))
+            : pricePerPerson;
+        }
         
         return {
           client_id: p.client_id,
