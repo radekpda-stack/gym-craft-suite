@@ -4,24 +4,27 @@ import {
   FileJson, 
   FileSpreadsheet, 
   Loader2, 
-  Calendar, 
   Shield,
+  CheckCircle2,
   Users,
-  TrendingUp,
+  Activity,
+  MousePointer,
+  Timer,
   AlertTriangle,
-  CheckCircle2
+  Gauge
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n';
 import { format, subDays, subMonths } from 'date-fns';
 
-type PeriodOption = '30d' | '90d' | 'custom';
+type PeriodOption = '30d' | '90d' | '1y' | 'custom';
 
 interface ExportProgress {
   step: string;
@@ -29,15 +32,26 @@ interface ExportProgress {
   total: number;
 }
 
+interface ExportOptions {
+  includeTrainerData: boolean;
+  includeClientPortalData: boolean;
+  includeInteractionEvents: boolean;
+  includePerformanceMetrics: boolean;
+  includeErrors: boolean;
+  includeFormAnalytics: boolean;
+  includeJourneys: boolean;
+  includeGamification: boolean;
+}
+
 // Simple hash function for anonymization
-function hashUserId(userId: string): string {
+function hashId(id: string, prefix = 'user'): string {
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    const char = userId.charCodeAt(i);
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  return `user_${Math.abs(hash).toString(16).substring(0, 8)}`;
+  return `${prefix}_${Math.abs(hash).toString(16).substring(0, 8)}`;
 }
 
 export function AdminAnalyticsExport() {
@@ -45,34 +59,49 @@ export function AdminAnalyticsExport() {
   const { toast } = useToast();
   const { language } = useLanguage();
   
-  const [period, setPeriod] = useState<PeriodOption>('30d');
-  const [customStart, setCustomStart] = useState(format(subMonths(new Date(), 3), 'yyyy-MM-dd'));
+  const [period, setPeriod] = useState<PeriodOption>('90d');
+  const [customStart, setCustomStart] = useState(format(subMonths(new Date(), 6), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
+  
+  const [options, setOptions] = useState<ExportOptions>({
+    includeTrainerData: true,
+    includeClientPortalData: true,
+    includeInteractionEvents: true,
+    includePerformanceMetrics: true,
+    includeErrors: true,
+    includeFormAnalytics: true,
+    includeJourneys: true,
+    includeGamification: true,
+  });
 
   const t = useMemo(() => ({
-    title: language === 'cs' ? 'Analytický export' : 'Analytics Export',
+    title: language === 'cs' ? 'Kompletní analytický export' : 'Complete Analytics Export',
     description: language === 'cs' 
-      ? 'Export anonymizovaných dat o používání aplikace pro AI analýzu'
-      : 'Export anonymized app usage data for AI analysis',
+      ? 'Export všech anonymizovaných dat o používání aplikace pro vývoj a AI analýzu'
+      : 'Export all anonymized app usage data for development and AI analysis',
     period: language === 'cs' ? 'Období' : 'Period',
     last30: language === 'cs' ? 'Posledních 30 dní' : 'Last 30 days',
     last90: language === 'cs' ? 'Posledních 90 dní' : 'Last 90 days',
+    last1y: language === 'cs' ? 'Poslední rok' : 'Last year',
     custom: language === 'cs' ? 'Vlastní rozsah' : 'Custom range',
     from: language === 'cs' ? 'Od' : 'From',
     to: language === 'cs' ? 'Do' : 'To',
-    export: language === 'cs' ? 'Exportovat analytiku' : 'Export analytics',
+    export: language === 'cs' ? 'Exportovat kompletní analytiku' : 'Export complete analytics',
     exporting: language === 'cs' ? 'Exportuji...' : 'Exporting...',
     success: language === 'cs' ? 'Export dokončen' : 'Export completed',
     error: language === 'cs' ? 'Chyba při exportu' : 'Export error',
     processing: language === 'cs' ? 'Zpracovávám' : 'Processing',
-    noClientData: language === 'cs' 
-      ? 'Export neobsahuje žádná klientská data'
-      : 'Export contains no client data',
-    anonymized: language === 'cs'
-      ? 'User ID jsou anonymizovány (hash)'
-      : 'User IDs are anonymized (hashed)',
+    options: language === 'cs' ? 'Možnosti exportu' : 'Export options',
+    trainerData: language === 'cs' ? 'Data trenérů (feature_usage, sessions)' : 'Trainer data (feature_usage, sessions)',
+    clientPortal: language === 'cs' ? 'Klientský portál (aktivita, workouty)' : 'Client portal (activity, workouts)',
+    interactions: language === 'cs' ? 'Interakce (kliky, scrollování)' : 'Interactions (clicks, scrolling)',
+    performance: language === 'cs' ? 'Výkon (Core Web Vitals)' : 'Performance (Core Web Vitals)',
+    errors: language === 'cs' ? 'Chyby a události' : 'Errors and events',
+    forms: language === 'cs' ? 'Formulářová analytika' : 'Form analytics',
+    journeys: language === 'cs' ? 'Uživatelské cesty' : 'User journeys',
+    gamification: language === 'cs' ? 'Gamifikace (XP, odznaky)' : 'Gamification (XP, badges)',
   }), [language]);
 
   const getDateRange = () => {
@@ -86,11 +115,14 @@ export function AdminAnalyticsExport() {
       case '90d':
         start = subDays(end, 90);
         break;
+      case '1y':
+        start = subDays(end, 365);
+        break;
       case 'custom':
         start = new Date(customStart);
         return { start: customStart, end: customEnd };
       default:
-        start = subDays(end, 30);
+        start = subDays(end, 90);
     }
     
     return {
@@ -99,7 +131,6 @@ export function AdminAnalyticsExport() {
     };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const convertToCSV = (data: any[]): string => {
     if (data.length === 0) return '';
     const headers = Object.keys(data[0]);
@@ -120,327 +151,546 @@ export function AdminAnalyticsExport() {
 
     try {
       const { start, end } = getDateRange();
-      const files: { name: string; content: string }[] = [];
-      const totalSteps = 9; // Increased for client portal data
-
-      // 1. Fetch feature_usage data
-      setProgress({ step: `${t.processing} feature_usage...`, current: 1, total: totalSteps });
+      const files: { name: string; content: string; category: string }[] = [];
       
-      const { data: usageData, error: usageError } = await supabase
-        .from('feature_usage')
-        .select('*')
-        .gte('created_at', start)
-        .lte('created_at', end)
-        .order('created_at', { ascending: false });
-
-      if (usageError) throw usageError;
-
-      // Anonymize user_ids
-      const anonymizedUsage = (usageData || []).map(row => ({
-        ...row,
-        user_id: hashUserId(row.user_id),
-        // Remove any potential client references from metadata
-        metadata: row.metadata ? JSON.parse(JSON.stringify(row.metadata).replace(/client_id|client_name/gi, 'REDACTED')) : {},
-      }));
-
-      files.push({
-        name: 'app_usage_events.csv',
-        content: convertToCSV(anonymizedUsage),
-      });
-
-      // 2. Fetch session data
-      setProgress({ step: `${t.processing} user_sessions...`, current: 2, total: totalSteps });
+      // Calculate total steps based on selected options
+      let totalSteps = 3; // Base steps (summary, metadata, final)
+      if (options.includeTrainerData) totalSteps += 2;
+      if (options.includeClientPortalData) totalSteps += 3;
+      if (options.includeInteractionEvents) totalSteps += 4;
+      if (options.includePerformanceMetrics) totalSteps += 1;
+      if (options.includeErrors) totalSteps += 2;
+      if (options.includeFormAnalytics) totalSteps += 1;
+      if (options.includeJourneys) totalSteps += 2;
+      if (options.includeGamification) totalSteps += 2;
       
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('user_sessions')
-        .select('*')
-        .gte('started_at', start)
-        .lte('started_at', end)
-        .order('started_at', { ascending: false });
+      let currentStep = 0;
+      const nextStep = (name: string) => {
+        currentStep++;
+        setProgress({ step: `${t.processing} ${name}...`, current: currentStep, total: totalSteps });
+      };
 
-      if (sessionError) throw sessionError;
+      // Track all unique users across all data sources
+      const allUserIds = new Set<string>();
+      const allClientIds = new Set<string>();
 
-      const anonymizedSessions = (sessionData || []).map(row => ({
-        ...row,
-        user_id: hashUserId(row.user_id),
-      }));
+      // ========================================
+      // SECTION 1: TRAINER DATA
+      // ========================================
+      if (options.includeTrainerData) {
+        // 1.1 Feature Usage
+        nextStep('feature_usage');
+        const { data: usageData } = await supabase
+          .from('feature_usage')
+          .select('*')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false });
 
-      files.push({
-        name: 'user_sessions.csv',
-        content: convertToCSV(anonymizedSessions),
-      });
+        const anonymizedUsage = (usageData || []).map(row => {
+          allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: hashId(row.user_id, 'trainer'),
+            metadata: row.metadata ? JSON.parse(JSON.stringify(row.metadata).replace(/client_id|client_name/gi, 'REDACTED')) : {},
+          };
+        });
 
-      // 3. Create usage summary with session stats
-      setProgress({ step: `${t.processing} usage_summary...`, current: 3, total: totalSteps });
-      
-      const uniqueUsers = new Set(usageData?.map(r => r.user_id) || []);
-      const categoryCount: Record<string, number> = {};
-      const featureCount: Record<string, number> = {};
-      const dailyUsage: Record<string, number> = {};
-      
-      (usageData || []).forEach(row => {
-        categoryCount[row.feature_category] = (categoryCount[row.feature_category] || 0) + 1;
-        featureCount[row.feature_name] = (featureCount[row.feature_name] || 0) + 1;
-        const day = row.created_at.substring(0, 10);
-        dailyUsage[day] = (dailyUsage[day] || 0) + 1;
-      });
+        files.push({
+          name: '01_trainer_feature_usage.csv',
+          content: convertToCSV(anonymizedUsage),
+          category: 'trainer',
+        });
 
-      const sortedCategories = Object.entries(categoryCount).sort((a, b) => b[1] - a[1]);
-      const sortedFeatures = Object.entries(featureCount).sort((a, b) => b[1] - a[1]);
-      const days = Object.keys(dailyUsage).length || 1;
+        // 1.2 User Sessions
+        nextStep('user_sessions');
+        const { data: sessionData } = await supabase
+          .from('user_sessions')
+          .select('*')
+          .gte('started_at', start)
+          .lte('started_at', end)
+          .order('started_at', { ascending: false });
 
-      // Calculate session stats
-      const validSessions = sessionData?.filter(s => s.duration_seconds != null) || [];
-      const avgSessionDuration = validSessions.length > 0
-        ? Math.round(validSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / validSessions.length)
-        : 0;
-      
-      const deviceBreakdown: Record<string, number> = {};
-      const browserBreakdown: Record<string, number> = {};
-      sessionData?.forEach(s => {
-        if (s.device_type) deviceBreakdown[s.device_type] = (deviceBreakdown[s.device_type] || 0) + 1;
-        if (s.browser) browserBreakdown[s.browser] = (browserBreakdown[s.browser] || 0) + 1;
-      });
+        const anonymizedSessions = (sessionData || []).map(row => {
+          allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: hashId(row.user_id, 'trainer'),
+          };
+        });
 
-      // Calculate DAU (Daily Active Users)
-      const dauMap: Record<string, Set<string>> = {};
-      sessionData?.forEach(s => {
-        const day = s.started_at.substring(0, 10);
-        if (!dauMap[day]) dauMap[day] = new Set();
-        dauMap[day].add(s.user_id);
-      });
-      const dauData = Object.entries(dauMap).map(([date, users]) => ({ date, unique_users: users.size }));
+        files.push({
+          name: '01_trainer_sessions.csv',
+          content: convertToCSV(anonymizedSessions),
+          category: 'trainer',
+        });
+      }
 
-      // Calculate success rate
-      const totalEvents = usageData?.length || 0;
-      const successfulEvents = usageData?.filter(r => r.success !== false).length || 0;
-      const successRate = totalEvents > 0 ? Math.round((successfulEvents / totalEvents) * 100) : 100;
+      // ========================================
+      // SECTION 2: CLIENT PORTAL DATA
+      // ========================================
+      if (options.includeClientPortalData) {
+        // 2.1 Portal Activity
+        nextStep('client_portal_activity');
+        const { data: portalActivity } = await supabase
+          .from('client_portal_activity')
+          .select('*')
+          .gte('activity_date', start)
+          .lte('activity_date', end)
+          .order('created_at', { ascending: false });
 
-      const usageSummary = {
-        active_trainers: uniqueUsers.size,
-        total_events: usageData?.length || 0,
-        average_daily_events: Math.round((usageData?.length || 0) / days),
-        most_used_sections: sortedCategories.slice(0, 5).map(([name, count]) => ({ name, count })),
-        least_used_sections: sortedCategories.slice(-5).reverse().map(([name, count]) => ({ name, count })),
-        top_features: sortedFeatures.slice(0, 10).map(([name, count]) => ({ name, count })),
-        date_range: { start, end },
-        // Session stats
-        session_stats: {
-          total_sessions: sessionData?.length || 0,
-          avg_duration_seconds: avgSessionDuration,
-          device_breakdown: Object.entries(deviceBreakdown).map(([device, count]) => ({ device, count })),
-          browser_breakdown: Object.entries(browserBreakdown).map(([browser, count]) => ({ browser, count })),
+        const anonymizedPortalActivity = (portalActivity || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+          };
+        });
+
+        files.push({
+          name: '02_portal_activity.csv',
+          content: convertToCSV(anonymizedPortalActivity),
+          category: 'client_portal',
+        });
+
+        // 2.2 Client Workout Logs
+        nextStep('client_workout_logs');
+        const { data: workoutLogs } = await supabase
+          .from('client_workout_logs')
+          .select('id, client_id, trainer_id, date, status, source, duration_minutes, rpe, energy_before, energy_after, workout_type, created_at')
+          .gte('date', start)
+          .lte('date', end)
+          .order('date', { ascending: false });
+
+        const anonymizedWorkoutLogs = (workoutLogs || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+            trainer_id: hashId(row.trainer_id, 'trainer'),
+          };
+        });
+
+        files.push({
+          name: '02_portal_workout_logs.csv',
+          content: convertToCSV(anonymizedWorkoutLogs),
+          category: 'client_portal',
+        });
+
+        // 2.3 Confirmed Workouts
+        nextStep('client_confirmed_workouts');
+        const { data: confirmedWorkouts } = await supabase
+          .from('client_confirmed_workouts')
+          .select('id, client_id, performed_date, workout_type, xp, confirmed_by, created_at')
+          .gte('performed_date', start)
+          .lte('performed_date', end)
+          .order('performed_date', { ascending: false });
+
+        const anonymizedConfirmed = (confirmedWorkouts || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+          };
+        });
+
+        files.push({
+          name: '02_portal_confirmed_workouts.csv',
+          content: convertToCSV(anonymizedConfirmed),
+          category: 'client_portal',
+        });
+      }
+
+      // ========================================
+      // SECTION 3: INTERACTION EVENTS
+      // ========================================
+      if (options.includeInteractionEvents) {
+        // 3.1 Interaction Events
+        nextStep('interaction_events');
+        const { data: interactionEvents } = await supabase
+          .from('interaction_events')
+          .select('*')
+          .gte('timestamp', start)
+          .lte('timestamp', end)
+          .order('timestamp', { ascending: false })
+          .limit(10000);
+
+        const anonymizedInteractions = (interactionEvents || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '03_interaction_events.csv',
+          content: convertToCSV(anonymizedInteractions),
+          category: 'interactions',
+        });
+
+        // 3.2 Feature Sessions
+        nextStep('feature_sessions');
+        const { data: featureSessions } = await supabase
+          .from('feature_sessions')
+          .select('*')
+          .gte('started_at', start)
+          .lte('started_at', end)
+          .order('started_at', { ascending: false })
+          .limit(5000);
+
+        const anonymizedFeatureSessions = (featureSessions || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '03_feature_sessions.csv',
+          content: convertToCSV(anonymizedFeatureSessions),
+          category: 'interactions',
+        });
+
+        // 3.3 Scroll Analytics
+        nextStep('scroll_analytics');
+        const { data: scrollData } = await supabase
+          .from('scroll_analytics')
+          .select('*')
+          .gte('timestamp', start)
+          .lte('timestamp', end)
+          .order('timestamp', { ascending: false })
+          .limit(5000);
+
+        const anonymizedScroll = (scrollData || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '03_scroll_analytics.csv',
+          content: convertToCSV(anonymizedScroll),
+          category: 'interactions',
+        });
+
+        // 3.4 Rage Clicks
+        nextStep('rage_clicks');
+        const { data: rageClicks } = await supabase
+          .from('rage_clicks')
+          .select('*')
+          .gte('timestamp', start)
+          .lte('timestamp', end)
+          .order('timestamp', { ascending: false })
+          .limit(1000);
+
+        const anonymizedRageClicks = (rageClicks || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '03_rage_clicks.csv',
+          content: convertToCSV(anonymizedRageClicks),
+          category: 'interactions',
+        });
+      }
+
+      // ========================================
+      // SECTION 4: PERFORMANCE METRICS
+      // ========================================
+      if (options.includePerformanceMetrics) {
+        nextStep('performance_metrics');
+        const { data: perfMetrics } = await supabase
+          .from('performance_metrics')
+          .select('*')
+          .gte('timestamp', start)
+          .lte('timestamp', end)
+          .order('timestamp', { ascending: false })
+          .limit(5000);
+
+        const anonymizedPerf = (perfMetrics || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '04_performance_metrics.csv',
+          content: convertToCSV(anonymizedPerf),
+          category: 'performance',
+        });
+      }
+
+      // ========================================
+      // SECTION 5: ERRORS AND EVENTS
+      // ========================================
+      if (options.includeErrors) {
+        // 5.1 App Errors
+        nextStep('app_errors');
+        const { data: appErrors } = await supabase
+          .from('app_errors')
+          .select('*')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false })
+          .limit(2000);
+
+        const anonymizedErrors = (appErrors || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+            // Redact potentially sensitive info from stack traces
+            stack: row.stack ? row.stack.substring(0, 500) : null,
+          };
+        });
+
+        files.push({
+          name: '05_app_errors.csv',
+          content: convertToCSV(anonymizedErrors),
+          category: 'errors',
+        });
+
+        // 5.2 App Events
+        nextStep('app_events');
+        const { data: appEvents } = await supabase
+          .from('app_events')
+          .select('*')
+          .gte('timestamp', start)
+          .lte('timestamp', end)
+          .order('timestamp', { ascending: false })
+          .limit(5000);
+
+        const anonymizedAppEvents = (appEvents || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '05_app_events.csv',
+          content: convertToCSV(anonymizedAppEvents),
+          category: 'errors',
+        });
+      }
+
+      // ========================================
+      // SECTION 6: FORM ANALYTICS
+      // ========================================
+      if (options.includeFormAnalytics) {
+        nextStep('form_field_analytics');
+        const { data: formAnalytics } = await supabase
+          .from('form_field_analytics')
+          .select('*')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        const anonymizedFormAnalytics = (formAnalytics || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '06_form_analytics.csv',
+          content: convertToCSV(anonymizedFormAnalytics),
+          category: 'forms',
+        });
+      }
+
+      // ========================================
+      // SECTION 7: USER JOURNEYS
+      // ========================================
+      if (options.includeJourneys) {
+        // 7.1 User Journeys
+        nextStep('user_journeys');
+        const { data: journeys } = await supabase
+          .from('user_journeys')
+          .select('*')
+          .gte('started_at', start)
+          .lte('started_at', end)
+          .order('started_at', { ascending: false })
+          .limit(2000);
+
+        const anonymizedJourneys = (journeys || []).map(row => {
+          if (row.user_id) allUserIds.add(row.user_id);
+          return {
+            ...row,
+            user_id: row.user_id ? hashId(row.user_id, 'user') : null,
+          };
+        });
+
+        files.push({
+          name: '07_user_journeys.csv',
+          content: convertToCSV(anonymizedJourneys),
+          category: 'journeys',
+        });
+
+        // 7.2 Client Section Usage
+        nextStep('client_section_usage');
+        const { data: sectionUsage } = await supabase
+          .from('client_section_usage')
+          .select('*')
+          .gte('last_opened', start)
+          .lte('last_opened', end)
+          .order('last_opened', { ascending: false })
+          .limit(5000);
+
+        const anonymizedSectionUsage = (sectionUsage || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+            user_id: hashId(row.user_id, 'trainer'),
+          };
+        });
+
+        files.push({
+          name: '07_client_section_usage.csv',
+          content: convertToCSV(anonymizedSectionUsage),
+          category: 'journeys',
+        });
+      }
+
+      // ========================================
+      // SECTION 8: GAMIFICATION
+      // ========================================
+      if (options.includeGamification) {
+        // 8.1 Client XP (from loyalty_ledger)
+        nextStep('client_xp');
+        const { data: clientXp } = await supabase
+          .from('loyalty_ledger')
+          .select('id, client_id, source_type, source_id, points, meta, created_at')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        const anonymizedXp = (clientXp || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+            source_id: row.source_id ? hashId(row.source_id, 'src') : null,
+            meta: row.meta ? JSON.parse(JSON.stringify(row.meta).replace(/[A-Za-z]+\s[A-Za-z]+/g, 'REDACTED')) : null,
+          };
+        });
+
+        files.push({
+          name: '08_client_xp_ledger.csv',
+          content: convertToCSV(anonymizedXp),
+          category: 'gamification',
+        });
+
+        // 8.2 Client Badges
+        nextStep('client_badges');
+        const { data: clientBadges } = await supabase
+          .from('client_badges')
+          .select('id, client_id, badge_id, earned_at, progress_current, progress_target, created_at')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false });
+
+        const anonymizedBadges = (clientBadges || []).map(row => {
+          allClientIds.add(row.client_id);
+          return {
+            ...row,
+            client_id: hashId(row.client_id, 'client'),
+          };
+        });
+
+        files.push({
+          name: '08_client_badges.csv',
+          content: convertToCSV(anonymizedBadges),
+          category: 'gamification',
+        });
+      }
+
+      // ========================================
+      // SUMMARY AND METADATA
+      // ========================================
+      nextStep('generating_summary');
+
+      // Calculate comprehensive summary
+      const summary = {
+        export_info: {
+          generated_at: new Date().toISOString(),
+          period: { start, end },
+          options_selected: options,
         },
-        // DAU stats
-        daily_active_users: dauData,
-        avg_dau: dauData.length > 0 ? Math.round(dauData.reduce((sum, d) => sum + d.unique_users, 0) / dauData.length) : 0,
-        // Success rate
-        success_rate_percent: successRate,
-        failed_events: totalEvents - successfulEvents,
-      };
-
-      files.push({
-        name: 'usage_summary.json',
-        content: JSON.stringify(usageSummary, null, 2),
-      });
-
-      // 4. Feature usage breakdown
-      setProgress({ step: `${t.processing} feature_usage...`, current: 4, total: totalSteps });
-      
-      const featureUsageByUser: Record<string, Set<string>> = {};
-      (usageData || []).forEach(row => {
-        if (!featureUsageByUser[row.feature_name]) {
-          featureUsageByUser[row.feature_name] = new Set();
-        }
-        featureUsageByUser[row.feature_name].add(row.user_id);
-      });
-
-      // Calculate trend (compare first half vs second half of period)
-      const midPoint = new Date((new Date(start).getTime() + new Date(end).getTime()) / 2);
-      const featureTrend: Record<string, { first: number; second: number }> = {};
-      
-      (usageData || []).forEach(row => {
-        const date = new Date(row.created_at);
-        const half = date < midPoint ? 'first' : 'second';
-        if (!featureTrend[row.feature_name]) {
-          featureTrend[row.feature_name] = { first: 0, second: 0 };
-        }
-        featureTrend[row.feature_name][half]++;
-      });
-
-      const featureUsageData = sortedFeatures.map(([name, count]) => ({
-        feature_name: name,
-        usage_count: count,
-        unique_users: featureUsageByUser[name]?.size || 0,
-        trend: featureTrend[name]?.second > featureTrend[name]?.first ? 'growing' : 
-               featureTrend[name]?.second < featureTrend[name]?.first ? 'declining' : 'stable',
-      }));
-
-      files.push({
-        name: 'feature_usage.csv',
-        content: convertToCSV(featureUsageData),
-      });
-
-      // 5. Friction points analysis
-      setProgress({ step: `${t.processing} friction_points...`, current: 5, total: totalSteps });
-      
-      const frictionIndicators = [
-        'cancel', 'delete', 'error', 'undo', 'back', 'close', 'abandon', 'fail'
-      ];
-
-      const frictionEvents = (usageData || []).filter(row => 
-        frictionIndicators.some(indicator => 
-          row.feature_name.toLowerCase().includes(indicator) ||
-          row.success === false
-        )
-      );
-
-      const frictionByFeature: Record<string, { count: number; type: string }> = {};
-      frictionEvents.forEach(row => {
-        const type = row.success === false ? 'error' : 
-                    row.feature_name.includes('cancel') ? 'cancellation' :
-                    row.feature_name.includes('delete') ? 'deletion' : 'abandonment';
-        
-        if (!frictionByFeature[row.feature_name]) {
-          frictionByFeature[row.feature_name] = { count: 0, type };
-        }
-        frictionByFeature[row.feature_name].count++;
-      });
-
-      const frictionData = Object.entries(frictionByFeature)
-        .sort((a, b) => b[1].count - a[1].count)
-        .map(([name, data]) => ({
-          event_name: name,
-          occurrence_count: data.count,
-          problem_type: data.type,
-          ux_friction_estimate: data.count > 50 ? 'high' : data.count > 20 ? 'medium' : 'low',
-        }));
-
-      files.push({
-        name: 'friction_points.csv',
-        content: convertToCSV(frictionData),
-      });
-
-      // 6. Client Portal Activity Data
-      setProgress({ step: `${t.processing} client_portal_activity...`, current: 6, total: totalSteps });
-      
-      const { data: portalActivityData, error: portalError } = await supabase
-        .from('client_portal_activity')
-        .select(`
-          id,
-          client_id,
-          activity_type,
-          activity_date,
-          metadata,
-          created_at
-        `)
-        .gte('activity_date', start)
-        .lte('activity_date', end)
-        .order('created_at', { ascending: false });
-
-      if (portalError) throw portalError;
-
-      // Anonymize client IDs
-      const anonymizedPortalActivity = (portalActivityData || []).map(row => ({
-        ...row,
-        client_id: hashUserId(row.client_id),
-        metadata: row.metadata ? JSON.parse(JSON.stringify(row.metadata)) : {},
-      }));
-
-      files.push({
-        name: 'client_portal_activity.csv',
-        content: convertToCSV(anonymizedPortalActivity),
-      });
-
-      // 7. Client Portal Summary
-      setProgress({ step: `${t.processing} portal_summary...`, current: 7, total: totalSteps });
-      
-      const uniqueClients = new Set(portalActivityData?.map(r => r.client_id) || []);
-      const activityTypeCount: Record<string, number> = {};
-      const dailyPortalUsage: Record<string, number> = {};
-      const clientActivityCount: Record<string, number> = {};
-      
-      (portalActivityData || []).forEach(row => {
-        activityTypeCount[row.activity_type] = (activityTypeCount[row.activity_type] || 0) + 1;
-        dailyPortalUsage[row.activity_date] = (dailyPortalUsage[row.activity_date] || 0) + 1;
-        clientActivityCount[row.client_id] = (clientActivityCount[row.client_id] || 0) + 1;
-      });
-
-      const sortedActivityTypes = Object.entries(activityTypeCount).sort((a, b) => b[1] - a[1]);
-      const portalDays = Object.keys(dailyPortalUsage).length || 1;
-      
-      // Calculate most active clients (anonymized)
-      const sortedClients = Object.entries(clientActivityCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20)
-        .map(([clientId, count]) => ({
-          client_hash: hashUserId(clientId),
-          activity_count: count,
-        }));
-
-      // Calculate page views vs actions
-      const pageViews = (portalActivityData || []).filter(r => r.activity_type.includes('page_view')).length;
-      const actions = (portalActivityData || []).filter(r => !r.activity_type.includes('page_view')).length;
-
-      const portalSummary = {
-        active_clients: uniqueClients.size,
-        total_portal_events: portalActivityData?.length || 0,
-        average_daily_events: Math.round((portalActivityData?.length || 0) / portalDays),
-        page_views: pageViews,
-        actions: actions,
-        engagement_ratio: pageViews > 0 ? Math.round((actions / pageViews) * 100) / 100 : 0,
-        most_used_features: sortedActivityTypes.slice(0, 15).map(([name, count]) => ({ 
-          activity_type: name, 
-          count,
-          percentage: Math.round((count / (portalActivityData?.length || 1)) * 100)
+        user_stats: {
+          unique_trainers: allUserIds.size,
+          unique_clients: allClientIds.size,
+          total_unique_users: allUserIds.size + allClientIds.size,
+        },
+        data_breakdown: {} as Record<string, any>,
+        files_included: files.map(f => ({
+          name: f.name,
+          category: f.category,
+          rows: f.content.split('\n').length - 1, // Subtract header
         })),
-        least_used_features: sortedActivityTypes.slice(-10).reverse().map(([name, count]) => ({ 
-          activity_type: name, 
-          count 
-        })),
-        most_active_clients: sortedClients,
-        daily_usage_trend: Object.entries(dailyPortalUsage)
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([date, count]) => ({ date, count })),
-        date_range: { start, end },
       };
 
-      files.push({
-        name: 'client_portal_summary.json',
-        content: JSON.stringify(portalSummary, null, 2),
-      });
+      // Add category-specific summaries
+      const categoryFiles = files.reduce((acc, f) => {
+        if (!acc[f.category]) acc[f.category] = [];
+        acc[f.category].push(f);
+        return acc;
+      }, {} as Record<string, typeof files>);
 
-      // 8. Metadata
-      setProgress({ step: `${t.processing} metadata...`, current: 8, total: totalSteps });
-      
-      const metadata = {
-        app_version: '1.0.0',
-        export_date: new Date().toISOString(),
-        export_range: { from: start, to: end },
-        total_users: uniqueUsers.size,
-        total_events: usageData?.length || 0,
-        anonymization: true,
-        client_data_included: false,
-        files_included: files.map(f => f.name),
-        generated_by: 'admin_analytics_export',
-      };
+      for (const [category, catFiles] of Object.entries(categoryFiles)) {
+        summary.data_breakdown[category] = {
+          files: catFiles.length,
+          total_rows: catFiles.reduce((sum, f) => sum + f.content.split('\n').length - 1, 0),
+        };
+      }
 
       files.push({
-        name: 'metadata.json',
-        content: JSON.stringify(metadata, null, 2),
+        name: '00_export_summary.json',
+        content: JSON.stringify(summary, null, 2),
+        category: 'meta',
       });
 
-      // Create combined export file
+      // ========================================
+      // CREATE COMBINED EXPORT FILE
+      // ========================================
+      nextStep('creating_export_file');
+
       const dateStr = format(new Date(), 'yyyy-MM-dd');
-      let combinedContent = `# App Usage Analytics Export - ${dateStr}\n`;
+      let combinedContent = `# Complete App Analytics Export - ${dateStr}\n`;
       combinedContent += `# Period: ${start} to ${end}\n`;
       combinedContent += `# Total files: ${files.length}\n`;
-      combinedContent += `# ANONYMIZED - No client data included\n\n`;
+      combinedContent += `# Total trainers: ${allUserIds.size}\n`;
+      combinedContent += `# Total clients: ${allClientIds.size}\n`;
+      combinedContent += `# ANONYMIZED - All IDs are hashed\n\n`;
+      combinedContent += `# Categories exported:\n`;
+      for (const [cat, data] of Object.entries(summary.data_breakdown)) {
+        combinedContent += `#   - ${cat}: ${data.files} files, ${data.total_rows} rows\n`;
+      }
+      combinedContent += '\n';
       
+      // Sort files by name for consistent ordering
+      files.sort((a, b) => a.name.localeCompare(b.name));
+
       for (const file of files) {
-        combinedContent += `\n${'='.repeat(60)}\n`;
-        combinedContent += `# FILE: ${file.name}\n`;
-        combinedContent += `${'='.repeat(60)}\n\n`;
+        combinedContent += `\n${'='.repeat(80)}\n`;
+        combinedContent += `# FILE: ${file.name} (${file.category})\n`;
+        combinedContent += `${'='.repeat(80)}\n\n`;
         combinedContent += file.content;
         combinedContent += '\n';
       }
@@ -449,15 +699,15 @@ export function AdminAnalyticsExport() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `app_usage_export_${dateStr}.txt`;
+      a.download = `complete_analytics_export_${dateStr}.txt`;
       a.click();
       URL.revokeObjectURL(url);
 
       toast({
         title: t.success,
         description: language === 'cs' 
-          ? `Exportováno ${usageData?.length || 0} událostí od ${uniqueUsers.size} uživatelů`
-          : `Exported ${usageData?.length || 0} events from ${uniqueUsers.size} users`,
+          ? `Exportováno ${files.length} souborů, ${allUserIds.size} trenérů, ${allClientIds.size} klientů`
+          : `Exported ${files.length} files, ${allUserIds.size} trainers, ${allClientIds.size} clients`,
       });
 
     } catch (error) {
@@ -473,18 +723,18 @@ export function AdminAnalyticsExport() {
     }
   };
 
+  const toggleOption = (key: keyof ExportOptions) => {
+    setOptions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Security notice */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
         <Shield className="w-5 h-5 text-primary shrink-0 mt-0.5" />
         <div className="text-sm">
-          <p className="font-medium text-foreground">
-            {language === 'cs' ? 'Admin-only export' : 'Admin-only export'}
-          </p>
-          <p className="text-muted-foreground mt-1">
-            {t.description}
-          </p>
+          <p className="font-medium text-foreground">{t.title}</p>
+          <p className="text-muted-foreground mt-1">{t.description}</p>
         </div>
       </div>
 
@@ -492,22 +742,28 @@ export function AdminAnalyticsExport() {
       <div className="space-y-3">
         <Label className="text-sm font-medium">{t.period}</Label>
         <RadioGroup value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="30d" id="p30" />
-            <Label htmlFor="p30" className="cursor-pointer">{t.last30}</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="90d" id="p90" />
-            <Label htmlFor="p90" className="cursor-pointer">{t.last90}</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="custom" id="pcustom" />
-            <Label htmlFor="pcustom" className="cursor-pointer">{t.custom}</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="30d" id="p30" />
+              <Label htmlFor="p30" className="cursor-pointer text-sm">{t.last30}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="90d" id="p90" />
+              <Label htmlFor="p90" className="cursor-pointer text-sm">{t.last90}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="1y" id="p1y" />
+              <Label htmlFor="p1y" className="cursor-pointer text-sm">{t.last1y}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="custom" id="pcustom" />
+              <Label htmlFor="pcustom" className="cursor-pointer text-sm">{t.custom}</Label>
+            </div>
           </div>
         </RadioGroup>
         
         {period === 'custom' && (
-          <div className="flex gap-3 mt-3 pl-6">
+          <div className="flex gap-3 mt-3">
             <div className="flex-1">
               <Label className="text-xs text-muted-foreground">{t.from}</Label>
               <Input 
@@ -530,13 +786,108 @@ export function AdminAnalyticsExport() {
         )}
       </div>
 
+      {/* Export options */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">{t.options}</Label>
+        <div className="grid gap-2">
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-trainer" 
+              checked={options.includeTrainerData}
+              onCheckedChange={() => toggleOption('includeTrainerData')}
+            />
+            <Label htmlFor="opt-trainer" className="flex items-center gap-2 cursor-pointer text-sm">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              {t.trainerData}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-portal" 
+              checked={options.includeClientPortalData}
+              onCheckedChange={() => toggleOption('includeClientPortalData')}
+            />
+            <Label htmlFor="opt-portal" className="flex items-center gap-2 cursor-pointer text-sm">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+              {t.clientPortal}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-interactions" 
+              checked={options.includeInteractionEvents}
+              onCheckedChange={() => toggleOption('includeInteractionEvents')}
+            />
+            <Label htmlFor="opt-interactions" className="flex items-center gap-2 cursor-pointer text-sm">
+              <MousePointer className="w-4 h-4 text-muted-foreground" />
+              {t.interactions}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-performance" 
+              checked={options.includePerformanceMetrics}
+              onCheckedChange={() => toggleOption('includePerformanceMetrics')}
+            />
+            <Label htmlFor="opt-performance" className="flex items-center gap-2 cursor-pointer text-sm">
+              <Gauge className="w-4 h-4 text-muted-foreground" />
+              {t.performance}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-errors" 
+              checked={options.includeErrors}
+              onCheckedChange={() => toggleOption('includeErrors')}
+            />
+            <Label htmlFor="opt-errors" className="flex items-center gap-2 cursor-pointer text-sm">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              {t.errors}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-forms" 
+              checked={options.includeFormAnalytics}
+              onCheckedChange={() => toggleOption('includeFormAnalytics')}
+            />
+            <Label htmlFor="opt-forms" className="flex items-center gap-2 cursor-pointer text-sm">
+              <FileSpreadsheet className="w-4 h-4 text-muted-foreground" />
+              {t.forms}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-journeys" 
+              checked={options.includeJourneys}
+              onCheckedChange={() => toggleOption('includeJourneys')}
+            />
+            <Label htmlFor="opt-journeys" className="flex items-center gap-2 cursor-pointer text-sm">
+              <Timer className="w-4 h-4 text-muted-foreground" />
+              {t.journeys}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              id="opt-gamification" 
+              checked={options.includeGamification}
+              onCheckedChange={() => toggleOption('includeGamification')}
+            />
+            <Label htmlFor="opt-gamification" className="flex items-center gap-2 cursor-pointer text-sm">
+              <FileJson className="w-4 h-4 text-muted-foreground" />
+              {t.gamification}
+            </Label>
+          </div>
+        </div>
+      </div>
+
       {/* Progress indicator */}
       {progress && (
         <div className="p-3 rounded-lg bg-secondary/50 text-sm">
           <div className="flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{progress.step}</span>
-            <span className="ml-auto text-muted-foreground">
+            <span className="truncate">{progress.step}</span>
+            <span className="ml-auto text-muted-foreground shrink-0">
               {progress.current}/{progress.total}
             </span>
           </div>
@@ -573,19 +924,15 @@ export function AdminAnalyticsExport() {
       <div className="text-xs text-muted-foreground space-y-1.5 pt-2">
         <p className="flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-          {t.noClientData}
+          {language === 'cs' ? 'Všechna ID jsou anonymizována (hash)' : 'All IDs are anonymized (hashed)'}
         </p>
         <p className="flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-          {t.anonymized}
-        </p>
-        <p className="flex items-center gap-1.5 mt-3">
-          <FileSpreadsheet className="w-3.5 h-3.5" />
-          app_usage_events.csv, feature_usage.csv, friction_points.csv
+          {language === 'cs' ? 'Export obsahuje data všech uživatelů' : 'Export contains data from all users'}
         </p>
         <p className="flex items-center gap-1.5">
-          <FileJson className="w-3.5 h-3.5" />
-          usage_summary.json, metadata.json
+          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+          {language === 'cs' ? 'Připraveno pro AI analýzu a vývoj' : 'Ready for AI analysis and development'}
         </p>
       </div>
     </div>
