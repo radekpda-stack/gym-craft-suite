@@ -110,14 +110,31 @@ export function useClient(id: string | undefined) {
     queryKey: ["clients", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      
+      // Fetch client data and ledger balance in parallel
+      const [clientResult, ledgerResult] = await Promise.all([
+        supabase
+          .from("clients")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle(),
+        supabase
+          .from("vw_client_ledger_balances")
+          .select("ledger_balance")
+          .eq("client_id", id)
+          .maybeSingle()
+      ]);
 
-      if (error) throw error;
-      return data as Client | null;
+      if (clientResult.error) throw clientResult.error;
+      if (!clientResult.data) return null;
+      
+      // Use ledger balance if available, otherwise fall back to stored credit_balance
+      const actualBalance = ledgerResult.data?.ledger_balance ?? clientResult.data.credit_balance ?? 0;
+      
+      return {
+        ...clientResult.data,
+        credit_balance: actualBalance,
+      } as Client;
     },
     enabled: !!id,
   });
