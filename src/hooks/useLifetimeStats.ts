@@ -136,28 +136,28 @@ export function useLifetimeStats() {
       const firstTrainingDate = sortedDates[0] || null;
       const lastTrainingDate = sortedDates[sortedDates.length - 1] || null;
 
-      // Training types - count cardio from both training_type AND exercise category
-      const strengthTrainings = trainingTypes.filter(t => t.training_type === "strength").length;
-      
-      // Count unique training sessions with cardio exercises
+      // Training types - make categories mutually exclusive
+      // First identify all cardio training IDs (from exercises or training_type)
       const cardioSessionIds = new Set(
         cardioExerciseEntries
           .map(e => e.training_session_id)
           .filter(Boolean)
       );
       
-      // Also count trainings explicitly marked as cardio
-      const explicitCardioIds = new Set(
-        trainingTypes
-          .filter(t => t.training_type === "cardio" || t.training_type === "hiit" || t.training_type === "running")
-          .map(t => t.id)
-      );
+      // Also count trainings explicitly marked as cardio/hiit/running
+      trainingTypes
+        .filter(t => t.training_type === "cardio" || t.training_type === "hiit" || t.training_type === "running")
+        .forEach(t => cardioSessionIds.add(t.id));
       
-      // Merge both sets
-      const allCardioIds = new Set([...cardioSessionIds, ...explicitCardioIds]);
-      const cardioTrainings = allCardioIds.size;
+      const cardioTrainings = cardioSessionIds.size;
       
-      const otherTrainings = totalTrainings - strengthTrainings - cardioTrainings;
+      // Strength = trainings marked as strength that are NOT also cardio
+      const strengthTrainings = trainingTypes.filter(
+        t => t.training_type === "strength" && !cardioSessionIds.has(t.id)
+      ).length;
+      
+      // Other = everything else
+      const otherTrainings = Math.max(0, totalTrainings - strengthTrainings - cardioTrainings);
 
       // Finance stats
       const totalIncomeReceived = transactions
