@@ -28,6 +28,7 @@ const Index = lazy(() => import("./pages/Index"));
 const DemoPage = lazy(() => import("./pages/DemoPage"));
 const WaitingForApproval = lazy(() => import("./pages/WaitingForApproval"));
 const UserApprovals = lazy(() => import("./pages/admin/UserApprovals"));
+const PerformanceImport = lazy(() => import("./pages/admin/PerformanceImport"));
 const Clients = lazy(() => import("./pages/Clients"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
 const Trainings = lazy(() => import("./pages/Trainings"));
@@ -202,6 +203,7 @@ const App = () => (
                           
                           <Route path="/my-profile" element={<MyProfile />} />
                           <Route path="/admin/user-approvals" element={<UserApprovals />} />
+                          <Route path="/admin/performance-import" element={<PerformanceImport />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Layout>
