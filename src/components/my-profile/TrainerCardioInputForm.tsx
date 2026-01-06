@@ -42,7 +42,7 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
   const [distance, setDistance] = useState('2000');
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
-  const [centiseconds, setCentiseconds] = useState('');
+  const [centiseconds, setCentiseconds] = useState(''); // Now supports 00-99 (hundredths of seconds)
   const [notes, setNotes] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [isPR, setIsPR] = useState(false);
@@ -155,7 +155,7 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
     const s = parseInt(seconds) || 0;
     const cs = parseInt(centiseconds) || 0;
     if (m === 0 && s === 0) return null;
-    return `${m}:${s.toString().padStart(2, '0')}.${cs.toString().padStart(1, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
   };
 
   // Calculate pace preview
@@ -262,15 +262,18 @@ export function TrainerCardioInputForm({ clientId }: TrainerCardioInputFormProps
             <span className="text-xl font-bold">.</span>
             <div className="w-16">
               <Input
-                type="number"
-                placeholder="0"
+                type="text"
+                inputMode="numeric"
+                placeholder="00"
                 value={centiseconds}
-                onChange={(e) => setCentiseconds(e.target.value)}
-                min="0"
-                max="9"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                  setCentiseconds(val);
+                }}
+                maxLength={2}
                 className="text-center"
               />
-              <span className="text-xs text-muted-foreground text-center block mt-1">des.</span>
+              <span className="text-xs text-muted-foreground text-center block mt-1">setiny</span>
             </div>
           </div>
           {formatTimePreview() && (
