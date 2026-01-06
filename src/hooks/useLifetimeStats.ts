@@ -73,6 +73,7 @@ export function useLifetimeStats() {
       const [
         trainingStatsResult,
         trainingTypesResult,
+        cardioExerciseEntriesResult,
         financeStatsResult,
         productStatsResult,
         clientStatsResult,
@@ -86,8 +87,14 @@ export function useLifetimeStats() {
         // Training types breakdown
         supabase
           .from("training_sessions")
-          .select("training_type")
+          .select("id, training_type")
           .eq("status", "completed"),
+        
+        // Cardio exercise entries - find training sessions with cardio exercises
+        supabase
+          .from("exercise_entries")
+          .select("training_session_id, exercises!inner(category)")
+          .eq("exercises.category", "Kardio"),
         
         // Finance stats
         supabase
@@ -109,6 +116,7 @@ export function useLifetimeStats() {
 
       const trainings = trainingStatsResult.data || [];
       const trainingTypes = trainingTypesResult.data || [];
+      const cardioExerciseEntries = cardioExerciseEntriesResult.data || [];
       const transactions = financeStatsResult.data || [];
       const productTransactions = productStatsResult.data || [];
       const clients = clientStatsResult.data || [];
@@ -128,9 +136,27 @@ export function useLifetimeStats() {
       const firstTrainingDate = sortedDates[0] || null;
       const lastTrainingDate = sortedDates[sortedDates.length - 1] || null;
 
-      // Training types
+      // Training types - count cardio from both training_type AND exercise category
       const strengthTrainings = trainingTypes.filter(t => t.training_type === "strength").length;
-      const cardioTrainings = trainingTypes.filter(t => t.training_type === "cardio").length;
+      
+      // Count unique training sessions with cardio exercises
+      const cardioSessionIds = new Set(
+        cardioExerciseEntries
+          .map(e => e.training_session_id)
+          .filter(Boolean)
+      );
+      
+      // Also count trainings explicitly marked as cardio
+      const explicitCardioIds = new Set(
+        trainingTypes
+          .filter(t => t.training_type === "cardio" || t.training_type === "hiit" || t.training_type === "running")
+          .map(t => t.id)
+      );
+      
+      // Merge both sets
+      const allCardioIds = new Set([...cardioSessionIds, ...explicitCardioIds]);
+      const cardioTrainings = allCardioIds.size;
+      
       const otherTrainings = totalTrainings - strengthTrainings - cardioTrainings;
 
       // Finance stats
