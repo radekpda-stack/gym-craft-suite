@@ -36,6 +36,7 @@ import {
   calculatePaymentSummary,
 } from '@/components/trainings/ParticipantPaymentCard';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
+import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
@@ -78,6 +79,7 @@ export default function TrainingDetail() {
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
   const { data: allTags = [] } = useTags();
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
+  const { data: budgetGroups = [] } = useBudgetGroups();
   const { data: existingFeedback } = useTrainingFeedback(id);
   const { data: feedbackRequest } = useFeedbackRequest(id);
   const updateTraining = useUpdateTrainingSession();
@@ -211,6 +213,23 @@ export default function TrainingDetail() {
     navigate('/schedule');
   };
 
+  // Helper: get effective credit balance (shared_balance for budget group members)
+  const getEffectiveCreditBalance = (clientId: string): number => {
+    // Check if client is in a budget group
+    const group = budgetGroups.find(g => 
+      g.members.some(m => m.client_id === clientId)
+    );
+    
+    if (group) {
+      // Use shared balance from budget group
+      return group.shared_balance ?? 0;
+    }
+    
+    // Use individual client credit balance
+    const clientData = clients.find(c => c.id === clientId);
+    return clientData?.credit_balance ?? 0;
+  };
+
   const openCompleteDialog = () => {
     setCompleteNotes(training.notes || '');
     
@@ -226,7 +245,7 @@ export default function TrainingDetail() {
       // Use existing participants with their price shares
       payments = existingParticipants.map(p => {
         const clientData = clients.find(c => c.id === p.client_id);
-        const creditBalance = clientData?.credit_balance ?? 0;
+        const creditBalance = getEffectiveCreditBalance(p.client_id);
         const paymentMode = clientData?.payment_mode;
         
         return {
@@ -241,7 +260,7 @@ export default function TrainingDetail() {
     } else {
       // Initialize with primary client only
       const primaryClient = clients.find(c => c.id === training.client_id) || client;
-      const creditBalance = primaryClient?.credit_balance ?? 0;
+      const creditBalance = getEffectiveCreditBalance(training.client_id);
       const paymentMode = primaryClient?.payment_mode;
       
       payments = [{
