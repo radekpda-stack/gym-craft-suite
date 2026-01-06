@@ -33,6 +33,7 @@ import {
 // Audit components
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
+import { ClientQuickInfoCard } from '@/components/clients/ClientQuickInfoCard';
 
 // Action components
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
@@ -250,6 +251,13 @@ export default function ClientDetail() {
         onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
         redFlagCount={redFlagCount}
         lastPortalLogin={portalAccess?.last_portal_login}
+      />
+
+      {/* NEW: Quick Info Card - editable phone, email, gender, handedness */}
+      <ClientQuickInfoCard
+        client={client}
+        onUpdate={handleSaveClient}
+        isLoading={updateClient.isPending}
       />
 
       {/* NEW: Health Alert Banner */}
