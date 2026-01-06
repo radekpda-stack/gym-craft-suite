@@ -37,6 +37,7 @@ import { useRecentExercises } from '@/hooks/useRecentExercises';
 import { useFavoriteExercises } from '@/hooks/useFavoriteExercises';
 import { cn } from '@/lib/utils';
 import { detectExerciseMetricCategory, getRpeBgColor } from '@/lib/exerciseMetrics';
+import { AssistanceBandSelector, isPullUpExercise, type BandType } from './AssistanceBandSelector';
 
 const formSchema = z.object({
   client_id: z.string().min(1, 'Vyberte klienta'),
@@ -85,6 +86,7 @@ export function QuickLogDialog({
   const { favoriteIds, isFavorite } = useFavoriteExercises();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [assistanceBands, setAssistanceBands] = useState<BandType[]>([]);
 
   const activeClients = clients.filter(c => !c.is_archived);
   const activeExercises = exercises.filter(e => !e.is_archived);
@@ -168,6 +170,7 @@ export function QuickLogDialog({
         resistance: null,
       });
       setShowAdvanced(false);
+      setAssistanceBands([]);
     }
   }, [open, clientId, exerciseId, form, exercises]);
 
@@ -182,6 +185,11 @@ export function QuickLogDialog({
 
   const showCardioMetrics = exerciseCategory !== 'strength';
   const rpeValue = form.watch('rpe');
+  
+  // Check if selected exercise is a pull-up type (for assistance bands)
+  const isPullUp = selectedExercise 
+    ? isPullUpExercise(selectedExercise.name_cs || selectedExercise.name || '')
+    : false;
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -203,6 +211,11 @@ export function QuickLogDialog({
         }
       }
       
+      // Build metrics_json for assistance bands (pull-up exercises)
+      const metricsJson = assistanceBands.length > 0 
+        ? { assistance_bands: assistanceBands }
+        : null;
+
       await createEntry.mutateAsync({
         client_id: data.client_id,
         exercise_id: data.exercise_id,
@@ -231,6 +244,7 @@ export function QuickLogDialog({
         rpe: data.rpe ?? null,
         level: data.level ?? null,
         resistance: data.resistance ?? null,
+        metrics_json: metricsJson,
       });
 
       onOpenChange(false);
@@ -746,6 +760,14 @@ export function QuickLogDialog({
                   )}
                 />
               </div>
+            )}
+
+            {/* Assistance Bands for Pull-up exercises */}
+            {isPullUp && (
+              <AssistanceBandSelector
+                value={assistanceBands}
+                onChange={setAssistanceBands}
+              />
             )}
 
             {/* Notes */}

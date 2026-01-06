@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { ExerciseEntry, useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { TimeInput } from '@/components/ui/time-input';
 import { secondsToMs, msToSeconds } from '@/lib/timeUtils';
+import { AssistanceBandSelector, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
 
 interface EditEntryDialogProps {
   entry: ExerciseEntry | null;
@@ -56,6 +57,7 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
   const [calories, setCalories] = useState<string>('');
   const [isTest, setIsTest] = useState(false);
   const [legFatigue, setLegFatigue] = useState(false);
+  const [assistanceBands, setAssistanceBands] = useState<BandType[]>([]);
   
   // Sync form with entry when it changes
   useEffect(() => {
@@ -86,6 +88,10 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
       setCalories(entry.calories_kcal?.toString() || '');
       setIsTest(!!entry.is_test);
       setLegFatigue(!!entry.leg_fatigue);
+      
+      // Extract assistance bands from metrics_json
+      const metricsJson = (entry as any).metrics_json as { assistance_bands?: BandType[] } | null;
+      setAssistanceBands(metricsJson?.assistance_bands || []);
     }
   }, [entry]);
   
@@ -95,7 +101,9 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
   const isCardio = metricCategory ? metricCategory !== 'strength' : (
     !!avgWatts || !!maxWatts || !!avgSpeedKmh || !!pace500m || !!paceKm || !!avgHr || !!distanceMeters
   );
-
+  
+  // Check if this is a pull-up exercise
+  const isPullUp = entry ? isPullUpExercise(entry.exercise_name || '') : false;
   const handleSave = async () => {
     if (!entry) return;
 
@@ -133,6 +141,11 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
       calories_kcal: parseIntOrNull(calories),
       is_test: isTest,
       leg_fatigue: legFatigue,
+
+      // Pull-up assistance bands
+      metrics_json: assistanceBands.length > 0 
+        ? { assistance_bands: assistanceBands }
+        : null,
 
       notes: notes || null,
     });
@@ -210,6 +223,14 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
                   onChange={(e) => setTempo(e.target.value)}
                 />
               </div>
+
+              {/* Assistance Bands for Pull-up exercises */}
+              {isPullUp && (
+                <AssistanceBandSelector
+                  value={assistanceBands}
+                  onChange={setAssistanceBands}
+                />
+              )}
             </>
           ) : (
             <>

@@ -15,6 +15,7 @@ import { detectExerciseMetricCategory, getPerformanceDisplay, getRpeBgColor } fr
 import { formatTimeMs } from '@/lib/timeUtils';
 import { EditExerciseEntryDialog } from './EditExerciseEntryDialog';
 import { ExerciseEntryDetailSheet } from './ExerciseEntryDetailSheet';
+import { AssistanceBandBadges, isPullUpExercise, type BandType } from './AssistanceBandSelector';
 
 interface ExerciseHistoryTableProps {
   exerciseId: string;
@@ -76,6 +77,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           distance_meters,
           level,
           resistance,
+          metrics_json,
           clients(id, name)
         `)
         .eq('exercise_id', exerciseId);
@@ -128,6 +130,10 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           distance_meters: (entry as any).distance_meters,
         }, metricCategory);
 
+        // Extract assistance bands from metrics_json
+        const metricsJson = (entry as any).metrics_json as { assistance_bands?: BandType[] } | null;
+        const assistanceBands = metricsJson?.assistance_bands || [];
+
         return {
           id: entry.id,
           type: hasTime ? ('time' as const) : ('strength' as const),
@@ -148,6 +154,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           level: (entry as any).level,
           resistance: (entry as any).resistance,
           performanceDisplay,
+          assistanceBands,
         };
       });
 
@@ -181,7 +188,11 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
 
       rows = rows.map(r => ({ ...r, isPR: prIds.has(r.id) }));
 
-      return { rows, isTimeBased, metricCategory };
+      // Check if this exercise is a pull-up type
+      const exerciseName = exerciseData?.name_cs || exerciseData?.name || '';
+      const isPullUp = isPullUpExercise(exerciseName);
+
+      return { rows, isTimeBased, metricCategory, isPullUp };
     },
     enabled: !!exerciseId,
   });
@@ -324,7 +335,12 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                         {row.sets && row.reps ? `${row.sets}×${row.reps}` : '-'}
                       </TableCell>
                       <TableCell className="text-right font-medium whitespace-nowrap">
-                        {row.weight ? `${row.weight} kg` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span>{row.weight ? `${row.weight} kg` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}</span>
+                          {data?.isPullUp && row.assistanceBands && row.assistanceBands.length > 0 && (
+                            <AssistanceBandBadges bands={row.assistanceBands} className="justify-end" />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
                         {row.volume ? `${row.volume} kg` : '-'}
