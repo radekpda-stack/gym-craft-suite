@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sheet";
 import { TrainingForm, TrainingFormValues } from "./TrainingForm";
 import { Client } from "@/hooks/useClients";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CreateTrainingSheetProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function CreateTrainingSheet({
   defaultDate,
   defaultValues: propDefaultValues,
 }: CreateTrainingSheetProps) {
+  const isMobile = useIsMobile();
   const defaultValues: Partial<TrainingFormValues> = { ...propDefaultValues };
   
   if (defaultClientId && !defaultValues.client_id) {
@@ -41,14 +43,18 @@ export function CreateTrainingSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
+      <SheetContent className={
+        isMobile 
+          ? "w-full h-full max-w-none inset-0 rounded-none flex flex-col"
+          : "w-full sm:max-w-lg overflow-y-auto"
+      }>
+        <SheetHeader className="shrink-0">
           <SheetTitle>Nový trénink</SheetTitle>
           <SheetDescription>
             Vytvořte nový trénink pro klienta.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6">
+        <div className={isMobile ? "flex-1 overflow-y-auto mt-6" : "mt-6"}>
           <TrainingForm
             key={defaultDate || 'new'}
             onSubmit={onSubmit}
@@ -56,6 +62,7 @@ export function CreateTrainingSheet({
             clients={clients}
             defaultValues={Object.keys(defaultValues).length > 0 ? defaultValues : undefined}
             submitLabel="Vytvořit trénink"
+            stickySubmit={isMobile}
           />
         </div>
       </SheetContent>

@@ -4,8 +4,8 @@ import { useClients } from "@/hooks/useClients";
 import { useTrainingPrices } from "@/hooks/useAppSettings";
 import { useCreateTrainingSession } from "@/hooks/useTrainingSessions";
 import { useAddTrainingSessionTags } from "@/hooks/useTrainingSessionTags";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CreateTrainingDialogProps {
   open: boolean;
@@ -26,6 +26,7 @@ export function CreateTrainingDialog({
   const trainingPrices = useTrainingPrices();
   const createTraining = useCreateTrainingSession();
   const addTrainingTags = useAddTrainingSessionTags();
+  const isMobile = useIsMobile();
 
   const defaultValues: Partial<EnhancedTrainingFormValues> = { ...propDefaultValues };
   
@@ -66,11 +67,15 @@ export function CreateTrainingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-2">
+      <DialogContent className={
+        isMobile 
+          ? "fixed inset-0 w-full h-full max-w-none max-h-none translate-x-0 translate-y-0 left-0 top-0 rounded-none flex flex-col p-0"
+          : "sm:max-w-lg max-h-[90vh] p-0"
+      }>
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
           <DialogTitle>Nový trénink</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(90vh-80px)] px-6 pb-6">
+        <div className={isMobile ? "flex-1 overflow-y-auto px-4 pb-4" : "max-h-[calc(90vh-80px)] overflow-y-auto px-6 pb-6"}>
           <EnhancedTrainingForm
             key={defaultDate || defaultClientId || 'new'}
             onSubmit={handleSubmit}
@@ -79,8 +84,9 @@ export function CreateTrainingDialog({
             trainingPrices={trainingPrices}
             defaultValues={Object.keys(defaultValues).length > 0 ? defaultValues : undefined}
             submitLabel="Vytvořit trénink"
+            stickySubmit={isMobile}
           />
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

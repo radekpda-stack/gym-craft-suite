@@ -62,6 +62,7 @@ interface EnhancedTrainingFormProps {
   defaultTagIds?: string[];
   trainingPrices: Record<string, number>;
   submitLabel?: string;
+  stickySubmit?: boolean;
 }
 
 // Helper to remove diacritics for search
@@ -77,6 +78,7 @@ export function EnhancedTrainingForm({
   defaultTagIds = [],
   trainingPrices,
   submitLabel = "Vytvořit trénink",
+  stickySubmit = false,
 }: EnhancedTrainingFormProps) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
   const [clientSearch, setClientSearch] = useState("");
@@ -175,230 +177,234 @@ export function EnhancedTrainingForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
-        {/* 1. Client Selection */}
-        <FormField
-          control={form.control}
-          name="client_id"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Klient *</FormLabel>
-              <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className={cn(
-                        "w-full justify-between bg-secondary border-border h-12 text-base",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {selectedClient?.name || "Vyberte klienta..."}
-                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
-                  <Command shouldFilter={false}>
-                    <CommandInput 
-                      placeholder="Hledat klienta..." 
-                      value={clientSearch}
-                      onValueChange={setClientSearch}
-                      className="h-11"
-                    />
-                    <CommandList>
-                      <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
-                      <CommandGroup className="max-h-60 overflow-auto">
-                        {filteredClients.map((client) => (
-                          <CommandItem
-                            key={client.id}
-                            value={client.id}
-                            onSelect={() => {
-                              field.onChange(client.id);
-                              setClientSearch("");
-                              setClientPopoverOpen(false);
-                            }}
-                            className="py-3"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                field.value === client.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex-1">
-                              <span>{client.name}</span>
-                            </div>
-                            <span className={cn(
-                              "text-sm font-medium",
-                              (client.credit_balance || 0) >= autoPrice ? "text-success" :
-                              (client.credit_balance || 0) > 0 ? "text-warning" : "text-destructive"
-                            )}>
-                              {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Credit Status Banner */}
-        {selectedClient && creditStatus && (
-          <div className={cn("p-3 rounded-xl flex items-center gap-3", creditStatus.bg)}>
-            <creditStatus.icon className={cn("w-5 h-5", creditStatus.color)} />
-            <div className="flex-1">
-              <p className={cn("text-sm font-medium", creditStatus.color)}>{creditStatus.label}</p>
-              <p className="text-xs text-muted-foreground">
-                Kredit: {availableCredit.toLocaleString('cs-CZ')} Kč
-                {sharedBudget?.isShared && " (sdílený účet)"}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* 2. Date and Time */}
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Datum a čas *</FormLabel>
-              <FormControl>
-                <DateTimePicker
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Vyberte datum a čas"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Participant count */}
-        <FormField
-          control={form.control}
-          name="participant_count"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Počet osob</FormLabel>
-              <Select 
-                onValueChange={(v) => field.onChange(parseInt(v))} 
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-secondary border-border h-11">
-                    <SelectValue placeholder="1" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-popover border-border">
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 5. Price - Auto with override option */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <FormLabel>Cena tréninku</FormLabel>
-            <button
-              type="button"
-              onClick={() => setPriceOverrideEnabled(!priceOverrideEnabled)}
-              className="text-xs text-primary hover:underline"
-            >
-              {priceOverrideEnabled ? "Použít automatickou cenu" : "Upravit ručně"}
-            </button>
-          </div>
-          
-          {priceOverrideEnabled ? (
-            <FormField
-              control={form.control}
-              name="price_override"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder={autoPrice.toString()}
-                      value={field.value || ""}
-                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      className="bg-secondary border-border h-11"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Automatická cena: {autoPrice.toLocaleString('cs-CZ')} Kč
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-          ) : (
-            <div className="h-11 px-4 rounded-lg bg-secondary border border-border flex items-center justify-between">
-              <span className="text-lg font-semibold">{finalPrice.toLocaleString('cs-CZ')} Kč</span>
-              <span className="text-xs text-muted-foreground">
-                {participantCount} {participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'}
-              </span>
-            </div>
-          )}
-        </div>
-
-
-        {/* Training Type */}
-        <FormField
-          control={form.control}
-          name="training_type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Dumbbell className="w-4 h-4" />
-                Typ tréninku
-              </FormLabel>
-              <FormControl>
-                <TrainingTypeSelector
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        {/* Training Tags */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Tag className="w-4 h-4" />
-            Štítky tréninku
-          </label>
-          <TrainingTagsSelector
-            selectedTagIds={selectedTagIds}
-            onChange={setSelectedTagIds}
+      <form onSubmit={form.handleSubmit(handleSubmit)} className={stickySubmit ? "flex flex-col h-full" : "space-y-5"}>
+        <div className={stickySubmit ? "flex-1 overflow-y-auto space-y-5" : "space-y-5"}>
+          {/* 1. Client Selection */}
+          <FormField
+            control={form.control}
+            name="client_id"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Klient *</FormLabel>
+                <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between bg-secondary border-border h-12 text-base",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {selectedClient?.name || "Vyberte klienta..."}
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Hledat klienta..." 
+                        value={clientSearch}
+                        onValueChange={setClientSearch}
+                        className="h-11"
+                      />
+                      <CommandList>
+                        <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
+                        <CommandGroup className="max-h-60 overflow-auto">
+                          {filteredClients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={client.id}
+                              onSelect={() => {
+                                field.onChange(client.id);
+                                setClientSearch("");
+                                setClientPopoverOpen(false);
+                              }}
+                              className="py-3"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === client.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex-1">
+                                <span>{client.name}</span>
+                              </div>
+                              <span className={cn(
+                                "text-sm font-medium",
+                                (client.credit_balance || 0) >= autoPrice ? "text-success" :
+                                (client.credit_balance || 0) > 0 ? "text-warning" : "text-destructive"
+                              )}>
+                                {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
           />
+
+          {/* Credit Status Banner */}
+          {selectedClient && creditStatus && (
+            <div className={cn("p-3 rounded-xl flex items-center gap-3", creditStatus.bg)}>
+              <creditStatus.icon className={cn("w-5 h-5", creditStatus.color)} />
+              <div className="flex-1">
+                <p className={cn("text-sm font-medium", creditStatus.color)}>{creditStatus.label}</p>
+                <p className="text-xs text-muted-foreground">
+                  Kredit: {availableCredit.toLocaleString('cs-CZ')} Kč
+                  {sharedBudget?.isShared && " (sdílený účet)"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Date and Time */}
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Datum a čas *</FormLabel>
+                <FormControl>
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Vyberte datum a čas"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Participant count */}
+          <FormField
+            control={form.control}
+            name="participant_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Počet osob</FormLabel>
+                <Select 
+                  onValueChange={(v) => field.onChange(parseInt(v))} 
+                  value={field.value?.toString()}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-secondary border-border h-11">
+                      <SelectValue placeholder="1" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-popover border-border">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 5. Price - Auto with override option */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <FormLabel>Cena tréninku</FormLabel>
+              <button
+                type="button"
+                onClick={() => setPriceOverrideEnabled(!priceOverrideEnabled)}
+                className="text-xs text-primary hover:underline"
+              >
+                {priceOverrideEnabled ? "Použít automatickou cenu" : "Upravit ručně"}
+              </button>
+            </div>
+            
+            {priceOverrideEnabled ? (
+              <FormField
+                control={form.control}
+                name="price_override"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder={autoPrice.toString()}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        className="bg-secondary border-border h-11"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Automatická cena: {autoPrice.toLocaleString('cs-CZ')} Kč
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <div className="h-11 px-4 rounded-lg bg-secondary border border-border flex items-center justify-between">
+                <span className="text-lg font-semibold">{finalPrice.toLocaleString('cs-CZ')} Kč</span>
+                <span className="text-xs text-muted-foreground">
+                  {participantCount} {participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'}
+                </span>
+              </div>
+            )}
+          </div>
+
+
+          {/* Training Type */}
+          <FormField
+            control={form.control}
+            name="training_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" />
+                  Typ tréninku
+                </FormLabel>
+                <FormControl>
+                  <TrainingTypeSelector
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {/* Training Tags */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Štítky tréninku
+            </label>
+            <TrainingTagsSelector
+              selectedTagIds={selectedTagIds}
+              onChange={setSelectedTagIds}
+            />
+          </div>
         </div>
 
-
-        <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Ukládám...
-            </>
-          ) : (
-            submitLabel
-          )}
-        </Button>
+        {/* Submit button - sticky on mobile when stickySubmit is true */}
+        <div className={stickySubmit ? "sticky bottom-0 pt-4 pb-safe bg-card border-t border-border -mx-4 px-4" : ""}>
+          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Ukládám...
+              </>
+            ) : (
+              submitLabel
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );

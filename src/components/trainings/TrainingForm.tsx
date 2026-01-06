@@ -68,6 +68,7 @@ interface TrainingFormProps {
   defaultValues?: Partial<TrainingFormValues>;
   submitLabel?: string;
   showRecurrence?: boolean;
+  stickySubmit?: boolean;
 }
 
 // Helper to remove diacritics for search
@@ -82,6 +83,7 @@ export function TrainingForm({
   defaultValues,
   submitLabel = "Vytvořit trénink",
   showRecurrence = true,
+  stickySubmit = false,
 }: TrainingFormProps) {
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -179,7 +181,8 @@ export function TrainingForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className={stickySubmit ? "flex flex-col h-full" : "space-y-6"}>
+        <div className={stickySubmit ? "flex-1 overflow-y-auto space-y-6" : "space-y-6"}>
         <FormField
           control={form.control}
           name="client_id"
@@ -557,17 +560,21 @@ export function TrainingForm({
             />
           </CollapsibleContent>
         </Collapsible>
+        </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Ukládám...
-            </>
-          ) : (
-            submitLabel
-          )}
-        </Button>
+        {/* Submit button - sticky on mobile when stickySubmit is true */}
+        <div className={stickySubmit ? "sticky bottom-0 pt-4 pb-safe bg-card border-t border-border -mx-4 px-4" : ""}>
+          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Ukládám...
+              </>
+            ) : (
+              submitLabel
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );
