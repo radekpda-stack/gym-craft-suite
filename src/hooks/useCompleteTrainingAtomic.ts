@@ -116,6 +116,43 @@ export function useCompleteTrainingAtomic() {
           .eq('training_session_id', params.sessionId)
           .eq('client_id', participant.client_id);
       }
+
+      // Check if any client has exhausted their grandfathered credit
+      // and needs to be switched to new pricing
+      const clientsToCheckForLegacyPricing = params.participants
+        .filter(p => p.payment_method === 'credit')
+        .map(p => p.client_id);
+
+      if (clientsToCheckForLegacyPricing.length > 0) {
+        const { data: clientsData } = await supabase
+          .from('clients')
+          .select('id, name, credit_balance, grandfathered_credit, use_legacy_pricing')
+          .in('id', clientsToCheckForLegacyPricing);
+
+        const clientsSwitchedToNewPricing: string[] = [];
+        
+        for (const client of clientsData || []) {
+          // Check if client was on legacy pricing but has now exhausted grandfathered credit
+          if (
+            client.use_legacy_pricing && 
+            client.grandfathered_credit !== null &&
+            client.credit_balance <= 0
+          ) {
+            // Switch client to new pricing
+            await supabase
+              .from('clients')
+              .update({ use_legacy_pricing: false })
+              .eq('id', client.id);
+            
+            clientsSwitchedToNewPricing.push(client.name);
+          }
+        }
+
+        // Store switched clients in result for notification
+        if (clientsSwitchedToNewPricing.length > 0) {
+          (result as any).clientsSwitchedToNewPricing = clientsSwitchedToNewPricing;
+        }
+      }
       
       return result;
     },
@@ -132,6 +169,18 @@ export function useCompleteTrainingAtomic() {
       queryClient.invalidateQueries({ queryKey: ["today-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["clients_price_status"] });
+      
+      // Notify about clients switched to new pricing
+      const switchedClients = (result as any).clientsSwitchedToNewPricing as string[] | undefined;
+      if (switchedClients && switchedClients.length > 0) {
+        toast({ 
+          title: "Přechod na nové ceny",
+          description: `${switchedClients.join(', ')} vyčerpal/a předplacený kredit a přechází na nové ceny.`,
+          variant: "default",
+          duration: 8000,
+        });
+      }
       
       if (result.idempotent) {
         toast({ 

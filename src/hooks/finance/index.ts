@@ -19,3 +19,4 @@ export { useSalesCartWithDiscount } from '../useSalesCartWithDiscount';
 export { useUnpaidTrainings } from '../useUnpaidTrainings';
 export { useUnifiedFinancialData } from '../useUnifiedFinancialData';
 export { useSharedBudgetBalance } from '../useSharedBudgetBalance';
+export { usePriceTransition, useClientTrainingPrice, getEffectiveTrainingPrice } from '../usePriceTransition';

@@ -35,6 +35,10 @@ export interface Client {
   stress_level: number | null;
   dietary_restrictions: string[] | null;
   supplements: string[] | null;
+  // Price transition fields
+  grandfathered_credit: number | null;
+  grandfathered_at: string | null;
+  use_legacy_pricing: boolean;
 }
 
 export interface ClientQuickInfo {
