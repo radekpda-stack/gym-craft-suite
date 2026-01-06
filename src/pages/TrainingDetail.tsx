@@ -23,7 +23,7 @@ import {
   useCancelTrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
-import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
+
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { useClient, useClients } from '@/hooks/useClients';
@@ -113,7 +113,6 @@ export default function TrainingDetail() {
   const [usePriceSplit, setUsePriceSplit] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
   const [partialPaymentMethod, setPartialPaymentMethod] = useState<PartialPaymentMethod>('cash');
-  const [completeTrainingType, setCompleteTrainingType] = useState<string>('strength');
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -231,7 +230,6 @@ export default function TrainingDetail() {
     setCompleteNotes(training.notes || '');
     setUsePriceSplit(existingParticipants.length > 0 || participantCount > 1);
     setPaymentMethod('credit');
-    setCompleteTrainingType(training.training_type || 'strength');
     
     // Initialize participant shares
     const totalPrice = getTrainingPrice(participantCount, trainingPrices);
@@ -296,14 +294,6 @@ export default function TrainingDetail() {
       // Check if using partial credit (hybrid payment)
       const isPartialCredit = paymentMethod === 'credit_partial';
       const creditToUse = isPartialCredit ? Math.min(clientCreditBalance, correctPrice) : 0;
-      
-      // Update training type if changed
-      if (completeTrainingType !== training.training_type) {
-        await updateTraining.mutateAsync({
-          id: training.id,
-          input: { training_type: completeTrainingType },
-        });
-      }
       
       // Use atomic RPC - single transaction for everything
       await completeTrainingAtomic.mutateAsync({
@@ -462,15 +452,6 @@ export default function TrainingDetail() {
           <div className="space-y-4 py-4">
             {/* Tag validation warning */}
             <TagValidationAlert validation={tagValidation} compact />
-
-            {/* Training type selector */}
-            <div className="space-y-2">
-              <Label>Typ tréninku</Label>
-              <TrainingTypeSelector
-                value={completeTrainingType}
-                onChange={setCompleteTrainingType}
-              />
-            </div>
 
             {/* Price split toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
