@@ -69,14 +69,38 @@ export function useClients() {
         }] as Client[];
       }
       
-      const { data, error } = await supabase
+      // Fetch clients
+      const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("*")
         .order("is_favorite", { ascending: false })
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as Client[];
+      if (clientsError) throw clientsError;
+      
+      // Fetch ledger balances to get accurate credit values
+      const { data: ledgerData } = await supabase
+        .from("vw_client_ledger_balances")
+        .select("client_id, ledger_balance");
+      
+      // Create a map of client_id -> ledger_balance
+      const ledgerMap = new Map<string, number>();
+      if (ledgerData) {
+        for (const row of ledgerData) {
+          ledgerMap.set(row.client_id, row.ledger_balance ?? 0);
+        }
+      }
+      
+      // Merge clients with their actual credit balance from ledger
+      const clientsWithBalance = (clientsData || []).map(client => ({
+        ...client,
+        // Use ledger balance if available, otherwise fall back to stored credit_balance
+        credit_balance: ledgerMap.has(client.id) 
+          ? ledgerMap.get(client.id)! 
+          : (client.credit_balance || 0),
+      }));
+      
+      return clientsWithBalance as Client[];
     },
   });
 }
