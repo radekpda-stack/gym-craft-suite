@@ -129,10 +129,10 @@ export function ClientHeaderCompact({
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-foreground truncate max-w-[140px] sm:max-w-none">{client.name}</h1>
             {/* Export PDF buttons + settings - next to name */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <CreditStatementDialog
                 clientId={client.id}
                 clientName={client.name}
@@ -144,10 +144,10 @@ export function ClientHeaderCompact({
                   <Button
                     variant="outline"
                     size="xs"
-                    className="gap-1.5 text-xs font-medium shrink-0"
+                    className="gap-1 text-[10px] sm:text-xs font-medium shrink-0 px-1.5 sm:px-2"
                   >
-                    <FileText className="w-3.5 h-3.5" />
-                    PDF výpis
+                    <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden xs:inline">PDF</span> výpis
                   </Button>
                 }
               />
@@ -161,17 +161,17 @@ export function ClientHeaderCompact({
                   <Button
                     variant="outline"
                     size="xs"
-                    className="gap-1.5 text-xs font-medium shrink-0"
+                    className="gap-1 text-[10px] sm:text-xs font-medium shrink-0 px-1.5 sm:px-2"
                   >
-                    <FileText className="w-3.5 h-3.5" />
-                    Výpis kreditu
+                    <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    Kredit
                   </Button>
                 }
               />
               <PdfSettingsDialog
                 trigger={
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7">
+                    <Settings className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
                   </Button>
                 }
               />
