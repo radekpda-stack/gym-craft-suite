@@ -40,11 +40,10 @@ export function ParticipantPaymentCard({
   disabled 
 }: ParticipantPaymentCardProps) {
   const { credit_balance, price_share, payment_method } = participant;
-  
-  const hasSufficientCredit = credit_balance >= price_share;
-  const hasCredit = credit_balance > 0;
-  const showCreditWarning = payment_method === 'credit' && !hasSufficientCredit;
-  const showCreditInfo = payment_method === 'credit' && hasSufficientCredit;
+
+  const afterBalance = credit_balance - price_share;
+  const isDebt = afterBalance < 0;
+  const showCreditLine = payment_method === 'credit';
 
   return (
     <div className="p-3 rounded-xl border bg-card space-y-2">
@@ -53,14 +52,13 @@ export function ParticipantPaymentCard({
         <ClientAvatar name={participant.client_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{participant.client_name}</p>
-          {showCreditInfo && (
-            <p className="text-xs text-muted-foreground">
-              Kredit: {formatCurrency(credit_balance)} → {formatCurrency(credit_balance - price_share)}
-            </p>
-          )}
-          {showCreditWarning && (
-            <p className="text-xs text-warning">
-              Kredit: {formatCurrency(credit_balance)} (chybí {formatCurrency(price_share - credit_balance)})
+          {showCreditLine && (
+            <p className={cn(
+              "text-xs",
+              isDebt ? "text-warning" : "text-muted-foreground"
+            )}>
+              Kredit: {formatCurrency(credit_balance)} → {formatCurrency(afterBalance)}
+              {isDebt ? ` (dluh ${formatCurrency(Math.abs(afterBalance))})` : ''}
             </p>
           )}
         </div>
@@ -74,22 +72,21 @@ export function ParticipantPaymentCard({
         {paymentOptions.map((option) => {
           const Icon = option.icon;
           const isSelected = payment_method === option.value;
-          const isCreditDisabled = option.value === 'credit' && !hasCredit;
-          
+
           return (
             <button
               key={option.value}
               type="button"
-              disabled={disabled || isCreditDisabled}
+              disabled={disabled}
               onClick={() => onChange(participant.client_id, option.value)}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all",
-                isSelected 
-                  ? "bg-primary text-primary-foreground" 
+                isSelected
+                  ? "bg-primary text-primary-foreground"
                   : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
-                (disabled || isCreditDisabled) && "opacity-40 cursor-not-allowed"
+                disabled && "opacity-40 cursor-not-allowed"
               )}
-              title={isCreditDisabled ? 'Klient nemá kredit' : option.label}
+              title={option.label}
             >
               <Icon className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{option.shortLabel}</span>
@@ -106,26 +103,19 @@ export function ParticipantPaymentCard({
  */
 export function getDefaultPaymentMethod(
   paymentMode: string | null | undefined,
-  creditBalance: number,
-  priceShare: number
+  _creditBalance: number,
+  _priceShare: number
 ): IndividualPaymentMethod {
   // If client is cash only, default to cash
   if (paymentMode === 'cash_only') {
     return 'cash';
   }
-  
-  // If client pays from credit and has sufficient balance
-  if ((paymentMode === 'credit' || paymentMode === 'mixed' || !paymentMode) && creditBalance >= priceShare) {
+
+  // Otherwise default to credit (can go to zero/negative = debt)
+  if (paymentMode === 'credit' || paymentMode === 'mixed' || !paymentMode) {
     return 'credit';
   }
-  
-  // If mixed and has some credit but not enough, still try credit
-  // (the UI will show warning)
-  if (paymentMode === 'mixed' && creditBalance > 0) {
-    return 'credit';
-  }
-  
-  // Default to cash
+
   return 'cash';
 }
 
