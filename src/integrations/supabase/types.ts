@@ -2527,6 +2527,8 @@ export type Database = {
           created_at: string
           credit_balance: number | null
           current_activities: string[] | null
+          custom_price_note: string | null
+          custom_training_price: number | null
           dietary_restrictions: string[] | null
           email: string | null
           feedback_enabled: boolean | null
@@ -2561,6 +2563,8 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           current_activities?: string[] | null
+          custom_price_note?: string | null
+          custom_training_price?: number | null
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
@@ -2595,6 +2599,8 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           current_activities?: string[] | null
+          custom_price_note?: string | null
+          custom_training_price?: number | null
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
