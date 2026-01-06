@@ -31,6 +31,7 @@ import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSett
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
+import { PriceTransitionSettings } from '@/components/settings/PriceTransitionSettings';
 
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
@@ -209,6 +210,8 @@ export default function Settings() {
             >
               <TrainingPricesSettings />
             </SettingsSection>
+
+            <PriceTransitionSettings />
 
             <SettingsSection
               title={language === 'cs' ? 'Upozornění na kredit' : 'Credit Alerts'}

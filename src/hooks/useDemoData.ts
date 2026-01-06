@@ -45,6 +45,10 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     stress_level: null,
     dietary_restrictions: null,
     supplements: null,
+    // Price transition fields
+    grandfathered_credit: null,
+    grandfathered_at: null,
+    use_legacy_pricing: false,
   };
 }
 

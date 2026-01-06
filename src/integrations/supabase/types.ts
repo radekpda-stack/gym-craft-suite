@@ -2534,6 +2534,8 @@ export type Database = {
           email: string | null
           feedback_enabled: boolean | null
           gender: string | null
+          grandfathered_at: string | null
+          grandfathered_credit: number | null
           handedness: string | null
           health_restrictions: string | null
           id: string
@@ -2555,6 +2557,7 @@ export type Database = {
           training_goals: string[] | null
           training_start_date: string | null
           updated_at: string
+          use_legacy_pricing: boolean | null
           user_id: string | null
         }
         Insert: {
@@ -2571,6 +2574,8 @@ export type Database = {
           email?: string | null
           feedback_enabled?: boolean | null
           gender?: string | null
+          grandfathered_at?: string | null
+          grandfathered_credit?: number | null
           handedness?: string | null
           health_restrictions?: string | null
           id?: string
@@ -2592,6 +2597,7 @@ export type Database = {
           training_goals?: string[] | null
           training_start_date?: string | null
           updated_at?: string
+          use_legacy_pricing?: boolean | null
           user_id?: string | null
         }
         Update: {
@@ -2608,6 +2614,8 @@ export type Database = {
           email?: string | null
           feedback_enabled?: boolean | null
           gender?: string | null
+          grandfathered_at?: string | null
+          grandfathered_credit?: number | null
           handedness?: string | null
           health_restrictions?: string | null
           id?: string
@@ -2629,6 +2637,7 @@ export type Database = {
           training_goals?: string[] | null
           training_start_date?: string | null
           updated_at?: string
+          use_legacy_pricing?: boolean | null
           user_id?: string | null
         }
         Relationships: []

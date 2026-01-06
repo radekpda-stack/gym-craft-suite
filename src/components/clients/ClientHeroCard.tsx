@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Utensils,
   Tag,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -17,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, startOfYear, format } from 'date-fns';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface ClientHeroCardProps {
   client: Client;
@@ -40,6 +42,19 @@ export function ClientHeroCard({
   
   const { data: feedbackSummary, isLoading: feedbackLoading } = useClientFeedbackSummary(client.id);
   const { data: nutritionEval, isLoading: nutritionLoading } = useNutritionEvaluation(client.id);
+  const { data: settings } = useAppSettings();
+  
+  // Check if client is on legacy pricing
+  const isOnLegacyPricing = Boolean(
+    settings?.price_transition_enabled &&
+    client.use_legacy_pricing &&
+    client.grandfathered_credit !== null &&
+    creditBalance > 0
+  );
+  
+  const remainingLegacyCredit = client.grandfathered_credit !== null
+    ? Math.max(0, Math.min(creditBalance, client.grandfathered_credit))
+    : 0;
   
   // Fetch training counts specifically for this client
   const { data: trainingCounts, isLoading: trainingsLoading } = useQuery({
@@ -88,7 +103,13 @@ export function ClientHeroCard({
           {formatCurrency(creditBalance)}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {isOnLegacyPricing && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-lg flex items-center gap-1">
+              <History className="w-3 h-3" />
+              Stará cena
+            </span>
+          )}
           {client.custom_training_price != null && (
             <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-lg flex items-center gap-1">
               <Tag className="w-3 h-3" />
