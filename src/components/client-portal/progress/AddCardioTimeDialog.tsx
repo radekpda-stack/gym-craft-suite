@@ -46,6 +46,7 @@ export function AddCardioTimeDialog({
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
+  const [centiseconds, setCentiseconds] = useState('');
   const [notes, setNotes] = useState('');
 
   const addCardio = useClientAddCardio();
@@ -55,7 +56,8 @@ export function AddCardioTimeDialog({
 
     const mins = parseInt(minutes) || 0;
     const secs = parseInt(seconds) || 0;
-    const totalSeconds = mins * 60 + secs;
+    const cs = parseInt(centiseconds) || 0;
+    const totalSeconds = mins * 60 + secs + cs / 100;
 
     if (totalSeconds <= 0) {
       toast.error('Zadej platný čas');
@@ -75,6 +77,7 @@ export function AddCardioTimeDialog({
       setOpen(false);
       setMinutes('');
       setSeconds('');
+      setCentiseconds('');
       setNotes('');
     } catch (error) {
       toast.error('Nepodařilo se přidat záznam');
@@ -155,26 +158,48 @@ export function AddCardioTimeDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Čas (mm:ss)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min="0"
-                placeholder="min"
-                value={minutes}
-                onChange={(e) => setMinutes(e.target.value)}
-                className="text-center"
-              />
-              <span className="text-xl font-medium text-muted-foreground">:</span>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                placeholder="sec"
-                value={seconds}
-                onChange={(e) => setSeconds(e.target.value)}
-                className="text-center"
-              />
+            <Label>Čas (mm:ss.cc)</Label>
+            <div className="flex items-center gap-1.5">
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="min"
+                  value={minutes}
+                  onChange={(e) => setMinutes(e.target.value)}
+                  className="text-center"
+                />
+                <span className="text-[10px] text-muted-foreground text-center block mt-0.5">min</span>
+              </div>
+              <span className="text-xl font-medium text-muted-foreground pb-4">:</span>
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  placeholder="sec"
+                  value={seconds}
+                  onChange={(e) => setSeconds(e.target.value)}
+                  className="text-center"
+                />
+                <span className="text-[10px] text-muted-foreground text-center block mt-0.5">sek</span>
+              </div>
+              <span className="text-xl font-medium text-muted-foreground pb-4">.</span>
+              <div className="w-14">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="00"
+                  value={centiseconds}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                    setCentiseconds(val);
+                  }}
+                  maxLength={2}
+                  className="text-center"
+                />
+                <span className="text-[10px] text-muted-foreground text-center block mt-0.5">setiny</span>
+              </div>
             </div>
           </div>
 
