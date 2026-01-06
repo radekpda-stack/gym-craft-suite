@@ -113,16 +113,16 @@ const translations = {
   },
 };
 
-// Font sizes based on setting
+// Font sizes based on setting - increased for better readability
 const getFontSizes = (size: 'small' | 'medium' | 'large') => {
-  const multiplier = size === 'small' ? 0.9 : size === 'large' ? 1.1 : 1;
+  const multiplier = size === 'small' ? 0.9 : size === 'large' ? 1.15 : 1;
   return {
-    title: Math.round(20 * multiplier),
-    subtitle: Math.round(14 * multiplier),
-    heading: Math.round(12 * multiplier),
-    body: Math.round(10 * multiplier),
-    small: Math.round(9 * multiplier),
-    tiny: Math.round(8 * multiplier),
+    title: Math.round(22 * multiplier),
+    subtitle: Math.round(15 * multiplier),
+    heading: Math.round(13 * multiplier),
+    body: Math.round(11 * multiplier),
+    small: Math.round(10 * multiplier),
+    tiny: Math.round(9 * multiplier),
   };
 };
 
@@ -537,7 +537,8 @@ export async function generateCreditStatementPdf(
     );
 
     // Footer text - use custom footer if provided
-    const footerY = Math.min(subtotalY + 20, pageHeight - 25);
+    // Ensure footer is positioned above page numbers and stripe, with enough space
+    const footerY = pageHeight - 22;
     doc.setFontSize(FONTS.tiny);
     doc.setTextColor(...COLORS.textLight);
     doc.setFont(FONT_FAMILY, "normal");
