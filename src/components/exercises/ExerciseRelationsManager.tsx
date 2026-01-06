@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ArrowRight, ArrowLeft, RefreshCw, Zap, Plus, X, Link2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RefreshCw, Zap, Plus, X, Link2, Wand2, Loader2 } from 'lucide-react';
 import { useExercises, useExerciseRelations, type RelationType } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const RELATION_TYPE_CONFIG: Record<RelationType, { label: string; icon: React.ReactNode; color: string; description: string }> = {
   progression: {
@@ -53,13 +54,107 @@ export function ExerciseRelationsManager({ exerciseId, exerciseName, readonly = 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('');
   const [selectedRelationType, setSelectedRelationType] = useState<RelationType>('variant');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
 
   const activeExercises = exercises.filter(e => !e.is_archived && e.id !== exerciseId);
+
+  // Get current exercise
+  const currentExercise = exercises.find(e => e.id === exerciseId);
 
   // Get exercise name by id
   const getExerciseName = (id: string) => {
     const ex = exercises.find(e => e.id === id);
     return ex?.name_cs || ex?.name || 'Neznámý cvik';
+  };
+
+  // Find related exercises based on subcategory
+  const findRelatedExercises = () => {
+    if (!currentExercise) return [];
+    
+    const existingRelatedIds = new Set(relations.map(r => r.related_exercise_id));
+    
+    return activeExercises.filter(ex => {
+      // Don't suggest already related exercises
+      if (existingRelatedIds.has(ex.id)) return false;
+      
+      // Same subcategory = variant
+      if (currentExercise.subcategory && ex.subcategory === currentExercise.subcategory) {
+        return true;
+      }
+      
+      // Same category = alternative
+      if (currentExercise.category && ex.category === currentExercise.category) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
+
+  // Auto-generate relations
+  const handleAutoGenerate = async () => {
+    if (!currentExercise) return;
+    
+    setIsGenerating(true);
+    let addedCount = 0;
+    
+    try {
+      const existingRelatedIds = new Set(relations.map(r => r.related_exercise_id));
+      
+      // Find exercises in same subcategory (variants)
+      const sameSubcategory = currentExercise.subcategory 
+        ? activeExercises.filter(ex => 
+            ex.subcategory === currentExercise.subcategory && 
+            !existingRelatedIds.has(ex.id)
+          )
+        : [];
+      
+      // Add variant relations (max 5)
+      for (const ex of sameSubcategory.slice(0, 5)) {
+        await addRelation.mutateAsync({
+          exercise_id: exerciseId,
+          related_exercise_id: ex.id,
+          relation_type: 'variant',
+          note_cs: null,
+          note_en: null,
+        });
+        addedCount++;
+        existingRelatedIds.add(ex.id);
+      }
+      
+      // Find exercises in same category but different subcategory (alternatives)
+      const sameCategory = activeExercises.filter(ex => 
+        ex.category === currentExercise.category && 
+        ex.subcategory !== currentExercise.subcategory &&
+        !existingRelatedIds.has(ex.id)
+      );
+      
+      // Add alternative relations (max 3)
+      for (const ex of sameCategory.slice(0, 3)) {
+        await addRelation.mutateAsync({
+          exercise_id: exerciseId,
+          related_exercise_id: ex.id,
+          relation_type: 'alternative',
+          note_cs: null,
+          note_en: null,
+        });
+        addedCount++;
+      }
+      
+      toast({
+        title: 'Vztahy vygenerovány',
+        description: `Přidáno ${addedCount} nových vztahů`,
+      });
+    } catch {
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se vygenerovat vztahy',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleAddRelation = async () => {
@@ -104,10 +199,25 @@ export function ExerciseRelationsManager({ exerciseId, exerciseName, readonly = 
               Vztahy k jiným cvikům
             </CardTitle>
             {!readonly && (
-              <Button variant="ghost" size="sm" onClick={() => setShowAddDialog(true)}>
-                <Plus className="w-4 h-4 mr-1" />
-                Přidat
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleAutoGenerate}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Wand2 className="w-4 h-4 mr-1" />
+                  )}
+                  Generovat
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Přidat
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -116,14 +226,29 @@ export function ExerciseRelationsManager({ exerciseId, exerciseName, readonly = 
             <div className="text-center py-4 text-muted-foreground text-sm">
               <p>Žádné vztahy zatím nejsou definovány</p>
               {!readonly && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={() => setShowAddDialog(true)}
-                  className="mt-2"
-                >
-                  Přidat první vztah
-                </Button>
+                <div className="flex flex-col gap-2 mt-3">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={handleAutoGenerate}
+                    disabled={isGenerating}
+                    className="mx-auto"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4 mr-2" />
+                    )}
+                    Automaticky vygenerovat vztahy
+                  </Button>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={() => setShowAddDialog(true)}
+                  >
+                    nebo přidat ručně
+                  </Button>
+                </div>
               )}
             </div>
           ) : (
