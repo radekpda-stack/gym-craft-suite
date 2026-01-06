@@ -616,6 +616,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
