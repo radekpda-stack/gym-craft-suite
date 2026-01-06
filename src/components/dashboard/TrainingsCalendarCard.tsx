@@ -8,7 +8,7 @@ import { DashboardViewModel, ScheduleItem } from '@/hooks/useDashboardViewModel'
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
-
+import { TrainingFocusTimeline } from './TrainingFocusTimeline';
 interface TrainingsCalendarCardProps {
   data: DashboardViewModel | undefined;
   isLoading: boolean;
@@ -313,15 +313,14 @@ export const TrainingsCalendarCard = memo(function TrainingsCalendarCard({
           </div>
         )}
         
-        <div className="p-4 space-y-4">
-          {/* Next training highlight */}
-          {nextTraining ? (
-            <NextTrainingHighlight
-              item={nextTraining}
-              onClick={() => navigate(`/trainings/${nextTraining.id}`)}
+        <div className="space-y-4">
+          {/* Animated Timeline - shows when there are trainings */}
+          {totalCount > 0 ? (
+            <TrainingFocusTimeline 
+              schedule={viewMode === 'today' ? data.todaySchedule : data.weekSchedule}
             />
-          ) : totalCount === 0 ? (
-            <div className="text-center py-6">
+          ) : (
+            <div className="text-center py-6 px-4">
               <div className="inline-flex p-3 rounded-2xl bg-muted/30 mb-2">
                 <Calendar className="w-6 h-6 text-muted-foreground/50" />
               </div>
@@ -337,29 +336,9 @@ export const TrainingsCalendarCard = memo(function TrainingsCalendarCard({
                 Naplánovat trénink
               </Button>
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Vše dokončeno!</p>
-            </div>
           )}
           
-          {/* Training list */}
-          {displayTrainings.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium px-1 mb-2">
-                {nextTraining ? 'Další tréninky' : 'Tréninky'}
-              </p>
-              {displayTrainings.map(item => (
-                <TrainingItem
-                  key={item.id}
-                  item={item}
-                  isNext={false}
-                  onClick={() => navigate(`/trainings/${item.id}`)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="px-4 space-y-4">
           
           {/* Week mini overview */}
           {viewMode === 'today' && data.weekSchedule.length > 0 && (
@@ -371,15 +350,16 @@ export const TrainingsCalendarCard = memo(function TrainingsCalendarCard({
             </div>
           )}
           
-          {/* Calendar link */}
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={() => navigate('/schedule')}
-          >
-            <Calendar className="w-4 h-4" />
-            Otevřít rozvrh
-          </Button>
+            {/* Calendar link */}
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => navigate('/schedule')}
+            >
+              <Calendar className="w-4 h-4" />
+              Otevřít rozvrh
+            </Button>
+          </div>
         </div>
       </div>
       
