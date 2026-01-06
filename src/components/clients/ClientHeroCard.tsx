@@ -5,6 +5,7 @@ import {
   Dumbbell,
   MessageSquare,
   Utensils,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -87,11 +88,19 @@ export function ClientHeroCard({
           {formatCurrency(creditBalance)}
         </div>
         
-        {isSharedBudget && (
-          <span className="text-xs text-primary font-medium px-2 py-1 bg-primary/10 rounded-lg">
-            {sharedBudgetName || 'Sdílený'}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {client.custom_training_price != null && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-lg flex items-center gap-1">
+              <Tag className="w-3 h-3" />
+              {client.custom_training_price} Kč
+            </span>
+          )}
+          {isSharedBudget && (
+            <span className="text-xs text-primary font-medium px-2 py-1 bg-primary/10 rounded-lg">
+              {sharedBudgetName || 'Sdílený'}
+            </span>
+          )}
+        </div>
       </div>
       
       {/* Status indicators row */}

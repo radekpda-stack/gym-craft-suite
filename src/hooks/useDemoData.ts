@@ -31,6 +31,9 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     updated_at: demoClient.updated_at,
     user_id: 'demo-admin-0001',
     training_start_date: null,
+    // Custom pricing
+    custom_training_price: null,
+    custom_price_note: null,
     // Extended personal data fields
     handedness: null,
     occupation: null,

@@ -27,6 +27,9 @@ export interface Client {
   updated_at: string;
   user_id: string | null;
   training_start_date: string | null;
+  // Custom pricing
+  custom_training_price: number | null;
+  custom_price_note: string | null;
   // Extended personal data fields
   handedness: string | null;
   occupation: string | null;
@@ -254,7 +257,14 @@ export function useUpdateClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: Partial<ClientFormValues> & { training_start_date?: string | null } }) => {
+    mutationFn: async ({ id, ...rest }: { 
+      id: string; 
+      values?: Partial<ClientFormValues> & { training_start_date?: string | null };
+      custom_training_price?: number | null;
+      custom_price_note?: string | null;
+    }) => {
+      const values = rest.values || {};
+      const hasCustomPriceUpdate = 'custom_training_price' in rest;
       const updateData: Record<string, unknown> = {};
 
       // Only add fields that are explicitly provided (not undefined)
@@ -294,6 +304,10 @@ export function useUpdateClient() {
       if (values.stress_level !== undefined) updateData.stress_level = values.stress_level;
       if (values.dietary_restrictions !== undefined) updateData.dietary_restrictions = values.dietary_restrictions;
       if (values.supplements !== undefined) updateData.supplements = values.supplements;
+
+      // Custom pricing fields
+      if (hasCustomPriceUpdate) updateData.custom_training_price = rest.custom_training_price;
+      if ('custom_price_note' in rest) updateData.custom_price_note = rest.custom_price_note;
 
       // Don't update if no fields to update
       if (Object.keys(updateData).length === 0) {

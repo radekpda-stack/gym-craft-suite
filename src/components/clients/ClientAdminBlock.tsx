@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { PaymentModeSelector, PaymentMode } from './PaymentModeSelector';
 import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
+import { CustomPriceSection } from './CustomPriceSection';
 import { Client, useUpdatePaymentMode } from '@/hooks/useClients';
 
 interface ClientAdminBlockProps {
@@ -64,6 +65,15 @@ export function ClientAdminBlock({
               clientEmail={client.email}
               showSettings={true}
             />
+
+            <div className="border-t border-border/50 pt-4">
+              {/* Custom Price Section */}
+              <CustomPriceSection
+                clientId={client.id}
+                currentPrice={client.custom_training_price}
+                currentNote={client.custom_price_note}
+              />
+            </div>
 
             <div className="border-t border-border/50 pt-4">
               {/* Payment Mode Selector */}

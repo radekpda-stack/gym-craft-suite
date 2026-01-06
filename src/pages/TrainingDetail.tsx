@@ -237,29 +237,38 @@ export default function TrainingDetail() {
     const participantCount = existingParticipants.length > 0 
       ? existingParticipants.length 
       : (training.participant_count || 1);
-    const totalPrice = getTrainingPrice(participantCount, trainingPrices);
+    
+    // Check for custom pricing (only for single participant)
+    const primaryClient = clients.find(c => c.id === training.client_id) || client;
+    const hasCustomPrice = participantCount === 1 && primaryClient?.custom_training_price != null;
+    const totalPrice = hasCustomPrice 
+      ? primaryClient.custom_training_price!
+      : getTrainingPrice(participantCount, trainingPrices);
     
     let payments: ParticipantPayment[];
     
     if (existingParticipants.length > 0) {
       // Use existing participants with their price shares
+      // If custom price and single participant, override the price share
       payments = existingParticipants.map(p => {
         const clientData = clients.find(c => c.id === p.client_id);
         const creditBalance = getEffectiveCreditBalance(p.client_id);
         const paymentMode = clientData?.payment_mode;
+        const priceShare = (hasCustomPrice && existingParticipants.length === 1) 
+          ? totalPrice 
+          : p.price_share;
         
         return {
           client_id: p.client_id,
           client_name: clientData?.name || 'Neznámý',
-          price_share: p.price_share,
-          payment_method: getDefaultPaymentMethod(paymentMode, creditBalance, p.price_share),
+          price_share: priceShare,
+          payment_method: getDefaultPaymentMethod(paymentMode, creditBalance, priceShare),
           credit_balance: creditBalance,
           payment_mode: paymentMode,
         };
       });
     } else {
       // Initialize with primary client only
-      const primaryClient = clients.find(c => c.id === training.client_id) || client;
       const creditBalance = getEffectiveCreditBalance(training.client_id);
       const paymentMode = primaryClient?.payment_mode;
       
@@ -487,7 +496,13 @@ export default function TrainingDetail() {
                 })}
                 <div className="border-t pt-2 mt-2 flex items-center justify-between">
                   <span className="font-medium">Celkem:</span>
-                  <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+                    {participantPayments.length === 1 && 
+                     clients.find(c => c.id === participantPayments[0].client_id)?.custom_training_price != null && (
+                      <div className="text-xs text-muted-foreground">(vlastní cena)</div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
