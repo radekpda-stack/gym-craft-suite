@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer, ChevronDown, ChevronRight, ExternalLink, Calendar } from 'lucide-react';
+import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer, ChevronDown, ChevronRight, ExternalLink, Calendar, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { EditExerciseEntryDialog } from '@/components/exercises/EditExerciseEntryDialog';
 
 interface ExerciseClientComparisonProps {
   exerciseId: string;
@@ -27,12 +28,14 @@ const COLORS = [
 ];
 
 interface TimeEntry {
+  id: string;
   date: string;
   timeSeconds: number;
   isPR: boolean;
 }
 
 interface StrengthEntry {
+  id: string;
   date: string;
   weight: number;
   reps: number;
@@ -50,6 +53,7 @@ function formatTimeDisplay(seconds: number): string {
 export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseClientComparisonProps) {
   const navigate = useNavigate();
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-client-comparison', exerciseId],
@@ -69,6 +73,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
       const { data: entries } = await supabase
         .from('exercise_entries')
         .select(`
+          id,
           weight_kg,
           reps,
           sets,
@@ -143,6 +148,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
 
           // Store individual entry
           client.entries.push({
+            id: entry.id,
             date: entry.date,
             weight,
             reps,
@@ -185,6 +191,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
 
           // Store individual entry
           client.entries.push({
+            id: entry.id,
             date: entry.date,
             timeSeconds,
             isPR: entry.is_pr || false,
@@ -311,6 +318,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   })) || [];
 
   return (
+    <>
     <div className="space-y-4">
       {/* Time-based comparison (for cardio/conditioning exercises) */}
       {showTime && (
@@ -484,11 +492,15 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                                 <div className="grid gap-2">
                                   {client.entries.map((entry, entryIdx) => (
                                     <div 
-                                      key={`${client.clientId}-entry-${entryIdx}`}
+                                      key={entry.id}
                                       className={cn(
-                                        "flex items-center justify-between p-2 rounded-lg",
+                                        "flex items-center justify-between p-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors",
                                         entry.isPR ? "bg-primary/10 border border-primary/30" : "bg-card"
                                       )}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditEntryId(entry.id);
+                                      }}
                                     >
                                       <div className="flex items-center gap-3">
                                         <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -502,12 +514,15 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                                           </Badge>
                                         )}
                                       </div>
-                                      <span className={cn(
-                                        "font-mono font-bold",
-                                        entry.isPR ? "text-primary" : "text-foreground"
-                                      )}>
-                                        {formatTimeDisplay(entry.timeSeconds)}
-                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className={cn(
+                                          "font-mono font-bold",
+                                          entry.isPR ? "text-primary" : "text-foreground"
+                                        )}>
+                                          {formatTimeDisplay(entry.timeSeconds)}
+                                        </span>
+                                        <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -696,13 +711,17 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                                   Všechny záznamy ({client.entries.length})
                                 </p>
                                 <div className="grid gap-2">
-                                  {client.entries.slice(0, 10).map((entry, entryIdx) => (
+                                  {client.entries.slice(0, 10).map((entry) => (
                                     <div 
-                                      key={`${client.clientId}-entry-${entryIdx}`}
+                                      key={entry.id}
                                       className={cn(
-                                        "flex items-center justify-between p-2 rounded-lg",
+                                        "flex items-center justify-between p-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors",
                                         entry.isPR ? "bg-primary/10 border border-primary/30" : "bg-card"
                                       )}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditEntryId(entry.id);
+                                      }}
                                     >
                                       <div className="flex items-center gap-3">
                                         <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -726,6 +745,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                                         )}>
                                           {entry.weight} kg
                                         </span>
+                                        <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                       </div>
                                     </div>
                                   ))}
@@ -761,5 +781,16 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         </Card>
       )}
     </div>
+      
+      {/* Edit Entry Dialog */}
+      <EditExerciseEntryDialog
+        entryId={editEntryId}
+        metricCategory={data?.isTimeBased ? 'cardio' : 'strength'}
+        open={!!editEntryId}
+        onOpenChange={(open) => {
+          if (!open) setEditEntryId(null);
+        }}
+      />
+    </>
   );
 }
