@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText, Zap } from 'lucide-react';
+import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText, Zap, Pencil } from 'lucide-react';
 import { formatPace500m } from '@/lib/exerciseMetrics';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { ExerciseRelationsManager } from '@/components/exercises/ExerciseRelationsManager';
+import { EditExerciseEntryDialog } from '@/components/exercises/EditExerciseEntryDialog';
 import type { ExerciseStats } from '@/hooks/useExerciseStats';
-
 interface ExerciseDetailOverviewProps {
   exercise: {
     id: string;
@@ -100,6 +100,7 @@ export function ExerciseDetailOverview({
   onQuickLog 
 }: ExerciseDetailOverviewProps) {
   const navigate = useNavigate();
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
   
   // Determine if this is time-based from stats or exercise type
   const isTimeBased = stats?.isTimeBased || exercise.is_time_based || exerciseType === 'cardio';
@@ -113,6 +114,8 @@ export function ExerciseDetailOverview({
   const topPR = selectedClientId 
     ? stats?.prHistory?.find(pr => pr.clientId === selectedClientId)
     : stats?.prHistory?.[0];
+  
+  const metricCategory = isTimeBased ? 'cardio' : 'strength';
 
   return (
     <div className="space-y-4">
@@ -359,8 +362,8 @@ export function ExerciseDetailOverview({
               {recentRecords.map((pr, idx) => (
                 <div
                   key={pr.id}
-                  className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => navigate(`/clients/${pr.clientId}`)}
+                  className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer group"
+                  onClick={() => setEditEntryId(pr.id)}
                 >
                   <div className="flex items-center gap-3">
                     <span className={cn(
@@ -379,17 +382,20 @@ export function ExerciseDetailOverview({
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    {pr.timeSeconds ? (
-                      <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
-                    ) : pr.weight ? (
-                      <>
-                        <span className="font-bold">{pr.weight} kg</span>
-                        {pr.reps > 0 && (
-                          <span className="text-xs text-muted-foreground ml-1">× {pr.reps}</span>
-                        )}
-                      </>
-                    ) : null}
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      {pr.timeSeconds ? (
+                        <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
+                      ) : pr.weight ? (
+                        <>
+                          <span className="font-bold">{pr.weight} kg</span>
+                          {pr.reps > 0 && (
+                            <span className="text-xs text-muted-foreground ml-1">× {pr.reps}</span>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
+                    <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
               ))}
@@ -464,6 +470,16 @@ export function ExerciseDetailOverview({
       <ExerciseRelationsManager
         exerciseId={exercise.id}
         exerciseName={exercise.name_cs || exercise.name}
+      />
+      
+      {/* Edit Entry Dialog */}
+      <EditExerciseEntryDialog
+        entryId={editEntryId}
+        metricCategory={metricCategory}
+        open={!!editEntryId}
+        onOpenChange={(open) => {
+          if (!open) setEditEntryId(null);
+        }}
       />
     </div>
   );
