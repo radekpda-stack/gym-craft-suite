@@ -55,7 +55,15 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
   ({ side = "right", className, children, ...props }, ref) => (
     <SheetPortal>
       <SheetOverlay />
-      <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+      <SheetPrimitive.Content 
+        ref={ref} 
+        className={cn(sheetVariants({ side }), className)} 
+        onOpenAutoFocus={(e) => {
+          // Prevent auto-focus issues on mobile that can block input interaction
+          e.preventDefault();
+        }}
+        {...props}
+      >
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 p-1.5 rounded-xl bg-secondary/50 opacity-70 ring-offset-background transition-all hover:opacity-100 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:pointer-events-none">
           <X className="h-4 w-4" />
