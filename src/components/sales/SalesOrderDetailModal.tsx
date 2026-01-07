@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
-  X, 
   Package, 
   Wrench, 
   Coins, 
@@ -12,15 +12,18 @@ import {
   Banknote,
   CreditCard,
   Wallet,
-  Building2
+  Building2,
+  Pencil
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
+import { EditSalesOrderDialog } from './EditSalesOrderDialog';
 
 interface SalesOrderDetailModalProps {
   orderId: string | null;
@@ -39,6 +42,7 @@ interface OrderItem {
   line_discount_value: number | null;
   line_discount_amount: number | null;
   line_total_after_discount: number | null;
+  payment_method: string | null;
 }
 
 interface OrderDetail {
@@ -84,6 +88,8 @@ const KIND_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
 };
 
 export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrderDetailModalProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const { data: order, isLoading } = useQuery({
     queryKey: ['sales_order_detail', orderId],
     queryFn: async () => {
@@ -120,7 +126,8 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
             line_discount_type,
             line_discount_value,
             line_discount_amount,
-            line_total_after_discount
+            line_total_after_discount,
+            payment_method
           )
         `)
         .eq('id', orderId)
@@ -164,10 +171,20 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                   {format(new Date(order.created_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}
                 </p>
               </div>
-              <Badge variant="outline" className="flex items-center gap-1">
-                <PaymentIcon className="w-3 h-3" />
-                {PAYMENT_LABELS[order.payment_method]}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <PaymentIcon className="w-3 h-3" />
+                  {PAYMENT_LABELS[order.payment_method]}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditDialogOpen(true)}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <Separator />
@@ -188,7 +205,22 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                       <KindIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.name_snapshot}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{item.name_snapshot}</p>
+                        {item.payment_method && item.payment_method !== order.payment_method && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                            {(() => {
+                              const ItemPaymentIcon = PAYMENT_ICONS[item.payment_method] || Banknote;
+                              return (
+                                <span className="flex items-center gap-1">
+                                  <ItemPaymentIcon className="w-3 h-3" />
+                                  {PAYMENT_LABELS[item.payment_method]}
+                                </span>
+                              );
+                            })()}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{formatCurrency(item.unit_price)} × {item.quantity}</span>
                         {hasDiscount && (
@@ -277,6 +309,15 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
           </div>
         ) : null}
       </DialogContent>
+      
+      {/* Edit Dialog */}
+      {order && (
+        <EditSalesOrderDialog
+          order={order}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
     </Dialog>
   );
 }

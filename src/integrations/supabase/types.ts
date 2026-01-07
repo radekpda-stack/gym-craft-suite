@@ -6415,6 +6415,7 @@ export type Database = {
           line_total_after_discount: number | null
           name_snapshot: string
           order_id: string
+          payment_method: string | null
           product_id: string
           product_kind: string
           quantity: number
@@ -6431,6 +6432,7 @@ export type Database = {
           line_total_after_discount?: number | null
           name_snapshot: string
           order_id: string
+          payment_method?: string | null
           product_id: string
           product_kind: string
           quantity: number
@@ -6447,6 +6449,7 @@ export type Database = {
           line_total_after_discount?: number | null
           name_snapshot?: string
           order_id?: string
+          payment_method?: string | null
           product_id?: string
           product_kind?: string
           quantity?: number
