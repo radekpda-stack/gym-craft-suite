@@ -38,20 +38,29 @@ export function CredentialsReminderDialog({
   const validateForm = () => {
     const newErrors: typeof errors = {};
     
+    // Email validation - required
     if (!email) {
       newErrors.email = 'Email je povinný';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = 'Neplatný formát emailu';
     }
 
-    if (!password) {
-      newErrors.password = 'Heslo je povinné';
-    } else if (password.length < 8) {
+    // Password validation - optional but must be 8+ chars if provided
+    if (password && password.length < 8) {
       newErrors.password = 'Heslo musí mít alespoň 8 znaků';
     }
 
-    if (password !== confirmPassword) {
+    // Confirm password must match if password is set
+    if (password && password !== confirmPassword) {
       newErrors.confirm = 'Hesla se neshodují';
+    }
+
+    // At least something must be changed
+    const emailChanged = email !== currentEmail;
+    const passwordChanged = password.length > 0;
+    
+    if (!emailChanged && !passwordChanged) {
+      newErrors.email = 'Změňte alespoň email nebo heslo';
     }
 
     setErrors(newErrors);
@@ -67,13 +76,17 @@ export function CredentialsReminderDialog({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session?.access_token) {
+        throw new Error('Nejste přihlášeni');
+      }
+      
       const { data, error } = await supabase.functions.invoke('update-client-own-credentials', {
         body: {
           newEmail: email !== currentEmail ? email : undefined,
-          newPassword: password,
+          newPassword: password || undefined,
         },
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
