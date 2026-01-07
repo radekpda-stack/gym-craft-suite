@@ -88,7 +88,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.update-client-own-credentials]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-xp]
 verify_jwt = true

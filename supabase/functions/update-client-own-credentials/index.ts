@@ -14,29 +14,48 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get auth token from request
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Chybí autorizace' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create client with user's token to get their identity
-    const supabaseAnon = createClient(
-      supabaseUrl,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // Create client with user's token to verify and get their identity
+    const supabaseAnon = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser();
-    if (userError || !user) {
-      console.error('Auth error:', userError);
+    // Verify the JWT token and get claims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAnon.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Token verification failed:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Neplatný token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: 'Nepodařilo se ověřit uživatele' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get user details
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser();
+    if (userError || !user) {
+      console.error('Get user error:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Nepodařilo se načíst uživatele' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
