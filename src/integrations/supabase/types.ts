@@ -8996,6 +8996,14 @@ export type Database = {
         Args: { p_order_id: string; p_user_id: string }
         Returns: Json
       }
+      rpc_update_sale_payment: {
+        Args: {
+          p_item_payments?: Json
+          p_order_id: string
+          p_order_payment_method: string
+        }
+        Returns: Json
+      }
       seed_circuit_templates_for_user: {
         Args: { p_user_id: string }
         Returns: {
