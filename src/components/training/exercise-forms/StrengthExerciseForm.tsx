@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import type { ExerciseWithType } from '@/types/exercise-entries';
+import { AssistanceBandSelector, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
 
 interface StrengthExerciseFormProps {
   exercise: ExerciseWithType;
@@ -25,6 +26,7 @@ interface StrengthExerciseFormProps {
     time_seconds: number | null;
     tempo: string | null;
     notes: string | null;
+    assistance_bands?: BandType[] | null;
   }) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
@@ -36,6 +38,7 @@ interface StrengthExerciseFormProps {
     time_seconds?: number | null;
     tempo?: string | null;
     notes?: string | null;
+    assistance_bands?: BandType[] | null;
   };
 }
 
@@ -55,9 +58,14 @@ export function StrengthExerciseForm({
   const [timeSeconds, setTimeSeconds] = useState<number | null>(defaultValues?.time_seconds || null);
   const [tempo, setTempo] = useState(defaultValues?.tempo || null);
   const [notes, setNotes] = useState(defaultValues?.notes || '');
+  const [assistanceBands, setAssistanceBands] = useState<BandType[]>(defaultValues?.assistance_bands || []);
 
   const isTimeBased = exercise.is_time_based;
   const isValid = sets > 0 && (isTimeBased ? (timeSeconds && timeSeconds > 0) : (reps && reps > 0));
+  
+  // Check if this exercise supports assistance bands
+  const exerciseName = exercise.name_cs || exercise.name;
+  const showAssistanceBands = isPullUpExercise(exerciseName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +74,7 @@ export function StrengthExerciseForm({
     await onSubmit({
       client_id: clientId,
       exercise_id: exercise.id,
-      exercise_name: exercise.name_cs || exercise.name,
+      exercise_name: exerciseName,
       date,
       sets,
       reps: isTimeBased ? null : reps,
@@ -75,6 +83,7 @@ export function StrengthExerciseForm({
       time_seconds: isTimeBased ? timeSeconds : null,
       tempo,
       notes: notes || null,
+      assistance_bands: showAssistanceBands && assistanceBands.length > 0 ? assistanceBands : null,
     });
   };
 
@@ -185,6 +194,16 @@ export function StrengthExerciseForm({
           />
         </div>
       </div>
+
+      {/* Assistance Bands - only for pull-ups, chin-ups, dips */}
+      {showAssistanceBands && (
+        <div className="p-4 rounded-xl bg-muted/50 border">
+          <AssistanceBandSelector
+            value={assistanceBands}
+            onChange={setAssistanceBands}
+          />
+        </div>
+      )}
 
       {/* Advanced - Tempo */}
       <div className="p-4 rounded-xl bg-muted/50 border">
