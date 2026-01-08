@@ -88,44 +88,44 @@ export function EditSalesOrderDialog({ order, open, onOpenChange }: EditSalesOrd
     mutationFn: async () => {
       if (!order) throw new Error('No order');
 
-      // Update order payment method
-      const { error: orderError } = await supabase
-        .from('sales_orders')
-        .update({ 
-          payment_method: orderPaymentMethod,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id);
+      // Build item payments array for split payments
+      const itemPayments = useSplitPayment
+        ? order.sales_order_items.map(item => ({
+            itemId: item.id,
+            paymentMethod: itemPaymentMethods[item.id] || orderPaymentMethod
+          }))
+        : null;
 
-      if (orderError) throw orderError;
+      // Call the RPC function that handles credit recalculation
+      const { data, error } = await supabase.rpc('rpc_update_sale_payment', {
+        p_order_id: order.id,
+        p_order_payment_method: orderPaymentMethod,
+        p_item_payments: itemPayments
+      });
 
-      // Update item payment methods if using split payment
-      if (useSplitPayment) {
-        for (const item of order.sales_order_items) {
-          const itemMethod = itemPaymentMethods[item.id];
-          const { error: itemError } = await supabase
-            .from('sales_order_items')
-            .update({ payment_method: itemMethod })
-            .eq('id', item.id);
+      if (error) throw error;
 
-          if (itemError) throw itemError;
-        }
-      } else {
-        // Clear all item payment methods if not using split payment
-        for (const item of order.sales_order_items) {
-          const { error: itemError } = await supabase
-            .from('sales_order_items')
-            .update({ payment_method: null })
-            .eq('id', item.id);
-
-          if (itemError) throw itemError;
-        }
+      const result = data as { success: boolean; error?: string; credit_diff?: number };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Nepodařilo se aktualizovat objednávku');
       }
+
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['sales_orders_history'] });
       queryClient.invalidateQueries({ queryKey: ['sales_order_detail', order?.id] });
-      toast.success('Objednávka byla aktualizována');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['credit_transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['client-purchase-history'] });
+      
+      const creditDiff = (result as any)?.credit_diff || 0;
+      if (creditDiff !== 0) {
+        toast.success(`Objednávka aktualizována. Kredit ${creditDiff < 0 ? 'stržen' : 'vrácen'}: ${formatCurrency(Math.abs(creditDiff))}`);
+      } else {
+        toast.success('Objednávka byla aktualizována');
+      }
       onOpenChange(false);
     },
     onError: (error) => {
