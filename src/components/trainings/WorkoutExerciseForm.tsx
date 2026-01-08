@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { useExercises, Exercise } from '@/hooks/useExercises';
 import { cn } from '@/lib/utils';
 import { parseTimeToMs, formatTimeMs, parsePaceToMs, formatPaceMs, msToSeconds } from '@/lib/timeUtils';
+import { AssistanceBandSelector, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
 
 interface SetData {
   weight_kg: number | null;
@@ -55,6 +56,7 @@ interface ExerciseFormData {
   exercise_name: string;
   sets: SetData[];
   default_unit?: string;
+  assistance_bands?: BandType[] | null;
 }
 
 interface WorkoutExerciseFormProps {
@@ -101,6 +103,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetData[]>([{ ...DEFAULT_SET }]);
+  const [assistanceBands, setAssistanceBands] = useState<BandType[]>([]);
   
   // State for time/pace input as strings
   const [timeInputs, setTimeInputs] = useState<string[]>(['']);
@@ -112,6 +115,10 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     const unit = selectedExercise.default_unit as MeasurementUnit;
     return ['reps', 'seconds', 'meters', 'calories', 'cardio_machine'].includes(unit) ? unit : 'reps';
   }, [selectedExercise]);
+
+  // Check if this exercise supports assistance bands
+  const exerciseName = selectedExercise?.name_cs || selectedExercise?.name || '';
+  const showAssistanceBands = isPullUpExercise(exerciseName);
 
   const filteredExercises = useMemo(() => {
     if (!searchQuery) return exercises.slice(0, 20);
@@ -126,10 +133,11 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     setSelectedExercise(exercise);
     setCustomExerciseName('');
     setSearchOpen(false);
-    // Reset sets when changing exercise
+    // Reset sets and bands when changing exercise
     setSets([{ ...DEFAULT_SET }]);
     setTimeInputs(['']);
     setPaceInputs(['']);
+    setAssistanceBands([]);
   };
 
   const handleAddSet = () => {
@@ -204,6 +212,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
       exercise_name: selectedExercise.name_cs || selectedExercise.name, // Snapshot for display
       sets: sets.filter(s => hasValidData(s)),
       default_unit: measurementUnit,
+      assistance_bands: showAssistanceBands && assistanceBands.length > 0 ? assistanceBands : null,
     });
   };
 
@@ -310,6 +319,16 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
               {mg}
             </Badge>
           ))}
+        </div>
+      )}
+
+      {/* Assistance Bands - for pull-ups, chin-ups, dips */}
+      {showAssistanceBands && (
+        <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+          <AssistanceBandSelector
+            value={assistanceBands}
+            onChange={setAssistanceBands}
+          />
         </div>
       )}
 
