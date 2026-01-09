@@ -98,6 +98,8 @@ export function ClientHeaderCompact({
   const [startDateInput, setStartDateInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(client.name);
   
   // Editable profile fields
   const [editPhone, setEditPhone] = useState(client.phone || '');
@@ -170,6 +172,29 @@ export function ClientHeaderCompact({
     setIsEditingProfile(false);
   };
 
+  const handleStartEditName = () => {
+    setEditName(client.name);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = editName.trim();
+    if (onUpdateClient && trimmedName && trimmedName !== client.name) {
+      await onUpdateClient({ name: trimmedName });
+      toast({ title: 'Jméno aktualizováno' });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveName();
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false);
+      setEditName(client.name);
+    }
+  };
+
   const getGenderLabel = (gender: 'male' | 'female' | null) => {
     if (gender === 'male') return 'Muž';
     if (gender === 'female') return 'Žena';
@@ -201,7 +226,42 @@ export function ClientHeaderCompact({
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{client.name}</h1>
+          <div className="flex items-center gap-1">
+            {isEditingName ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={handleNameKeyDown}
+                  onBlur={handleSaveName}
+                  className="h-8 text-lg font-bold"
+                  autoFocus
+                />
+                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={handleSaveName}>
+                  <Check className="w-4 h-4 text-success" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setIsEditingName(false); setEditName(client.name); }}>
+                  <X className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{client.name}</h1>
+                {onUpdateClient && (
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7 shrink-0"
+                    onClick={handleStartEditName}
+                    title="Upravit jméno"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
           {birthYear && (
             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{birthYear}</span>
