@@ -6,7 +6,10 @@ import {
   Clock,
   Users,
   Banknote,
+  CreditCard,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -25,6 +28,9 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
 import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
+import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
+import { PaymentMethodSelector, PaymentOption, getPaymentMethodFromOption } from '@/components/trainings/PaymentMethodSelector';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DashboardStatusBarProps {
   data: DashboardViewModel | undefined;
@@ -101,11 +107,30 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
   const { toast } = useToast();
   const { data: clients = [] } = useClients();
   const createTraining = useCreateTrainingSession();
+  const { data: unpaidTrainings = [] } = useUnpaidTrainings();
+  const payTraining = usePayTraining();
   
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showUnpaidDialog, setShowUnpaidDialog] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>('credit');
+
+  const selectedTraining = unpaidTrainings.find(t => t.id === selectedTrainingId);
+
+  const handlePayTraining = async () => {
+    if (!selectedTrainingId) return;
+    
+    await payTraining.mutateAsync({
+      trainingId: selectedTrainingId,
+      paymentMethod: getPaymentMethodFromOption(paymentMethod),
+      deductCredit: paymentMethod === 'credit',
+    });
+    
+    setSelectedTrainingId(null);
+    setPaymentMethod('credit');
+  };
   
   const handleCreateTraining = async (formData: any) => {
     try {
@@ -225,31 +250,113 @@ export function DashboardStatusBar({ data, isLoading }: DashboardStatusBarProps)
       />
       
       {/* Unpaid Detail Dialog */}
-      <Dialog open={showUnpaidDialog} onOpenChange={setShowUnpaidDialog}>
-        <DialogContent>
+      <Dialog open={showUnpaidDialog} onOpenChange={(open) => {
+        setShowUnpaidDialog(open);
+        if (!open) {
+          setSelectedTrainingId(null);
+          setPaymentMethod('credit');
+        }
+      }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-[hsl(38_92%_50%)]" />
+              <Clock className="w-5 h-5 text-status-warning" />
               Nezaplacené tréninky
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-center">
-            <p className="text-3xl font-bold text-foreground">
-              {formatCurrency(finance.unpaidTotal.amount)}
-            </p>
-            <p className="text-muted-foreground mt-1">
-              {finance.unpaidTotal.count} nezaplacených tréninků
-            </p>
-            <Button 
-              className="mt-4" 
-              onClick={() => {
-                setShowUnpaidDialog(false);
-                window.location.href = '/clients?filter=unpaid';
-              }}
-            >
-              Zobrazit klienty
-            </Button>
-          </div>
+          
+          {selectedTrainingId && selectedTraining ? (
+            // Payment view
+            <div className="space-y-4 py-2">
+              <div className="p-4 rounded-lg bg-secondary/50 border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">{selectedTraining.client_name}</span>
+                  <span className="text-lg font-bold text-primary">
+                    {formatCurrency(selectedTraining.final_price || 0)}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(selectedTraining.date), 'd. MMMM yyyy', { locale: cs })}
+                </p>
+              </div>
+              
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                disabled={payTraining.isPending}
+              />
+
+              {paymentMethod === 'credit' && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Částka bude odečtena z kreditu klienta
+                </p>
+              )}
+              
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedTrainingId(null);
+                    setPaymentMethod('credit');
+                  }}
+                >
+                  Zpět
+                </Button>
+                <Button 
+                  className="flex-1"
+                  onClick={handlePayTraining}
+                  disabled={payTraining.isPending}
+                >
+                  {payTraining.isPending ? 'Ukládám...' : 'Potvrdit platbu'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            // List view
+            <div className="space-y-4 py-2">
+              <div className="text-center pb-2 border-b">
+                <p className="text-3xl font-bold text-foreground">
+                  {formatCurrency(finance.unpaidTotal.amount)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {finance.unpaidTotal.count} nezaplacených tréninků
+                </p>
+              </div>
+              
+              <ScrollArea className="max-h-[300px]">
+                <div className="space-y-2">
+                  {unpaidTrainings.map((training) => (
+                    <div
+                      key={training.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-card border hover:bg-secondary/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium text-foreground">{training.client_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(training.date), 'd. MMMM yyyy', { locale: cs })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-status-warning">
+                          {formatCurrency(training.final_price || 0)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setSelectedTrainingId(training.id)}
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          Uhradit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       
