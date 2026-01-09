@@ -225,12 +225,26 @@ export function LegacyPriceFixSection({ clientId }: LegacyPriceFixSectionProps) 
               <span>Fixace vyčerpána. Při dalším tréninku se použije nový ceník.</span>
             </div>
           ) : isInsufficientForNextTraining ? (
-            <div className="flex items-start gap-2 text-xs text-amber-500">
-              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>
-                Zbývající kredit ({remaining.toLocaleString('cs-CZ')} Kč) nestačí na další trénink (min. {MIN_TRAINING_PRICE} Kč). 
-                Fixace bude automaticky ukončena při příštím tréninku.
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 text-xs text-amber-500">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Zbývající kredit ({remaining.toLocaleString('cs-CZ')} Kč) nestačí na další trénink (min. {MIN_TRAINING_PRICE} Kč). 
+                  Fixace bude automaticky ukončena při příštím tréninku.
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => {
+                  setInputAmount(grandfatheredCredit.toString());
+                  setIsEditing(true);
+                }}
+              >
+                <Pencil className="w-3 h-3 mr-1" />
+                Upravit částku
+              </Button>
             </div>
           ) : (
             <Button 
