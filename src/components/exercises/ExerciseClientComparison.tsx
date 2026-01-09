@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer, ChevronDown, ChevronRight, ExternalLink, Calendar, Pencil } from 'lucide-react';
+import { Users, Loader2, TrendingUp, TrendingDown, Minus, Trophy, Timer, ChevronDown, ChevronRight, ExternalLink, Calendar, Pencil, Ruler } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -44,6 +44,13 @@ interface StrengthEntry {
   volume: number;
   isPR: boolean;
 }
+interface DistanceEntry {
+  id: string;
+  date: string;
+  distanceMeters: number;
+  distanceCm: number;
+  isPR: boolean;
+}
 
 export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseClientComparisonProps) {
   const navigate = useNavigate();
@@ -53,16 +60,22 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   const { data, isLoading } = useQuery({
     queryKey: ['exercise-client-comparison', exerciseId],
     queryFn: async () => {
-      // First, get exercise info to determine if it's time-based
+      // First, get exercise info to determine if it's time-based or jump
       const { data: exercise } = await supabase
         .from('exercises')
-        .select('is_time_based, category')
+        .select('is_time_based, category, name, name_cs')
         .eq('id', exerciseId)
         .single();
 
       const isTimeBased = exercise?.is_time_based || 
         exercise?.category === 'cardio' || 
         exercise?.category === 'conditioning';
+      
+      const exerciseName = exercise?.name_cs || exercise?.name || '';
+      const exerciseCategory = exercise?.category || '';
+      const isJumpExercise = exerciseName.toLowerCase().includes('skok') || 
+        exerciseName.toLowerCase().includes('jump') ||
+        (exerciseCategory.toLowerCase().includes('plyometrics') && exerciseName.toLowerCase().includes('jump'));
 
       // Fetch all data from exercise_entries (includes both strength and time-based)
       const { data: entries } = await supabase
@@ -74,6 +87,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           sets,
           time_seconds,
           time_ms,
+          distance_meters,
           date,
           is_pr,
           client_id,
@@ -109,12 +123,27 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
         entries: TimeEntry[];
       }>();
 
+      // Process clients for distance-based (jumps)
+      const clientDistanceMap = new Map<string, {
+        clientId: string;
+        clientName: string;
+        bestDistanceM: number | null;
+        bestDistanceCm: number | null;
+        averageDistanceCm: number | null;
+        entryCount: number;
+        prCount: number;
+        lastDate: string;
+        distances: number[];
+        entries: DistanceEntry[];
+      }>();
+
       (entries || []).forEach(entry => {
         const clientId = entry.client_id;
         const clientName = (entry.clients as any)?.name || 'Neznámý';
         const weight = entry.weight_kg || 0;
         const timeSeconds = entry.time_seconds;
         const timeMs = entry.time_ms;
+        const distanceMeters = (entry as any).distance_meters || 0;
         const reps = entry.reps || 0;
         const sets = entry.sets || 1;
         const volume = weight * reps * sets;
@@ -197,6 +226,43 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
             isPR: entry.is_pr || false,
           });
         }
+
+        // Process distance data (for jumps - higher is better)
+        if (distanceMeters > 0) {
+          if (!clientDistanceMap.has(clientId)) {
+            clientDistanceMap.set(clientId, {
+              clientId,
+              clientName,
+              bestDistanceM: null,
+              bestDistanceCm: null,
+              averageDistanceCm: null,
+              entryCount: 0,
+              prCount: 0,
+              lastDate: entry.date,
+              distances: [],
+              entries: [],
+            });
+          }
+
+          const client = clientDistanceMap.get(clientId)!;
+          client.distances.push(distanceMeters);
+          if (client.bestDistanceM === null || distanceMeters > client.bestDistanceM) {
+            client.bestDistanceM = distanceMeters;
+            client.bestDistanceCm = Math.round(distanceMeters * 100);
+          }
+          client.entryCount++;
+          if (entry.is_pr) client.prCount++;
+          if (entry.date > client.lastDate) client.lastDate = entry.date;
+
+          // Store individual entry
+          client.entries.push({
+            id: entry.id,
+            date: entry.date,
+            distanceMeters,
+            distanceCm: Math.round(distanceMeters * 100),
+            isPR: entry.is_pr || false,
+          });
+        }
       });
 
       // Calculate averages for time-based (in milliseconds)
@@ -205,6 +271,27 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           client.averageTimeMs = Math.round(
             client.timesMs.reduce((a, b) => a + b, 0) / client.timesMs.length
           );
+        }
+      });
+
+      // Calculate averages for distance-based
+      clientDistanceMap.forEach((client) => {
+        if (client.distances.length > 0) {
+          client.averageDistanceCm = Math.round(
+            (client.distances.reduce((a, b) => a + b, 0) / client.distances.length) * 100
+          );
+        }
+      });
+
+      // Recompute true PRs for distance (each client's best is their PR)
+      clientDistanceMap.forEach((client) => {
+        if (client.entries.length > 0) {
+          const bestEntry = client.entries.reduce((a, b) => a.distanceMeters > b.distanceMeters ? a : b);
+          client.entries = client.entries.map(e => ({
+            ...e,
+            isPR: e.id === bestEntry.id
+          }));
+          client.prCount = 1;
         }
       });
 
@@ -245,12 +332,38 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
           return a.bestTimeMs - b.bestTimeMs;
         });
 
+      // Calculate trends for distance-based (higher distance = improvement)
+      const distanceClients = Array.from(clientDistanceMap.values())
+        .map(client => {
+          let trend: 'up' | 'down' | 'stable' = 'stable';
+          if (client.distances.length >= 2) {
+            const recentDist = client.distances.slice(0, 3);
+            const olderDist = client.distances.slice(3, 6);
+            if (recentDist.length > 0 && olderDist.length > 0) {
+              const recentAvg = recentDist.reduce((a, b) => a + b, 0) / recentDist.length;
+              const olderAvg = olderDist.reduce((a, b) => a + b, 0) / olderDist.length;
+              if (recentAvg > olderAvg * 1.05) trend = 'up'; // Higher = improvement
+              else if (recentAvg < olderAvg * 0.95) trend = 'down'; // Lower = worse
+            }
+          }
+          return { ...client, trend };
+        })
+        .sort((a, b) => {
+          // Sort by best distance (higher is better)
+          if (a.bestDistanceCm === null) return 1;
+          if (b.bestDistanceCm === null) return -1;
+          return b.bestDistanceCm - a.bestDistanceCm;
+        });
+
       return {
         strengthClients,
         timeClients,
+        distanceClients,
         hasStrength: strengthClients.length > 0,
         hasTime: timeClients.length > 0,
+        hasDistance: distanceClients.length > 0,
         isTimeBased,
+        isJumpExercise,
       };
     },
     enabled: !!exerciseId,
@@ -270,7 +383,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
     );
   }
 
-  const hasData = data?.hasStrength || data?.hasTime;
+  const hasData = data?.hasStrength || data?.hasTime || data?.hasDistance;
 
   if (!hasData) {
     return (
@@ -297,8 +410,9 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   };
 
   // Determine what to show
-  const showStrength = !data.isTimeBased && data.hasStrength;
-  const showTime = data.isTimeBased && data.hasTime;
+  const showStrength = !data.isTimeBased && !data.isJumpExercise && data.hasStrength;
+  const showTime = data.isTimeBased && !data.isJumpExercise && data.hasTime;
+  const showDistance = data.isJumpExercise && data.hasDistance;
 
   // Prepare chart data
   const strengthChartData = data?.strengthClients.slice(0, 10).map((c, i) => ({
@@ -312,8 +426,16 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   const timeChartData = data?.timeClients.slice(0, 10).map((c, i) => ({
     name: c.clientName.length > 12 ? c.clientName.slice(0, 12) + '...' : c.clientName,
     fullName: c.clientName,
-    value: c.bestTimeMs ? c.bestTimeMs / 1000 : null, // Convert ms to seconds for chart
+    value: c.bestTimeMs ? c.bestTimeMs / 1000 : null,
     valueMs: c.bestTimeMs,
+    clientId: c.clientId,
+    rank: i,
+  })) || [];
+
+  const distanceChartData = data?.distanceClients?.slice(0, 10).map((c, i) => ({
+    name: c.clientName.length > 12 ? c.clientName.slice(0, 12) + '...' : c.clientName,
+    fullName: c.clientName,
+    value: c.bestDistanceCm,
     clientId: c.clientId,
     rank: i,
   })) || [];
@@ -321,6 +443,77 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
   return (
     <>
     <div className="space-y-4">
+      {/* Distance-based comparison (for jump exercises) */}
+      {showDistance && (
+        <Card className="analytics-chart">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Ruler className="h-5 w-5 text-primary" />
+                Porovnání klientů - Nejlepší skok
+              </CardTitle>
+              <StatInfoTooltip
+                title="Porovnání vzdálenosti"
+                description="Porovnání nejlepších skoků mezi všemi klienty."
+                calculation="Zobrazuje nejvyšší zaznamenanou vzdálenost/výšku pro každého klienta."
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-52 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distanceChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <defs>
+                    {distanceChartData.map((_, index) => (
+                      <linearGradient key={`gradient-dist-${index}`} id={`gradientDist${index}`} x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <XAxis type="number" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(v) => `${v} cm`} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} width={90} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(value: number, _, props) => [`${value} cm`, props.payload.fullName]} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
+                    {distanceChartData.map((entry, index) => (
+                      <Cell key={entry.clientId} fill={`url(#gradientDist${index})`} className="cursor-pointer transition-opacity hover:opacity-80" onClick={() => toggleExpand(entry.clientId)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium">#</th>
+                    <th className="text-left py-2 px-2 font-medium">Klient</th>
+                    <th className="text-right py-2 px-2 font-medium">Nejlepší</th>
+                    <th className="text-right py-2 px-2 font-medium">Průměr</th>
+                    <th className="text-center py-2 px-2 font-medium">Trend</th>
+                    <th className="text-right py-2 px-2 font-medium">Pokusy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.distanceClients?.slice(0, 10).map((client, idx) => (
+                    <tr key={client.clientId} className="border-b last:border-0 hover:bg-muted/50">
+                      <td className="py-3 px-2">
+                        <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium", idx === 0 ? "bg-amber-500/20 text-amber-500" : idx === 1 ? "bg-slate-400/20 text-slate-400" : idx === 2 ? "bg-orange-600/20 text-orange-600" : "bg-muted text-muted-foreground")}>{idx + 1}</span>
+                      </td>
+                      <td className="py-3 px-2 font-medium">{client.clientName}</td>
+                      <td className="py-3 px-2 text-right font-bold text-primary">{client.bestDistanceCm} cm</td>
+                      <td className="py-3 px-2 text-right text-muted-foreground">{client.averageDistanceCm} cm</td>
+                      <td className="py-3 px-2 text-center"><TrendIcon trend={client.trend} /></td>
+                      <td className="py-3 px-2 text-right"><Badge variant="secondary" className="font-mono">{client.entryCount}×</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Time-based comparison (for cardio/conditioning exercises) */}
       {showTime && (
         <Card className="analytics-chart">
@@ -336,10 +529,6 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                 calculation="Zobrazuje nejkratší zaznamenaný čas pro každého klienta."
               />
             </div>
-          </CardHeader>
-          <CardContent>
-            {/* Bar chart for time */}
-            <div className="h-52 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={timeChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
                   <defs>

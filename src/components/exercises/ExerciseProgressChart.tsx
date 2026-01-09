@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, AreaChart, Area } from 'recharts';
-import { TrendingUp, Loader2, Activity, Timer, Zap } from 'lucide-react';
+import { TrendingUp, Loader2, Activity, Timer, Zap, Ruler } from 'lucide-react';
 import { format, subDays, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -54,10 +54,23 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         exercise?.category === 'cardio' || 
         exercise?.category === 'conditioning';
 
+      // Detect if this is a jump exercise
+      const { data: exerciseInfo } = await supabase
+        .from('exercises')
+        .select('name, name_cs, category')
+        .eq('id', exerciseId)
+        .single();
+      
+      const exerciseName = exerciseInfo?.name_cs || exerciseInfo?.name || '';
+      const exerciseCategory = exerciseInfo?.category || '';
+      const isJumpExercise = exerciseName.toLowerCase().includes('skok') || 
+        exerciseName.toLowerCase().includes('jump') ||
+        (exerciseCategory.toLowerCase().includes('plyometrics') && exerciseName.toLowerCase().includes('jump'));
+
       // Fetch all data from exercise_entries (includes both strength and time-based)
       let query = supabase
         .from('exercise_entries')
-        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, avg_watts, max_watts, pace_sec_per_500m, clients(name)')
+        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, avg_watts, max_watts, pace_sec_per_500m, distance_meters, clients(name)')
         .eq('exercise_id', exerciseId)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date');
@@ -77,6 +90,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         const timeSeconds = entry.time_seconds;
         const avgWatts = (entry as any).avg_watts || 0;
         const pace500m = (entry as any).pace_sec_per_500m || 0;
+        const distanceMeters = (entry as any).distance_meters || 0;
+        const distanceCm = distanceMeters > 0 ? Math.round(distanceMeters * 100) : 0;
         
         // Brzycki formula for 1RM estimate
         const estimated1RM = reps > 0 && reps < 15 && weight > 0 
@@ -93,6 +108,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           timeFormatted: timeSeconds ? formatTimeDisplay(timeSeconds) : null,
           avgWatts,
           pace500m,
+          distanceMeters,
+          distanceCm,
           clientName: (entry.clients as any)?.name,
           isPR: entry.is_pr,
         };
@@ -102,15 +119,39 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       const strengthData = processedData.filter(d => d.weight > 0);
       const timeData = processedData.filter(d => d.timeSeconds && d.timeSeconds > 0);
       const wattsData = processedData.filter(d => d.avgWatts > 0);
+      const distanceData = processedData.filter(d => d.distanceMeters > 0);
+
+      // Recompute true PRs for distance data (best = highest)
+      const distancePRIds = new Set<string>();
+      if (distanceData.length > 0) {
+        // Group by client
+        const clientGroups = new Map<string, typeof distanceData>();
+        distanceData.forEach(d => {
+          const clientName = d.clientName || 'unknown';
+          const list = clientGroups.get(clientName) ?? [];
+          list.push(d);
+          clientGroups.set(clientName, list);
+        });
+        
+        // Find best for each client
+        clientGroups.forEach((entries) => {
+          const best = entries.reduce((a, b) => a.distanceMeters > b.distanceMeters ? a : b);
+          // Mark this entry as true PR (we use date as unique identifier since we don't have id here)
+          (best as any).isTruePR = true;
+        });
+      }
 
       return {
         strengthData,
         timeData,
         wattsData,
+        distanceData,
         hasStrength: strengthData.length > 0,
         hasTime: timeData.length > 0,
         hasWatts: wattsData.length > 0,
+        hasDistance: distanceData.length > 0,
         isTimeBased,
+        isJumpExercise,
       };
     },
     enabled: !!exerciseId,
@@ -126,7 +167,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     );
   }
 
-  const hasData = data?.hasStrength || data?.hasTime || data?.hasWatts;
+  const hasData = data?.hasStrength || data?.hasTime || data?.hasWatts || data?.hasDistance;
 
   if (!hasData) {
     return (
@@ -157,8 +198,9 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
   }
 
   // Determine what to show based on exercise type and available data
-  const showStrength = !data.isTimeBased && data.hasStrength;
-  const showTime = (data.isTimeBased || exerciseType === 'cardio') && data.hasTime;
+  const showStrength = !data.isTimeBased && !data.isJumpExercise && data.hasStrength;
+  const showTime = (data.isTimeBased || exerciseType === 'cardio') && !data.isJumpExercise && data.hasTime;
+  const showDistance = data.isJumpExercise && data.hasDistance;
 
   return (
     <div className="space-y-4">
@@ -175,6 +217,92 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           </SelectContent>
         </Select>
       </div>
+
+      {/* Distance-based charts (for jump exercises) */}
+      {showDistance && (
+        <Card className="analytics-chart">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Ruler className="h-5 w-5 text-primary" />
+                Vzdálenost × datum
+              </CardTitle>
+              <StatInfoTooltip
+                title="Vývoj vzdálenosti"
+                description="Graf zobrazuje vývoj vzdálenosti/výšky skoků v průběhu tréninků. Vyšší = lepší výkon."
+                calculation="Každý bod představuje zaznamenanou vzdálenost v cm."
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.distanceData}>
+                  <defs>
+                    <linearGradient id="distanceLineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={COLORS[0]} stopOpacity={0.6} />
+                      <stop offset="100%" stopColor={COLORS[0]} stopOpacity={1} />
+                    </linearGradient>
+                    <filter id="distanceGlow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis 
+                    dataKey="dateLabel" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tickFormatter={(v) => `${v} cm`}
+                    domain={['dataMin - 10', 'dataMax + 10']}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }}
+                    formatter={(value: number) => [`${value} cm`, 'Vzdálenost']}
+                    labelFormatter={(label) => `Datum: ${label}`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="distanceCm" 
+                    stroke="url(#distanceLineGradient)" 
+                    strokeWidth={3} 
+                    dot={(props) => {
+                      const { cx, cy, payload, index } = props;
+                      const isPR = (payload as any).isTruePR || payload.isPR;
+                      return (
+                        <circle 
+                          key={`dot-distance-${index}`}
+                          cx={cx} 
+                          cy={cy} 
+                          r={isPR ? 8 : 4} 
+                          fill={COLORS[0]} 
+                          stroke="hsl(var(--background))" 
+                          strokeWidth={isPR ? 3 : 2}
+                          filter={isPR ? "url(#distanceGlow)" : undefined}
+                        />
+                      );
+                    }}
+                    activeDot={{ r: 6, fill: COLORS[0], stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Time-based charts (for cardio exercises) */}
       {showTime && (
