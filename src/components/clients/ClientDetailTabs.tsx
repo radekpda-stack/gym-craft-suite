@@ -109,35 +109,37 @@ export function ClientDetailTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      {/* Tab Navigation */}
-      <TabsList className="w-full h-auto flex-wrap justify-start gap-1 bg-transparent p-0 mb-4">
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-              "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
-              "data-[state=inactive]:bg-secondary/50 data-[state=inactive]:text-muted-foreground",
-              "data-[state=inactive]:hover:bg-secondary"
-            )}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{tab.label}</span>
-            {tab.badge && (
-              <Badge 
-                variant={tab.badgeVariant === 'destructive' ? 'destructive' : 'secondary'}
-                className={cn(
-                  "h-5 min-w-5 px-1 text-[10px]",
-                  tab.badgeVariant === 'warning' && "bg-amber-500/20 text-amber-600 border-amber-500/30"
-                )}
-              >
-                {tab.badge}
-              </Badge>
-            )}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      {/* Tab Navigation - horizontal scroll on mobile */}
+      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 mb-4">
+        <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-transparent p-0">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0",
+                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
+                "data-[state=inactive]:bg-secondary/50 data-[state=inactive]:text-muted-foreground",
+                "data-[state=inactive]:hover:bg-secondary"
+              )}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">{tab.label}</span>
+              {tab.badge && (
+                <Badge 
+                  variant={tab.badgeVariant === 'destructive' ? 'destructive' : 'secondary'}
+                  className={cn(
+                    "h-5 min-w-5 px-1 text-[10px]",
+                    tab.badgeVariant === 'warning' && "bg-amber-500/20 text-amber-600 border-amber-500/30"
+                  )}
+                >
+                  {tab.badge}
+                </Badge>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
 
       {/* Tab: Trainings */}
       <TabsContent value="trainings" className="mt-0 space-y-4">

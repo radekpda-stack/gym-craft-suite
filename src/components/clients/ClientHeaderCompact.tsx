@@ -120,95 +120,37 @@ export function ClientHeaderCompact({
   };
 
   return (
-    <div className="glass rounded-2xl p-4 sticky top-0 z-30 backdrop-blur-lg">
-      {/* Top row: Avatar + Name + Back */}
-      <div className="flex items-center gap-3">
+    <div className="glass rounded-2xl p-3 sm:p-4 sticky top-0 z-30 backdrop-blur-lg">
+      {/* Row 1: Back + Avatar + Name + Year/Age */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link 
           to="/clients" 
-          className="p-2 -ml-2 rounded-full hover:bg-secondary/50 transition-colors shrink-0 md:hidden"
+          className="p-1.5 -ml-1.5 rounded-full hover:bg-secondary/50 transition-colors shrink-0 md:hidden"
         >
           <ChevronLeft className="w-5 h-5" />
         </Link>
         
-        <Avatar className="h-12 w-12 shrink-0">
-          <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+          <AvatarFallback className="bg-primary/10 text-primary text-base sm:text-lg font-semibold">
             {client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </AvatarFallback>
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-foreground truncate">{client.name}</h1>
-          </div>
-          
-          {/* Age + Birth year */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {birthYear && (
-              <>
-                <span className="font-medium text-foreground">{birthYear}</span>
-                {age && <span className="text-xs">({age} let)</span>}
-              </>
-            )}
-          </div>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{client.name}</h1>
+          {birthYear && (
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{birthYear}</span>
+              {age && <span className="text-[10px] sm:text-xs">({age} let)</span>}
+            </div>
+          )}
         </div>
 
-        {/* PDF Export dropdown menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
-              <MoreVertical className="w-3.5 h-3.5 sm:hidden" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <CreditStatementDialog
-              clientId={client.id}
-              clientName={client.name}
-              clientEmail={client.email || undefined}
-              clientPhone={client.phone || undefined}
-              isSharedBudget={!!budgetGroup}
-              budgetGroupId={budgetGroup?.group_id}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  PDF výpis (tréninkový)
-                </DropdownMenuItem>
-              }
-            />
-            <CreditLedgerExportDialog
-              clientId={client.id}
-              clientName={client.name}
-              clientEmail={client.email || undefined}
-              isSharedBudget={!!budgetGroup}
-              budgetGroupId={budgetGroup?.group_id}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Výpis kreditu
-                </DropdownMenuItem>
-              }
-            />
-            <DropdownMenuSeparator />
-            <PdfSettingsDialog
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Nastavení PDF
-                </DropdownMenuItem>
-              }
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Red flag + Days since + Streak + Contact icons */}
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Days since training */}
+        {/* Desktop: PDF + Badges + Indicators */}
+        <div className="hidden sm:flex items-center gap-1 shrink-0">
           <ClientDaysSinceBadge clientId={client.id} />
-          
-          {/* Training streak */}
           <ClientStreakBadge clientId={client.id} />
-          {/* Red flag indicator */}
+          
           {redFlagCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -222,7 +164,6 @@ export function ClientHeaderCompact({
             </Tooltip>
           )}
 
-          {/* Portal login indicator */}
           {lastPortalLogin && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -271,12 +212,107 @@ export function ClientHeaderCompact({
               size="icon"
               className="h-8 w-8"
               onClick={() => handleCopyContact(client.phone || client.email || '', client.phone ? 'Telefon' : 'Email')}
-            title="Kopírovat kontakt"
+              title="Kopírovat kontakt"
             >
               <Copy className="w-3 h-3 text-muted-foreground" />
             </Button>
           )}
         </div>
+
+        {/* PDF Export dropdown menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0 h-8 px-2 sm:px-3">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <CreditStatementDialog
+              clientId={client.id}
+              clientName={client.name}
+              clientEmail={client.email || undefined}
+              clientPhone={client.phone || undefined}
+              isSharedBudget={!!budgetGroup}
+              budgetGroupId={budgetGroup?.group_id}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  PDF výpis (tréninkový)
+                </DropdownMenuItem>
+              }
+            />
+            <CreditLedgerExportDialog
+              clientId={client.id}
+              clientName={client.name}
+              clientEmail={client.email || undefined}
+              isSharedBudget={!!budgetGroup}
+              budgetGroupId={budgetGroup?.group_id}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Výpis kreditu
+                </DropdownMenuItem>
+              }
+            />
+            <DropdownMenuSeparator />
+            <PdfSettingsDialog
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Nastavení PDF
+                </DropdownMenuItem>
+              }
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Row 2: Mobile badges + indicators */}
+      <div className="flex items-center gap-1 mt-2 sm:hidden flex-wrap">
+        <ClientDaysSinceBadge clientId={client.id} />
+        <ClientStreakBadge clientId={client.id} />
+        
+        {redFlagCount > 0 && (
+          <div className="p-1.5 rounded-full bg-destructive/10">
+            <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+          </div>
+        )}
+
+        {lastPortalLogin && (
+          <div className="p-1.5 rounded-full bg-success/10">
+            <Globe className="w-3.5 h-3.5 text-success" />
+          </div>
+        )}
+
+        <div className="flex-1" />
+
+        {client.phone && (
+          <>
+            <a 
+              href={`tel:${client.phone}`}
+              className="p-1.5 rounded-full hover:bg-secondary/50 transition-colors"
+            >
+              <Phone className="w-4 h-4 text-muted-foreground" />
+            </a>
+            <a 
+              href={`https://wa.me/${client.phone.replace(/\s/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-full hover:bg-secondary/50 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4 text-muted-foreground" />
+            </a>
+          </>
+        )}
+        {client.email && (
+          <a 
+            href={`mailto:${client.email}`}
+            className="p-1.5 rounded-full hover:bg-secondary/50 transition-colors"
+          >
+            <Mail className="w-4 h-4 text-muted-foreground" />
+          </a>
+        )}
       </div>
 
       {/* Tags row */}

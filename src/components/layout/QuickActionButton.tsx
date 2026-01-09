@@ -180,7 +180,7 @@ export function QuickActionButton() {
   return (
     <>
       {/* FAB Button */}
-      <div className="fixed right-4 lg:right-6 bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-[calc(24px+env(safe-area-inset-bottom))] z-[60]">
+      <div className="fixed right-4 lg:right-6 bottom-[calc(100px+env(safe-area-inset-bottom))] lg:bottom-[calc(24px+env(safe-area-inset-bottom))] z-[60]">
         <AnimatePresence>
           {isOpen && (
             <>
