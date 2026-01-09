@@ -6,9 +6,7 @@ import {
   AlertTriangle, 
   Eye, 
   EyeOff,
-  Archive,
   Wrench,
-  PackagePlus,
   Loader2,
   CreditCard,
   Sparkles
@@ -22,6 +20,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useProducts, useCreateProduct, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { StockReceiveDialog } from '@/components/settings/StockReceiveDialog';
+import { StockSearchAndFilters, StockFilter, StockSortOption, StockTypeFilter } from './StockSearchAndFilters';
+import { LowStockBanner } from './LowStockBanner';
+import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -39,11 +40,16 @@ const PRODUCT_KINDS = [
   { value: 'credit_topup', label: 'Dobití kreditu', description: 'Přičte kredit klientovi' },
 ];
 
+// Helper to normalize text for search (remove diacritics)
+const normalizeText = (text: string) => 
+  text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 export function StockManagement() {
   const { data: products = [], isLoading } = useProducts();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
 
+  // Form state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [name, setName] = useState('');
@@ -57,17 +63,89 @@ export function StockManagement() {
   const [xpBonus, setXpBonus] = useState('0');
   const [minSellPrice, setMinSellPrice] = useState('');
   const [discountEligible, setDiscountEligible] = useState(true);
-  const [showMargin, setShowMargin] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
 
+  // Filter & search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<StockFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<StockTypeFilter>('all');
+  const [sortBy, setSortBy] = useState<StockSortOption>('name_asc');
+  const [showMargin, setShowMargin] = useState(false);
+  const [bannerExpanded, setBannerExpanded] = useState(false);
+
+  const debouncedSearch = useDebounce(searchQuery, 250);
+
+  // Low stock products (for banner)
   const lowStockProducts = useMemo(() => (
     products.filter(p => p.is_active && p.kind === 'inventory' && p.stock_quantity <= p.low_stock_threshold)
   ), [products]);
 
+  // Filtered and sorted products
   const filteredProducts = useMemo(() => {
-    if (showArchived) return products;
-    return products.filter(p => p.is_active);
-  }, [products, showArchived]);
+    let result = [...products];
+    
+    // Search filter (case-insensitive, normalize diacritics)
+    if (debouncedSearch) {
+      const searchNormalized = normalizeText(debouncedSearch);
+      result = result.filter(p => 
+        normalizeText(p.name).includes(searchNormalized)
+      );
+    }
+    
+    // Quick filter (chips)
+    switch (activeFilter) {
+      case 'low_stock':
+        result = result.filter(p => p.is_active && p.kind === 'inventory' && p.stock_quantity <= p.low_stock_threshold);
+        break;
+      case 'active':
+        result = result.filter(p => p.is_active);
+        break;
+      case 'archived':
+        result = result.filter(p => !p.is_active);
+        break;
+      // 'all' = show all (including archived for visibility)
+    }
+    
+    // Type filter
+    if (typeFilter !== 'all') {
+      result = result.filter(p => p.kind === typeFilter);
+    }
+    
+    // Sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name, 'cs');
+        case 'name_desc':
+          return b.name.localeCompare(a.name, 'cs');
+        case 'stock_asc':
+          return (a.stock_quantity || 0) - (b.stock_quantity || 0);
+        case 'stock_desc':
+          return (b.stock_quantity || 0) - (a.stock_quantity || 0);
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'margin_desc': {
+          const marginA = a.purchase_price > 0 ? (1 - a.purchase_price / a.price) : -1;
+          const marginB = b.purchase_price > 0 ? (1 - b.purchase_price / b.price) : -1;
+          return marginB - marginA;
+        }
+        default:
+          return 0;
+      }
+    });
+    
+    return result;
+  }, [products, debouncedSearch, activeFilter, typeFilter, sortBy]);
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setActiveFilter('all');
+    setTypeFilter('all');
+    setSortBy('name_asc');
+  };
+
+  const hasActiveFilters = searchQuery || activeFilter !== 'all' || typeFilter !== 'all';
 
   const resetForm = () => {
     setName('');
@@ -186,23 +264,29 @@ export function StockManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Low stock warning banner */}
-      {lowStockProducts.length > 0 && (
-        <div className="p-4 rounded-xl bg-warning/10 border border-warning/30 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-warning">Nízký stav zásob</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {lowStockProducts.map(p => p.name).join(', ')} 
-              {lowStockProducts.length === 1 ? ' má' : ' mají'} nízký stav zásob
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Low stock warning banner (collapsible) */}
+      <LowStockBanner
+        products={lowStockProducts}
+        expanded={bannerExpanded}
+        onToggleExpand={() => setBannerExpanded(!bannerExpanded)}
+        onShowLowStock={() => setActiveFilter('low_stock')}
+      />
 
-      {/* Actions bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      {/* Search, filters, and actions */}
+      <div className="space-y-3">
+        <StockSearchAndFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeFilter={activeFilter}
+          onActiveFilterChange={setActiveFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
+
+        {/* Actions bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -212,192 +296,183 @@ export function StockManagement() {
             {showMargin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             <span className="hidden sm:inline">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowArchived(!showArchived)}
-            className="gap-2"
-          >
-            <Archive className="w-4 h-4" />
-            <span className="hidden sm:inline">{showArchived ? 'Skrýt archiv' : 'Zobrazit archiv'}</span>
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <StockReceiveDialog />
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Přidat</span> položku
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nová položka</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label>Název</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Název produktu nebo služby"
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Label>Typ položky</Label>
-                  <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PRODUCT_KINDS.map((k) => (
-                        <SelectItem key={k.value} value={k.value}>
-                          <div className="flex flex-col">
-                            <span>{k.label}</span>
-                            <span className="text-xs text-muted-foreground">{k.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Kategorie</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-2">
+            <StockReceiveDialog />
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Přidat</span> položku
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nová položka</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
                   <div>
-                    <Label>Prodejní cena (Kč)</Label>
+                    <Label>Název</Label>
                     <Input
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="65"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Název produktu nebo služby"
                       className="mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Nákupní cena (Kč)</Label>
-                    <Input
-                      type="number"
-                      value={purchasePrice}
-                      onChange={(e) => setPurchasePrice(e.target.value)}
-                      placeholder="30"
-                      className="mt-2"
-                    />
+                    <Label>Typ položky</Label>
+                    <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRODUCT_KINDS.map((k) => (
+                          <SelectItem key={k.value} value={k.value}>
+                            <div className="flex flex-col">
+                              <span>{k.label}</span>
+                              <span className="text-xs text-muted-foreground">{k.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                {kind === 'credit_topup' && (
-                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                    <Label>Kredit k přičtení (Kč)</Label>
+                  <div>
+                    <Label>Kategorie</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Prodejní cena (Kč)</Label>
+                      <Input
+                        type="number"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="65"
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label>Nákupní cena (Kč)</Label>
+                      <Input
+                        type="number"
+                        value={purchasePrice}
+                        onChange={(e) => setPurchasePrice(e.target.value)}
+                        placeholder="30"
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                  {kind === 'credit_topup' && (
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <Label>Kredit k přičtení (Kč)</Label>
+                      <Input
+                        type="number"
+                        value={creditDelta}
+                        onChange={(e) => setCreditDelta(e.target.value)}
+                        placeholder="1000"
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Částka kreditu, která se přičte klientovi po nákupu
+                      </p>
+                    </div>
+                  )}
+                  {kind === 'inventory' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Skladem (ks)</Label>
+                          <Input
+                            type="number"
+                            value={stockQuantity}
+                            onChange={(e) => setStockQuantity(e.target.value)}
+                            placeholder="0"
+                            className="mt-2"
+                          />
+                        </div>
+                        <div>
+                          <Label>Upozornit při (ks)</Label>
+                          <Input
+                            type="number"
+                            value={lowStockThreshold}
+                            onChange={(e) => setLowStockThreshold(e.target.value)}
+                            placeholder="5"
+                            className="mt-2"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Min. prodejní cena (Kč)</Label>
+                          <Input
+                            type="number"
+                            value={minSellPrice}
+                            onChange={(e) => setMinSellPrice(e.target.value)}
+                            placeholder="Volitelné"
+                            className="mt-2"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Sleva nemůže jít pod tuto cenu
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-6">
+                          <Switch
+                            checked={discountEligible}
+                            onCheckedChange={setDiscountEligible}
+                          />
+                          <Label>Povolit slevy</Label>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {/* XP Bonus field */}
+                  <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-violet-500" />
+                      <Label>XP Bonus při nákupu</Label>
+                    </div>
                     <Input
                       type="number"
-                      value={creditDelta}
-                      onChange={(e) => setCreditDelta(e.target.value)}
-                      placeholder="1000"
-                      className="mt-2"
+                      value={xpBonus}
+                      onChange={(e) => setXpBonus(e.target.value)}
+                      placeholder="0"
+                      min="0"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      Částka kreditu, která se přičte klientovi po nákupu
+                      Jednorázový XP bonus pro klienta při nákupu
                     </p>
                   </div>
-                )}
-                {kind === 'inventory' && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Skladem (ks)</Label>
-                        <Input
-                          type="number"
-                          value={stockQuantity}
-                          onChange={(e) => setStockQuantity(e.target.value)}
-                          placeholder="0"
-                          className="mt-2"
-                        />
-                      </div>
-                      <div>
-                        <Label>Upozornit při (ks)</Label>
-                        <Input
-                          type="number"
-                          value={lowStockThreshold}
-                          onChange={(e) => setLowStockThreshold(e.target.value)}
-                          placeholder="5"
-                          className="mt-2"
-                        />
-                      </div>
+                  {price && purchasePrice && parseFloat(purchasePrice) > 0 && (
+                    <div className="p-3 rounded-lg bg-secondary/50">
+                      <p className="text-sm text-muted-foreground">Marže:</p>
+                      <p className="text-lg font-bold text-success">
+                        {calculateMarginPercent(parseFloat(price), parseFloat(purchasePrice))}%
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Min. prodejní cena (Kč)</Label>
-                        <Input
-                          type="number"
-                          value={minSellPrice}
-                          onChange={(e) => setMinSellPrice(e.target.value)}
-                          placeholder="Volitelné"
-                          className="mt-2"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Sleva nemůže jít pod tuto cenu
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 pt-6">
-                        <Switch
-                          checked={discountEligible}
-                          onCheckedChange={setDiscountEligible}
-                        />
-                        <Label>Povolit slevy</Label>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {/* XP Bonus field */}
-                <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-violet-500" />
-                    <Label>XP Bonus při nákupu</Label>
-                  </div>
-                  <Input
-                    type="number"
-                    value={xpBonus}
-                    onChange={(e) => setXpBonus(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Jednorázový XP bonus pro klienta při nákupu
-                  </p>
+                  )}
+                  <Button 
+                    onClick={handleCreate} 
+                    disabled={createProduct.isPending || (kind === 'credit_topup' && (!creditDelta || parseFloat(creditDelta) <= 0))} 
+                    className="w-full"
+                  >
+                    Vytvořit položku
+                  </Button>
                 </div>
-                {price && purchasePrice && parseFloat(purchasePrice) > 0 && (
-                  <div className="p-3 rounded-lg bg-secondary/50">
-                    <p className="text-sm text-muted-foreground">Marže:</p>
-                    <p className="text-lg font-bold text-success">
-                      {calculateMarginPercent(parseFloat(price), parseFloat(purchasePrice))}%
-                    </p>
-                  </div>
-                )}
-                <Button 
-                  onClick={handleCreate} 
-                  disabled={createProduct.isPending || (kind === 'credit_topup' && (!creditDelta || parseFloat(creditDelta) <= 0))} 
-                  className="w-full"
-                >
-                  Vytvořit položku
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
@@ -584,17 +659,36 @@ export function StockManagement() {
             )}
           </div>
         ))}
+        
+        {/* Empty state */}
         {filteredProducts.length === 0 && (
           <div className="glass rounded-xl p-8 text-center">
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Zatím žádné položky</p>
-            <Button 
-              className="mt-4 gap-2"
-              onClick={() => setIsCreateOpen(true)}
-            >
-              <Plus className="w-4 h-4" />
-              Přidat první položku
-            </Button>
+            {products.length === 0 ? (
+              <>
+                <p className="text-muted-foreground">Zatím žádné položky</p>
+                <Button 
+                  className="mt-4 gap-2"
+                  onClick={() => setIsCreateOpen(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Přidat první položku
+                </Button>
+              </>
+            ) : hasActiveFilters ? (
+              <>
+                <p className="text-muted-foreground">Žádné položky nevyhovují filtru</p>
+                <Button 
+                  variant="outline"
+                  className="mt-4"
+                  onClick={resetFilters}
+                >
+                  Zrušit filtry
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Žádné položky</p>
+            )}
           </div>
         )}
       </div>
