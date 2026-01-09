@@ -66,6 +66,7 @@ function demoTrainingToSession(demoTraining: ReturnType<typeof useDemoMode>['dem
     status: demoTraining.status as 'scheduled' | 'completed' | 'canceled',
     canceled_at: null,
     is_late_cancellation: false,
+    cancellation_reason: null,
     participant_count: demoTraining.participant_count,
     recurrence_type: null,
     recurrence_end_date: null,

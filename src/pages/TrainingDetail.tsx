@@ -367,7 +367,8 @@ export default function TrainingDetail() {
     setShowCancelDialog(true);
   };
 
-  const handleCancel = async () => {
+  // Fixed: Accept deductCredit and optional note as parameters to avoid race condition with setState
+  const handleCancelWithDeduct = async (shouldDeductCredit: boolean, note?: string) => {
     const trainingDate = new Date(training.date);
     const hoursUntilTraining = differenceInHours(trainingDate, new Date());
     const isLateCancellation = hoursUntilTraining < 24;
@@ -378,7 +379,8 @@ export default function TrainingDetail() {
       participant_count: training.participant_count || 1,
       isLateCancellation,
       trainingPrices,
-      deductCredit: cancelDeductCredit,
+      deductCredit: shouldDeductCredit,
+      cancelNote: note,
     });
     
     // Track training cancellation
@@ -387,7 +389,7 @@ export default function TrainingDetail() {
         training_id: training.id,
         client_id: training.client_id,
         is_late_cancellation: isLateCancellation,
-        deduct_credit: cancelDeductCredit,
+        deduct_credit: shouldDeductCredit,
       }
     });
     
@@ -444,13 +446,11 @@ export default function TrainingDetail() {
           trainingPrice={getTrainingPrice(training.participant_count || 1, trainingPrices)}
           clientName={client?.name || 'Klient'}
           onComplete={openCompleteDialog}
-          onCancelWithCredit={async () => {
-            setCancelDeductCredit(true);
-            await handleCancel();
+          onCancelWithCredit={async (note) => {
+            await handleCancelWithDeduct(true, note);
           }}
-          onCancelNoCredit={async () => {
-            setCancelDeductCredit(false);
-            await handleCancel();
+          onCancelNoCredit={async (note) => {
+            await handleCancelWithDeduct(false, note);
           }}
           onReschedule={async (newDate) => {
             await updateTraining.mutateAsync({
