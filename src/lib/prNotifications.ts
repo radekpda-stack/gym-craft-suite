@@ -14,7 +14,7 @@ interface PRNotificationParams {
 }
 
 /**
- * Creates in-app notification and sends web push for PR events
+ * Creates in-app notification for PR events
  */
 export async function notifyAboutPR({
   trainerId,
@@ -25,13 +25,11 @@ export async function notifyAboutPR({
   unit,
   metricType,
   oldValue,
-  entryId,
-  entryDate
+  entryId
 }: PRNotificationParams): Promise<void> {
   const isUpdate = oldValue !== undefined && oldValue !== null;
   const notificationType = isUpdate ? 'pr_updated' : 'pr_created';
   
-  // Format value display
   const valueDisplay = metricType === 'time' 
     ? formatTime(value) 
     : `${value} ${unit}`;
@@ -48,10 +46,7 @@ export async function notifyAboutPR({
     ? `${exerciseName}: ${valueDisplay} (předchozí: ${oldValueDisplay})`
     : `${exerciseName}: ${valueDisplay}`;
 
-  const deeplink = `/clients/${clientId}?tab=progress&highlight=${entryId}`;
-
   try {
-    // 1. Create in-app notification
     await supabase.from('notifications').insert({
       user_id: trainerId,
       type: notificationType,
@@ -61,28 +56,6 @@ export async function notifyAboutPR({
       entity_id: entryId,
       severity: 'info',
       client_id: clientId
-    });
-
-    // 2. Send web push notification (fire and forget)
-    supabase.functions.invoke('send-push-notification', {
-      body: {
-        user_id: trainerId,
-        title,
-        body: message,
-        url: deeplink,
-        tag: `pr-${entryId}`,
-        data: {
-          type: notificationType,
-          clientId,
-          entryId,
-          exerciseName,
-          value,
-          oldValue,
-          metricType
-        }
-      }
-    }).catch(err => {
-      console.error('Failed to send push notification:', err);
     });
   } catch (error) {
     console.error('Error creating PR notification:', error);
