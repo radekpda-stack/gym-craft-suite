@@ -11,6 +11,7 @@ import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
 import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
+import { ClientsInDebtCard } from '@/components/dashboard/ClientsInDebtCard';
 
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
@@ -60,6 +61,11 @@ export default function Index() {
         {/* 💵 Cashflow Forecast - NEW */}
         <SectionErrorBoundary section="Cashflow" compact>
           <CashflowForecastCard />
+        </SectionErrorBoundary>
+
+        {/* 💸 Clients in Debt Widget */}
+        <SectionErrorBoundary section="Klienti s dluhem" compact>
+          <ClientsInDebtCard />
         </SectionErrorBoundary>
 
         {/* 📅 Trainings & Calendar - Combined Card */}
