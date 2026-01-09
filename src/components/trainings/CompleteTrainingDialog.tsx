@@ -4,7 +4,7 @@
  * Full-featured dialog for completing training with individual payment settings per participant.
  * Shows each participant with their credit balance and payment method selection.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -59,6 +59,7 @@ export function CompleteTrainingDialog({
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
   const [completeNotes, setCompleteNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const lastInitializedSessionId = useRef<string | null>(null);
 
   // Get effective credit balance (includes shared budget)
   const getEffectiveCreditBalance = (clientId: string): number => {
@@ -77,14 +78,27 @@ export function CompleteTrainingDialog({
     return clientData.credit_balance ?? 0;
   };
 
-  // Initialize payments when dialog opens
+  // Initialize payments when dialog opens with a new session
   useEffect(() => {
-    if (!open || !session) {
+    // If dialog is closed, reset tracking
+    if (!open) {
+      lastInitializedSessionId.current = null;
       setParticipantPayments([]);
       setCompleteNotes('');
       return;
     }
 
+    // Don't initialize if no session or already initialized for this session
+    if (!session || lastInitializedSessionId.current === session.id) {
+      return;
+    }
+
+    // Wait for clients data to be available
+    if (clients.length === 0) {
+      return;
+    }
+
+    lastInitializedSessionId.current = session.id;
     setCompleteNotes(session.notes || '');
 
     const participantCount = existingParticipants.length > 0
@@ -142,11 +156,21 @@ export function CompleteTrainingDialog({
     }
 
     setParticipantPayments(payments);
-  }, [open, session, existingParticipants, clients, budgetGroups, trainingPrices]);
+  }, [open, session?.id, clients.length, existingParticipants.length]);
 
   const handleParticipantPaymentChange = (clientId: string, method: IndividualPaymentMethod) => {
     setParticipantPayments(prev => prev.map(p =>
       p.client_id === clientId ? { ...p, payment_method: method } : p
+    ));
+  };
+
+  const handleParticipantPriceChange = (clientId: string, newPrice: number) => {
+    setParticipantPayments(prev => prev.map(p =>
+      p.client_id === clientId ? { 
+        ...p, 
+        price_share: newPrice,
+        // Recalculate credit balance after this payment
+      } : p
     ));
   };
 
@@ -209,7 +233,9 @@ export function CompleteTrainingDialog({
                 key={participant.client_id}
                 participant={participant}
                 onChange={handleParticipantPaymentChange}
+                onPriceChange={handleParticipantPriceChange}
                 disabled={isLoading}
+                allowPriceEdit={participantPayments.length > 1}
               />
             ))}
           </div>
