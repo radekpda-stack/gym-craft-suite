@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { notifyClientsAboutTrainerPR, isTrainerClient, checkClientBeatTrainer } from '@/lib/trainerPRNotifications';
+import { notifyAboutPR } from '@/lib/prNotifications';
 import type { Json } from '@/integrations/supabase/types';
 export interface ExerciseEntry {
   id: string;
@@ -117,6 +118,7 @@ export function useExerciseEntries(clientId?: string) {
       if (!user) throw new Error('User not authenticated');
 
       let isPR = false;
+      let oldValue: number | undefined = undefined;
       
       // Check if this is a time-based PR (lower is better - for cardio)
       if (entry.time_seconds && entry.time_seconds > 0) {
@@ -129,8 +131,12 @@ export function useExerciseEntries(clientId?: string) {
           .order('time_seconds', { ascending: true })
           .limit(1);
 
-        isPR = !existingEntries?.length || 
-          (existingEntries[0].time_seconds !== null && entry.time_seconds < existingEntries[0].time_seconds);
+        if (existingEntries?.length && existingEntries[0].time_seconds !== null) {
+          oldValue = existingEntries[0].time_seconds;
+          isPR = entry.time_seconds < oldValue;
+        } else {
+          isPR = true;
+        }
       }
       // Check if this is a weight-based PR (higher is better - for strength)
       else if (entry.weight_kg && entry.weight_kg > 0) {
@@ -143,17 +149,42 @@ export function useExerciseEntries(clientId?: string) {
           .order('weight_kg', { ascending: false })
           .limit(1);
 
-        isPR = !existingEntries?.length || 
-          (existingEntries[0].weight_kg !== null && entry.weight_kg > existingEntries[0].weight_kg);
+        if (existingEntries?.length && existingEntries[0].weight_kg !== null) {
+          oldValue = existingEntries[0].weight_kg;
+          isPR = entry.weight_kg > oldValue;
+        } else {
+          isPR = true;
+        }
       }
 
       const { data, error } = await supabase
         .from('exercise_entries')
         .insert({ ...entry, user_id: user.id, is_pr: isPR })
-        .select()
+        .select('*, clients(id, name)')
         .single();
 
       if (error) throw error;
+
+      // Send PR notification to trainer (for client PRs)
+      if (isPR && !isTrainerClient(entry.client_id)) {
+        const clientName = (data as any).clients?.name || 'Klient';
+        const metricType = entry.time_seconds ? 'time' : 'weight';
+        const value = entry.time_seconds || entry.weight_kg || 0;
+        const unit = entry.time_seconds ? 's' : 'kg';
+
+        notifyAboutPR({
+          trainerId: user.id,
+          clientId: entry.client_id,
+          clientName,
+          exerciseName: entry.exercise_name,
+          value,
+          unit,
+          metricType,
+          oldValue: oldValue !== undefined && isPR && oldValue !== value ? oldValue : undefined,
+          entryId: data.id,
+          entryDate: entry.date
+        }).catch(console.error);
+      }
 
       // If this is a trainer's PR, notify clients who do the same exercise
       if (isPR && isTrainerClient(entry.client_id)) {
