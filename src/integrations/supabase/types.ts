@@ -7470,6 +7470,8 @@ export type Database = {
           is_processed: boolean | null
           is_red_flag: boolean | null
           limiting_factor: string | null
+          link_confidence: string | null
+          link_method: string | null
           mood_rating: number
           muscle_soreness: string[] | null
           muscle_soreness_comment: string | null
@@ -7514,6 +7516,8 @@ export type Database = {
           is_processed?: boolean | null
           is_red_flag?: boolean | null
           limiting_factor?: string | null
+          link_confidence?: string | null
+          link_method?: string | null
           mood_rating: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
@@ -7558,6 +7562,8 @@ export type Database = {
           is_processed?: boolean | null
           is_red_flag?: boolean | null
           limiting_factor?: string | null
+          link_confidence?: string | null
+          link_method?: string | null
           mood_rating?: number
           muscle_soreness?: string[] | null
           muscle_soreness_comment?: string | null
