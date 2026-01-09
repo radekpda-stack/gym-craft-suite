@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { IndividualPaymentMethod } from '@/components/trainings/ParticipantPaymentCard';
 import { getServiceIdForParticipants } from '@/hooks/useCreditLots';
+import { checkTrainingStreak } from '@/components/notifications/SmartNotificationEngine';
 
 interface ParticipantWithPayment {
   client_id: string;
@@ -190,9 +191,22 @@ export function useCompleteTrainingAtomic() {
       if (clientsSwitchedToNewPricing.length > 0) {
         (result as any).clientsSwitchedToNewPricing = clientsSwitchedToNewPricing;
       }
-      
+
       if (fifoDeductionErrors.length > 0) {
         (result as any).fifoDeductionErrors = fifoDeductionErrors;
+      }
+      
+      // Check for training milestones for each participant
+      for (const participant of params.participants) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('name')
+          .eq('id', participant.client_id)
+          .single();
+        
+        if (clientData?.name) {
+          checkTrainingStreak(user.id, participant.client_id, clientData.name);
+        }
       }
       
       return result;

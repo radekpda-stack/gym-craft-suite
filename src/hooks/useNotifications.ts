@@ -12,9 +12,17 @@ export type NotificationType =
   | 'feedback_received'
   | 'feedback_red_flag'
   | 'feedback_trend_alert'
+  | 'feedback_pending'
   | 'client_anniversary'
   | 'client_profile_updated'
-  | 'client_nutrition_started';
+  | 'client_nutrition_started'
+  | 'pr_created'
+  | 'pr_updated'
+  | 'pr_achieved'
+  | 'package_low'
+  | 'package_expiring'
+  | 'inactivity_warning'
+  | 'training_streak';
 
 export interface Notification {
   id: string;
