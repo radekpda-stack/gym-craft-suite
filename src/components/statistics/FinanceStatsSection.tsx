@@ -5,7 +5,7 @@ import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
-import { TopPayingClientsCard } from './TopPayingClientsCard';
+import { RevenueByParticipantsCard } from './RevenueByParticipantsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
@@ -132,7 +132,7 @@ export function FinanceStatsSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <RevenueBreakdownCard />
         <AverageTrainingPriceCard />
-        <TopPayingClientsCard />
+        <RevenueByParticipantsCard />
       </div>
 
       {/* Cancellation Stats - single row */}

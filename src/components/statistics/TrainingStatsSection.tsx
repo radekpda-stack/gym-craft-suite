@@ -3,6 +3,7 @@ import { useGlobalTrainingTagStats, GlobalDateRange } from '@/hooks/useGlobalTra
 import { TrainingHeroKPI } from './TrainingHeroKPI';
 import { TrainingTypeDistributionCard } from './TrainingTypeDistributionCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
+import { TrainingDurationCard } from './TrainingDurationCard';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -65,8 +66,11 @@ export function TrainingStatsSection() {
         mostFrequentType={stats.mostFrequentType}
       />
 
-      {/* Training Type Distribution */}
-      <TrainingTypeDistributionCard distribution={stats.trainingTypeDistribution} />
+      {/* Training Type Distribution and Duration */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TrainingTypeDistributionCard distribution={stats.trainingTypeDistribution} />
+        <TrainingDurationCard />
+      </div>
 
       {/* Tag Distribution */}
       <GlobalTagDistributionCard

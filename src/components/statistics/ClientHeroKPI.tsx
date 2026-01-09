@@ -63,10 +63,10 @@ export function ClientHeroKPI({
         onClick={() => onCardClick?.('tenure')}
       />
 
-      {/* Feedback score - scale is 1-10 */}
+      {/* Body feel score - scale is 1-10 */}
       {avgFeedbackScore !== undefined && avgFeedbackScore > 0 ? (
         <GaugeCard
-          title="Spokojenost"
+          title="Ø Pocit těla"
           value={avgFeedbackScore}
           maxValue={10}
           displayValue={avgFeedbackScore.toFixed(1)}
@@ -78,7 +78,7 @@ export function ClientHeroKPI({
         />
       ) : (
         <MetricCard
-          title="Spokojenost"
+          title="Ø Pocit těla"
           value="-"
           subtitle="Žádný feedback"
           progress={0}

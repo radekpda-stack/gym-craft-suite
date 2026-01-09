@@ -75,9 +75,11 @@ export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps
       const ranking = Object.entries(clientLTV)
         .map(([id, data]) => {
           const client = clientMap.get(id);
+          const monthlyValue = data.months > 0 ? Math.round(data.revenue / data.months) : 0;
           return {
             id,
             name: client?.name || 'Neznámý',
+            monthlyValue,
             ...data,
           };
         })
@@ -87,8 +89,11 @@ export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps
 
       const totalLTV = ranking.reduce((sum, c) => sum + c.revenue, 0);
       const avgLTV = ranking.length > 0 ? totalLTV / ranking.length : 0;
+      const avgMonthly = ranking.length > 0 
+        ? Math.round(ranking.reduce((sum, c) => sum + c.monthlyValue, 0) / ranking.length)
+        : 0;
 
-      return { ranking, avgLTV };
+      return { ranking, avgLTV, avgMonthly };
     },
   });
 
@@ -107,10 +112,10 @@ export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps
   if (ranking.length === 0) {
     return (
       <Card>
-        <CardHeader className="pb-2">
+      <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Crown className="h-4 w-4 text-warning" />
-            Top klienti podle hodnoty
+            Nejhodnotnější klienti (LTV)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -128,11 +133,16 @@ export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Crown className="h-4 w-4 text-warning" />
-            Top klienti podle hodnoty
+            Nejhodnotnější klienti (LTV)
           </CardTitle>
-          <span className="text-xs text-muted-foreground">
-            Ø {formatCurrency(data?.avgLTV || 0)}
-          </span>
+          <div className="text-right">
+            <span className="text-xs text-muted-foreground block">
+              Ø LTV: {formatCurrency(data?.avgLTV || 0)}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              Ø měsíčně: {formatCurrency(data?.avgMonthly || 0)}
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -159,7 +169,7 @@ export function ClientLTVRankingCard({ onViewAll, limit = 5 }: TopClientLTVProps
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{client.name}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {client.trainings} tréninků • {client.months}m
+                  {client.trainings} tréninků • {client.months}m • {formatCurrency(client.monthlyValue)}/m
                 </p>
               </div>
             </div>
