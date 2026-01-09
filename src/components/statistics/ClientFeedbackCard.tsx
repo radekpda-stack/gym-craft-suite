@@ -79,12 +79,12 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
           <p className="text-xs text-muted-foreground">{bodyFeelDisplay.label}</p>
         </div>
 
-        {/* Session fit metric */}
+        {/* Session fit metric - how well training matched client's needs */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-amber-500" />
-              <span className="text-sm">Náročnost tréninku</span>
+              <span className="text-sm">Sedí mi trénink</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-lg font-bold ${sessionFitDisplay.color}`}>

@@ -12,6 +12,7 @@ export interface LifetimeStats {
   avgTrainingsPerDay: number;
   strengthTrainings: number;
   cardioTrainings: number;
+  conditioningTrainings: number;
   otherTrainings: number;
   firstTrainingDate: string | null;
   lastTrainingDate: string | null;
@@ -24,6 +25,7 @@ export interface LifetimeStats {
   uniqueProductsSold: number;
   cancellationFees: number;
   avgPricePerTraining: number;
+  avgHourlyRate: number;
   totalPayments: number;
   
   // Clients
@@ -40,8 +42,9 @@ const DEMO_STATS: LifetimeStats = {
   totalHours: 847,
   trainingDays: 312,
   avgTrainingsPerDay: 2.7,
-  strengthTrainings: 623,
+  strengthTrainings: 523,
   cardioTrainings: 156,
+  conditioningTrainings: 100,
   otherTrainings: 68,
   firstTrainingDate: "2023-03-15",
   lastTrainingDate: "2026-01-04",
@@ -52,6 +55,7 @@ const DEMO_STATS: LifetimeStats = {
   uniqueProductsSold: 12,
   cancellationFees: 24500,
   avgPricePerTraining: 1166,
+  avgHourlyRate: 1165,
   totalPayments: 423,
   totalClientsEver: 68,
   activeClients: 52,
@@ -73,7 +77,6 @@ export function useLifetimeStats() {
       const [
         trainingStatsResult,
         trainingTypesResult,
-        cardioExerciseEntriesResult,
         financeStatsResult,
         productStatsResult,
         clientStatsResult,
@@ -84,17 +87,11 @@ export function useLifetimeStats() {
           .select("client_id, duration, final_price, date")
           .eq("status", "completed"),
         
-        // Training types breakdown
+        // Training types breakdown - simplified to use training_type directly
         supabase
           .from("training_sessions")
           .select("id, training_type")
           .eq("status", "completed"),
-        
-        // Cardio exercise entries - find training sessions with cardio exercises
-        supabase
-          .from("exercise_entries")
-          .select("training_session_id, exercises!inner(category)")
-          .eq("exercises.category", "Kardio"),
         
         // Finance stats
         supabase
@@ -116,7 +113,6 @@ export function useLifetimeStats() {
 
       const trainings = trainingStatsResult.data || [];
       const trainingTypes = trainingTypesResult.data || [];
-      const cardioExerciseEntries = cardioExerciseEntriesResult.data || [];
       const transactions = financeStatsResult.data || [];
       const productTransactions = productStatsResult.data || [];
       const clients = clientStatsResult.data || [];
@@ -136,28 +132,21 @@ export function useLifetimeStats() {
       const firstTrainingDate = sortedDates[0] || null;
       const lastTrainingDate = sortedDates[sortedDates.length - 1] || null;
 
-      // Training types - make categories mutually exclusive
-      // First identify all cardio training IDs (from exercises or training_type)
-      const cardioSessionIds = new Set(
-        cardioExerciseEntries
-          .map(e => e.training_session_id)
-          .filter(Boolean)
-      );
-      
-      // Also count trainings explicitly marked as cardio/hiit/running
-      trainingTypes
-        .filter(t => t.training_type === "cardio" || t.training_type === "hiit" || t.training_type === "running")
-        .forEach(t => cardioSessionIds.add(t.id));
-      
-      const cardioTrainings = cardioSessionIds.size;
-      
-      // Strength = trainings marked as strength that are NOT also cardio
+      // Training types - simplified categorization using training_type directly
       const strengthTrainings = trainingTypes.filter(
-        t => t.training_type === "strength" && !cardioSessionIds.has(t.id)
+        t => t.training_type === "strength"
+      ).length;
+      
+      const cardioTrainings = trainingTypes.filter(
+        t => ["cardio", "hiit", "running"].includes(t.training_type || "")
+      ).length;
+      
+      const conditioningTrainings = trainingTypes.filter(
+        t => ["conditioning", "functional", "mobility"].includes(t.training_type || "")
       ).length;
       
       // Other = everything else
-      const otherTrainings = Math.max(0, totalTrainings - strengthTrainings - cardioTrainings);
+      const otherTrainings = Math.max(0, totalTrainings - strengthTrainings - cardioTrainings - conditioningTrainings);
 
       // Finance stats
       const totalIncomeReceived = transactions
@@ -187,6 +176,11 @@ export function useLifetimeStats() {
         ? Math.round(totalTrainingValue / totalTrainings) 
         : 0;
 
+      // Average hourly rate
+      const avgHourlyRate = totalHours > 0
+        ? Math.round(totalTrainingValue / totalHours)
+        : 0;
+
       // Client stats
       const totalClientsEver = clients.length;
       const activeClients = clients.filter(c => !c.is_archived).length;
@@ -204,6 +198,7 @@ export function useLifetimeStats() {
         avgTrainingsPerDay,
         strengthTrainings,
         cardioTrainings,
+        conditioningTrainings,
         otherTrainings,
         firstTrainingDate,
         lastTrainingDate,
@@ -214,6 +209,7 @@ export function useLifetimeStats() {
         uniqueProductsSold,
         cancellationFees,
         avgPricePerTraining,
+        avgHourlyRate,
         totalPayments,
         totalClientsEver,
         activeClients,

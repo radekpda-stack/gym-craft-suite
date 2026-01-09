@@ -15,8 +15,9 @@ import {
   UserX,
   Heart,
   Zap,
-  CreditCard,
-  XCircle
+  XCircle,
+  Activity,
+  DollarSign
 } from "lucide-react";
 
 function StatItem({ 
@@ -161,7 +162,7 @@ export function LifetimeStatsSection() {
         />
         <div className="pt-2 border-t border-border mt-2">
           <p className="text-xs text-muted-foreground mb-2 font-medium">Podle typu:</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <div className="text-center p-2 rounded-lg bg-muted/50">
               <Zap className="h-4 w-4 mx-auto mb-1 text-orange-500" />
               <p className="text-sm font-semibold">{stats.strengthTrainings}</p>
@@ -171,6 +172,11 @@ export function LifetimeStatsSection() {
               <Heart className="h-4 w-4 mx-auto mb-1 text-red-500" />
               <p className="text-sm font-semibold">{stats.cardioTrainings}</p>
               <p className="text-xs text-muted-foreground">Kardio</p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-muted/50">
+              <Activity className="h-4 w-4 mx-auto mb-1 text-blue-500" />
+              <p className="text-sm font-semibold">{stats.conditioningTrainings}</p>
+              <p className="text-xs text-muted-foreground">Kondiční</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-muted/50">
               <Dumbbell className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
@@ -194,6 +200,12 @@ export function LifetimeStatsSection() {
           label="Hodnota tréninků"
           value={formatCurrency(stats.totalTrainingValue)}
           subValue={`Ø ${formatCurrency(stats.avgPricePerTraining)} za trénink`}
+        />
+        <StatItem
+          icon={DollarSign}
+          label="Hodinová sazba"
+          value={formatCurrency(stats.avgHourlyRate)}
+          subValue="průměrně za hodinu práce"
         />
         <StatItem
           icon={ShoppingBag}
