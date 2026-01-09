@@ -28,6 +28,7 @@ import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 import { useClientPackages } from '@/hooks/useClientPackages';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { useClientLTV } from '@/hooks/useClientLTV';
+import { useClientCreditSummary } from '@/hooks/useCreditLots';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ClientPaceTrendCard } from './ClientPaceTrendCard';
 
@@ -56,12 +57,19 @@ export function ClientQuickCards({
   const { data: packages = [] } = useClientPackages(clientId);
   const { data: transactions = [] } = useCreditTransactions(clientId);
   const { data: ltvData } = useClientLTV(clientId);
+  const { data: creditSummary } = useClientCreditSummary(clientId);
   
   const unpaidCount = unpaidTrainings.length;
   const unpaidAmount = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
   const activePackages = packages.filter(p => p.is_active);
   const recentTransactions = transactions.slice(0, 3);
   const hasFinanceDetails = unpaidCount > 0 || activePackages.length > 0 || recentTransactions.length > 0;
+  
+  // Credit lots breakdown
+  const oldCreditBalance = creditSummary?.old_balance || 0;
+  const newCreditBalance = creditSummary?.new_balance || 0;
+  const hasCreditLots = (oldCreditBalance + newCreditBalance) > 0;
+  const hasOldAndNew = oldCreditBalance > 0 && newCreditBalance > 0;
 
   const getCreditStatusColor = () => {
     if (creditBalance <= 0) return 'text-destructive';
@@ -102,12 +110,29 @@ export function ClientQuickCards({
           </div>
 
           <div className="space-y-2">
-            {/* Balance */}
+            {/* Balance - with credit lot breakdown if available */}
             <div className={cn('p-3 rounded-xl border', getCreditBgColor())}>
               <div className="flex items-center justify-between">
-                <span className={cn('text-2xl font-bold', getCreditStatusColor())}>
-                  {formatCurrency(creditBalance)}
-                </span>
+                <div className="space-y-1">
+                  <span className={cn('text-2xl font-bold', getCreditStatusColor())}>
+                    {formatCurrency(creditBalance)}
+                  </span>
+                  {/* Show OLD/NEW breakdown if both exist */}
+                  {hasCreditLots && hasOldAndNew && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">
+                        Starý: <span className="font-medium text-foreground">{formatCurrency(oldCreditBalance)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Nový: <span className="font-medium text-foreground">{formatCurrency(newCreditBalance)}</span>
+                      </span>
+                    </div>
+                  )}
+                  {/* Show single type if only one exists */}
+                  {hasCreditLots && !hasOldAndNew && oldCreditBalance > 0 && (
+                    <p className="text-xs text-muted-foreground">Starý ceník (fixováno)</p>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {/* LTV indicator */}
                   {ltvData && ltvData.totalRevenue > 0 && (

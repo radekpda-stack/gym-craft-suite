@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
+import { useAddCreditLot } from '@/hooks/useCreditLots';
 import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { cn } from '@/lib/utils';
@@ -61,6 +62,7 @@ export function UnifiedCreditModal({
   
   const { data: clients = [] } = useClients();
   const createTransaction = useCreateTransaction();
+  const addCreditLot = useAddCreditLot();
   const payTraining = usePayTraining();
   
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
@@ -161,9 +163,10 @@ export function UnifiedCreditModal({
     setIsProcessing(true);
     try {
       const numericAmount = parseFloat(amount);
+      const amountCzk = Math.round(Math.abs(numericAmount)); // Celé Kč
       const finalAmount = activeTab === 'add' 
-        ? Math.abs(numericAmount) 
-        : (operationType === 'add' ? Math.abs(numericAmount) : -Math.abs(numericAmount));
+        ? amountCzk 
+        : (operationType === 'add' ? amountCzk : -amountCzk);
       
       // Create description with payment method
       const methodLabel = paymentMethods.find(m => m.value === paymentMethod)?.label || paymentMethod;
@@ -172,14 +175,35 @@ export function UnifiedCreditModal({
         description = `[${methodLabel}] ${description}`;
       }
 
-      // Create the transaction
-      await createTransaction.mutateAsync({
-        client_id: selectedClientId,
-        amount: finalAmount,
-        type: activeTab === 'add' ? 'payment' : 'manual',
-        description,
-        clearPersonalDebt: activeTab === 'add' && personalDebt > 0,
-      });
+      // For 'add' tab - use the new credit lot system
+      if (activeTab === 'add') {
+        // Create a new credit lot via RPC
+        await addCreditLot.mutateAsync({
+          clientId: selectedClientId,
+          amountCzk: amountCzk,
+          source: 'purchase',
+          note: description,
+        });
+      } else {
+        // For manual adjustments, still use old transaction system + create lot
+        await createTransaction.mutateAsync({
+          client_id: selectedClientId,
+          amount: finalAmount,
+          type: 'manual',
+          description,
+          clearPersonalDebt: false,
+        });
+        
+        // Also create a credit lot for the adjustment
+        if (finalAmount !== 0) {
+          await addCreditLot.mutateAsync({
+            clientId: selectedClientId,
+            amountCzk: finalAmount,
+            source: 'manual_adjustment',
+            note: description,
+          });
+        }
+      }
 
       // Pay selected unpaid trainings from new credit (only for add tab)
       if (activeTab === 'add' && selectedUnpaidIds.length > 0) {
