@@ -17,8 +17,11 @@ import { useState } from 'react';
 import { CreditLedgerExportDialog } from '@/components/credit/CreditLedgerExportDialog';
 import { ClientPerformanceExportDialog } from '@/components/clients/ClientPerformanceExportDialog';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, 
+  ChevronDown,
+  ChevronUp,
   Phone, 
   Mail, 
   MessageCircle,
@@ -32,7 +35,12 @@ import {
   FileText,
   Settings,
   BarChart3,
-  MoreVertical,
+  User,
+  Hand,
+  Briefcase,
+  Moon,
+  Activity,
+  Dumbbell,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +58,7 @@ import { cn } from '@/lib/utils';
 import { format, differenceInYears, differenceInMonths, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Client } from '@/hooks/useClients';
+import { ClientFormValues } from '@/lib/validations/client';
 import { toast } from '@/hooks/use-toast';
 import { ClientDaysSinceBadge } from './ClientDaysSinceBadge';
 import { ClientStreakBadge } from './ClientStreakBadge';
@@ -60,6 +69,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ClientHeaderCompactProps {
   client: Client;
+  onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
   onUpdateTrainingStartDate?: (date: string | null) => Promise<void>;
   redFlagCount?: number;
   lastPortalLogin?: string | null;
@@ -67,6 +77,7 @@ interface ClientHeaderCompactProps {
 
 export function ClientHeaderCompact({ 
   client, 
+  onUpdateClient,
   onUpdateTrainingStartDate,
   redFlagCount = 0,
   lastPortalLogin,
@@ -85,6 +96,17 @@ export function ClientHeaderCompact({
   });
   const [isEditingStartDate, setIsEditingStartDate] = useState(false);
   const [startDateInput, setStartDateInput] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  
+  // Editable profile fields
+  const [editPhone, setEditPhone] = useState(client.phone || '');
+  const [editEmail, setEditEmail] = useState(client.email || '');
+  const [editGender, setEditGender] = useState<'male' | 'female' | null>(client.gender);
+  const [editHandedness, setEditHandedness] = useState<'left' | 'right' | 'ambidextrous' | null>(client.handedness as 'left' | 'right' | 'ambidextrous' | null);
+  const [editOccupation, setEditOccupation] = useState(client.occupation || '');
+  const [editSleepHours, setEditSleepHours] = useState<number | null>(client.sleep_hours);
+  const [editStressLevel, setEditStressLevel] = useState<number | null>(client.stress_level);
 
   // Calculate age from birth_date
   const age = client.birth_date 
@@ -119,6 +141,46 @@ export function ClientHeaderCompact({
     const date = client.training_start_date || format(new Date(client.created_at), 'yyyy-MM-dd');
     setStartDateInput(date);
     setIsEditingStartDate(true);
+  };
+
+  const handleStartEditProfile = () => {
+    setEditPhone(client.phone || '');
+    setEditEmail(client.email || '');
+    setEditGender(client.gender);
+    setEditHandedness(client.handedness as 'left' | 'right' | 'ambidextrous' | null);
+    setEditOccupation(client.occupation || '');
+    setEditSleepHours(client.sleep_hours);
+    setEditStressLevel(client.stress_level);
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (onUpdateClient) {
+      await onUpdateClient({
+        phone: editPhone || null,
+        email: editEmail,
+        gender: editGender,
+        handedness: editHandedness,
+        occupation: editOccupation || null,
+        sleep_hours: editSleepHours,
+        stress_level: editStressLevel,
+      });
+      toast({ title: 'Profil aktualizován' });
+    }
+    setIsEditingProfile(false);
+  };
+
+  const getGenderLabel = (gender: 'male' | 'female' | null) => {
+    if (gender === 'male') return 'Muž';
+    if (gender === 'female') return 'Žena';
+    return 'Neuvedeno';
+  };
+
+  const getHandednessLabel = (hand: string | null) => {
+    if (hand === 'right') return 'Pravák';
+    if (hand === 'left') return 'Levák';
+    if (hand === 'ambidextrous') return 'Obouruký';
+    return 'Neuvedeno';
   };
 
   return (
@@ -343,14 +405,17 @@ export function ClientHeaderCompact({
         </div>
       )}
 
-      {/* "Chodí od" row */}
-      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50 text-sm">
+      {/* "Chodí od" row - clickable to expand */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 mt-3 pt-3 border-t border-border/50 text-sm hover:bg-secondary/30 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 transition-colors rounded-lg"
+      >
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <span className="text-muted-foreground">Chodí od:</span>
           
           {isEditingStartDate ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <Input
                 type="date"
                 value={startDateInput}
@@ -374,7 +439,10 @@ export function ClientHeaderCompact({
                   size="icon" 
                   variant="ghost" 
                   className="h-6 w-6"
-                  onClick={handleStartEditDate}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartEditDate();
+                  }}
                 >
                   <Edit2 className="w-3 h-3 text-muted-foreground" />
                 </Button>
@@ -388,7 +456,215 @@ export function ClientHeaderCompact({
         <span className="text-muted-foreground">
           U tebe: <span className="font-medium text-foreground">{monthsWithTrainer} měsíců</span>
         </span>
-      </div>
+
+        <div className="flex-1" />
+        
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
+
+      {/* Expanded profile details */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-3 pb-1 space-y-3">
+              {isEditingProfile ? (
+                // Edit mode
+                <div className="space-y-3 bg-secondary/30 rounded-xl p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Telefon</label>
+                      <Input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="+420..."
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Email</label>
+                      <Input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Pohlaví</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={editGender === 'male' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEditGender('male')}
+                          className="flex-1"
+                        >
+                          Muž
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editGender === 'female' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEditGender('female')}
+                          className="flex-1"
+                        >
+                          Žena
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Dominantní ruka</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={editHandedness === 'right' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEditHandedness('right')}
+                          className="flex-1"
+                        >
+                          Pravák
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editHandedness === 'left' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEditHandedness('left')}
+                          className="flex-1"
+                        >
+                          Levák
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Zaměstnání</label>
+                      <Input
+                        value={editOccupation}
+                        onChange={(e) => setEditOccupation(e.target.value)}
+                        placeholder="Programátor, učitel..."
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Hodiny spánku</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={24}
+                        value={editSleepHours ?? ''}
+                        onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="7"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <Button
+                            key={level}
+                            type="button"
+                            variant={editStressLevel === level ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setEditStressLevel(level)}
+                            className="flex-1"
+                          >
+                            {level}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(false)}>
+                      Zrušit
+                    </Button>
+                    <Button size="sm" onClick={handleSaveProfile}>
+                      Uložit
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Display mode
+                <div className="bg-secondary/30 rounded-xl p-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                    {/* Contact */}
+                    {client.phone && (
+                      <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span>{client.phone}</span>
+                      </a>
+                    )}
+                    {client.email && (
+                      <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors truncate">
+                        <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{client.email}</span>
+                      </a>
+                    )}
+                    
+                    {/* Personal info */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="w-4 h-4" />
+                      <span>{getGenderLabel(client.gender)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Hand className="w-4 h-4" />
+                      <span>{getHandednessLabel(client.handedness)}</span>
+                    </div>
+                    
+                    {/* Lifestyle */}
+                    {client.occupation && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Briefcase className="w-4 h-4" />
+                        <span>{client.occupation}</span>
+                      </div>
+                    )}
+                    {client.sleep_hours !== null && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Moon className="w-4 h-4" />
+                        <span>{client.sleep_hours}h spánku</span>
+                      </div>
+                    )}
+                    {client.stress_level !== null && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Activity className="w-4 h-4" />
+                        <span>Stres: {client.stress_level}/5</span>
+                      </div>
+                    )}
+                    
+                    {/* Sports */}
+                    {client.current_activities && client.current_activities.length > 0 && (
+                      <div className="flex items-center gap-2 text-muted-foreground col-span-2 sm:col-span-3">
+                        <Dumbbell className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{client.current_activities.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {onUpdateClient && (
+                    <div className="flex justify-end pt-3 mt-3 border-t border-border/50">
+                      <Button variant="outline" size="sm" onClick={handleStartEditProfile} className="gap-1.5">
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Upravit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
