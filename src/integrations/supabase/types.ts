@@ -8088,6 +8088,75 @@ export type Database = {
           },
         ]
       }
+      training_presets: {
+        Row: {
+          body_part_tag_ids: string[] | null
+          client_id: string | null
+          color: string | null
+          created_at: string | null
+          default_rpe: number | null
+          focus_tag_ids: string[] | null
+          icon: string | null
+          id: string
+          intensity_tag_id: string | null
+          is_global: boolean | null
+          name: string
+          sort_order: number | null
+          training_type: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body_part_tag_ids?: string[] | null
+          client_id?: string | null
+          color?: string | null
+          created_at?: string | null
+          default_rpe?: number | null
+          focus_tag_ids?: string[] | null
+          icon?: string | null
+          id?: string
+          intensity_tag_id?: string | null
+          is_global?: boolean | null
+          name: string
+          sort_order?: number | null
+          training_type?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body_part_tag_ids?: string[] | null
+          client_id?: string | null
+          color?: string | null
+          created_at?: string | null
+          default_rpe?: number | null
+          focus_tag_ids?: string[] | null
+          icon?: string | null
+          id?: string
+          intensity_tag_id?: string | null
+          is_global?: boolean | null
+          name?: string
+          sort_order?: number | null
+          training_type?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_presets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_presets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       training_session_participants: {
         Row: {
           client_id: string
@@ -8171,6 +8240,7 @@ export type Database = {
         Row: {
           canceled_at: string | null
           client_id: string | null
+          client_rpe: number | null
           completion_quality: string | null
           created_at: string
           date: string
@@ -8207,6 +8277,7 @@ export type Database = {
           trainer_recommendations: string | null
           trainer_went_well: string | null
           training_goal: string | null
+          training_load: number | null
           training_plan_id: string | null
           training_type: string | null
           updated_at: string
@@ -8215,6 +8286,7 @@ export type Database = {
         Insert: {
           canceled_at?: string | null
           client_id?: string | null
+          client_rpe?: number | null
           completion_quality?: string | null
           created_at?: string
           date: string
@@ -8251,6 +8323,7 @@ export type Database = {
           trainer_recommendations?: string | null
           trainer_went_well?: string | null
           training_goal?: string | null
+          training_load?: number | null
           training_plan_id?: string | null
           training_type?: string | null
           updated_at?: string
@@ -8259,6 +8332,7 @@ export type Database = {
         Update: {
           canceled_at?: string | null
           client_id?: string | null
+          client_rpe?: number | null
           completion_quality?: string | null
           created_at?: string
           date?: string
@@ -8295,6 +8369,7 @@ export type Database = {
           trainer_recommendations?: string | null
           trainer_went_well?: string | null
           training_goal?: string | null
+          training_load?: number | null
           training_plan_id?: string | null
           training_type?: string | null
           updated_at?: string
