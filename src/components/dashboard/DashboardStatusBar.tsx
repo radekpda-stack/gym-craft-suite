@@ -72,12 +72,22 @@ interface MetricChipProps {
 }
 
 function MetricChip({ icon: Icon, label, value, subValue, warning, error, onClick }: MetricChipProps) {
+  const isClickable = !!onClick;
+  
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick?.();
+      }}
+      disabled={!isClickable}
       className={cn(
         'flex items-center gap-2 h-9 px-3 rounded-full text-sm transition-colors shrink-0',
-        'bg-secondary/50 hover:bg-secondary',
+        'bg-secondary/50',
+        isClickable && 'hover:bg-secondary cursor-pointer',
+        !isClickable && 'cursor-default',
         error && 'ring-1 ring-status-error/30',
         warning && !error && 'ring-1 ring-status-warning/30'
       )}
