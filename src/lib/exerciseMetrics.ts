@@ -250,6 +250,20 @@ export function getPerformanceDisplay(
     return { value: '-', label: '', unit: '', raw: null };
   }
   
+  // Jump exercises - show distance in cm
+  if (category === 'jump') {
+    if (entry.distance_meters && entry.distance_meters > 0) {
+      const distanceCm = Math.round(entry.distance_meters * 100);
+      return {
+        value: `${distanceCm}`,
+        label: 'Vzdálenost',
+        unit: 'cm',
+        raw: entry.distance_meters,
+      };
+    }
+    return { value: '-', label: '', unit: '', raw: null };
+  }
+  
   // Strength - no performance display
   return { value: '-', label: '', unit: '', raw: null };
 }

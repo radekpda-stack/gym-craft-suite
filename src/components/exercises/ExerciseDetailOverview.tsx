@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText, Zap, Pencil } from 'lucide-react';
+import { Trophy, TrendingUp, Activity, Timer, Target, Gauge, Info, PlusCircle, FileText, Zap, Pencil, Ruler } from 'lucide-react';
 import { formatPace500m } from '@/lib/exerciseMetrics';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -102,8 +102,9 @@ export function ExerciseDetailOverview({
   const navigate = useNavigate();
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
   
-  // Determine if this is time-based from stats or exercise type
+  // Determine if this is time-based or jump exercise from stats or exercise type
   const isTimeBased = stats?.isTimeBased || exercise.is_time_based || exerciseType === 'cardio';
+  const isJumpExercise = stats?.isJumpExercise || false;
   
   const hasData = stats && (stats.totalEntries > 0 || (stats.prHistory && stats.prHistory.length > 0));
 
@@ -122,7 +123,70 @@ export function ExerciseDetailOverview({
       {/* KPI Cards */}
       {hasData ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {!isTimeBased ? (
+          {isJumpExercise ? (
+            // Jump exercise cards
+            <>
+              {/* Best Distance */}
+              <Card className="p-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs">Nejlepší skok</span>
+                  <StatInfoTooltip
+                    title="Nejlepší skok"
+                    description="Nejvyšší zaznamenaná vzdálenost/výška"
+                    calculation="Maximum z distance_meters"
+                  />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">
+                    {stats?.bestDistance ? `${Math.round(stats.bestDistance * 100)}` : '-'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">cm</span>
+                </div>
+                {stats?.bestDistanceClient && !selectedClientId && (
+                  <span className="text-xs text-muted-foreground">{stats.bestDistanceClient}</span>
+                )}
+              </Card>
+
+              {/* Average Distance */}
+              <Card className="p-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <Target className="w-3.5 h-3.5" />
+                  <span className="text-xs">Průměr</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">
+                    {stats?.averageDistance ? `${Math.round(stats.averageDistance * 100)}` : '-'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">cm</span>
+                </div>
+              </Card>
+
+              {/* Total Attempts */}
+              <Card className="p-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <Activity className="w-3.5 h-3.5" />
+                  <span className="text-xs">Pokusů</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">{stats?.totalEntries || 0}</span>
+                </div>
+              </Card>
+
+              {/* PR Count */}
+              <Card className="p-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs">PRs</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">
+                    {stats?.prHistory?.length || 0}
+                  </span>
+                </div>
+              </Card>
+            </>
+          ) : !isTimeBased ? (
             // Strength exercise cards
             <>
               {/* Max Weight */}
@@ -335,7 +399,9 @@ export function ExerciseDetailOverview({
                 <p className="text-sm text-muted-foreground">{topPR.clientName}</p>
               </div>
               <div className="text-right">
-                {topPR.timeSeconds ? (
+                {(topPR as any).distanceMeters ? (
+                  <span className="text-2xl font-bold text-primary">{Math.round((topPR as any).distanceMeters * 100)} cm</span>
+                ) : topPR.timeSeconds ? (
                   <span className="text-2xl font-bold text-primary">{formatTime(topPR.timeSeconds)}</span>
                 ) : topPR.weight ? (
                   <>
@@ -384,7 +450,9 @@ export function ExerciseDetailOverview({
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      {pr.timeSeconds ? (
+                      {pr.distanceMeters ? (
+                        <span className="font-bold">{Math.round(pr.distanceMeters * 100)} cm</span>
+                      ) : pr.timeSeconds ? (
                         <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
                       ) : pr.weight ? (
                         <>
