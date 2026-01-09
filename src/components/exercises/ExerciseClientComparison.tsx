@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -529,6 +529,9 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                 calculation="Zobrazuje nejkratší zaznamenaný čas pro každého klienta."
               />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-52 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={timeChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
                   <defs>
@@ -595,9 +598,8 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                 </thead>
                 <tbody>
                   {data?.timeClients.slice(0, 10).map((client, idx) => (
-                    <>
+                    <React.Fragment key={client.clientId}>
                       <tr
-                        key={client.clientId}
                         className={cn(
                           "border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors",
                           expandedClientId === client.clientId && "bg-muted/30"
@@ -733,7 +735,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                           </motion.tr>
                         )}
                       </AnimatePresence>
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -827,9 +829,8 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                 </thead>
                 <tbody>
                   {data?.strengthClients.slice(0, 10).map((client, idx) => (
-                    <>
+                    <React.Fragment key={client.clientId}>
                       <tr
-                        key={client.clientId}
                         className={cn(
                           "border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors",
                           expandedClientId === client.clientId && "bg-muted/30"
@@ -962,7 +963,7 @@ export function ExerciseClientComparison({ exerciseId, exerciseType }: ExerciseC
                           </motion.tr>
                         )}
                       </AnimatePresence>
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
