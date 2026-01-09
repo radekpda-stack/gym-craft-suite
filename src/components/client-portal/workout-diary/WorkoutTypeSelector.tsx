@@ -2,14 +2,14 @@ import { cn } from '@/lib/utils';
 import { Dumbbell, Heart, Zap, Move, Coffee, Shuffle, Footprints, Activity } from 'lucide-react';
 
 export const WORKOUT_TYPES = [
-  { value: 'strength', label: 'Síla', icon: Dumbbell, color: 'text-blue-500' },
-  { value: 'cardio', label: 'Kardio', icon: Heart, color: 'text-red-500' },
-  { value: 'run', label: 'Běh', icon: Footprints, color: 'text-emerald-500' },
+  { value: 'strength', label: 'Silový', icon: Dumbbell, color: 'text-blue-500' },
   { value: 'hiit', label: 'HIIT', icon: Zap, color: 'text-orange-500' },
-  { value: 'conditioning', label: 'Kondice', icon: Activity, color: 'text-cyan-500' },
+  { value: 'cardio', label: 'Kardio', icon: Heart, color: 'text-red-500' },
+  { value: 'running', label: 'Běh', icon: Footprints, color: 'text-emerald-500' },
+  { value: 'functional', label: 'Funkční', icon: Activity, color: 'text-cyan-500' },
   { value: 'mobility', label: 'Mobilita', icon: Move, color: 'text-green-500' },
-  { value: 'recovery', label: 'Regenerace', icon: Coffee, color: 'text-purple-500' },
-  { value: 'other', label: 'Ostatní', icon: Shuffle, color: 'text-muted-foreground' },
+  { value: 'regeneration', label: 'Regenerace', icon: Coffee, color: 'text-purple-500' },
+  { value: 'other', label: 'Jiný', icon: Shuffle, color: 'text-muted-foreground' },
 ] as const;
 
 export type WorkoutType = typeof WORKOUT_TYPES[number]['value'];
