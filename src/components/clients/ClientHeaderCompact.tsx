@@ -15,6 +15,7 @@
  */
 import { useState } from 'react';
 import { CreditLedgerExportDialog } from '@/components/credit/CreditLedgerExportDialog';
+import { ClientPerformanceExportDialog } from '@/components/clients/ClientPerformanceExportDialog';
 import { Link } from 'react-router-dom';
 import { 
   ChevronLeft, 
@@ -30,6 +31,7 @@ import {
   Globe,
   FileText,
   Settings,
+  BarChart3,
   MoreVertical,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -252,6 +254,16 @@ export function ClientHeaderCompact({
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <FileText className="w-4 h-4 mr-2" />
                   Výpis kreditu
+                </DropdownMenuItem>
+              }
+            />
+            <ClientPerformanceExportDialog
+              clientId={client.id}
+              clientName={client.name}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Export výkonu
                 </DropdownMenuItem>
               }
             />
