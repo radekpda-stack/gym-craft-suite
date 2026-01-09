@@ -588,12 +588,10 @@ export function StockManagement() {
                       ? "bg-blue-500/10 text-blue-500"
                       : product.kind === 'credit_topup'
                         ? "bg-emerald-500/10 text-emerald-500"
-                        : isLowStock(product) && product.is_active 
-                          ? "bg-warning/20 text-warning" 
-                          : "bg-primary/10 text-primary"
+                        : "bg-primary/10 text-primary"
                   )}>
                     {isLowStock(product) && product.is_active ? (
-                      <AlertTriangle className="w-5 h-5" />
+                      <AlertTriangle className="w-5 h-5 text-warning" />
                     ) : (
                       getKindIcon(product.kind || 'inventory')
                     )}
@@ -609,11 +607,6 @@ export function StockManagement() {
                       {product.kind === 'credit_topup' && (
                         <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-xs">
                           +{(product.credit_delta || 0).toLocaleString('cs-CZ')} Kč kredit
-                        </Badge>
-                      )}
-                      {isLowStock(product) && product.is_active && (
-                        <Badge variant="outline" className="text-warning border-warning/50 text-xs">
-                          Nízký stav
                         </Badge>
                       )}
                     </div>
