@@ -2,7 +2,6 @@ import { Trophy, Dumbbell, Timer, Repeat, TrendingUp, Zap, Ruler } from 'lucide-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useClientPRs, ClientPR, formatPRValue } from '@/hooks/useClientPRs';
 import { useClientExercisePRs, ExercisePR } from '@/hooks/useClientExercisePRs';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -83,12 +82,8 @@ function PRItem({
 }
 
 export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
-  // Fetch from client_prs table (challenge/predefined PRs)
-  const { data: clientPRs, isLoading: prsLoading } = useClientPRs(clientId);
-  // Fetch from exercise_entries (workout PRs)
-  const { data: exercisePRs, isLoading: exerciseLoading } = useClientExercisePRs(clientId);
-
-  const isLoading = prsLoading || exerciseLoading;
+  // Fetch only exercise PRs (best performance per exercise)
+  const { data: exercisePRs, isLoading } = useClientExercisePRs(clientId);
 
   if (isLoading) {
     return (
@@ -105,50 +100,10 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
     );
   }
 
-  // Combine PRs from both sources
-  const allPRs: Array<{
-    id: string;
-    name: string;
-    value: string;
-    metricType: MetricType;
-    achievedAt: string;
-    sortDate: Date;
-  }> = [];
+  // Only show exercise PRs - one best performance per exercise
+  const prs = exercisePRs || [];
 
-  // Add predefined PRs (from challenges, etc.)
-  if (clientPRs) {
-    for (const pr of clientPRs) {
-      if (pr.pr_definitions) {
-        allPRs.push({
-          id: pr.id,
-          name: pr.pr_definitions.name,
-          value: pr.best_display,
-          metricType: pr.pr_definitions.metric_type as MetricType,
-          achievedAt: pr.achieved_at,
-          sortDate: new Date(pr.achieved_at),
-        });
-      }
-    }
-  }
-
-  // Add exercise PRs
-  if (exercisePRs) {
-    for (const pr of exercisePRs) {
-      allPRs.push({
-        id: pr.id,
-        name: pr.exerciseName,
-        value: pr.bestDisplay,
-        metricType: pr.metricType as MetricType,
-        achievedAt: pr.achievedAt,
-        sortDate: new Date(pr.achievedAt),
-      });
-    }
-  }
-
-  // Sort by date (newest first)
-  allPRs.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
-
-  if (allPRs.length === 0) {
+  if (prs.length === 0) {
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -166,8 +121,8 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
     );
   }
 
-  // Show top PRs (limit to avoid overwhelming)
-  const topPRs = allPRs.slice(0, 8);
+  // Sort by best value (descending for weight/reps, ascending for time would need special handling)
+  const sortedPRs = [...prs].sort((a, b) => b.bestValue - a.bestValue);
 
   return (
     <Card>
@@ -178,26 +133,20 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
             Osobní rekordy
           </CardTitle>
           <Badge variant="outline" className="text-xs">
-            {allPRs.length} {allPRs.length === 1 ? 'záznam' : allPRs.length < 5 ? 'záznamy' : 'záznamů'}
+            {prs.length} {prs.length === 1 ? 'cvik' : prs.length < 5 ? 'cviky' : 'cviků'}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {topPRs.map((pr) => (
+        {sortedPRs.map((pr) => (
           <PRItem 
             key={pr.id} 
-            name={pr.name}
-            value={pr.value}
-            metricType={pr.metricType}
+            name={pr.exerciseName}
+            value={pr.bestDisplay}
+            metricType={pr.metricType as MetricType}
             achievedAt={pr.achievedAt}
           />
         ))}
-        
-        {allPRs.length > 8 && (
-          <p className="text-xs text-center text-muted-foreground pt-2">
-            + {allPRs.length - 8} dalších záznamů
-          </p>
-        )}
       </CardContent>
     </Card>
   );
