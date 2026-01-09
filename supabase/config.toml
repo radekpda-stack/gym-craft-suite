@@ -110,3 +110,12 @@ verify_jwt = true
 
 [functions.garmin-ocr]
 verify_jwt = true
+
+[functions.subscribe-push]
+verify_jwt = true
+
+[functions.unsubscribe-push]
+verify_jwt = true
+
+[functions.send-push-notification]
+verify_jwt = false
