@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
 import { RPEInputField } from './RPEInputField';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Typ tréninku - předdefinované hodnoty
 const TRAINING_TYPES = [
@@ -36,10 +35,6 @@ interface TrainingTagStepperProps {
   // Coach RPE
   coachRPE: number | null;
   onCoachRPEChange: (rpe: number) => void;
-  // Client RPE (read-only, z feedbacku)
-  clientRPE?: number | null;
-  // Training load (computed)
-  trainingLoad?: number | null;
   // Stav tréninku pro validaci
   trainingStatus?: 'scheduled' | 'completed' | 'canceled';
   // Kompaktní mód pro menší obrazovky
@@ -58,8 +53,6 @@ export function TrainingTagStepper({
   onBodyPartTagsChange,
   coachRPE,
   onCoachRPEChange,
-  clientRPE,
-  trainingLoad,
   trainingStatus = 'scheduled',
   compact = false,
   className,
@@ -73,19 +66,6 @@ export function TrainingTagStepper({
     const bodyPart = tags.filter((t) => t.tag_type === 'body_part');
     return { focus, intensity, bodyPart };
   }, [tags]);
-
-  // Stav otevřených sekcí
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    type: true,
-    focus: true,
-    intensity: true,
-    bodyPart: true,
-    rpe: true,
-  });
-
-  const toggleSection = (section: string) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
 
   // Helper pro toggle tagu v multi-select
   const toggleTag = (
@@ -107,294 +87,193 @@ export function TrainingTagStepper({
   };
 
   // Vybrané hodnoty pro shrnutí
-  const selectedTypeName = TRAINING_TYPES.find((t) => t.value === trainingType)?.label;
+  const selectedType = TRAINING_TYPES.find((t) => t.value === trainingType);
   const selectedFocusNames = focusTagIds.map(getTagName).filter(Boolean);
   const selectedIntensityName = intensityTagId ? getTagName(intensityTagId) : null;
   const selectedBodyPartNames = bodyPartTagIds.map(getTagName).filter(Boolean);
 
-  // Shrnutí nahoře
-  const renderSummary = () => (
-    <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/50 rounded-lg mb-4">
-      {selectedTypeName && (
-        <Badge variant="secondary" className="font-medium">
-          {selectedTypeName}
-        </Badge>
-      )}
-      {selectedFocusNames.map((name) => (
-        <Badge key={name} variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">
-          {name}
-        </Badge>
-      ))}
-      {selectedIntensityName && (
-        <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-200">
-          {selectedIntensityName}
-        </Badge>
-      )}
-      {selectedBodyPartNames.map((name) => (
-        <Badge key={name} variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-200">
-          {name}
-        </Badge>
-      ))}
-      {coachRPE && (
-        <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-200">
-          RPE {coachRPE}
-        </Badge>
-      )}
-      {trainingLoad && (
-        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200">
-          Load {trainingLoad}
-        </Badge>
-      )}
-      {!selectedTypeName && !selectedFocusNames.length && !coachRPE && (
-        <span className="text-sm text-muted-foreground">Vyberte parametry tréninku...</span>
-      )}
+  const hasAnySelection = selectedType || selectedFocusNames.length > 0 || selectedIntensityName || selectedBodyPartNames.length > 0 || coachRPE;
+
+  // Kompaktní shrnutí - jedna řádka badges
+  const renderCompactSummary = () => {
+    if (!hasAnySelection) return null;
+    
+    return (
+      <div className="flex flex-wrap items-center gap-1.5 pb-3 mb-3 border-b border-border/50">
+        {selectedType && (
+          <Badge variant="default" className="text-xs font-medium">
+            {selectedType.icon} {selectedType.label}
+          </Badge>
+        )}
+        {selectedFocusNames.map((name) => (
+          <Badge key={name} variant="secondary" className="text-xs bg-blue-500/15 text-blue-600 dark:text-blue-400 border-0">
+            {name}
+          </Badge>
+        ))}
+        {selectedIntensityName && (
+          <Badge variant="secondary" className="text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0">
+            {selectedIntensityName}
+          </Badge>
+        )}
+        {selectedBodyPartNames.map((name) => (
+          <Badge key={name} variant="secondary" className="text-xs bg-purple-500/15 text-purple-600 dark:text-purple-400 border-0">
+            {name}
+          </Badge>
+        ))}
+        {coachRPE && (
+          <Badge variant="secondary" className="text-xs bg-rose-500/15 text-rose-600 dark:text-rose-400 border-0">
+            RPE {coachRPE}
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
+  // Inline sekce label
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
+      {children}
     </div>
   );
 
-  // Sekce s collapsible
-  const renderSection = (
-    id: string,
-    title: string,
-    stepNumber: number,
-    isComplete: boolean,
-    content: React.ReactNode
-  ) => (
-    <Collapsible
-      open={openSections[id]}
-      onOpenChange={() => toggleSection(id)}
-      className="border rounded-lg"
-    >
-      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium',
-              isComplete
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
-            )}
-          >
-            {isComplete ? <Check className="h-4 w-4" /> : stepNumber}
-          </div>
-          <span className="font-medium text-sm">{title}</span>
-        </div>
-        {openSections[id] ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
-      </CollapsibleTrigger>
-      <CollapsibleContent className="px-3 pb-3">{content}</CollapsibleContent>
-    </Collapsible>
-  );
-
-  // Chip komponenta
-  const Chip = ({
+  // Moderní chip komponenta
+  const TagChip = ({
     label,
     selected,
     onClick,
-    onRemove,
-    color,
+    variant = 'default',
   }: {
     label: string;
     selected: boolean;
     onClick: () => void;
-    onRemove?: () => void;
-    color?: string;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium transition-all',
-        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1',
-        'min-h-[44px]', // Touch-friendly
-        selected
-          ? 'bg-primary text-primary-foreground shadow-sm'
-          : 'bg-muted hover:bg-muted/80 text-foreground'
-      )}
-      style={selected && color ? { backgroundColor: color } : undefined}
-    >
-      {label}
-      {selected && onRemove && (
-        <X
-          className="h-3 w-3 ml-1 hover:scale-125 transition-transform"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-        />
-      )}
-    </button>
-  );
+    variant?: 'type' | 'focus' | 'intensity' | 'bodyPart' | 'default';
+  }) => {
+    const variantStyles = {
+      type: selected 
+        ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20' 
+        : 'bg-muted/60 hover:bg-muted text-foreground',
+      focus: selected 
+        ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-500/20' 
+        : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300',
+      intensity: selected 
+        ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/20' 
+        : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+      bodyPart: selected 
+        ? 'bg-purple-500 text-white shadow-sm ring-2 ring-purple-500/20' 
+        : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300',
+      default: selected 
+        ? 'bg-primary text-primary-foreground shadow-sm' 
+        : 'bg-muted hover:bg-muted/80 text-foreground',
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+          'min-h-[40px] active:scale-[0.98]',
+          variantStyles[variant]
+        )}
+      >
+        {selected && <Check className="h-3.5 w-3.5" />}
+        <span>{label}</span>
+      </button>
+    );
+  };
 
   return (
-    <div className={cn('space-y-3', className)}>
-      {/* Shrnutí nahoře */}
-      {renderSummary()}
+    <div className={cn('space-y-4', className)}>
+      {/* Kompaktní shrnutí */}
+      {renderCompactSummary()}
 
-      {/* Krok 1: Typ tréninku */}
-      {renderSection(
-        'type',
-        'Typ tréninku',
-        1,
-        !!trainingType,
-        <div className="flex flex-wrap gap-2 pt-2">
+      {/* Typ tréninku */}
+      <div>
+        <SectionLabel>Typ tréninku</SectionLabel>
+        <div className="flex flex-wrap gap-2">
           {TRAINING_TYPES.map((type) => (
-            <Chip
+            <TagChip
               key={type.value}
               label={`${type.icon} ${type.label}`}
               selected={trainingType === type.value}
               onClick={() => onTrainingTypeChange(type.value)}
+              variant="type"
             />
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Krok 2: Zaměření (multi-select) */}
-      {renderSection(
-        'focus',
-        'Zaměření',
-        2,
-        focusTagIds.length > 0,
-        <div className="space-y-2 pt-2">
-          {focusTagIds.length > 0 && (
-            <div className="flex flex-wrap gap-1 pb-2 border-b">
-              <span className="text-xs text-muted-foreground mr-2">Vybrané:</span>
-              {focusTagIds.map((id) => (
-                <Badge
-                  key={id}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => toggleTag(id, focusTagIds, onFocusTagsChange)}
-                >
-                  {getTagName(id)} <X className="h-3 w-3 ml-1" />
-                </Badge>
-              ))}
-            </div>
-          )}
+      {/* Zaměření (multi-select) */}
+      {tagsByType.focus.length > 0 && (
+        <div>
+          <SectionLabel>Zaměření</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {tagsByType.focus.map((tag) => (
-              <Chip
+              <TagChip
                 key={tag.id}
                 label={tag.name}
                 selected={focusTagIds.includes(tag.id)}
                 onClick={() => toggleTag(tag.id, focusTagIds, onFocusTagsChange)}
-                color={focusTagIds.includes(tag.id) ? tag.color || undefined : undefined}
+                variant="focus"
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Krok 3: Intenzita (single-select) */}
-      {renderSection(
-        'intensity',
-        'Intenzita',
-        3,
-        !!intensityTagId,
-        <div className="flex flex-wrap gap-2 pt-2">
-          {tagsByType.intensity.map((tag) => (
-            <Chip
-              key={tag.id}
-              label={tag.name}
-              selected={intensityTagId === tag.id}
-              onClick={() =>
-                onIntensityTagChange(intensityTagId === tag.id ? null : tag.id)
-              }
-              color={intensityTagId === tag.id ? tag.color || undefined : undefined}
-            />
-          ))}
+      {/* Intenzita (single-select) */}
+      {tagsByType.intensity.length > 0 && (
+        <div>
+          <SectionLabel>Intenzita</SectionLabel>
+          <div className="flex flex-wrap gap-2">
+            {tagsByType.intensity.map((tag) => (
+              <TagChip
+                key={tag.id}
+                label={tag.name}
+                selected={intensityTagId === tag.id}
+                onClick={() => onIntensityTagChange(intensityTagId === tag.id ? null : tag.id)}
+                variant="intensity"
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Krok 4: Partie těla (multi-select) */}
-      {renderSection(
-        'bodyPart',
-        'Partie těla',
-        4,
-        bodyPartTagIds.length > 0,
-        <div className="space-y-2 pt-2">
-          {bodyPartTagIds.length > 0 && (
-            <div className="flex flex-wrap gap-1 pb-2 border-b">
-              <span className="text-xs text-muted-foreground mr-2">Vybrané:</span>
-              {bodyPartTagIds.map((id) => (
-                <Badge
-                  key={id}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => toggleTag(id, bodyPartTagIds, onBodyPartTagsChange)}
-                >
-                  {getTagName(id)} <X className="h-3 w-3 ml-1" />
-                </Badge>
-              ))}
-            </div>
-          )}
+      {/* Partie těla (multi-select) */}
+      {tagsByType.bodyPart.length > 0 && (
+        <div>
+          <SectionLabel>Partie těla</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {tagsByType.bodyPart.map((tag) => (
-              <Chip
+              <TagChip
                 key={tag.id}
                 label={tag.name}
                 selected={bodyPartTagIds.includes(tag.id)}
                 onClick={() => toggleTag(tag.id, bodyPartTagIds, onBodyPartTagsChange)}
-                color={bodyPartTagIds.includes(tag.id) ? tag.color || undefined : undefined}
+                variant="bodyPart"
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Krok 5: RPE */}
-      {renderSection(
-        'rpe',
-        'RPE (náročnost)',
-        5,
-        !!coachRPE,
-        <div className="space-y-4 pt-2">
-          <RPEInputField
-            value={coachRPE}
-            onChange={onCoachRPEChange}
-            label="RPE trenéra"
-            size={compact ? 'sm' : 'md'}
-          />
-
-          {/* Client RPE - read-only */}
-          {clientRPE !== undefined && (
-            <div className="pt-2 border-t">
-              <RPEInputField
-                value={clientRPE}
-                onChange={() => {}}
-                label="RPE klienta (z dotazníku)"
-                readOnly
-                showHelp={false}
-                size="sm"
-              />
-              {coachRPE && clientRPE && (
-                <div className="mt-2 text-sm">
-                  {Math.abs(coachRPE - clientRPE) >= 3 ? (
-                    <span className="text-amber-600">
-                      ⚠️ Velký rozdíl: {coachRPE > clientRPE ? '+' : ''}
-                      {coachRPE - clientRPE} (trenér vs klient)
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      Rozdíl: {coachRPE > clientRPE ? '+' : ''}
-                      {coachRPE - clientRPE}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Validační upozornění */}
-          {trainingStatus === 'completed' && !coachRPE && (
-            <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700">
-              ⚠️ RPE je povinné pro dokončené tréninky
-            </div>
-          )}
-        </div>
-      )}
+      {/* RPE trenéra */}
+      <div>
+        <SectionLabel>RPE trenéra</SectionLabel>
+        <RPEInputField
+          value={coachRPE}
+          onChange={onCoachRPEChange}
+          size={compact ? 'sm' : 'md'}
+          showHelp={false}
+        />
+        {/* Validační upozornění */}
+        {trainingStatus === 'completed' && !coachRPE && (
+          <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-400">
+            ⚠️ RPE je povinné pro dokončené tréninky
+          </div>
+        )}
+      </div>
     </div>
   );
 }
