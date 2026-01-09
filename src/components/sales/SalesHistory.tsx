@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -13,7 +13,9 @@ import {
   Loader2,
   Package,
   Sparkles,
-  Tag
+  Tag,
+  Search,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { SalesOrderDetailModal } from './SalesOrderDetailModal';
@@ -58,6 +61,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 export function SalesHistory() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['sales_orders_history'],
@@ -116,8 +120,29 @@ export function SalesHistory() {
     );
   }
 
+  // Filter orders based on search query
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return orders.filter(order => {
+      // Search by client name
+      if (order.clients?.name?.toLowerCase().includes(query)) return true;
+      // Search by payment method
+      const paymentLabel = PAYMENT_LABELS[order.payment_method]?.toLowerCase();
+      if (paymentLabel?.includes(query)) return true;
+      // Search by amount
+      if (order.total_amount.toString().includes(query)) return true;
+      // Search by date
+      const dateStr = format(new Date(order.created_at), 'd. MMMM yyyy', { locale: cs }).toLowerCase();
+      if (dateStr.includes(query)) return true;
+      
+      return false;
+    });
+  }, [orders, searchQuery]);
+
   // Group orders by date
-  const groupedOrders = orders.reduce((acc, order) => {
+  const groupedOrders = filteredOrders.reduce((acc, order) => {
     const date = format(new Date(order.created_at), 'yyyy-MM-dd');
     if (!acc[date]) {
       acc[date] = [];
@@ -128,7 +153,41 @@ export function SalesHistory() {
 
   return (
     <>
-      <ScrollArea className="h-[calc(100vh-300px)] pr-2">
+      {/* Search Input */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Hledat dle klienta, data, částky..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+            onClick={() => setSearchQuery('')}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* No results message */}
+      {filteredOrders.length === 0 && searchQuery && (
+        <Card className="glass">
+          <CardContent className="py-8 text-center">
+            <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">
+              Žádné výsledky pro "{searchQuery}"
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <ScrollArea className="h-[calc(100vh-380px)] pr-2">
         <div className="space-y-6">
           {Object.entries(groupedOrders).map(([date, dayOrders]) => (
             <div key={date}>
