@@ -33,6 +33,8 @@ interface ClientDebt {
   id: string;
   name: string;
   debt: number;
+  unpaidCount: number;
+  hasNegativeCredit: boolean;
 }
 
 const paymentMethods = [
@@ -47,30 +49,47 @@ export function ClientsInDebtCard() {
   const navigate = useNavigate();
   const createTransaction = useCreateTransaction();
   
-  // Fetch clients with their effective balance (considering budget groups)
+  // Fetch clients with debt (negative credit OR unpaid training sessions)
   const { data: clientsInDebt = [], isLoading } = useQuery({
     queryKey: ['clients-in-debt'],
     queryFn: async (): Promise<ClientDebt[]> => {
       // Get all non-archived clients with their budget group info
-      const { data: clients, error } = await supabase
-        .from('clients')
-        .select(`
-          id,
-          name,
-          credit_balance,
-          client_budget_members (
-            group_id,
-            client_budget_groups (
-              shared_balance
+      const [clientsResult, unpaidResult] = await Promise.all([
+        supabase
+          .from('clients')
+          .select(`
+            id,
+            name,
+            credit_balance,
+            client_budget_members (
+              group_id,
+              client_budget_groups (
+                shared_balance
+              )
             )
-          )
-        `)
-        .eq('is_archived', false);
+          `)
+          .eq('is_archived', false),
+        supabase
+          .from('training_sessions')
+          .select('id, client_id, final_price')
+          .eq('status', 'completed')
+          .eq('payment_status', 'pending'),
+      ]);
 
-      if (error) throw error;
+      if (clientsResult.error) throw clientsResult.error;
 
-      // Filter to only clients with effective negative balance
-      return (clients || [])
+      // Build map of unpaid amounts per client
+      const unpaidByClient = new Map<string, { count: number; amount: number }>();
+      (unpaidResult.data || []).forEach(t => {
+        const current = unpaidByClient.get(t.client_id) || { count: 0, amount: 0 };
+        unpaidByClient.set(t.client_id, {
+          count: current.count + 1,
+          amount: current.amount + (t.final_price || 0),
+        });
+      });
+
+      // Filter to clients with effective negative balance OR unpaid sessions
+      return (clientsResult.data || [])
         .map(c => {
           // Check if client is in a budget group
           const budgetMember = c.client_budget_members?.[0];
@@ -81,11 +100,19 @@ export function ClientsInDebtCard() {
             ? sharedBalance
             : (c.credit_balance || 0);
           
+          const unpaidInfo = unpaidByClient.get(c.id) || { count: 0, amount: 0 };
+          const hasNegativeCredit = effectiveBalance < 0;
+          
+          // Total debt = negative credit (if any) + unpaid sessions amount
+          const creditDebt = hasNegativeCredit ? Math.abs(effectiveBalance) : 0;
+          const totalDebt = creditDebt + unpaidInfo.amount;
+          
           return {
             id: c.id,
             name: c.name,
-            debt: effectiveBalance < 0 ? Math.abs(effectiveBalance) : 0,
-            effectiveBalance,
+            debt: totalDebt,
+            unpaidCount: unpaidInfo.count,
+            hasNegativeCredit,
           };
         })
         .filter(c => c.debt > 0)
@@ -202,9 +229,16 @@ export function ClientsInDebtCard() {
                 className="flex-1 min-w-0 text-left"
               >
                 <p className="font-medium text-foreground truncate">{client.name}</p>
-                <p className="text-sm text-destructive font-semibold">
-                  -{formatCurrency(client.debt)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-destructive font-semibold">
+                    -{formatCurrency(client.debt)}
+                  </p>
+                  {client.unpaidCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 text-muted-foreground">
+                      {client.unpaidCount}× nezaplaceno
+                    </Badge>
+                  )}
+                </div>
               </button>
               
               <Button
