@@ -228,22 +228,37 @@ export function useFeedbackWithTags(clientId: string | undefined, options?: {
         .map(f => f.training_session_id)
         .filter((id): id is string => id != null);
       
-      // Fetch tags for all sessions at once
+      // Fetch tags for all sessions at once - use separate queries to avoid RLS issues
       const { data: tagLinks, error: tagError } = await supabase
         .from('training_session_tags')
-        .select(`
-          training_session_id,
-          tags:tag_id (id, name, color, tag_type)
-        `)
+        .select('training_session_id, tag_id')
         .in('training_session_id', sessionIds);
       
       if (tagError) throw tagError;
+      
+      // Get unique tag IDs
+      const tagIds = [...new Set((tagLinks || []).map(l => l.tag_id))];
+      
+      // Fetch tags separately
+      let tagsMap = new Map<string, Tag>();
+      if (tagIds.length > 0) {
+        const { data: tags, error: tagsError } = await supabase
+          .from('tags')
+          .select('id, name, color, tag_type')
+          .in('id', tagIds);
+        
+        if (tagsError) throw tagsError;
+        
+        (tags || []).forEach(tag => {
+          tagsMap.set(tag.id, tag as Tag);
+        });
+      }
       
       // Create a map of session ID -> tags
       const tagsBySession = new Map<string, Tag[]>();
       (tagLinks || []).forEach(link => {
         const sessionId = link.training_session_id;
-        const tag = link.tags as unknown as Tag;
+        const tag = tagsMap.get(link.tag_id);
         if (tag) {
           if (!tagsBySession.has(sessionId)) {
             tagsBySession.set(sessionId, []);
