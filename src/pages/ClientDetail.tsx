@@ -33,6 +33,7 @@ import {
 // Audit components
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
+import { ClientFeedbackAnalysisSection } from '@/components/clients/ClientFeedbackAnalysisSection';
 import { ClientQuickInfoCard } from '@/components/clients/ClientQuickInfoCard';
 
 // Action components
@@ -265,6 +266,12 @@ export default function ClientDetail() {
         clientId={client.id} 
         healthRestrictions={client.health_restrictions} 
       />
+
+      {/* SECTION: Feedback Analysis - Training → Response */}
+      <ClientFeedbackAnalysisSection clientId={client.id} defaultOpen={false} />
+
+      {/* Periodization Card */}
+      <ClientPeriodizationCard clientId={client.id} />
 
       {/* Periodization Card */}
       <ClientPeriodizationCard clientId={client.id} />
