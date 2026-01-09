@@ -23,12 +23,21 @@ export function useClientLTV(clientId: string | undefined) {
     queryFn: async (): Promise<ClientLTVData | null> => {
       if (!clientId) return null;
 
-      // Fetch all training sessions for the client
-      const { data: trainings } = await supabase
+      // Fetch all completed training sessions for the client
+      const { data: completedTrainings } = await supabase
         .from('training_sessions')
         .select('id, date, final_price, status')
         .eq('client_id', clientId)
         .eq('status', 'completed')
+        .order('date', { ascending: true });
+
+      // Fetch late cancellations (charged) - these count as revenue
+      const { data: lateCancellations } = await supabase
+        .from('training_sessions')
+        .select('id, date, final_price, status, is_late_cancellation, payment_status')
+        .eq('client_id', clientId)
+        .eq('status', 'canceled')
+        .eq('is_late_cancellation', true)
         .order('date', { ascending: true });
 
       // Fetch credit transactions for products and topups
@@ -37,9 +46,16 @@ export function useClientLTV(clientId: string | undefined) {
         .select('id, amount, type, created_at, product_id')
         .eq('client_id', clientId);
 
-      // Calculate training revenue
-      const trainingRevenue = trainings?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
-      const totalTrainings = trainings?.length || 0;
+      // Combine completed trainings + late cancellations for revenue calculation
+      const allChargedSessions = [
+        ...(completedTrainings || []),
+        ...(lateCancellations || []),
+      ];
+
+      // Calculate training revenue (includes late cancellations)
+      const trainingRevenue = allChargedSessions.reduce((sum, t) => sum + (t.final_price || 0), 0);
+      const totalTrainings = completedTrainings?.length || 0; // Count only completed for "trainings" metric
+      const lateCancelCount = lateCancellations?.length || 0;
 
       // Calculate product revenue (product sales are typically negative transactions from client's perspective)
       const productTransactions = transactions?.filter(t => t.product_id !== null) || [];
@@ -52,9 +68,9 @@ export function useClientLTV(clientId: string | undefined) {
       // Total revenue (lifetime) = trainings + products
       const totalRevenue = trainingRevenue + productRevenue;
 
-      // Get first and last training dates
-      const firstTraining = trainings?.[0];
-      const lastTraining = trainings?.[trainings.length - 1];
+      // Get first and last training dates (from completed trainings only for timeline)
+      const firstTraining = completedTrainings?.[0];
+      const lastTraining = completedTrainings?.[completedTrainings.length - 1];
       
       const firstTrainingDate = firstTraining?.date || null;
       const lastTrainingDate = lastTraining?.date || null;
