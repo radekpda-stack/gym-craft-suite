@@ -27,7 +27,7 @@ import {
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { PackagesManagement } from '@/components/settings/PackagesManagement';
-import { TrainingPricesSettings } from '@/components/settings/TrainingPricesSettings';
+import { PriceListSettings } from '@/components/settings/PriceListSettings';
 import { CreditThresholdSettings } from '@/components/settings/CreditThresholdSettings';
 import { TagsManagement } from '@/components/settings/TagsManagement';
 import { CompanyProfileSettings } from '@/components/settings/CompanyProfileSettings';
@@ -198,17 +198,17 @@ export default function Settings() {
             <SettingsSection
               title={language === 'cs' ? 'Ceny tréninků' : 'Training Prices'}
               description={language === 'cs' 
-                ? 'Základní ceny podle počtu účastníků' 
-                : 'Base prices by participant count'}
+                ? 'Aktuální i plánované ceny podle počtu účastníků' 
+                : 'Current and scheduled prices by participant count'}
               icon={CreditCard}
               impact={{
                 type: 'warning',
                 message: language === 'cs' 
-                  ? 'Změny cen ovlivní pouze NOVÉ tréninky' 
-                  : 'Price changes affect only NEW trainings'
+                  ? 'Nový ceník se aktivuje automaticky v nastavený den' 
+                  : 'New price list activates automatically on the set date'
               }}
             >
-              <TrainingPricesSettings />
+              <PriceListSettings />
             </SettingsSection>
 
             <PriceTransitionSettings />

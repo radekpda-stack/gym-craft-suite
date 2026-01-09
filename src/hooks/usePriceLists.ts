@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const OLD_PRICE_LIST_ID = '00000000-0000-0000-0000-000000000001';
@@ -11,6 +11,7 @@ export interface PriceList {
   is_active: boolean;
   created_at: string;
   user_id: string | null;
+  description: string | null;
 }
 
 export interface PriceItem {
@@ -23,6 +24,14 @@ export interface PriceItem {
 
 export interface PriceListWithItems extends PriceList {
   price_items: PriceItem[];
+}
+
+export interface UpcomingPriceList {
+  id: string;
+  name: string;
+  effective_from: string;
+  description: string | null;
+  days_until: number;
 }
 
 /**
@@ -54,6 +63,21 @@ export function useCurrentPriceList() {
 
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+/**
+ * Get upcoming (future) price list
+ */
+export function useUpcomingPriceList() {
+  return useQuery({
+    queryKey: ['upcoming_price_list'],
+    queryFn: async (): Promise<UpcomingPriceList | null> => {
+      const { data, error } = await supabase.rpc('rpc_get_upcoming_price_list');
+
+      if (error) throw error;
+      return data?.[0] || null;
     },
   });
 }
@@ -104,4 +128,90 @@ export function getPricesMap(priceItems: PriceItem[]): Record<string, number> {
     acc[item.service_id] = item.unit_price_czk;
     return acc;
   }, {} as Record<string, number>);
+}
+
+/**
+ * Create a new price list with prices
+ */
+export function useCreatePriceList() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      name,
+      effectiveFrom,
+      prices,
+    }: {
+      name: string;
+      effectiveFrom: Date;
+      prices: { PT_1: number; PT_2: number; PT_3P: number; first_training?: number };
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Create the price list
+      const { data: priceList, error: plError } = await supabase
+        .from('price_lists')
+        .insert({
+          name,
+          effective_from: effectiveFrom.toISOString(),
+          is_active: true,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (plError) throw plError;
+
+      // Create price items
+      const priceItems = [
+        { price_list_id: priceList.id, service_id: 'PT_1', unit_price_czk: prices.PT_1 },
+        { price_list_id: priceList.id, service_id: 'PT_2', unit_price_czk: prices.PT_2 },
+        { price_list_id: priceList.id, service_id: 'PT_3P', unit_price_czk: prices.PT_3P },
+      ];
+
+      const { error: piError } = await supabase
+        .from('price_items')
+        .insert(priceItems);
+
+      if (piError) throw piError;
+
+      return priceList;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['price_lists'] });
+      queryClient.invalidateQueries({ queryKey: ['upcoming_price_list'] });
+    },
+  });
+}
+
+/**
+ * Delete a price list
+ */
+export function useDeletePriceList() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (priceListId: string) => {
+      // Delete price items first
+      const { error: piError } = await supabase
+        .from('price_items')
+        .delete()
+        .eq('price_list_id', priceListId);
+
+      if (piError) throw piError;
+
+      // Delete price list
+      const { error: plError } = await supabase
+        .from('price_lists')
+        .delete()
+        .eq('id', priceListId);
+
+      if (plError) throw plError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['price_lists'] });
+      queryClient.invalidateQueries({ queryKey: ['upcoming_price_list'] });
+    },
+  });
 }

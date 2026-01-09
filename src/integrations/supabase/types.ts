@@ -6273,6 +6273,7 @@ export type Database = {
       price_lists: {
         Row: {
           created_at: string | null
+          description: string | null
           effective_from: string
           id: string
           is_active: boolean | null
@@ -6281,6 +6282,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          description?: string | null
           effective_from: string
           id?: string
           is_active?: boolean | null
@@ -6289,6 +6291,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          description?: string | null
           effective_from?: string
           id?: string
           is_active?: boolean | null
@@ -9413,6 +9416,16 @@ export type Database = {
       rpc_get_price_for_service: {
         Args: { p_price_list_id: string; p_service_id: string }
         Returns: number
+      }
+      rpc_get_upcoming_price_list: {
+        Args: never
+        Returns: {
+          days_until: number
+          description: string
+          effective_from: string
+          id: string
+          name: string
+        }[]
       }
       rpc_migrate_credit_to_lot: {
         Args: {
