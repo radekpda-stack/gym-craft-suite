@@ -460,11 +460,13 @@ export function TrainingDetailView({
           }}
           focusTagIds={focusTagIds}
           onFocusTagsChange={(ids) => {
+            // Filter to only keep valid tags that exist in our tags list
+            const validIds = ids.filter(id => tags.some(t => t.id === id));
             const otherTags = selectedTagIds.filter(id => {
               const tag = tags.find(t => t.id === id);
-              return tag?.tag_type !== 'focus';
+              return tag && tag.tag_type !== 'focus';
             });
-            const newTagIds = [...otherTags, ...ids];
+            const newTagIds = [...otherTags, ...validIds];
             setSelectedTagIds(newTagIds);
             if (onTagsChange) onTagsChange(newTagIds);
           }}
@@ -472,19 +474,23 @@ export function TrainingDetailView({
           onIntensityTagChange={(id) => {
             const otherTags = selectedTagIds.filter(tagId => {
               const tag = tags.find(t => t.id === tagId);
-              return tag?.tag_type !== 'intensity';
+              return tag && tag.tag_type !== 'intensity';
             });
-            const newTagIds = id ? [...otherTags, id] : otherTags;
+            // Only add the id if it's a valid tag
+            const validId = id && tags.some(t => t.id === id) ? id : null;
+            const newTagIds = validId ? [...otherTags, validId] : otherTags;
             setSelectedTagIds(newTagIds);
             if (onTagsChange) onTagsChange(newTagIds);
           }}
           bodyPartTagIds={bodyPartTagIds}
           onBodyPartTagsChange={(ids) => {
+            // Filter to only keep valid tags that exist in our tags list
+            const validIds = ids.filter(id => tags.some(t => t.id === id));
             const otherTags = selectedTagIds.filter(id => {
               const tag = tags.find(t => t.id === id);
-              return tag?.tag_type !== 'body_part';
+              return tag && tag.tag_type !== 'body_part';
             });
-            const newTagIds = [...otherTags, ...ids];
+            const newTagIds = [...otherTags, ...validIds];
             setSelectedTagIds(newTagIds);
             if (onTagsChange) onTagsChange(newTagIds);
           }}
