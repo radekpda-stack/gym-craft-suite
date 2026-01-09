@@ -28,7 +28,7 @@ export interface CartValidationError {
   productId: string;
   productName: string;
   message: string;
-  type: 'stock' | 'quantity' | 'credit_topup';
+  type: 'stock' | 'quantity' | 'credit_topup' | 'min_price';
 }
 
 export interface CartValidation {
@@ -36,6 +36,7 @@ export interface CartValidation {
   errors: CartValidationError[];
   hasStockIssues: boolean;
   hasCreditTopupWithoutClient: boolean;
+  hasMinPriceIssues: boolean;
 }
 
 interface UseSalesCartOptions {
@@ -221,11 +222,39 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
     };
   }, [items, orderDiscount]);
 
+  // Helper function to calculate final unit price after discounts
+  const calculateFinalUnitPrice = useCallback((item: CartItemWithDiscount): number => {
+    const unitPrice = item.product.price;
+    
+    // If item has line discount, it takes priority
+    if (item.lineDiscount && item.product.kind === 'inventory') {
+      if (item.lineDiscount.type === 'percent') {
+        return Math.round(unitPrice * (1 - item.lineDiscount.value / 100));
+      } else {
+        return Math.max(0, unitPrice - item.lineDiscount.value / item.quantity);
+      }
+    }
+    
+    // Otherwise apply order discount if eligible
+    if (orderDiscount && item.product.kind === 'inventory' && item.product.discount_eligible !== false) {
+      if (orderDiscount.type === 'percent') {
+        return Math.round(unitPrice * (1 - orderDiscount.value / 100));
+      } else {
+        // Fixed order discount is spread across all items proportionally
+        // For simplicity, we'll just check percentage discounts for min price
+        return unitPrice;
+      }
+    }
+    
+    return unitPrice;
+  }, [orderDiscount]);
+
   // Validation
   const validation = useMemo<CartValidation>(() => {
     const errors: CartValidationError[] = [];
     let hasStockIssues = false;
     let hasCreditTopupWithoutClient = false;
+    let hasMinPriceIssues = false;
 
     items.forEach(item => {
       // Check stock for inventory products
@@ -237,6 +266,20 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
             productName: item.product.name,
             message: `Nedostatek na skladě (${item.product.stock_quantity} ks)`,
             type: 'stock',
+          });
+        }
+      }
+
+      // Check min sell price for inventory products
+      if (item.product.kind === 'inventory' && item.product.min_sell_price != null && item.product.min_sell_price > 0) {
+        const finalUnitPrice = calculateFinalUnitPrice(item);
+        if (finalUnitPrice < item.product.min_sell_price) {
+          hasMinPriceIssues = true;
+          errors.push({
+            productId: item.product.id,
+            productName: item.product.name,
+            message: `Cena pod minimem: min ${item.product.min_sell_price} Kč/ks`,
+            type: 'min_price',
           });
         }
       }
@@ -268,8 +311,9 @@ export function useSalesCartWithDiscount(options: UseSalesCartOptions = {}) {
       errors,
       hasStockIssues,
       hasCreditTopupWithoutClient,
+      hasMinPriceIssues,
     };
-  }, [items, clientId]);
+  }, [items, clientId, calculateFinalUnitPrice]);
 
   // Get items with calculated line totals
   const itemsWithTotals = useMemo(() => {

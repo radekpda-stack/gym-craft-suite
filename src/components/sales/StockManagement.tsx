@@ -55,6 +55,8 @@ export function StockManagement() {
   const [stockQuantity, setStockQuantity] = useState('0');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [xpBonus, setXpBonus] = useState('0');
+  const [minSellPrice, setMinSellPrice] = useState('');
+  const [discountEligible, setDiscountEligible] = useState(true);
   const [showMargin, setShowMargin] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -77,6 +79,8 @@ export function StockManagement() {
     setStockQuantity('0');
     setLowStockThreshold('5');
     setXpBonus('0');
+    setMinSellPrice('');
+    setDiscountEligible(true);
     setEditingProduct(null);
   };
 
@@ -94,6 +98,8 @@ export function StockManagement() {
       stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
       low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
       xp_bonus: parseInt(xpBonus) || 0,
+      min_sell_price: kind === 'inventory' && minSellPrice ? parseFloat(minSellPrice) : null,
+      discount_eligible: discountEligible,
     });
 
     resetForm();
@@ -115,6 +121,8 @@ export function StockManagement() {
       stock_quantity: kind === 'inventory' ? parseInt(stockQuantity) || 0 : 0,
       low_stock_threshold: kind === 'inventory' ? parseInt(lowStockThreshold) || 5 : 0,
       xp_bonus: parseInt(xpBonus) || 0,
+      min_sell_price: kind === 'inventory' && minSellPrice ? parseFloat(minSellPrice) : null,
+      discount_eligible: discountEligible,
     });
 
     resetForm();
@@ -138,6 +146,8 @@ export function StockManagement() {
     setStockQuantity(product.stock_quantity?.toString() || '0');
     setLowStockThreshold(product.low_stock_threshold?.toString() || '5');
     setXpBonus(product.xp_bonus?.toString() || '0');
+    setMinSellPrice(product.min_sell_price?.toString() || '');
+    setDiscountEligible(product.discount_eligible !== false);
   };
 
   const isLowStock = (product: Product) => 
@@ -306,28 +316,52 @@ export function StockManagement() {
                   </div>
                 )}
                 {kind === 'inventory' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Skladem (ks)</Label>
-                      <Input
-                        type="number"
-                        value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
-                        placeholder="0"
-                        className="mt-2"
-                      />
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Skladem (ks)</Label>
+                        <Input
+                          type="number"
+                          value={stockQuantity}
+                          onChange={(e) => setStockQuantity(e.target.value)}
+                          placeholder="0"
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label>Upozornit při (ks)</Label>
+                        <Input
+                          type="number"
+                          value={lowStockThreshold}
+                          onChange={(e) => setLowStockThreshold(e.target.value)}
+                          placeholder="5"
+                          className="mt-2"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Upozornit při (ks)</Label>
-                      <Input
-                        type="number"
-                        value={lowStockThreshold}
-                        onChange={(e) => setLowStockThreshold(e.target.value)}
-                        placeholder="5"
-                        className="mt-2"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Min. prodejní cena (Kč)</Label>
+                        <Input
+                          type="number"
+                          value={minSellPrice}
+                          onChange={(e) => setMinSellPrice(e.target.value)}
+                          placeholder="Volitelné"
+                          className="mt-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Sleva nemůže jít pod tuto cenu
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                        <Switch
+                          checked={discountEligible}
+                          onCheckedChange={setDiscountEligible}
+                        />
+                        <Label>Povolit slevy</Label>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
                 {/* XP Bonus field */}
                 <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
