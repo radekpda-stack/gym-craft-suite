@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +16,6 @@ import {
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { formatCurrency } from '@/lib/formatters';
 import { toast } from '@/hooks/use-toast';
@@ -44,24 +45,60 @@ type PaymentMethodType = 'cash' | 'bank' | 'card';
 
 export function ClientsInDebtCard() {
   const navigate = useNavigate();
-  const { data: clients = [], isLoading } = useClients();
   const createTransaction = useCreateTransaction();
+  
+  // Fetch clients with their effective balance (considering budget groups)
+  const { data: clientsInDebt = [], isLoading } = useQuery({
+    queryKey: ['clients-in-debt'],
+    queryFn: async (): Promise<ClientDebt[]> => {
+      // Get all non-archived clients with their budget group info
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select(`
+          id,
+          name,
+          credit_balance,
+          client_budget_members (
+            group_id,
+            client_budget_groups (
+              shared_balance
+            )
+          )
+        `)
+        .eq('is_archived', false);
+
+      if (error) throw error;
+
+      // Filter to only clients with effective negative balance
+      return (clients || [])
+        .map(c => {
+          // Check if client is in a budget group
+          const budgetMember = c.client_budget_members?.[0];
+          const sharedBalance = budgetMember?.client_budget_groups?.shared_balance;
+          
+          // Use shared balance if in group, otherwise individual balance
+          const effectiveBalance = sharedBalance !== null && sharedBalance !== undefined
+            ? sharedBalance
+            : (c.credit_balance || 0);
+          
+          return {
+            id: c.id,
+            name: c.name,
+            debt: effectiveBalance < 0 ? Math.abs(effectiveBalance) : 0,
+            effectiveBalance,
+          };
+        })
+        .filter(c => c.debt > 0)
+        .sort((a, b) => b.debt - a.debt);
+    },
+    staleTime: 60000,
+  });
   
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientDebt | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('bank');
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Get clients with negative balance (debt)
-  const clientsInDebt: ClientDebt[] = clients
-    .filter(c => !c.is_archived && (c.credit_balance || 0) < 0)
-    .map(c => ({
-      id: c.id,
-      name: c.name,
-      debt: Math.abs(c.credit_balance || 0),
-    }))
-    .sort((a, b) => b.debt - a.debt);
 
   const totalDebt = clientsInDebt.reduce((sum, c) => sum + c.debt, 0);
 
