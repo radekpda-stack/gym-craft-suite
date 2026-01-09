@@ -20,6 +20,7 @@ import { ExternalEventBlock } from '@/components/calendar/ExternalEventBlock';
 import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
 import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { CompleteTrainingDialog } from '@/components/trainings/CompleteTrainingDialog';
 import { FreeSlotIndicator } from '@/components/calendar/FreeSlotIndicator';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,16 +28,6 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
 import { ScheduleTrainingTimeline } from '@/components/schedule/ScheduleTrainingTimeline';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 // Pomocná funkce pro generování volných slotů mezi tréninky
 function generateFreeSlots(
@@ -234,16 +225,7 @@ export default function SchedulePage() {
     setCompleteDialog({ open: true, session });
   };
 
-  const confirmComplete = async () => {
-    if (!completeDialog.session) return;
-    
-    await updateTraining.mutateAsync({
-      id: completeDialog.session.id,
-      input: { status: 'completed' },
-      trainingPrices,
-    });
-    setCompleteDialog({ open: false, session: null });
-  };
+  // confirmComplete is now handled by CompleteTrainingDialog
 
   const handleCancel = (session: any) => {
     setCancelDialog({ open: true, session });
@@ -510,21 +492,12 @@ export default function SchedulePage() {
         defaultValues={selectedDateTime ? { date: selectedDateTime } : undefined}
       />
 
-      {/* Complete Dialog */}
-      <AlertDialog open={completeDialog.open} onOpenChange={(open) => setCompleteDialog({ open, session: open ? completeDialog.session : null })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Dokončit trénink?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Trénink bude označen jako dokončený a klientovi bude stržen kredit.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmComplete}>Dokončit</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Complete Training Dialog - with participant payments */}
+      <CompleteTrainingDialog
+        open={completeDialog.open}
+        onOpenChange={(open) => setCompleteDialog({ open, session: open ? completeDialog.session : null })}
+        session={completeDialog.session}
+      />
 
       {/* Cancel Training Dialog */}
       <CancelTrainingDialog

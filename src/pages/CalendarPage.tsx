@@ -20,20 +20,11 @@ import { WeekMiniGrid } from '@/components/calendar/WeekMiniGrid';
 import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
 import { EmptyAgendaState } from '@/components/calendar/EmptyAgendaState';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { CompleteTrainingDialog } from '@/components/trainings/CompleteTrainingDialog';
 import { FreeSlotIndicator } from '@/components/calendar/FreeSlotIndicator';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 
 type ViewMode = 'agenda' | 'week';
@@ -213,16 +204,7 @@ export default function CalendarPage() {
     setCompleteDialog({ open: true, session });
   };
 
-  const confirmComplete = async () => {
-    if (!completeDialog.session) return;
-    
-    await updateTraining.mutateAsync({
-      id: completeDialog.session.id,
-      input: { status: 'completed' },
-      trainingPrices,
-    });
-    setCompleteDialog({ open: false, session: null });
-  };
+  // confirmComplete is now handled by CompleteTrainingDialog
 
   const handleCancel = (session: any) => {
     setCancelDialog({ open: true, session });
@@ -489,28 +471,12 @@ export default function CalendarPage() {
         defaultDate={selectedDateTime || undefined}
       />
 
-      {/* Complete Dialog */}
-      <AlertDialog open={completeDialog.open} onOpenChange={(open) => setCompleteDialog({ open, session: open ? completeDialog.session : null })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Dokončit trénink?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {completeDialog.session && (
-                <>
-                  Trénink s {getClient(completeDialog.session.client_id)?.name || 'klientem'} bude označen jako dokončený.
-                  Kredit bude automaticky stržen.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmComplete} className="bg-success hover:bg-success/90">
-              Dokončit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Complete Training Dialog - with participant payments */}
+      <CompleteTrainingDialog
+        open={completeDialog.open}
+        onOpenChange={(open) => setCompleteDialog({ open, session: open ? completeDialog.session : null })}
+        session={completeDialog.session}
+      />
 
       {/* Cancel Dialog */}
       <CancelTrainingDialog
