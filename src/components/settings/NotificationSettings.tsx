@@ -10,7 +10,9 @@ import {
   CreditCard, 
   Dumbbell, 
   MessageSquare, 
-  Cake
+  Cake,
+  Medal,
+  Trophy
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -26,6 +28,9 @@ export interface NotificationPreferences {
   trainingReminders: boolean;
   incompleteTrainingAlerts: boolean;
   
+  // Personal Records (PR)
+  prAlerts: boolean;
+  
   // Feedback
   feedbackAlerts: boolean;
   feedbackRedFlags: boolean;
@@ -34,6 +39,7 @@ export interface NotificationPreferences {
   birthdayAlerts: boolean;
   milestoneAlerts: boolean;
   anniversaryAlerts: boolean;
+  inactivityAlerts: boolean;
   
   // Chat
   chatNotifications: boolean;
@@ -45,11 +51,13 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   packageAlerts: true,
   trainingReminders: true,
   incompleteTrainingAlerts: true,
+  prAlerts: true,
   feedbackAlerts: true,
   feedbackRedFlags: true,
   birthdayAlerts: true,
   milestoneAlerts: true,
   anniversaryAlerts: false,
+  inactivityAlerts: true,
   chatNotifications: true,
 };
 
@@ -144,6 +152,17 @@ export function NotificationSettings() {
       ],
     },
     {
+      title: language === 'cs' ? "Osobní rekordy (PR)" : "Personal Records (PR)",
+      icon: Medal,
+      items: [
+        {
+          key: "prAlerts",
+          label: language === 'cs' ? "Nová PR" : "New PRs",
+          description: language === 'cs' ? "Notifikace při dosažení nového osobního rekordu klientem" : "Notifications when client achieves a new personal record",
+        },
+      ],
+    },
+    {
       title: "Zpětná vazba",
       icon: MessageSquare,
       items: [
@@ -169,14 +188,25 @@ export function NotificationSettings() {
           description: language === 'cs' ? "Připomenutí narozenin klientů" : "Client birthday reminders",
         },
         {
-          key: "milestoneAlerts",
-          label: language === 'cs' ? "Milníky" : "Milestones",
-          description: language === 'cs' ? "Úspěchy klientů (100, 500, 1000 tréninků)" : "Client achievements (100, 500, 1000 trainings)",
-        },
-        {
           key: "anniversaryAlerts",
           label: language === 'cs' ? "Výročí" : "Anniversaries",
           description: language === 'cs' ? "Výročí spolupráce s klientem" : "Client collaboration anniversaries",
+        },
+        {
+          key: "inactivityAlerts",
+          label: language === 'cs' ? "Neaktivita" : "Inactivity",
+          description: language === 'cs' ? "Upozornění na dlouho neaktivní klienty" : "Alerts for inactive clients",
+        },
+      ],
+    },
+    {
+      title: language === 'cs' ? "Úspěchy & Milníky" : "Achievements & Milestones",
+      icon: Trophy,
+      items: [
+        {
+          key: "milestoneAlerts",
+          label: language === 'cs' ? "Milníky tréninků" : "Training milestones",
+          description: language === 'cs' ? "Úspěchy klientů (5, 10, 50, 100, 500 tréninků)" : "Client achievements (5, 10, 50, 100, 500 trainings)",
         },
       ],
     },
