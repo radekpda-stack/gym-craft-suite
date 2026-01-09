@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Settings2, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Loader2, Settings2, ChevronDown, AlertTriangle, Users } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useFeedbackSettings, FeedbackQuestionsConfig } from '@/hooks/useFeedbackRequests';
 import { FeedbackQuestionsEditor } from './FeedbackQuestionsEditor';
-
+import { ClientFeedbackList } from './ClientFeedbackList';
 const DEFAULT_QUESTIONS_CONFIG: FeedbackQuestionsConfig = {
   questions: [
     { id: 'soreness', type: 'slider', label: 'Svalovka', emoji: '💪', minLabel: 'Žádná', maxLabel: 'Extrémní', min: 1, max: 10, defaultValue: 5, enabled: true, order: 0 },
@@ -101,6 +102,22 @@ export function FeedbackSettings() {
 
   return (
     <div className="space-y-6">
+      {/* === KLIENTI A FEEDBACK === */}
+      <Card className="glass">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Klienti a feedback
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Spravujte, kteří klienti se zobrazují v přehledu feedbacků po tréninku.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ClientFeedbackList />
+        </CardContent>
+      </Card>
+
       {/* === ZÁKLADNÍ NASTAVENÍ === */}
       <div className="space-y-4">
         {/* Auto-send toggle */}

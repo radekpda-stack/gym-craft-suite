@@ -20,6 +20,8 @@ import {
   MailOpen,
   Settings2,
   Trash2,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -34,6 +37,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +62,7 @@ import { useClients } from '@/hooks/useClients';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { usePendingFeedbackTrainings } from '@/hooks/usePendingFeedbackTrainings';
 import { useCreateFeedbackRequest, useDeleteFeedbackRequest, useDeleteMultipleFeedbackRequests } from '@/hooks/useFeedbackRequests';
+import { useToggleClientFeedback } from '@/hooks/useToggleClientFeedback';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { FeedbackTrendsOverview } from '@/components/feedback/FeedbackTrendsOverview';
@@ -85,6 +104,32 @@ export default function FeedbackOverview() {
   const createFeedbackRequest = useCreateFeedbackRequest();
   const deleteFeedbackRequest = useDeleteFeedbackRequest();
   const deleteMultipleFeedbackRequests = useDeleteMultipleFeedbackRequests();
+  const toggleClientFeedback = useToggleClientFeedback();
+  
+  // Toggle feedback confirmation dialog
+  const [feedbackToggleDialog, setFeedbackToggleDialog] = useState<{
+    open: boolean;
+    clientId: string;
+    clientName: string;
+    newValue: boolean;
+  }>({ open: false, clientId: '', clientName: '', newValue: false });
+
+  const handleFeedbackToggle = (clientId: string, clientName: string, currentValue: boolean) => {
+    setFeedbackToggleDialog({
+      open: true,
+      clientId,
+      clientName,
+      newValue: !currentValue,
+    });
+  };
+
+  const confirmFeedbackToggle = () => {
+    toggleClientFeedback.mutate({
+      clientId: feedbackToggleDialog.clientId,
+      enabled: feedbackToggleDialog.newValue,
+    });
+    setFeedbackToggleDialog({ open: false, clientId: '', clientName: '', newValue: false });
+  };
 
   // Handle status card click
   const handleStatusClick = (status: 'to_send' | 'pending' | 'completed' | 'expired' | 'red_flags') => {
@@ -518,7 +563,24 @@ export default function FeedbackOverview() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0">
+                              {/* Feedback toggle */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center">
+                                    <Switch
+                                      checked={true}
+                                      onCheckedChange={() => handleFeedbackToggle(training.client_id, training.client_name, true)}
+                                      disabled={toggleClientFeedback.isPending}
+                                      className="scale-75"
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p>Vypnout feedback pro {training.client_name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -843,6 +905,44 @@ export default function FeedbackOverview() {
         } : undefined}
         bulkCount={isBulkDelete ? selectedIds.size : undefined}
       />
+
+      {/* Feedback toggle confirmation dialog */}
+      <AlertDialog 
+        open={feedbackToggleDialog.open} 
+        onOpenChange={(open) => !open && setFeedbackToggleDialog(prev => ({ ...prev, open: false }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {feedbackToggleDialog.newValue ? (
+                <Bell className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <BellOff className="w-5 h-5 text-muted-foreground" />
+              )}
+              {feedbackToggleDialog.newValue ? 'Zapnout feedback?' : 'Vypnout feedback?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {feedbackToggleDialog.newValue ? (
+                <>
+                  Klient <strong>{feedbackToggleDialog.clientName}</strong> se bude zobrazovat v přehledu feedbacků 
+                  po každém tréninku.
+                </>
+              ) : (
+                <>
+                  Klient <strong>{feedbackToggleDialog.clientName}</strong> se už nebude zobrazovat v přehledu feedbacků 
+                  a nebudete vyzváni k odeslání dotazníku. Můžete to kdykoliv změnit v Nastavení.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmFeedbackToggle}>
+              {feedbackToggleDialog.newValue ? 'Zapnout' : 'Vypnout'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
