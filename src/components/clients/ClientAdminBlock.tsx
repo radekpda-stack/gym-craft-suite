@@ -11,6 +11,7 @@ import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog
 import { PaymentModeSelector, PaymentMode } from './PaymentModeSelector';
 import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 import { CustomPriceSection } from './CustomPriceSection';
+import { LegacyPriceFixSection } from './LegacyPriceFixSection';
 import { Client, useUpdatePaymentMode } from '@/hooks/useClients';
 
 interface ClientAdminBlockProps {
@@ -84,6 +85,11 @@ export function ClientAdminBlock({
                 onChange={handlePaymentModeChange}
                 disabled={updatePaymentMode.isPending}
               />
+            </div>
+
+            <div className="border-t border-border/50 pt-4">
+              {/* Legacy Price Fix Section */}
+              <LegacyPriceFixSection clientId={client.id} />
             </div>
 
             {/* Actions */}
