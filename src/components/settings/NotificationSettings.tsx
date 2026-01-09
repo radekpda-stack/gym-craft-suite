@@ -5,20 +5,15 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useLanguage } from "@/lib/i18n";
-import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { 
   Loader2, 
   CreditCard, 
   Dumbbell, 
   MessageSquare, 
-  Cake, 
-  Bell,
-  BellOff,
-  BellRing,
-  AlertCircle
+  Cake
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+
 export interface NotificationPreferences {
   // Global
   emailNotifications: boolean;
@@ -72,19 +67,9 @@ export function NotificationSettings() {
   const { language } = useLanguage();
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const { 
-    isSupported: isPushSupported, 
-    isSubscribed: isPushSubscribed, 
-    isLoading: isPushLoading,
-    permission: pushPermission,
-    subscribe: subscribeToPush,
-    unsubscribe: unsubscribeFromPush,
-    vapidKeyConfigured
-  } = usePushSubscription();
   
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
   const [hasChanges, setHasChanges] = useState(false);
-  const [pushActionLoading, setPushActionLoading] = useState(false);
 
   useEffect(() => {
     if (settings?.notification_preferences) {
@@ -107,19 +92,6 @@ export function NotificationSettings() {
         onSuccess: () => setHasChanges(false),
       }
     );
-  };
-
-  const handlePushToggle = async () => {
-    setPushActionLoading(true);
-    try {
-      if (isPushSubscribed) {
-        await unsubscribeFromPush();
-      } else {
-        await subscribeToPush();
-      }
-    } finally {
-      setPushActionLoading(false);
-    }
   };
 
   const categories: NotificationCategory[] = [
@@ -220,90 +192,6 @@ export function NotificationSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Web Push Notifications Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BellRing className="w-4 h-4 text-primary" />
-            </div>
-            <CardTitle className="text-base">
-              {language === 'cs' ? 'Push notifikace' : 'Push Notifications'}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!isPushSupported ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {language === 'cs' 
-                  ? 'Push notifikace nejsou v tomto prohlížeči podporovány.'
-                  : 'Push notifications are not supported in this browser.'}
-              </AlertDescription>
-            </Alert>
-          ) : !vapidKeyConfigured ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {language === 'cs' 
-                  ? 'Push notifikace nejsou nakonfigurovány.'
-                  : 'Push notifications are not configured.'}
-              </AlertDescription>
-            </Alert>
-          ) : pushPermission === 'denied' ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {language === 'cs' 
-                  ? 'Push notifikace jsou zablokované v prohlížeči. Povolte je v nastavení prohlížeče.'
-                  : 'Push notifications are blocked in the browser. Enable them in browser settings.'}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">
-                  {language === 'cs' ? 'Dostávat push notifikace' : 'Receive push notifications'}
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {isPushSubscribed 
-                    ? (language === 'cs' ? 'Notifikace jsou povoleny' : 'Notifications are enabled')
-                    : (language === 'cs' ? 'Povolit notifikace v prohlížeči' : 'Enable browser notifications')}
-                </p>
-              </div>
-              <Button 
-                variant={isPushSubscribed ? "outline" : "default"}
-                size="sm"
-                onClick={handlePushToggle}
-                disabled={pushActionLoading || isPushLoading}
-              >
-                {pushActionLoading || isPushLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isPushSubscribed ? (
-                  <>
-                    <BellOff className="h-4 w-4 mr-2" />
-                    {language === 'cs' ? 'Vypnout' : 'Disable'}
-                  </>
-                ) : (
-                  <>
-                    <Bell className="h-4 w-4 mr-2" />
-                    {language === 'cs' ? 'Povolit' : 'Enable'}
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-          
-          <Separator />
-          
-          <p className="text-xs text-muted-foreground">
-            {language === 'cs' 
-              ? 'Push notifikace vás upozorní na nové osobní rekordy klientů i když aplikace není otevřená.'
-              : 'Push notifications will alert you about new client personal records even when the app is closed.'}
-          </p>
-        </CardContent>
-      </Card>
 
       {categories.map((category) => {
         const CategoryIcon = category.icon;
