@@ -37,7 +37,6 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
 import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
-import { TrainingPresetSelector } from '@/components/trainings/TrainingPresetSelector';
 import { RPEInputField } from '@/components/trainings/RPEInputField';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
@@ -451,43 +450,7 @@ export function TrainingDetailView({
       )}
 
       {/* TRAINING TYPE & TAGS - Stepper workflow */}
-      <div className="glass rounded-xl p-4 space-y-4">
-        {/* Rychlé sady */}
-        <TrainingPresetSelector
-          clientId={training.client_id}
-          onApplyPreset={(preset) => {
-            // Aplikovat preset
-            if (preset.trainingType && onFieldUpdate) {
-              onFieldUpdate('training_type', preset.trainingType);
-            }
-            // Sloučit tagy
-            const newTagIds = [
-              ...preset.focusTagIds,
-              ...(preset.intensityTagId ? [preset.intensityTagId] : []),
-              ...preset.bodyPartTagIds,
-            ];
-            setSelectedTagIds(newTagIds);
-            if (onTagsChange) {
-              onTagsChange(newTagIds);
-            }
-            // Nastavit RPE
-            if (preset.defaultRPE) {
-              setCoachRPE(preset.defaultRPE);
-              if (onFieldUpdate) {
-                onFieldUpdate('rpe', String(preset.defaultRPE));
-              }
-            }
-          }}
-          currentState={{
-            trainingType: training.training_type,
-            focusTagIds,
-            intensityTagId,
-            bodyPartTagIds,
-            coachRPE,
-          }}
-        />
-
-        {/* Stepper pro výběr typu, zaměření, intenzity, partií a RPE */}
+      <div className="glass rounded-xl p-4">
         <TrainingTagStepper
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {
@@ -532,8 +495,6 @@ export function TrainingDetailView({
               await onFieldUpdate('rpe', String(rpe));
             }
           }}
-          clientRPE={training.client_rpe}
-          trainingLoad={training.training_load}
           trainingStatus={training.status as 'scheduled' | 'completed' | 'canceled'}
         />
       </div>
