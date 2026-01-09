@@ -365,6 +365,54 @@ export type Database = {
         }
         Relationships: []
       }
+      business_health_baselines: {
+        Row: {
+          baseline_value: number | null
+          confidence: number | null
+          created_at: string | null
+          data_points_count: number | null
+          id: string
+          last_computed_at: string | null
+          metric_type: string
+          seasonality_factor: Json | null
+          standard_deviation: number | null
+          updated_at: string | null
+          user_id: string
+          weight: number | null
+          window_weeks: number | null
+        }
+        Insert: {
+          baseline_value?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          data_points_count?: number | null
+          id?: string
+          last_computed_at?: string | null
+          metric_type: string
+          seasonality_factor?: Json | null
+          standard_deviation?: number | null
+          updated_at?: string | null
+          user_id: string
+          weight?: number | null
+          window_weeks?: number | null
+        }
+        Update: {
+          baseline_value?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          data_points_count?: number | null
+          id?: string
+          last_computed_at?: string | null
+          metric_type?: string
+          seasonality_factor?: Json | null
+          standard_deviation?: number | null
+          updated_at?: string | null
+          user_id?: string
+          weight?: number | null
+          window_weeks?: number | null
+        }
+        Relationships: []
+      }
       calendar_ics_events: {
         Row: {
           additional_matched_client_ids: string[] | null
