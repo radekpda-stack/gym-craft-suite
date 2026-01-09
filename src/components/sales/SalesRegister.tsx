@@ -30,6 +30,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 type SortOption = 'best_selling' | 'least_selling' | 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
 
+// Helper to normalize text for search (remove diacritics)
+const normalizeText = (text: string) => 
+  text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'best_selling', label: 'Nejprodávanější' },
   { value: 'least_selling', label: 'Nejméně prodávané' },
@@ -145,10 +148,10 @@ export function SalesRegister() {
   const groupedProducts = useMemo(() => {
     let result = [...products];
 
-    // Search filter
+    // Search filter (case-insensitive, normalize diacritics)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(p => p.name.toLowerCase().includes(query));
+      const query = normalizeText(searchQuery.trim());
+      result = result.filter(p => normalizeText(p.name).includes(query));
     }
 
     // Category filter
