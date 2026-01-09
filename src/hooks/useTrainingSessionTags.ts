@@ -222,6 +222,15 @@ export function useUpdateTrainingSessionTags() {
       trainingSessionId: string; 
       tagIds: string[];
     }) => {
+      // Validate that trainingSessionId is a valid UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!trainingSessionId || !uuidRegex.test(trainingSessionId)) {
+        throw new Error(`Invalid training session ID: ${trainingSessionId}`);
+      }
+
+      // Filter out any invalid tag IDs (must be valid UUIDs)
+      const validTagIds = tagIds.filter(id => id && uuidRegex.test(id));
+
       // Delete all existing tags for this session
       const { error: deleteError } = await supabase
         .from("training_session_tags")
@@ -231,9 +240,9 @@ export function useUpdateTrainingSessionTags() {
       if (deleteError) throw deleteError;
 
       // Insert new tags if any
-      if (tagIds.length === 0) return [];
+      if (validTagIds.length === 0) return [];
 
-      const insertData = tagIds.map(tagId => ({
+      const insertData = validTagIds.map(tagId => ({
         training_session_id: trainingSessionId,
         tag_id: tagId,
       }));
