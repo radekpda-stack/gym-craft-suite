@@ -115,10 +115,12 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         const volume = weight * reps * sets;
         const timeSeconds = entry.time_seconds;
         const timeMs = (entry as any).time_ms as number | null | undefined;
+        const distanceMeters = (entry as any).distance_meters as number | null | undefined;
 
         // Determine entry type
         const hasTime = !!timeSeconds && timeSeconds > 0;
         const hasWeight = weight > 0;
+        const hasDistance = !!distanceMeters && distanceMeters > 0;
 
         // Get performance display using fallback logic
         const performanceDisplay = getPerformanceDisplay({
@@ -136,16 +138,18 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
 
         return {
           id: entry.id,
-          type: hasTime ? ('time' as const) : ('strength' as const),
+          type: hasTime ? ('time' as const) : hasDistance ? ('jump' as const) : ('strength' as const),
           date: entry.date,
           clientId: entry.client_id,
           clientName: (entry.clients as any)?.name || 'Neznámý',
           weight: hasWeight ? weight : null,
           reps: hasWeight ? reps : null,
-          sets: hasWeight ? sets : null,
+          sets: hasWeight || hasDistance ? sets : null,
           volume: hasWeight ? volume : null,
           timeSeconds: hasTime ? timeSeconds : null,
           timeMs: hasTime ? (timeMs ?? null) : null,
+          distanceMeters: hasDistance ? distanceMeters : null,
+          distanceCm: hasDistance ? Math.round((distanceMeters || 0) * 100) : null,
           notes: entry.notes,
           // NOTE: we will re-compute PR in UI so edits reflect immediately
           isPR: false,
@@ -172,8 +176,16 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       for (const [, list] of groups) {
         const timeRows = list.filter(r => r.timeSeconds && r.timeSeconds > 0);
         const weightRows = list.filter(r => r.weight && r.weight > 0);
+        const distanceRows = list.filter(r => r.distanceMeters && r.distanceMeters > 0);
 
-        if (isTimeBased && timeRows.length) {
+        // Priority: Jump (distance) > Time > Strength
+        if (distanceRows.length && metricCategory === 'jump') {
+          // For jumps: higher distance is better
+          const best = distanceRows
+            .map(r => ({ id: r.id, v: r.distanceMeters!, date: r.date }))
+            .sort((a, b) => b.v - a.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+          if (best) prIds.add(best.id);
+        } else if (isTimeBased && timeRows.length) {
           const best = timeRows
             .map(r => ({ id: r.id, v: r.timeMs ?? (r.timeSeconds! * 1000), date: r.date }))
             .sort((a, b) => a.v - b.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
@@ -191,8 +203,9 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       // Check if this exercise is a pull-up type
       const exerciseName = exerciseData?.name_cs || exerciseData?.name || '';
       const isPullUp = isPullUpExercise(exerciseName);
+      const isJumpExercise = metricCategory === 'jump';
 
-      return { rows, isTimeBased, metricCategory, isPullUp };
+      return { rows, isTimeBased, isJumpExercise, metricCategory, isPullUp };
     },
     enabled: !!exerciseId,
   });
@@ -229,6 +242,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   }
 
   const isTimeBased = data.isTimeBased;
+  const isJumpExercise = data.isJumpExercise;
 
   return (
     <>
@@ -263,7 +277,14 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
               <TableRow>
                 <TableHead className="w-[80px] sm:w-[100px]">Datum</TableHead>
                 {!clientId && <TableHead className="min-w-[80px]">Klient</TableHead>}
-                {isTimeBased ? (
+                {isJumpExercise ? (
+                  <>
+                    <TableHead className="text-right min-w-[60px]">Pokusy</TableHead>
+                    <TableHead className="text-right min-w-[70px]">Vzdálenost</TableHead>
+                    <TableHead className="text-center w-[45px] hidden sm:table-cell">RPE</TableHead>
+                    <TableHead className="max-w-[100px] hidden lg:table-cell">Pozn.</TableHead>
+                  </>
+                ) : isTimeBased ? (
                   <>
                     <TableHead className="text-right min-w-[70px]">Čas</TableHead>
                     <TableHead className="text-right min-w-[80px] hidden sm:table-cell">Tempo</TableHead>
@@ -299,7 +320,26 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   {!clientId && (
                     <TableCell>{row.clientName}</TableCell>
                   )}
-                  {isTimeBased ? (
+                  {isJumpExercise ? (
+                    <>
+                      <TableCell className="text-right text-muted-foreground whitespace-nowrap">
+                        {row.sets ? `${row.sets}×` : '1×'}
+                      </TableCell>
+                      <TableCell className="text-right font-medium whitespace-nowrap">
+                        {row.distanceCm ? `${row.distanceCm} cm` : '-'}
+                      </TableCell>
+                      <TableCell className="text-center hidden sm:table-cell">
+                        {row.rpe ? (
+                          <Badge className={cn("text-xs px-1.5 py-0.5", getRpeBgColor(row.rpe))}>
+                            {row.rpe}
+                          </Badge>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[100px] truncate text-muted-foreground text-sm hidden lg:table-cell">
+                        {row.notes || '-'}
+                      </TableCell>
+                    </>
+                  ) : isTimeBased ? (
                     <>
                       <TableCell className="text-right font-medium whitespace-nowrap">
                         {row.timeMs ? formatTimeDisplay(row.timeSeconds || 0, row.timeMs) : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}
@@ -336,7 +376,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       </TableCell>
                       <TableCell className="text-right font-medium whitespace-nowrap">
                         <div className="flex flex-col items-end gap-0.5">
-                          <span>{row.weight ? `${row.weight} kg` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}</span>
+                          <span>{row.weight ? `${row.weight} kg` : row.distanceCm ? `${row.distanceCm} cm` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}</span>
                           {data?.isPullUp && row.assistanceBands && row.assistanceBands.length > 0 && (
                             <AssistanceBandBadges bands={row.assistanceBands} className="justify-end" />
                           )}
