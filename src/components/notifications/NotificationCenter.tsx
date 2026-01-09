@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -48,6 +48,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   package_expiring: Clock,
   inactivity_warning: AlertTriangle,
   training_streak: Trophy,
+  diagnostic_completed: Stethoscope,
 };
 
 const notificationColors: Record<string, string> = {

@@ -78,6 +78,7 @@ const ClientPortalRewards = lazy(() => import("./pages/client-portal/ClientPorta
 const ClientPortalPurchases = lazy(() => import("./pages/client-portal/ClientPortalPurchases"));
 const ClientPortalHomework = lazy(() => import("./pages/client-portal/ClientPortalHomework"));
 const ClientPortalChat = lazy(() => import("./pages/client-portal/ClientPortalChat"));
+const ClientPortalDiagnostic = lazy(() => import("./pages/client-portal/ClientPortalDiagnostic"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -142,6 +143,7 @@ const App = () => (
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
                 <Route path="chat" element={<ClientPortalChat />} />
+                <Route path="diagnostic" element={<ClientPortalDiagnostic />} />
               </Route>
               
               {/* Legacy Client Portal Routes */}
