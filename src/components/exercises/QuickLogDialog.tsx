@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity, Star, Clock } from 'lucide-react';
+import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity, Star, Clock, Ruler } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -183,7 +183,8 @@ export function QuickLogDialog({
     ? detectExerciseMetricCategory(selectedExercise.name_cs || selectedExercise.name || '', selectedExercise.category)
     : 'strength';
 
-  const showCardioMetrics = exerciseCategory !== 'strength';
+  const showCardioMetrics = exerciseCategory !== 'strength' && exerciseCategory !== 'jump';
+  const isJumpExercise = exerciseCategory === 'jump';
   const rpeValue = form.watch('rpe');
   
   // Check if selected exercise is a pull-up type (for assistance bands)
@@ -696,6 +697,77 @@ export function QuickLogDialog({
                     />
                   </CollapsibleContent>
                 </Collapsible>
+              </div>
+            ) : isJumpExercise ? (
+              /* Jump exercises - distance in cm */
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="distance_meters"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Ruler className="w-3 h-3" />
+                        Vzdálenost / Výška (cm) *
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="např. 250"
+                          value={field.value ? field.value * 100 : ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) / 100 : null)}
+                          className="h-11"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Zadejte vzdálenost skoku v centimetrech
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Sets for jumps */}
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="reps"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Počet pokusů</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            placeholder="1"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sets"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Série</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             ) : (
               /* Strength */

@@ -1,6 +1,6 @@
 // Exercise metrics utilities - performance display, formatting, and fallback logic
 
-export type ExerciseMetricCategory = 'rower' | 'skierg' | 'treadmill' | 'bike' | 'cardio' | 'strength';
+export type ExerciseMetricCategory = 'rower' | 'skierg' | 'treadmill' | 'bike' | 'cardio' | 'jump' | 'strength';
 
 /**
  * Detect the metric category from exercise name or category
@@ -11,6 +11,12 @@ export function detectExerciseMetricCategory(
 ): ExerciseMetricCategory {
   const nameLower = exerciseName.toLowerCase();
   const categoryLower = (exerciseCategory || '').toLowerCase();
+  
+  // Jump exercises (skok do dálky, skok do výšky, etc.)
+  if (nameLower.includes('skok') || nameLower.includes('jump') ||
+      (categoryLower.includes('plyometrics') && nameLower.includes('jump'))) {
+    return 'jump';
+  }
   
   // Rower / Veslo
   if (nameLower.includes('veslo') || nameLower.includes('rower') || nameLower.includes('veslování')) {
