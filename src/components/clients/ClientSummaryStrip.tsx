@@ -12,6 +12,7 @@ import {
   Calendar,
   TrendingUp,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,9 @@ interface ClientSummaryStripProps {
   isSharedBudget: boolean;
   budgetGroupName?: string | null;
   sessionsThisMonth: number;
+  unpaidCount?: number;
+  unpaidAmount?: number;
+  paymentMode?: string | null;
   onAddCredit: () => void;
   onAddTraining: () => void;
 }
@@ -38,6 +42,9 @@ export function ClientSummaryStrip({
   isSharedBudget,
   budgetGroupName,
   sessionsThisMonth,
+  unpaidCount = 0,
+  unpaidAmount = 0,
+  paymentMode,
   onAddCredit,
   onAddTraining,
 }: ClientSummaryStripProps) {
@@ -48,27 +55,42 @@ export function ClientSummaryStrip({
   const oldCreditBalance = creditSummary?.old_balance || 0;
   const newCreditBalance = creditSummary?.new_balance || 0;
   const hasOldAndNew = oldCreditBalance > 0 && newCreditBalance > 0;
+  
+  // For cash_only clients, "debt" is the unpaid amount
+  const isCashOnly = paymentMode === 'cash_only';
+  const hasDebt = unpaidCount > 0;
+  
+  // Effective balance for display (for cash_only, show negative unpaid amount as "debt")
+  const displayBalance = isCashOnly ? -unpaidAmount : creditBalance;
 
   const getCreditColor = () => {
-    if (creditBalance <= 0) return 'text-destructive';
-    if (creditBalance < 800) return 'text-amber-500';
+    if (hasDebt) return 'text-destructive';
+    if (displayBalance <= 0) return 'text-destructive';
+    if (displayBalance < 800) return 'text-amber-500';
     return 'text-success';
   };
 
   const getCreditBg = () => {
-    if (creditBalance <= 0) return 'bg-destructive/10 border-destructive/30';
-    if (creditBalance < 800) return 'bg-amber-500/10 border-amber-500/30';
+    if (hasDebt) return 'bg-destructive/10 border-destructive/30';
+    if (displayBalance <= 0) return 'bg-destructive/10 border-destructive/30';
+    if (displayBalance < 800) return 'bg-amber-500/10 border-amber-500/30';
     return 'bg-success/10 border-success/30';
   };
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {/* Credit Card */}
+      {/* Credit/Debt Card */}
       <div className={cn('rounded-xl p-3 border', getCreditBg())}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5 text-muted-foreground">
-            <CreditCard className="w-4 h-4" />
-            <span className="text-xs font-medium">Kredit</span>
+            {hasDebt ? (
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+            ) : (
+              <CreditCard className="w-4 h-4" />
+            )}
+            <span className="text-xs font-medium">
+              {isCashOnly ? (hasDebt ? 'Dluh' : 'Stav') : 'Kredit'}
+            </span>
           </div>
           {isSharedBudget && (
             <Tooltip>
@@ -85,23 +107,34 @@ export function ClientSummaryStrip({
           )}
         </div>
         <div className={cn('text-xl font-bold', getCreditColor())}>
-          {formatCurrency(creditBalance)}
+          {isCashOnly && hasDebt ? (
+            <>-{formatCurrency(unpaidAmount)}</>
+          ) : (
+            formatCurrency(creditBalance)
+          )}
         </div>
-        {hasOldAndNew && (
+        {hasDebt && (
+          <div className="text-[10px] text-destructive mt-1 font-medium">
+            {unpaidCount}× nezaplaceno
+          </div>
+        )}
+        {!isCashOnly && hasOldAndNew && !hasDebt && (
           <div className="flex gap-2 text-[10px] text-muted-foreground mt-1">
             <span>Starý: {formatCurrency(oldCreditBalance)}</span>
             <span>Nový: {formatCurrency(newCreditBalance)}</span>
           </div>
         )}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full mt-2 h-7 text-xs gap-1"
-          onClick={onAddCredit}
-        >
-          <Plus className="w-3 h-3" />
-          Dobít kredit
-        </Button>
+        {!isCashOnly && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full mt-2 h-7 text-xs gap-1"
+            onClick={onAddCredit}
+          >
+            <Plus className="w-3 h-3" />
+            Dobít kredit
+          </Button>
+        )}
       </div>
 
       {/* Trainings This Month */}
