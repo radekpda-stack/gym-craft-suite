@@ -1,6 +1,6 @@
 /**
  * Performance Dashboard Card
- * Shows: PRs count, monthly trainings, feedback rating
+ * Shows: PRs count, monthly trainings, feedback rating, training load
  */
 import { Trophy, Activity, Star } from 'lucide-react';
 import { ClientDashboardCard, DashboardMetric } from '../ClientDashboardCard';
@@ -10,6 +10,7 @@ import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsCard';
 import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
+import { ClientTrainingLoadCard } from '@/components/clients/ClientTrainingLoadCard';
 
 interface PerformanceCardProps {
   clientId: string;
@@ -60,6 +61,10 @@ export function PerformanceCard({
       isFavorite={isFavorite}
     >
       <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">Zátěž a náročnost</h4>
+          <ClientTrainingLoadCard clientId={clientId} className="border-0 shadow-none" />
+        </div>
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Osobní rekordy</h4>
           <ClientPRsCard clientId={clientId} />
