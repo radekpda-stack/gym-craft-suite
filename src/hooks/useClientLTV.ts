@@ -49,7 +49,7 @@ export function useClientLTV(clientId: string | undefined) {
       const topupTransactions = transactions?.filter(t => t.type === 'credit_added' && t.amount > 0) || [];
       const creditTopups = topupTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-      // Total revenue (trainings + products)
+      // Total revenue (lifetime) = trainings + products
       const totalRevenue = trainingRevenue + productRevenue;
 
       // Get first and last training dates
@@ -65,17 +65,13 @@ export function useClientLTV(clientId: string | undefined) {
         monthsActive = Math.max(1, differenceInMonths(new Date(), new Date(firstTrainingDate)) + 1);
       }
 
-      // Average per training
-      const avgRevenuePerTraining = totalTrainings > 0 ? Math.round(totalRevenue / totalTrainings) : 0;
-      
-      // Average trainings per month
+      // Averages (for "Průměr/měsíc" we intentionally use trainings only,
+      // otherwise product purchases would inflate the value and it wouldn't match "X tréninků × cena")
+      const avgRevenuePerTraining = totalTrainings > 0 ? Math.round(trainingRevenue / totalTrainings) : 0;
       const avgTrainingsPerMonth = totalTrainings / Math.max(monthsActive, 1);
-      
-      // Average revenue per month = average trainings per month × average price per training
-      // This correctly reflects: if client does 5 trainings/month at 800 Kč = 4000 Kč/month
       const avgRevenuePerMonth = Math.round(avgTrainingsPerMonth * avgRevenuePerTraining);
 
-      // Projected annual value (based on average monthly revenue)
+      // Projected annual value (based on average monthly training revenue)
       const projectedAnnualValue = avgRevenuePerMonth * 12;
 
       return {
