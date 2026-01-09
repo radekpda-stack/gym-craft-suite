@@ -118,7 +118,7 @@ export function useCompleteTrainingAtomic() {
           .eq('client_id', participant.client_id);
       }
 
-      // NEW: Use FIFO credit lot deduction for credit payments
+      // NEW: Use FIFO credit lot deduction for credit payments (only if client has credit lots)
       const creditParticipants = params.participants.filter(p => p.payment_method === 'credit');
       const participantCount = params.participants.length;
       const serviceId = getServiceIdForParticipants(participantCount);
@@ -127,21 +127,33 @@ export function useCompleteTrainingAtomic() {
       const fifoDeductionErrors: string[] = [];
 
       for (const participant of creditParticipants) {
-        // Call the FIFO deduction RPC for each credit participant
-        const { data: fifoResult, error: fifoError } = await supabase.rpc('rpc_deduct_credit_fifo', {
-          p_client_id: participant.client_id,
-          p_training_session_id: params.sessionId,
-          p_service_id: serviceId,
-          p_user_id: user.id,
-        });
+        // First check if client has any credit lots - only use FIFO for clients with lots
+        const { data: clientLots } = await supabase
+          .from('credit_lots')
+          .select('id')
+          .eq('client_id', participant.client_id)
+          .eq('user_id', user.id)
+          .gt('balance_czk_remaining', 0)
+          .limit(1);
 
-        if (fifoError) {
-          console.error('FIFO deduction error:', fifoError);
-          fifoDeductionErrors.push(participant.client_id);
-        } else if (fifoResult && typeof fifoResult === 'object' && 'success' in fifoResult && !fifoResult.success) {
-          console.warn('FIFO deduction failed:', (fifoResult as any).error);
-          fifoDeductionErrors.push(participant.client_id);
+        // Only call FIFO deduction if client has credit lots
+        if (clientLots && clientLots.length > 0) {
+          const { data: fifoResult, error: fifoError } = await supabase.rpc('rpc_deduct_credit_fifo', {
+            p_client_id: participant.client_id,
+            p_training_session_id: params.sessionId,
+            p_service_id: serviceId,
+            p_user_id: user.id,
+          });
+
+          if (fifoError) {
+            console.error('FIFO deduction error:', fifoError);
+            fifoDeductionErrors.push(participant.client_id);
+          } else if (fifoResult && typeof fifoResult === 'object' && 'success' in fifoResult && !fifoResult.success) {
+            console.warn('FIFO deduction failed:', (fifoResult as any).error);
+            fifoDeductionErrors.push(participant.client_id);
+          }
         }
+        // If client has no lots, credit deduction was already handled by main RPC
 
         // Check if client's OLD lot is now depleted and they should switch to new pricing
         const { data: clientData } = await supabase
