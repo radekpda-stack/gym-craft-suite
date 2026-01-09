@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Search, Dumbbell, Trophy, Heart } from 'lucide-react';
+import { Plus, X, Search, Dumbbell, Trophy, Heart, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Command,
   CommandEmpty,
@@ -104,6 +105,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetData[]>([{ ...DEFAULT_SET }]);
   const [assistanceBands, setAssistanceBands] = useState<BandType[]>([]);
+  const [isBodyweightOnly, setIsBodyweightOnly] = useState(true);
   
   // State for time/pace input as strings
   const [timeInputs, setTimeInputs] = useState<string[]>(['']);
@@ -138,6 +140,9 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
     setTimeInputs(['']);
     setPaceInputs(['']);
     setAssistanceBands([]);
+    // Reset bodyweight toggle based on exercise type
+    const newExerciseName = exercise.name_cs || exercise.name || '';
+    setIsBodyweightOnly(isPullUpExercise(newExerciseName));
   };
 
   const handleAddSet = () => {
@@ -324,11 +329,23 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
 
       {/* Assistance Bands - for pull-ups, chin-ups, dips */}
       {showAssistanceBands && (
-        <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+        <div className="space-y-3 p-3 bg-secondary/50 rounded-lg border border-border">
           <AssistanceBandSelector
             value={assistanceBands}
             onChange={setAssistanceBands}
           />
+          
+          {/* Bodyweight only toggle */}
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">Pouze vlastní váha</span>
+            </div>
+            <Switch
+              checked={isBodyweightOnly}
+              onCheckedChange={setIsBodyweightOnly}
+            />
+          </div>
         </div>
       )}
 
@@ -351,14 +368,24 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
         <div className="space-y-2">
           {/* Header row - dynamic based on measurement type */}
           {measurementUnit === 'reps' && (
-            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
-              <span className="w-8 text-center">#</span>
-              <span>Váha (kg)</span>
-              <span>Opak.</span>
-              <span>RPE</span>
-              <span className="w-10 text-center">PR</span>
-              <span className="w-8"></span>
-            </div>
+            showAssistanceBands && isBodyweightOnly ? (
+              <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+                <span className="w-8 text-center">#</span>
+                <span>Opak.</span>
+                <span>RPE</span>
+                <span className="w-10 text-center">PR</span>
+                <span className="w-8"></span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+                <span className="w-8 text-center">#</span>
+                <span>{showAssistanceBands ? '+Váha (kg)' : 'Váha (kg)'}</span>
+                <span>Opak.</span>
+                <span>RPE</span>
+                <span className="w-10 text-center">PR</span>
+                <span className="w-8"></span>
+              </div>
+            )
           )}
           {measurementUnit === 'seconds' && (
             <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
@@ -553,6 +580,49 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                 </div>
               ) : (
                 /* Standard set layout */
+                showAssistanceBands && isBodyweightOnly && measurementUnit === 'reps' ? (
+                  /* Bodyweight only layout - no weight column */
+                  <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center">
+                    <span className="w-8 text-center text-sm text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={set.reps ?? ''}
+                      onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                      className="bg-secondary border-border h-9"
+                    />
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      placeholder="-"
+                      value={set.rpe ?? ''}
+                      onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
+                      className="bg-secondary border-border h-9"
+                    />
+                    {/* PR Checkbox */}
+                    <div className="w-10 flex justify-center">
+                      <Checkbox
+                        checked={set.is_pr}
+                        onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
+                        className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="w-8 h-8"
+                      onClick={() => handleRemoveSet(index)}
+                      disabled={sets.length === 1}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                /* Standard set layout with weight */
                 <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 items-center">
                   <span className="w-8 text-center text-sm text-muted-foreground">
                     {index + 1}
@@ -697,6 +767,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                     <X className="w-3 h-3" />
                   </Button>
                 </div>
+                )
               )}
             </div>
           ))}
