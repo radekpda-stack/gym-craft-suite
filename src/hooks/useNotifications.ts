@@ -22,7 +22,8 @@ export type NotificationType =
   | 'package_low'
   | 'package_expiring'
   | 'inactivity_warning'
-  | 'training_streak';
+  | 'training_streak'
+  | 'diagnostic_completed';
 
 export interface Notification {
   id: string;
