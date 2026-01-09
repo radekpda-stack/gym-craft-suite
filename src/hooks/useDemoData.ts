@@ -89,6 +89,8 @@ function demoTrainingToSession(demoTraining: ReturnType<typeof useDemoMode>['dem
     prep_notes: null,
     pain_reported: false,
     pain_notes: null,
+    client_rpe: null,
+    training_load: null,
   };
 }
 

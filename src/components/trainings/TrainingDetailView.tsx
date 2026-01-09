@@ -36,10 +36,14 @@ import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
+import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
+import { TrainingPresetSelector } from '@/components/trainings/TrainingPresetSelector';
+import { RPEInputField } from '@/components/trainings/RPEInputField';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
 import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
+import { useTags } from '@/hooks/useTags';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 import { Client, useClients } from '@/hooks/useClients';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
@@ -141,6 +145,23 @@ export function TrainingDetailView({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showNote, setShowNote] = useState(!!training.notes);
+  const [coachRPE, setCoachRPE] = useState<number | null>(training.rpe || null);
+  
+  const { data: tags = [] } = useTags();
+  
+  // Rozdělit tagy podle typu pro stepper
+  const focusTagIds = selectedTagIds.filter(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'focus';
+  });
+  const intensityTagId = selectedTagIds.find(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'intensity';
+  }) || null;
+  const bodyPartTagIds = selectedTagIds.filter(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'body_part';
+  });
   
   const changePaymentMethod = useChangePaymentMethod();
   const { data: settings } = useAppSettings();
@@ -429,40 +450,92 @@ export function TrainingDetailView({
         />
       )}
 
-      {/* TRAINING TYPE & TAGS - combined section for preparation */}
+      {/* TRAINING TYPE & TAGS - Stepper workflow */}
       <div className="glass rounded-xl p-4 space-y-4">
-        {/* Training Type */}
-        <div>
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Dumbbell className="w-4 h-4" />
-            <span className="text-sm font-medium">Typ tréninku</span>
-          </div>
-          <TrainingTypeSelector
-            value={training.training_type}
-            onChange={async (value) => {
+        {/* Rychlé sady */}
+        <TrainingPresetSelector
+          clientId={training.client_id}
+          onApplyPreset={(preset) => {
+            // Aplikovat preset
+            if (preset.trainingType && onFieldUpdate) {
+              onFieldUpdate('training_type', preset.trainingType);
+            }
+            // Sloučit tagy
+            const newTagIds = [
+              ...preset.focusTagIds,
+              ...(preset.intensityTagId ? [preset.intensityTagId] : []),
+              ...preset.bodyPartTagIds,
+            ];
+            setSelectedTagIds(newTagIds);
+            if (onTagsChange) {
+              onTagsChange(newTagIds);
+            }
+            // Nastavit RPE
+            if (preset.defaultRPE) {
+              setCoachRPE(preset.defaultRPE);
               if (onFieldUpdate) {
-                await onFieldUpdate('training_type', value || '');
+                onFieldUpdate('rpe', String(preset.defaultRPE));
               }
-            }}
-          />
-        </div>
+            }
+          }}
+          currentState={{
+            trainingType: training.training_type,
+            focusTagIds,
+            intensityTagId,
+            bodyPartTagIds,
+            coachRPE,
+          }}
+        />
 
-        {/* Tags */}
-        <div>
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <FileText className="w-4 h-4" />
-            <span className="text-sm font-medium">Tagy</span>
-          </div>
-          <TrainingTagsSelector
-            selectedTagIds={selectedTagIds}
-            onChange={(newTagIds) => {
-              setSelectedTagIds(newTagIds);
-              if (!isEditMode && onTagsChange) {
-                onTagsChange(newTagIds);
-              }
-            }}
-          />
-        </div>
+        {/* Stepper pro výběr typu, zaměření, intenzity, partií a RPE */}
+        <TrainingTagStepper
+          trainingType={training.training_type}
+          onTrainingTypeChange={async (type) => {
+            if (onFieldUpdate) {
+              await onFieldUpdate('training_type', type);
+            }
+          }}
+          focusTagIds={focusTagIds}
+          onFocusTagsChange={(ids) => {
+            const otherTags = selectedTagIds.filter(id => {
+              const tag = tags.find(t => t.id === id);
+              return tag?.tag_type !== 'focus';
+            });
+            const newTagIds = [...otherTags, ...ids];
+            setSelectedTagIds(newTagIds);
+            if (onTagsChange) onTagsChange(newTagIds);
+          }}
+          intensityTagId={intensityTagId}
+          onIntensityTagChange={(id) => {
+            const otherTags = selectedTagIds.filter(tagId => {
+              const tag = tags.find(t => t.id === tagId);
+              return tag?.tag_type !== 'intensity';
+            });
+            const newTagIds = id ? [...otherTags, id] : otherTags;
+            setSelectedTagIds(newTagIds);
+            if (onTagsChange) onTagsChange(newTagIds);
+          }}
+          bodyPartTagIds={bodyPartTagIds}
+          onBodyPartTagsChange={(ids) => {
+            const otherTags = selectedTagIds.filter(id => {
+              const tag = tags.find(t => t.id === id);
+              return tag?.tag_type !== 'body_part';
+            });
+            const newTagIds = [...otherTags, ...ids];
+            setSelectedTagIds(newTagIds);
+            if (onTagsChange) onTagsChange(newTagIds);
+          }}
+          coachRPE={coachRPE}
+          onCoachRPEChange={async (rpe) => {
+            setCoachRPE(rpe);
+            if (onFieldUpdate) {
+              await onFieldUpdate('rpe', String(rpe));
+            }
+          }}
+          clientRPE={training.client_rpe}
+          trainingLoad={training.training_load}
+          trainingStatus={training.status as 'scheduled' | 'completed' | 'canceled'}
+        />
       </div>
 
       {/* EXERCISES - main content */}
