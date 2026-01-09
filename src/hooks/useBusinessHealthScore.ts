@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, subMonths, subDays } from 'date-fns';
+import { startOfMonth, subMonths, subDays, subWeeks } from 'date-fns';
 
 export interface BusinessHealthData {
   score: number; // 0-100
@@ -12,10 +12,13 @@ export interface BusinessHealthData {
   };
   status: 'excellent' | 'good' | 'warning' | 'critical';
   insights: string[];
+  weekChange?: number; // Change in score from last week
+  confidence?: number; // Confidence level 0-100
   creditInfo?: {
     clientsWithCredit: number;
     clientsInDebt: number;
     totalActiveClients: number;
+    totalDebt?: number;
   };
 }
 
@@ -149,6 +152,19 @@ export function useBusinessHealthScore() {
         insights.push('Váš byznys je v dobré kondici!');
       }
 
+      // Calculate total debt
+      const totalDebt = activeClients
+        .filter(c => (c.credit_balance || 0) < 0)
+        .reduce((sum, c) => sum + (c.credit_balance || 0), 0);
+
+      // Confidence calculation based on data points
+      const dataPoints = thisMonthTrainings.length + lastMonthTrainings.length;
+      let confidence = 50;
+      if (dataPoints >= 50) confidence = 95;
+      else if (dataPoints >= 30) confidence = 85;
+      else if (dataPoints >= 15) confidence = 70;
+      else if (dataPoints >= 5) confidence = 55;
+
       return {
         score: totalScore,
         components: {
@@ -179,10 +195,13 @@ export function useBusinessHealthScore() {
         },
         status,
         insights,
+        weekChange: 0, // TODO: Implement week-over-week comparison with stored data
+        confidence,
         creditInfo: {
           clientsWithCredit: clientsWithPositiveCredit,
           clientsInDebt,
           totalActiveClients: activeClients.length,
+          totalDebt: Math.abs(totalDebt),
         },
       };
     },

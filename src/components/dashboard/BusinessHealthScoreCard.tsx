@@ -1,12 +1,48 @@
 import { memo, useState } from 'react';
-import { Gauge, Info, ChevronRight } from 'lucide-react';
+import { Info, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBusinessHealthScore } from '@/hooks/useBusinessHealthScore';
 import { cn } from '@/lib/utils';
 import { BusinessHealthDetailModal } from './BusinessHealthDetailModal';
+import { AnimatedHealthGauge } from './AnimatedHealthGauge';
+import { getStatusLabel } from '@/utils/healthInsightsGenerator';
+
+const STATUS_STYLES = {
+  excellent: {
+    bg: 'from-success/15 via-success/5 to-transparent',
+    border: 'border-success/20',
+    badge: 'bg-success/20 text-success',
+    glow: 'shadow-success/20',
+  },
+  good: {
+    bg: 'from-primary/15 via-primary/5 to-transparent',
+    border: 'border-primary/20',
+    badge: 'bg-primary/20 text-primary',
+    glow: 'shadow-primary/20',
+  },
+  warning: {
+    bg: 'from-warning/15 via-warning/5 to-transparent',
+    border: 'border-warning/20',
+    badge: 'bg-warning/20 text-warning',
+    glow: 'shadow-warning/20',
+  },
+  critical: {
+    bg: 'from-destructive/15 via-destructive/5 to-transparent',
+    border: 'border-destructive/20',
+    badge: 'bg-destructive/20 text-destructive',
+    glow: 'shadow-destructive/20',
+  },
+};
+
+const COMPONENT_CONFIG = {
+  retention: { icon: '👥', key: 'retention' },
+  creditHealth: { icon: '💳', key: 'credits' },
+  revenueTrend: { icon: '📈', key: 'revenue' },
+  payments: { icon: '✓', key: 'payments' },
+} as const;
 
 export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
   const { data, isLoading } = useBusinessHealthScore();
@@ -14,9 +50,21 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
 
   if (isLoading) {
     return (
-      <Card className="glass">
-        <CardContent className="p-4">
-          <Skeleton className="h-20 w-full" />
+      <Card className="glass overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-14 rounded-lg" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
@@ -24,108 +72,157 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
 
   if (!data) return null;
 
-  const statusColors = {
-    excellent: 'text-success',
-    good: 'text-primary',
-    warning: 'text-warning',
-    critical: 'text-destructive',
-  };
-
-  const statusBg = {
-    excellent: 'from-success/10 to-success/5',
-    good: 'from-primary/10 to-primary/5',
-    warning: 'from-warning/10 to-warning/5',
-    critical: 'from-destructive/10 to-destructive/5',
-  };
-
-  const statusLabels = {
-    excellent: 'Výborný',
-    good: 'Dobrý',
-    warning: 'Vyžaduje pozornost',
-    critical: 'Kritický',
-  };
+  const styles = STATUS_STYLES[data.status];
+  const weekChange = data.weekChange || 0;
 
   return (
     <>
-      <Card 
-        className={cn(
-          'overflow-hidden bg-gradient-to-br cursor-pointer transition-all hover:ring-2 hover:ring-primary/20',
-          statusBg[data.status]
-        )}
-        onClick={() => setDetailOpen(true)}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
       >
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Gauge className={cn('w-5 h-5', statusColors[data.status])} />
-              <span className="text-sm font-semibold">Business Health Score</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs">
-                    <div className="space-y-2 text-xs">
-                      <p className="font-medium">Jak se počítá skóre:</p>
-                      <div className="space-y-1 text-muted-foreground">
-                        <p>• Retence: aktivní klienti za 60 dní</p>
-                        <p>• Zdraví kreditů: klienti s kladným kreditem</p>
-                        <p>• Trend příjmů: změna oproti minulému měsíci</p>
-                        <p>• Platební morálka: % zaplacených tréninků</p>
-                      </div>
-                      {data.creditInfo && (
-                        <div className="pt-1 border-t border-border/50 text-muted-foreground">
-                          <p>• {data.creditInfo.clientsWithCredit} s kreditem</p>
-                          <p>• {data.creditInfo.clientsInDebt} v dluhu</p>
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', 
-                data.status === 'excellent' && 'bg-success/20 text-success',
-                data.status === 'good' && 'bg-primary/20 text-primary',
-                data.status === 'warning' && 'bg-warning/20 text-warning',
-                data.status === 'critical' && 'bg-destructive/20 text-destructive'
-              )}>
-                {statusLabels[data.status]}
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className={cn('text-4xl font-bold', statusColors[data.status])}>
-              {data.score}
-            </div>
-            <div className="flex-1">
-              <Progress value={data.score} className="h-2" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            {Object.entries(data.components).map(([key, comp]) => (
-              <div key={key} className="p-1.5 rounded-lg bg-background/50">
-                <div className="font-semibold">{comp.value}%</div>
-                <div className="text-muted-foreground text-[10px] truncate">{comp.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {data.insights.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              💡 {data.insights[0]}
-            </p>
+        <Card
+          className={cn(
+            'overflow-hidden cursor-pointer transition-all duration-300',
+            'bg-gradient-to-br border',
+            styles.bg,
+            styles.border,
+            'hover:shadow-lg',
+            styles.glow,
+            'hover:scale-[1.01]'
           )}
-        </CardContent>
-      </Card>
+          onClick={() => setDetailOpen(true)}
+        >
+          <CardContent className="p-5">
+            {/* Header with Gauge */}
+            <div className="flex items-start gap-5">
+              <AnimatedHealthGauge
+                score={data.score}
+                status={data.status}
+                size="lg"
+              />
 
-      <BusinessHealthDetailModal 
-        open={detailOpen} 
-        onOpenChange={setDetailOpen} 
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-foreground">Business Health Score</h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help flex-shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs">
+                        <div className="space-y-2 text-xs">
+                          <p className="font-medium">Jak se počítá skóre:</p>
+                          <div className="space-y-1 text-muted-foreground">
+                            <p>• <strong>Retence:</strong> aktivní klienti za 60 dní</p>
+                            <p>• <strong>Zdraví kreditů:</strong> klienti s kladným kreditem</p>
+                            <p>• <strong>Trend příjmů:</strong> změna oproti minulému měsíci</p>
+                            <p>• <strong>Platební morálka:</strong> % zaplacených tréninků</p>
+                          </div>
+                          <p className="text-muted-foreground pt-1 border-t border-border/50">
+                            Skóre se automaticky přizpůsobuje tvému byznysu.
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', styles.badge)}>
+                    {getStatusLabel(data.status)}
+                  </span>
+                  
+                  {weekChange !== 0 && (
+                    <span className={cn(
+                      'text-xs flex items-center gap-0.5',
+                      weekChange > 0 ? 'text-success' : 'text-destructive'
+                    )}>
+                      {weekChange > 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      {weekChange > 0 ? '+' : ''}{weekChange} za týden
+                    </span>
+                  )}
+                  {weekChange === 0 && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                      <Minus className="w-3 h-3" />
+                      stabilní
+                    </span>
+                  )}
+                </div>
+
+                {data.confidence !== undefined && (
+                  <p className="text-xs text-muted-foreground">
+                    🎯 Spolehlivost: {Math.round(data.confidence)}%
+                  </p>
+                )}
+              </div>
+
+              <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
+            </div>
+
+            {/* Component Grid */}
+            <div className="grid grid-cols-4 gap-2 mt-4">
+              {Object.entries(data.components).map(([key, comp], index) => {
+                const config = COMPONENT_CONFIG[key as keyof typeof COMPONENT_CONFIG];
+                if (!config) return null;
+                
+                const isRevenue = key === 'revenueTrend';
+                const displayValue = isRevenue && comp.value > 0 ? `+${comp.value}` : comp.value;
+                
+                return (
+                  <motion.div
+                    key={key}
+                    className="p-2.5 rounded-lg bg-background/60 backdrop-blur-sm text-center border border-border/50"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 * index }}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <div className="text-sm mb-0.5">
+                      {config.icon}
+                    </div>
+                    <div className={cn(
+                      'font-bold text-sm tabular-nums',
+                      comp.value >= 70 ? 'text-success' : 
+                      comp.value >= 50 ? 'text-foreground' : 
+                      comp.value < 0 ? 'text-destructive' :
+                      'text-warning'
+                    )}>
+                      {displayValue}%
+                    </div>
+                    <div className="text-muted-foreground text-[10px] leading-tight truncate">
+                      {comp.label}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Primary Insight */}
+            {data.insights.length > 0 && (
+              <motion.div
+                className="mt-3 p-2.5 rounded-lg bg-background/40 border border-border/30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  💡 {data.insights[0]}
+                </p>
+              </motion.div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <BusinessHealthDetailModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
       />
     </>
   );
