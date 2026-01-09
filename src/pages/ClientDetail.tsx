@@ -35,6 +35,7 @@ import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientPeriodizationCard } from '@/components/clients/ClientPeriodizationCard';
 import { ClientFeedbackAnalysisSection } from '@/components/clients/ClientFeedbackAnalysisSection';
 import { ClientQuickInfoCard } from '@/components/clients/ClientQuickInfoCard';
+import { ClientTrainingLoadCard } from '@/components/clients/ClientTrainingLoadCard';
 
 // Action components
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
@@ -270,8 +271,8 @@ export default function ClientDetail() {
       {/* SECTION: Feedback Analysis - Training → Response */}
       <ClientFeedbackAnalysisSection clientId={client.id} defaultOpen={false} />
 
-      {/* Periodization Card */}
-      <ClientPeriodizationCard clientId={client.id} />
+      {/* SECTION: Training Load & RPE Stats */}
+      <ClientTrainingLoadCard clientId={client.id} />
 
       {/* Periodization Card */}
       <ClientPeriodizationCard clientId={client.id} />

@@ -5,9 +5,10 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Repeat, Search, Check, ChevronDown, X, UserPlus, Tags } from "lucide-react";
-import { TrainingTagsSelector } from "./TrainingTagsSelector";
-import { TrainingTypeSelector } from "./TrainingTypeSelector";
+import { Loader2, Repeat, Search, Check, ChevronDown, X, UserPlus } from "lucide-react";
+import { TrainingTagStepper } from "./TrainingTagStepper";
+import { TrainingPresetSelector } from "./TrainingPresetSelector";
+import { useTags } from "@/hooks/useTags";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Form,
@@ -170,8 +171,24 @@ export function TrainingForm({
     form.setValue("additional_client_ids", current.filter(id => id !== clientId), { shouldDirty: true });
   };
 
-  // State for tags
+  // State for tags and RPE
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [coachRPE, setCoachRPE] = useState<number | null>(null);
+  const { data: tags = [] } = useTags();
+  
+  // Rozdělit tagy podle typu pro stepper
+  const focusTagIds = selectedTagIds.filter(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'focus';
+  });
+  const intensityTagId = selectedTagIds.find(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'intensity';
+  }) || null;
+  const bodyPartTagIds = selectedTagIds.filter(id => {
+    const tag = tags.find(t => t.id === id);
+    return tag?.tag_type === 'body_part';
+  });
 
   const handleSubmit = async (data: TrainingFormValues) => {
     await onSubmit(data, selectedTagIds);
@@ -416,33 +433,68 @@ export function TrainingForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="training_type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Typ tréninku</FormLabel>
-              <FormControl>
-                <TrainingTypeSelector
-                  value={field.value}
-                  onChange={(value) => field.onChange(value)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Training Type, Tags & RPE - Stepper */}
+        <div className="space-y-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+          {/* Rychlé sady */}
+          <TrainingPresetSelector
+            clientId={primaryClientId}
+            onApplyPreset={(preset) => {
+              if (preset.trainingType) {
+                form.setValue('training_type', preset.trainingType, { shouldDirty: true });
+              }
+              const newTagIds = [
+                ...preset.focusTagIds,
+                ...(preset.intensityTagId ? [preset.intensityTagId] : []),
+                ...preset.bodyPartTagIds,
+              ];
+              setSelectedTagIds(newTagIds);
+              if (preset.defaultRPE) {
+                setCoachRPE(preset.defaultRPE);
+              }
+            }}
+            currentState={{
+              trainingType: form.watch('training_type') || null,
+              focusTagIds,
+              intensityTagId,
+              bodyPartTagIds,
+              coachRPE,
+            }}
+          />
 
-        {/* Tags Selector */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Tags className="w-4 h-4" />
-            Štítky tréninku
-          </label>
-          <TrainingTagsSelector
-            selectedTagIds={selectedTagIds}
-            onChange={setSelectedTagIds}
-            showValidation={false}
+          {/* Stepper */}
+          <TrainingTagStepper
+            trainingType={form.watch('training_type') || null}
+            onTrainingTypeChange={(type) => {
+              form.setValue('training_type', type, { shouldDirty: true });
+            }}
+            focusTagIds={focusTagIds}
+            onFocusTagsChange={(ids) => {
+              const otherTags = selectedTagIds.filter(id => {
+                const tag = tags.find(t => t.id === id);
+                return tag?.tag_type !== 'focus';
+              });
+              setSelectedTagIds([...otherTags, ...ids]);
+            }}
+            intensityTagId={intensityTagId}
+            onIntensityTagChange={(id) => {
+              const otherTags = selectedTagIds.filter(tagId => {
+                const tag = tags.find(t => t.id === tagId);
+                return tag?.tag_type !== 'intensity';
+              });
+              setSelectedTagIds(id ? [...otherTags, id] : otherTags);
+            }}
+            bodyPartTagIds={bodyPartTagIds}
+            onBodyPartTagsChange={(ids) => {
+              const otherTags = selectedTagIds.filter(id => {
+                const tag = tags.find(t => t.id === id);
+                return tag?.tag_type !== 'body_part';
+              });
+              setSelectedTagIds([...otherTags, ...ids]);
+            }}
+            coachRPE={coachRPE}
+            onCoachRPEChange={setCoachRPE}
+            trainingStatus={form.watch('status') as 'scheduled' | 'completed' | 'canceled'}
+            compact
           />
         </div>
 

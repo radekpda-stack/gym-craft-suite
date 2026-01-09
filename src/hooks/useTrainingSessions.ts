@@ -48,6 +48,9 @@ export interface TrainingSession {
   prep_notes: string | null;
   pain_reported: boolean;
   pain_notes: string | null;
+  // RPE and Training Load fields
+  client_rpe: number | null;
+  training_load: number | null;
 }
 
 export interface CreateTrainingInput {
@@ -133,6 +136,8 @@ export function useTrainingSessions(clientId?: string) {
           prep_notes: null,
           pain_reported: false,
           pain_notes: null,
+          client_rpe: null,
+          training_load: null,
         };
         
         if (clientId && demoSession.client_id !== clientId) {
