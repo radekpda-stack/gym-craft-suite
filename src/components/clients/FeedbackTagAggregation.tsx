@@ -213,6 +213,7 @@ export function FeedbackTagAggregation({ clientId }: FeedbackTagAggregationProps
   }
   
   if (error) {
+    console.error('FeedbackTagAggregation error:', error);
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
@@ -222,7 +223,8 @@ export function FeedbackTagAggregation({ clientId }: FeedbackTagAggregationProps
     );
   }
   
-  if (analysis.totalFeedbacks === 0) {
+  // Handle case when analysis is undefined or has no feedbacks
+  if (!analysis || analysis.totalFeedbacks === 0) {
     return (
       <Card>
         <CardHeader>
@@ -234,6 +236,7 @@ export function FeedbackTagAggregation({ clientId }: FeedbackTagAggregationProps
         <CardContent className="py-8 text-center text-muted-foreground">
           <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>Zatím žádná data pro analýzu</p>
+          <p className="text-xs mt-1">Zpětná vazba se zobrazí po vyplnění feedbacku k tréninku.</p>
         </CardContent>
       </Card>
     );
