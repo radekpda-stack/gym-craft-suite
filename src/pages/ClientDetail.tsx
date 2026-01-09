@@ -153,6 +153,9 @@ export default function ClientDetail() {
       {/* SECTION 1: Sticky Header */}
       <ClientHeaderCompact 
         client={client} 
+        onUpdateClient={async (data) => {
+          await updateClient.mutateAsync({ id: client.id, values: data });
+        }}
         onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
         redFlagCount={redFlagCount}
         lastPortalLogin={portalAccess?.last_portal_login}
