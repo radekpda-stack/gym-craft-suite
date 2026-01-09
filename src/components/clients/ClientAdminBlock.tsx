@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { CreditStatementDialog } from '@/components/credit/CreditStatementDialog';
 import { PaymentModeSelector, PaymentMode } from './PaymentModeSelector';
-import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 import { CustomPriceSection } from './CustomPriceSection';
 import { LegacyPriceFixSection } from './LegacyPriceFixSection';
 import { Client, useUpdatePaymentMode } from '@/hooks/useClients';
@@ -59,15 +58,7 @@ export function ClientAdminBlock({
         {/* Expandable content */}
         {isExpanded && (
           <div className="p-4 pt-0 space-y-6">
-            {/* Client Portal Section - Full version with settings */}
-            <ClientPortalAccessSection
-              clientId={client.id}
-              clientName={client.name}
-              clientEmail={client.email}
-              showSettings={true}
-            />
-
-            <div className="border-t border-border/50 pt-4">
+            <div>
               {/* Custom Price Section */}
               <CustomPriceSection
                 clientId={client.id}
