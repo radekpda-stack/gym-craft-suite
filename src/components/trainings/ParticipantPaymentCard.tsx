@@ -5,8 +5,7 @@
  * Now includes editable price share for custom payment splits.
  * Auto-fills payment method based on client preferences.
  */
-import { useState } from 'react';
-import { Wallet, Banknote, CreditCard, Building2, Clock, Pencil, Check } from 'lucide-react';
+import { Wallet, Banknote, CreditCard, Building2, Clock } from 'lucide-react';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -47,31 +46,14 @@ export function ParticipantPaymentCard({
   allowPriceEdit = true,
 }: ParticipantPaymentCardProps) {
   const { credit_balance, price_share, payment_method } = participant;
-  const [isEditingPrice, setIsEditingPrice] = useState(false);
-  const [editedPrice, setEditedPrice] = useState(price_share.toString());
 
   const afterBalance = credit_balance - price_share;
   const isDebt = afterBalance < 0;
   const showCreditLine = payment_method === 'credit';
 
-  const handlePriceEdit = () => {
-    setEditedPrice(price_share.toString());
-    setIsEditingPrice(true);
-  };
-
-  const handlePriceConfirm = () => {
-    const newPrice = Math.max(0, parseInt(editedPrice) || 0);
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPrice = Math.max(0, parseInt(e.target.value) || 0);
     onPriceChange?.(participant.client_id, newPrice);
-    setIsEditingPrice(false);
-  };
-
-  const handlePriceKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handlePriceConfirm();
-    } else if (e.key === 'Escape') {
-      setIsEditingPrice(false);
-      setEditedPrice(price_share.toString());
-    }
   };
 
   return (
@@ -92,42 +74,20 @@ export function ParticipantPaymentCard({
           )}
         </div>
         <div className="text-right flex items-center gap-1">
-          {isEditingPrice ? (
+          {allowPriceEdit && onPriceChange && !disabled ? (
             <div className="flex items-center gap-1">
               <Input
                 type="number"
-                value={editedPrice}
-                onChange={(e) => setEditedPrice(e.target.value)}
-                onKeyDown={handlePriceKeyDown}
-                onBlur={handlePriceConfirm}
+                value={price_share}
+                onChange={handlePriceChange}
                 className="w-20 h-8 text-right text-sm font-bold"
-                autoFocus
                 min={0}
                 step={100}
               />
               <span className="text-xs text-muted-foreground">Kč</span>
-              <button
-                type="button"
-                onClick={handlePriceConfirm}
-                className="p-1 rounded-md hover:bg-secondary text-success"
-              >
-                <Check className="w-4 h-4" />
-              </button>
             </div>
           ) : (
-            <>
-              <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
-              {allowPriceEdit && onPriceChange && !disabled && (
-                <button
-                  type="button"
-                  onClick={handlePriceEdit}
-                  className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  title="Upravit částku"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </>
+            <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
           )}
         </div>
       </div>
