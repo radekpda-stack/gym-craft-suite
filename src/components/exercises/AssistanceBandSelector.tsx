@@ -144,7 +144,7 @@ export function AssistanceBandSelector({ value, onChange, className }: Assistanc
         </CollapsibleTrigger>
 
         <CollapsibleContent className="pt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {BAND_OPTIONS.map((band) => {
               const isSelected = value.includes(band.id);
               return (
@@ -154,20 +154,20 @@ export function AssistanceBandSelector({ value, onChange, className }: Assistanc
                   variant="outline"
                   onClick={() => toggleBand(band.id)}
                   className={cn(
-                    'h-auto py-2 px-3 justify-start border-2 transition-all',
+                    'h-auto min-h-[56px] py-3 px-3 justify-start border-2 transition-all text-left',
                     isSelected 
                       ? cn(band.bgColor, 'border-current', band.color)
                       : 'border-border hover:border-muted-foreground/50'
                   )}
                 >
-                  <div className="flex flex-col items-start gap-0.5">
+                  <div className="flex flex-col items-start gap-1 w-full">
                     <span className={cn(
                       'font-medium text-sm',
                       isSelected ? band.color : 'text-foreground'
                     )}>
                       {band.label}
                     </span>
-                    <span className="text-xs text-muted-foreground line-clamp-1">
+                    <span className="text-xs text-muted-foreground whitespace-normal break-words leading-tight">
                       {band.description}
                     </span>
                   </div>

@@ -32,6 +32,8 @@ export interface WorkoutEntry {
   // Rower/SkiErg specific
   level?: number | null;
   resistance?: number | null;
+  // Assistance bands for pull-ups/dips
+  assistance_bands?: string[] | null;
 }
 
 export interface WorkoutEntryInput {
@@ -60,6 +62,8 @@ export interface WorkoutEntryInput {
   // Rower/SkiErg specific
   level?: number | null;
   resistance?: number | null;
+  // Assistance bands for pull-ups/dips
+  assistance_bands?: string[] | null;
 }
 
 export interface GroupedWorkoutEntry {
@@ -106,6 +110,7 @@ export function useWorkoutEntries(trainingSessionId?: string) {
         pace_per_500m_ms: (entry as any).pace_per_500m_ms ?? null,
         level: (entry as any).level ?? null,
         resistance: (entry as any).resistance ?? null,
+        assistance_bands: (entry as any).assistance_bands ?? null,
       })) as WorkoutEntry[];
     },
     enabled: !!trainingSessionId,

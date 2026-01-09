@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { GroupedWorkoutEntry, WorkoutEntry } from '@/hooks/useWorkoutEntries';
 import { cn } from '@/lib/utils';
+import { AssistanceBandBadges, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
 
 // Format seconds to mm:ss
 function formatTimeDisplay(seconds: number): string {
@@ -147,6 +148,12 @@ export function WorkoutExerciseList({
                           <Badge variant="secondary" className="text-xs">
                             {bestSet.weight_kg}kg × {bestSet.reps}
                           </Badge>
+                        )}
+                        {/* Show assistance bands if any set has them */}
+                        {isPullUpExercise(group.exercise_name) && group.sets.some(s => s.assistance_bands && s.assistance_bands.length > 0) && (
+                          <AssistanceBandBadges 
+                            bands={(group.sets.find(s => s.assistance_bands && s.assistance_bands.length > 0)?.assistance_bands || []) as BandType[]} 
+                          />
                         )}
                         {/* Show PR badge if any set has is_pr */}
                         {group.sets.some(s => s.is_pr) && (

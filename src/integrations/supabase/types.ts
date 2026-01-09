@@ -8425,6 +8425,7 @@ export type Database = {
       }
       workout_entries: {
         Row: {
+          assistance_bands: string[] | null
           calories: number | null
           created_at: string
           distance_meters: number | null
@@ -8445,6 +8446,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          assistance_bands?: string[] | null
           calories?: number | null
           created_at?: string
           distance_meters?: number | null
@@ -8465,6 +8467,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          assistance_bands?: string[] | null
           calories?: number | null
           created_at?: string
           distance_meters?: number | null

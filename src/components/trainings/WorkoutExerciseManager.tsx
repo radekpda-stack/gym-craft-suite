@@ -69,6 +69,7 @@ export function WorkoutExerciseManager({
       avg_watts?: number | null;
       calories?: number | null;
     }[];
+    assistance_bands?: string[] | null;
   }) => {
     try {
       // Create entries for each set with participant_client_id for group trainings
@@ -87,6 +88,8 @@ export function WorkoutExerciseManager({
           calories: data.sets[i].calories,
           // Add participant_client_id for group trainings
           participant_client_id: isGroupTraining ? currentParticipantId : null,
+          // Add assistance bands (same for all sets of this exercise)
+          assistance_bands: data.assistance_bands || null,
         });
       }
 
@@ -146,6 +149,8 @@ export function WorkoutExerciseManager({
         watts: lastSet?.watts || null,
         calories: lastSet?.calories || null,
         participant_client_id: participantClientId || null,
+        // Copy assistance bands from last set
+        assistance_bands: lastSet?.assistance_bands || null,
       });
     } catch (error) {
       console.error('Error adding set:', error);
