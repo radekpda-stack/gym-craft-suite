@@ -130,7 +130,7 @@ export default function ClientDetail() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24 sm:pb-4">
+    <div className="space-y-3 sm:space-y-4 animate-fade-in pb-36 sm:pb-4 px-3 sm:px-4 lg:px-6">
       {/* Desktop Breadcrumbs */}
       {!isMobile && (
         <PageBreadcrumbs
