@@ -162,7 +162,7 @@ export function ClientSummaryStrip({
       <div className="hidden md:block rounded-xl p-3 border border-border bg-card">
         <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
           <TrendingUp className="w-4 h-4" />
-          <span className="text-xs font-medium">Lifetime Value</span>
+          <span className="text-xs font-medium">Celková hodnota</span>
         </div>
         {ltvData && ltvData.totalRevenue > 0 ? (
           <>
