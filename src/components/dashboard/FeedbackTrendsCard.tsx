@@ -71,38 +71,54 @@ export function FeedbackTrendsCard() {
             key={trend.clientId}
             to={`/clients/${trend.clientId}`}
             className={cn(
-              "flex items-center justify-between p-3 rounded-lg transition-colors",
+              "flex flex-col gap-2 p-3 rounded-lg transition-colors",
               trend.severity === 'critical'
                 ? "bg-destructive/10 hover:bg-destructive/20"
                 : "bg-orange-500/10 hover:bg-orange-500/20"
             )}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                trend.severity === 'critical' ? "bg-destructive/20" : "bg-orange-500/20"
-              )}>
-                <AlertTriangle className={cn(
-                  "w-4 h-4",
-                  trend.severity === 'critical' ? "text-destructive" : "text-orange-500"
-                )} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                  trend.severity === 'critical' ? "bg-destructive/20" : "bg-orange-500/20"
+                )}>
+                  <AlertTriangle className={cn(
+                    "w-4 h-4",
+                    trend.severity === 'critical' ? "text-destructive" : "text-orange-500"
+                  )} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{trend.clientName}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {trend.issues.join(', ')}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="font-medium text-sm truncate">{trend.clientName}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {trend.issues.join(', ')}
-                </p>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {formatDistanceToNow(new Date(trend.lastFeedbackDate), { 
+                    addSuffix: true, 
+                    locale: cs 
+                  })}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {formatDistanceToNow(new Date(trend.lastFeedbackDate), { 
-                  addSuffix: true, 
-                  locale: cs 
-                })}
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
+            {/* Data-driven reasons */}
+            {trend.reasons && trend.reasons.length > 0 && (
+              <div className="flex flex-wrap gap-1 ml-11">
+                {trend.reasons.map((reason, idx) => (
+                  <Badge 
+                    key={idx} 
+                    variant="secondary" 
+                    className="text-xs font-normal"
+                  >
+                    {reason}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </Link>
         ))}
         {trends.length > 5 && (
