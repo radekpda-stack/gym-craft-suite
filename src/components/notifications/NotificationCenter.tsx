@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -39,8 +39,11 @@ const notificationIcons: Record<string, typeof Bell> = {
   feedback_received: MessageSquare,
   feedback_red_flag: AlertTriangle,
   feedback_trend_alert: TrendingDown,
+  feedback_pending: MessageSquare,
   client_anniversary: Gift,
-  pr_achieved: Trophy,
+  pr_achieved: Medal,
+  pr_created: Medal,
+  pr_updated: Target,
   package_low: CreditCard,
   package_expiring: Clock,
   inactivity_warning: AlertTriangle,
@@ -58,8 +61,11 @@ const notificationColors: Record<string, string> = {
   feedback_received: "text-green-500",
   feedback_red_flag: "text-destructive",
   feedback_trend_alert: "text-orange-500",
+  feedback_pending: "text-blue-500",
   client_anniversary: "text-amber-500",
-  pr_achieved: "text-warning",
+  pr_achieved: "text-yellow-500",
+  pr_created: "text-yellow-500",
+  pr_updated: "text-orange-500",
   package_low: "text-warning",
   package_expiring: "text-orange-500",
   inactivity_warning: "text-destructive",
@@ -74,23 +80,23 @@ const NOTIFICATION_CATEGORIES = {
     color: "text-primary",
     types: [] as string[], // Handled separately
   },
+  pr: {
+    label: "Osobní rekordy (PR)",
+    icon: Medal,
+    color: "text-yellow-500",
+    types: ["pr_created", "pr_updated", "pr_achieved"],
+  },
   feedback: {
     label: "Zpětná vazba",
     icon: MessageSquare,
     color: "text-green-500",
-    types: ["feedback_received", "feedback_red_flag", "feedback_trend_alert"],
+    types: ["feedback_received", "feedback_red_flag", "feedback_trend_alert", "feedback_pending"],
   },
-  trainings: {
-    label: "Tréninky",
-    icon: Dumbbell,
-    color: "text-orange-500",
-    types: ["incomplete_training", "pr_achieved", "training_streak"],
-  },
-  packages: {
-    label: "Balíčky & finance",
-    icon: CreditCard,
-    color: "text-warning",
-    types: ["low_credit", "negative_credit", "package_low", "package_expiring"],
+  achievements: {
+    label: "Úspěchy & Milníky",
+    icon: Trophy,
+    color: "text-success",
+    types: ["milestone_100", "milestone_500", "milestone_1000", "training_streak"],
   },
   clients: {
     label: "Klienti",
@@ -98,11 +104,17 @@ const NOTIFICATION_CATEGORIES = {
     color: "text-blue-500",
     types: ["birthday", "client_anniversary", "inactivity_warning"],
   },
-  achievements: {
-    label: "Úspěchy",
-    icon: Trophy,
-    color: "text-success",
-    types: ["milestone_100", "milestone_500", "milestone_1000"],
+  packages: {
+    label: "Balíčky & finance",
+    icon: CreditCard,
+    color: "text-warning",
+    types: ["low_credit", "negative_credit", "package_low", "package_expiring"],
+  },
+  trainings: {
+    label: "Tréninky",
+    icon: Dumbbell,
+    color: "text-orange-500",
+    types: ["incomplete_training"],
   },
 };
 
