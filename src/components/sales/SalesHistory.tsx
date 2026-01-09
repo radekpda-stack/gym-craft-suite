@@ -96,6 +96,40 @@ export function SalesHistory() {
     },
   });
 
+  // Filter orders based on search query - MUST be before any early returns
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    if (!searchQuery.trim()) return orders;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return orders.filter(order => {
+      // Search by client name
+      if (order.clients?.name?.toLowerCase().includes(query)) return true;
+      // Search by payment method
+      const paymentLabel = PAYMENT_LABELS[order.payment_method]?.toLowerCase();
+      if (paymentLabel?.includes(query)) return true;
+      // Search by amount
+      if (order.total_amount.toString().includes(query)) return true;
+      // Search by date
+      const dateStr = format(new Date(order.created_at), 'd. MMMM yyyy', { locale: cs }).toLowerCase();
+      if (dateStr.includes(query)) return true;
+      
+      return false;
+    });
+  }, [orders, searchQuery]);
+
+  // Group orders by date - MUST be before any early returns
+  const groupedOrders = useMemo(() => {
+    return filteredOrders.reduce((acc, order) => {
+      const date = format(new Date(order.created_at), 'yyyy-MM-dd');
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(order);
+      return acc;
+    }, {} as Record<string, SalesOrder[]>);
+  }, [filteredOrders]);
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -119,37 +153,6 @@ export function SalesHistory() {
       </Card>
     );
   }
-
-  // Filter orders based on search query
-  const filteredOrders = useMemo(() => {
-    if (!searchQuery.trim()) return orders;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return orders.filter(order => {
-      // Search by client name
-      if (order.clients?.name?.toLowerCase().includes(query)) return true;
-      // Search by payment method
-      const paymentLabel = PAYMENT_LABELS[order.payment_method]?.toLowerCase();
-      if (paymentLabel?.includes(query)) return true;
-      // Search by amount
-      if (order.total_amount.toString().includes(query)) return true;
-      // Search by date
-      const dateStr = format(new Date(order.created_at), 'd. MMMM yyyy', { locale: cs }).toLowerCase();
-      if (dateStr.includes(query)) return true;
-      
-      return false;
-    });
-  }, [orders, searchQuery]);
-
-  // Group orders by date
-  const groupedOrders = filteredOrders.reduce((acc, order) => {
-    const date = format(new Date(order.created_at), 'yyyy-MM-dd');
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(order);
-    return acc;
-  }, {} as Record<string, SalesOrder[]>);
 
   return (
     <>
