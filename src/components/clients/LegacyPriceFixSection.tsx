@@ -138,6 +138,8 @@ export function LegacyPriceFixSection({ clientId }: LegacyPriceFixSectionProps) 
     saveAmount.mutate(amount);
   };
 
+  const MIN_TRAINING_PRICE = 800; // Minimum training price for 1 participant
+  
   const isLegacyEnabled = client?.use_legacy_pricing ?? false;
   const grandfatheredCredit = client?.grandfathered_credit ?? 0;
   const consumed = consumedData?.consumed ?? 0;
@@ -145,6 +147,7 @@ export function LegacyPriceFixSection({ clientId }: LegacyPriceFixSectionProps) 
   const percentUsed = grandfatheredCredit > 0 ? Math.min(100, (consumed / grandfatheredCredit) * 100) : 0;
   const hasFixedAmount = grandfatheredCredit > 0;
   const showInput = isLegacyEnabled && (isEditing || !hasFixedAmount);
+  const isInsufficientForNextTraining = remaining > 0 && remaining < MIN_TRAINING_PRICE;
 
   return (
     <div className="space-y-3">
@@ -220,6 +223,14 @@ export function LegacyPriceFixSection({ clientId }: LegacyPriceFixSectionProps) 
             <div className="flex items-start gap-2 text-xs text-amber-500">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <span>Fixace vyčerpána. Při dalším tréninku se použije nový ceník.</span>
+            </div>
+          ) : isInsufficientForNextTraining ? (
+            <div className="flex items-start gap-2 text-xs text-amber-500">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>
+                Zbývající kredit ({remaining.toLocaleString('cs-CZ')} Kč) nestačí na další trénink (min. {MIN_TRAINING_PRICE} Kč). 
+                Fixace bude automaticky ukončena při příštím tréninku.
+              </span>
             </div>
           ) : (
             <Button 
