@@ -120,8 +120,26 @@ export function useExerciseEntries(clientId?: string) {
       let isPR = false;
       let oldValue: number | undefined = undefined;
       
+      // Check if this is a distance-based PR (higher is better - for jumps)
+      if (entry.distance_meters && entry.distance_meters > 0) {
+        const { data: existingEntries } = await supabase
+          .from('exercise_entries')
+          .select('distance_meters')
+          .eq('client_id', entry.client_id)
+          .eq('exercise_name', entry.exercise_name)
+          .not('distance_meters', 'is', null)
+          .order('distance_meters', { ascending: false })
+          .limit(1);
+
+        if (existingEntries?.length && existingEntries[0].distance_meters !== null) {
+          oldValue = existingEntries[0].distance_meters;
+          isPR = entry.distance_meters > oldValue;
+        } else {
+          isPR = true;
+        }
+      }
       // Check if this is a time-based PR (lower is better - for cardio)
-      if (entry.time_seconds && entry.time_seconds > 0) {
+      else if (entry.time_seconds && entry.time_seconds > 0) {
         const { data: existingEntries } = await supabase
           .from('exercise_entries')
           .select('time_seconds')
