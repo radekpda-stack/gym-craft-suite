@@ -108,6 +108,15 @@ export function AssistanceBandSelector({ value, onChange, className }: Assistanc
     ));
   };
 
+  const getSelectedBandsSummary = () => {
+    if (value.length === 0) return null;
+    return (
+      <span className="text-xs text-primary font-medium">
+        {value.length} {value.length === 1 ? 'vybraná' : value.length < 5 ? 'vybrané' : 'vybraných'}
+      </span>
+    );
+  };
+
   return (
     <div className={cn('space-y-2', className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -133,10 +142,10 @@ export function AssistanceBandSelector({ value, onChange, className }: Assistanc
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex items-center gap-2">
-              {!isOpen && getSelectedBandsDisplay()}
+            <div className="flex items-center gap-2 shrink-0">
+              {!isOpen && getSelectedBandsSummary()}
               <ChevronDown className={cn(
-                'w-4 h-4 text-muted-foreground transition-transform',
+                'w-4 h-4 text-muted-foreground transition-transform shrink-0',
                 isOpen && 'rotate-180'
               )} />
             </div>
