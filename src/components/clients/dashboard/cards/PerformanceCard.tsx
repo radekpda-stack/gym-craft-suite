@@ -2,7 +2,7 @@
  * Performance Dashboard Card
  * Shows: PRs count, monthly trainings, feedback rating, training load
  */
-import { Trophy, Activity, Star } from 'lucide-react';
+import { Trophy, Activity, Star, Download } from 'lucide-react';
 import { ClientDashboardCard, DashboardMetric } from '../ClientDashboardCard';
 import { usePerformanceMetrics } from '@/hooks/useClientDashboardMetrics';
 import { useTrackSectionOpen } from '@/hooks/useSectionUsage';
@@ -11,6 +11,8 @@ import { ClientTagAnalyticsCard } from '@/components/clients/ClientTagAnalyticsC
 import { ClientFeedbackRecovery } from '@/components/clients/ClientFeedbackRecovery';
 import { ClientFeedbackCard } from '@/components/clients/ClientFeedbackCard';
 import { ClientTrainingLoadCard } from '@/components/clients/ClientTrainingLoadCard';
+import { ClientPerformanceExportDialog } from '@/components/clients/ClientPerformanceExportDialog';
+import { Button } from '@/components/ui/button';
 
 interface PerformanceCardProps {
   clientId: string;
@@ -61,6 +63,20 @@ export function PerformanceCard({
       isFavorite={isFavorite}
     >
       <div className="space-y-4">
+        {/* Export button */}
+        <div className="flex justify-end">
+          <ClientPerformanceExportDialog
+            clientId={clientId}
+            clientName={clientName}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export výkonu
+              </Button>
+            }
+          />
+        </div>
+        
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Zátěž a náročnost</h4>
           <ClientTrainingLoadCard clientId={clientId} className="border-0 shadow-none" />
