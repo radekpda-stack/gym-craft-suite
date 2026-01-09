@@ -2591,11 +2591,15 @@ export type Database = {
           is_favorite: boolean
           is_self_profile: boolean
           is_system: boolean
+          lock_set_at: string | null
+          lock_set_by: string | null
+          locked_price_list_id: string | null
           name: string
           notes: string | null
           occupation: string | null
           payment_mode: string | null
           phone: string | null
+          price_lock_mode: string | null
           sitting_hours_daily: number | null
           sleep_hours: number | null
           sports_history: string | null
@@ -2631,11 +2635,15 @@ export type Database = {
           is_favorite?: boolean
           is_self_profile?: boolean
           is_system?: boolean
+          lock_set_at?: string | null
+          lock_set_by?: string | null
+          locked_price_list_id?: string | null
           name: string
           notes?: string | null
           occupation?: string | null
           payment_mode?: string | null
           phone?: string | null
+          price_lock_mode?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
           sports_history?: string | null
@@ -2671,11 +2679,15 @@ export type Database = {
           is_favorite?: boolean
           is_self_profile?: boolean
           is_system?: boolean
+          lock_set_at?: string | null
+          lock_set_by?: string | null
+          locked_price_list_id?: string | null
           name?: string
           notes?: string | null
           occupation?: string | null
           payment_mode?: string | null
           phone?: string | null
+          price_lock_mode?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
           sports_history?: string | null
@@ -2688,7 +2700,154 @@ export type Database = {
           use_legacy_pricing?: boolean | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_locked_price_list_id_fkey"
+            columns: ["locked_price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_consumptions: {
+        Row: {
+          amount_czk: number
+          client_id: string
+          created_at: string | null
+          id: string
+          lot_id: string
+          note: string | null
+          price_list_id: string
+          service_id: string
+          training_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_czk: number
+          client_id: string
+          created_at?: string | null
+          id?: string
+          lot_id: string
+          note?: string | null
+          price_list_id: string
+          service_id: string
+          training_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_czk?: number
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          lot_id?: string
+          note?: string | null
+          price_list_id?: string
+          service_id?: string
+          training_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_consumptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_consumptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "credit_consumptions_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "credit_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_consumptions_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_consumptions_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_lots: {
+        Row: {
+          balance_czk_original: number
+          balance_czk_remaining: number
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          note: string | null
+          price_list_id: string
+          purchased_at: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          balance_czk_original: number
+          balance_czk_remaining: number
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          price_list_id: string
+          purchased_at?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          balance_czk_original?: number
+          balance_czk_remaining?: number
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          price_list_id?: string
+          purchased_at?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_lots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_lots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "credit_lots_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {
@@ -6079,6 +6238,65 @@ export type Database = {
           },
         ]
       }
+      price_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          price_list_id: string
+          service_id: string
+          unit_price_czk: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          price_list_id: string
+          service_id: string
+          unit_price_czk: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          price_list_id?: string
+          service_id?: string
+          unit_price_czk?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_items_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          created_at: string | null
+          effective_from: string
+          id: string
+          is_active: boolean | null
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          effective_from: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          effective_from?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
@@ -9042,6 +9260,16 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      rpc_add_credit_lot: {
+        Args: {
+          p_amount_czk: number
+          p_client_id: string
+          p_note?: string
+          p_source?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       rpc_apply_credit_delta: {
         Args: {
           p_client_id: string
@@ -9077,10 +9305,24 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_deduct_credit_fifo: {
+        Args: {
+          p_client_id: string
+          p_service_id: string
+          p_training_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       rpc_fix_balance_discrepancy: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: Json
       }
+      rpc_get_client_credit_summary: {
+        Args: { p_client_id: string; p_user_id: string }
+        Returns: Json
+      }
+      rpc_get_current_price_list: { Args: never; Returns: string }
       rpc_get_effective_balance: {
         Args: { p_client_id: string }
         Returns: Json
@@ -9090,6 +9332,18 @@ export type Database = {
         Returns: string
       }
       rpc_get_pending_payments: { Args: { p_user_id: string }; Returns: Json }
+      rpc_get_price_for_service: {
+        Args: { p_price_list_id: string; p_service_id: string }
+        Returns: number
+      }
+      rpc_migrate_credit_to_lot: {
+        Args: {
+          p_client_id: string
+          p_use_old_price_list: boolean
+          p_user_id: string
+        }
+        Returns: Json
+      }
       rpc_process_sale: { Args: { payload: Json }; Returns: Json }
       rpc_refund_sale: {
         Args: { p_order_id: string; p_user_id: string }
