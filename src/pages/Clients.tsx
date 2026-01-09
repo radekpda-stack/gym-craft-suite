@@ -57,6 +57,11 @@ type GenderFilter = 'all' | 'male' | 'female';
 type SortOption = 'name' | 'trainings' | 'credit' | 'recent';
 type ViewMode = 'today' | 'week' | 'all' | 'archived';
 
+// Helper to remove diacritics for search
+const removeDiacritics = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
 // Helper to calculate age from birth date string
 const calculateAge = (birthDateStr: string | null): number | null => {
   if (!birthDateStr) return null;
@@ -166,10 +171,11 @@ export default function Clients() {
         viewMode === 'week' ? (!isArchived && weekClientIds.has(client.id)) :
         true;
       
+      const searchNorm = removeDiacritics(searchQuery);
       const matchesSearch =
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (client.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (client.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
+        removeDiacritics(client.name).includes(searchNorm) ||
+        removeDiacritics(client.email || '').includes(searchNorm) ||
+        removeDiacritics(client.notes || '').includes(searchNorm);
 
       const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
       const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
