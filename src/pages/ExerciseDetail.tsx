@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Dumbbell, Users, Activity, BarChart3, History, PlusCircle, Settings } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Users, Activity, BarChart3, History, PlusCircle, Settings, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,8 +50,9 @@ export default function ExerciseDetail() {
     return 'strength';
   })();
   
-  // Use stats.isTimeBased for UI decisions (more accurate)
+  // Use stats.isTimeBased and isJumpExercise for UI decisions
   const isTimeBased = stats?.isTimeBased || exerciseType === 'cardio';
+  const isJumpExercise = stats?.isJumpExercise || false;
 
   // Show loading state while exercises are being fetched
   if (exercisesLoading) {
@@ -129,7 +130,12 @@ export default function ExerciseDetail() {
         </Card>
         <Card className="p-3">
           <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
-            {isTimeBased ? (
+            {isJumpExercise ? (
+              <>
+                <Ruler className="w-3.5 h-3.5" />
+                <span className="text-xs">Nejlepší</span>
+              </>
+            ) : isTimeBased ? (
               <>
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span className="text-xs">Nejlepší čas</span>
@@ -142,9 +148,11 @@ export default function ExerciseDetail() {
             )}
           </div>
           <p className="text-lg font-bold">
-            {isTimeBased 
-              ? (stats?.bestTime ? formatQuickTime(stats.bestTime) : '-')
-              : (stats?.globalMaxWeight ? `${stats.globalMaxWeight} kg` : '-')
+            {isJumpExercise 
+              ? (stats?.bestDistance ? `${Math.round(stats.bestDistance * 100)} cm` : '-')
+              : isTimeBased 
+                ? (stats?.bestTime ? formatQuickTime(stats.bestTime) : '-')
+                : (stats?.globalMaxWeight ? `${stats.globalMaxWeight} kg` : '-')
             }
           </p>
         </Card>

@@ -6,6 +6,7 @@ interface ClientPerformance {
   clientName: string;
   maxWeight: number | null;
   bestTime: number | null; // seconds - lower is better
+  bestDistance: number | null; // meters - higher is better (for jumps)
   totalSets: number;
   totalReps: number;
   totalVolume: number;
@@ -20,6 +21,7 @@ interface PRRecord {
   clientName: string;
   weight: number | null;
   timeSeconds: number | null;
+  distanceMeters: number | null;
   reps: number;
   date: string;
 }
@@ -28,6 +30,7 @@ export interface ExerciseStats {
   exerciseId: string;
   exerciseName: string;
   isTimeBased: boolean;
+  isJumpExercise: boolean;
   totalClients: number;
   totalEntries: number;
   // Strength stats
@@ -46,6 +49,10 @@ export interface ExerciseStats {
   averagePace500m: number | null;
   bestPace500m: number | null;
   averageCadence: number | null;
+  // Jump exercise stats
+  bestDistance: number | null; // meters
+  bestDistanceClient: string | null;
+  averageDistance: number | null; // meters
   // Common
   clientPerformances: ClientPerformance[];
   prHistory: PRRecord[];
@@ -81,6 +88,7 @@ export function useExerciseStats(exerciseId: string | null) {
           pace_sec_per_500m,
           pace_sec_per_km,
           cadence_spm,
+          distance_meters,
           clients!inner(id, name)
         `)
         .eq('exercise_id', exerciseId)
@@ -97,16 +105,23 @@ export function useExerciseStats(exerciseId: string | null) {
 
       if (exerciseError) throw exerciseError;
 
-      // Determine if exercise is time-based
+      // Determine if exercise is time-based or jump exercise
       const isTimeBased = exercise?.is_time_based || 
         exercise?.category === 'cardio' || 
         exercise?.category === 'conditioning';
+      
+      const exerciseName = exercise?.name_cs || exercise?.name || '';
+      const exerciseCategory = exercise?.category || '';
+      const isJumpExercise = exerciseName.toLowerCase().includes('skok') || 
+        exerciseName.toLowerCase().includes('jump') ||
+        (exerciseCategory.toLowerCase().includes('plyometrics') && exerciseName.toLowerCase().includes('jump'));
 
       if (!entries || entries.length === 0) {
         return {
           exerciseId,
-          exerciseName: exercise?.name_cs || exercise?.name || '',
+          exerciseName,
           isTimeBased,
+          isJumpExercise,
           totalClients: 0,
           totalEntries: 0,
           globalMaxWeight: null,
@@ -122,6 +137,9 @@ export function useExerciseStats(exerciseId: string | null) {
           averagePace500m: null,
           bestPace500m: null,
           averageCadence: null,
+          bestDistance: null,
+          bestDistanceClient: null,
+          averageDistance: null,
           clientPerformances: [],
           prHistory: [],
           mostActiveClient: null,
@@ -135,6 +153,7 @@ export function useExerciseStats(exerciseId: string | null) {
         entries: typeof entries;
         weights: number[];
         times: number[];
+        distances: number[];
         reps: number[];
         sets: number[];
         prCount: number;
@@ -152,6 +171,7 @@ export function useExerciseStats(exerciseId: string | null) {
             entries: [],
             weights: [],
             times: [],
+            distances: [],
             reps: [],
             sets: [],
             prCount: 0,
@@ -163,6 +183,8 @@ export function useExerciseStats(exerciseId: string | null) {
         client.entries.push(entry);
         if (entry.weight_kg) client.weights.push(entry.weight_kg);
         if (entry.time_seconds) client.times.push(entry.time_seconds);
+        const distanceMeters = (entry as any).distance_meters;
+        if (distanceMeters && distanceMeters > 0) client.distances.push(distanceMeters);
         if (entry.reps) client.reps.push(entry.reps);
         if (entry.sets) client.sets.push(entry.sets);
         if (entry.is_pr) client.prCount++;
@@ -173,6 +195,7 @@ export function useExerciseStats(exerciseId: string | null) {
       const clientPerformances: ClientPerformance[] = Array.from(clientMap.values()).map((client) => {
         const maxWeight = client.weights.length > 0 ? Math.max(...client.weights) : null;
         const bestTime = client.times.length > 0 ? Math.min(...client.times) : null;
+        const bestDistance = client.distances.length > 0 ? Math.max(...client.distances) : null;
         const totalSets = client.sets.reduce((a, b) => a + b, 0);
         const totalReps = client.reps.reduce((a, b) => a + b, 0) * (client.sets[0] || 1);
         const totalVolume = client.weights.reduce((sum, w, i) => {
@@ -182,7 +205,17 @@ export function useExerciseStats(exerciseId: string | null) {
         // Calculate trend based on exercise type
         let trend: 'up' | 'down' | 'stable' = 'stable';
         
-        if (isTimeBased && client.times.length >= 2) {
+        if (isJumpExercise && client.distances.length >= 2) {
+          // For jumps, higher distance is better
+          const recentDist = client.distances.slice(0, 3);
+          const olderDist = client.distances.slice(3, 6);
+          if (recentDist.length > 0 && olderDist.length > 0) {
+            const recentAvg = recentDist.reduce((a, b) => a + b, 0) / recentDist.length;
+            const olderAvg = olderDist.reduce((a, b) => a + b, 0) / olderDist.length;
+            if (recentAvg > olderAvg * 1.05) trend = 'up';
+            else if (recentAvg < olderAvg * 0.95) trend = 'down';
+          }
+        } else if (isTimeBased && client.times.length >= 2) {
           // For time-based, lower is better
           const recentTimes = client.times.slice(0, 3);
           const olderTimes = client.times.slice(3, 6);
@@ -209,6 +242,7 @@ export function useExerciseStats(exerciseId: string | null) {
           clientName: client.clientName,
           maxWeight,
           bestTime,
+          bestDistance,
           totalSets,
           totalReps,
           totalVolume,
@@ -219,7 +253,9 @@ export function useExerciseStats(exerciseId: string | null) {
       });
 
       // Sort based on exercise type
-      if (isTimeBased) {
+      if (isJumpExercise) {
+        clientPerformances.sort((a, b) => (b.bestDistance || 0) - (a.bestDistance || 0)); // Higher is better
+      } else if (isTimeBased) {
         clientPerformances.sort((a, b) => {
           if (a.bestTime === null) return 1;
           if (b.bestTime === null) return -1;
@@ -229,20 +265,24 @@ export function useExerciseStats(exerciseId: string | null) {
         clientPerformances.sort((a, b) => (b.maxWeight || 0) - (a.maxWeight || 0));
       }
 
-      // PR History - include both weight and time PRs, sorted by performance
+      // PR History - include weight, time, and distance PRs, sorted by performance
       const prHistory: PRRecord[] = entries
-        .filter((e) => e.is_pr && (e.weight_kg || e.time_seconds))
+        .filter((e) => e.is_pr && (e.weight_kg || e.time_seconds || (e as any).distance_meters))
         .map((e) => ({
           id: e.id,
           clientId: e.client_id,
           clientName: (e.clients as any)?.name || 'Neznámý',
           weight: e.weight_kg,
           timeSeconds: e.time_seconds,
+          distanceMeters: (e as any).distance_meters || null,
           reps: e.reps || 0,
           date: e.date,
         }))
         .sort((a, b) => {
-          if (isTimeBased) {
+          if (isJumpExercise) {
+            // For jumps: higher distance is better (descending)
+            return (b.distanceMeters || 0) - (a.distanceMeters || 0);
+          } else if (isTimeBased) {
             // For time-based: lower time is better (ascending)
             if (!a.timeSeconds) return 1;
             if (!b.timeSeconds) return -1;
@@ -307,6 +347,17 @@ export function useExerciseStats(exerciseId: string | null) {
         ? Math.round(allCadences.reduce((a, b) => a + b, 0) / allCadences.length)
         : null;
 
+      // Jump exercise stats - Distance
+      const allDistances = entries
+        .filter((e) => (e as any).distance_meters && (e as any).distance_meters > 0)
+        .map((e) => (e as any).distance_meters as number);
+      const bestDistance = allDistances.length > 0 ? Math.max(...allDistances) : null;
+      const averageDistance = allDistances.length > 0 
+        ? allDistances.reduce((a, b) => a + b, 0) / allDistances.length
+        : null;
+      const bestDistanceEntry = entries.find((e) => (e as any).distance_meters === bestDistance);
+      const bestDistanceClient = bestDistanceEntry ? (bestDistanceEntry.clients as any)?.name : null;
+
       // Most active client
       let mostActiveClient: { name: string; count: number } | null = null;
       let maxCount = 0;
@@ -319,8 +370,9 @@ export function useExerciseStats(exerciseId: string | null) {
 
       return {
         exerciseId,
-        exerciseName: exercise?.name_cs || exercise?.name || '',
+        exerciseName,
         isTimeBased,
+        isJumpExercise,
         totalClients: clientMap.size,
         totalEntries: entries.length,
         globalMaxWeight,
@@ -340,6 +392,9 @@ export function useExerciseStats(exerciseId: string | null) {
         averagePace500m,
         bestPace500m,
         averageCadence,
+        bestDistance,
+        bestDistanceClient,
+        averageDistance,
         clientPerformances,
         prHistory,
         mostActiveClient,
