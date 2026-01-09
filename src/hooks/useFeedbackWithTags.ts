@@ -199,10 +199,7 @@ export function useFeedbackWithTags(clientId: string | undefined, options?: {
             duration,
             status,
             notes,
-            participant_count,
-            training_templates (
-              name
-            )
+            participant_count
           )
         `)
         .eq('client_id', clientId)
@@ -306,7 +303,7 @@ export function useFeedbackWithTags(clientId: string | undefined, options?: {
             status: training.status,
             notes: training.notes,
             participant_count: training.participant_count,
-            template_name: training.training_templates?.name || null,
+            template_name: null,
           } : null,
           tags: tagsBySession.get(f.training_session_id) || [],
           status,
