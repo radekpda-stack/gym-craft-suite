@@ -15,6 +15,7 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { toast } from '@/hooks/use-toast';
 import { useClientPortalAccess } from '@/hooks/useClientPortalAccess';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
+import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
 
 // Components
 import { ClientHeaderCompact } from '@/components/clients/ClientHeaderCompact';
@@ -36,6 +37,7 @@ export default function ClientDetail() {
   const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
   const { data: portalAccess } = useClientPortalAccess(id);
   const { evaluation: feedbackEval } = useFeedbackEvaluation(id);
+  const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
   const redFlagCount = feedbackEval?.redFlagCount ?? 0;
   
   const updateClient = useUpdateClient();
@@ -49,6 +51,13 @@ export default function ClientDetail() {
   const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
   const sharedBalance = sharedBudgetInfo?.sharedBalance ?? 0;
   const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
+  
+  // Unpaid trainings count and amount
+  const unpaidCount = unpaidTrainings.length;
+  const unpaidAmount = useMemo(() => 
+    unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0),
+    [unpaidTrainings]
+  );
 
   // Sessions this month
   const sessionsThisMonth = useMemo(() => {
@@ -162,6 +171,9 @@ export default function ClientDetail() {
         isSharedBudget={isSharedBudget}
         budgetGroupName={sharedBudgetInfo?.groupName}
         sessionsThisMonth={sessionsThisMonth}
+        unpaidCount={unpaidCount}
+        unpaidAmount={unpaidAmount}
+        paymentMode={client.payment_mode}
         onAddCredit={() => setIsCreditModalOpen(true)}
         onAddTraining={() => setIsTrainingDialogOpen(true)}
       />
