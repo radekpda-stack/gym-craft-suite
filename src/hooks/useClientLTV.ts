@@ -59,15 +59,21 @@ export function useClientLTV(clientId: string | undefined) {
       const firstTrainingDate = firstTraining?.date || null;
       const lastTrainingDate = lastTraining?.date || null;
 
-      // Calculate months active
+      // Calculate months active (based on first training to now)
       let monthsActive = 1;
       if (firstTrainingDate) {
         monthsActive = Math.max(1, differenceInMonths(new Date(), new Date(firstTrainingDate)) + 1);
       }
 
-      // Averages
+      // Average per training
       const avgRevenuePerTraining = totalTrainings > 0 ? Math.round(totalRevenue / totalTrainings) : 0;
-      const avgRevenuePerMonth = Math.round(totalRevenue / monthsActive);
+      
+      // Average trainings per month
+      const avgTrainingsPerMonth = totalTrainings / Math.max(monthsActive, 1);
+      
+      // Average revenue per month = average trainings per month × average price per training
+      // This correctly reflects: if client does 5 trainings/month at 800 Kč = 4000 Kč/month
+      const avgRevenuePerMonth = Math.round(avgTrainingsPerMonth * avgRevenuePerTraining);
 
       // Projected annual value (based on average monthly revenue)
       const projectedAnnualValue = avgRevenuePerMonth * 12;
