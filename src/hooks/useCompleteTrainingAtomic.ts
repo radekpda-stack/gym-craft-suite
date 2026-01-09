@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { IndividualPaymentMethod } from '@/components/trainings/ParticipantPaymentCard';
+import { getServiceIdForParticipants } from '@/hooks/useCreditLots';
 
 interface ParticipantWithPayment {
   client_id: string;
@@ -117,41 +118,69 @@ export function useCompleteTrainingAtomic() {
           .eq('client_id', participant.client_id);
       }
 
-      // Check if any client has exhausted their grandfathered credit
-      // and needs to be switched to new pricing
-      const clientsToCheckForLegacyPricing = params.participants
-        .filter(p => p.payment_method === 'credit')
-        .map(p => p.client_id);
+      // NEW: Use FIFO credit lot deduction for credit payments
+      const creditParticipants = params.participants.filter(p => p.payment_method === 'credit');
+      const participantCount = params.participants.length;
+      const serviceId = getServiceIdForParticipants(participantCount);
+      
+      const clientsSwitchedToNewPricing: string[] = [];
+      const fifoDeductionErrors: string[] = [];
 
-      if (clientsToCheckForLegacyPricing.length > 0) {
-        const { data: clientsData } = await supabase
+      for (const participant of creditParticipants) {
+        // Call the FIFO deduction RPC for each credit participant
+        const { data: fifoResult, error: fifoError } = await supabase.rpc('rpc_deduct_credit_fifo', {
+          p_client_id: participant.client_id,
+          p_training_session_id: params.sessionId,
+          p_service_id: serviceId,
+          p_user_id: user.id,
+        });
+
+        if (fifoError) {
+          console.error('FIFO deduction error:', fifoError);
+          fifoDeductionErrors.push(participant.client_id);
+        } else if (fifoResult && typeof fifoResult === 'object' && 'success' in fifoResult && !fifoResult.success) {
+          console.warn('FIFO deduction failed:', (fifoResult as any).error);
+          fifoDeductionErrors.push(participant.client_id);
+        }
+
+        // Check if client's OLD lot is now depleted and they should switch to new pricing
+        const { data: clientData } = await supabase
           .from('clients')
-          .select('id, name, credit_balance, grandfathered_credit, use_legacy_pricing')
-          .in('id', clientsToCheckForLegacyPricing);
+          .select('id, name, price_lock_mode, locked_price_list_id')
+          .eq('id', participant.client_id)
+          .single();
 
-        const clientsSwitchedToNewPricing: string[] = [];
-        
-        for (const client of clientsData || []) {
-          // Check if client was on legacy pricing but has now exhausted grandfathered credit
-          if (
-            client.use_legacy_pricing && 
-            client.grandfathered_credit !== null &&
-            client.credit_balance <= 0
-          ) {
-            // Switch client to new pricing
+        if (clientData?.price_lock_mode === 'lock_old_until_depleted') {
+          // Check if OLD lots are depleted
+          const { data: oldLots } = await supabase
+            .from('credit_lots')
+            .select('balance_czk_remaining')
+            .eq('client_id', participant.client_id)
+            .eq('price_list_id', '00000000-0000-0000-0000-000000000001') // OLD
+            .gt('balance_czk_remaining', 0);
+
+          if (!oldLots || oldLots.length === 0) {
+            // All OLD lots depleted - switch to new pricing
             await supabase
               .from('clients')
-              .update({ use_legacy_pricing: false })
-              .eq('id', client.id);
+              .update({ 
+                price_lock_mode: 'none',
+                locked_price_list_id: null,
+              })
+              .eq('id', participant.client_id);
             
-            clientsSwitchedToNewPricing.push(client.name);
+            clientsSwitchedToNewPricing.push(clientData.name);
           }
         }
+      }
 
-        // Store switched clients in result for notification
-        if (clientsSwitchedToNewPricing.length > 0) {
-          (result as any).clientsSwitchedToNewPricing = clientsSwitchedToNewPricing;
-        }
+      // Store switched clients in result for notification
+      if (clientsSwitchedToNewPricing.length > 0) {
+        (result as any).clientsSwitchedToNewPricing = clientsSwitchedToNewPricing;
+      }
+      
+      if (fifoDeductionErrors.length > 0) {
+        (result as any).fifoDeductionErrors = fifoDeductionErrors;
       }
       
       return result;
@@ -171,6 +200,11 @@ export function useCompleteTrainingAtomic() {
       queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"] });
       queryClient.invalidateQueries({ queryKey: ["clients_price_status"] });
       
+      // Invalidate credit lots queries
+      queryClient.invalidateQueries({ queryKey: ["credit_lots"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_consumptions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_summary"] });
+
       // Notify about clients switched to new pricing
       const switchedClients = (result as any).clientsSwitchedToNewPricing as string[] | undefined;
       if (switchedClients && switchedClients.length > 0) {
@@ -179,6 +213,16 @@ export function useCompleteTrainingAtomic() {
           description: `${switchedClients.join(', ')} vyčerpal/a předplacený kredit a přechází na nové ceny.`,
           variant: "default",
           duration: 8000,
+        });
+      }
+      
+      // Warn about FIFO deduction errors
+      const fifoErrors = (result as any).fifoDeductionErrors as string[] | undefined;
+      if (fifoErrors && fifoErrors.length > 0) {
+        toast({ 
+          title: "Varování: Chyba při FIFO stržení",
+          description: `U ${fifoErrors.length} klientů se nepodařilo správně strhnout kredit.`,
+          variant: "destructive",
         });
       }
       
