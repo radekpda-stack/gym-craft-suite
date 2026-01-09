@@ -5,13 +5,12 @@ import { useTags } from '@/hooks/useTags';
 import { RPEInputField } from './RPEInputField';
 import { Badge } from '@/components/ui/badge';
 
-// Typ tréninku - předdefinované hodnoty
+// Typ tréninku - předdefinované hodnoty (bez duplicit se Zaměřením)
 const TRAINING_TYPES = [
   { value: 'strength', label: 'Silový', icon: '💪' },
-  { value: 'conditioning', label: 'Kondiční', icon: '🏃' },
   { value: 'hiit', label: 'HIIT', icon: '🔥' },
   { value: 'cardio', label: 'Kardio', icon: '❤️' },
-  { value: 'running', label: 'Běh', icon: '🏃‍♂️' },
+  { value: 'running', label: 'Běh', icon: '🏃' },
   { value: 'functional', label: 'Funkční', icon: '⚡' },
   { value: 'mobility', label: 'Mobilita', icon: '🧘' },
   { value: 'regeneration', label: 'Regenerace', icon: '🌿' },
