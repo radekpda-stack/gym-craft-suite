@@ -8239,6 +8239,7 @@ export type Database = {
       training_sessions: {
         Row: {
           canceled_at: string | null
+          cancellation_reason: string | null
           client_id: string | null
           client_rpe: number | null
           completion_quality: string | null
@@ -8285,6 +8286,7 @@ export type Database = {
         }
         Insert: {
           canceled_at?: string | null
+          cancellation_reason?: string | null
           client_id?: string | null
           client_rpe?: number | null
           completion_quality?: string | null
@@ -8331,6 +8333,7 @@ export type Database = {
         }
         Update: {
           canceled_at?: string | null
+          cancellation_reason?: string | null
           client_id?: string | null
           client_rpe?: number | null
           completion_quality?: string | null

@@ -26,6 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -35,8 +37,8 @@ interface QuickActionsSectionProps {
   trainingPrice: number;
   clientName: string;
   onComplete: () => void;
-  onCancelWithCredit: () => Promise<void>;
-  onCancelNoCredit: () => Promise<void>;
+  onCancelWithCredit: (note?: string) => Promise<void>;
+  onCancelNoCredit: (note?: string) => Promise<void>;
   onReschedule: (newDate: Date) => Promise<void>;
   isCompleting?: boolean;
   isCanceling?: boolean;
@@ -60,6 +62,7 @@ export function QuickActionsSection({
   const [showCancelNoCreditDialog, setShowCancelNoCreditDialog] = useState(false);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [newDate, setNewDate] = useState<Date>(new Date(trainingDate));
+  const [cancelNote, setCancelNote] = useState('');
 
   const date = new Date(trainingDate);
   const hoursUntilTraining = differenceInHours(date, new Date());
@@ -72,13 +75,25 @@ export function QuickActionsSection({
   };
 
   const handleCancelWithCreditConfirm = async () => {
-    await onCancelWithCredit();
+    await onCancelWithCredit(cancelNote || undefined);
     setShowCancelCreditDialog(false);
+    setCancelNote('');
   };
 
   const handleCancelNoCreditConfirm = async () => {
-    await onCancelNoCredit();
+    await onCancelNoCredit(cancelNote || undefined);
     setShowCancelNoCreditDialog(false);
+    setCancelNote('');
+  };
+  
+  const openCancelCreditDialog = () => {
+    setCancelNote('');
+    setShowCancelCreditDialog(true);
+  };
+  
+  const openCancelNoCreditDialog = () => {
+    setCancelNote('');
+    setShowCancelNoCreditDialog(true);
   };
 
   return (
@@ -110,7 +125,7 @@ export function QuickActionsSection({
           <Button 
             variant="outline" 
             className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setShowCancelCreditDialog(true)}
+            onClick={openCancelCreditDialog}
             disabled={isCompleting || isCanceling || isRescheduling}
           >
             <XCircle className="w-4 h-4" />
@@ -121,7 +136,7 @@ export function QuickActionsSection({
           <Button 
             variant="outline" 
             className="gap-1.5"
-            onClick={() => setShowCancelNoCreditDialog(true)}
+            onClick={openCancelNoCreditDialog}
             disabled={isCompleting || isCanceling || isRescheduling}
           >
             <XCircle className="w-4 h-4" />
@@ -190,6 +205,19 @@ export function QuickActionsSection({
                 Trénink již proběhl
               </div>
             )}
+            
+            {/* Cancellation note */}
+            <div className="space-y-2">
+              <Label htmlFor="cancel-note-credit">Důvod zrušení (volitelné)</Label>
+              <Textarea
+                id="cancel-note-credit"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder="Proč byl trénink zrušen..."
+                rows={2}
+                className="resize-none"
+              />
+            </div>
           </div>
 
           <DialogFooter>
@@ -235,6 +263,19 @@ export function QuickActionsSection({
                 <span className="text-muted-foreground">Kredit:</span>
                 <span className="font-medium text-success">Beze změny</span>
               </div>
+            </div>
+            
+            {/* Cancellation note */}
+            <div className="space-y-2">
+              <Label htmlFor="cancel-note-no-credit">Důvod zrušení (volitelné)</Label>
+              <Textarea
+                id="cancel-note-no-credit"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder="Proč byl trénink zrušen..."
+                rows={2}
+                className="resize-none"
+              />
             </div>
           </div>
 

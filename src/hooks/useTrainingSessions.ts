@@ -22,6 +22,7 @@ export interface TrainingSession {
   status: TrainingStatus;
   canceled_at: string | null;
   is_late_cancellation: boolean;
+  cancellation_reason: string | null;
   participant_count: number;
   recurrence_type: string | null;
   recurrence_end_date: string | null;
@@ -113,6 +114,7 @@ export function useTrainingSessions(clientId?: string) {
           status: demoTraining.status as TrainingStatus,
           canceled_at: null,
           is_late_cancellation: false,
+          cancellation_reason: null,
           participant_count: demoTraining.participant_count,
           recurrence_type: null,
           recurrence_end_date: null,
@@ -660,7 +662,8 @@ export function useCancelTrainingSession() {
       participant_count,
       isLateCancellation,
       trainingPrices,
-      deductCredit = true
+      deductCredit = true,
+      cancelNote
     }: { 
       id: string; 
       client_id: string;
@@ -668,6 +671,7 @@ export function useCancelTrainingSession() {
       isLateCancellation: boolean;
       trainingPrices: { "1": number; "2": number; "3": number };
       deductCredit?: boolean;
+      cancelNote?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -685,13 +689,20 @@ export function useCancelTrainingSession() {
       }
 
       // Update training status to canceled
+      const updateData: Record<string, any> = {
+        status: "canceled",
+        canceled_at: new Date().toISOString(),
+        is_late_cancellation: isLateCancellation,
+      };
+      
+      // Add cancellation reason if provided
+      if (cancelNote) {
+        updateData.cancellation_reason = cancelNote;
+      }
+      
       const { data, error } = await supabase
         .from("training_sessions")
-        .update({
-          status: "canceled",
-          canceled_at: new Date().toISOString(),
-          is_late_cancellation: isLateCancellation,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
