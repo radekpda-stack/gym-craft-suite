@@ -17,6 +17,8 @@ export interface Product {
   stock_quantity: number;
   low_stock_threshold: number;
   xp_bonus: number;
+  min_sell_price: number | null;
+  discount_eligible: boolean;
   created_at: string;
   updated_at: string;
   user_id: string | null;
@@ -33,6 +35,8 @@ export interface CreateProductInput {
   stock_quantity?: number;
   low_stock_threshold?: number;
   xp_bonus?: number;
+  min_sell_price?: number | null;
+  discount_eligible?: boolean;
 }
 
 export function useProducts(activeOnly = false) {

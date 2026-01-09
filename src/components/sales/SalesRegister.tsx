@@ -1,22 +1,16 @@
 import { useState, useMemo, useCallback } from 'react';
 import { 
-  ShoppingCart, 
   Loader2, 
   Package, 
-  Banknote, 
-  CreditCard as CardIcon, 
-  Wallet,
   User,
   AlertTriangle,
   Check,
   Wrench,
-  Building2,
   Coins,
   SlidersHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
@@ -27,19 +21,12 @@ import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
-import { CartItemRow } from './CartItemRow';
-import { CartSummary } from './CartSummary';
+import { ProductSearchAndFilters } from './ProductSearchAndFilters';
+import { CartPanel } from './CartPanel';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { featureTracker } from '@/hooks/useFeatureTracking';
 import { useQueryClient } from '@tanstack/react-query';
-
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: 'cash', label: 'Hotově', icon: Banknote },
-  { value: 'credit', label: 'Kredit', icon: Wallet },
-  { value: 'card', label: 'Kartou', icon: CardIcon },
-  { value: 'bank', label: 'Převod', icon: Building2 },
-];
 
 type SortOption = 'best_selling' | 'least_selling' | 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
 
@@ -140,11 +127,16 @@ export function SalesRegister() {
   const [noClient, setNoClient] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [saleNote, setSaleNote] = useState('');
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [inStockOnly, setInStockOnly] = useState(false);
   
   // Sorting state
   const [sortBy, setSortBy] = useState<SortOption>('best_selling');
   const [outOfStockLast, setOutOfStockLast] = useState(true);
-  const [hideOutOfStock, setHideOutOfStock] = useState(false);
 
   // New cart hook with discount support
   const cart = useSalesCartWithDiscount({ clientId: noClient ? null : selectedClient || null });
@@ -153,8 +145,19 @@ export function SalesRegister() {
   const groupedProducts = useMemo(() => {
     let result = [...products];
 
-    // Filter out of stock if enabled (only applies to inventory items)
-    if (hideOutOfStock) {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(p => p.name.toLowerCase().includes(query));
+    }
+
+    // Category filter
+    if (selectedCategory) {
+      result = result.filter(p => p.category === selectedCategory);
+    }
+
+    // In stock only filter (only applies to inventory items)
+    if (inStockOnly) {
       result = result.filter(p => p.kind !== 'inventory' || (p.stock_quantity || 0) > 0);
     }
 
@@ -170,11 +173,9 @@ export function SalesRegister() {
         case 'price_desc':
           return b.price - a.price;
         case 'least_selling':
-          // Reverse of default (best selling)
           return a.name.localeCompare(b.name, 'cs');
         case 'best_selling':
         default:
-          // Already sorted by sales from hook
           return 0;
       }
     };
@@ -203,7 +204,7 @@ export function SalesRegister() {
     const creditTopups = sortWithStock(result.filter(p => p.kind === 'credit_topup'));
 
     return { services, inventory, creditTopups };
-  }, [products, sortBy, outOfStockLast, hideOutOfStock]);
+  }, [products, sortBy, outOfStockLast, searchQuery, selectedCategory, inStockOnly]);
 
   const totalProducts = groupedProducts.services.length + groupedProducts.inventory.length + groupedProducts.creditTopups.length;
 
@@ -239,6 +240,7 @@ export function SalesRegister() {
       const result = await processSaleWithDiscount({
         clientId: noClient ? null : selectedClient || null,
         paymentMethod,
+        note: saleNote || undefined,
         items: cart.items,
         orderDiscount: cart.orderDiscount,
         itemDiscounts: cart.itemsWithTotals
@@ -266,6 +268,7 @@ export function SalesRegister() {
         setSelectedClient('');
         setNoClient(false);
         setPaymentMethod('cash');
+        setSaleNote('');
 
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -277,7 +280,7 @@ export function SalesRegister() {
     } finally {
       setIsProcessing(false);
     }
-  }, [cart, paymentMethod, selectedClient, noClient, queryClient]);
+  }, [cart, paymentMethod, selectedClient, noClient, saleNote, queryClient]);
 
   const isLowStock = (product: Product) => 
     product.kind === 'inventory' && product.stock_quantity <= product.low_stock_threshold;
@@ -326,110 +329,94 @@ export function SalesRegister() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Client Selection */}
-      <div className="glass rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <Label className="flex items-center gap-2 text-sm font-medium">
-            <User className="w-4 h-4" />
-            Klient
-          </Label>
-          <Button
-            variant={noClient ? "default" : "outline"}
-            size="sm"
-            onClick={handleNoClientToggle}
-            className="gap-2"
-            disabled={hasCreditTopup}
-          >
-            {noClient ? <Check className="w-4 h-4" /> : null}
-            Bez klienta
-          </Button>
-        </div>
-        
-        {!noClient ? (
-          <ClientSearchSelect
-            clients={sortedClients}
-            value={selectedClient}
-            onValueChange={setSelectedClient}
-            placeholder="Vyhledat klienta..."
-            showCreditBalance
-            filterArchived={false}
-          />
-        ) : (
-          <div className="p-3 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-            Prodej bude zaznamenán bez přiřazení klientovi
-            {creditTopupNeedsClient && (
-              <p className="text-destructive mt-1 font-medium">
-                ⚠️ Dobití kreditu vyžaduje výběr klienta
-              </p>
-            )}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
+      {/* Left Column - Client, Search, Products */}
+      <div className="space-y-4">
+        {/* Client Selection */}
+        <div className="glass rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <User className="w-4 h-4" />
+              Klient
+            </Label>
+            <Button
+              variant={noClient ? "default" : "outline"}
+              size="sm"
+              onClick={handleNoClientToggle}
+              className="gap-2"
+              disabled={hasCreditTopup}
+            >
+              {noClient ? <Check className="w-4 h-4" /> : null}
+              Bez klienta
+            </Button>
           </div>
-        )}
-
-        {selectedClientData && (
-          <div className="mt-3 p-3 rounded-lg bg-secondary/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Kredit:</span>
-              <span className={cn(
-                "font-semibold",
-                (selectedClientData.credit_balance || 0) < 0 ? "text-destructive" : 
-                (selectedClientData.credit_balance || 0) < 500 ? "text-warning" : "text-success"
-              )}>
-                {formatCurrency(selectedClientData.credit_balance || 0)}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Validation Errors */}
-      {!cart.validation.isValid && !cart.isEmpty && (
-        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-destructive">Nelze dokončit prodej</p>
-              <ul className="text-sm text-destructive/80 mt-1 space-y-1">
-                {cart.validation.errors.map((error, idx) => (
-                  <li key={idx}>{error.message}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Products Grid with Sorting */}
-      <div>
-        <div className="flex items-center justify-between mb-3 gap-2">
-          <Label className="text-sm font-medium">Produkty a služby</Label>
           
-          {/* Compact filters in popover for mobile */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 h-8">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="hidden sm:inline">Řazení</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72" align="end">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Řazení</Label>
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                    <SelectTrigger className="w-full h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-3 pt-2 border-t">
-                  <div className="flex items-center justify-between">
+          {!noClient ? (
+            <ClientSearchSelect
+              clients={sortedClients}
+              value={selectedClient}
+              onValueChange={setSelectedClient}
+              placeholder="Vyhledat klienta..."
+              showCreditBalance
+              filterArchived={false}
+            />
+          ) : (
+            <div className="p-3 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
+              Prodej bude zaznamenán bez přiřazení klientovi
+              {creditTopupNeedsClient && (
+                <p className="text-destructive mt-1 font-medium">
+                  ⚠️ Dobití kreditu vyžaduje výběr klienta
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedClientData && (
+            <div className="mt-3 p-3 rounded-lg bg-secondary/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Kredit:</span>
+                <span className={cn(
+                  "font-semibold",
+                  (selectedClientData.credit_balance || 0) < 0 ? "text-destructive" : 
+                  (selectedClientData.credit_balance || 0) < 500 ? "text-warning" : "text-success"
+                )}>
+                  {formatCurrency(selectedClientData.credit_balance || 0)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search and Filters */}
+        <div className="glass rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <Label className="text-sm font-medium">Produkty a služby</Label>
+            
+            {/* Sorting popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-8">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="hidden sm:inline">Řazení</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="end">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Řazení</Label>
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SORT_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t">
                     <Label htmlFor="out-of-stock-last" className="text-sm cursor-pointer">
                       Vyprodané na konec
                     </Label>
@@ -439,28 +426,33 @@ export function SalesRegister() {
                       onCheckedChange={setOutOfStockLast}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="hide-out-of-stock" className="text-sm cursor-pointer">
-                      Skrýt vyprodané
-                    </Label>
-                    <Switch
-                      id="hide-out-of-stock"
-                      checked={hideOutOfStock}
-                      onCheckedChange={setHideOutOfStock}
-                    />
-                  </div>
                 </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <ProductSearchAndFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            inStockOnly={inStockOnly}
+            onInStockOnlyChange={setInStockOnly}
+          />
         </div>
-        
+
+        {/* Products Grid */}
         {totalProducts === 0 ? (
           <div className="glass rounded-xl p-8 text-center">
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Žádné produkty</p>
+            <p className="text-muted-foreground">
+              {searchQuery || selectedCategory ? 'Žádné výsledky' : 'Žádné produkty'}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Přidejte produkty v záložce Sklad
+              {searchQuery || selectedCategory 
+                ? 'Zkuste upravit vyhledávání nebo filtry'
+                : 'Přidejte produkty v záložce Sklad'
+              }
             </p>
           </div>
         ) : (
@@ -473,7 +465,7 @@ export function SalesRegister() {
                   <span className="text-sm font-medium text-muted-foreground">Služby</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.services.length})</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.services.map((product) => (
                     <ProductCard 
                       key={product.id} 
@@ -496,7 +488,7 @@ export function SalesRegister() {
                   <span className="text-sm font-medium text-muted-foreground">Produkty</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.inventory.length})</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.inventory.map((product) => (
                     <ProductCard 
                       key={product.id} 
@@ -519,7 +511,7 @@ export function SalesRegister() {
                   <span className="text-sm font-medium text-muted-foreground">Dobití kreditu</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.creditTopups.length})</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.creditTopups.map((product) => (
                     <ProductCard 
                       key={product.id} 
@@ -537,129 +529,23 @@ export function SalesRegister() {
         )}
       </div>
 
-      {/* Cart */}
-      {!cart.isEmpty && (
-        <div className="glass rounded-xl p-4">
-          <Label className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <ShoppingCart className="w-4 h-4" />
-            Košík ({cart.totals.itemCount})
-          </Label>
-
-          <div className="space-y-2 mb-4">
-            {cart.itemsWithTotals.map((item) => {
-              const stockError = cart.validation.errors.find(
-                e => e.productId === item.product.id && e.type === 'stock'
-              );
-
-              return (
-                <CartItemRow
-                  key={item.product.id}
-                  product={item.product}
-                  quantity={item.quantity}
-                  lineTotal={item.lineTotal}
-                  lineDiscount={item.lineDiscount}
-                  lineDiscountAmount={item.lineDiscountAmount}
-                  lineTotalAfterDiscount={item.lineTotalAfterDiscount}
-                  onQuantityChange={(qty) => cart.setQuantityDirect(item.product.id, qty)}
-                  onIncrement={(amt) => cart.incrementQuantity(item.product.id, amt)}
-                  onDecrement={() => cart.decrementQuantity(item.product.id)}
-                  onRemove={() => cart.removeItem(item.product.id)}
-                  onLineDiscountChange={(discount) => cart.setLineDiscount(item.product.id, discount)}
-                  stockIssue={!!stockError}
-                />
-              );
-            })}
-          </div>
-
-          {/* Payment Method - Compact on mobile */}
-          <div className="mb-4">
-            <Label className="mb-2 block text-sm">Způsob platby</Label>
-            <RadioGroup 
-              value={paymentMethod} 
-              onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-              className="grid grid-cols-4 gap-1.5 sm:gap-2"
-            >
-              {PAYMENT_METHODS.map((method) => {
-                // Credit requires client
-                const disabled = method.value === 'credit' && !selectedClient && !noClient;
-                // Credit topup cannot be paid by credit
-                const disabledForTopup = method.value === 'credit' && hasCreditTopup;
-
-                return (
-                  <div key={method.value}>
-                    <RadioGroupItem
-                      value={method.value}
-                      id={`payment-${method.value}`}
-                      className="peer sr-only"
-                      disabled={disabled || disabledForTopup}
-                    />
-                    <Label
-                      htmlFor={`payment-${method.value}`}
-                      className={cn(
-                        "flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl border-2 cursor-pointer transition-all",
-                        "hover:bg-secondary/50",
-                        paymentMethod === method.value 
-                          ? "border-primary bg-primary/10" 
-                          : "border-border",
-                        (disabled || disabledForTopup) && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <method.icon className={cn(
-                        "w-5 h-5 sm:w-6 sm:h-6",
-                        paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <span className={cn(
-                        "text-[10px] sm:text-xs font-medium text-center leading-tight",
-                        paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                      )}>
-                        {method.label}
-                      </span>
-                    </Label>
-                  </div>
-                );
-              })}
-            </RadioGroup>
-          </div>
-
-          {/* Cart Summary with Discounts */}
-          <div className="mb-4">
-            <CartSummary
-              totals={cart.totals}
-              orderDiscount={cart.orderDiscount}
-              onOrderDiscountChange={cart.setOrderDiscount}
-              clientCreditBalance={selectedClientData?.credit_balance}
-              isPayingWithCredit={paymentMethod === 'credit'}
-            />
-          </div>
-
-          {/* Credit info for non-credit payments */}
-          {paymentMethod !== 'credit' && !hasCreditTopup && selectedClientData && (
-            <p className="text-xs text-success mb-4">
-              Kredit klienta nebude ovlivněn
-            </p>
-          )}
-          {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
-            <p className="text-xs text-amber-600 mb-4">
-              Klientovi bude připsán kredit z dobíjecích položek
-            </p>
-          )}
-
-          {/* Complete Sale Button */}
-          <Button 
-            onClick={handleSale} 
-            disabled={checkoutDisabled} 
-            className="w-full h-12 text-base gap-2"
-            size="lg"
-          >
-            {isProcessing ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Check className="w-5 h-5" />
-            )}
-            {isProcessing ? 'Zpracovávám...' : 'Dokončit prodej'}
-          </Button>
-        </div>
-      )}
+      {/* Right Column - Sticky Cart Panel */}
+      <div className="lg:sticky lg:top-4 lg:self-start">
+        <CartPanel
+          cart={cart}
+          paymentMethod={paymentMethod}
+          onPaymentMethodChange={setPaymentMethod}
+          saleNote={saleNote}
+          onSaleNoteChange={setSaleNote}
+          selectedClientData={selectedClientData}
+          hasCreditTopup={hasCreditTopup}
+          isProcessing={isProcessing}
+          checkoutDisabled={checkoutDisabled}
+          onSale={handleSale}
+          selectedClient={selectedClient}
+          noClient={noClient}
+        />
+      </div>
     </div>
   );
 }

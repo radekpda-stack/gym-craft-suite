@@ -6084,10 +6084,12 @@ export type Database = {
           category: string
           created_at: string
           credit_delta: number
+          discount_eligible: boolean | null
           id: string
           is_active: boolean
           kind: string
           low_stock_threshold: number | null
+          min_sell_price: number | null
           name: string
           price: number
           purchase_price: number | null
@@ -6100,10 +6102,12 @@ export type Database = {
           category?: string
           created_at?: string
           credit_delta?: number
+          discount_eligible?: boolean | null
           id?: string
           is_active?: boolean
           kind?: string
           low_stock_threshold?: number | null
+          min_sell_price?: number | null
           name: string
           price?: number
           purchase_price?: number | null
@@ -6116,10 +6120,12 @@ export type Database = {
           category?: string
           created_at?: string
           credit_delta?: number
+          discount_eligible?: boolean | null
           id?: string
           is_active?: boolean
           kind?: string
           low_stock_threshold?: number | null
+          min_sell_price?: number | null
           name?: string
           price?: number
           purchase_price?: number | null

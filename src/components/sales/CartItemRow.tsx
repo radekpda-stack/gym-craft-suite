@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Minus, Plus, MoreHorizontal, Trash2, Tag, X } from 'lucide-react';
+import { Minus, Plus, MoreHorizontal, Trash2, Tag, X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -24,6 +24,8 @@ interface CartItemRowProps {
   onRemove: () => void;
   onLineDiscountChange: (discount: CartDiscount | null) => void;
   stockIssue?: boolean;
+  minPriceIssue?: boolean;
+  minPriceMessage?: string;
 }
 
 const QUICK_ADD_OPTIONS = [5, 10, 20];
@@ -41,6 +43,8 @@ export function CartItemRow({
   onRemove,
   onLineDiscountChange,
   stockIssue,
+  minPriceIssue,
+  minPriceMessage,
 }: CartItemRowProps) {
   const [isEditingQty, setIsEditingQty] = useState(false);
   const [editQtyValue, setEditQtyValue] = useState(quantity.toString());
@@ -102,7 +106,8 @@ export function CartItemRow({
   return (
     <div className={cn(
       'flex items-center gap-2 p-2 rounded-lg bg-secondary/30',
-      stockIssue && 'ring-1 ring-destructive/50 bg-destructive/5'
+      stockIssue && 'ring-1 ring-destructive/50 bg-destructive/5',
+      minPriceIssue && 'ring-1 ring-warning/50 bg-warning/5'
     )}>
       {/* Product info */}
       <div className="flex-1 min-w-0">
@@ -110,6 +115,16 @@ export function CartItemRow({
           <span className="font-medium text-sm truncate">{product.name}</span>
           {hasDiscount && (
             <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+          )}
+          {minPriceIssue && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertTriangle className="w-3 h-3 text-warning flex-shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{minPriceMessage || 'Cena pod minimální prodejní cenou'}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
