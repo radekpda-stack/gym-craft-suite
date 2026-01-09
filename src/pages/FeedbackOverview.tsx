@@ -479,9 +479,10 @@ export default function FeedbackOverview() {
                         const timeBadge = getTimeBadge(training.hours_since_training);
                         const feedbackStatus = getFeedbackStatusBadge(training.feedback_status);
                         const FeedbackIcon = feedbackStatus.Icon;
+                        const isGroupTraining = training.total_participants > 1;
                         return (
                           <div
-                            key={training.id}
+                            key={training.participant_id}
                             className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors"
                           >
                             {/* Time indicator */}
@@ -498,6 +499,13 @@ export default function FeedbackOverview() {
                                 >
                                   {training.client_name}
                                 </Link>
+                                {/* Group training badge */}
+                                {isGroupTraining && (
+                                  <Badge variant="outline" className="text-xs gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {training.participant_index}/{training.total_participants}
+                                  </Badge>
+                                )}
                                 {/* Feedback status badge */}
                                 <Badge variant="outline" className={cn('text-xs gap-1', feedbackStatus.color)}>
                                   <FeedbackIcon className="w-3 h-3" />
