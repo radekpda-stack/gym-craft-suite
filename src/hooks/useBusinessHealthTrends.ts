@@ -13,6 +13,7 @@ interface TrendDataPoint {
 interface RevenueTrendPoint {
   date: string;
   creditTopUp: number;
+  productSales: number;
   total: number;
 }
 
@@ -73,6 +74,7 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
         trainingsResult,
         cancelledResult,
         creditTopUpsResult,
+        productSalesResult,
       ] = await Promise.all([
         supabase
           .from('clients')
@@ -89,14 +91,24 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
           .from('training_sessions')
           .select('id, date, client_id')
           .eq('user_id', user.id)
-          .in('status', ['cancelled', 'no_show'])
+          .eq('status', 'canceled')
           .gte('date', startDate.toISOString())
           .order('date', { ascending: true }),
+        // Credit top-ups: payments (type: 'payment' with positive amount) and manual credits
+        supabase
+          .from('credit_transactions')
+          .select('id, amount, created_at, type')
+          .eq('user_id', user.id)
+          .in('type', ['payment', 'manual'])
+          .gt('amount', 0)
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: true }),
+        // Product sales (type: 'product')
         supabase
           .from('credit_transactions')
           .select('id, amount, created_at')
           .eq('user_id', user.id)
-          .eq('type', 'topup')
+          .eq('type', 'product')
           .gte('created_at', startDate.toISOString())
           .order('created_at', { ascending: true }),
       ]);
@@ -105,6 +117,7 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
       const trainings = trainingsResult.data || [];
       const cancelled = cancelledResult.data || [];
       const creditTopUps = creditTopUpsResult.data || [];
+      const productSales = productSalesResult.data || [];
       
       const activeClients = clients.filter(c => !c.is_archived);
       const clientsInDebt = activeClients.filter(c => (c.credit_balance || 0) < 0);
@@ -129,11 +142,19 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
             return d >= date && d < nextDate;
           })
           .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const productTotal = productSales
+          .filter(t => {
+            const d = new Date(t.created_at);
+            return d >= date && d < nextDate;
+          })
+          .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
           
         return {
           date: dateStr,
           creditTopUp: creditTotal,
-          total: creditTotal,
+          productSales: productTotal,
+          total: creditTotal + productTotal,
         };
       });
 
@@ -237,7 +258,7 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
       else status = 'critical';
 
       // Confidence
-      const dataPoints = trainings.length + cancelled.length + creditTopUps.length;
+      const dataPoints = trainings.length + cancelled.length + creditTopUps.length + productSales.length;
       const confidence = Math.min(100, Math.round((dataPoints / (days * 0.5)) * 100));
 
       // Generate explanations
