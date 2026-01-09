@@ -2,12 +2,15 @@
  * ParticipantPaymentCard Component
  * 
  * Compact card for each participant with individual payment method selection.
+ * Now includes editable price share for custom payment splits.
  * Auto-fills payment method based on client preferences.
  */
-import { Wallet, Banknote, CreditCard, Building2, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Wallet, Banknote, CreditCard, Building2, Clock, Pencil, Check } from 'lucide-react';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
+import { Input } from '@/components/ui/input';
 
 export type IndividualPaymentMethod = 'credit' | 'cash' | 'card' | 'bank' | 'pending';
 
@@ -23,7 +26,9 @@ export interface ParticipantPayment {
 interface ParticipantPaymentCardProps {
   participant: ParticipantPayment;
   onChange: (clientId: string, method: IndividualPaymentMethod) => void;
+  onPriceChange?: (clientId: string, newPrice: number) => void;
   disabled?: boolean;
+  allowPriceEdit?: boolean;
 }
 
 const paymentOptions: { value: IndividualPaymentMethod; label: string; shortLabel: string; icon: typeof Wallet }[] = [
@@ -36,14 +41,38 @@ const paymentOptions: { value: IndividualPaymentMethod; label: string; shortLabe
 
 export function ParticipantPaymentCard({ 
   participant, 
-  onChange, 
-  disabled 
+  onChange,
+  onPriceChange,
+  disabled,
+  allowPriceEdit = true,
 }: ParticipantPaymentCardProps) {
   const { credit_balance, price_share, payment_method } = participant;
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [editedPrice, setEditedPrice] = useState(price_share.toString());
 
   const afterBalance = credit_balance - price_share;
   const isDebt = afterBalance < 0;
   const showCreditLine = payment_method === 'credit';
+
+  const handlePriceEdit = () => {
+    setEditedPrice(price_share.toString());
+    setIsEditingPrice(true);
+  };
+
+  const handlePriceConfirm = () => {
+    const newPrice = Math.max(0, parseInt(editedPrice) || 0);
+    onPriceChange?.(participant.client_id, newPrice);
+    setIsEditingPrice(false);
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handlePriceConfirm();
+    } else if (e.key === 'Escape') {
+      setIsEditingPrice(false);
+      setEditedPrice(price_share.toString());
+    }
+  };
 
   return (
     <div className="p-3 rounded-xl border bg-card space-y-2">
@@ -62,8 +91,44 @@ export function ParticipantPaymentCard({
             </p>
           )}
         </div>
-        <div className="text-right">
-          <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
+        <div className="text-right flex items-center gap-1">
+          {isEditingPrice ? (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                value={editedPrice}
+                onChange={(e) => setEditedPrice(e.target.value)}
+                onKeyDown={handlePriceKeyDown}
+                onBlur={handlePriceConfirm}
+                className="w-20 h-8 text-right text-sm font-bold"
+                autoFocus
+                min={0}
+                step={100}
+              />
+              <span className="text-xs text-muted-foreground">Kč</span>
+              <button
+                type="button"
+                onClick={handlePriceConfirm}
+                className="p-1 rounded-md hover:bg-secondary text-success"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
+              {allowPriceEdit && onPriceChange && !disabled && (
+                <button
+                  type="button"
+                  onClick={handlePriceEdit}
+                  className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  title="Upravit částku"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -140,8 +205,11 @@ export function calculatePaymentSummary(participants: ParticipantPayment[]): Pay
   };
 
   participants.forEach(p => {
-    summary[p.payment_method].total += p.price_share;
-    summary[p.payment_method].count += 1;
+    // Only count participants who are actually paying something
+    if (p.price_share > 0) {
+      summary[p.payment_method].total += p.price_share;
+      summary[p.payment_method].count += 1;
+    }
   });
 
   return paymentOptions

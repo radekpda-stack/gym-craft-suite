@@ -362,6 +362,13 @@ export default function TrainingDetail() {
     ));
   };
 
+  // Handler to update individual participant price share
+  const handleParticipantPriceChange = (clientId: string, newPrice: number) => {
+    setParticipantPayments(prev => prev.map(p => 
+      p.client_id === clientId ? { ...p, price_share: newPrice } : p
+    ));
+  };
+
   const openCancelDialog = () => {
     setCancelDeductCredit(true);
     setShowCancelDialog(true);
@@ -487,7 +494,9 @@ export default function TrainingDetail() {
                   key={participant.client_id}
                   participant={participant}
                   onChange={handleParticipantPaymentChange}
+                  onPriceChange={handleParticipantPriceChange}
                   disabled={isSubmitting || completeTrainingAtomic.isPending}
+                  allowPriceEdit={participantPayments.length > 1}
                 />
               ))}
             </div>
