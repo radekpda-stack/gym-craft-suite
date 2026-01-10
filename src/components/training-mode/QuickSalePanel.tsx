@@ -169,7 +169,7 @@ export function QuickSalePanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Client selection + Search */}
       <div className="p-4 border-b border-border/50 bg-background space-y-3">
         {/* Client selector */}
