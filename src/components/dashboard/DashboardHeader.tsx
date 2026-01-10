@@ -3,8 +3,8 @@ import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Users, Banknote, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, Users, Banknote, TrendingUp, TrendingDown, Minus, BarChart3, Dumbbell } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 interface DashboardHeaderProps {
@@ -43,6 +43,8 @@ const TrendIndicator = ({ current, previous }: { current: number; previous: numb
 };
 
 export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
+  const navigate = useNavigate();
+  
   if (isLoading) {
     return (
       <div className="mb-2">
@@ -91,17 +93,29 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           </div>
         </div>
         
-        {/* Analytics button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          asChild
-          className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
-        >
-          <Link to="/statistics">
-            <BarChart3 className="w-5 h-5 text-primary" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1.5">
+          {/* Training Mode button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/training-mode')}
+            className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
+          >
+            <Dumbbell className="w-5 h-5 text-primary" />
+          </Button>
+          
+          {/* Analytics button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
+          >
+            <Link to="/statistics">
+              <BarChart3 className="w-5 h-5 text-primary" />
+            </Link>
+          </Button>
+        </div>
       </div>
       
       {/* Quick metrics - now visible on mobile too */}

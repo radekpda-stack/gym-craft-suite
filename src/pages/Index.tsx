@@ -1,10 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import { Dumbbell } from 'lucide-react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useDashboardViewModel } from '@/hooks/useDashboardViewModel';
 import { useDashboardLayout } from '@/hooks/useAppSettings';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
-import { Button } from '@/components/ui/button';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
@@ -20,7 +17,6 @@ import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSession
 import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
 
 export default function Index() {
-  const navigate = useNavigate();
   usePageTracking('dashboard');
   
   const { data, isLoading } = useDashboardViewModel();
@@ -29,15 +25,6 @@ export default function Index() {
   return (
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
-        {/* Training Mode Button */}
-        <Button
-          onClick={() => navigate('/training-mode')}
-          className="w-full h-14 gap-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-lg font-semibold shadow-lg"
-        >
-          <Dumbbell className="w-6 h-6" />
-          Tréninkový režim
-        </Button>
-
         {/* Header with date */}
         <SectionErrorBoundary section="Hlavička" compact>
           <DashboardHeader data={data} isLoading={isLoading} />
