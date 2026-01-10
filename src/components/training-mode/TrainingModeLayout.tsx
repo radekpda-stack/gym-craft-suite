@@ -21,39 +21,37 @@ export function TrainingModeLayout({ children }: TrainingModeLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header - mobile optimized */}
+      {/* Header - compact mobile optimized */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-area-top">
-        <div className="flex items-center justify-between h-14 px-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-primary" />
+        <div className="flex items-center justify-between h-12 px-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Dumbbell className="w-5 h-5 text-primary" />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-base font-semibold">Tréninkový režim</h1>
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold">Trénink</h1>
+              <div className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium",
+                isOnline ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+              )}>
                 {isOnline ? (
-                  <Wifi className="w-3 h-3 text-success" />
+                  <Wifi className="w-2.5 h-2.5" />
                 ) : (
-                  <WifiOff className="w-3 h-3 text-warning" />
+                  <WifiOff className="w-2.5 h-2.5" />
                 )}
-                <span className={cn(
-                  "text-[10px] font-medium",
-                  isOnline ? "text-success" : "text-warning"
-                )}>
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
+                {isOnline ? 'Online' : 'Offline'}
               </div>
             </div>
           </div>
           
-          {/* Larger close button for mobile */}
+          {/* Close button */}
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="h-12 w-12 rounded-xl hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-transform"
+            className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-transform"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </Button>
         </div>
       </header>
