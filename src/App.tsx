@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages - Main app
 const Index = lazy(() => import("./pages/Index"));
+const TrainingModePage = lazy(() => import("./pages/TrainingModePage"));
 const DemoPage = lazy(() => import("./pages/DemoPage"));
 const WaitingForApproval = lazy(() => import("./pages/WaitingForApproval"));
 const UserApprovals = lazy(() => import("./pages/admin/UserApprovals"));
@@ -115,6 +116,8 @@ const App = () => (
               <Route path="/client/login" element={<Navigate to="/login?mode=client" replace />} />
               
               <Route path="/waiting-for-approval" element={<WaitingForApproval />} />
+              {/* Training Mode - standalone route without Layout */}
+              <Route path="/training-mode" element={<ProtectedRoute><TrainingModePage /></ProtectedRoute>} />
               {/* Public feedback routes (no auth) */}
               <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/feedback/:token" element={<FeedbackPage />} />
