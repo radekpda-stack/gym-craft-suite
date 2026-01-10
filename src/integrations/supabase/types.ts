@@ -3679,6 +3679,7 @@ export type Database = {
           resistance: number | null
           rpe: number | null
           sets: number
+          side: string | null
           source: string | null
           status: string | null
           strokes: number | null
@@ -3725,6 +3726,7 @@ export type Database = {
           resistance?: number | null
           rpe?: number | null
           sets?: number
+          side?: string | null
           source?: string | null
           status?: string | null
           strokes?: number | null
@@ -3771,6 +3773,7 @@ export type Database = {
           resistance?: number | null
           rpe?: number | null
           sets?: number
+          side?: string | null
           source?: string | null
           status?: string | null
           strokes?: number | null

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { Plus, Search, Star, Clock, Dumbbell, Timer, Loader2, X, ArrowUp, ArrowRight, Repeat } from 'lucide-react';
+import { Plus, Search, Star, Clock, Dumbbell, Timer, Loader2, X, ArrowUp, ArrowRight, Repeat, Footprints } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TimeInputSimple } from '@/components/ui/time-input-simple';
+import { SideSelector, type Side } from '@/components/ui/side-selector';
 import { useExercises, Exercise } from '@/hooks/useExercises';
 import { useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { useRecentExercises } from '@/hooks/useRecentExercises';
@@ -65,16 +66,25 @@ function getExerciseInputType(exercise: Exercise): ExerciseInputType {
 
 function getExerciseTypeBadge(exercise: Exercise) {
   const type = getExerciseInputType(exercise);
+  const badges: React.ReactNode[] = [];
+  
   switch (type) {
     case 'height':
-      return <Badge variant="secondary" className="text-[10px] shrink-0 bg-purple-500/10 text-purple-600">výška</Badge>;
+      badges.push(<Badge key="height" variant="secondary" className="text-[10px] shrink-0 bg-purple-500/10 text-purple-600">výška</Badge>);
+      break;
     case 'distance':
-      return <Badge variant="secondary" className="text-[10px] shrink-0 bg-blue-500/10 text-blue-600">délka</Badge>;
+      badges.push(<Badge key="distance" variant="secondary" className="text-[10px] shrink-0 bg-blue-500/10 text-blue-600">délka</Badge>);
+      break;
     case 'time':
-      return <Badge variant="secondary" className="text-[10px] shrink-0 bg-amber-500/10 text-amber-600">čas</Badge>;
-    default:
-      return null;
+      badges.push(<Badge key="time" variant="secondary" className="text-[10px] shrink-0 bg-amber-500/10 text-amber-600">čas</Badge>);
+      break;
   }
+  
+  if (exercise.is_unilateral) {
+    badges.push(<Badge key="unilateral" variant="secondary" className="text-[10px] shrink-0 bg-cyan-500/10 text-cyan-600">L/R</Badge>);
+  }
+  
+  return badges.length > 0 ? <div className="flex gap-1">{badges}</div> : null;
 }
 
 interface QuickExerciseAddProps {
@@ -101,8 +111,10 @@ export function QuickExerciseAdd({
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [side, setSide] = useState<Side>('both');
 
   const activeExercises = exercises.filter(e => !e.is_archived);
+  const isUnilateral = selectedExercise?.is_unilateral || false;
 
   // Organize exercises
   const organizedExercises = useMemo(() => {
@@ -148,6 +160,8 @@ export function QuickExerciseAdd({
       height_cm: null,
       distance_cm: null,
     });
+    // Reset side to 'both' for unilateral exercises, 'none' for others
+    setSide(exercise.is_unilateral ? 'both' : 'both');
     setStep('log');
   };
 
@@ -177,6 +191,9 @@ export function QuickExerciseAdd({
         distanceMeters = data.distance_cm / 100;
       }
 
+      // Determine side value for storage
+      const sideValue = isUnilateral ? side : 'none';
+
       await createEntry.mutateAsync({
         client_id: clientId,
         exercise_id: selectedExercise.id,
@@ -193,6 +210,7 @@ export function QuickExerciseAdd({
         is_pr: false,
         distance_meters: distanceMeters,
         height_cm: data.height_cm,
+        side: sideValue,
       });
 
       toast.success(`${selectedExercise.name_cs || selectedExercise.name} uložen`);
@@ -239,37 +257,56 @@ export function QuickExerciseAdd({
     );
   };
 
+  // Render side selector for unilateral exercises
+  const renderSideSelector = () => {
+    if (!isUnilateral) return null;
+    
+    return (
+      <div className="space-y-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+        <div className="flex items-center gap-2 text-sm font-medium text-cyan-600">
+          <Footprints className="w-4 h-4" />
+          Strana
+        </div>
+        <SideSelector value={side} onChange={setSide} />
+      </div>
+    );
+  };
+
   // Render input fields based on exercise type
   const renderInputFields = () => {
     switch (exerciseType) {
       case 'time':
         return (
-          <FormField
-            control={form.control}
-            name="time_ms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1.5">
-                  <Timer className="w-4 h-4" />
-                  Čas
-                </FormLabel>
-                <FormControl>
-                  <TimeInputSimple
-                    value={field.value}
-                    onChange={field.onChange}
-                    maxMinutes={59}
-                    showCentiseconds={true}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-4">
+            {renderSideSelector()}
+            <FormField
+              control={form.control}
+              name="time_ms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1.5">
+                    <Timer className="w-4 h-4" />
+                    Čas
+                  </FormLabel>
+                  <FormControl>
+                    <TimeInputSimple
+                      value={field.value}
+                      onChange={field.onChange}
+                      maxMinutes={59}
+                      showCentiseconds={true}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         );
 
       case 'height':
         return (
           <div className="space-y-4">
+            {renderSideSelector()}
             {/* Height input */}
             <FormField
               control={form.control}
@@ -355,6 +392,7 @@ export function QuickExerciseAdd({
       case 'distance':
         return (
           <div className="space-y-4">
+            {renderSideSelector()}
             {/* Distance input */}
             <FormField
               control={form.control}
@@ -440,6 +478,7 @@ export function QuickExerciseAdd({
       case 'reps_only':
         return (
           <div className="space-y-4">
+            {renderSideSelector()}
             {/* Reps and Sets */}
             <div className="grid grid-cols-2 gap-3">
               {renderRepsField()}
@@ -472,6 +511,7 @@ export function QuickExerciseAdd({
       default: // 'strength'
         return (
           <div className="space-y-4">
+            {renderSideSelector()}
             {/* Weight with quick adjust buttons */}
             <FormField
               control={form.control}
