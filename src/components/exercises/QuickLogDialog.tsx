@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity, Star, Clock, Ruler } from 'lucide-react';
+import { CalendarIcon, Dumbbell, Timer, Loader2, Trophy, ChevronDown, Zap, Activity, Star, Clock, Ruler, Footprints } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import { useFavoriteExercises } from '@/hooks/useFavoriteExercises';
 import { cn } from '@/lib/utils';
 import { detectExerciseMetricCategory, getRpeBgColor } from '@/lib/exerciseMetrics';
 import { AssistanceBandSelector, isPullUpExercise, type BandType } from './AssistanceBandSelector';
+import { SideSelector, type Side } from '@/components/ui/side-selector';
 
 const formSchema = z.object({
   client_id: z.string().min(1, 'Vyberte klienta'),
@@ -87,6 +88,7 @@ export function QuickLogDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [assistanceBands, setAssistanceBands] = useState<BandType[]>([]);
+  const [side, setSide] = useState<Side>('left');
 
   const activeClients = clients.filter(c => !c.is_archived);
   const activeExercises = exercises.filter(e => !e.is_archived);
@@ -171,6 +173,7 @@ export function QuickLogDialog({
       });
       setShowAdvanced(false);
       setAssistanceBands([]);
+      setSide('left');
     }
   }, [open, clientId, exerciseId, form, exercises]);
 
@@ -185,6 +188,7 @@ export function QuickLogDialog({
 
   const showCardioMetrics = exerciseCategory !== 'strength' && exerciseCategory !== 'jump';
   const isJumpExercise = exerciseCategory === 'jump';
+  const isUnilateral = selectedExercise?.is_unilateral || false;
   const rpeValue = form.watch('rpe');
   
   // Check if selected exercise is a pull-up type (for assistance bands)
@@ -246,6 +250,7 @@ export function QuickLogDialog({
         level: data.level ?? null,
         resistance: data.resistance ?? null,
         metrics_json: metricsJson,
+        side: isUnilateral ? side : null,
       });
 
       onOpenChange(false);
@@ -701,6 +706,20 @@ export function QuickLogDialog({
             ) : isJumpExercise ? (
               /* Jump exercises - distance in cm */
               <div className="space-y-4">
+                {/* Side selector for unilateral exercises */}
+                {isUnilateral && (
+                  <div className="space-y-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                    <div className="flex items-center gap-2 text-sm font-medium text-cyan-600">
+                      <Footprints className="w-4 h-4" />
+                      Strana (noha)
+                    </div>
+                    <SideSelector value={side} onChange={setSide} />
+                    <p className="text-xs text-muted-foreground">
+                      Pro zápis obou stran uložte zvlášť levou a pravou nohu
+                    </p>
+                  </div>
+                )}
+
                 <FormField
                   control={form.control}
                   name="distance_meters"
