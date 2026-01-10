@@ -55,7 +55,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
 
       for (const entry of entries || []) {
         // Group by exercise name + side for unilateral exercises
-        const entrySide = entry.side || 'none';
+        const entrySide = (entry.side as 'left' | 'right' | 'both' | 'none') || 'none';
         const key = entrySide === 'left' || entrySide === 'right' 
           ? `${entry.exercise_name}__${entrySide}` 
           : entry.exercise_name;
@@ -65,6 +65,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
           exerciseMap.set(key, {
             id: entry.id,
             exerciseId: entry.exercise_id,
+            exerciseName: entry.exercise_name,
             maxWeight: entry.weight_kg || 0,
             maxWeightReps: entry.reps || 0,
             maxWeightDate: entry.date,
@@ -75,6 +76,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             isBodyweight: entry.is_bodyweight || false,
             hasWeight: !!entry.weight_kg && entry.weight_kg > 0,
             hasTime: !!entry.time_seconds && entry.time_seconds > 0,
+            side: entrySide,
           });
         } else {
           // Update max weight
@@ -101,11 +103,16 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
       }
 
       // Convert to PRs - prioritize weight PRs, then time PRs, then reps PRs
-      for (const [exerciseName, data] of exerciseMap) {
+      for (const [key, data] of exerciseMap) {
+        // Extract display name (remove __left or __right suffix for display)
+        const displayName = data.side === 'left' || data.side === 'right'
+          ? `${data.exerciseName} (${data.side === 'left' ? 'L' : 'R'})`
+          : data.exerciseName;
+        
         if (data.hasWeight && data.maxWeight > 0) {
           prs.push({
-            id: `${exerciseName}-weight`,
-            exerciseName,
+            id: `${key}-weight`,
+            exerciseName: displayName,
             exerciseId: data.exerciseId,
             bestValue: data.maxWeight,
             bestDisplay: `${data.maxWeight} kg`,
@@ -113,14 +120,15 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             metricType: 'weight',
             achievedAt: data.maxWeightDate,
             isBodyweight: false,
+            side: data.side,
           });
         } else if (data.hasTime && data.maxTime > 0) {
           // Format time as mm:ss
           const minutes = Math.floor(data.maxTime / 60);
           const seconds = data.maxTime % 60;
           prs.push({
-            id: `${exerciseName}-time`,
-            exerciseName,
+            id: `${key}-time`,
+            exerciseName: displayName,
             exerciseId: data.exerciseId,
             bestValue: data.maxTime,
             bestDisplay: minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}s`,
@@ -128,11 +136,12 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             metricType: 'time',
             achievedAt: data.maxTimeDate,
             isBodyweight: false,
+            side: data.side,
           });
         } else if (data.isBodyweight && data.maxReps > 0) {
           prs.push({
-            id: `${exerciseName}-reps`,
-            exerciseName,
+            id: `${key}-reps`,
+            exerciseName: displayName,
             exerciseId: data.exerciseId,
             bestValue: data.maxReps,
             bestDisplay: `${data.maxReps} reps`,
@@ -140,6 +149,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             metricType: 'reps',
             achievedAt: data.maxRepsDate,
             isBodyweight: true,
+            side: data.side,
           });
         }
       }
