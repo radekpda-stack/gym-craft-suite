@@ -27,7 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
-import { ScheduleTrainingTimeline } from '@/components/schedule/ScheduleTrainingTimeline';
+
 
 // Pomocná funkce pro generování volných slotů mezi tréninky
 function generateFreeSlots(
@@ -418,13 +418,6 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Animated Training Timeline */}
-      {dayEvents.length > 0 && (
-        <ScheduleTrainingTimeline 
-          sessions={dayEvents} 
-          clients={clients}
-        />
-      )}
 
       {/* Day Events List */}
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-32">
