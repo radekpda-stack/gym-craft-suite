@@ -8,7 +8,8 @@ import {
   Users,
   Clock,
   CreditCard,
-  Banknote
+  Banknote,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ClientPRsQuickView } from './ClientPRsQuickView';
+import { QuickExerciseAdd } from './QuickExerciseAdd';
+import { RescheduleDialog } from './RescheduleDialog';
 import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
 import { CompleteTrainingDialog } from '@/components/trainings/CompleteTrainingDialog';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
@@ -49,7 +52,6 @@ interface TrainingModeCardProps {
   session: TrainingModeCardSession;
   isActive: boolean;
   onToggleActive: (id: string) => void;
-  onReschedule?: (id: string) => void;
   onComplete?: () => void;
 }
 
@@ -57,11 +59,13 @@ export function TrainingModeCard({
   session,
   isActive,
   onToggleActive,
-  onReschedule,
   onComplete,
 }: TrainingModeCardProps) {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [showExerciseAdd, setShowExerciseAdd] = useState(false);
+  const [selectedClientForExercise, setSelectedClientForExercise] = useState<string | null>(null);
   
   const { data: participants = [] } = useTrainingParticipants(session.id);
   const { data: clients = [] } = useClients();
@@ -249,51 +253,64 @@ export function TrainingModeCard({
 
             {/* Quick Actions */}
             {canTakeAction && (
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-3">
+                {/* Add Exercise button */}
                 <Button
-                  onClick={() => setShowCompleteDialog(true)}
-                  className="flex-1 bg-success hover:bg-success/90 text-white gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedClientForExercise(participantIds[0]);
+                    setShowExerciseAdd(true);
+                  }}
+                  className="w-full gap-2"
                 >
-                  <Check className="w-4 h-4" />
-                  Dokončit
+                  <Plus className="w-4 h-4" />
+                  Přidat cvik
                 </Button>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="destructive" className="gap-2">
-                      <X className="w-4 h-4" />
-                      Zrušit
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => setShowCancelDialog(true)}
-                      className="gap-2"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      Zrušit (strhnout kredit)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setShowCancelDialog(true)}
-                      className="gap-2"
-                    >
-                      <Banknote className="w-4 h-4" />
-                      Zrušit (bez stržení)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => setShowCompleteDialog(true)}
+                    className="flex-1 bg-success hover:bg-success/90 text-white gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Dokončit
+                  </Button>
 
-                {onReschedule && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="destructive" className="gap-2">
+                        <X className="w-4 h-4" />
+                        Zrušit
+                        <ChevronDown className="w-3 h-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => setShowCancelDialog(true)}
+                        className="gap-2"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        Zrušit (strhnout kredit)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setShowCancelDialog(true)}
+                        className="gap-2"
+                      >
+                        <Banknote className="w-4 h-4" />
+                        Zrušit (bez stržení)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     variant="outline"
-                    onClick={() => onReschedule(session.id)}
+                    onClick={() => setShowRescheduleDialog(true)}
                     className="gap-2"
                   >
                     <CalendarDays className="w-4 h-4" />
                     Přesunout
                   </Button>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -329,6 +346,24 @@ export function TrainingModeCard({
         }}
         isLoading={false}
       />
+
+      <RescheduleDialog
+        open={showRescheduleDialog}
+        onOpenChange={setShowRescheduleDialog}
+        sessionId={session.id}
+        currentDate={session.date}
+        clientName={participantNames.join(', ')}
+        onSuccess={onComplete}
+      />
+
+      {selectedClientForExercise && (
+        <QuickExerciseAdd
+          open={showExerciseAdd}
+          onOpenChange={setShowExerciseAdd}
+          clientId={selectedClientForExercise}
+          trainingSessionId={session.id}
+        />
+      )}
     </>
   );
 }
