@@ -59,7 +59,17 @@ function PRItem({ pr }: { pr: ExercisePR }) {
         <PRIcon metricType={pr.metricType} />
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm font-semibold truncate">{pr.exerciseName}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-semibold truncate">{pr.exerciseName}</p>
+          {pr.side && (pr.side === 'left' || pr.side === 'right') && (
+            <span className={cn(
+              "text-[10px] font-bold px-1 rounded shrink-0",
+              pr.side === 'left' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+            )}>
+              {pr.side === 'left' ? 'L' : 'R'}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           {format(new Date(pr.achievedAt), 'd. MMMM yyyy', { locale: cs })}
         </p>

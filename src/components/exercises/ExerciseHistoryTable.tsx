@@ -78,6 +78,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           level,
           resistance,
           metrics_json,
+          side,
           clients(id, name)
         `)
         .eq('exercise_id', exerciseId);
@@ -159,6 +160,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           resistance: (entry as any).resistance,
           performanceDisplay,
           assistanceBands,
+          side: (entry as any).side as 'left' | 'right' | 'both' | 'none' | null,
         };
       });
 
@@ -314,6 +316,14 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1">
                       {row.isPR && <Trophy className="w-3 h-3 text-primary" />}
+                      {row.side && (row.side === 'left' || row.side === 'right') && (
+                        <span className={cn(
+                          "text-[10px] font-bold px-1 rounded",
+                          row.side === 'left' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                        )}>
+                          {row.side === 'left' ? 'L' : 'R'}
+                        </span>
+                      )}
                       {format(new Date(row.date), 'd.M.yy', { locale: cs })}
                     </div>
                   </TableCell>
