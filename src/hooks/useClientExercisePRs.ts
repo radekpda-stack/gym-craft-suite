@@ -29,7 +29,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
       // Get all exercise entries for this client
       const { data: entries, error } = await supabase
         .from('exercise_entries')
-        .select('id, exercise_name, exercise_id, weight_kg, reps, is_bodyweight, date, time_seconds, side')
+        .select('id, exercise_name, exercise_id, weight_kg, reps, is_bodyweight, date, time_seconds, side, distance_meters, height_cm')
         .eq('client_id', clientId)
         .order('date', { ascending: false });
 
@@ -47,9 +47,15 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
         maxRepsDate: string;
         maxTime: number;
         maxTimeDate: string;
+        maxDistance: number;
+        maxDistanceDate: string;
+        maxHeight: number;
+        maxHeightDate: string;
         isBodyweight: boolean;
         hasWeight: boolean;
         hasTime: boolean;
+        hasDistance: boolean;
+        hasHeight: boolean;
         side: 'left' | 'right' | 'both' | 'none' | null;
       }>();
 
@@ -73,9 +79,15 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             maxRepsDate: entry.date,
             maxTime: entry.time_seconds || 0,
             maxTimeDate: entry.date,
+            maxDistance: entry.distance_meters || 0,
+            maxDistanceDate: entry.date,
+            maxHeight: entry.height_cm || 0,
+            maxHeightDate: entry.date,
             isBodyweight: entry.is_bodyweight || false,
             hasWeight: !!entry.weight_kg && entry.weight_kg > 0,
             hasTime: !!entry.time_seconds && entry.time_seconds > 0,
+            hasDistance: !!entry.distance_meters && entry.distance_meters > 0,
+            hasHeight: !!entry.height_cm && entry.height_cm > 0,
             side: entrySide,
           });
         } else {
@@ -93,6 +105,18 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             existing.maxTimeDate = entry.date;
             existing.hasTime = true;
           }
+          // Update max distance (for jumps, throws, etc.)
+          if (entry.distance_meters && entry.distance_meters > existing.maxDistance) {
+            existing.maxDistance = entry.distance_meters;
+            existing.maxDistanceDate = entry.date;
+            existing.hasDistance = true;
+          }
+          // Update max height (for vertical jumps, etc.)
+          if (entry.height_cm && entry.height_cm > existing.maxHeight) {
+            existing.maxHeight = entry.height_cm;
+            existing.maxHeightDate = entry.date;
+            existing.hasHeight = true;
+          }
           // Update max reps for bodyweight exercises
           if (entry.is_bodyweight && entry.reps && entry.reps > existing.maxReps) {
             existing.maxReps = entry.reps;
@@ -102,14 +126,47 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
         }
       }
 
-      // Convert to PRs - prioritize weight PRs, then time PRs, then reps PRs
+      // Convert to PRs - prioritize distance, height, weight, time, then reps
       for (const [key, data] of exerciseMap) {
         // Extract display name (remove __left or __right suffix for display)
         const displayName = data.side === 'left' || data.side === 'right'
           ? `${data.exerciseName} (${data.side === 'left' ? 'L' : 'R'})`
           : data.exerciseName;
         
-        if (data.hasWeight && data.maxWeight > 0) {
+        // Distance PRs (jumps, throws) - priority for jump exercises
+        if (data.hasDistance && data.maxDistance > 0) {
+          // Format distance as cm or m
+          const distanceCm = Math.round(data.maxDistance * 100);
+          const displayValue = distanceCm >= 100 
+            ? `${(data.maxDistance).toFixed(2)} m` 
+            : `${distanceCm} cm`;
+          prs.push({
+            id: `${key}-distance`,
+            exerciseName: displayName,
+            exerciseId: data.exerciseId,
+            bestValue: data.maxDistance,
+            bestDisplay: displayValue,
+            unit: 'cm',
+            metricType: 'distance',
+            achievedAt: data.maxDistanceDate,
+            isBodyweight: false,
+            side: data.side,
+          });
+        } else if (data.hasHeight && data.maxHeight > 0) {
+          // Height PRs (vertical jumps)
+          prs.push({
+            id: `${key}-height`,
+            exerciseName: displayName,
+            exerciseId: data.exerciseId,
+            bestValue: data.maxHeight,
+            bestDisplay: `${data.maxHeight} cm`,
+            unit: 'cm',
+            metricType: 'distance',
+            achievedAt: data.maxHeightDate,
+            isBodyweight: false,
+            side: data.side,
+          });
+        } else if (data.hasWeight && data.maxWeight > 0) {
           prs.push({
             id: `${key}-weight`,
             exerciseName: displayName,
