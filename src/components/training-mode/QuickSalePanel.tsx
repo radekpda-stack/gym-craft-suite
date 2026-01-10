@@ -54,24 +54,26 @@ function QuickProductCard({ product, inCart, quantity, onAdd }: QuickProductCard
       onClick={onAdd}
       disabled={outOfStock}
       className={cn(
-        "relative p-3 rounded-xl text-left transition-all w-full",
+        "relative p-4 rounded-xl text-left transition-all w-full min-h-[64px]",
         "active:scale-[0.98]",
         outOfStock && "opacity-50 cursor-not-allowed",
         inCart 
           ? "bg-primary/20 ring-2 ring-primary" 
-          : "bg-secondary/50 hover:bg-secondary"
+          : "bg-secondary/50 hover:bg-secondary active:bg-secondary"
       )}
     >
       <div className="flex items-center gap-3">
-        {getIcon()}
+        <div className="p-2 rounded-lg bg-background/50">
+          {getIcon()}
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{product.name}</p>
-          <p className="text-base font-bold text-primary">
+          <p className="text-lg font-bold text-primary">
             {formatCurrency(product.price)}
           </p>
         </div>
         {inCart && (
-          <Badge className="bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold">
+          <Badge className="bg-primary min-w-8 h-8 flex items-center justify-center text-base font-bold">
             {quantity}
           </Badge>
         )}
@@ -163,21 +165,21 @@ export function QuickSalePanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Search */}
-      <div className="p-4 border-b border-border/50">
+      <div className="p-4 border-b border-border/50 bg-background">
         <Input
           placeholder="Hledat produkt..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10"
+          className="h-12 text-base"
         />
       </div>
 
-      {/* Products grid */}
+      {/* Products list */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-2">
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Žádné produkty</p>
             </div>
           ) : (
@@ -199,26 +201,26 @@ export function QuickSalePanel() {
 
       {/* Cart summary & checkout */}
       {!cart.isEmpty && (
-        <div className="border-t border-border/50 p-4 space-y-3 bg-background">
+        <div className="border-t border-border/50 p-4 space-y-3 bg-background safe-area-bottom">
           {/* Cart items */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-32 overflow-y-auto">
             {cart.items.map((item) => (
-              <div key={item.product.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{item.quantity}×</span>
-                  <span className="truncate max-w-[150px]">{item.product.name}</span>
+              <div key={item.product.id} className="flex items-center justify-between py-1">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Badge variant="secondary" className="shrink-0">{item.quantity}×</Badge>
+                  <span className="truncate text-sm">{item.product.name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="font-medium text-sm">
                     {formatCurrency(item.product.price * item.quantity)}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
+                    className="h-8 w-8"
                     onClick={() => cart.removeItem(item.product.id)}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -226,9 +228,9 @@ export function QuickSalePanel() {
           </div>
 
           {/* Total */}
-          <div className="flex items-center justify-between py-2 border-t border-border/50">
+          <div className="flex items-center justify-between py-3 border-t border-border/50">
             <span className="font-medium">Celkem:</span>
-            <span className="text-lg font-bold text-primary">
+            <span className="text-xl font-bold text-primary">
               {formatCurrency(cart.totals.totalAfterDiscount)}
             </span>
           </div>
@@ -237,16 +239,16 @@ export function QuickSalePanel() {
           <Button
             onClick={handleQuickSale}
             disabled={isProcessing}
-            className="w-full h-12 gap-2"
+            className="w-full h-14 gap-2 text-base font-semibold"
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
                 Zpracovávám...
               </>
             ) : (
               <>
-                <Check className="w-4 h-4" />
+                <Check className="w-5 h-5" />
                 Potvrdit prodej
               </>
             )}
