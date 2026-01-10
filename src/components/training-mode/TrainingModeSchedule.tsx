@@ -67,8 +67,8 @@ export function TrainingModeSchedule() {
   );
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="h-full overflow-y-auto">
-      <div className="p-4 space-y-4 pb-24">
+    <PullToRefresh onRefresh={handleRefresh} className="h-full overflow-y-auto overscroll-contain">
+      <div className="p-4 space-y-4 pb-32">
         {/* Date header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
