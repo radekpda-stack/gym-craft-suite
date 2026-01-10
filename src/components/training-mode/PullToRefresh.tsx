@@ -59,7 +59,7 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
   const lastRefreshText = getLastRefreshText();
 
   return (
-    <div className={cn("relative overflow-hidden", className)}>
+    <div className={cn("relative", className)}>
       {/* Pull indicator */}
       <motion.div
         className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center h-16 -mt-16 z-10"
@@ -97,7 +97,7 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
         dragElastic={{ top: 0.4, bottom: 0 }}
         onDragEnd={handleDragEnd}
         style={{ y: isRefreshing ? 60 : y }}
-        className="h-full overflow-y-auto touch-pan-y"
+        className="h-full overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
         {children}
