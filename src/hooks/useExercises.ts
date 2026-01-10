@@ -14,7 +14,7 @@ export const MOVEMENT_PATTERNS = [
 
 export const DIFFICULTIES = ['beginner', 'intermediate', 'advanced'] as const;
 
-export const DEFAULT_UNITS = ['reps', 'seconds', 'meters', 'calories', 'cardio_machine'] as const;
+export const DEFAULT_UNITS = ['reps', 'seconds', 'meters', 'calories', 'cardio_machine', 'height_cm', 'distance_cm'] as const;
 
 export const SOURCES = ['system', 'custom', 'import'] as const;
 
@@ -75,6 +75,7 @@ export interface Exercise {
   is_bodyweight: boolean;
   is_time_based: boolean;
   default_unit: DefaultUnit;
+  supported_metrics: string[] | null;
   video_url: string | null;
   image_url: string | null;
   source: Source;

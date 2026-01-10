@@ -22,6 +22,7 @@ export interface ExerciseEntry {
   notes: string | null;
   is_pr: boolean;
   distance_meters: number | null;
+  height_cm: number | null;
   // Extended metrics
   avg_watts: number | null;
   max_watts: number | null;
@@ -92,6 +93,7 @@ export function useExerciseEntries(clientId?: string) {
     notes: string | null;
     is_pr: boolean;
     distance_meters?: number | null;
+    height_cm?: number | null;
     avg_watts?: number | null;
     max_watts?: number | null;
     avg_speed_kmh?: number | null;
