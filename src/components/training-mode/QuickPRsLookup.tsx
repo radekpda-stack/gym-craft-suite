@@ -105,7 +105,7 @@ export function QuickPRsLookup() {
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Client Search - sticky at top */}
       <div className="p-4 border-b border-border/50 bg-background">
         <ClientSearchSelect

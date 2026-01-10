@@ -76,15 +76,15 @@ export default function TrainingModePage() {
         </div>
 
         {/* Tab content - flex-1 with min-h-0 for proper overflow */}
-        <TabsContent value="schedule" className="flex-1 min-h-0 mt-0 overflow-y-auto">
+        <TabsContent value="schedule" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
           <TrainingModeSchedule />
         </TabsContent>
         
-        <TabsContent value="sale" className="flex-1 min-h-0 mt-0 overflow-hidden flex flex-col">
+        <TabsContent value="sale" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
           <QuickSalePanel />
         </TabsContent>
 
-        <TabsContent value="prs" className="flex-1 min-h-0 mt-0 overflow-hidden flex flex-col">
+        <TabsContent value="prs" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
           <QuickPRsLookup />
         </TabsContent>
       </Tabs>
