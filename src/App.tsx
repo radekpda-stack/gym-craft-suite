@@ -12,6 +12,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SessionTrackingProvider } from "@/components/SessionTrackingProvider";
 import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
 import { UndoProvider } from "@/contexts/UndoContext";
+import { TrainingModeProvider } from "@/contexts/TrainingModeContext";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { UndoToast } from "@/components/ui/UndoToast";
 import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
@@ -103,6 +104,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <UndoToast />
+            <TrainingModeProvider>
             <BrowserRouter>
             <InteractionTracker>
             <DemoProvider>
@@ -224,6 +226,7 @@ const App = () => (
             </DemoProvider>
             </InteractionTracker>
           </BrowserRouter>
+            </TrainingModeProvider>
           </TooltipProvider>
         </UndoProvider>
       </LanguageProvider>
