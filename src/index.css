@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&display=swap');
 
 @layer base {
   /* ========================================
@@ -960,4 +960,309 @@
     @apply bg-card;
     border-color: hsl(var(--border) / 0.5);
   }
+}
+
+/* ============================================
+   PULSE THEME - Ultra Sporty Overrides
+   Dynamic typography, glowing icons, energetic feel
+   ============================================ */
+
+.theme-pulse {
+  /* Outfit - geometric, sporty, modern sans-serif */
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.theme-pulse h1, 
+.theme-pulse h2, 
+.theme-pulse h3,
+.theme-pulse .text-h1,
+.theme-pulse .text-h2,
+.theme-pulse .text-h3 {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+/* Pulse - Gradient text for headings */
+.theme-pulse .gradient-text,
+.theme-pulse h1 {
+  background: linear-gradient(135deg, hsl(330 85% 60%) 0%, hsl(200 100% 55%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Pulse - Icon glow effect */
+.theme-pulse svg {
+  filter: drop-shadow(0 0 3px hsl(330 85% 60% / 0.4));
+  transition: filter 0.2s ease;
+}
+
+.theme-pulse svg:hover,
+.theme-pulse button:hover svg,
+.theme-pulse a:hover svg {
+  filter: drop-shadow(0 0 8px hsl(330 85% 60% / 0.7));
+}
+
+/* Pulse - Primary icons get electric blue */
+.theme-pulse .text-primary svg,
+.theme-pulse [data-primary] svg {
+  filter: drop-shadow(0 0 4px hsl(200 100% 55% / 0.5));
+}
+
+/* Pulse - Cards with gradient border */
+.theme-pulse .jm-card,
+.theme-pulse [data-slot="card"] {
+  border: 1px solid transparent;
+  background: 
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg, hsl(330 85% 60% / 0.3), hsl(200 100% 55% / 0.3)) border-box;
+  border-radius: 1rem;
+}
+
+.theme-pulse .jm-card:hover,
+.theme-pulse [data-slot="card"]:hover {
+  background: 
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg, hsl(330 85% 60% / 0.5), hsl(200 100% 55% / 0.5)) border-box;
+}
+
+/* Pulse - Buttons with gradient and glow */
+.theme-pulse .jm-btn-primary,
+.theme-pulse button[data-primary],
+.theme-pulse [data-slot="button"][data-variant="default"] {
+  background: linear-gradient(135deg, hsl(330 85% 55%) 0%, hsl(330 90% 65%) 100%);
+  box-shadow: 0 0 20px hsl(330 85% 60% / 0.4), 0 4px 12px hsl(0 0% 0% / 0.3);
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-pulse .jm-btn-primary:hover,
+.theme-pulse button[data-primary]:hover {
+  box-shadow: 0 0 30px hsl(330 85% 60% / 0.6), 0 6px 20px hsl(0 0% 0% / 0.4);
+  transform: translateY(-2px);
+}
+
+/* Pulse - Accent elements with electric blue */
+.theme-pulse .text-accent,
+.theme-pulse [data-accent] {
+  color: hsl(200 100% 55%);
+  text-shadow: 0 0 10px hsl(200 100% 55% / 0.5);
+}
+
+/* Pulse - Badge styling */
+.theme-pulse [data-slot="badge"] {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 9999px;
+}
+
+/* Pulse - Input fields with glow focus */
+.theme-pulse input:focus,
+.theme-pulse textarea:focus,
+.theme-pulse select:focus {
+  box-shadow: 0 0 0 2px hsl(330 85% 60% / 0.3), 0 0 15px hsl(330 85% 60% / 0.2);
+  border-color: hsl(330 85% 60%);
+}
+
+/* Pulse - Progress bars with gradient */
+.theme-pulse [role="progressbar"] > div,
+.theme-pulse .progress-bar {
+  background: linear-gradient(90deg, hsl(330 85% 60%) 0%, hsl(200 100% 55%) 100%);
+}
+
+/* Pulse - Stat cards with energetic hover */
+.theme-pulse .stat-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 30px hsl(330 85% 60% / 0.2);
+}
+
+/* Pulse - Noise texture adjustment */
+.theme-pulse::before {
+  opacity: 0.015;
+}
+
+/* ============================================
+   NOIR LUXE THEME - Sophisticated Elegance
+   Refined typography, subtle gold accents, luxury feel
+   ============================================ */
+
+.theme-noir-luxe {
+  /* Inter for body - clean and readable */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+}
+
+.theme-noir-luxe h1, 
+.theme-noir-luxe h2, 
+.theme-noir-luxe h3,
+.theme-noir-luxe .text-h1,
+.theme-noir-luxe .text-h2,
+.theme-noir-luxe .text-h3 {
+  /* Cormorant Garamond - elegant serif for headings */
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-style: normal;
+}
+
+.theme-noir-luxe .text-h1,
+.theme-noir-luxe h1 {
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  font-size: 1.8em;
+}
+
+/* Noir Luxe - Gold gradient text for headings */
+.theme-noir-luxe .gradient-text,
+.theme-noir-luxe h1 {
+  background: linear-gradient(135deg, hsl(42 65% 65%) 0%, hsl(38 50% 45%) 50%, hsl(42 70% 60%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Noir Luxe - Subtle icon styling */
+.theme-noir-luxe svg {
+  stroke-width: 1.5;
+  transition: all 0.3s ease;
+}
+
+.theme-noir-luxe button:hover svg,
+.theme-noir-luxe a:hover svg {
+  filter: drop-shadow(0 0 4px hsl(42 65% 55% / 0.4));
+  color: hsl(42 65% 55%);
+}
+
+/* Noir Luxe - Primary icons get gold tint */
+.theme-noir-luxe .text-primary svg {
+  filter: drop-shadow(0 0 2px hsl(42 65% 55% / 0.3));
+}
+
+/* Noir Luxe - Cards with refined borders */
+.theme-noir-luxe .jm-card,
+.theme-noir-luxe [data-slot="card"] {
+  border: 1px solid hsl(42 25% 20% / 0.4);
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.3), inset 0 1px 0 hsl(42 30% 30% / 0.1);
+}
+
+.theme-noir-luxe .jm-card:hover,
+.theme-noir-luxe [data-slot="card"]:hover {
+  border-color: hsl(42 40% 35% / 0.5);
+  box-shadow: 0 4px 16px hsl(0 0% 0% / 0.4), inset 0 1px 0 hsl(42 30% 35% / 0.15);
+}
+
+/* Noir Luxe - Elegant buttons */
+.theme-noir-luxe .jm-btn-primary,
+.theme-noir-luxe button[data-primary],
+.theme-noir-luxe [data-slot="button"][data-variant="default"] {
+  background: linear-gradient(180deg, hsl(42 60% 52%) 0%, hsl(38 55% 42%) 100%);
+  box-shadow: 0 2px 8px hsl(42 65% 55% / 0.2), inset 0 1px 0 hsl(42 80% 70% / 0.3);
+  border: 1px solid hsl(42 50% 35% / 0.5);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.theme-noir-luxe .jm-btn-primary:hover,
+.theme-noir-luxe button[data-primary]:hover {
+  background: linear-gradient(180deg, hsl(42 65% 58%) 0%, hsl(38 60% 48%) 100%);
+  box-shadow: 0 4px 12px hsl(42 65% 55% / 0.3), inset 0 1px 0 hsl(42 80% 75% / 0.4);
+}
+
+/* Noir Luxe - Secondary buttons with gold border */
+.theme-noir-luxe .jm-btn-secondary {
+  border: 1px solid hsl(42 30% 30% / 0.5);
+  letter-spacing: 0.08em;
+}
+
+.theme-noir-luxe .jm-btn-secondary:hover {
+  border-color: hsl(42 50% 45% / 0.6);
+  background: hsl(42 20% 12% / 0.3);
+}
+
+/* Noir Luxe - Accent elements */
+.theme-noir-luxe .text-accent,
+.theme-noir-luxe [data-accent] {
+  color: hsl(42 65% 55%);
+}
+
+/* Noir Luxe - Badge styling - refined */
+.theme-noir-luxe [data-slot="badge"] {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  border-radius: 0.25rem;
+  border: 1px solid hsl(42 30% 30% / 0.3);
+}
+
+/* Noir Luxe - Input fields with subtle gold focus */
+.theme-noir-luxe input:focus,
+.theme-noir-luxe textarea:focus,
+.theme-noir-luxe select:focus {
+  box-shadow: 0 0 0 1px hsl(42 50% 45% / 0.4);
+  border-color: hsl(42 50% 45%);
+}
+
+/* Noir Luxe - Progress bars with gold */
+.theme-noir-luxe [role="progressbar"] > div,
+.theme-noir-luxe .progress-bar {
+  background: linear-gradient(90deg, hsl(42 55% 45%) 0%, hsl(42 70% 55%) 100%);
+}
+
+/* Noir Luxe - Stat cards with elegant hover */
+.theme-noir-luxe .stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px hsl(0 0% 0% / 0.4), 0 0 30px hsl(42 65% 55% / 0.08);
+}
+
+/* Noir Luxe - Sidebar with luxe border */
+.theme-noir-luxe .sidebar-glass {
+  border-right: 1px solid hsl(42 25% 18% / 0.5);
+}
+
+/* Noir Luxe - Dividers with gold tint */
+.theme-noir-luxe hr,
+.theme-noir-luxe [data-slot="separator"] {
+  border-color: hsl(42 20% 20% / 0.4);
+}
+
+/* Noir Luxe - Tables with refined styling */
+.theme-noir-luxe th {
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+/* Noir Luxe - Subtle noise adjustment */
+.theme-noir-luxe::before {
+  opacity: 0.02;
+}
+
+/* Noir Luxe - Links with elegant underline */
+.theme-noir-luxe a:not([class]) {
+  text-decoration: none;
+  border-bottom: 1px solid hsl(42 40% 40% / 0.3);
+  transition: border-color 0.3s ease;
+}
+
+.theme-noir-luxe a:not([class]):hover {
+  border-bottom-color: hsl(42 65% 55%);
+}
+
+/* Noir Luxe - Scrollbar with gold */
+.theme-noir-luxe::-webkit-scrollbar-thumb {
+  background-color: hsl(42 30% 25% / 0.6);
+}
+
+.theme-noir-luxe::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(42 40% 35% / 0.7);
 }
