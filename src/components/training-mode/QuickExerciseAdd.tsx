@@ -282,83 +282,200 @@ export function QuickExerciseAdd({
                     )}
                   />
                 ) : (
-                  /* Strength exercise */
-                  <div className="grid grid-cols-3 gap-3">
+                  /* Strength exercise - mobile optimized with +/- buttons */
+                  <div className="space-y-4">
+                    {/* Weight with quick adjust buttons */}
                     <FormField
                       control={form.control}
                       name="weight_kg"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Váha (kg)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              placeholder="0"
-                              value={field.value ?? ''}
-                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
-                              className="text-center text-lg font-semibold"
-                            />
-                          </FormControl>
+                          <FormLabel className="flex items-center gap-1.5">
+                            <Dumbbell className="w-4 h-4" />
+                            Váha (kg)
+                          </FormLabel>
+                          <div className="flex items-center gap-2">
+                            {/* Quick subtract buttons */}
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-lg font-bold shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(Math.max(0, current - 5));
+                                }}
+                              >
+                                -5
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-10 text-base font-semibold shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(Math.max(0, current - 2.5));
+                                }}
+                              >
+                                -2.5
+                              </Button>
+                            </div>
+                            
+                            {/* Weight input */}
+                            <FormControl>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="0"
+                                value={field.value ?? ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="text-center text-2xl font-bold h-14 flex-1"
+                              />
+                            </FormControl>
+                            
+                            {/* Quick add buttons */}
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-10 text-base font-semibold shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(current + 2.5);
+                                }}
+                              >
+                                +2.5
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-lg font-bold shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(current + 5);
+                                }}
+                              >
+                                +5
+                              </Button>
+                            </div>
+                          </div>
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="reps"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Opakování</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              placeholder="0"
-                              value={field.value ?? ''}
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                              className="text-center text-lg font-semibold"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="sets"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Série</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              placeholder="1"
-                              value={field.value}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                              className="text-center text-lg font-semibold"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+
+                    {/* Reps and Sets row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="reps"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Opakování</FormLabel>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-xl shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(Math.max(0, current - 1));
+                                }}
+                              >
+                                -
+                              </Button>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  placeholder="0"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                  className="text-center text-xl font-bold h-12"
+                                />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-xl shrink-0"
+                                onClick={() => {
+                                  const current = field.value || 0;
+                                  field.onChange(current + 1);
+                                }}
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sets"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Série</FormLabel>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-xl shrink-0"
+                                onClick={() => {
+                                  field.onChange(Math.max(1, field.value - 1));
+                                }}
+                              >
+                                -
+                              </Button>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  placeholder="1"
+                                  value={field.value}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  className="text-center text-xl font-bold h-12"
+                                />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-12 w-12 text-xl shrink-0"
+                                onClick={() => {
+                                  field.onChange(field.value + 1);
+                                }}
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 )}
 
-                {/* Quick preset buttons for common values */}
+                {/* Quick preset buttons for common reps values */}
                 {!isTimeBased && (
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Rychlá volba opakování:</p>
+                    <p className="text-xs text-muted-foreground font-medium">Rychlá volba opakování:</p>
                     <div className="flex flex-wrap gap-2">
-                      {[5, 8, 10, 12, 15].map(reps => (
+                      {[5, 6, 8, 10, 12, 15, 20].map(reps => (
                         <Button
                           key={reps}
                           type="button"
                           variant="outline"
-                          size="sm"
-                          onClick={() => form.setValue('reps', reps)}
                           className={cn(
-                            form.watch('reps') === reps && "bg-primary/10 border-primary"
+                            "h-11 px-4 text-base font-semibold",
+                            form.watch('reps') === reps && "bg-primary/10 border-primary text-primary"
                           )}
+                          onClick={() => form.setValue('reps', reps)}
                         >
                           {reps}×
                         </Button>
