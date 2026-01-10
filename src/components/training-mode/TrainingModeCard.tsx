@@ -9,7 +9,8 @@ import {
   Clock,
   CreditCard,
   Banknote,
-  Plus
+  Plus,
+  GripVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ import { cs } from 'date-fns/locale';
 import { ClientPRsQuickView } from './ClientPRsQuickView';
 import { QuickExerciseAdd } from './QuickExerciseAdd';
 import { RescheduleDialog } from './RescheduleDialog';
+import { SwipeableCard } from './SwipeableCard';
 import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
 import { CompleteTrainingDialog } from '@/components/trainings/CompleteTrainingDialog';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
@@ -34,6 +36,7 @@ import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/us
 import { useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
 import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
 import { useTags } from '@/hooks/useTags';
+import { toast } from 'sonner';
 
 interface TrainingModeCardSession {
   id: string;
@@ -179,50 +182,68 @@ export function TrainingModeCard({
   const isCancelled = session.status === 'cancelled' || session.status === 'canceled';
   const canTakeAction = !isCompleted && !isCancelled;
 
-  return (
-    <>
-      <div
-        className={cn(
-          "rounded-xl border transition-all duration-200",
-          isActive 
-            ? "border-primary bg-primary/5 shadow-lg" 
-            : "border-border/50 bg-card hover:border-border",
-          (isCompleted || isCancelled) && "opacity-60"
-        )}
+  // Quick swipe actions
+  const handleSwipeComplete = () => {
+    if (canTakeAction) {
+      setShowCompleteDialog(true);
+    }
+  };
+
+  const handleSwipeCancel = () => {
+    if (canTakeAction) {
+      setShowCancelDialog(true);
+    }
+  };
+
+  const cardContent = (
+    <div
+      className={cn(
+        "rounded-xl border transition-all duration-200 bg-card",
+        isActive 
+          ? "border-primary bg-primary/5 shadow-lg" 
+          : "border-border/50 hover:border-border",
+        (isCompleted || isCancelled) && "opacity-60"
+      )}
+    >
+      {/* Header - always visible */}
+      <button
+        type="button"
+        onClick={() => onToggleActive(session.id)}
+        className="w-full p-4 text-left min-h-[76px]"
       >
-        {/* Header - always visible */}
-        <button
-          type="button"
-          onClick={() => onToggleActive(session.id)}
-          className="w-full p-4 text-left"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold">{timeStr}</span>
-                {getStatusBadge()}
+        <div className="flex items-start justify-between gap-3">
+          {/* Swipe hint indicator */}
+          {canTakeAction && !isActive && (
+            <div className="flex items-center self-center mr-1">
+              <GripVertical className="w-4 h-4 text-muted-foreground/40" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="font-semibold text-base">{timeStr}</span>
+              {getStatusBadge()}
+            </div>
+            <p className="text-sm text-foreground truncate font-medium">
+              {participantNames.join(', ')}
+            </p>
+            {participantCount > 1 && (
+              <div className="flex items-center gap-1 mt-1">
+                <Users className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{participantCount} účastníků</span>
               </div>
-              <p className="text-sm text-foreground truncate">
-                {participantNames.join(', ')}
-              </p>
-              {participantCount > 1 && (
-                <div className="flex items-center gap-1 mt-1">
-                  <Users className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{participantCount} účastníků</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary">{estimatedPrice} Kč</span>
-              {isActive ? (
-                <ChevronUp className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-muted-foreground" />
-              )}
-            </div>
+            )}
           </div>
-        </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm font-semibold text-primary">{estimatedPrice} Kč</span>
+            {isActive ? (
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+      </button>
 
         {/* Expanded content */}
         {isActive && (
@@ -318,6 +339,22 @@ export function TrainingModeCard({
           </div>
         )}
       </div>
+  );
+
+  return (
+    <>
+      {canTakeAction && !isActive ? (
+        <SwipeableCard
+          onSwipeLeft={handleSwipeCancel}
+          onSwipeRight={handleSwipeComplete}
+          leftLabel="Zrušit"
+          rightLabel="Dokončit"
+        >
+          {cardContent}
+        </SwipeableCard>
+      ) : (
+        cardContent
+      )}
 
       {/* Dialogs */}
       <CompleteTrainingDialog

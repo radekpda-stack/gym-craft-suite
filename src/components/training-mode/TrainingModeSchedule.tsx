@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, RefreshCw } from 'lucide-react';
 import { TrainingModeCard } from './TrainingModeCard';
+import { PullToRefresh } from './PullToRefresh';
 import { useTrainingMode } from '@/hooks/useTrainingMode';
 import { useDashboardSchedule } from '@/hooks/dashboard/useDashboardSchedule';
 import { useTrainingSessions } from '@/hooks/useTrainingSessions';
@@ -42,6 +43,11 @@ export function TrainingModeSchedule() {
     refetch();
   };
 
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -61,85 +67,96 @@ export function TrainingModeSchedule() {
   );
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Date header */}
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Calendar className="w-4 h-4" />
-        <span className="text-sm font-medium capitalize">{dateStr}</span>
-        <span className="text-xs">({todaySessions.length} tréninků)</span>
+    <PullToRefresh onRefresh={handleRefresh} className="h-full">
+      <div className="p-4 space-y-4 pb-safe">
+        {/* Date header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-4 h-4" />
+            <span className="text-sm font-medium capitalize">{dateStr}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+              {todaySessions.length} tréninků
+            </span>
+          </div>
+        </div>
+
+        {todaySessions.length === 0 ? (
+          <div className="text-center py-16">
+            <Calendar className="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
+            <h3 className="font-semibold text-lg mb-2">Žádné tréninky</h3>
+            <p className="text-sm text-muted-foreground">
+              Dnes nemáte naplánované žádné tréninky
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Scheduled (active) sessions first */}
+            {scheduledSessions.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  Naplánované ({scheduledSessions.length})
+                </h3>
+                <div className="space-y-3">
+                  {scheduledSessions.map((session) => session && (
+                    <TrainingModeCard
+                      key={session.id}
+                      session={session}
+                      isActive={activeSessionId === session.id}
+                      onToggleActive={handleToggleActive}
+                      onComplete={handleComplete}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed sessions */}
+            {completedSessions.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-success" />
+                  Dokončené ({completedSessions.length})
+                </h3>
+                <div className="space-y-3">
+                  {completedSessions.map((session) => session && (
+                    <TrainingModeCard
+                      key={session.id}
+                      session={session}
+                      isActive={activeSessionId === session.id}
+                      onToggleActive={handleToggleActive}
+                      onComplete={handleComplete}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled sessions */}
+            {cancelledSessions.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-destructive" />
+                  Zrušené ({cancelledSessions.length})
+                </h3>
+                <div className="space-y-3">
+                  {cancelledSessions.map((session) => session && (
+                    <TrainingModeCard
+                      key={session.id}
+                      session={session}
+                      isActive={activeSessionId === session.id}
+                      onToggleActive={handleToggleActive}
+                      onComplete={handleComplete}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {todaySessions.length === 0 ? (
-        <div className="text-center py-12">
-          <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-          <h3 className="font-medium text-lg mb-1">Žádné tréninky</h3>
-          <p className="text-sm text-muted-foreground">
-            Dnes nemáte naplánované žádné tréninky
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Scheduled (active) sessions first */}
-          {scheduledSessions.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Naplánované ({scheduledSessions.length})
-              </h3>
-              <div className="space-y-3">
-                {scheduledSessions.map((session) => session && (
-                  <TrainingModeCard
-                    key={session.id}
-                    session={session}
-                    isActive={activeSessionId === session.id}
-                    onToggleActive={handleToggleActive}
-                    onComplete={handleComplete}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Completed sessions */}
-          {completedSessions.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Dokončené ({completedSessions.length})
-              </h3>
-              <div className="space-y-3">
-                {completedSessions.map((session) => session && (
-                  <TrainingModeCard
-                    key={session.id}
-                    session={session}
-                    isActive={activeSessionId === session.id}
-                    onToggleActive={handleToggleActive}
-                    onComplete={handleComplete}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Cancelled sessions */}
-          {cancelledSessions.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Zrušené ({cancelledSessions.length})
-              </h3>
-              <div className="space-y-3">
-                {cancelledSessions.map((session) => session && (
-                  <TrainingModeCard
-                    key={session.id}
-                    session={session}
-                    isActive={activeSessionId === session.id}
-                    onToggleActive={handleToggleActive}
-                    onComplete={handleComplete}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    </PullToRefresh>
   );
 }
