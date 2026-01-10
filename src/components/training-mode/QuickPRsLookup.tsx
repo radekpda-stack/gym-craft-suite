@@ -123,43 +123,45 @@ export function QuickPRsLookup() {
       </div>
 
       {/* PRs List */}
-      {!selectedClientId ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 p-8">
-          <Search className="w-12 h-12 opacity-30" />
-          <p className="text-center text-sm">
-            Vyberte klienta pro zobrazení jeho osobních rekordů
-          </p>
-        </div>
-      ) : prsLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Načítám PRka...</div>
-        </div>
-      ) : sortedPRs.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2 p-8">
-          <Trophy className="w-10 h-10 opacity-30" />
-          <p className="text-center text-sm">
-            {selectedClient?.name} zatím nemá žádné osobní rekordy
-          </p>
-        </div>
-      ) : (
-        <>
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-1.5">
-              {sortedPRs.map((pr) => (
-                <PRItem key={pr.id} pr={pr} />
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* Stats footer - sticky at bottom */}
-          <div className="p-4 border-t border-border/50 bg-background flex items-center justify-between text-sm">
-            <span className="font-medium truncate min-w-0">{selectedClient?.name}</span>
-            <Badge variant="secondary" className="shrink-0 ml-2">
-              {sortedPRs.length} PRek
-            </Badge>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {!selectedClientId ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 p-8">
+            <Search className="w-12 h-12 opacity-30" />
+            <p className="text-center text-sm">
+              Vyberte klienta pro zobrazení jeho osobních rekordů
+            </p>
           </div>
-        </>
-      )}
+        ) : prsLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-pulse text-muted-foreground">Načítám PRka...</div>
+          </div>
+        ) : sortedPRs.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2 p-8">
+            <Trophy className="w-10 h-10 opacity-30" />
+            <p className="text-center text-sm">
+              {selectedClient?.name} zatím nemá žádné osobní rekordy
+            </p>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-1.5 pb-20">
+                {sortedPRs.map((pr) => (
+                  <PRItem key={pr.id} pr={pr} />
+                ))}
+              </div>
+            </ScrollArea>
+
+            {/* Stats footer - sticky at bottom */}
+            <div className="shrink-0 p-4 border-t border-border/50 bg-background flex items-center justify-between text-sm">
+              <span className="font-medium truncate min-w-0">{selectedClient?.name}</span>
+              <Badge variant="secondary" className="shrink-0 ml-2">
+                {sortedPRs.length} PRek
+              </Badge>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

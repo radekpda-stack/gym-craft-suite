@@ -46,10 +46,10 @@ export default function TrainingModePage() {
       <Tabs 
         value={activeTab} 
         onValueChange={setActiveTab}
-        className="flex flex-col h-[calc(100vh-56px)]"
+        className="flex flex-col h-full"
       >
         {/* Tab navigation - sticky with better mobile touch targets */}
-        <div className="sticky top-0 z-10 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="shrink-0 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <TabsList className="h-16 w-full bg-transparent gap-1 px-3">
             <TabsTrigger 
               value="schedule"
@@ -75,16 +75,16 @@ export default function TrainingModePage() {
           </TabsList>
         </div>
 
-        {/* Tab content */}
-        <TabsContent value="schedule" className="flex-1 mt-0 overflow-hidden">
+        {/* Tab content - flex-1 with min-h-0 for proper overflow */}
+        <TabsContent value="schedule" className="flex-1 min-h-0 mt-0 overflow-y-auto">
           <TrainingModeSchedule />
         </TabsContent>
         
-        <TabsContent value="sale" className="flex-1 mt-0 overflow-hidden flex flex-col">
+        <TabsContent value="sale" className="flex-1 min-h-0 mt-0 overflow-hidden flex flex-col">
           <QuickSalePanel />
         </TabsContent>
 
-        <TabsContent value="prs" className="flex-1 mt-0 overflow-hidden flex flex-col">
+        <TabsContent value="prs" className="flex-1 min-h-0 mt-0 overflow-hidden flex flex-col">
           <QuickPRsLookup />
         </TabsContent>
       </Tabs>

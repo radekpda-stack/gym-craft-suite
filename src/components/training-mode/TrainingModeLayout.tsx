@@ -20,9 +20,9 @@ export function TrainingModeLayout({ children }: TrainingModeLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       {/* Header - compact mobile optimized */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-area-top">
+      <header className="shrink-0 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-area-top">
         <div className="flex items-center justify-between h-12 px-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -56,8 +56,8 @@ export function TrainingModeLayout({ children }: TrainingModeLayoutProps) {
         </div>
       </header>
 
-      {/* Main content with safe area */}
-      <main className="flex-1 overflow-hidden">
+      {/* Main content - flex-1 with min-h-0 for proper overflow in children */}
+      <main className="flex-1 min-h-0 flex flex-col">
         {children}
       </main>
     </div>
