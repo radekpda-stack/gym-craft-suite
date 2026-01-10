@@ -261,56 +261,58 @@ export function TrainingModeCard({
                     setSelectedClientForExercise(participantIds[0]);
                     setShowExerciseAdd(true);
                   }}
-                  className="w-full gap-2"
+                  className="w-full h-12 gap-2 text-base"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   Přidat cvik
                 </Button>
 
-                <div className="flex flex-wrap gap-2">
+                {/* Main action buttons - stack on very small screens */}
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={() => setShowCompleteDialog(true)}
-                    className="flex-1 bg-success hover:bg-success/90 text-white gap-2"
+                    className="h-12 bg-success hover:bg-success/90 text-white gap-2"
                   >
-                    <Check className="w-4 h-4" />
-                    Dokončit
+                    <Check className="w-5 h-5" />
+                    <span className="truncate">Dokončit</span>
                   </Button>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="destructive" className="gap-2">
-                        <X className="w-4 h-4" />
-                        Zrušit
-                        <ChevronDown className="w-3 h-3" />
+                      <Button variant="destructive" className="h-12 gap-2 w-full">
+                        <X className="w-5 h-5" />
+                        <span className="truncate">Zrušit</span>
+                        <ChevronDown className="w-4 h-4 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem 
                         onClick={() => setShowCancelDialog(true)}
-                        className="gap-2"
+                        className="gap-2 py-3"
                       >
                         <CreditCard className="w-4 h-4" />
                         Zrušit (strhnout kredit)
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => setShowCancelDialog(true)}
-                        className="gap-2"
+                        className="gap-2 py-3"
                       >
                         <Banknote className="w-4 h-4" />
                         Zrušit (bez stržení)
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowRescheduleDialog(true)}
-                    className="gap-2"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                    Přesunout
-                  </Button>
                 </div>
+
+                {/* Reschedule button - full width */}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRescheduleDialog(true)}
+                  className="w-full h-11 gap-2"
+                >
+                  <CalendarDays className="w-5 h-5" />
+                  Přesunout termín
+                </Button>
               </div>
             )}
           </div>
