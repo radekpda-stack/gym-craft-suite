@@ -734,8 +734,8 @@ export function QuickLogDialog({
                           type="number"
                           inputMode="numeric"
                           placeholder="např. 250"
-                          value={field.value ? field.value * 100 : ''}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) / 100 : null)}
+                          value={field.value ? Math.round(field.value * 100) : ''}
+                          onChange={(e) => field.onChange(e.target.value ? Math.round(parseFloat(e.target.value)) / 100 : null)}
                           className="h-11"
                         />
                       </FormControl>
