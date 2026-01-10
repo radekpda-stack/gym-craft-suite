@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarCheck, ShoppingBag, Trophy, Plus, UserPlus, Package } from 'lucide-react';
+import { CalendarCheck, ShoppingBag, Trophy, UserPlus, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TrainingModeLayout } from '@/components/training-mode/TrainingModeLayout';
 import { TrainingModeSchedule } from '@/components/training-mode/TrainingModeSchedule';
@@ -7,12 +7,14 @@ import { QuickSalePanel } from '@/components/training-mode/QuickSalePanel';
 import { QuickPRsLookup } from '@/components/training-mode/QuickPRsLookup';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { useTrainingMode } from '@/hooks/useTrainingMode';
-import { useNavigate } from 'react-router-dom';
+import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
+import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
 
 export default function TrainingModePage() {
   const { enterTrainingMode } = useTrainingMode();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('schedule');
+  const [showTrainingDialog, setShowTrainingDialog] = useState(false);
+  const [showClientSheet, setShowClientSheet] = useState(false);
 
   // Enter training mode when page loads
   useEffect(() => {
@@ -25,13 +27,13 @@ export default function TrainingModePage() {
       id: 'new-training',
       icon: <CalendarCheck className="w-5 h-5" />,
       label: 'Nový trénink',
-      onClick: () => navigate('/calendar'),
+      onClick: () => setShowTrainingDialog(true),
     },
     {
       id: 'new-client',
       icon: <UserPlus className="w-5 h-5" />,
       label: 'Nový klient',
-      onClick: () => navigate('/clients'),
+      onClick: () => setShowClientSheet(true),
     },
     {
       id: 'new-sale',
@@ -93,6 +95,21 @@ export default function TrainingModePage() {
       <FloatingActionButton 
         actions={fabActions} 
         className="bottom-6 right-4 safe-area-bottom"
+      />
+
+      {/* Dialog pro nový trénink */}
+      <CreateTrainingDialog
+        open={showTrainingDialog}
+        onOpenChange={setShowTrainingDialog}
+      />
+
+      {/* Sheet pro nového klienta */}
+      <CreateClientSheet
+        open={showClientSheet}
+        onOpenChange={setShowClientSheet}
+        onSubmit={async () => {
+          setShowClientSheet(false);
+        }}
       />
     </TrainingModeLayout>
   );
