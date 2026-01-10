@@ -169,7 +169,7 @@ export function ClientPRsQuickView({
             )}
           </div>
         </button>
-        <ScrollArea className={cn(isExpanded ? "h-[300px]" : "h-[200px]", "transition-all")}>
+        <ScrollArea className={cn(isExpanded ? "h-[360px]" : "h-[280px]", "transition-all")}>
           <SingleClientPRs clientId={participantIds[0]} maxItems={maxItems} expanded={isExpanded} />
         </ScrollArea>
       </div>
@@ -211,7 +211,7 @@ export function ClientPRsQuickView({
         </TabsList>
         {participantIds.map((id) => (
           <TabsContent key={id} value={id} className="mt-3">
-            <ScrollArea className={cn(isExpanded ? "h-[280px]" : "h-[180px]", "transition-all")}>
+            <ScrollArea className={cn(isExpanded ? "h-[320px]" : "h-[240px]", "transition-all")}>
               <SingleClientPRs clientId={id} maxItems={maxItems} expanded={isExpanded} />
             </ScrollArea>
           </TabsContent>

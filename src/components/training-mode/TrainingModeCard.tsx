@@ -7,19 +7,11 @@ import {
   ChevronUp,
   Users,
   Clock,
-  CreditCard,
-  Banknote,
-  Plus,
-  GripVertical
+  GripVertical,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -298,31 +290,14 @@ export function TrainingModeCard({
                     <span className="truncate">Dokončit</span>
                   </Button>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="destructive" className="h-12 gap-2 w-full">
-                        <X className="w-5 h-5" />
-                        <span className="truncate">Zrušit</span>
-                        <ChevronDown className="w-4 h-4 shrink-0" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem 
-                        onClick={() => setShowCancelDialog(true)}
-                        className="gap-2 py-3"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        Zrušit (strhnout kredit)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setShowCancelDialog(true)}
-                        className="gap-2 py-3"
-                      >
-                        <Banknote className="w-4 h-4" />
-                        Zrušit (bez stržení)
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowCancelDialog(true)}
+                    className="h-12 gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    <span className="truncate">Zrušit</span>
+                  </Button>
                 </div>
 
                 {/* Reschedule button - full width */}

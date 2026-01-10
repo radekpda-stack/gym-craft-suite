@@ -6,12 +6,14 @@ import {
   Wrench,
   Coins,
   ShoppingCart,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { Product } from '@/hooks/useProducts';
 import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
@@ -93,9 +95,13 @@ export function QuickSalePanel() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Get default client from active session
-  const defaultClientId = participants.length > 0 
+  const sessionClientId = participants.length > 0 
     ? participants[0].client_id 
     : null;
+  
+  // Allow manual client selection, default to session client
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const defaultClientId = selectedClientId || sessionClientId;
 
   const cart = useSalesCartWithDiscount({ clientId: defaultClientId });
 
@@ -164,8 +170,27 @@ export function QuickSalePanel() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="p-4 border-b border-border/50 bg-background">
+      {/* Client selection + Search */}
+      <div className="p-4 border-b border-border/50 bg-background space-y-3">
+        {/* Client selector */}
+        <div className="flex items-center gap-2">
+          <User className="w-4 h-4 text-muted-foreground shrink-0" />
+          <ClientSearchSelect
+            clients={clients.map(c => ({ 
+              id: c.id, 
+              name: c.name,
+              credit_balance: c.credit_balance,
+              is_archived: c.is_archived 
+            }))}
+            value={defaultClientId || ''}
+            onValueChange={(val) => setSelectedClientId(val || null)}
+            placeholder="Vybrat klienta..."
+            filterArchived
+            showCreditBalance
+          />
+        </div>
+        
+        {/* Search */}
         <Input
           placeholder="Hledat produkt..."
           value={searchQuery}

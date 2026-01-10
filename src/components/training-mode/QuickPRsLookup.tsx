@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Dumbbell, Timer, Hash, Search } from 'lucide-react';
+import { Trophy, Dumbbell, Timer, Hash, Search, Copy, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
@@ -7,6 +7,8 @@ import { useClients } from '@/hooks/useClients';
 import { useClientExercisePRs, ExercisePR } from '@/hooks/useClientExercisePRs';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
   switch (metricType) {
     case 'weight':
@@ -34,25 +36,58 @@ function getMetricColor(metricType: ExercisePR['metricType']) {
 }
 
 function PRItem({ pr }: { pr: ExercisePR }) {
+  const [copied, setCopied] = useState(false);
   const colorClass = getMetricColor(pr.metricType);
   
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(pr.bestDisplay);
+      setCopied(true);
+      
+      // Haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      
+      toast.success(`${pr.bestDisplay} zkopírováno`);
+      
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Nepodařilo se zkopírovat');
+    }
+  };
+
   return (
-    <div className="flex items-center justify-between py-3 px-3 rounded-xl bg-secondary/50 active:bg-secondary transition-colors">
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        "w-full flex items-center justify-between py-3 px-3 rounded-xl",
+        "bg-secondary/50 hover:bg-secondary active:scale-[0.98] transition-all"
+      )}
+    >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className={`p-2 rounded-lg ${colorClass}`}>
           <PRIcon metricType={pr.metricType} />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 text-left">
           <span className="font-medium text-sm block truncate">{pr.exerciseName}</span>
           <span className="text-xs text-muted-foreground">
             {format(new Date(pr.achievedAt), 'd. MMMM', { locale: cs })}
           </span>
         </div>
       </div>
-      <Badge variant="secondary" className={`font-mono font-bold text-base shrink-0 ml-2 ${colorClass}`}>
-        {pr.bestDisplay}
-      </Badge>
-    </div>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        <Badge variant="secondary" className={`font-mono font-bold text-base ${colorClass}`}>
+          {pr.bestDisplay}
+        </Badge>
+        {copied ? (
+          <Check className="w-4 h-4 text-success" />
+        ) : (
+          <Copy className="w-4 h-4 text-muted-foreground/50" />
+        )}
+      </div>
+    </button>
   );
 }
 
