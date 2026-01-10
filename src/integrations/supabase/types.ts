@@ -3660,6 +3660,7 @@ export type Database = {
           distance_meters: number | null
           exercise_id: string | null
           exercise_name: string
+          height_cm: number | null
           id: string
           incline_percent: number | null
           is_bodyweight: boolean | null
@@ -3705,6 +3706,7 @@ export type Database = {
           distance_meters?: number | null
           exercise_id?: string | null
           exercise_name: string
+          height_cm?: number | null
           id?: string
           incline_percent?: number | null
           is_bodyweight?: boolean | null
@@ -3750,6 +3752,7 @@ export type Database = {
           distance_meters?: number | null
           exercise_id?: string | null
           exercise_name?: string
+          height_cm?: number | null
           id?: string
           incline_percent?: number | null
           is_bodyweight?: boolean | null
