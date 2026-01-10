@@ -6,6 +6,8 @@ export type ThemeId =
   | 'theme-arctic-pro' 
   | 'theme-light-minimal' 
   | 'theme-frost-minimal'
+  | 'theme-pulse'
+  | 'theme-noir-luxe'
   | 'default';
 
 export interface PdfColors {
@@ -61,6 +63,8 @@ export function getCurrentThemeId(): ThemeId {
   if (classList.contains('theme-arctic-pro')) return 'theme-arctic-pro';
   if (classList.contains('theme-light-minimal')) return 'theme-light-minimal';
   if (classList.contains('theme-frost-minimal')) return 'theme-frost-minimal';
+  if (classList.contains('theme-pulse')) return 'theme-pulse';
+  if (classList.contains('theme-noir-luxe')) return 'theme-noir-luxe';
   
   return 'default';
 }
@@ -75,6 +79,8 @@ export function getThemeDisplayName(themeId: ThemeId, language: 'cs' | 'en' = 'c
     'theme-arctic-pro': { cs: 'Arctic Pro (Cyan)', en: 'Arctic Pro (Cyan)' },
     'theme-light-minimal': { cs: 'Light Minimal (Modrá)', en: 'Light Minimal (Blue)' },
     'theme-frost-minimal': { cs: 'Frost Minimal (Světle modrá)', en: 'Frost Minimal (Sky Blue)' },
+    'theme-pulse': { cs: 'Pulse (Magenta)', en: 'Pulse (Magenta)' },
+    'theme-noir-luxe': { cs: 'Noir Luxe (Zlatá)', en: 'Noir Luxe (Gold)' },
     'default': { cs: 'Výchozí', en: 'Default' },
   };
   

@@ -8,7 +8,7 @@ initClientErrorReporter();
 // Initialize theme on load (keep in sync with src/hooks/useTheme)
 const initTheme = () => {
   const stored = localStorage.getItem('app-theme');
-  const validThemes = ['nike', 'nike-volt', 'arctic-pro', 'light-minimal', 'frost-minimal'] as const;
+  const validThemes = ['nike', 'nike-volt', 'arctic-pro', 'light-minimal', 'frost-minimal', 'pulse', 'noir-luxe'] as const;
   const lightThemes = ['light-minimal', 'frost-minimal'];
   const defaultDark = 'arctic-pro';
   const defaultLight = 'frost-minimal';
