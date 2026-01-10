@@ -1,5 +1,5 @@
-import { ReactNode, useState, useRef, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { ReactNode, useState, useRef, useCallback, useEffect } from 'react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Loader2, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,36 +15,102 @@ const MAX_PULL = 120;
 export function PullToRefresh({ children, onRefresh, className }: PullToRefreshProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const y = useMotionValue(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isPulling = useRef(false);
+  
+  const pullDistance = useMotionValue(0);
 
   // Visual transforms
-  const indicatorOpacity = useTransform(y, [0, 30, PULL_THRESHOLD], [0, 0.5, 1]);
-  const indicatorScale = useTransform(y, [0, PULL_THRESHOLD], [0.5, 1]);
-  const indicatorRotate = useTransform(y, [0, PULL_THRESHOLD, MAX_PULL], [0, 180, 360]);
+  const indicatorOpacity = useTransform(pullDistance, [0, 30, PULL_THRESHOLD], [0, 0.5, 1]);
+  const indicatorScale = useTransform(pullDistance, [0, PULL_THRESHOLD], [0.5, 1]);
+  const indicatorRotate = useTransform(pullDistance, [0, PULL_THRESHOLD, MAX_PULL], [0, 180, 360]);
+  const contentY = useTransform(pullDistance, [0, MAX_PULL], [0, MAX_PULL]);
 
-  const handleDragEnd = useCallback(
-    async (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      if (isRefreshing) return;
+  const resetPull = useCallback(() => {
+    animate(pullDistance, 0, { type: 'spring', stiffness: 400, damping: 30 });
+    touchStartY.current = null;
+    isPulling.current = false;
+  }, [pullDistance]);
 
-      // Check if we're at the top of scroll
-      const container = containerRef.current;
-      if (container && container.scrollTop > 5) return;
+  const handleRefreshAction = useCallback(async () => {
+    setIsRefreshing(true);
+    if (navigator.vibrate) navigator.vibrate(30);
+    
+    try {
+      await onRefresh();
+      setLastRefresh(new Date());
+    } finally {
+      setIsRefreshing(false);
+      resetPull();
+    }
+  }, [onRefresh, resetPull]);
 
-      if (info.offset.y > PULL_THRESHOLD) {
-        setIsRefreshing(true);
-        if (navigator.vibrate) navigator.vibrate(30);
-        
-        try {
-          await onRefresh();
-          setLastRefresh(new Date());
-        } finally {
-          setIsRefreshing(false);
-        }
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isRefreshing) return;
+    
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    
+    // Only activate pull-to-refresh when at the very top
+    if (scrollEl.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  }, [isRefreshing]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isRefreshing || touchStartY.current === null) return;
+    
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - touchStartY.current;
+    
+    // Only handle pull-down gesture when at the top
+    if (deltaY > 0 && scrollEl.scrollTop <= 0) {
+      isPulling.current = true;
+      
+      // Apply resistance for rubber-band effect
+      const resistance = 0.5;
+      const pullValue = Math.min(deltaY * resistance, MAX_PULL);
+      pullDistance.set(pullValue);
+      
+      // Prevent default only when actively pulling to refresh
+      // This allows normal scroll behavior in all other cases
+      if (pullValue > 10) {
+        e.preventDefault();
       }
-    },
-    [isRefreshing, onRefresh]
-  );
+    } else if (!isPulling.current) {
+      // Reset if we're not pulling (allows normal scroll)
+      touchStartY.current = null;
+    }
+  }, [isRefreshing, pullDistance]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (isRefreshing || !isPulling.current) {
+      touchStartY.current = null;
+      isPulling.current = false;
+      return;
+    }
+    
+    const currentPull = pullDistance.get();
+    
+    if (currentPull >= PULL_THRESHOLD) {
+      // Trigger refresh
+      handleRefreshAction();
+    } else {
+      // Snap back
+      resetPull();
+    }
+  }, [isRefreshing, pullDistance, handleRefreshAction, resetPull]);
+
+  // Also reset when refreshing completes
+  useEffect(() => {
+    if (!isRefreshing) {
+      resetPull();
+    }
+  }, [isRefreshing, resetPull]);
 
   const getLastRefreshText = () => {
     if (!lastRefresh) return null;
@@ -59,13 +125,13 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
   const lastRefreshText = getLastRefreshText();
 
   return (
-    <div className={cn("relative", className)}>
-      {/* Pull indicator */}
+    <div className={cn("relative h-full", className)}>
+      {/* Pull indicator - positioned above content */}
       <motion.div
-        className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center h-16 -mt-16 z-10"
+        className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center h-16 z-10 pointer-events-none"
         style={{ 
           opacity: indicatorOpacity,
-          y: useTransform(y, [0, MAX_PULL], [0, MAX_PULL]),
+          y: useTransform(pullDistance, [0, MAX_PULL], [-64, MAX_PULL - 64]),
         }}
       >
         {isRefreshing ? (
@@ -89,16 +155,14 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
         </div>
       )}
 
-      {/* Content with drag */}
+      {/* Scrollable content - native scroll, no drag */}
       <motion.div
-        ref={containerRef}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.4, bottom: 0 }}
-        onDragEnd={handleDragEnd}
-        style={{ y: isRefreshing ? 60 : y }}
-        className="h-full overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        ref={scrollRef}
+        className="h-full overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
+        style={{ y: isRefreshing ? 60 : contentY }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {children}
       </motion.div>
