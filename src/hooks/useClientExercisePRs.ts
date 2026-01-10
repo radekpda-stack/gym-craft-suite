@@ -11,6 +11,7 @@ export interface ExercisePR {
   metricType: 'weight' | 'time' | 'reps' | 'distance';
   achievedAt: string;
   isBodyweight: boolean;
+  side: 'left' | 'right' | 'both' | 'none' | null;
 }
 
 /**
@@ -28,7 +29,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
       // Get all exercise entries for this client
       const { data: entries, error } = await supabase
         .from('exercise_entries')
-        .select('id, exercise_name, exercise_id, weight_kg, reps, is_bodyweight, date, time_seconds')
+        .select('id, exercise_name, exercise_id, weight_kg, reps, is_bodyweight, date, time_seconds, side')
         .eq('client_id', clientId)
         .order('date', { ascending: false });
 
@@ -38,6 +39,7 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
       const exerciseMap = new Map<string, {
         id: string;
         exerciseId: string | null;
+        exerciseName: string;
         maxWeight: number;
         maxWeightReps: number;
         maxWeightDate: string;
@@ -48,10 +50,15 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
         isBodyweight: boolean;
         hasWeight: boolean;
         hasTime: boolean;
+        side: 'left' | 'right' | 'both' | 'none' | null;
       }>();
 
       for (const entry of entries || []) {
-        const key = entry.exercise_name;
+        // Group by exercise name + side for unilateral exercises
+        const entrySide = entry.side || 'none';
+        const key = entrySide === 'left' || entrySide === 'right' 
+          ? `${entry.exercise_name}__${entrySide}` 
+          : entry.exercise_name;
         const existing = exerciseMap.get(key);
         
         if (!existing) {

@@ -4,6 +4,8 @@ import { useToast } from '@/hooks/use-toast';
 import { notifyClientsAboutTrainerPR, isTrainerClient, checkClientBeatTrainer } from '@/lib/trainerPRNotifications';
 import { notifyAboutPR } from '@/lib/prNotifications';
 import type { Json } from '@/integrations/supabase/types';
+export type ExerciseEntrySide = 'left' | 'right' | 'both' | 'none';
+
 export interface ExerciseEntry {
   id: string;
   user_id: string;
@@ -23,6 +25,8 @@ export interface ExerciseEntry {
   is_pr: boolean;
   distance_meters: number | null;
   height_cm: number | null;
+  /** Side for unilateral exercises */
+  side: ExerciseEntrySide | null;
   // Extended metrics
   avg_watts: number | null;
   max_watts: number | null;
@@ -94,6 +98,7 @@ export function useExerciseEntries(clientId?: string) {
     is_pr: boolean;
     distance_meters?: number | null;
     height_cm?: number | null;
+    side?: ExerciseEntrySide | null;
     avg_watts?: number | null;
     max_watts?: number | null;
     avg_speed_kmh?: number | null;
