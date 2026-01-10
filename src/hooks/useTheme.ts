@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 // 'system' is a special meta-theme that maps to light/dark based on OS preference
-export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal';
+export type ThemeId = 'nike' | 'nike-volt' | 'arctic-pro' | 'light-minimal' | 'frost-minimal' | 'pulse' | 'noir-luxe';
 export type ThemePreference = ThemeId | 'system';
 
 export interface Theme {
@@ -54,6 +54,30 @@ export const themes: Theme[] = [
       primary: '#00D4FF',
       background: '#0A0F14',
       card: '#0D1419',
+    },
+  },
+  {
+    id: 'pulse',
+    name: 'Pulse',
+    nameCs: 'Pulse',
+    description: 'Ultra-sporty with vibrant magenta & electric blue',
+    descriptionCs: 'Ultra sportovní s živou magentou a elektrickou modrou',
+    preview: {
+      primary: '#E839A0',
+      background: '#0F0A10',
+      card: '#171118',
+    },
+  },
+  {
+    id: 'noir-luxe',
+    name: 'Noir Luxe',
+    nameCs: 'Noir Luxe',
+    description: 'Sophisticated elegance with gold accents',
+    descriptionCs: 'Sofistikovaná elegance se zlatými akcenty',
+    preview: {
+      primary: '#D4A84B',
+      background: '#0B0908',
+      card: '#151210',
     },
   },
   {

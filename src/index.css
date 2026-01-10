@@ -320,6 +320,114 @@
     --chart-4: 280 45% 55%;
     --chart-5: 42 75% 50%;
   }
+
+  /* ========================================
+     PULSE THEME - Ultra-sporty, fresh, dynamic
+     Magenta/Pink energy with electric blue accents
+     ======================================== */
+  :root.theme-pulse, html.theme-pulse, body.theme-pulse {
+    --background: 280 15% 5%;
+    --foreground: 0 0% 98%;
+    --card: 280 12% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 280 12% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 330 85% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 12% 14%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 280 10% 16%;
+    --muted-foreground: 280 8% 60%;
+    --accent: 200 100% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 75% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 95% 55%;
+    --warning-foreground: 0 0% 2%;
+    --status-ok: 160 75% 45%;
+    --status-warning: 45 95% 55%;
+    --status-error: 0 84% 60%;
+    --border: 280 10% 20%;
+    --input: 280 12% 10%;
+    --ring: 330 85% 60%;
+    --radius: 1rem;
+    --sidebar-background: 280 15% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 330 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 12% 9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 280 10% 20%;
+    --sidebar-ring: 330 85% 60%;
+    --text-primary: 0 0% 98%;
+    --text-secondary: 280 8% 72%;
+    --text-muted: 280 6% 52%;
+    --shadow-sm: 0 2px 4px 0 hsl(330 85% 60% / 0.08);
+    --shadow-md: 0 4px 16px -2px hsl(330 85% 60% / 0.12);
+    --shadow-lg: 0 8px 32px -4px hsl(330 85% 60% / 0.16);
+    /* Chart colors - vibrant sport palette */
+    --chart-1: 330 85% 60%;
+    --chart-2: 200 100% 55%;
+    --chart-3: 160 75% 45%;
+    --chart-4: 45 95% 55%;
+    --chart-5: 280 70% 60%;
+  }
+
+  /* ========================================
+     NOIR LUXE THEME - Ultra-elegant, sophisticated
+     Deep black with refined gold/champagne accents
+     ======================================== */
+  :root.theme-noir-luxe, html.theme-noir-luxe, body.theme-noir-luxe {
+    --background: 30 8% 4%;
+    --foreground: 45 20% 92%;
+    --card: 30 6% 8%;
+    --card-foreground: 45 20% 92%;
+    --popover: 30 6% 11%;
+    --popover-foreground: 45 20% 92%;
+    --primary: 42 65% 55%;
+    --primary-foreground: 30 8% 4%;
+    --secondary: 30 5% 13%;
+    --secondary-foreground: 45 20% 92%;
+    --muted: 30 5% 16%;
+    --muted-foreground: 30 8% 50%;
+    --accent: 42 45% 48%;
+    --accent-foreground: 30 8% 4%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 155 45% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 70% 52%;
+    --warning-foreground: 30 8% 4%;
+    --status-ok: 155 45% 42%;
+    --status-warning: 38 70% 52%;
+    --status-error: 0 60% 50%;
+    --border: 30 6% 18%;
+    --input: 30 6% 8%;
+    --ring: 42 65% 55%;
+    --radius: 0.375rem;
+    --sidebar-background: 30 8% 4%;
+    --sidebar-foreground: 45 20% 92%;
+    --sidebar-primary: 42 65% 55%;
+    --sidebar-primary-foreground: 30 8% 4%;
+    --sidebar-accent: 30 6% 8%;
+    --sidebar-accent-foreground: 45 20% 92%;
+    --sidebar-border: 30 6% 18%;
+    --sidebar-ring: 42 65% 55%;
+    --text-primary: 45 20% 92%;
+    --text-secondary: 40 12% 68%;
+    --text-muted: 35 8% 48%;
+    --shadow-sm: 0 1px 3px 0 hsl(42 65% 55% / 0.05);
+    --shadow-md: 0 4px 12px -2px hsl(42 65% 55% / 0.08);
+    --shadow-lg: 0 8px 24px -4px hsl(42 65% 55% / 0.12);
+    /* Chart colors - luxurious palette */
+    --chart-1: 42 65% 55%;
+    --chart-2: 155 45% 42%;
+    --chart-3: 210 50% 55%;
+    --chart-4: 340 45% 55%;
+    --chart-5: 38 70% 52%;
+  }
 }
 
 @layer base {
