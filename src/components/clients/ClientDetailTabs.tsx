@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard';
 
 // Tab content components
 import { ClientTrainingFinanceCard } from './ClientTrainingFinanceCard';
@@ -163,6 +164,9 @@ export function ClientDetailTabs({
         
         {/* Feedback Analysis */}
         <ClientFeedbackAnalysisSection clientId={client.id} defaultOpen={true} />
+        
+        {/* Asymmetry L vs R */}
+        <AsymmetryCard clientId={client.id} />
         
         {/* PRs */}
         <div className="bg-card border border-border rounded-2xl p-4">
