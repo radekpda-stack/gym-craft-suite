@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/lib/i18n';
+import { useCertificationsFromExpenses } from '@/hooks/useEducationExpenses';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Camera, X, Plus, Instagram, Facebook, Linkedin, Globe, Save, Loader2 } from 'lucide-react';
+import { Camera, X, Plus, Instagram, Facebook, Linkedin, Globe, Save, Loader2, GraduationCap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TrainerProfile {
   id: string;
@@ -46,6 +48,7 @@ export function TrainerProfileSettings() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const { certifications: expenseCertifications, isLoading: expenseCertsLoading } = useCertificationsFromExpenses();
   
   const [profile, setProfile] = useState<TrainerProfile>({
     id: '',
@@ -332,10 +335,37 @@ export function TrainerProfileSettings() {
         </div>
       </div>
 
-      {/* Certifications */}
+      {/* Certifications from Education Expenses */}
+      {expenseCertifications.length > 0 && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            {language === 'cs' ? 'Certifikace z nákladů' : 'Certifications from Expenses'}
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {expenseCertifications.map((cert) => (
+              <Badge key={cert.id} variant="default" className="gap-1">
+                {cert.name}
+                <span className="text-[10px] opacity-70">({cert.year})</span>
+              </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {language === 'cs' 
+              ? 'Tyto certifikace jsou automaticky načteny z nákladů kategorie Vzdělávání.' 
+              : 'These certifications are automatically loaded from Education expenses.'}
+            {' '}
+            <Link to="/expenses" className="text-primary hover:underline">
+              {language === 'cs' ? 'Spravovat náklady' : 'Manage expenses'}
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {/* Manual Certifications */}
       <div className="space-y-2">
         <Label>
-          {language === 'cs' ? 'Certifikace' : 'Certifications'}
+          {language === 'cs' ? 'Další certifikace (ručně)' : 'Other Certifications (manual)'}
         </Label>
         <div className="flex flex-wrap gap-2 mb-2">
           {profile.certifications.map((cert) => (
