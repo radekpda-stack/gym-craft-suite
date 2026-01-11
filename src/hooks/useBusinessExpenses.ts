@@ -12,7 +12,7 @@ export type ExpenseCategory =
   | 'insurance' 
   | 'other';
 
-export type RecurringInterval = 'monthly' | 'quarterly' | 'yearly';
+export type RecurringInterval = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
 export interface BusinessExpense {
   id: string;
