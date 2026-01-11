@@ -23,7 +23,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   notes: z.string().optional(),
   is_recurring: z.boolean().default(false),
-  recurring_interval: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  recurring_interval: z.enum(['weekly', 'monthly', 'quarterly', 'yearly']).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -235,7 +235,8 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
                       <SelectValue placeholder="Vyberte interval" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                <SelectContent>
+                    <SelectItem value="weekly">Týdně</SelectItem>
                     <SelectItem value="monthly">Měsíčně</SelectItem>
                     <SelectItem value="quarterly">Čtvrtletně</SelectItem>
                     <SelectItem value="yearly">Ročně</SelectItem>
