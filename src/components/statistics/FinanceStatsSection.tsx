@@ -8,6 +8,7 @@ import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { RevenueByParticipantsCard } from './RevenueByParticipantsCard';
 import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
+import { OperatingExpensesCard } from './OperatingExpensesCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { formatCurrency } from '@/lib/formatters';
@@ -132,6 +133,10 @@ export function FinanceStatsSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <RevenueBreakdownCard />
         <AverageTrainingPriceCard />
+        <OperatingExpensesCard />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <RevenueByParticipantsCard />
       </div>
 
