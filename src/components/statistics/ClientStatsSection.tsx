@@ -4,6 +4,7 @@ import { InsightsBar, generateClientInsights } from './InsightsBar';
 import { ClientHeroKPI } from './ClientHeroKPI';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
 import { ClientTenureCard } from './ClientTenureCard';
+import { ClientAgeCard } from './ClientAgeCard';
 import { ClientFeedbackCard } from './ClientFeedbackCard';
 import { ClientTagsCard } from './ClientTagsCard';
 import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
@@ -70,9 +71,10 @@ export function ClientStatsSection() {
       {/* Active vs At Risk clients */}
       <ClientAnalyticsCard />
 
-      {/* Stats Grid - tenure, feedback, tags */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Stats Grid - tenure, age, feedback, tags */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <ClientTenureCard />
+        <ClientAgeCard />
         <ClientFeedbackCard stats={stats} />
         <ClientTagsCard />
       </div>
