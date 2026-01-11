@@ -1,12 +1,13 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, ChevronRight, Clock, Medal, Users, Award } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Clock, Medal, Users, Award, Crown, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { parseISO } from 'date-fns';
 import { useClientActiveChallenges, useChallengeLeaderboard } from '@/hooks/useClientPortalBenchmarks';
-import { formatCountdown, formatChallengeScore, formatChallengeScoreFull, getMetricLabel } from '@/lib/challengeUtils';
+import { formatCountdown, formatChallengeScoreFull, getMetricLabel } from '@/lib/challengeUtils';
 import { cn } from '@/lib/utils';
 
 interface ActiveChallengeWidgetProps {
@@ -25,9 +26,11 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
     ? (data?.participantCounts?.[challenge.id] ?? 0)
     : 0;
 
-  // Get leaderboard for the active challenge
-  const { data: leaderboardData } = useChallengeLeaderboard(challenge?.id || null);
-  const leaderboard = leaderboardData?.leaderboard?.slice(0, 3) || [];
+  // Get full leaderboard for the active challenge
+  const { data: leaderboardData, isLoading: leaderboardLoading } = useChallengeLeaderboard(challenge?.id || null);
+  const leaderboard = leaderboardData?.leaderboard || [];
+  const myEntry = leaderboard.find((e: any) => e.is_you);
+  const myRank = myEntry?.rank;
 
   // Don't render anything if no active challenges
   if (!isLoading && !challenge) {
@@ -39,10 +42,17 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
   const isUrgent = endDate.getTime() - Date.now() < 72 * 60 * 60 * 1000; // < 72h
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-3.5 w-3.5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-3.5 w-3.5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-3.5 w-3.5 text-amber-700" />;
+    if (rank === 1) return <Crown className="h-5 w-5 text-amber-500" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
     return null;
+  };
+
+  const getRankBgClass = (rank: number) => {
+    if (rank === 1) return 'bg-gradient-to-r from-amber-500/20 to-amber-500/5';
+    if (rank === 2) return 'bg-gradient-to-r from-gray-300/20 to-gray-300/5 dark:from-gray-600/20 dark:to-gray-600/5';
+    if (rank === 3) return 'bg-gradient-to-r from-amber-700/20 to-amber-700/5';
+    return '';
   };
 
   return (
@@ -52,101 +62,189 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
       transition={{ delay: 0.1 }}
       className={className}
     >
-      <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border-purple-500/20">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-purple-500" />
+      <Card className="relative overflow-hidden border-purple-500/20">
+        {/* Header section */}
+        <CardHeader className="pb-3 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-purple-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-0 text-[10px]">
+                    Aktivní výzva
+                  </Badge>
+                  {isUrgent && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      Končí brzy!
+                    </Badge>
+                  )}
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-6 w-40" />
+                ) : (
+                  <CardTitle className="text-lg truncate">
+                    {challenge?.title}
+                  </CardTitle>
+                )}
+              </div>
             </div>
-            <Link to="/client/challenges">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                Výzvy <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-24" />
+          {/* Stats bar */}
+          {!isLoading && challenge && (
+            <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                <span className={cn(isUrgent && "text-destructive font-medium")}>{countdownText}</span>
+              </div>
+              {participantCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />
+                  <span>{participantCount} účastníků</span>
+                </div>
+              )}
+              {myRank && (
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-primary" />
+                  <span className="text-primary font-medium">{myRank}. místo</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardHeader>
+
+        <CardContent className="pt-4">
+          {isLoading || leaderboardLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
             </div>
           ) : challenge ? (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-500">
-                  Aktivní výzva
-                </span>
-                {isUrgent && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">
-                    Končí brzy!
-                  </span>
-                )}
-              </div>
-
-              <p className="text-lg font-bold truncate mb-2">
-                {challenge.title}
-              </p>
-
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
-                  {countdownText}
-                </div>
-                {participantCount > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5" />
-                    {participantCount} účastníků
-                  </div>
-                )}
-              </div>
-
-              {/* Leaderboard preview */}
-              {leaderboard.length > 0 && (
-                <div className="mb-3 p-2.5 rounded-lg bg-muted/50 space-y-1.5">
-                  <p className="text-xs text-muted-foreground font-medium mb-2">Výsledky</p>
-                  {leaderboard.map((entry: any) => (
-                    <div 
-                      key={entry.rank}
-                      className={cn(
-                        "flex items-center gap-2 text-xs py-1 px-2 rounded",
-                        entry.is_you && "bg-primary/10 font-medium"
-                      )}
-                    >
-                      <span className="w-5 flex justify-center">
-                        {getRankIcon(entry.rank) || <span className="text-muted-foreground">{entry.rank}.</span>}
-                      </span>
-                      <span className="flex-1 truncate">
-                        {entry.is_you ? 'Ty' : entry.pseudonym}
-                      </span>
-                      <span className="font-mono tabular-nums">
-                        {formatChallengeScoreFull(entry.score, challenge.primary_metric)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {submission ? (
-                <div className="p-2 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">Tvůj nejlepší výsledek</p>
-                  <p className="text-sm font-semibold">
-                    {formatChallengeScore(submission.score_primary, challenge.primary_metric)}
-                    {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (
-                      <span className="ml-1 font-normal text-muted-foreground">
-                        {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
-                      </span>
-                    )}
+            <div className="space-y-4">
+              {/* Full Leaderboard */}
+              {leaderboard.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                    <Trophy className="w-3.5 h-3.5" />
+                    Žebříček výsledků
                   </p>
+                  <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
+                    {leaderboard.map((entry: any) => (
+                      <motion.div
+                        key={entry.rank}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: entry.rank * 0.03 }}
+                        className={cn(
+                          "flex items-center gap-3 py-2.5 px-3 rounded-lg transition-all",
+                          entry.is_you && "bg-primary/10 border border-primary/20 ring-1 ring-primary/10",
+                          !entry.is_you && getRankBgClass(entry.rank),
+                          !entry.is_you && entry.rank > 3 && "hover:bg-muted/50"
+                        )}
+                      >
+                        {/* Rank */}
+                        <div className="w-8 flex items-center justify-center shrink-0">
+                          {getRankIcon(entry.rank) || (
+                            <span className={cn(
+                              "text-sm font-medium",
+                              entry.is_you ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {entry.rank}.
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Avatar & Name */}
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                            entry.rank === 1 ? "bg-amber-500/20 text-amber-600" :
+                            entry.rank === 2 ? "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
+                            entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
+                            entry.is_you ? "bg-primary/20 text-primary" :
+                            "bg-muted text-muted-foreground"
+                          )}>
+                            {entry.pseudonym?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "font-medium truncate text-sm",
+                                entry.is_you && "text-primary"
+                              )}>
+                                {entry.is_you ? 'Ty' : entry.pseudonym}
+                              </span>
+                              {entry.is_you && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                                  Tvůj výsledek
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className="text-right shrink-0">
+                          <span className={cn(
+                            "font-mono font-semibold tabular-nums text-sm",
+                            entry.is_you && "text-primary"
+                          )}>
+                            {formatChallengeScoreFull(entry.score, challenge.primary_metric)}
+                          </span>
+                          {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
+                            </span>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <Link to="/client/challenges">
-                  <Button variant="secondary" size="sm" className="w-full">
-                    Odeslat výsledek
-                  </Button>
-                </Link>
+                <div className="text-center py-6 text-muted-foreground">
+                  <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Zatím žádné výsledky</p>
+                  <p className="text-xs">Buď první, kdo odešle svůj výkon!</p>
+                </div>
               )}
-            </>
+
+              {/* Submit button or My result summary */}
+              <div className="pt-2 border-t">
+                {submission ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tvůj nejlepší výsledek</p>
+                      <p className="font-semibold">
+                        {formatChallengeScoreFull(submission.score_primary, challenge.primary_metric)}
+                        {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (
+                          <span className="ml-1 font-normal text-muted-foreground text-sm">
+                            {getMetricLabel(challenge.primary_metric, challenge.unit_label)}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {challenge.allow_multiple_attempts && (
+                      <Link to="/client/challenges">
+                        <Button variant="outline" size="sm">
+                          Vylepšit výsledek
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <Link to="/client/challenges" className="block">
+                    <Button className="w-full gap-2" size="lg">
+                      <Trophy className="w-4 h-4" />
+                      Odeslat výsledek
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
           ) : null}
         </CardContent>
       </Card>
