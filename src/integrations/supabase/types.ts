@@ -6807,6 +6807,70 @@ export type Database = {
         }
         Relationships: []
       }
+      reward_redemptions: {
+        Row: {
+          client_id: string
+          created_at: string
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          lp_spent: number
+          notes: string | null
+          redeemed_at: string
+          reward_id: string
+          status: string
+          trainer_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          lp_spent: number
+          notes?: string | null
+          redeemed_at?: string
+          reward_id: string
+          status?: string
+          trainer_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          lp_spent?: number
+          notes?: string | null
+          redeemed_at?: string
+          reward_id?: string
+          status?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_order_items: {
         Row: {
           created_at: string
@@ -7876,6 +7940,57 @@ export type Database = {
             referencedColumns: ["client_id"]
           },
         ]
+      }
+      trainer_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          icon_key: string
+          id: string
+          is_active: boolean
+          lp_cost: number
+          name: string
+          quantity_available: number | null
+          quantity_redeemed: number
+          trainer_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          lp_cost: number
+          name: string
+          quantity_available?: number | null
+          quantity_redeemed?: number
+          trainer_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          lp_cost?: number
+          name?: string
+          quantity_available?: number | null
+          quantity_redeemed?: number
+          trainer_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       trainer_workout_diary: {
         Row: {
