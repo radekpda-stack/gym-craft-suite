@@ -1562,6 +1562,45 @@ export type Database = {
           },
         ]
       }
+      client_daily_checkins: {
+        Row: {
+          checkin_date: string
+          client_id: string
+          created_at: string
+          id: string
+          xp_awarded: number
+        }
+        Insert: {
+          checkin_date?: string
+          client_id: string
+          created_at?: string
+          id?: string
+          xp_awarded?: number
+        }
+        Update: {
+          checkin_date?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_daily_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_daily_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_leaderboard_settings: {
         Row: {
           client_id: string
@@ -1597,6 +1636,54 @@ export type Database = {
           },
           {
             foreignKeyName: "client_leaderboard_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_login_streaks: {
+        Row: {
+          client_id: string
+          created_at: string
+          current_streak: number
+          id: string
+          last_checkin_date: string | null
+          longest_streak: number
+          total_checkins: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_checkin_date?: string | null
+          longest_streak?: number
+          total_checkins?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_checkin_date?: string | null
+          longest_streak?: number
+          total_checkins?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_login_streaks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_login_streaks_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: true
             referencedRelation: "vw_client_ledger_balances"
@@ -9414,6 +9501,7 @@ export type Database = {
           last_used: string
         }[]
       }
+      handle_daily_checkin: { Args: { p_client_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

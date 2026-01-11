@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientRecentActivity, type PeriodDays } from '@/hooks/useClientPortalStats';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
@@ -9,7 +8,6 @@ import {
   Dumbbell,
   ArrowDownLeft,
   CalendarClock,
-  AlertCircle,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
@@ -25,6 +23,9 @@ import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/Acti
 import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
+import { DailyCheckinCard } from '@/components/client-portal/gamification/DailyCheckinCard';
+import { WeeklyMissionsCard } from '@/components/client-portal/gamification/WeeklyMissionsCard';
+import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
 import { ClientActionRequired } from '@/components/client-portal/dashboard/ClientActionRequired';
@@ -67,22 +68,31 @@ export default function ClientPortalOverview() {
         <GamificationBadge />
       </div>
 
-      {/* 2. ACTION REQUIRED - Hero section for pending tasks */}
+      {/* 2. Daily Check-in Card */}
+      <DailyCheckinCard />
+
+      {/* 3. ACTION REQUIRED - Hero section for pending tasks */}
       <ClientActionRequired />
 
-      {/* 3. Hero Stats Row - Credit + Next Training */}
+      {/* 4. Hero Stats Row - Credit + Next Training */}
       <HeroStatsRow period={period} />
 
-      {/* 4. Quick Actions - 4 main icons */}
+      {/* 5. Quick Actions - 4 main icons */}
       <ClientQuickActions />
 
-      {/* 5. Overall Performance Card */}
+      {/* 6. Weekly Missions */}
+      <WeeklyMissionsCard />
+
+      {/* 7. Training Calendar */}
+      <TrainingCalendar />
+
+      {/* 8. Overall Performance Card */}
       {clientId && <OverallPerformanceCard clientId={clientId} />}
 
-      {/* 6. Active Challenges */}
+      {/* 9. Active Challenges */}
       <ActiveChallengeWidget />
 
-      {/* 7. Progress Link */}
+      {/* 10. Progress Link */}
       <ProgressLinkCard delay={0.25} />
 
       {/* 8. Recent Activity - Collapsible */}
