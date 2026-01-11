@@ -9,7 +9,8 @@
  * - Komunikace (Chat, Notes)
  * - Nastavení (Settings, Portal, Admin)
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
   Trophy, 
@@ -65,7 +66,21 @@ export function ClientDetailTabs({
   onAddNote,
   onArchive,
 }: ClientDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState('trainings');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Map URL tab param to internal tab id
+    if (tabFromUrl === 'chat') return 'communication';
+    return tabFromUrl || 'trainings';
+  });
+
+  // Sync URL when tab changes
+  useEffect(() => {
+    if (tabFromUrl === 'chat' && activeTab === 'communication') {
+      // Clear URL param after navigating to chat
+      setSearchParams({}, { replace: true });
+    }
+  }, [activeTab, tabFromUrl, setSearchParams]);
   
   // Metrics for badges
   const { unreadCount } = useCommunicationMetrics(client.id);
