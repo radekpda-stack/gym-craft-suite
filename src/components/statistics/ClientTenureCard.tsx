@@ -25,42 +25,29 @@ export function ClientTenureCard() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return null;
 
-      // Get all active clients
+      // Get all active clients with training_start_date
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, name, created_at')
+        .select('id, name, created_at, training_start_date')
         .eq('user_id', user.user.id)
         .eq('is_archived', false);
 
       if (!clients || clients.length === 0) return null;
 
-      // Get first training date for each client
-      const { data: firstTrainings } = await supabase
-        .from('training_sessions')
-        .select('client_id, date')
-        .in('client_id', clients.map(c => c.id))
-        .order('date', { ascending: true });
-
-      // Build map of first training per client
-      const firstTrainingMap = new Map<string, Date>();
-      firstTrainings?.forEach(t => {
-        if (!firstTrainingMap.has(t.client_id)) {
-          firstTrainingMap.set(t.client_id, new Date(t.date));
-        }
-      });
-
       const now = new Date();
       
-      // Calculate tenure for each client based on first training or created_at
+      // Calculate tenure for each client based on training_start_date (preferred) or created_at (fallback)
       const tenures: ClientTenure[] = clients.map(c => {
-        const firstTraining = firstTrainingMap.get(c.id);
-        const startDate = firstTraining || new Date(c.created_at);
+        // Use training_start_date if available, otherwise fall back to created_at
+        const startDate = c.training_start_date 
+          ? new Date(c.training_start_date) 
+          : new Date(c.created_at);
         const months = differenceInMonths(now, startDate);
         return { 
           id: c.id, 
           name: c.name, 
-          months,
-          firstTraining: firstTraining || null
+          months: Math.max(0, months),
+          firstTraining: c.training_start_date ? new Date(c.training_start_date) : null
         };
       });
 
