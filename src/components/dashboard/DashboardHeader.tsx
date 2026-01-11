@@ -93,26 +93,28 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1 shrink-0">
           {/* Training Mode button */}
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             onClick={() => navigate('/training-mode')}
-            className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
+            className="h-7 px-2.5 rounded-md bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all"
           >
-            <Dumbbell className="w-5 h-5 text-primary" />
+            <Dumbbell className="w-3.5 h-3.5 text-primary mr-1.5" />
+            <span className="text-xs font-medium text-foreground/80">Tréninkový režim</span>
           </Button>
           
           {/* Analytics button */}
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             asChild
-            className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10"
+            className="h-7 px-2.5 rounded-md bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all"
           >
             <Link to="/statistics">
-              <BarChart3 className="w-5 h-5 text-primary" />
+              <BarChart3 className="w-3.5 h-3.5 text-primary mr-1.5" />
+              <span className="text-xs font-medium text-foreground/80">Statistiky</span>
             </Link>
           </Button>
         </div>
