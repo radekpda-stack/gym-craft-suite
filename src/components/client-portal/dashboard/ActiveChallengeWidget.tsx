@@ -1,12 +1,13 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, ChevronRight, Clock, Medal } from 'lucide-react';
+import { Trophy, ChevronRight, Clock, Medal, Users, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { parseISO } from 'date-fns';
-import { useClientActiveChallenges } from '@/hooks/useClientPortalBenchmarks';
-import { formatCountdown, formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
+import { useClientActiveChallenges, useChallengeLeaderboard } from '@/hooks/useClientPortalBenchmarks';
+import { formatCountdown, formatChallengeScore, formatChallengeScoreFull, getMetricLabel } from '@/lib/challengeUtils';
+import { cn } from '@/lib/utils';
 
 interface ActiveChallengeWidgetProps {
   className?: string;
@@ -24,6 +25,10 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
     ? (data?.participantCounts?.[challenge.id] ?? 0)
     : 0;
 
+  // Get leaderboard for the active challenge
+  const { data: leaderboardData } = useChallengeLeaderboard(challenge?.id || null);
+  const leaderboard = leaderboardData?.leaderboard?.slice(0, 3) || [];
+
   // Don't render anything if no active challenges
   if (!isLoading && !challenge) {
     return null;
@@ -32,6 +37,13 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
   const endDate = challenge ? parseISO(challenge.end_at) : new Date();
   const countdownText = formatCountdown(endDate);
   const isUrgent = endDate.getTime() - Date.now() < 72 * 60 * 60 * 1000; // < 72h
+
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return <Trophy className="h-3.5 w-3.5 text-amber-500" />;
+    if (rank === 2) return <Medal className="h-3.5 w-3.5 text-gray-400" />;
+    if (rank === 3) return <Award className="h-3.5 w-3.5 text-amber-700" />;
+    return null;
+  };
 
   return (
     <motion.div
@@ -76,21 +88,47 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                 {challenge.title}
               </p>
 
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
                   {countdownText}
                 </div>
                 {participantCount > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <Medal className="w-3.5 h-3.5" />
+                    <Users className="w-3.5 h-3.5" />
                     {participantCount} účastníků
                   </div>
                 )}
               </div>
 
+              {/* Leaderboard preview */}
+              {leaderboard.length > 0 && (
+                <div className="mb-3 p-2.5 rounded-lg bg-muted/50 space-y-1.5">
+                  <p className="text-xs text-muted-foreground font-medium mb-2">Výsledky</p>
+                  {leaderboard.map((entry: any) => (
+                    <div 
+                      key={entry.rank}
+                      className={cn(
+                        "flex items-center gap-2 text-xs py-1 px-2 rounded",
+                        entry.is_you && "bg-primary/10 font-medium"
+                      )}
+                    >
+                      <span className="w-5 flex justify-center">
+                        {getRankIcon(entry.rank) || <span className="text-muted-foreground">{entry.rank}.</span>}
+                      </span>
+                      <span className="flex-1 truncate">
+                        {entry.is_you ? 'Ty' : entry.pseudonym}
+                      </span>
+                      <span className="font-mono tabular-nums">
+                        {formatChallengeScoreFull(entry.score, challenge.primary_metric)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {submission ? (
-                <div className="mt-3 p-2 rounded-lg bg-muted/50">
+                <div className="p-2 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground">Tvůj nejlepší výsledek</p>
                   <p className="text-sm font-semibold">
                     {formatChallengeScore(submission.score_primary, challenge.primary_metric)}
@@ -103,7 +141,7 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                 </div>
               ) : (
                 <Link to="/client/challenges">
-                  <Button variant="secondary" size="sm" className="mt-3 w-full">
+                  <Button variant="secondary" size="sm" className="w-full">
                     Odeslat výsledek
                   </Button>
                 </Link>

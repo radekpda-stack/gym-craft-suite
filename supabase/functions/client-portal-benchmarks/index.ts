@@ -837,16 +837,18 @@ serve(async (req) => {
         submissions = subs || [];
       }
 
-      // Get participant counts for each challenge
+      // Get participant counts for each challenge (unique clients, not submissions)
       const participantCounts: Record<string, number> = {};
       for (const challenge of challenges || []) {
-        const { count } = await supabase
+        // Count unique clients who submitted to this challenge
+        const { data: uniqueClients } = await supabase
           .from('challenge_submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('challenge_id', challenge.id)
-          .eq('status', 'approved');
+          .select('client_id')
+          .eq('challenge_id', challenge.id);
         
-        participantCounts[challenge.id] = count || 0;
+        // Get unique client count
+        const uniqueClientIds = new Set(uniqueClients?.map(s => s.client_id) || []);
+        participantCounts[challenge.id] = uniqueClientIds.size;
       }
 
       return new Response(
