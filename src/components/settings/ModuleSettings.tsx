@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   BarChart3,
   Dumbbell,
+  Gift,
 } from "lucide-react";
 
 interface ModuleConfig {
@@ -144,6 +145,16 @@ const MODULES: ModuleConfig[] = [
     descriptionEn: "Physical tests and client assessments",
     warningCs: "Skryje sekci Testy z navigace",
     warningEn: "Hides Tests section from navigation",
+  },
+  {
+    key: "rewards_system",
+    icon: Gift,
+    labelCs: "Systém odměn",
+    labelEn: "Rewards System",
+    descriptionCs: "Věrnostní odměny a výměna bodů za odměny v klientském portálu",
+    descriptionEn: "Loyalty rewards and point redemption in client portal",
+    warningCs: "Klienti neuvidí sekci Odměny",
+    warningEn: "Clients won't see the Rewards section",
   },
 ];
 
