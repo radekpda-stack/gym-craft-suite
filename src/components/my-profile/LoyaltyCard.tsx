@@ -14,6 +14,8 @@ import { cs } from 'date-fns/locale';
 import { Star, ShoppingBag, Gift, RefreshCcw, Coins } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useIsModuleEnabledForClient } from '@/hooks/useTrainerModuleSettings';
 
 interface LoyaltyCardProps {
   clientId: string;
@@ -49,8 +51,10 @@ const DEFAULT_SOURCE = {
 };
 
 export function LoyaltyCard({ clientId }: LoyaltyCardProps) {
+  const { clientAccount } = useClientPortal();
   const { data: loyalty, isLoading: loyaltyLoading } = useClientLoyalty(clientId);
   const { data: history, isLoading: historyLoading } = useLoyaltyHistory(clientId, 10);
+  const isRewardsEnabled = useIsModuleEnabledForClient(clientAccount?.trainer_id, 'rewards_system');
 
   if (loyaltyLoading) {
     return <Skeleton className="h-64" />;
@@ -142,13 +146,15 @@ export function LoyaltyCard({ clientId }: LoyaltyCardProps) {
           </div>
         )}
 
-        {/* Link to Rewards */}
-        <Link to="/zona/odmeny">
-          <Button variant="outline" className="w-full mt-2" size="sm">
-            <Gift className="w-4 h-4 mr-2" />
-            Zobrazit odměny
-          </Button>
-        </Link>
+        {/* Link to Rewards - only show if rewards system is enabled */}
+        {isRewardsEnabled && (
+          <Link to="/zona/odmeny">
+            <Button variant="outline" className="w-full mt-2" size="sm">
+              <Gift className="w-4 h-4 mr-2" />
+              Zobrazit odměny
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   );

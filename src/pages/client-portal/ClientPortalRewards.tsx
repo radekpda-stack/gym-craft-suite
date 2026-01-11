@@ -5,8 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientLoyalty, LP_MILESTONES, getCurrentMilestone, getNextMilestone } from '@/hooks/useClientLoyalty';
-import { Gift, Lock, Coins, Star, Coffee, Dumbbell, Sparkles, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useIsModuleEnabledForClient } from '@/hooks/useTrainerModuleSettings';
+import { Gift, Lock, Coins, Star, Coffee, Dumbbell, Sparkles, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 // Placeholder rewards - will be configured by trainer later
@@ -46,8 +47,14 @@ const PLACEHOLDER_REWARDS = [
 ];
 
 export default function ClientPortalRewards() {
-  const { clientId } = useClientPortal();
+  const { clientId, clientAccount } = useClientPortal();
   const { data: loyalty, isLoading } = useClientLoyalty(clientId ?? undefined);
+  const isRewardsEnabled = useIsModuleEnabledForClient(clientAccount?.trainer_id, 'rewards_system');
+
+  // If rewards system is disabled, redirect to overview
+  if (!isRewardsEnabled) {
+    return <Navigate to="/zona" replace />;
+  }
 
   if (isLoading) {
     return (

@@ -14,6 +14,7 @@ export interface ModuleSettings {
   statistics: boolean;
   challenges: boolean;
   exercises: boolean;
+  rewards_system: boolean;
 }
 
 const DEFAULT_MODULES: ModuleSettings = {
@@ -30,6 +31,8 @@ const DEFAULT_MODULES: ModuleSettings = {
   statistics: true,
   challenges: true,
   exercises: true,
+  // Rewards system - disabled by default
+  rewards_system: false,
 };
 
 export function useModuleSettings() {
