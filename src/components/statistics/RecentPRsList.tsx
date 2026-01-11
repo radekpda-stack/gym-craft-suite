@@ -22,10 +22,10 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
 
       const monthStart = startOfMonth(new Date());
 
-      // Get recent PRs
+      // Get recent PRs with all metric types
       const { data: prs } = await supabase
         .from('exercise_entries')
-        .select('id, exercise_name, weight_kg, reps, date, client_id')
+        .select('id, exercise_name, weight_kg, reps, date, client_id, distance_meters, time_seconds')
         .eq('user_id', user.user.id)
         .eq('is_pr', true)
         .order('date', { ascending: false })
@@ -49,6 +49,8 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
         reps: pr.reps,
         date: pr.date,
         client: clientMap.get(pr.client_id) || 'Neznámý',
+        distance: pr.distance_meters,
+        time: pr.time_seconds,
       }));
 
       // Count PRs this month
@@ -57,6 +59,70 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
       return { recentPRs, monthlyCount };
     },
   });
+
+  // Helper function to format time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to format distance
+  const formatDistance = (meters: number) => {
+    if (meters >= 100) {
+      return `${(meters / 100).toFixed(0)} cm`;
+    }
+    return `${meters.toFixed(0)} cm`;
+  };
+
+  // Render appropriate PR value based on metric type
+  const renderPRValue = (pr: { weight?: number | null; reps?: number | null; distance?: number | null; time?: number | null; exercise: string }) => {
+    const exerciseLower = pr.exercise.toLowerCase();
+    const isJumpExercise = exerciseLower.includes('skok') || exerciseLower.includes('jump') || exerciseLower.includes('výskok');
+    const isTimeExercise = exerciseLower.includes('běh') || exerciseLower.includes('run') || 
+                           exerciseLower.includes('veslo') || exerciseLower.includes('row') ||
+                           exerciseLower.includes('metr') || exerciseLower.includes('km');
+
+    // Priority 1: Distance for jump exercises
+    if (isJumpExercise && pr.distance && pr.distance > 0) {
+      return <p className="text-sm font-bold text-success">{formatDistance(pr.distance)}</p>;
+    }
+
+    // Priority 2: Time for time-based exercises
+    if (isTimeExercise && pr.time && pr.time > 0) {
+      return <p className="text-sm font-bold text-success">{formatTime(pr.time)}</p>;
+    }
+
+    // Priority 3: If distance exists (for any exercise with distance)
+    if (pr.distance && pr.distance > 0) {
+      return <p className="text-sm font-bold text-success">{formatDistance(pr.distance)}</p>;
+    }
+
+    // Priority 4: If time exists (for any timed exercise)
+    if (pr.time && pr.time > 0) {
+      return <p className="text-sm font-bold text-success">{formatTime(pr.time)}</p>;
+    }
+
+    // Priority 5: Weight with optional reps
+    if (pr.weight && pr.weight > 0) {
+      return (
+        <>
+          <p className="text-sm font-bold text-success">{pr.weight} kg</p>
+          {pr.reps && pr.reps > 0 && (
+            <p className="text-[10px] text-muted-foreground">{pr.reps}×</p>
+          )}
+        </>
+      );
+    }
+
+    // Priority 6: Just reps
+    if (pr.reps && pr.reps > 0) {
+      return <p className="text-sm font-bold text-success">{pr.reps} opak.</p>;
+    }
+
+    // Fallback
+    return <p className="text-sm font-bold text-success">PR</p>;
+  };
 
   if (isLoading) {
     return (
@@ -126,18 +192,7 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              {pr.weight && pr.weight > 0 ? (
-                <>
-                  <p className="text-sm font-bold text-success">{pr.weight} kg</p>
-                  {pr.reps && pr.reps > 0 && (
-                    <p className="text-[10px] text-muted-foreground">{pr.reps}×</p>
-                  )}
-                </>
-              ) : pr.reps && pr.reps > 0 ? (
-                <p className="text-sm font-bold text-success">{pr.reps} opak.</p>
-              ) : (
-                <p className="text-sm font-bold text-success">PR</p>
-              )}
+              {renderPRValue(pr)}
             </div>
           </div>
         ))}
