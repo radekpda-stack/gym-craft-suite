@@ -40,6 +40,7 @@ import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
 import { RPEInputField } from '@/components/trainings/RPEInputField';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
+import { ParticipantsPRsSection } from '@/components/trainings/ParticipantsPRsSection';
 import { InlineTextarea } from '@/components/trainings/InlineTextarea';
 import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
 import { useTags } from '@/hooks/useTags';
@@ -447,6 +448,11 @@ export function TrainingDetailView({
           currentParticipantCount={training.participant_count || 1}
           isEditable={true}
         />
+      )}
+
+      {/* PARTICIPANTS PRs - show for scheduled/in_progress trainings with participants */}
+      {(training.status === 'scheduled' || training.status === 'in_progress') && participants.length > 0 && (
+        <ParticipantsPRsSection participants={participants} />
       )}
 
       {/* TRAINING TYPE & TAGS - Stepper workflow */}
