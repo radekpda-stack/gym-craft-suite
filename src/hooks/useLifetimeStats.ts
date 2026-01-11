@@ -149,18 +149,21 @@ export function useLifetimeStats() {
       const otherTrainings = Math.max(0, totalTrainings - strengthTrainings - cardioTrainings - conditioningTrainings);
 
       // Finance stats
+      // Income received = payments (positive amounts) + manual additions (positive)
       const totalIncomeReceived = transactions
         .filter(t => ["payment", "manual", "transfer"].includes(t.type) && t.amount > 0)
         .reduce((sum, t) => sum + t.amount, 0);
       
+      // Training value = what was charged for trainings (including canceled training fees)
       const totalTrainingValue = transactions
-        .filter(t => t.type === "training")
+        .filter(t => t.type === "training" || t.type === "canceled_training")
         .reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
       const totalProductRevenue = transactions
         .filter(t => t.type === "product")
         .reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
+      // Cancellation fees are part of training value but also tracked separately
       const cancellationFees = transactions
         .filter(t => t.type === "canceled_training")
         .reduce((sum, t) => sum + Math.abs(t.amount), 0);
