@@ -170,12 +170,13 @@ export function useCreateFeedbackRequest() {
     mutationFn: async (input: CreateFeedbackRequestInput) => {
       if (!user) throw new Error('Nepřihlášen');
 
-      // Check if feedback request already exists for this training
+      // Check if feedback request already exists for this training AND this specific client
       if (input.training_session_id) {
         const { data: existing } = await supabase
           .from('feedback_requests')
           .select('*')
           .eq('training_session_id', input.training_session_id)
+          .eq('client_id', input.client_id)
           .eq('user_id', user.id)
           .maybeSingle();
 
