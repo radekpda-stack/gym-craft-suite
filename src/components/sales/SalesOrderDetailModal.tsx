@@ -163,7 +163,7 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">
+                  <span className="font-semibold text-foreground">
                     {order.clients?.name || 'Bez klienta'}
                   </span>
                 </div>
@@ -199,14 +199,14 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50"
                   >
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                       <KindIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{item.name_snapshot}</p>
+                        <p className="font-medium text-sm text-foreground truncate">{item.name_snapshot}</p>
                         {item.payment_method && item.payment_method !== order.payment_method && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
                             {(() => {
@@ -239,12 +239,12 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                           <p className="text-xs text-muted-foreground line-through">
                             {formatCurrency(item.line_total)}
                           </p>
-                          <p className="font-medium">
+                          <p className="font-semibold text-foreground">
                             {formatCurrency(item.line_total_after_discount || item.line_total)}
                           </p>
                         </div>
                       ) : (
-                        <p className="font-medium">{formatCurrency(item.line_total)}</p>
+                        <p className="font-semibold text-foreground">{formatCurrency(item.line_total)}</p>
                       )}
                     </div>
                   </div>
@@ -281,7 +281,7 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
 
               <Separator />
 
-              <div className="flex justify-between font-bold text-lg">
+              <div className="flex justify-between font-bold text-lg text-foreground">
                 <span>Celkem</span>
                 <span className="text-primary">{formatCurrency(order.total_amount)}</span>
               </div>
