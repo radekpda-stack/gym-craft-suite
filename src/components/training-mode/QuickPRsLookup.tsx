@@ -318,13 +318,13 @@ export function QuickPRsLookup() {
   const { data: scheduleData, isLoading: scheduleLoading } = useDashboardSchedule();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   
-  // Extract unique clients from today's schedule
+  // Extract unique clients from today's schedule (only scheduled, not completed)
   const todayClients = useMemo(() => {
     if (!scheduleData?.todaySchedule) return [];
     
     const clientMap = new Map<string, TodayClient>();
     scheduleData.todaySchedule
-      .filter(s => s.status === 'scheduled' || s.status === 'completed')
+      .filter(s => s.status === 'scheduled') // Only show clients with pending trainings
       .forEach(s => {
         if (!clientMap.has(s.clientId)) {
           clientMap.set(s.clientId, {
