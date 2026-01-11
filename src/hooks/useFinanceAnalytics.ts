@@ -147,12 +147,13 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
         const amount = Math.abs(tx.amount);
         totalIncome += amount;
 
-        // Categorize by type field instead of just foreign keys
-        if (tx.type === 'training' || tx.training_session_id) {
+        // Categorize by type field - include canceled_training as training income
+        if (tx.type === 'training' || tx.type === 'canceled_training' || tx.training_session_id) {
           trainingIncome += amount;
         } else if (tx.type === 'product' || tx.product_id) {
           productIncome += amount;
         } else {
+          // Manual deductions and other types
           otherIncome += amount;
         }
 
@@ -174,7 +175,7 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
         const clientData = clientMap.get(clientId)!;
         clientData.totalIncome += amount;
         clientData.transactionCount += 1;
-        if (tx.type === 'training' || tx.training_session_id) {
+        if (tx.type === 'training' || tx.type === 'canceled_training' || tx.training_session_id) {
           clientData.trainingIncome += amount;
         } else if (tx.type === 'product' || tx.product_id) {
           clientData.productIncome += amount;
@@ -193,7 +194,7 @@ export function useFinanceAnalytics(params: FinanceAnalyticsParams) {
       previousTransactions?.forEach(tx => {
         const amount = Math.abs(tx.amount);
         prevTotalIncome += amount;
-        if (tx.type === 'training' || tx.training_session_id) {
+        if (tx.type === 'training' || tx.type === 'canceled_training' || tx.training_session_id) {
           prevTrainingIncome += amount;
         } else if (tx.type === 'product' || tx.product_id) {
           prevProductIncome += amount;
