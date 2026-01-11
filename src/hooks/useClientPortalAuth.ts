@@ -41,12 +41,16 @@ export function useClientPortalAuth() {
     
     try {
       // Get client account by user_id (or auth_user_id)
-      const { data: account, error: accountError } = await supabase
+      // Use order + limit to handle users with multiple client_accounts (e.g. trainers)
+      const { data: accounts, error: accountError } = await supabase
         .from('client_accounts')
         .select('*')
         .or(`user_id.eq.${userId},auth_user_id.eq.${userId}`)
         .eq('is_active', true)
-        .maybeSingle();
+        .order('last_portal_login', { ascending: false, nullsFirst: false })
+        .limit(1);
+
+      const account = accounts?.[0] ?? null;
 
       if (accountError) throw accountError;
 

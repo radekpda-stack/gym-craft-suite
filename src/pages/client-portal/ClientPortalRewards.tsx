@@ -6,55 +6,25 @@ import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientLoyalty, LP_MILESTONES, getCurrentMilestone, getNextMilestone } from '@/hooks/useClientLoyalty';
 import { useIsModuleEnabledForClient } from '@/hooks/useTrainerModuleSettings';
-import { Gift, Lock, Coins, Star, Coffee, Dumbbell, Sparkles, ArrowLeft, AlertCircle } from 'lucide-react';
+import { useAvailableRewards } from '@/hooks/useTrainerRewards';
+import { RewardCard } from '@/components/client-portal/rewards/RewardCard';
+import { RedemptionHistory } from '@/components/client-portal/rewards/RedemptionHistory';
+import { Gift, Coins, Sparkles, ArrowLeft, PackageOpen } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-// Placeholder rewards - will be configured by trainer later
-const PLACEHOLDER_REWARDS = [
-  {
-    id: 'reward-1',
-    name: 'Proteinový shake zdarma',
-    description: 'Jeden proteinový shake po tréninku',
-    lpCost: 50,
-    icon: Coffee,
-    available: false,
-  },
-  {
-    id: 'reward-2',
-    name: 'Sleva 10% na suplementy',
-    description: 'Sleva na jakýkoliv produkt v obchodě',
-    lpCost: 100,
-    icon: Gift,
-    available: false,
-  },
-  {
-    id: 'reward-3',
-    name: 'Trénink navíc',
-    description: 'Jeden trénink s trenérem zdarma',
-    lpCost: 300,
-    icon: Dumbbell,
-    available: false,
-  },
-  {
-    id: 'reward-4',
-    name: 'VIP konzultace',
-    description: 'Hodinová konzultace výživy nebo tréninku',
-    lpCost: 500,
-    icon: Star,
-    available: false,
-  },
-];
-
 export default function ClientPortalRewards() {
   const { clientId, clientAccount } = useClientPortal();
-  const { data: loyalty, isLoading } = useClientLoyalty(clientId ?? undefined);
+  const { data: loyalty, isLoading: loyaltyLoading } = useClientLoyalty(clientId ?? undefined);
+  const { data: rewards, isLoading: rewardsLoading } = useAvailableRewards();
   const isRewardsEnabled = useIsModuleEnabledForClient(clientAccount?.trainer_id, 'rewards_system');
 
   // If rewards system is disabled, redirect to overview
   if (!isRewardsEnabled) {
     return <Navigate to="/zona" replace />;
   }
+
+  const isLoading = loyaltyLoading || rewardsLoading;
 
   if (isLoading) {
     return (
@@ -72,6 +42,7 @@ export default function ClientPortalRewards() {
 
   const currentMilestone = getCurrentMilestone(loyalty?.lifetime_points || 0);
   const nextMilestone = getNextMilestone(loyalty?.lifetime_points || 0);
+  const lpBalance = loyalty?.points_balance || 0;
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -102,7 +73,7 @@ export default function ClientPortalRewards() {
                 <Coins className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <p className="text-3xl font-bold">{loyalty?.points_balance || 0}</p>
+                <p className="text-3xl font-bold">{lpBalance}</p>
                 <p className="text-sm text-muted-foreground">Dostupné LP</p>
               </div>
             </div>
@@ -159,68 +130,41 @@ export default function ClientPortalRewards() {
         </div>
       </div>
 
-      {/* Rewards - Coming Soon */}
+      {/* Available Rewards */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <Gift className="w-5 h-5 text-primary" />
           Dostupné odměny
-          <Badge variant="secondary">Již brzy</Badge>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {PLACEHOLDER_REWARDS.map((reward, index) => {
-            const canAfford = (loyalty?.points_balance || 0) >= reward.lpCost;
-            const Icon = reward.icon;
-            
-            return (
-              <motion.div
-                key={reward.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="relative overflow-hidden opacity-75">
-                  {/* Coming Soon Overlay */}
-                  <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                    <Badge variant="secondary" className="text-base">
-                      <Lock className="w-4 h-4 mr-1" />
-                      Již brzy
-                    </Badge>
-                  </div>
-                  
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Icon className="w-6 h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-base">{reward.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {reward.description}
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-amber-500 font-semibold">
-                        <Coins className="w-4 h-4" />
-                        {reward.lpCost} LP
-                      </div>
-                      <Button 
-                        size="sm" 
-                        disabled={!canAfford || !reward.available}
-                        variant={canAfford ? 'default' : 'secondary'}
-                      >
-                        Vyměnit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+        
+        {rewards && rewards.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {rewards.map((reward, index) => (
+              <RewardCard 
+                key={reward.id} 
+                reward={reward} 
+                lpBalance={lpBalance}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="bg-muted/30">
+            <CardContent className="py-8 text-center">
+              <PackageOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">
+                Trenér zatím nenastavil žádné odměny.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Sbírej body a brzy tu budou odměny!
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Redemption History */}
+      <RedemptionHistory />
 
       {/* Info */}
       <Card className="bg-muted/50">
@@ -230,7 +174,7 @@ export default function ClientPortalRewards() {
               💡 Věrnostní body (LP) získáváš za tréninky, splněné výzvy a další aktivity.
             </p>
             <p>
-              Čím víc trénuješ, tím víc bodů získáš! Odměny budou brzy k dispozici.
+              Čím víc trénuješ, tím víc bodů získáš!
             </p>
           </div>
         </CardContent>
