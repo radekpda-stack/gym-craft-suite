@@ -179,9 +179,10 @@ export function useLifetimeStats() {
         ? Math.round(totalTrainingValue / totalTrainings) 
         : 0;
 
-      // Average hourly rate
-      const avgHourlyRate = totalHours > 0
-        ? Math.round(totalTrainingValue / totalHours)
+      // Average hourly rate - use precise minutes for calculation, not rounded hours
+      const preciseHours = totalMinutes / 60;
+      const avgHourlyRate = preciseHours > 0
+        ? Math.round(totalTrainingValue / preciseHours)
         : 0;
 
       // Client stats
