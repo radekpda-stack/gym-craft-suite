@@ -25,6 +25,7 @@ import {
   Image,
   FileQuestion,
   PieChart,
+  Receipt,
   UserCircle,
   Trophy,
   ClipboardCheck,
@@ -308,6 +309,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         label: 'Finance',
         items: [
           { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
+          { id: 'expenses', to: '/expenses', icon: Receipt, label: 'Náklady' },
           { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
         ],
       },

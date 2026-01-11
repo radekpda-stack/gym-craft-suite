@@ -365,6 +365,68 @@ export type Database = {
         }
         Relationships: []
       }
+      business_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          is_recurring: boolean | null
+          name: string
+          notes: string | null
+          parent_expense_id: string | null
+          receipt_url: string | null
+          recurring_end_date: string | null
+          recurring_interval: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          notes?: string | null
+          parent_expense_id?: string | null
+          receipt_url?: string | null
+          recurring_end_date?: string | null
+          recurring_interval?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          notes?: string | null
+          parent_expense_id?: string | null
+          receipt_url?: string | null
+          recurring_end_date?: string | null
+          recurring_interval?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_expenses_parent_expense_id_fkey"
+            columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "business_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_health_baselines: {
         Row: {
           baseline_value: number | null
