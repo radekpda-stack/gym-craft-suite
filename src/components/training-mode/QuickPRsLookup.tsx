@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trophy, Dumbbell, Timer, Hash, Search, Copy, Check, User, ChevronRight, ArrowLeft, Calendar } from 'lucide-react';
+import { Trophy, Dumbbell, Timer, Hash, Search, User, ChevronRight, ArrowLeft, Calendar, Ruler } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,9 +7,9 @@ import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
 import { useClientExercisePRs, ExercisePR } from '@/hooks/useClientExercisePRs';
 import { useDashboardSchedule } from '@/hooks/dashboard/useDashboardSchedule';
+import { ExerciseHistorySheet } from './ExerciseHistorySheet';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
@@ -20,6 +20,8 @@ function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
       return <Timer className="w-4 h-4" />;
     case 'reps':
       return <Hash className="w-4 h-4" />;
+    case 'distance':
+      return <Ruler className="w-4 h-4" />;
     default:
       return <Trophy className="w-4 h-4" />;
   }
@@ -28,41 +30,30 @@ function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
 function getMetricColor(metricType: ExercisePR['metricType']) {
   switch (metricType) {
     case 'weight':
-      return 'bg-primary/10 text-primary border-primary/20';
+      return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
     case 'time':
       return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
     case 'reps':
       return 'bg-green-500/10 text-green-600 border-green-500/20';
+    case 'distance':
+      return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
     default:
       return 'bg-muted text-muted-foreground';
   }
 }
 
-function PRItem({ pr }: { pr: ExercisePR }) {
-  const [copied, setCopied] = useState(false);
+interface PRItemProps {
+  pr: ExercisePR;
+  onSelect: (pr: ExercisePR) => void;
+}
+
+function PRItem({ pr, onSelect }: PRItemProps) {
   const colorClass = getMetricColor(pr.metricType);
-  
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(pr.bestDisplay);
-      setCopied(true);
-      
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
-      
-      toast.success(`${pr.bestDisplay} zkopírováno`);
-      
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error('Nepodařilo se zkopírovat');
-    }
-  };
 
   return (
     <button
       type="button"
-      onClick={handleCopy}
+      onClick={() => onSelect(pr)}
       className={cn(
         "w-full flex items-center justify-between py-3 px-3 rounded-xl",
         "bg-secondary/50 hover:bg-secondary active:scale-[0.98] transition-all"
@@ -83,11 +74,7 @@ function PRItem({ pr }: { pr: ExercisePR }) {
         <Badge variant="secondary" className={`font-mono font-bold text-base ${colorClass}`}>
           {pr.bestDisplay}
         </Badge>
-        {copied ? (
-          <Check className="w-4 h-4 text-success" />
-        ) : (
-          <Copy className="w-4 h-4 text-muted-foreground/50" />
-        )}
+        <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
       </div>
     </button>
   );
@@ -198,6 +185,7 @@ interface ClientPRsViewProps {
 
 function ClientPRsView({ clientId, clientName, onBack }: ClientPRsViewProps) {
   const { data: prs = [], isLoading } = useClientExercisePRs(clientId);
+  const [selectedPR, setSelectedPR] = useState<ExercisePR | null>(null);
 
   const sortedPRs = useMemo(() => {
     return [...prs].sort((a, b) => {
@@ -207,46 +195,57 @@ function ClientPRsView({ clientId, clientName, onBack }: ClientPRsViewProps) {
   }, [prs]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      {/* Back header */}
-      <button
-        onClick={onBack}
-        className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-border/50 hover:bg-secondary/50 transition-colors text-left bg-background"
-      >
-        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-        <span className="font-medium truncate">{clientName}</span>
-      </button>
-      
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Načítám PRka...</div>
-        </div>
-      ) : sortedPRs.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2 p-8">
-          <Trophy className="w-10 h-10 opacity-30" />
-          <p className="text-center text-sm">
-            {clientName} zatím nemá žádné osobní rekordy
-          </p>
-        </div>
-      ) : (
-        <>
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-1.5 pb-20">
-              {sortedPRs.map((pr) => (
-                <PRItem key={pr.id} pr={pr} />
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* Stats footer */}
-          <div className="shrink-0 p-4 border-t border-border/50 bg-background flex items-center justify-center">
-            <Badge variant="secondary">
-              {sortedPRs.length} osobních rekordů
-            </Badge>
+    <>
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Back header */}
+        <button
+          onClick={onBack}
+          className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-border/50 hover:bg-secondary/50 transition-colors text-left bg-background"
+        >
+          <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+          <span className="font-medium truncate">{clientName}</span>
+        </button>
+        
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-pulse text-muted-foreground">Načítám PRka...</div>
           </div>
-        </>
-      )}
-    </div>
+        ) : sortedPRs.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2 p-8">
+            <Trophy className="w-10 h-10 opacity-30" />
+            <p className="text-center text-sm">
+              {clientName} zatím nemá žádné osobní rekordy
+            </p>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-1.5 pb-20">
+                {sortedPRs.map((pr) => (
+                  <PRItem key={pr.id} pr={pr} onSelect={setSelectedPR} />
+                ))}
+              </div>
+            </ScrollArea>
+
+            {/* Stats footer */}
+            <div className="shrink-0 p-4 border-t border-border/50 bg-background flex items-center justify-center">
+              <Badge variant="secondary">
+                {sortedPRs.length} osobních rekordů
+              </Badge>
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Exercise History Sheet */}
+      <ExerciseHistorySheet
+        open={!!selectedPR}
+        onOpenChange={(open) => !open && setSelectedPR(null)}
+        pr={selectedPR}
+        clientId={clientId}
+        clientName={clientName}
+      />
+    </>
   );
 }
 
