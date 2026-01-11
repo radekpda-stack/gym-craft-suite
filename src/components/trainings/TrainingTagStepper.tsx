@@ -26,8 +26,28 @@ const BODY_PART_CATEGORIES = [
 
 // Mapování kategorií na podřazené svaly
 const BODY_PART_CHILDREN: Record<string, string[]> = {
-  upper: ['Biceps', 'Triceps', 'Ramena', 'Hrudník', 'Záda', 'Předloktí', 'Trapézy', 'Krk'],
-  lower: ['Přední stehna', 'Zadní stehna', 'Lýtka', 'Hýždě', 'Abduktory', 'Addukty'],
+  upper: [
+    // Ramena a rotátory
+    'Ramena', 'Deltový sval přední', 'Deltový sval střední', 'Deltový sval zadní', 'Rotátorová manžeta',
+    // Paže
+    'Biceps', 'Triceps', 'Předloktí',
+    // Hrudník
+    'Hrudník', 'Prsní sval velký', 'Prsní sval malý',
+    // Záda
+    'Záda', 'Latissimus', 'Trapézy', 'Rhomboidy', 'Vzpřimovače páteře',
+    // Krk
+    'Krk',
+  ],
+  lower: [
+    // Stehna
+    'Přední stehna', 'Čtyřhlavý sval stehenní', 'Zadní stehna', 'Hamstringy',
+    // Hýždě
+    'Hýždě', 'Gluteus maximus', 'Gluteus medius',
+    // Lýtka
+    'Lýtka', 'Gastrocnemius', 'Soleus',
+    // Kyčle a ostatní
+    'Iliopsoas', 'Abduktory', 'Addukty',
+  ],
   core: ['Přímé břišní svalstvo', 'Šikmé břišní svalstvo', 'Hluboké břišní svalstvo', 'Střed těla'],
 };
 
