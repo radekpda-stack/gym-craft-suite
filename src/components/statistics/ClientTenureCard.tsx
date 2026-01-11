@@ -2,13 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Loader2 } from 'lucide-react';
-import { differenceInMonths } from 'date-fns';
+import { differenceInMonths, differenceInYears } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface TenureBucket {
   label: string;
   count: number;
   color: string;
+}
+
+interface ClientTenure {
+  id: string;
+  name: string;
+  months: number;
+  firstTraining: Date | null;
 }
 
 export function ClientTenureCard() {
@@ -18,36 +25,60 @@ export function ClientTenureCard() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return null;
 
-      // Get all active clients with creation dates
+      // Get all active clients
       const { data: clients } = await supabase
         .from('clients')
         .select('id, name, created_at')
         .eq('user_id', user.user.id)
         .eq('is_archived', false);
 
-      if (!clients) return null;
+      if (!clients || clients.length === 0) return null;
+
+      // Get first training date for each client
+      const { data: firstTrainings } = await supabase
+        .from('training_sessions')
+        .select('client_id, date')
+        .in('client_id', clients.map(c => c.id))
+        .order('date', { ascending: true });
+
+      // Build map of first training per client
+      const firstTrainingMap = new Map<string, Date>();
+      firstTrainings?.forEach(t => {
+        if (!firstTrainingMap.has(t.client_id)) {
+          firstTrainingMap.set(t.client_id, new Date(t.date));
+        }
+      });
 
       const now = new Date();
       
-      // Calculate tenure for each client
-      const tenures = clients.map(c => {
-        const months = differenceInMonths(now, new Date(c.created_at));
-        return { id: c.id, name: c.name, months };
+      // Calculate tenure for each client based on first training or created_at
+      const tenures: ClientTenure[] = clients.map(c => {
+        const firstTraining = firstTrainingMap.get(c.id);
+        const startDate = firstTraining || new Date(c.created_at);
+        const months = differenceInMonths(now, startDate);
+        return { 
+          id: c.id, 
+          name: c.name, 
+          months,
+          firstTraining: firstTraining || null
+        };
       });
 
       // Bucket distribution
       const buckets: TenureBucket[] = [
-        { label: '< 6 měsíců', count: 0, color: 'bg-primary' },
+        { label: '< 3 měsíce', count: 0, color: 'bg-primary' },
+        { label: '3-6 měsíců', count: 0, color: 'bg-blue-500' },
         { label: '6-12 měsíců', count: 0, color: 'bg-success' },
         { label: '1-2 roky', count: 0, color: 'bg-warning' },
         { label: '2+ roky', count: 0, color: 'bg-destructive' },
       ];
 
       tenures.forEach(t => {
-        if (t.months < 6) buckets[0].count++;
-        else if (t.months < 12) buckets[1].count++;
-        else if (t.months < 24) buckets[2].count++;
-        else buckets[3].count++;
+        if (t.months < 3) buckets[0].count++;
+        else if (t.months < 6) buckets[1].count++;
+        else if (t.months < 12) buckets[2].count++;
+        else if (t.months < 24) buckets[3].count++;
+        else buckets[4].count++;
       });
 
       // Calculate average
@@ -55,10 +86,10 @@ export function ClientTenureCard() {
         ? tenures.reduce((sum, t) => sum + t.months, 0) / tenures.length 
         : 0;
 
-      // Get longest clients
+      // Get longest clients (sorted by months descending)
       const longestClients = [...tenures]
         .sort((a, b) => b.months - a.months)
-        .slice(0, 3);
+        .slice(0, 5);
 
       return { 
         buckets, 
@@ -68,6 +99,18 @@ export function ClientTenureCard() {
       };
     },
   });
+
+  // Format tenure display
+  const formatTenure = (months: number): string => {
+    if (months < 1) return '< 1 měsíc';
+    if (months < 12) return `${months} měs.`;
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0) {
+      return years === 1 ? '1 rok' : `${years} roky`;
+    }
+    return `${years}r ${remainingMonths}m`;
+  };
 
   if (isLoading) {
     return (
@@ -93,13 +136,13 @@ export function ClientTenureCard() {
       <CardContent className="space-y-4">
         {/* Average tenure */}
         <div className="text-center p-3 rounded-lg bg-primary/10">
-          <p className="text-2xl font-bold">{data?.avgMonths || 0}</p>
-          <p className="text-xs text-muted-foreground">měsíců průměrně</p>
+          <p className="text-2xl font-bold">{formatTenure(Math.round(data?.avgMonths || 0))}</p>
+          <p className="text-xs text-muted-foreground">průměrná délka</p>
         </div>
 
         {/* Distribution bars */}
         <div className="space-y-2">
-          {buckets.map((bucket, i) => {
+          {buckets.filter(b => b.count > 0).map((bucket) => {
             const percentage = totalClients > 0 ? (bucket.count / totalClients) * 100 : 0;
             return (
               <div key={bucket.label} className="space-y-1">
@@ -118,19 +161,16 @@ export function ClientTenureCard() {
           })}
         </div>
 
-        {/* Longest clients */}
+        {/* Longest clients with exact tenure */}
         {data?.longestClients && data.longestClients.length > 0 && (
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground mb-2">Nejdéle spolupracují</p>
             <div className="space-y-1">
-              {data.longestClients.map((client, i) => (
+              {data.longestClients.map((client) => (
                 <div key={client.id} className="flex items-center justify-between text-sm">
                   <span className="truncate flex-1">{client.name}</span>
-                  <span className="text-muted-foreground ml-2">
-                    {client.months >= 12 
-                      ? `${Math.floor(client.months / 12)}r ${client.months % 12}m`
-                      : `${client.months}m`
-                    }
+                  <span className="text-muted-foreground ml-2 font-medium">
+                    {formatTenure(client.months)}
                   </span>
                 </div>
               ))}
