@@ -235,10 +235,7 @@ function ExerciseCard({
               <h4 className="font-semibold capitalize truncate">{exercise.exercise_name}</h4>
               {exercise.client_best_value !== null && (
                 <p className="text-sm text-muted-foreground">
-                  {exerciseType === 'strength' 
-                    ? `${exercise.client_best_value} kg` 
-                    : formatCardioValue(exercise.client_best_value)
-                  }
+                  {formatExerciseValue(exercise.client_best_value, exercise.metric_type, exerciseType)}
                 </p>
               )}
             </div>
@@ -350,6 +347,39 @@ function formatCardioValue(value: number): string {
     return `${(value / 1000).toFixed(2)} km`;
   }
   return `${value} m`;
+}
+
+function formatExerciseValue(
+  value: number, 
+  metricType: string | undefined, 
+  exerciseType: 'strength' | 'cardio'
+): string {
+  if (exerciseType === 'cardio') {
+    return formatCardioValue(value);
+  }
+  
+  switch (metricType) {
+    case 'time':
+      // Format time (seconds)
+      if (value >= 60) {
+        const minutes = Math.floor(value / 60);
+        const seconds = value % 60;
+        return `${minutes}:${seconds.toFixed(0).padStart(2, '0')}`;
+      }
+      return `${value.toFixed(1)} s`;
+    case 'distance':
+      // Format distance (meters)
+      if (value >= 1) {
+        return `${value.toFixed(2)} m`;
+      }
+      return `${(value * 100).toFixed(0)} cm`;
+    case 'height':
+      // Format height (cm)
+      return `${value.toFixed(0)} cm`;
+    case 'weight':
+    default:
+      return `${value} kg`;
+  }
 }
 
 export default function ExerciseComparisonGrid({
