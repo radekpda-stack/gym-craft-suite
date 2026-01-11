@@ -255,34 +255,27 @@ serve(async (req) => {
     if (action === 'get_available_exercises') {
       console.log(`[Benchmarks] Getting available exercises for client: ${clientId}`);
 
-      // Get all strength entries for trainer's clients
-      const { data: strengthData } = await supabase
+      // Get ALL exercise entries (including plyometrics with distance/height/time)
+      const { data: exerciseData } = await supabase
         .from('exercise_entries')
-        .select('exercise_name, exercise_id, client_id, weight_kg')
-        .eq('user_id', trainerId)
-        .not('weight_kg', 'is', null);
+        .select('exercise_name, exercise_id, client_id, weight_kg, distance_meters, height_cm, time_seconds')
+        .eq('user_id', trainerId);
+
+      // Get exercise definitions to identify plyometric exercises
+      const { data: exerciseDefinitions } = await supabase
+        .from('exercises')
+        .select('name_cs, default_unit, category, is_time_based, supported_metrics');
+
+      const exerciseDefMap = new Map((exerciseDefinitions || []).map((e: any) => 
+        [e.name_cs?.toLowerCase().trim(), e]
+      ));
 
       // Get all cardio entries
       const { data: cardioData } = await supabase
         .from('cardio_entries')
-        .select('exercise_name, exercise_id, client_id, distance_meters')
+        .select('exercise_name, exercise_id, client_id, distance_meters, duration_seconds')
         .eq('user_id', trainerId);
 
-      // Process strength exercises
-      const strengthByExercise = new Map<string, Map<string, number>>();
-      (strengthData || []).forEach((e: any) => {
-        const key = e.exercise_name.toLowerCase().trim();
-        if (!strengthByExercise.has(key)) {
-          strengthByExercise.set(key, new Map());
-        }
-        const clientMap = strengthByExercise.get(key)!;
-        const current = clientMap.get(e.client_id) || 0;
-        if (e.weight_kg && e.weight_kg > current) {
-          clientMap.set(e.client_id, e.weight_kg);
-        }
-      });
-
-      // Calculate percentiles for strength
       interface ExerciseWithPercentile {
         exercise_name: string;
         exercise_id: string | null;
@@ -290,30 +283,139 @@ serve(async (req) => {
         exercise_type: 'strength' | 'cardio';
         client_percentile: number | null;
         client_best_value: number | null;
+        metric_type?: string;
       }
 
+      // Process exercise entries - group by exercise and determine best metric
+      const exerciseByName = new Map<string, { 
+        clients: Map<string, { value: number; metric: string }>;
+        metric: string;
+        exerciseId: string | null;
+      }>();
+
+      (exerciseData || []).forEach((e: any) => {
+        const key = e.exercise_name.toLowerCase().trim();
+        const exerciseDef = exerciseDefMap.get(key);
+        
+        // Determine which metric to use based on exercise definition and available data
+        let metric = 'weight';
+        let value: number | null = null;
+        
+        // Check exercise definition for preferred metric
+        const defaultUnit = exerciseDef?.default_unit;
+        const category = exerciseDef?.category?.toLowerCase();
+        const isTimeBased = exerciseDef?.is_time_based === true;
+        const isPlyometric = category === 'plyometrics' || 
+          key.includes('skok') || key.includes('jump') || 
+          key.includes('výskok') || key.includes('box jump');
+        const isDistancePlyometric = key.includes('dálk') || key.includes('long jump') || key.includes('broad');
+        const isHeightPlyometric = key.includes('výšk') || key.includes('high jump') || 
+          key.includes('vertik') || key.includes('vertical') || key.includes('cmj') || 
+          key.includes('squat jump') || key.includes('výskok');
+
+        if (isTimeBased || defaultUnit === 'time_seconds' || 
+            key.includes('běh') || key.includes('run') || 
+            key.includes('veslo') || key.includes('row') ||
+            key.includes('skierg')) {
+          // Time-based exercise
+          if (e.time_seconds && e.time_seconds > 0) {
+            metric = 'time';
+            value = e.time_seconds;
+          }
+        } else if (isPlyometric) {
+          if (isDistancePlyometric) {
+            // Distance-based plyometric (long jump)
+            if (e.distance_meters && e.distance_meters > 0) {
+              metric = 'distance';
+              value = e.distance_meters;
+            }
+          } else if (isHeightPlyometric || defaultUnit === 'height_cm') {
+            // Height-based plyometric (vertical jump, box jump)
+            if (e.height_cm && e.height_cm > 0) {
+              metric = 'height';
+              value = e.height_cm;
+            } else if (e.distance_meters && e.distance_meters > 0) {
+              // Fallback to distance_meters if height_cm not available
+              metric = 'height';
+              value = e.distance_meters * 100; // Convert m to cm
+            }
+          } else if (e.distance_meters && e.distance_meters > 0) {
+            // Generic plyometric with distance data
+            metric = 'distance';
+            value = e.distance_meters;
+          } else if (e.height_cm && e.height_cm > 0) {
+            metric = 'height';
+            value = e.height_cm;
+          }
+        } else if (e.weight_kg && e.weight_kg > 0) {
+          // Standard strength exercise
+          metric = 'weight';
+          value = e.weight_kg;
+        } else if (e.distance_meters && e.distance_meters > 0) {
+          // Has distance data
+          metric = 'distance';
+          value = e.distance_meters;
+        } else if (e.height_cm && e.height_cm > 0) {
+          // Has height data
+          metric = 'height';
+          value = e.height_cm;
+        }
+
+        if (value === null) return;
+
+        if (!exerciseByName.has(key)) {
+          exerciseByName.set(key, { 
+            clients: new Map(), 
+            metric,
+            exerciseId: e.exercise_id 
+          });
+        }
+
+        const exercise = exerciseByName.get(key)!;
+        const clientData = exercise.clients.get(e.client_id);
+        
+        // For time: lower is better, for others: higher is better
+        const isBetter = metric === 'time' 
+          ? !clientData || value < clientData.value
+          : !clientData || value > clientData.value;
+          
+        if (isBetter) {
+          exercise.clients.set(e.client_id, { value, metric });
+        }
+      });
+
+      // Calculate percentiles for strength/plyometric exercises
       const strengthResults: ExerciseWithPercentile[] = [];
-      strengthByExercise.forEach((clientBests, exerciseName) => {
-        const values = Array.from(clientBests.values()).sort((a, b) => a - b);
-        const clientBest = clientBests.get(clientId);
+      exerciseByName.forEach((data, exerciseName) => {
+        const values = Array.from(data.clients.values()).map(c => c.value);
+        const clientData = data.clients.get(clientId);
         
         let percentile: number | null = null;
-        if (clientBest !== undefined && values.length > 0) {
-          const belowCount = values.filter(v => v < clientBest).length;
-          percentile = (belowCount / values.length) * 100;
+        if (clientData !== undefined && values.length > 0) {
+          const sortedValues = [...values].sort((a, b) => a - b);
+          if (data.metric === 'time') {
+            // For time: lower is better, so count how many are HIGHER (worse)
+            const higherCount = sortedValues.filter(v => v > clientData.value).length;
+            percentile = (higherCount / values.length) * 100;
+          } else {
+            // For weight/distance/height: higher is better
+            const lowerCount = sortedValues.filter(v => v < clientData.value).length;
+            percentile = (lowerCount / values.length) * 100;
+          }
         }
 
         strengthResults.push({
           exercise_name: exerciseName,
-          exercise_id: null,
+          exercise_id: data.exerciseId,
           entry_count: values.length,
           exercise_type: 'strength',
           client_percentile: percentile,
-          client_best_value: clientBest ?? null,
+          client_best_value: clientData?.value ?? null,
+          metric_type: data.metric,
         });
       });
 
-      // Process cardio exercises (distance based)
+      // Process cardio exercises (distance or duration based)
       const cardioByExercise = new Map<string, Map<string, number>>();
       (cardioData || []).forEach((e: any) => {
         const key = e.exercise_name.toLowerCase().trim();
@@ -322,6 +424,7 @@ serve(async (req) => {
         }
         const clientMap = cardioByExercise.get(key)!;
         const current = clientMap.get(e.client_id) || 0;
+        // Use distance as primary metric for cardio
         if (e.distance_meters && e.distance_meters > current) {
           clientMap.set(e.client_id, e.distance_meters);
         }
@@ -407,22 +510,40 @@ serve(async (req) => {
       let unit = 'kg';
 
       if (exerciseType === 'strength') {
-        // First check if this is a time-based exercise by looking at the exercise or entries
         // Get exercise info if available
         const { data: exerciseInfo } = await supabase
           .from('exercises')
-          .select('is_time_based, category')
+          .select('is_time_based, category, default_unit, supported_metrics')
           .ilike('name_cs', exerciseName)
           .maybeSingle();
 
+        const nameLower = exerciseName.toLowerCase();
+        const category = exerciseInfo?.category?.toLowerCase() || '';
+        const defaultUnit = exerciseInfo?.default_unit || '';
+        
+        // Determine exercise type
         const isTimeBased = exerciseInfo?.is_time_based === true ||
-          exerciseInfo?.category === 'cardio' ||
-          exerciseInfo?.category === 'conditioning' ||
-          exerciseName.toLowerCase().includes('skierg') ||
-          exerciseName.toLowerCase().includes('veslo') ||
-          exerciseName.toLowerCase().includes('rower') ||
-          exerciseName.toLowerCase().includes('běh') ||
-          exerciseName.toLowerCase().includes('run');
+          category === 'cardio' ||
+          category === 'conditioning' ||
+          nameLower.includes('skierg') ||
+          nameLower.includes('veslo') ||
+          nameLower.includes('rower') ||
+          nameLower.includes('běh') ||
+          nameLower.includes('run');
+          
+        const isPlyometric = category === 'plyometrics' || 
+          nameLower.includes('skok') || nameLower.includes('jump') || 
+          nameLower.includes('výskok') || nameLower.includes('box jump');
+          
+        const isDistancePlyometric = nameLower.includes('dálk') || 
+          nameLower.includes('long jump') || nameLower.includes('broad');
+          
+        const isHeightPlyometric = nameLower.includes('výšk') || 
+          nameLower.includes('high jump') || 
+          nameLower.includes('vertik') || nameLower.includes('vertical') || 
+          nameLower.includes('cmj') || nameLower.includes('squat jump') || 
+          nameLower.includes('výskok') || nameLower.includes('box jump') ||
+          defaultUnit === 'height_cm';
 
         if (isTimeBased) {
           // TIME-BASED: get entries with time_seconds, sort ascending (lower is better)
@@ -456,17 +577,14 @@ serve(async (req) => {
           entries.forEach((e: any) => {
             if (!e.time_seconds || e.time_seconds <= 0) return;
             
-            // Prefer time_ms for precision, fallback to time_seconds * 1000
             const timeMs = e.time_ms ?? (e.time_seconds * 1000);
             const existing = clientBests.get(e.client_id);
             
-            // Lower time is better
             if (!existing || timeMs < existing.timeMs) {
               clientBests.set(e.client_id, { timeMs, date: e.date });
             }
           });
 
-          // Filter by gender if needed
           let filteredClientIds = Array.from(clientBests.keys());
           if (genderFilter && genderFilter !== 'all') {
             filteredClientIds = filteredClientIds.filter(cid => {
@@ -475,7 +593,6 @@ serve(async (req) => {
             });
           }
 
-          // Build leaderboard
           leaderboard = filteredClientIds
             .map(cid => {
               const data = clientBests.get(cid)!;
@@ -484,7 +601,6 @@ serve(async (req) => {
               const isSelfProfile = client?.is_self_profile === true;
               const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
 
-              // Format time for display (mm:ss.SS)
               const totalSeconds = data.timeMs / 1000;
               const mins = Math.floor(totalSeconds / 60);
               const secs = totalSeconds % 60;
@@ -510,11 +626,163 @@ serve(async (req) => {
                 rank: 0,
               };
             })
-            // ASCENDING sort for time (lower is better)
             .sort((a, b) => a.best_value - b.best_value);
 
+        } else if (isPlyometric && isDistancePlyometric) {
+          // DISTANCE-BASED PLYOMETRIC (long jump, broad jump)
+          metric = 'distance';
+          unit = 'm';
+
+          const { data: entries } = await supabase
+            .from('exercise_entries')
+            .select('client_id, distance_meters, date')
+            .eq('user_id', trainerId)
+            .ilike('exercise_name', exerciseName)
+            .not('distance_meters', 'is', null);
+
+          if (!entries?.length) {
+            return new Response(
+              JSON.stringify({ 
+                leaderboard: [], 
+                total_participants: 0, 
+                client_rank: null,
+                client_percentile: null,
+                exercise_name: exerciseName,
+                metric: 'distance',
+                unit: 'm'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const clientBests = new Map<string, { distance: number; date: string }>();
+          entries.forEach((e: any) => {
+            if (!e.distance_meters || e.distance_meters <= 0) return;
+            const existing = clientBests.get(e.client_id);
+            if (!existing || e.distance_meters > existing.distance) {
+              clientBests.set(e.client_id, { distance: e.distance_meters, date: e.date });
+            }
+          });
+
+          let filteredClientIds = Array.from(clientBests.keys());
+          if (genderFilter && genderFilter !== 'all') {
+            filteredClientIds = filteredClientIds.filter(cid => {
+              const client = clientsMap.get(cid);
+              return client?.gender === genderFilter;
+            });
+          }
+
+          leaderboard = filteredClientIds
+            .map(cid => {
+              const data = clientBests.get(cid)!;
+              const client = clientsMap.get(cid);
+              const setting = settingsMap.get(cid);
+              const isSelfProfile = client?.is_self_profile === true;
+              const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
+
+              let nickname: string;
+              if (isSelfProfile) {
+                nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+              } else if (isVisible && setting?.leaderboard_nickname) {
+                nickname = setting.leaderboard_nickname;
+              } else {
+                nickname = generateAnonymousName(cid);
+              }
+
+              return {
+                client_id: cid,
+                nickname,
+                best_value: data.distance,
+                display_value: `${data.distance.toFixed(2)} m`,
+                achieved_at: data.date,
+                is_anonymous: !isVisible && !isSelfProfile,
+                is_current_client: cid === clientId,
+                rank: 0,
+              };
+            })
+            .sort((a, b) => b.best_value - a.best_value);
+
+        } else if (isPlyometric && isHeightPlyometric) {
+          // HEIGHT-BASED PLYOMETRIC (high jump, vertical jump, box jump)
+          metric = 'height';
+          unit = 'cm';
+
+          const { data: entries } = await supabase
+            .from('exercise_entries')
+            .select('client_id, height_cm, distance_meters, date')
+            .eq('user_id', trainerId)
+            .ilike('exercise_name', exerciseName);
+
+          if (!entries?.length) {
+            return new Response(
+              JSON.stringify({ 
+                leaderboard: [], 
+                total_participants: 0, 
+                client_rank: null,
+                client_percentile: null,
+                exercise_name: exerciseName,
+                metric: 'height',
+                unit: 'cm'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const clientBests = new Map<string, { height: number; date: string }>();
+          entries.forEach((e: any) => {
+            // Prefer height_cm, fallback to distance_meters * 100
+            let height = e.height_cm;
+            if (!height && e.distance_meters) {
+              height = e.distance_meters * 100;
+            }
+            if (!height || height <= 0) return;
+            
+            const existing = clientBests.get(e.client_id);
+            if (!existing || height > existing.height) {
+              clientBests.set(e.client_id, { height, date: e.date });
+            }
+          });
+
+          let filteredClientIds = Array.from(clientBests.keys());
+          if (genderFilter && genderFilter !== 'all') {
+            filteredClientIds = filteredClientIds.filter(cid => {
+              const client = clientsMap.get(cid);
+              return client?.gender === genderFilter;
+            });
+          }
+
+          leaderboard = filteredClientIds
+            .map(cid => {
+              const data = clientBests.get(cid)!;
+              const client = clientsMap.get(cid);
+              const setting = settingsMap.get(cid);
+              const isSelfProfile = client?.is_self_profile === true;
+              const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
+
+              let nickname: string;
+              if (isSelfProfile) {
+                nickname = setting?.leaderboard_nickname || client?.name || 'Trenér';
+              } else if (isVisible && setting?.leaderboard_nickname) {
+                nickname = setting.leaderboard_nickname;
+              } else {
+                nickname = generateAnonymousName(cid);
+              }
+
+              return {
+                client_id: cid,
+                nickname,
+                best_value: data.height,
+                display_value: `${data.height.toFixed(0)} cm`,
+                achieved_at: data.date,
+                is_anonymous: !isVisible && !isSelfProfile,
+                is_current_client: cid === clientId,
+                rank: 0,
+              };
+            })
+            .sort((a, b) => b.best_value - a.best_value);
+
         } else {
-          // WEIGHT-BASED: original logic
+          // WEIGHT-BASED: default strength exercise
           const { data: entries } = await supabase
             .from('exercise_entries')
             .select('client_id, weight_kg, date')
@@ -538,7 +806,6 @@ serve(async (req) => {
             );
           }
 
-          // Get unique clients and their best performance (highest weight)
           const clientBests = new Map<string, { weight: number; date: string }>();
           entries.forEach((e: any) => {
             const existing = clientBests.get(e.client_id);
@@ -547,7 +814,6 @@ serve(async (req) => {
             }
           });
 
-          // Filter by gender if needed
           let filteredClientIds = Array.from(clientBests.keys());
           if (genderFilter && genderFilter !== 'all') {
             filteredClientIds = filteredClientIds.filter(cid => {
@@ -556,7 +822,6 @@ serve(async (req) => {
             });
           }
 
-          // Build leaderboard
           leaderboard = filteredClientIds
             .map(cid => {
               const data = clientBests.get(cid)!;
@@ -585,7 +850,6 @@ serve(async (req) => {
                 rank: 0,
               };
             })
-            // DESCENDING sort for weight (higher is better)
             .sort((a, b) => b.best_value - a.best_value);
         }
 
