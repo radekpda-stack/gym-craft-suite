@@ -36,7 +36,7 @@ export function RevenueBreakdownCard() {
         const absAmount = Math.abs(t.amount);
         if (t.type === 'training') breakdown.training += absAmount;
         else if (t.type === 'product') breakdown.product += absAmount;
-        else if (t.type === 'cancellation' || t.type === 'late_cancel') breakdown.cancellation += absAmount;
+        else if (t.type === 'canceled_training') breakdown.cancellation += absAmount;
       });
 
       return breakdown;

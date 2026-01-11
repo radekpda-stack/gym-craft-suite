@@ -374,14 +374,15 @@ export function useAnnualStats(
         client: clientMap.get(maxWeightEntry.client_id) || 'Neznámý',
       } : null;
 
-      // Finance stats - income from actual services (trainings + products)
+      // Finance stats - income from actual services (trainings + canceled trainings + products)
       const productSales = creditTransactions.filter(t => t.type === 'product');
       const productIncome = productSales.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
-      const trainingCharges = creditTransactions.filter(t => t.type === 'training');
+      // Training income includes regular trainings AND canceled training fees
+      const trainingCharges = creditTransactions.filter(t => t.type === 'training' || t.type === 'canceled_training');
       const trainingIncome = trainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
-      // Total income = trainings + products (consistent with breakdown)
+      // Total income = trainings (including cancellation fees) + products
       const totalIncome = trainingIncome + productIncome;
 
       const months = Math.max(1, totalDays / 30);
