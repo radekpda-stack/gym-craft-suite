@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, Trash2 } from 'lucide-react';
@@ -151,50 +152,42 @@ export function EditMeasurementSheet({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Váha (kg)</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.weight}
-                  onChange={(e) => handleChange('weight', e.target.value)}
-                  placeholder="0.0"
+                  onChange={(value) => handleChange('weight', value)}
+                  placeholder="0,0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Tuk (%)</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.body_fat_percentage}
-                  onChange={(e) => handleChange('body_fat_percentage', e.target.value)}
-                  placeholder="0.0"
+                  onChange={(value) => handleChange('body_fat_percentage', value)}
+                  placeholder="0,0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Svaly (kg)</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.muscle_mass}
-                  onChange={(e) => handleChange('muscle_mass', e.target.value)}
-                  placeholder="0.0"
+                  onChange={(value) => handleChange('muscle_mass', value)}
+                  placeholder="0,0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Bazál. metabol.</Label>
-                <Input
-                  type="number"
+                <NumericInput
+                  allowDecimals={false}
                   value={formData.basal_metabolism}
-                  onChange={(e) => handleChange('basal_metabolism', e.target.value)}
+                  onChange={(value) => handleChange('basal_metabolism', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Viscerální tuk</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.visceral_fat}
-                  onChange={(e) => handleChange('visceral_fat', e.target.value)}
+                  onChange={(value) => handleChange('visceral_fat', value)}
                   placeholder="0"
                 />
               </div>
@@ -207,91 +200,73 @@ export function EditMeasurementSheet({
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Hrudník</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.chest}
-                  onChange={(e) => handleChange('chest', e.target.value)}
+                  onChange={(value) => handleChange('chest', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Pas</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.waist}
-                  onChange={(e) => handleChange('waist', e.target.value)}
+                  onChange={(value) => handleChange('waist', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Boky</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.hips}
-                  onChange={(e) => handleChange('hips', e.target.value)}
+                  onChange={(value) => handleChange('hips', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Biceps L</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.bicep_left}
-                  onChange={(e) => handleChange('bicep_left', e.target.value)}
+                  onChange={(value) => handleChange('bicep_left', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Biceps P</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.bicep_right}
-                  onChange={(e) => handleChange('bicep_right', e.target.value)}
+                  onChange={(value) => handleChange('bicep_right', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Stehno L</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.thigh_left}
-                  onChange={(e) => handleChange('thigh_left', e.target.value)}
+                  onChange={(value) => handleChange('thigh_left', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Stehno P</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.thigh_right}
-                  onChange={(e) => handleChange('thigh_right', e.target.value)}
+                  onChange={(value) => handleChange('thigh_right', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Lýtko L</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.calf_left}
-                  onChange={(e) => handleChange('calf_left', e.target.value)}
+                  onChange={(value) => handleChange('calf_left', value)}
                   placeholder="0"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Lýtko P</Label>
-                <Input
-                  type="number"
-                  step="0.1"
+                <NumericInput
                   value={formData.calf_right}
-                  onChange={(e) => handleChange('calf_right', e.target.value)}
+                  onChange={(value) => handleChange('calf_right', value)}
                   placeholder="0"
                 />
               </div>
