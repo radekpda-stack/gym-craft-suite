@@ -9,6 +9,7 @@ import {
   Check,
   X,
   Trophy,
+  Timer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,12 +32,25 @@ import {
 import { GroupedWorkoutEntry, WorkoutEntry } from '@/hooks/useWorkoutEntries';
 import { cn } from '@/lib/utils';
 import { AssistanceBandBadges, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
+import { parseTimeToMs, formatTimeMs, msToSeconds } from '@/lib/timeUtils';
 
-// Format seconds to mm:ss
+// Format seconds to mm:ss.SS with centiseconds
 function formatTimeDisplay(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
+  const secsFormatted = secs.toFixed(2);
+  const paddedSecs = secs < 10 ? `0${secsFormatted}` : secsFormatted;
+  return `${mins}:${paddedSecs}`;
+}
+
+// Detect if an exercise group is cardio-based (has time or distance data, no weight)
+function isCardioExercise(sets: WorkoutEntry[]): boolean {
+  // Check if any set has cardio data and no weight/reps
+  return sets.some(set => 
+    (set.time_seconds && set.time_seconds > 0 || set.distance_meters && set.distance_meters > 0) &&
+    (!set.weight_kg || set.weight_kg === 0) &&
+    (!set.reps || set.reps === 0)
+  );
 }
 
 interface WorkoutExerciseListProps {
@@ -48,11 +62,19 @@ interface WorkoutExerciseListProps {
   participantName?: string;
 }
 
+// Extended EditingSet interface for both strength and cardio
 interface EditingSet {
   id: string;
+  isCardio: boolean;
+  // Strength fields
   weight_kg: string;
   reps: string;
   rpe: string;
+  // Cardio fields
+  time_input: string; // mm:ss.SS format
+  distance_meters: string;
+  watts: string;
+  calories: string;
 }
 
 export function WorkoutExerciseList({
@@ -75,22 +97,48 @@ export function WorkoutExerciseList({
     );
   };
 
-  const handleStartEdit = (set: WorkoutEntry) => {
+  const handleStartEdit = (set: WorkoutEntry, isCardioGroup: boolean) => {
+    // Determine if this is a cardio entry based on data
+    const hasCardioData = (set.time_seconds && set.time_seconds > 0) || (set.distance_meters && set.distance_meters > 0);
+    const hasStrengthData = (set.weight_kg && set.weight_kg > 0) || (set.reps && set.reps > 0);
+    const editAsCardio = isCardioGroup || (hasCardioData && !hasStrengthData);
+    
     setEditingSet({
       id: set.id,
+      isCardio: editAsCardio,
+      // Strength fields
       weight_kg: set.weight_kg?.toString() || '',
       reps: set.reps?.toString() || '',
       rpe: set.rpe?.toString() || '',
+      // Cardio fields - format time for display
+      time_input: set.time_seconds ? formatTimeMs(set.time_seconds * 1000) : '',
+      distance_meters: set.distance_meters?.toString() || '',
+      watts: set.watts?.toString() || '',
+      calories: set.calories?.toString() || '',
     });
   };
 
   const handleSaveEdit = () => {
     if (!editingSet) return;
-    onUpdateSet(editingSet.id, {
-      weight_kg: editingSet.weight_kg ? parseFloat(editingSet.weight_kg) : null,
-      reps: editingSet.reps ? parseInt(editingSet.reps) : null,
-      rpe: editingSet.rpe ? parseInt(editingSet.rpe) : null,
-    });
+    
+    if (editingSet.isCardio) {
+      // Parse time input to get time_seconds
+      const timeMs = parseTimeToMs(editingSet.time_input);
+      const timeSeconds = timeMs !== null ? msToSeconds(timeMs) : null;
+      
+      onUpdateSet(editingSet.id, {
+        time_seconds: timeSeconds,
+        distance_meters: editingSet.distance_meters ? parseFloat(editingSet.distance_meters) : null,
+        watts: editingSet.watts ? parseFloat(editingSet.watts) : null,
+        calories: editingSet.calories ? parseFloat(editingSet.calories) : null,
+      });
+    } else {
+      onUpdateSet(editingSet.id, {
+        weight_kg: editingSet.weight_kg ? parseFloat(editingSet.weight_kg) : null,
+        reps: editingSet.reps ? parseInt(editingSet.reps) : null,
+        rpe: editingSet.rpe ? parseInt(editingSet.rpe) : null,
+      });
+    }
     setEditingSet(null);
   };
 
@@ -123,6 +171,18 @@ export function WorkoutExerciseList({
         const key = getExerciseKey(group);
         const isOpen = openExercises.includes(key);
         const totalVolume = calculateTotalVolume(group.sets);
+        const isCardioGroup = isCardioExercise(group.sets);
+        
+        // For cardio, find the best (fastest) time
+        const bestCardioSet = isCardioGroup 
+          ? group.sets.reduce((best, set) => {
+              if (!set.time_seconds) return best;
+              if (!best.time_seconds) return set;
+              return set.time_seconds < best.time_seconds ? set : best;
+            }, group.sets[0])
+          : null;
+        
+        // For strength, find the best volume
         const bestSet = group.sets.reduce((best, set) => {
           const currentVolume = (set.weight_kg || 0) * (set.reps || 0);
           const bestVolume = (best.weight_kg || 0) * (best.reps || 0);
@@ -143,8 +203,17 @@ export function WorkoutExerciseList({
                     <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                     <div>
                       <h4 className="font-medium text-foreground flex items-center gap-2">
+                        {isCardioGroup && <Timer className="w-4 h-4 text-green-500" />}
                         {group.exercise_name}
-                        {bestSet.weight_kg && (
+                        {/* Cardio badge - show best time */}
+                        {isCardioGroup && bestCardioSet?.time_seconds && (
+                          <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-500">
+                            {formatTimeDisplay(bestCardioSet.time_seconds)}
+                            {bestCardioSet.distance_meters && ` / ${bestCardioSet.distance_meters}m`}
+                          </Badge>
+                        )}
+                        {/* Strength badge */}
+                        {!isCardioGroup && bestSet.weight_kg && (
                           <Badge variant="secondary" className="text-xs">
                             {bestSet.weight_kg}kg × {bestSet.reps}
                           </Badge>
@@ -165,7 +234,7 @@ export function WorkoutExerciseList({
                       </h4>
                       <p className="text-xs text-muted-foreground">
                         {group.sets.length} {group.sets.length === 1 ? 'série' : group.sets.length < 5 ? 'série' : 'sérií'}
-                        {totalVolume > 0 && ` • ${totalVolume.toFixed(0)} kg objem`}
+                        {!isCardioGroup && totalVolume > 0 && ` • ${totalVolume.toFixed(0)} kg objem`}
                       </p>
                     </div>
                   </div>
@@ -193,14 +262,24 @@ export function WorkoutExerciseList({
               {/* Exercise Sets */}
               <CollapsibleContent>
                 <div className="border-t border-border">
-                  {/* Header */}
-                  <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 p-3 text-xs text-muted-foreground bg-secondary/30">
-                    <span className="w-8 text-center">#</span>
-                    <span>Váha</span>
-                    <span>Opak.</span>
-                    <span>RPE</span>
-                    <span className="w-16"></span>
-                  </div>
+                  {/* Header - dynamic based on exercise type */}
+                  {isCardioGroup ? (
+                    <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 p-3 text-xs text-muted-foreground bg-secondary/30">
+                      <span className="w-8 text-center">#</span>
+                      <span>Čas</span>
+                      <span>Vzdál.</span>
+                      <span>Watt</span>
+                      <span className="w-16"></span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 p-3 text-xs text-muted-foreground bg-secondary/30">
+                      <span className="w-8 text-center">#</span>
+                      <span>Váha</span>
+                      <span>Opak.</span>
+                      <span>RPE</span>
+                      <span className="w-16"></span>
+                    </div>
+                  )}
 
                   {/* Sets */}
                   {group.sets.map((set, setIndex) => (
@@ -216,82 +295,165 @@ export function WorkoutExerciseList({
                       </span>
 
                       {editingSet?.id === set.id ? (
-                        // Editing mode
-                        <>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={editingSet.weight_kg}
-                            onChange={(e) => setEditingSet({ ...editingSet, weight_kg: e.target.value })}
-                            className="bg-secondary border-border h-8"
-                          />
-                          <Input
-                            type="number"
-                            value={editingSet.reps}
-                            onChange={(e) => setEditingSet({ ...editingSet, reps: e.target.value })}
-                            className="bg-secondary border-border h-8"
-                          />
-                          <Input
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={editingSet.rpe}
-                            onChange={(e) => setEditingSet({ ...editingSet, rpe: e.target.value })}
-                            className="bg-secondary border-border h-8"
-                          />
-                          <div className="flex gap-1 w-16">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-7 h-7 text-primary"
-                              onClick={handleSaveEdit}
-                            >
-                              <Check className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-7 h-7"
-                              onClick={handleCancelEdit}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </>
+                        // Editing mode - check if cardio or strength
+                        editingSet.isCardio ? (
+                          // Cardio editing
+                          <>
+                            <Input
+                              type="text"
+                              placeholder="m:ss.SS"
+                              value={editingSet.time_input}
+                              onChange={(e) => setEditingSet({ ...editingSet, time_input: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="m"
+                              value={editingSet.distance_meters}
+                              onChange={(e) => setEditingSet({ ...editingSet, distance_meters: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="W"
+                              value={editingSet.watts}
+                              onChange={(e) => setEditingSet({ ...editingSet, watts: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <div className="flex gap-1 w-16">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7 text-primary"
+                                onClick={handleSaveEdit}
+                              >
+                                <Check className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                onClick={handleCancelEdit}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          // Strength editing
+                          <>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={editingSet.weight_kg}
+                              onChange={(e) => setEditingSet({ ...editingSet, weight_kg: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <Input
+                              type="number"
+                              value={editingSet.reps}
+                              onChange={(e) => setEditingSet({ ...editingSet, reps: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <Input
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={editingSet.rpe}
+                              onChange={(e) => setEditingSet({ ...editingSet, rpe: e.target.value })}
+                              className="bg-secondary border-border h-8"
+                            />
+                            <div className="flex gap-1 w-16">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7 text-primary"
+                                onClick={handleSaveEdit}
+                              >
+                                <Check className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                onClick={handleCancelEdit}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
+                        )
                       ) : (
-                        // View mode
-                        <>
-                          <span className="font-medium flex items-center gap-1">
-                            {set.weight_kg ? `${set.weight_kg} kg` : '-'}
-                            {set.is_pr && (
-                              <Trophy className="w-3 h-3 text-amber-500" />
-                            )}
-                          </span>
-                          <span className="font-medium">
-                            {set.reps ? set.reps : set.time_seconds ? formatTimeDisplay(set.time_seconds) : '-'}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {set.rpe ? `@${set.rpe}` : '-'}
-                          </span>
-                          <div className="flex gap-1 w-16">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-7 h-7"
-                              onClick={() => handleStartEdit(set)}
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-7 h-7 text-destructive hover:text-destructive"
-                              onClick={() => onDeleteSet(set.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </>
+                        // View mode - check if cardio or strength
+                        isCardioGroup ? (
+                          // Cardio view
+                          <>
+                            <span className="font-medium flex items-center gap-1">
+                              {set.time_seconds ? formatTimeDisplay(set.time_seconds) : '-'}
+                              {set.is_pr && (
+                                <Trophy className="w-3 h-3 text-amber-500" />
+                              )}
+                            </span>
+                            <span className="font-medium">
+                              {set.distance_meters ? `${set.distance_meters}m` : '-'}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {set.watts ? `${set.watts}W` : '-'}
+                            </span>
+                            <div className="flex gap-1 w-16">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                onClick={() => handleStartEdit(set, isCardioGroup)}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7 text-destructive hover:text-destructive"
+                                onClick={() => onDeleteSet(set.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          // Strength view
+                          <>
+                            <span className="font-medium flex items-center gap-1">
+                              {set.weight_kg ? `${set.weight_kg} kg` : '-'}
+                              {set.is_pr && (
+                                <Trophy className="w-3 h-3 text-amber-500" />
+                              )}
+                            </span>
+                            <span className="font-medium">
+                              {set.reps ? set.reps : set.time_seconds ? formatTimeDisplay(set.time_seconds) : '-'}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {set.rpe ? `@${set.rpe}` : '-'}
+                            </span>
+                            <div className="flex gap-1 w-16">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                onClick={() => handleStartEdit(set, isCardioGroup)}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7 text-destructive hover:text-destructive"
+                                onClick={() => onDeleteSet(set.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
+                        )
                       )}
                     </div>
                   ))}
