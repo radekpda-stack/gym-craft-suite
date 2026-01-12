@@ -7,6 +7,9 @@ import { LoadDistributionCard } from './analytics/LoadDistributionCard';
 import { MovementPatternsCard } from './analytics/MovementPatternsCard';
 import { TopExercisesCard } from './analytics/TopExercisesCard';
 import { PRTrendCard } from './analytics/PRTrendCard';
+import { IntensityTrendCard } from './analytics/IntensityTrendCard';
+import { TrainingFrequencyCard } from './analytics/TrainingFrequencyCard';
+import { CategoryDistributionCard } from './analytics/CategoryDistributionCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useClients } from '@/hooks/useClients';
@@ -87,9 +90,36 @@ export function ExerciseAnalyticsView() {
           />
         </AnalyticsGridItem>
 
+        {/* Training Frequency */}
+        <AnalyticsGridItem>
+          <TrainingFrequencyCard
+            days={periodDays}
+            clientId={selectedClientId}
+            isLoading={isLoading}
+          />
+        </AnalyticsGridItem>
+
         {/* PR Trend Card */}
         <AnalyticsGridItem>
           <PRTrendCard
+            days={periodDays}
+            clientId={selectedClientId}
+            isLoading={isLoading}
+          />
+        </AnalyticsGridItem>
+
+        {/* Intensity (RPE) Trend */}
+        <AnalyticsGridItem>
+          <IntensityTrendCard
+            days={periodDays}
+            clientId={selectedClientId}
+            isLoading={isLoading}
+          />
+        </AnalyticsGridItem>
+
+        {/* Category Distribution */}
+        <AnalyticsGridItem>
+          <CategoryDistributionCard
             days={periodDays}
             clientId={selectedClientId}
             isLoading={isLoading}
