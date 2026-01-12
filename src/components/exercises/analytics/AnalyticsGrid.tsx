@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { motion, Variants, Easing } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 interface AnalyticsGridProps {
   children: ReactNode;
@@ -22,7 +22,7 @@ const itemVariants: Variants = {
     y: 0,
     transition: {
       duration: 0.3,
-      ease: 'easeOut' as Easing,
+      ease: 'easeOut',
     },
   },
 };

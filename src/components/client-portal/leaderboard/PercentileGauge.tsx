@@ -8,10 +8,10 @@ interface PercentileGaugeProps {
 }
 
 const ZONES = [
-  { min: 0, max: 25, label: 'Prostor pro růst', color: 'from-orange-500 to-orange-400' },
-  { min: 25, max: 50, label: 'Průměr', color: 'from-amber-500 to-yellow-400' },
-  { min: 50, max: 75, label: 'Nad průměr', color: 'from-emerald-500 to-green-400' },
-  { min: 75, max: 100, label: 'Špička', color: 'from-primary to-cyan-400' },
+  { min: 0, max: 25, label: 'Prostor pro růst', color: 'from-destructive to-destructive/80' },
+  { min: 25, max: 50, label: 'Průměr', color: 'from-warning to-warning/80' },
+  { min: 50, max: 75, label: 'Nad průměr', color: 'from-success to-success/80' },
+  { min: 75, max: 100, label: 'Špička', color: 'from-primary to-primary/80' },
 ];
 
 function getZone(percentile: number) {
@@ -34,7 +34,7 @@ function getPercentileMessage(percentile: number): { message: string; icon: Reac
   return { message: 'Máš prostor pro růst! 💪', icon: <Target className="w-4 h-4" /> };
 }
 
-export default function PercentileGauge({ percentile, className }: PercentileGaugeProps) {
+export function PercentileGauge({ percentile, className }: PercentileGaugeProps) {
   if (percentile === null) {
     return (
       <div className={cn("flex flex-col items-center justify-center py-3", className)}>
@@ -55,9 +55,9 @@ export default function PercentileGauge({ percentile, className }: PercentileGau
           <span className={cn(
             "flex items-center gap-1.5 font-medium",
             percentile >= 75 ? "text-primary" :
-            percentile >= 50 ? "text-emerald-500" :
-            percentile >= 25 ? "text-amber-500" :
-            "text-orange-500"
+            percentile >= 50 ? "text-success" :
+            percentile >= 25 ? "text-warning" :
+            "text-destructive"
           )}>
             {icon}
             {zone.label}
@@ -130,9 +130,9 @@ export default function PercentileGauge({ percentile, className }: PercentileGau
         className={cn(
           "text-center text-sm py-2 px-3 rounded-lg",
           percentile >= 75 ? "bg-primary/10 text-primary" :
-          percentile >= 50 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-          percentile >= 25 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-          "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+          percentile >= 50 ? "bg-success/10 text-success" :
+          percentile >= 25 ? "bg-warning/10 text-warning" :
+          "bg-destructive/10 text-destructive"
         )}
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}

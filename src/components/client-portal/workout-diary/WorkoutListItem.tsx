@@ -57,10 +57,10 @@ export function WorkoutListItem({
     switch (status) {
       case 'planned':
       case 'draft':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Naplánovaný</Badge>;
+        return <Badge variant="outline" className="text-warning border-warning/50 bg-warning/10">Naplánovaný</Badge>;
       case 'completed':
       case 'reviewed':
-        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Hotovo</Badge>;
+        return <Badge variant="outline" className="text-success border-success/50 bg-success/10">Hotovo</Badge>;
       default:
         return null;
     }
@@ -81,11 +81,8 @@ export function WorkoutListItem({
               <div className={cn(
                 "w-10 h-10 rounded-lg flex items-center justify-center",
                 entry.is_coached 
-                  ? "bg-primary/10" 
-                  : "bg-green-500/10",
-                entry.is_coached 
-                  ? "text-primary" 
-                  : getWorkoutTypeColor(entry.workout_type)
+                  ? "bg-primary/10 text-primary" 
+                  : "bg-success/10 text-success"
               )}>
                 {entry.is_coached ? (
                   <User className="w-5 h-5" />
@@ -215,14 +212,14 @@ export function WorkoutListItem({
                     key={ex.id || idx}
                     className={cn(
                       "p-3 rounded-lg",
-                      (ex.is_personal_record || ex.is_pr) ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30"
+                      (ex.is_personal_record || ex.is_pr) ? "bg-warning/10 border border-warning/30" : "bg-secondary/30"
                     )}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{ex.exercise_name}</span>
                         {(ex.is_personal_record || ex.is_pr) && (
-                          <Trophy className="w-4 h-4 text-yellow-500" />
+                          <Trophy className="w-4 h-4 text-warning" />
                         )}
                       </div>
                       {ex.rpe && (

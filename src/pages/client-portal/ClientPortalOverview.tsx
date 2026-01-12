@@ -135,13 +135,13 @@ export default function ClientPortalOverview() {
                             <div className={cn(
                               "w-8 h-8 rounded-full flex items-center justify-center",
                               item.type === 'training' ? "bg-success/10" : 
-                              item.type === 'upcoming_training' ? "bg-blue-500/10" : 
+                              item.type === 'upcoming_training' ? "bg-primary/10" : 
                               "bg-success/10"
                             )}>
                               {item.type === 'training' ? (
                                 <Dumbbell className="w-4 h-4 text-success" />
                               ) : item.type === 'upcoming_training' ? (
-                                <CalendarClock className="w-4 h-4 text-blue-500" />
+                                <CalendarClock className="w-4 h-4 text-primary" />
                               ) : (
                                 <ArrowDownLeft className="w-4 h-4 text-success" />
                               )}
