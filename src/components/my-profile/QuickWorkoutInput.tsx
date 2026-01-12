@@ -16,10 +16,12 @@ import {
   ChevronDown,
   Loader2,
   Sparkles,
-  Target
+  Target,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface QuickWorkoutInputProps {
   clientId: string;
@@ -57,19 +59,63 @@ export function QuickWorkoutInput({ clientId }: QuickWorkoutInputProps) {
   const [duration, setDuration] = useState('');
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
 
-  // Fetch exercises for autocomplete
+  // Debounced search term
+  const debouncedSearch = useDebounce(customExercise, 200);
+
+  // Fetch exercises for autocomplete based on search
   const { data: exercises = [] } = useQuery({
-    queryKey: ['exercises-autocomplete'],
+    queryKey: ['exercises-autocomplete', debouncedSearch],
     queryFn: async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('exercises')
         .select('id, name, name_cs, category')
-        .eq('is_archived', false)
-        .limit(100);
+        .eq('is_archived', false);
+      
+      if (debouncedSearch && debouncedSearch.length >= 1) {
+        query.or(`name.ilike.%${debouncedSearch}%,name_cs.ilike.%${debouncedSearch}%`);
+      }
+      
+      const { data } = await query.limit(10);
       return data || [];
     },
   });
+
+  // Filter suggestions based on input
+  const suggestions = customExercise.length >= 1 
+    ? exercises.filter(e => 
+        e.name.toLowerCase().includes(customExercise.toLowerCase()) ||
+        e.name_cs?.toLowerCase().includes(customExercise.toLowerCase())
+      )
+    : [];
+
+  // Check if custom exercise name exists in database
+  const exerciseExists = exercises.some(
+    e => e.name.toLowerCase() === customExercise.toLowerCase() ||
+         e.name_cs?.toLowerCase() === customExercise.toLowerCase()
+  );
+
+  // Close autocomplete when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectSuggestion = (exercise: { id: string; name: string; name_cs: string | null }) => {
+    const displayName = exercise.name_cs || exercise.name;
+    setCustomExercise(displayName);
+    setSelectedExercise('');
+    setShowAutocomplete(false);
+    setIsExpanded(true);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
 
   const exerciseName = customExercise || selectedExercise;
 
@@ -280,18 +326,73 @@ export function QuickWorkoutInput({ clientId }: QuickWorkoutInputProps) {
               </button>
             ))}
           
-          {/* Custom exercise input */}
-          <div className="relative">
-            <Input
-              placeholder="Jiný cvik..."
-              value={customExercise}
-              onChange={(e) => {
-                setCustomExercise(e.target.value);
-                setSelectedExercise('');
-                if (e.target.value) setIsExpanded(true);
-              }}
-              className="w-32 h-9 text-sm bg-secondary/30 border-border/50"
-            />
+          {/* Custom exercise input with autocomplete */}
+          <div className="relative flex-1 min-w-[140px]" ref={autocompleteRef}>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Hledat cvik..."
+                value={customExercise}
+                onChange={(e) => {
+                  setCustomExercise(e.target.value);
+                  setSelectedExercise('');
+                  setShowAutocomplete(true);
+                  if (e.target.value) setIsExpanded(true);
+                }}
+                onFocus={() => customExercise.length >= 1 && setShowAutocomplete(true)}
+                className="pl-8 h-9 text-sm bg-secondary/30 border-border/50"
+              />
+            </div>
+            
+            {/* Autocomplete dropdown */}
+            <AnimatePresence>
+              {showAutocomplete && customExercise.length >= 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+                >
+                  {suggestions.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto">
+                      {suggestions.map((exercise) => (
+                        <button
+                          key={exercise.id}
+                          type="button"
+                          onClick={() => handleSelectSuggestion(exercise)}
+                          className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 text-sm transition-colors"
+                        >
+                          <Dumbbell className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{exercise.name_cs || exercise.name}</div>
+                            {exercise.category && (
+                              <div className="text-xs text-muted-foreground truncate">{exercise.category}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 text-center">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Cvik "{customExercise}" nenalezen
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAutocomplete(false);
+                          setIsExpanded(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Použít jako nový cvik
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
