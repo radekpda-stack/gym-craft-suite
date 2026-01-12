@@ -1,13 +1,14 @@
 import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LucideIcon, HelpCircle } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { LucideIcon } from 'lucide-react';
+import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+
+interface HelpContent {
+  title: string;
+  description: string;
+  calculation?: string;
+}
 
 interface AnalyticsCardProps {
   title: string;
@@ -18,7 +19,9 @@ interface AnalyticsCardProps {
   isEmpty?: boolean;
   emptyMessage?: string;
   className?: string;
+  /** @deprecated Use helpContent for richer help tooltips */
   helpText?: string;
+  helpContent?: HelpContent;
 }
 
 export function AnalyticsCard({
@@ -31,7 +34,14 @@ export function AnalyticsCard({
   emptyMessage = 'Žádná data pro zvolené období',
   className,
   helpText,
+  helpContent,
 }: AnalyticsCardProps) {
+  // Convert legacy helpText to helpContent format
+  const effectiveHelpContent: HelpContent | undefined = helpContent || (helpText ? {
+    title,
+    description: helpText,
+  } : undefined);
+
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
@@ -39,17 +49,12 @@ export function AnalyticsCard({
           <div className="flex items-center gap-2">
             {Icon && <Icon className="w-4 h-4 text-primary shrink-0" />}
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            {helpText && (
-              <TooltipProvider>
-                <Tooltip delayDuration={200}>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[280px] text-xs">
-                    <p>{helpText}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            {effectiveHelpContent && (
+              <StatInfoTooltip
+                title={effectiveHelpContent.title}
+                description={effectiveHelpContent.description}
+                calculation={effectiveHelpContent.calculation}
+              />
             )}
           </div>
           {actions && <div className="shrink-0">{actions}</div>}

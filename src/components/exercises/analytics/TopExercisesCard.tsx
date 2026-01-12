@@ -23,6 +23,12 @@ function formatVolume(value: number): string {
   return `${Math.round(value)} kg`;
 }
 
+const HELP_CONTENT = {
+  title: 'Top cviky',
+  description: 'Žebříček nejčastěji používaných cviků za zvolené období. Zobrazuje počet záznamů a celkový objem pro každý cvik.',
+  calculation: 'Počet = kolikrát byl cvik zaznamenán. Objem = Σ (série × opakování × váha) pro všechny záznamy daného cviku. Kliknutím přejdete na detail cviku.',
+};
+
 export function TopExercisesCard({ data, periodLabel, isLoading }: TopExercisesCardProps) {
   const navigate = useNavigate();
   const isEmpty = !data || data.length === 0;
@@ -40,7 +46,7 @@ export function TopExercisesCard({ data, periodLabel, isLoading }: TopExercisesC
       emptyMessage="Zatím žádná data o cvicích"
       actions={periodBadge}
       className="md:col-span-2"
-      helpText="Nejčastěji používané cviky za zvolené období. Počet = kolikrát byl cvik zaznamenán, Objem = celková zátěž (sets × reps × kg)."
+      helpContent={HELP_CONTENT}
     >
       <ScrollArea className="h-[180px]">
         <div className="space-y-1 pr-3">

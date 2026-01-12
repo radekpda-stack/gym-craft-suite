@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Minus, Weight, Calendar, Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import type { ExerciseAnalyticsNewData } from '@/hooks/useExerciseAnalyticsNew';
 
 interface AnalyticsKPICardsProps {
@@ -33,6 +34,25 @@ function TrendBadge({ value, suffix = '%' }: { value: number | undefined; suffix
     </span>
   );
 }
+
+// Help content for KPI cards
+const HELP_CONTENT = {
+  totalVolume: {
+    title: 'Celkový objem',
+    description: 'Součet veškeré zátěže za zvolené období. Trend porovnává druhou polovinu období s první.',
+    calculation: 'Objem = Σ (série × opakování × váha v kg)',
+  },
+  avgPerWeek: {
+    title: 'Průměr za týden',
+    description: 'Průměrný tréninkový objem na jeden týden za zvolené období.',
+    calculation: 'Průměr = Celkový objem ÷ počet týdnů v období',
+  },
+  topPattern: {
+    title: 'Top vzorec',
+    description: 'Nejčastěji zastoupený pohybový vzorec v tréninku za zvolené období.',
+    calculation: 'Počítá se frekvence výskytu každého pohybového vzorce (squat, hinge, push, pull...) a zobrazí se ten s nejvyšším počtem.',
+  },
+};
 
 export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
   // Calculate KPIs
@@ -72,9 +92,14 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
     <div className="grid grid-cols-3 gap-3">
       {/* Total Volume */}
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-          <Weight className="w-3.5 h-3.5" />
-          <span className="text-xs">Celkový objem</span>
+        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+          <Weight className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-xs truncate">Celkový objem</span>
+          <StatInfoTooltip
+            title={HELP_CONTENT.totalVolume.title}
+            description={HELP_CONTENT.totalVolume.description}
+            calculation={HELP_CONTENT.totalVolume.calculation}
+          />
         </div>
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-lg sm:text-xl font-bold">{formatVolume(totalVolume)}</span>
@@ -85,9 +110,14 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
 
       {/* Avg per Week */}
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-          <Calendar className="w-3.5 h-3.5" />
-          <span className="text-xs">Průměr/týden</span>
+        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-xs truncate">Průměr/týden</span>
+          <StatInfoTooltip
+            title={HELP_CONTENT.avgPerWeek.title}
+            description={HELP_CONTENT.avgPerWeek.description}
+            calculation={HELP_CONTENT.avgPerWeek.calculation}
+          />
         </div>
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-lg sm:text-xl font-bold">{formatVolume(avgPerWeek)}</span>
@@ -97,9 +127,14 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
 
       {/* Top Pattern */}
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-          <Trophy className="w-3.5 h-3.5" />
-          <span className="text-xs">Top vzorec</span>
+        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+          <Trophy className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-xs truncate">Top vzorec</span>
+          <StatInfoTooltip
+            title={HELP_CONTENT.topPattern.title}
+            description={HELP_CONTENT.topPattern.description}
+            calculation={HELP_CONTENT.topPattern.calculation}
+          />
         </div>
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm sm:text-base font-bold truncate">
