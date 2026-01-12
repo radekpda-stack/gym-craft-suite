@@ -19,11 +19,16 @@ function generateAnonymousName(clientId: string): string {
   return `${adjective} ${animal} #${number}`;
 }
 
-// Helper: Format duration
+// Helper: Format duration with centiseconds (always show full precision)
+// Format: m:ss.SS (e.g., "1:41.35", "0:59.00")
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Always show 2 decimal places for consistency
+  const secsFormatted = secs.toFixed(2);
+  // Pad the integer part of seconds to 2 digits (e.g., "5.00" -> "05.00")
+  const paddedSecs = secs < 10 ? `0${secsFormatted}` : secsFormatted;
+  return `${mins}:${paddedSecs}`;
 }
 
 serve(async (req) => {
@@ -601,10 +606,8 @@ serve(async (req) => {
               const isSelfProfile = client?.is_self_profile === true;
               const isVisible = isSelfProfile || setting?.leaderboard_visible === true;
 
-              const totalSeconds = data.timeMs / 1000;
-              const mins = Math.floor(totalSeconds / 60);
-              const secs = totalSeconds % 60;
-              const displayValue = `${mins}:${secs.toFixed(2).padStart(5, '0')}`;
+              // Format time with consistent centiseconds: m:ss.SS
+              const displayValue = formatDuration(data.timeMs / 1000);
 
               let nickname: string;
               if (isSelfProfile) {
