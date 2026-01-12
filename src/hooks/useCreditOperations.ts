@@ -220,10 +220,11 @@ export async function clearPersonalDebtToSharedBudget(
 export function useCreditTransactions(clientId?: string) {
   return useQuery({
     queryKey: ["credit_transactions", clientId],
+    staleTime: 1000 * 60 * 2, // 2 minutes
     queryFn: async () => {
       let query = supabase
         .from("credit_transactions")
-        .select("*")
+        .select("id, client_id, amount, type, description, reference_id, training_session_id, product_id, payment_method, created_at, created_by, user_id, group_id")
         .order("created_at", { ascending: false });
 
       if (clientId) {
@@ -464,8 +465,7 @@ export function useCreateTransaction() {
         toast({ title: isPositive ? "Platba přidána" : "Kredit odečten", description });
       }
     },
-    onError: (error) => {
-      console.error("Error creating transaction:", error);
+    onError: () => {
       toast({ title: "Chyba", description: "Nepodařilo se vytvořit transakci.", variant: "destructive" });
     },
   });
@@ -500,8 +500,7 @@ export function useDeleteTransaction() {
       const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
       toast({ title: "Transakce smazána", description: `Transakce odstraněna, ${budgetType.toLowerCase()} upraven.` });
     },
-    onError: (error) => {
-      console.error("Error deleting transaction:", error);
+    onError: () => {
       toast({ title: "Chyba", description: "Nepodařilo se smazat transakci.", variant: "destructive" });
     },
   });
@@ -551,8 +550,7 @@ export function useUpdateTransactionPaymentMethod() {
         description: result.changed ? `Způsob platby a ${budgetType} aktualizovány.` : "Způsob platby aktualizován.",
       });
     },
-    onError: (error) => {
-      console.error("Error updating payment method:", error);
+    onError: () => {
       toast({ title: "Chyba", description: "Nepodařilo se změnit způsob platby.", variant: "destructive" });
     },
   });
@@ -582,8 +580,7 @@ export function useUpdateSharedBudgetBalance() {
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
     },
-    onError: (error) => {
-      console.error("Error updating shared budget:", error);
+    onError: () => {
       toast({ title: "Chyba", description: "Nepodařilo se aktualizovat sdílený kredit.", variant: "destructive" });
     },
   });

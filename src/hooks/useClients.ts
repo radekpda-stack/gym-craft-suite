@@ -52,6 +52,7 @@ export function useClients() {
   
   return useQuery({
     queryKey: ["clients", isDemo],
+    staleTime: 1000 * 60 * 2, // 2 minutes
     queryFn: async () => {
       // In demo mode, return demo client data
       if (isDemo && demoClient) {
@@ -77,30 +78,30 @@ export function useClients() {
         }] as Client[];
       }
       
-      // Fetch clients
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("*")
-        .order("is_favorite", { ascending: false })
-        .order("created_at", { ascending: false });
+      // Fetch clients and ledger balances in parallel
+      const [clientsResult, ledgerResult] = await Promise.all([
+        supabase
+          .from("clients")
+          .select("id, name, email, phone, training_goals, notes, health_restrictions, credit_balance, birth_date, is_favorite, is_archived, feedback_enabled, gender, payment_mode, created_at, updated_at, user_id, training_start_date, custom_training_price, custom_price_note, custom_price_credit_limit, handedness, occupation, sitting_hours_daily, sports_history, current_activities, sleep_hours, stress_level, dietary_restrictions, supplements, grandfathered_credit, grandfathered_at, use_legacy_pricing")
+          .order("is_favorite", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("vw_client_ledger_balances")
+          .select("client_id, ledger_balance")
+      ]);
 
-      if (clientsError) throw clientsError;
-      
-      // Fetch ledger balances to get accurate credit values
-      const { data: ledgerData } = await supabase
-        .from("vw_client_ledger_balances")
-        .select("client_id, ledger_balance");
+      if (clientsResult.error) throw clientsResult.error;
       
       // Create a map of client_id -> ledger_balance
       const ledgerMap = new Map<string, number>();
-      if (ledgerData) {
-        for (const row of ledgerData) {
+      if (ledgerResult.data) {
+        for (const row of ledgerResult.data) {
           ledgerMap.set(row.client_id, row.ledger_balance ?? 0);
         }
       }
       
       // Merge clients with their actual credit balance from ledger
-      const clientsWithBalance = (clientsData || []).map(client => ({
+      const clientsWithBalance = (clientsResult.data || []).map(client => ({
         ...client,
         // Use ledger balance if available, otherwise fall back to stored credit_balance
         credit_balance: ledgerMap.has(client.id) 
@@ -232,13 +233,21 @@ export function useCreateClient() {
       });
     },
     onError: (error: Error) => {
-      console.error("Error creating client:", error);
-      
       // Handle client limit error with specific message
       if (error.message.startsWith('CLIENT_LIMIT:')) {
         toast({
           title: "Limit klientů dosažen",
           description: error.message.replace('CLIENT_LIMIT: ', ''),
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Handle demo limit error
+      if (error.message.startsWith('DEMO_LIMIT:')) {
+        toast({
+          title: "Demo limit",
+          description: error.message.replace('DEMO_LIMIT: ', ''),
           variant: "destructive",
         });
         return;
@@ -340,8 +349,7 @@ export function useUpdateClient() {
         description: "Údaje klienta byly úspěšně uloženy.",
       });
     },
-    onError: (error) => {
-      console.error("Error updating client:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se aktualizovat klienta.",
@@ -371,8 +379,7 @@ export function useDeleteClient() {
         description: "Klient byl úspěšně odstraněn.",
       });
     },
-    onError: (error) => {
-      console.error("Error deleting client:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se smazat klienta.",
@@ -407,8 +414,7 @@ export function useArchiveClient() {
           : "Klient byl obnoven z archivu.",
       });
     },
-    onError: (error) => {
-      console.error("Error archiving client:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se archivovat klienta.",
@@ -443,8 +449,7 @@ export function useUpdateClientFeedback() {
           : "Klientovi nebude zasílán feedback dotazník.",
       });
     },
-    onError: (error) => {
-      console.error("Error updating client feedback:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se aktualizovat nastavení feedbacku.",
@@ -485,8 +490,7 @@ export function useUpdatePaymentMode() {
         description: `Nový režim: ${modeLabels[variables.payment_mode]}`,
       });
     },
-    onError: (error) => {
-      console.error("Error updating payment mode:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se změnit platební režim.",

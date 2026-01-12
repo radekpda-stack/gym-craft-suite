@@ -63,18 +63,20 @@ export function useRenderTracker(componentName: string) {
         stackTrace: new Error().stack,
       };
 
-      // Console log with warning
-      console.warn(
-        `🔴 RENDER LOOP DETECTED: ${componentName}`,
-        `\n  Renders: ${tracking.count} in ${TIME_WINDOW_MS}ms`,
-        `\n  Total renders: ${renderCountRef.current}`,
-        `\n  Stack:`, log.stackTrace
-      );
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.warn(
+          `🔴 RENDER LOOP DETECTED: ${componentName}`,
+          `\n  Renders: ${tracking.count} in ${TIME_WINDOW_MS}ms`,
+          `\n  Total renders: ${renderCountRef.current}`,
+          `\n  Stack:`, log.stackTrace
+        );
+      }
 
       // Send to backend
       sendRenderLoopLog(log);
     }
-  });
+  }, [componentName]);
 
   return renderCountRef.current;
 }

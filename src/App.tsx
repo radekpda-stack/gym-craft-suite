@@ -19,6 +19,7 @@ import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell"
 import { PageLoader } from "@/components/PageLoader";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { InteractionTracker } from "@/lib/analytics/interaction";
+import { LazyRouteWrapper } from "@/components/LazyRouteWrapper";
 
 // Eagerly loaded (critical path)
 import UnifiedLogin from "./pages/UnifiedLogin";
@@ -132,7 +133,7 @@ const App = () => (
               <Route path="/demo/*" element={<DemoPage />} />
               
               {/* Client Portal Routes - Short URL /zona */}
-              <Route path="/zona" element={<ClientPortalShell />}>
+              <Route path="/zona" element={<LazyRouteWrapper><ClientPortalShell /></LazyRouteWrapper>}>
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
                 <Route path="diary" element={<ClientPortalWorkoutDiary />} />
@@ -154,7 +155,7 @@ const App = () => (
               </Route>
               
               {/* Legacy Client Portal Routes */}
-              <Route path="/client" element={<ClientPortalShell />}>
+              <Route path="/client" element={<LazyRouteWrapper><ClientPortalShell /></LazyRouteWrapper>}>
                 <Route index element={<ClientPortalOverview />} />
                 <Route path="progress" element={<ClientPortalProgress />} />
                 <Route path="diary" element={<ClientPortalWorkoutDiary />} />
