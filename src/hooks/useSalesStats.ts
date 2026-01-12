@@ -28,6 +28,7 @@ export interface SalesTrendData {
 export function useSalesStats() {
   return useQuery({
     queryKey: ["sales_stats"],
+    staleTime: 1000 * 60 * 2, // 2 minutes cache
     queryFn: async () => {
       const startOfCurrentMonth = startOfMonth(new Date()).toISOString();
       
@@ -72,6 +73,7 @@ export function useSalesStats() {
 export function useSalesTrend(period: SalesPeriod) {
   return useQuery({
     queryKey: ["sales_trend", period],
+    staleTime: 1000 * 60 * 2, // 2 minutes cache
     queryFn: async () => {
       let startDate: Date | null = null;
       let groupByFormat: string;
