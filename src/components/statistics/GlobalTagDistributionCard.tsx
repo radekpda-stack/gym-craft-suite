@@ -78,17 +78,17 @@ function DistributionSection({ sectionKey, icon, distribution, maxItems = 5 }: D
       <div className="space-y-2">
         {items.map((item) => (
           <div key={item.tagId} className="space-y-1">
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: item.tagColor }}
                 />
                 <span className="truncate">{item.tagName}</span>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span>{item.percentage}%</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground shrink-0">
+                <span className="text-[10px] sm:text-xs">{item.percentage}%</span>
+                <Badge variant="secondary" className="text-[10px] px-1 sm:px-1.5 py-0">
                   {item.count}×
                 </Badge>
               </div>
