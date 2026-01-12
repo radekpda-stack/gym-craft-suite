@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { subDays, format, eachDayOfInterval, eachWeekOfInterval } from 'date-fns';
+import { subDays, format, eachDayOfInterval, eachWeekOfInterval, startOfMonth } from 'date-fns';
 
 export type TimeRange = '7' | '30' | '90' | '180';
 
@@ -206,8 +206,11 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
 
       // Calculate current metrics
       const last28Days = subDays(now, 28);
+      const thisMonthStart = startOfMonth(now);
       const recentTrainings = trainings.filter(t => new Date(t.date) >= last28Days);
       const recentCancelled = cancelled.filter(t => new Date(t.date) >= last28Days);
+      // Cancelled THIS MONTH only (for the insight message)
+      const thisMonthCancelled = cancelled.filter(t => new Date(t.date) >= thisMonthStart);
       
       const recentRevenue = recentTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
       
@@ -272,8 +275,8 @@ export function useBusinessHealthTrends(range: TimeRange = '30') {
         explanations.push(`Příjem +${diff}% vs baseline - skvělé!`);
       }
       
-      if (recentCancelled.length > 2) {
-        explanations.push(`Zrušené tréninky tento měsíc: ${recentCancelled.length}.`);
+      if (thisMonthCancelled.length > 2) {
+        explanations.push(`Zrušené tréninky tento měsíc: ${thisMonthCancelled.length}.`);
       }
       
       if (clientsInDebt.length > 0) {
