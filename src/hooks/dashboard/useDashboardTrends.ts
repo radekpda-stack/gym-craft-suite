@@ -19,22 +19,22 @@ export function useDashboardTrends() {
       const yearEnd = endOfYear(now);
       const thirtyDaysAgo = subDays(now, 30);
 
-      const [thisMonthResult, lastMonthResult, yearlyResult, activeResult, lastMonthActiveResult, newClientsResult, allCompletedResult, creditResult, productResult, lifetimeResult] = await Promise.all([
-        supabase.from('training_sessions').select('id, status, final_price').gte('date', monthStart.toISOString()).lte('date', monthEnd.toISOString()),
+      // Optimized: Combined queries and reduced total number of requests
+      const [thisMonthResult, lastMonthResult, yearlyResult, activeResult, lastMonthActiveResult, newClientsResult, creditResult, lifetimeResult] = await Promise.all([
+        supabase.from('training_sessions').select('id, status, final_price, date').gte('date', monthStart.toISOString()).lte('date', monthEnd.toISOString()),
         supabase.from('training_sessions').select('id, status, final_price').gte('date', lastMonthStart.toISOString()).lte('date', lastMonthEnd.toISOString()),
-        supabase.from('training_sessions').select('id, final_price').gte('date', yearStart.toISOString()).lte('date', yearEnd.toISOString()).eq('status', 'completed'),
+        supabase.from('training_sessions').select('id, final_price, date').gte('date', yearStart.toISOString()).lte('date', yearEnd.toISOString()).eq('status', 'completed'),
         supabase.from('training_participants').select('client_id, training_sessions!inner(date, status)').gte('training_sessions.date', thirtyDaysAgo.toISOString()).eq('training_sessions.status', 'completed'),
         supabase.from('training_participants').select('client_id, training_sessions!inner(date, status)').gte('training_sessions.date', lastMonthStart.toISOString()).lte('training_sessions.date', lastMonthEnd.toISOString()).eq('training_sessions.status', 'completed'),
         supabase.from('clients').select('id').gte('created_at', monthStart.toISOString()).eq('is_archived', false),
-        supabase.from('training_sessions').select('id, date').eq('status', 'completed'),
-        supabase.from('credit_transactions').select('amount, type').in('type', ['payment', 'manual']).gte('created_at', monthStart.toISOString()).lte('created_at', monthEnd.toISOString()),
-        supabase.from('credit_transactions').select('amount').eq('type', 'product').gte('created_at', monthStart.toISOString()).lte('created_at', monthEnd.toISOString()),
+        supabase.from('credit_transactions').select('amount, type, client_id, clients(name)').gte('created_at', monthStart.toISOString()).lte('created_at', monthEnd.toISOString()),
         supabase.from('credit_transactions').select('client_id, amount, clients(name)').lt('amount', 0),
       ]);
 
       const thisMonth = (thisMonthResult.data || []) as TrainingSessionRow[];
       const lastMonth = (lastMonthResult.data || []) as TrainingSessionRow[];
       const yearly = (yearlyResult.data || []) as TrainingSessionRow[];
+      const creditTx = (creditResult.data || []) as CreditTransactionRow[];
       
       const thisMonthCompleted = thisMonth.filter(t => t.status === 'completed').length;
       const lastMonthCompleted = lastMonth.filter(t => t.status === 'completed').length;
@@ -46,18 +46,17 @@ export function useDashboardTrends() {
       const lastMonthActiveIds = new Set((lastMonthActiveResult.data as TrainingParticipantRow[] || []).map(p => p.client_id));
       const retainedClients = [...lastMonthActiveIds].filter(id => activeClientIds.has(id)).length;
 
-      const productIncome = (productResult.data || []).reduce((s, t: CreditTransactionRow) => s + Math.abs(t.amount || 0), 0);
-      const trainingIncome = (creditResult.data || []).reduce((s, t: CreditTransactionRow) => s + (t.amount || 0), 0);
+      // Calculate product and training income from unified credit query
+      const productIncome = creditTx.filter(t => t.type === 'product').reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+      const trainingIncome = creditTx.filter(t => t.type === 'payment' || t.type === 'manual').reduce((s, t) => s + (t.amount || 0), 0);
       const totalRevenue = trainingIncome + productIncome;
-
-      const creditTx = (creditResult.data || []) as CreditTransactionRow[];
       const creditsReceived = creditTx.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0);
 
-      const allCompleted = (allCompletedResult.data || []) as TrainingSessionRow[];
+      // Use yearly data for day/hour distribution (already completed)
       const dayNames = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
       const dayCountMap = new Map<number, number>();
       const hourCountMap = new Map<number, number>();
-      allCompleted.forEach(t => {
+      yearly.forEach(t => {
         const d = new Date(t.date);
         dayCountMap.set(d.getDay(), (dayCountMap.get(d.getDay()) || 0) + 1);
         hourCountMap.set(d.getHours(), (hourCountMap.get(d.getHours()) || 0) + 1);
@@ -84,7 +83,7 @@ export function useDashboardTrends() {
         cancellationRate: thisMonth.length > 0 ? Math.round((thisMonthCancelled / thisMonth.length) * 100) : 0,
         cancelledCount: thisMonthCancelled, totalTrainingsCount: thisMonth.length,
         productShare: totalRevenue > 0 ? Math.round((productIncome / totalRevenue) * 100) : 0,
-        productIncome, totalRevenue, creditsReceived, creditsReceivedCount: creditTx.filter(t => t.amount > 0).length,
+        productIncome, totalRevenue, creditsReceived, creditsReceivedCount: creditTx.filter(t => (t.amount || 0) > 0).length,
         yearlyHours: yearly.length, yearlyIncome: yearly.reduce((s, t) => s + (t.final_price || 0), 0),
         avgHourlyRate: yearly.length > 0 ? Math.round(yearly.reduce((s, t) => s + (t.final_price || 0), 0) / yearly.length) : 0,
         activeClients: activeClientIds.size, totalClients: 0, newClientsThisMonth: (newClientsResult.data || []).length,

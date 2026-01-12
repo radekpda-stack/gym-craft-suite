@@ -47,5 +47,6 @@ export function useTrainingTrend() {
         };
       });
     },
+    staleTime: 120000,
   });
 }
