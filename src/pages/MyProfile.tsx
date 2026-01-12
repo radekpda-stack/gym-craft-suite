@@ -3,14 +3,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Trophy, TrendingUp, BarChart3, BookOpen, Plus, UserCircle } from 'lucide-react';
+import { User, LayoutDashboard, History, Settings } from 'lucide-react';
 import { ClientPRsCard } from '@/components/clients/ClientPRsCard';
 import { MyProfileProgress } from '@/components/my-profile/MyProfileProgress';
-import { TrainerLeaderboards } from '@/components/my-profile/TrainerLeaderboards';
 import { MyProfileWorkoutDiary } from '@/components/my-profile/MyProfileWorkoutDiary';
-import { MyProfileOverview } from '@/components/my-profile/MyProfileOverview';
-import { MyProfileInput } from '@/components/my-profile/MyProfileInput';
 import { TrainerProfileSettings } from '@/components/settings/TrainerProfileSettings';
+import { ModernProfileHeader } from '@/components/my-profile/ModernProfileHeader';
+import { QuickWorkoutInput } from '@/components/my-profile/QuickWorkoutInput';
+import { CompactPRsSection } from '@/components/my-profile/CompactPRsSection';
+import { RecentActivityFeed } from '@/components/my-profile/RecentActivityFeed';
+import { TrainerLeaderboards } from '@/components/my-profile/TrainerLeaderboards';
 
 export default function MyProfile() {
   const { loading: authLoading } = useAuth();
@@ -39,66 +41,65 @@ export default function MyProfile() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      {/* Tabs */}
+    <div className="space-y-4 p-4 md:p-6 pb-24">
+      {/* Simplified 3-tab navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full flex flex-wrap gap-1 h-auto bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="flex items-center gap-1.5 text-xs">
-            <BarChart3 className="w-3.5 h-3.5" />
-            Přehled
+        <TabsList className="w-full grid grid-cols-3 h-12 bg-secondary/50 p-1 rounded-xl">
+          <TabsTrigger value="overview" className="flex items-center gap-2 text-sm rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="hidden sm:inline">Přehled</span>
           </TabsTrigger>
-          <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs">
-            <UserCircle className="w-3.5 h-3.5" />
-            Profil
+          <TabsTrigger value="history" className="flex items-center gap-2 text-sm rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">Historie</span>
           </TabsTrigger>
-          <TabsTrigger value="input" className="flex items-center gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" />
-            Zadávání
-          </TabsTrigger>
-          <TabsTrigger value="prs" className="flex items-center gap-1.5 text-xs">
-            <Trophy className="w-3.5 h-3.5" />
-            Rekordy
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="flex items-center gap-1.5 text-xs">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Pokrok
-          </TabsTrigger>
-          <TabsTrigger value="leaderboard" className="flex items-center gap-1.5 text-xs">
-            <BarChart3 className="w-3.5 h-3.5" />
-            Žebříčky
-          </TabsTrigger>
-          <TabsTrigger value="diary" className="flex items-center gap-1.5 text-xs">
-            <BookOpen className="w-3.5 h-3.5" />
-            Deník
+          <TabsTrigger value="settings" className="flex items-center gap-2 text-sm rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Nastavení</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="mt-6">
-          <MyProfileOverview clientId={profile.clientId} />
-        </TabsContent>
-
-        <TabsContent value="profile" className="mt-6">
-          <TrainerProfileSettings />
-        </TabsContent>
-
-        <TabsContent value="input" className="mt-6">
-          <MyProfileInput clientId={profile.clientId} />
-        </TabsContent>
-
-        <TabsContent value="prs" className="mt-6">
-          <ClientPRsCard clientId={profile.clientId} />
-        </TabsContent>
-
-        <TabsContent value="progress" className="mt-6">
-          <MyProfileProgress clientId={profile.clientId} trainerId={profile.trainerId} />
-        </TabsContent>
-
-        <TabsContent value="leaderboard" className="mt-6">
+        {/* Overview - Main dashboard with quick input */}
+        <TabsContent value="overview" className="mt-4 space-y-4">
+          {/* Profile header with stats */}
+          <ModernProfileHeader clientId={profile.clientId} />
+          
+          {/* Quick workout input - prominent placement */}
+          <QuickWorkoutInput clientId={profile.clientId} />
+          
+          {/* Two column grid for PRs and recent activity */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CompactPRsSection 
+              clientId={profile.clientId} 
+              onViewAll={() => setActiveTab('history')}
+            />
+            <RecentActivityFeed 
+              clientId={profile.clientId}
+              onViewDiary={() => setActiveTab('history')}
+            />
+          </div>
+          
+          {/* Leaderboards */}
           <TrainerLeaderboards />
         </TabsContent>
 
-        <TabsContent value="diary" className="mt-6">
+        {/* History - Diary, PRs, Progress */}
+        <TabsContent value="history" className="mt-4 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <ClientPRsCard clientId={profile.clientId} />
+            </div>
+            <div className="space-y-4">
+              <MyProfileProgress clientId={profile.clientId} trainerId={profile.trainerId} />
+            </div>
+          </div>
+          
           <MyProfileWorkoutDiary clientId={profile.clientId} />
+        </TabsContent>
+
+        {/* Settings - Profile settings */}
+        <TabsContent value="settings" className="mt-4">
+          <TrainerProfileSettings />
         </TabsContent>
       </Tabs>
     </div>
