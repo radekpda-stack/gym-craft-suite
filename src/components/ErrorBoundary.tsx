@@ -1,10 +1,13 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { trackUIException } from '@/lib/analytics/errors';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Component name for error tracking */
+  componentName?: string;
 }
 
 interface State {
@@ -27,6 +30,9 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
+    
+    // Track error for analytics
+    trackUIException(error, this.props.componentName || 'ErrorBoundary', 'critical');
   }
 
   private handleReset = () => {

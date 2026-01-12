@@ -7,5 +7,14 @@ export { EVENT_SCHEMA_VERSION, updateReferrerRoute, getReferrerRoute } from './c
 // Interaction analytics
 export { InteractionTracker, useFeatureTime, useJourney, JOURNEY_TYPES, usePerformance, measureRenderTime } from './interaction';
 
+// Performance analytics
+export { trackPageLoadPerformance, trackNavigationPerformance, trackApiLatency } from './performance';
+
+// Error analytics
+export { trackUIException, trackNetworkFailure, trackUnhandledException, resetErrorCount } from './errors';
+
+// API interceptor
+export { initApiInterceptor } from './api';
+
 // Legacy compatibility
 export { track as trackEvent, startTimedAction as startTimedEvent } from './core/tracker';
