@@ -121,7 +121,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     if (isDemo) return;
     if (isAuthenticated && clientId && !sessionInitialized.current) {
       sessionInitialized.current = true;
-      sessionManager.initialize(clientId).catch(console.debug);
+      sessionManager.initialize(clientId).catch(() => {});
     }
   }, [isAuthenticated, clientId, isDemo]);
 
@@ -282,7 +282,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
       </main>
 
       {/* Mobile Bottom Navigation - Only 5 items to prevent overflow */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50 md:hidden safe-area-pb">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50 md:hidden pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around h-16 px-2">
           {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.to || 

@@ -150,7 +150,7 @@ export const ClientCard = memo(function ClientCard({
   const getCreditColor = () => {
     if (actualBalance <= 0) return 'text-destructive';
     if (actualBalance < 500) return 'text-warning';
-    return 'text-emerald-400';
+    return 'text-success';
   };
 
   // Calculate days since last training
@@ -268,7 +268,7 @@ export const ClientCard = memo(function ClientCard({
               <div className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center',
                 actualBalance <= 0 ? 'bg-destructive/10' : 
-                actualBalance < 500 ? 'bg-warning/10' : 'bg-emerald-500/10'
+                actualBalance < 500 ? 'bg-warning/10' : 'bg-success/10'
               )}>
                 <Wallet className={cn('w-4 h-4', getCreditColor())} />
               </div>
@@ -475,7 +475,7 @@ export const ClientCard = memo(function ClientCard({
         <Button
           size="sm"
           variant="ghost"
-          className="flex-1 h-9 text-xs gap-1.5 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-400"
+          className="flex-1 h-9 text-xs gap-1.5 rounded-xl hover:bg-success/10 hover:text-success"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

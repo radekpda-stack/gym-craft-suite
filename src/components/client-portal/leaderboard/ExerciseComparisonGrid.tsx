@@ -15,7 +15,7 @@ import {
   GenderFilter 
 } from '@/hooks/useExerciseLeaderboard';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
-import PercentileGauge from './PercentileGauge';
+import { PercentileGauge } from './PercentileGauge';
 
 interface ExerciseComparisonGridProps {
   exercises: ExerciseWithPercentile[];
@@ -37,27 +37,27 @@ function getPercentileStyle(percentile: number | null) {
   
   if (percentile >= 90) return { 
     label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-gradient-to-br from-primary/15 via-cyan-500/10 to-emerald-500/10', 
+    bgColor: 'bg-gradient-to-br from-primary/15 via-primary/10 to-success/10', 
     textColor: 'text-primary',
     borderColor: 'border-primary/30',
-    gradient: 'from-primary via-cyan-500 to-emerald-500',
+    gradient: 'from-primary via-primary to-success',
     iconColor: 'text-primary'
   };
   if (percentile >= 75) return { 
     label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-gradient-to-br from-emerald-500/15 to-green-500/10', 
-    textColor: 'text-emerald-500',
-    borderColor: 'border-emerald-500/30',
-    gradient: 'from-emerald-500 to-green-400',
-    iconColor: 'text-emerald-500'
+    bgColor: 'bg-gradient-to-br from-success/15 to-success/10', 
+    textColor: 'text-success',
+    borderColor: 'border-success/30',
+    gradient: 'from-success to-success',
+    iconColor: 'text-success'
   };
   if (percentile >= 50) return { 
     label: 'Nad průměr', 
-    bgColor: 'bg-gradient-to-br from-amber-500/15 to-yellow-500/10', 
-    textColor: 'text-amber-500',
-    borderColor: 'border-amber-500/30',
-    gradient: 'from-amber-500 to-yellow-400',
-    iconColor: 'text-amber-500'
+    bgColor: 'bg-gradient-to-br from-warning/15 to-warning/10', 
+    textColor: 'text-warning',
+    borderColor: 'border-warning/30',
+    gradient: 'from-warning to-warning',
+    iconColor: 'text-warning'
   };
   if (percentile >= 25) return { 
     label: 'Průměr', 
@@ -69,11 +69,11 @@ function getPercentileStyle(percentile: number | null) {
   };
   return { 
     label: 'Prostor pro růst', 
-    bgColor: 'bg-gradient-to-br from-orange-500/15 to-red-500/10', 
-    textColor: 'text-orange-500',
-    borderColor: 'border-orange-500/30',
-    gradient: 'from-orange-500 to-red-400',
-    iconColor: 'text-orange-500'
+    bgColor: 'bg-gradient-to-br from-destructive/15 to-destructive/10', 
+    textColor: 'text-destructive',
+    borderColor: 'border-destructive/30',
+    gradient: 'from-destructive to-destructive',
+    iconColor: 'text-destructive'
   };
 }
 
@@ -91,14 +91,14 @@ function GenderFilterToggle({
       onValueChange={(v) => v && onChange(v as GenderFilter)}
       size="sm"
     >
-      <ToggleGroupItem value="all" aria-label="Všichni" className="gap-1 px-2 text-xs">
+      <ToggleGroupItem value="all" aria-label="Všichni" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <Users className="w-3 h-3" />
         Vše
       </ToggleGroupItem>
-      <ToggleGroupItem value="male" aria-label="Muži" className="gap-1 px-2 text-xs">
+      <ToggleGroupItem value="male" aria-label="Muži" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <span className="text-sm font-medium">♂</span>
       </ToggleGroupItem>
-      <ToggleGroupItem value="female" aria-label="Ženy" className="gap-1 px-2 text-xs">
+      <ToggleGroupItem value="female" aria-label="Ženy" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <span className="text-sm font-medium">♀</span>
       </ToggleGroupItem>
     </ToggleGroup>
@@ -119,11 +119,11 @@ function CardioMetricToggle({
       onValueChange={(v) => v && onChange(v as 'distance' | 'duration')}
       size="sm"
     >
-      <ToggleGroupItem value="distance" aria-label="Vzdálenost" className="gap-1 px-2 text-xs">
+      <ToggleGroupItem value="distance" aria-label="Vzdálenost" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <Route className="w-3 h-3" />
         Vzdálenost
       </ToggleGroupItem>
-      <ToggleGroupItem value="duration" aria-label="Čas" className="gap-1 px-2 text-xs">
+      <ToggleGroupItem value="duration" aria-label="Čas" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <Timer className="w-3 h-3" />
         Čas
       </ToggleGroupItem>
@@ -142,9 +142,9 @@ function LeaderboardRow({
 }) {
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1: return <Crown className="w-4 h-4 text-amber-500" />;
-      case 2: return <Medal className="w-4 h-4 text-gray-400" />;
-      case 3: return <Award className="w-4 h-4 text-amber-700" />;
+      case 1: return <Crown className="w-4 h-4 text-warning" />;
+      case 2: return <Medal className="w-4 h-4 text-muted-foreground" />;
+      case 3: return <Award className="w-4 h-4 text-warning/70" />;
       default: return <span className="text-xs font-medium text-muted-foreground">{rank}</span>;
     }
   };
@@ -164,9 +164,9 @@ function LeaderboardRow({
       </div>
       <div className={cn(
         "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-        entry.rank === 1 ? "bg-amber-500/20 text-amber-600" :
-        entry.rank === 2 ? "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
-        entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
+        entry.rank === 1 ? "bg-warning/20 text-warning" :
+        entry.rank === 2 ? "bg-muted text-muted-foreground" :
+        entry.rank === 3 ? "bg-warning/10 text-warning/80" :
         "bg-muted text-muted-foreground"
       )}>
         {displayInitial}
@@ -256,13 +256,13 @@ function ExerciseCard({
             <div className={cn(
               "relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden",
               exerciseType === 'strength' 
-                ? "bg-gradient-to-br from-blue-500/20 to-blue-600/10" 
-                : "bg-gradient-to-br from-green-500/20 to-emerald-600/10"
+                ? "bg-gradient-to-br from-primary/20 to-primary/10" 
+                : "bg-gradient-to-br from-success/20 to-success/10"
             )}>
               {exerciseType === 'strength' ? (
-                <Dumbbell className="w-6 h-6 text-blue-500" />
+                <Dumbbell className="w-6 h-6 text-primary" />
               ) : (
-                <Heart className="w-6 h-6 text-green-500" />
+                <Heart className="w-6 h-6 text-success" />
               )}
               {isTopPerformer && (
                 <motion.div 
@@ -277,8 +277,8 @@ function ExerciseCard({
             </div>
             
             {/* Exercise name and value */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-2 min-w-0">
                 <h4 className="font-semibold capitalize truncate text-base">{exercise.exercise_name}</h4>
                 <StatInfoTooltip
                   title="Srovnání výkonu"
