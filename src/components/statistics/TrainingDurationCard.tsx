@@ -100,16 +100,16 @@ export function TrainingDurationCard() {
         </div>
 
         {/* Min/Max */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1">
-            <TrendingDown className="h-3 w-3 text-blue-500" />
-            <span className="text-muted-foreground">Nejkratší:</span>
-            <span className="font-medium">{data.shortestDuration} min</span>
+        <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+          <div className="flex items-center gap-1 min-w-0">
+            <TrendingDown className="h-3 w-3 text-blue-500 shrink-0" />
+            <span className="text-muted-foreground shrink-0">Min:</span>
+            <span className="font-medium truncate">{data.shortestDuration}m</span>
           </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-orange-500" />
-            <span className="text-muted-foreground">Nejdelší:</span>
-            <span className="font-medium">{data.longestDuration} min</span>
+          <div className="flex items-center gap-1 justify-end min-w-0">
+            <TrendingUp className="h-3 w-3 text-orange-500 shrink-0" />
+            <span className="text-muted-foreground shrink-0">Max:</span>
+            <span className="font-medium truncate">{data.longestDuration}m</span>
           </div>
         </div>
       </CardContent>

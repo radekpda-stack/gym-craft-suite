@@ -64,7 +64,7 @@ export function ExerciseHeroKPI({
           maxValue={10}
           displayValue={avgRPE.toFixed(1)}
           sublabel="RPE"
-          description={avgRPE >= 8 ? 'Vysoká' : avgRPE >= 6 ? 'Střední' : 'Nízká'}
+          description={avgRPE >= 8 ? 'Vysoká zátěž' : avgRPE >= 6 ? 'Střední' : 'Nízká'}
           variant={avgRPE >= 8 ? 'destructive' : avgRPE >= 6 ? 'warning' : 'success'}
           size="md"
           onClick={() => onCardClick?.('intensity')}

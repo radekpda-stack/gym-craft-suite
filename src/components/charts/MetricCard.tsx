@@ -88,8 +88,8 @@ export function MetricCard({
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-muted-foreground truncate">{title}</p>
-              <p className={cn('text-xl font-bold', colors.text)}>{value}</p>
-              {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+              <p className={cn('text-lg sm:text-xl font-bold truncate', colors.text)}>{value}</p>
+              {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
             </div>
             {hasProgress && (
               <div className="w-24">
@@ -154,13 +154,13 @@ export function MetricCard({
                 </div>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className={cn('text-2xl font-bold tracking-tight', colors.text)}>{value}</p>
+            <p className="text-sm text-muted-foreground truncate">{title}</p>
+            <p className={cn('text-xl sm:text-2xl font-bold tracking-tight truncate', colors.text)}>{value}</p>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
             )}
             {hasProgress && showProgressValue && (
-              <p className="text-xs text-muted-foreground mt-1">{Math.round(clampedProgress)}% cíle</p>
+              <p className="text-xs text-muted-foreground mt-1">{Math.round(clampedProgress)}%</p>
             )}
           </div>
         </div>

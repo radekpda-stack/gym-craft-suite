@@ -92,12 +92,12 @@ export function TrainingHeroKPI({
           {/* Background gradient */}
           <div className={cn("absolute inset-0 opacity-30", `bg-gradient-to-br ${kpi.bgColor} to-transparent`)} />
           
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={cn("p-2 rounded-xl", kpi.bgColor)}>
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className={cn("p-2 rounded-xl shrink-0", kpi.bgColor)}>
                 <kpi.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", kpi.color)} />
               </div>
-              <span className="text-xs sm:text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground truncate">
                 {kpi.label}
               </span>
             </div>
@@ -109,8 +109,8 @@ export function TrainingHeroKPI({
           </div>
           
           <p className={cn(
-            "relative text-2xl sm:text-3xl font-bold",
-            kpi.isText ? 'text-lg sm:text-xl' : ''
+            "relative text-2xl sm:text-3xl font-bold truncate max-w-full",
+            kpi.isText ? 'text-base sm:text-lg' : ''
           )}>
             {kpi.value}
           </p>

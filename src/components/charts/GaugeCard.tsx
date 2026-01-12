@@ -36,8 +36,8 @@ export function GaugeCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4 flex flex-col items-center justify-center">
-        <p className="text-sm text-muted-foreground mb-3 text-center">{title}</p>
+      <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center min-w-0">
+        <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 text-center truncate max-w-full">{title}</p>
         
         <CircularGauge
           value={value}
@@ -49,7 +49,7 @@ export function GaugeCard({
         />
         
         {description && (
-          <p className="text-xs text-muted-foreground mt-3 text-center">{description}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3 text-center line-clamp-2">{description}</p>
         )}
       </CardContent>
     </Card>

@@ -46,7 +46,7 @@ export function ClientHeroKPI({
         maxValue={100}
         displayValue={`${retentionRate}%`}
         sublabel="aktivních"
-        description="Alespoň 1 trénink za 60 dní"
+        description="Min. 1 trénink / 60 dní"
         variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
         size="md"
         onClick={() => onCardClick?.('retention')}
