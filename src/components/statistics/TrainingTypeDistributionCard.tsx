@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Activity } from 'lucide-react';
+import { StatInfoTooltip } from './StatInfoTooltip';
 import type { TrainingTypeStat } from '@/hooks/useGlobalTrainingTagStats';
 
 const COLORS = [
@@ -34,7 +36,15 @@ export function TrainingTypeDistributionCard({
     return (
       <Card className={className}>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base sm:text-lg">Typy tréninků</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Activity className="h-4 w-4 text-primary" />
+            Typy tréninků
+            <StatInfoTooltip
+              title="Distribuce typů tréninků"
+              description="Rozdělení vašich tréninků podle jejich typu."
+              calculation="Počet tréninků každého typu ÷ celkový počet tréninků × 100."
+            />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
@@ -48,7 +58,15 @@ export function TrainingTypeDistributionCard({
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base sm:text-lg">Typy tréninků</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Activity className="h-4 w-4 text-primary" />
+          Typy tréninků
+          <StatInfoTooltip
+            title="Distribuce typů tréninků"
+            description="Rozdělení vašich tréninků podle jejich typu (silový, kondiční, kardio, atd.)."
+            calculation="Počet tréninků každého typu ÷ celkový počet tréninků × 100."
+          />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col sm:flex-row gap-4">

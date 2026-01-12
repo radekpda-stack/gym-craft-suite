@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLifetimeStats } from "@/hooks/useLifetimeStats";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { StatInfoTooltip } from "./StatInfoTooltip";
 import { 
   Trophy, 
   Dumbbell, 
@@ -15,30 +16,47 @@ import {
   UserX,
   Heart,
   Zap,
-  XCircle,
   Activity,
-  DollarSign
+  DollarSign,
+  Award
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
+// Modern stat item component
 function StatItem({ 
   icon: Icon, 
   label, 
   value, 
-  subValue 
+  subValue,
+  tooltip,
+  iconColor = "text-primary",
+  iconBg = "bg-primary/10"
 }: { 
   icon: React.ElementType; 
   label: string; 
   value: string | number; 
   subValue?: string;
+  tooltip?: { description: string; calculation?: string };
+  iconColor?: string;
+  iconBg?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 py-2">
-      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-        <Icon className="h-4 w-4 text-primary" />
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+      <div className={cn("p-2.5 rounded-xl shrink-0", iconBg)}>
+        <Icon className={cn("h-4 w-4", iconColor)} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-lg font-semibold text-foreground">{value}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          {tooltip && (
+            <StatInfoTooltip
+              title={label}
+              description={tooltip.description}
+              calculation={tooltip.calculation}
+            />
+          )}
+        </div>
+        <p className="text-lg font-bold text-foreground">{value}</p>
         {subValue && (
           <p className="text-xs text-muted-foreground">{subValue}</p>
         )}
@@ -49,18 +67,32 @@ function StatItem({
 
 function StatsSection({ 
   title, 
-  children 
+  icon: Icon,
+  children,
+  headerTooltip
 }: { 
-  title: string; 
+  title: string;
+  icon: React.ElementType;
   children: React.ReactNode;
+  headerTooltip?: { description: string; calculation?: string };
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3 bg-gradient-to-r from-muted/50 to-transparent">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Icon className="h-4 w-4 text-primary" />
+          {title}
+          {headerTooltip && (
+            <StatInfoTooltip
+              title={title}
+              description={headerTooltip.description}
+              calculation={headerTooltip.calculation}
+            />
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid gap-1">
+        <div className="grid gap-2">
           {children}
         </div>
       </CardContent>
@@ -76,15 +108,9 @@ function LoadingSkeleton() {
           <CardHeader className="pb-3">
             <Skeleton className="h-5 w-32" />
           </CardHeader>
-          <CardContent className="pt-0 space-y-4">
+          <CardContent className="pt-0 space-y-2">
             {[1, 2, 3, 4].map((j) => (
-              <div key={j} className="flex items-start gap-3">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div className="space-y-1.5 flex-1">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-              </div>
+              <Skeleton key={j} className="h-16 w-full rounded-xl" />
             ))}
           </CardContent>
         </Card>
@@ -119,15 +145,17 @@ export function LifetimeStatsSection() {
   return (
     <div className="space-y-4">
       {/* Header with start date */}
-      <Card className="bg-gradient-to-br from-primary/10 via-background to-background border-primary/20">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-full bg-primary/20">
-              <Trophy className="h-6 w-6 text-primary" />
+      <Card className="relative overflow-hidden border-primary/20">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        <CardContent className="relative py-5">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-primary/20 shadow-lg shadow-primary/10">
+              <Trophy className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">Kariérní statistiky</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-xl font-bold text-foreground">Kariérní statistiky</h2>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
                 Od {startDate}
               </p>
             </div>
@@ -136,51 +164,89 @@ export function LifetimeStatsSection() {
       </Card>
 
       {/* Training Stats */}
-      <StatsSection title="Tréninky">
-        <StatItem
-          icon={Dumbbell}
-          label="Celkem tréninků"
-          value={stats.totalTrainings.toLocaleString('cs-CZ')}
-        />
-        <StatItem
-          icon={Users}
-          label="Unikátních klientů"
-          value={stats.uniqueClients}
-          subValue="se kterými jste trénoval"
-        />
-        <StatItem
-          icon={Clock}
-          label="Celkem hodin"
-          value={`${stats.totalHours.toLocaleString('cs-CZ')} h`}
-          subValue={`${stats.totalMinutes.toLocaleString('cs-CZ')} minut`}
-        />
-        <StatItem
-          icon={Calendar}
-          label="Tréninkových dnů"
-          value={stats.trainingDays}
-          subValue={`Ø ${stats.avgTrainingsPerDay} tréninků/den`}
-        />
-        <div className="pt-2 border-t border-border mt-2">
-          <p className="text-xs text-muted-foreground mb-2 font-medium">Podle typu:</p>
+      <StatsSection 
+        title="Tréninky" 
+        icon={Dumbbell}
+        headerTooltip={{
+          description: "Kompletní přehled všech vašich tréninkových aktivit od začátku kariéry.",
+          calculation: "Data z tabulky training_sessions se statusem 'completed'."
+        }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <StatItem
+            icon={Dumbbell}
+            label="Celkem tréninků"
+            value={stats.totalTrainings.toLocaleString('cs-CZ')}
+            tooltip={{
+              description: "Celkový počet dokončených tréninků za celou vaši kariéru.",
+              calculation: "Počet všech tréninků se statusem 'completed'."
+            }}
+          />
+          <StatItem
+            icon={Users}
+            label="Unikátních klientů"
+            value={stats.uniqueClients}
+            subValue="se kterými jste trénoval/a"
+            tooltip={{
+              description: "Počet různých klientů, se kterými jste měl/a alespoň jeden trénink.",
+              calculation: "Počet unikátních client_id v dokončených trénincích."
+            }}
+          />
+          <StatItem
+            icon={Clock}
+            label="Celkem hodin"
+            value={`${stats.totalHours.toLocaleString('cs-CZ')} h`}
+            subValue={`${stats.totalMinutes.toLocaleString('cs-CZ')} minut`}
+            iconColor="text-blue-500"
+            iconBg="bg-blue-500/10"
+            tooltip={{
+              description: "Celkový čas strávený trénováním klientů.",
+              calculation: "Součet délky všech dokončených tréninků (duration)."
+            }}
+          />
+          <StatItem
+            icon={Calendar}
+            label="Tréninkových dnů"
+            value={stats.trainingDays}
+            subValue={`Ø ${stats.avgTrainingsPerDay} tréninků/den`}
+            iconColor="text-emerald-500"
+            iconBg="bg-emerald-500/10"
+            tooltip={{
+              description: "Počet dní, kdy proběhl alespoň jeden trénink.",
+              calculation: "Počet unikátních kalendářních dní s alespoň jedním tréninkem."
+            }}
+          />
+        </div>
+        
+        {/* Training types */}
+        <div className="pt-3 mt-3 border-t border-border">
+          <div className="flex items-center gap-1 mb-3">
+            <p className="text-xs text-muted-foreground font-medium">Podle typu tréninku</p>
+            <StatInfoTooltip
+              title="Rozdělení podle typu"
+              description="Distribuce tréninků podle jejich hlavního zaměření."
+              calculation="Silové = 'strength'. Kardio = 'cardio', 'hiit', 'running'. Kondiční = 'conditioning', 'functional', 'mobility'. Ostatní = zbývající typy."
+            />
+          </div>
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-2 rounded-lg bg-muted/50">
-              <Zap className="h-4 w-4 mx-auto mb-1 text-orange-500" />
-              <p className="text-sm font-semibold">{stats.strengthTrainings}</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/10">
+              <Zap className="h-5 w-5 mx-auto mb-1.5 text-orange-500" />
+              <p className="text-lg font-bold">{stats.strengthTrainings}</p>
               <p className="text-xs text-muted-foreground">Silové</p>
             </div>
-            <div className="text-center p-2 rounded-lg bg-muted/50">
-              <Heart className="h-4 w-4 mx-auto mb-1 text-red-500" />
-              <p className="text-sm font-semibold">{stats.cardioTrainings}</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/10">
+              <Heart className="h-5 w-5 mx-auto mb-1.5 text-red-500" />
+              <p className="text-lg font-bold">{stats.cardioTrainings}</p>
               <p className="text-xs text-muted-foreground">Kardio</p>
             </div>
-            <div className="text-center p-2 rounded-lg bg-muted/50">
-              <Activity className="h-4 w-4 mx-auto mb-1 text-blue-500" />
-              <p className="text-sm font-semibold">{stats.conditioningTrainings}</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/10">
+              <Activity className="h-5 w-5 mx-auto mb-1.5 text-blue-500" />
+              <p className="text-lg font-bold">{stats.conditioningTrainings}</p>
               <p className="text-xs text-muted-foreground">Kondiční</p>
             </div>
-            <div className="text-center p-2 rounded-lg bg-muted/50">
-              <Dumbbell className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-              <p className="text-sm font-semibold">{stats.otherTrainings}</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border">
+              <Dumbbell className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
+              <p className="text-lg font-bold">{stats.otherTrainings}</p>
               <p className="text-xs text-muted-foreground">Ostatní</p>
             </div>
           </div>
@@ -188,58 +254,101 @@ export function LifetimeStatsSection() {
       </StatsSection>
 
       {/* Finance Stats */}
-      <StatsSection title="Finance">
-        <StatItem
-          icon={Banknote}
-          label="Celkem přijato"
-          value={formatCurrency(stats.totalIncomeReceived)}
-          subValue={`z ${stats.totalPayments} plateb`}
-        />
-        <StatItem
-          icon={TrendingUp}
-          label="Hodnota tréninků"
-          value={formatCurrency(stats.totalTrainingValue)}
-          subValue={`Ø ${formatCurrency(stats.avgPricePerTraining)} za trénink`}
-        />
-        <StatItem
-          icon={DollarSign}
-          label="Hodinová sazba"
-          value={formatCurrency(stats.avgHourlyRate)}
-          subValue="průměrně za hodinu práce"
-        />
-        <StatItem
-          icon={ShoppingBag}
-          label="Příjmy z produktů"
-          value={formatCurrency(stats.totalProductRevenue)}
-          subValue={`${stats.totalProductsSold}× prodáno (${stats.uniqueProductsSold} různých)`}
-        />
-        <StatItem
-          icon={XCircle}
-          label="Stornovací poplatky"
-          value={formatCurrency(stats.cancellationFees)}
-        />
+      <StatsSection 
+        title="Finance" 
+        icon={Banknote}
+        headerTooltip={{
+          description: "Finanční přehled vaší kariéry včetně příjmů z tréninků, produktů a dalších zdrojů.",
+          calculation: "Data z tabulky credit_transactions."
+        }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <StatItem
+            icon={Banknote}
+            label="Celkem přijato"
+            value={formatCurrency(stats.totalIncomeReceived)}
+            subValue={`z ${stats.totalPayments} plateb`}
+            iconColor="text-emerald-500"
+            iconBg="bg-emerald-500/10"
+            tooltip={{
+              description: "Celková částka přijatá od klientů formou plateb a manuálních dobití.",
+              calculation: "Součet kladných částek z transakcí typu 'payment', 'manual' a 'transfer'."
+            }}
+          />
+          <StatItem
+            icon={TrendingUp}
+            label="Hodnota tréninků"
+            value={formatCurrency(stats.totalTrainingValue)}
+            subValue={`Ø ${formatCurrency(stats.avgPricePerTraining)} za trénink`}
+            iconColor="text-blue-500"
+            iconBg="bg-blue-500/10"
+            tooltip={{
+              description: "Celková hodnota poskytnutých služeb (tréninky + storno poplatky).",
+              calculation: "Součet absolutních hodnot z transakcí typu 'training' a 'canceled_training'."
+            }}
+          />
+          <StatItem
+            icon={DollarSign}
+            label="Hodinová sazba"
+            value={formatCurrency(stats.avgHourlyRate)}
+            subValue="průměrně za hodinu práce"
+            iconColor="text-amber-500"
+            iconBg="bg-amber-500/10"
+            tooltip={{
+              description: "Průměrná částka, kterou vyděláte za jednu hodinu trénování.",
+              calculation: "Hodnota tréninků ÷ celkový počet odtrénovaných hodin."
+            }}
+          />
+          <StatItem
+            icon={ShoppingBag}
+            label="Příjmy z produktů"
+            value={formatCurrency(stats.totalProductRevenue)}
+            subValue={`${stats.totalProductsSold}× prodáno (${stats.uniqueProductsSold} různých)`}
+            iconColor="text-purple-500"
+            iconBg="bg-purple-500/10"
+            tooltip={{
+              description: "Celkové příjmy z prodaných produktů a doplňků stravy.",
+              calculation: "Součet absolutních hodnot z transakcí typu 'product'."
+            }}
+          />
+        </div>
       </StatsSection>
 
       {/* Client Stats */}
-      <StatsSection title="Klienti">
+      <StatsSection 
+        title="Klienti" 
+        icon={Users}
+        headerTooltip={{
+          description: "Statistiky o vašich klientech za celou kariéru.",
+          calculation: "Data z tabulky clients."
+        }}
+      >
         <StatItem
           icon={Users}
           label="Celkem klientů"
           value={stats.totalClientsEver}
           subValue="za celou dobu"
+          tooltip={{
+            description: "Celkový počet klientů, které jste kdy měl/a v systému.",
+            calculation: "Počet všech klientů v databázi (včetně archivovaných)."
+          }}
         />
-        <div className="grid grid-cols-2 gap-2 pt-2">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10">
-            <UserCheck className="h-4 w-4 text-green-600" />
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+            <div className="p-2 rounded-lg bg-emerald-500/20">
+              <UserCheck className="h-4 w-4 text-emerald-500" />
+            </div>
             <div>
-              <p className="text-sm font-semibold text-green-700 dark:text-green-400">{stats.activeClients}</p>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activeClients}</p>
               <p className="text-xs text-muted-foreground">Aktivních</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-            <UserX className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
+            <div className="p-2 rounded-lg bg-muted">
+              <UserX className="h-4 w-4 text-muted-foreground" />
+            </div>
             <div>
-              <p className="text-sm font-semibold">{stats.archivedClients}</p>
+              <p className="text-xl font-bold">{stats.archivedClients}</p>
               <p className="text-xs text-muted-foreground">Archivovaných</p>
             </div>
           </div>
