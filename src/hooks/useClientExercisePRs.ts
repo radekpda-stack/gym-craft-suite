@@ -15,12 +15,17 @@ export interface ExercisePR {
 }
 
 /**
- * Format seconds to mm:ss or just seconds
+ * Format seconds to m:ss.SS with centiseconds for consistent display
+ * Examples: "1:41.35", "0:59.00", "2:05.70"
  */
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return minutes > 0 ? `${minutes}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+  const secs = seconds % 60;
+  // Always show 2 decimal places for consistency
+  const secsFormatted = secs.toFixed(2);
+  // Pad the integer part of seconds to 2 digits (e.g., "5.00" -> "05.00")
+  const paddedSecs = secs < 10 ? `0${secsFormatted}` : secsFormatted;
+  return `${minutes}:${paddedSecs}`;
 }
 
 /**
