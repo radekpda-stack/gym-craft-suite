@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, Heart, ChevronDown, ChevronUp, Crown, Medal, Award, Users, Route, Timer } from 'lucide-react';
+import { Dumbbell, Heart, ChevronDown, ChevronUp, Crown, Medal, Award, Users, Route, Timer, HelpCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
@@ -15,6 +14,8 @@ import {
   ExerciseLeaderboardEntry,
   GenderFilter 
 } from '@/hooks/useExerciseLeaderboard';
+import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import PercentileGauge from './PercentileGauge';
 
 interface ExerciseComparisonGridProps {
   exercises: ExerciseWithPercentile[];
@@ -27,46 +28,52 @@ interface ExerciseComparisonGridProps {
 function getPercentileStyle(percentile: number | null) {
   if (percentile === null) return { 
     label: 'Bez dat', 
-    bgColor: 'bg-muted', 
+    bgColor: 'bg-muted/50', 
     textColor: 'text-muted-foreground',
-    borderColor: 'border-border',
-    progressColor: 'bg-muted-foreground'
+    borderColor: 'border-border/50',
+    gradient: 'from-muted to-muted',
+    iconColor: 'text-muted-foreground'
   };
   
   if (percentile >= 90) return { 
     label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-emerald-500/10', 
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    borderColor: 'border-emerald-500/30',
-    progressColor: 'bg-emerald-500'
+    bgColor: 'bg-gradient-to-br from-primary/15 via-cyan-500/10 to-emerald-500/10', 
+    textColor: 'text-primary',
+    borderColor: 'border-primary/30',
+    gradient: 'from-primary via-cyan-500 to-emerald-500',
+    iconColor: 'text-primary'
   };
   if (percentile >= 75) return { 
     label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-emerald-500/10', 
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    borderColor: 'border-emerald-500/20',
-    progressColor: 'bg-emerald-500'
+    bgColor: 'bg-gradient-to-br from-emerald-500/15 to-green-500/10', 
+    textColor: 'text-emerald-500',
+    borderColor: 'border-emerald-500/30',
+    gradient: 'from-emerald-500 to-green-400',
+    iconColor: 'text-emerald-500'
   };
   if (percentile >= 50) return { 
     label: 'Nad průměr', 
-    bgColor: 'bg-amber-500/10', 
-    textColor: 'text-amber-600 dark:text-amber-400',
-    borderColor: 'border-amber-500/20',
-    progressColor: 'bg-amber-500'
+    bgColor: 'bg-gradient-to-br from-amber-500/15 to-yellow-500/10', 
+    textColor: 'text-amber-500',
+    borderColor: 'border-amber-500/30',
+    gradient: 'from-amber-500 to-yellow-400',
+    iconColor: 'text-amber-500'
   };
   if (percentile >= 25) return { 
     label: 'Průměr', 
-    bgColor: 'bg-muted', 
+    bgColor: 'bg-muted/50', 
     textColor: 'text-muted-foreground',
-    borderColor: 'border-border',
-    progressColor: 'bg-muted-foreground'
+    borderColor: 'border-border/50',
+    gradient: 'from-muted-foreground to-muted-foreground',
+    iconColor: 'text-muted-foreground'
   };
   return { 
-    label: 'Prostor ke zlepšení', 
-    bgColor: 'bg-orange-500/10', 
-    textColor: 'text-orange-600 dark:text-orange-400',
-    borderColor: 'border-orange-500/20',
-    progressColor: 'bg-orange-500'
+    label: 'Prostor pro růst', 
+    bgColor: 'bg-gradient-to-br from-orange-500/15 to-red-500/10', 
+    textColor: 'text-orange-500',
+    borderColor: 'border-orange-500/30',
+    gradient: 'from-orange-500 to-red-400',
+    iconColor: 'text-orange-500'
   };
 }
 
@@ -200,6 +207,8 @@ function ExerciseCard({
   const [cardioMetric, setCardioMetric] = useState<'distance' | 'duration'>('distance');
   
   const style = getPercentileStyle(exercise.client_percentile);
+  const percentile = exercise.client_percentile;
+  const isTopPerformer = percentile !== null && percentile >= 75;
   
   const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
     exerciseType === 'strength' && isExpanded ? exercise.exercise_name : null,
@@ -221,61 +230,103 @@ function ExerciseCard({
     <motion.div
       layout
       className={cn(
-        "rounded-xl border transition-all cursor-pointer",
+        "rounded-xl border overflow-hidden transition-all cursor-pointer group",
         style.borderColor,
-        isExpanded ? "col-span-full" : ""
+        isExpanded ? "col-span-full" : "",
+        isTopPerformer && "ring-1 ring-primary/20"
       )}
     >
       {/* Card Header - Always visible */}
       <div 
-        className={cn("p-4", style.bgColor)}
+        className={cn(
+          "p-4 relative",
+          style.bgColor
+        )}
         onClick={onToggle}
       >
-        <div className="flex items-start justify-between gap-2">
+        {/* Top performer glow effect */}
+        {isTopPerformer && (
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+        )}
+        
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 relative">
           <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Exercise icon with gradient background */}
             <div className={cn(
-              "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-              exerciseType === 'strength' ? "bg-blue-500/10" : "bg-green-500/10"
+              "relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden",
+              exerciseType === 'strength' 
+                ? "bg-gradient-to-br from-blue-500/20 to-blue-600/10" 
+                : "bg-gradient-to-br from-green-500/20 to-emerald-600/10"
             )}>
               {exerciseType === 'strength' ? (
-                <Dumbbell className="w-5 h-5 text-blue-500" />
+                <Dumbbell className="w-6 h-6 text-blue-500" />
               ) : (
-                <Heart className="w-5 h-5 text-green-500" />
+                <Heart className="w-6 h-6 text-green-500" />
+              )}
+              {isTopPerformer && (
+                <motion.div 
+                  className="absolute -top-1 -right-1"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                >
+                  <Zap className="w-4 h-4 text-primary fill-primary" />
+                </motion.div>
               )}
             </div>
-            <div className="min-w-0">
-              <h4 className="font-semibold capitalize truncate">{exercise.exercise_name}</h4>
+            
+            {/* Exercise name and value */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold capitalize truncate text-base">{exercise.exercise_name}</h4>
+                <StatInfoTooltip
+                  title="Srovnání výkonu"
+                  description="Percentil ukazuje, kolik procent klientů jsi překonal v tomto cviku. Čím vyšší číslo, tím lepší výkon ve srovnání s ostatními."
+                  calculation="Percentil = (počet klientů s horším výkonem / celkový počet) × 100"
+                />
+              </div>
               {exercise.client_best_value !== null && (
-                <p className="text-sm text-muted-foreground">
-                  {formatExerciseValue(exercise.client_best_value, exercise.metric_type, exerciseType)}
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-lg font-bold tabular-nums">
+                    {formatExerciseValue(exercise.client_best_value, exercise.metric_type, exerciseType)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">tvůj max</span>
+                </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className={cn("text-xs border", style.borderColor, style.textColor)}>
+          
+          {/* Expand indicator */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "text-xs font-medium border",
+                style.borderColor, 
+                style.textColor
+              )}
+            >
               {style.label}
             </Badge>
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            )}
+            <motion.div
+              animate={{ rotate: isExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </motion.div>
           </div>
         </div>
         
-        {/* Mini progress bar */}
-        {exercise.client_percentile !== null && (
-          <div className="mt-3">
-            <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-              <motion.div 
-                className={cn("h-full rounded-full", style.progressColor)}
-                initial={{ width: 0 }}
-                animate={{ width: `${exercise.client_percentile}%` }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              />
-            </div>
-          </div>
+        {/* Percentile Gauge - Compact version when collapsed */}
+        {!isExpanded && percentile !== null && (
+          <motion.div 
+            className="mt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <PercentileGauge percentile={percentile} />
+          </motion.div>
         )}
       </div>
       
@@ -289,9 +340,15 @@ function ExerciseCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-4 border-t border-border/50 space-y-4">
+            <div className="p-4 border-t border-border/50 space-y-4 bg-card/50">
+              {/* Percentile Gauge - Full version when expanded */}
+              {percentile !== null && (
+                <PercentileGauge percentile={percentile} />
+              )}
+              
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/30">
+                <span className="text-xs text-muted-foreground">Filtrovat:</span>
                 <GenderFilterToggle value={genderFilter} onChange={setGenderFilter} />
                 {exerciseType === 'cardio' && (
                   <CardioMetricToggle value={cardioMetric} onChange={setCardioMetric} />
@@ -303,14 +360,14 @@ function ExerciseCard({
                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-primary">#{leaderboard.client_rank}</span>
+                      <span className="text-xl font-bold text-primary">#{leaderboard.client_rank}</span>
                       <span className="text-sm text-muted-foreground">
-                        z {leaderboard.total_participants}
+                        z {leaderboard.total_participants} klientů
                       </span>
                     </div>
                     {leaderboard.client_percentile != null && (
                       <Badge className="bg-primary/10 text-primary border-0">
-                        Top {Math.round(100 - leaderboard.client_percentile)}%
+                        Lepší než {Math.round(leaderboard.client_percentile)}%
                       </Badge>
                     )}
                   </div>
@@ -318,28 +375,33 @@ function ExerciseCard({
               )}
               
               {/* Leaderboard list */}
-              {isLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Skeleton key={i} className="h-12 rounded-lg" />
-                  ))}
-                </div>
-              ) : leaderboard?.leaderboard.length ? (
-                <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                  {leaderboard.leaderboard.map((entry) => (
-                    <LeaderboardRow
-                      key={entry.client_id}
-                      entry={entry}
-                      isCurrentClient={entry.client_id === clientId}
-                      currentClientName={clientName}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Žádní účastníci v této kategorii
-                </p>
-              )}
+              <div className="space-y-1">
+                <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Žebříček
+                </h5>
+                {isLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Skeleton key={i} className="h-12 rounded-lg" />
+                    ))}
+                  </div>
+                ) : leaderboard?.leaderboard.length ? (
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {leaderboard.leaderboard.map((entry) => (
+                      <LeaderboardRow
+                        key={entry.client_id}
+                        entry={entry}
+                        isCurrentClient={entry.client_id === clientId}
+                        currentClientName={clientName}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Žádní účastníci v této kategorii
+                  </p>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
