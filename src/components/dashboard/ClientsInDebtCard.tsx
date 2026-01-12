@@ -49,21 +49,21 @@ export function ClientsInDebtCard() {
   const navigate = useNavigate();
   const createTransaction = useCreateTransaction();
   
-  // Fetch clients with debt (negative credit OR unpaid training sessions)
+  // Fetch clients with debt using ledger-calculated balance (sum of transactions)
   const { data: clientsInDebt = [], isLoading } = useQuery({
     queryKey: ['clients-in-debt'],
     queryFn: async (): Promise<ClientDebt[]> => {
-      // Get all non-archived clients with their budget group info
-      const [clientsResult, unpaidResult] = await Promise.all([
+      // Get all non-archived clients with their budget group info and calculate real balance from transactions
+      const [clientsResult, unpaidResult, transactionsResult] = await Promise.all([
         supabase
           .from('clients')
           .select(`
             id,
             name,
-            credit_balance,
             client_budget_members (
               group_id,
               client_budget_groups (
+                id,
                 shared_balance
               )
             )
@@ -74,9 +74,27 @@ export function ClientsInDebtCard() {
           .select('id, client_id, final_price')
           .eq('status', 'completed')
           .eq('payment_status', 'pending'),
+        // Get all credit transactions to calculate real balance
+        supabase
+          .from('credit_transactions')
+          .select('client_id, amount, group_id'),
       ]);
 
       if (clientsResult.error) throw clientsResult.error;
+
+      // Calculate real balance from transactions (ledger-based)
+      const clientBalanceMap = new Map<string, number>();
+      const groupBalanceMap = new Map<string, number>();
+      
+      (transactionsResult.data || []).forEach(t => {
+        if (t.group_id) {
+          // Group transaction - add to group balance
+          groupBalanceMap.set(t.group_id, (groupBalanceMap.get(t.group_id) || 0) + (t.amount || 0));
+        } else {
+          // Individual transaction
+          clientBalanceMap.set(t.client_id, (clientBalanceMap.get(t.client_id) || 0) + (t.amount || 0));
+        }
+      });
 
       // Build map of unpaid amounts per client
       const unpaidByClient = new Map<string, { count: number; amount: number }>();
@@ -93,12 +111,13 @@ export function ClientsInDebtCard() {
         .map(c => {
           // Check if client is in a budget group
           const budgetMember = c.client_budget_members?.[0];
-          const sharedBalance = budgetMember?.client_budget_groups?.shared_balance;
+          const groupId = budgetMember?.client_budget_groups?.id;
           
-          // Use shared balance if in group, otherwise individual balance
-          const effectiveBalance = sharedBalance !== null && sharedBalance !== undefined
-            ? sharedBalance
-            : (c.credit_balance || 0);
+          // Use ledger-calculated balance (sum of transactions)
+          // For group members, use group balance; otherwise individual balance
+          const effectiveBalance = groupId
+            ? (groupBalanceMap.get(groupId) || 0)
+            : (clientBalanceMap.get(c.id) || 0);
           
           const unpaidInfo = unpaidByClient.get(c.id) || { count: 0, amount: 0 };
           const hasNegativeCredit = effectiveBalance < 0;
