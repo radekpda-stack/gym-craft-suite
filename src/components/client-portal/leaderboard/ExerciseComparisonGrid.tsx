@@ -177,13 +177,16 @@ function ExerciseCard({
   exerciseType,
   trainerId,
   clientId,
+  isExpanded,
+  onToggle,
 }: {
   exercise: ExerciseWithPercentile;
   exerciseType: 'strength' | 'cardio';
   trainerId: string | undefined;
   clientId: string | undefined;
+  isExpanded: boolean;
+  onToggle: () => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
   const [cardioMetric, setCardioMetric] = useState<'distance' | 'duration'>('distance');
   
@@ -217,7 +220,7 @@ function ExerciseCard({
       {/* Card Header - Always visible */}
       <div 
         className={cn("p-4", style.bgColor)}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -428,6 +431,13 @@ export default function ExerciseComparisonGrid({
     return b.entry_count - a.entry_count;
   });
 
+  // Track which exercise is currently expanded (only one at a time)
+  const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
+
+  const handleToggle = (exerciseName: string) => {
+    setExpandedExercise(prev => prev === exerciseName ? null : exerciseName);
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {sortedExercises.map((exercise) => (
@@ -437,6 +447,8 @@ export default function ExerciseComparisonGrid({
           exerciseType={exerciseType}
           trainerId={trainerId}
           clientId={clientId}
+          isExpanded={expandedExercise === exercise.exercise_name}
+          onToggle={() => handleToggle(exercise.exercise_name)}
         />
       ))}
     </div>
