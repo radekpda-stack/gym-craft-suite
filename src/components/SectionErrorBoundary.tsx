@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { trackUIException } from '@/lib/analytics/errors';
 
 interface Props {
   children: ReactNode;
@@ -33,6 +34,9 @@ export class SectionErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error(`[SectionErrorBoundary${this.props.section ? ` - ${this.props.section}` : ''}]:`, error, errorInfo);
+    
+    // Track error for analytics (warning severity for section-level errors)
+    trackUIException(error, this.props.section || 'SectionErrorBoundary', 'warning');
   }
 
   private handleRetry = () => {
