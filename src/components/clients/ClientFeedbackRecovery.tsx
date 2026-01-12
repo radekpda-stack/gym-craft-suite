@@ -29,6 +29,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { useClientFeedback, TrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { 
   safeAverage, 
@@ -56,6 +57,30 @@ interface ClientFeedbackRecoveryProps {
 type PeriodFilter = 7 | 30 | 90 | 365;
 
 type MetricType = 'sessionLoad' | 'readiness' | 'pain' | 'sessionFit';
+
+// Help content for metric cards
+const METRIC_HELP = {
+  sessionLoad: {
+    title: 'sRPE (session Rating of Perceived Exertion)',
+    description: 'Subjektivní vnímání náročnosti tréninku. Vyšší hodnota = těžší trénink. Sleduje trend zátěže v čase.',
+    calculation: 'sRPE = RPE hodnocení × doba tréninku (min). Zobrazeno v AU (Arbitrary Units). Graf ukazuje průměr za zvolené období.',
+  },
+  readiness: {
+    title: 'Připravenost',
+    description: 'Jak se klient cítil připravený na trénink. Sleduje fyzickou a mentální připravenost před tréninkem.',
+    calculation: 'Škála 1-10 z feedbacku. Nižší hodnota = horší připravenost. Šipka ukazuje trend vs. předchozí období.',
+  },
+  pain: {
+    title: 'Bolest',
+    description: 'Průměrná úroveň bolesti reportovaná klientem. Nižší hodnota je lepší.',
+    calculation: 'Škála 1-10 z feedbacku. Pozor: u bolesti je pokles (↓) pozitivní signál. Červená barva = vyšší bolest.',
+  },
+  sessionFit: {
+    title: 'Session Fit',
+    description: 'Jak dobře trénink odpovídal tomu, co klient očekával nebo potřeboval.',
+    calculation: 'Škála 1-10 z feedbacku. Vyšší hodnota = lepší shoda tréninku s očekáváním klienta.',
+  },
+};
 
 // Define metric configurations for detail dialog
 const getMetricConfig = (type: MetricType) => {
@@ -347,6 +372,11 @@ export function ClientFeedbackRecovery({
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Zap className="w-3 h-3" />
                 sRPE
+                <StatInfoTooltip
+                  title={METRIC_HELP.sessionLoad.title}
+                  description={METRIC_HELP.sessionLoad.description}
+                  calculation={METRIC_HELP.sessionLoad.calculation}
+                />
               </span>
               <TrendIndicator 
                 current={analytics.metrics.sessionLoad.current}
@@ -374,6 +404,11 @@ export function ClientFeedbackRecovery({
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Activity className="w-3 h-3" />
                 Připravenost
+                <StatInfoTooltip
+                  title={METRIC_HELP.readiness.title}
+                  description={METRIC_HELP.readiness.description}
+                  calculation={METRIC_HELP.readiness.calculation}
+                />
               </span>
               <TrendIndicator 
                 current={analytics.metrics.readiness.current}
@@ -401,6 +436,11 @@ export function ClientFeedbackRecovery({
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Heart className="w-3 h-3" />
                 Bolest
+                <StatInfoTooltip
+                  title={METRIC_HELP.pain.title}
+                  description={METRIC_HELP.pain.description}
+                  calculation={METRIC_HELP.pain.calculation}
+                />
               </span>
               <TrendIndicator 
                 current={analytics.metrics.pain.current}
@@ -430,6 +470,11 @@ export function ClientFeedbackRecovery({
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Target className="w-3 h-3" />
                 Session Fit
+                <StatInfoTooltip
+                  title={METRIC_HELP.sessionFit.title}
+                  description={METRIC_HELP.sessionFit.description}
+                  calculation={METRIC_HELP.sessionFit.calculation}
+                />
               </span>
               <TrendIndicator 
                 current={analytics.metrics.sessionFit.current}
@@ -454,6 +499,11 @@ export function ClientFeedbackRecovery({
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
             Rizikové signály
+            <StatInfoTooltip
+              title="Rizikové signály"
+              description="Automatická detekce varovných signálů z feedbacků klienta. Pomáhá identifikovat problémy dříve, než eskalují."
+              calculation="Red Flag = závažný jednorázový problém (vysoká bolest, nízká energie). Pattern = opakující se trend (např. klesající připravenost 3× za sebou). Top bolest = nejčastěji reportované bolestivé oblasti."
+            />
           </h4>
           
           <div className="space-y-2">
@@ -510,6 +560,11 @@ export function ClientFeedbackRecovery({
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" />
             Koučovací profil
+            <StatInfoTooltip
+              title="Koučovací profil"
+              description="Souhrnný přehled o tom, jak klient vnímá tréninky. Pomáhá přizpůsobit styl koučování."
+              calculation="Nejčastější limit = co klienta nejčastěji brzdí (čas, energie, motivace...). Enjoyment = průměrné hodnocení, jak moc se klientovi tréninky líbí."
+            />
           </h4>
           
           <div className="grid grid-cols-3 gap-4 text-sm">
