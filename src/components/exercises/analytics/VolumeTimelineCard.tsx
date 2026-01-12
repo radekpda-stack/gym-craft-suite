@@ -24,11 +24,16 @@ function formatVolume(value: number): string {
   return `${Math.round(value)}`;
 }
 
+const HELP_CONTENT = {
+  title: 'Celkový objem',
+  description: 'Graf zobrazuje vývoj tréninkového objemu po týdnech. Plná čára ukazuje objem vybraných klientů, čárkovaná čára průměr všech klientů pro srovnání.',
+  calculation: 'Týdenní objem = Σ (série × opakování × váha v kg) pro všechny záznamy v daném týdnu',
+};
+
 export function VolumeTimelineCard({
   data,
   comparisonMode,
   isLoading,
-  helpText,
 }: VolumeTimelineCardProps) {
   const isEmpty = !data || data.length === 0 || data.every(d => d.volume === 0);
 
@@ -39,7 +44,7 @@ export function VolumeTimelineCard({
       isLoading={isLoading}
       isEmpty={isEmpty}
       className="md:col-span-2"
-      helpText={helpText}
+      helpContent={HELP_CONTENT}
     >
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">

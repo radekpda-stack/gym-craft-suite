@@ -19,6 +19,12 @@ interface PRTrendCardProps {
   isLoading?: boolean;
 }
 
+const HELP_CONTENT = {
+  title: 'Osobní rekordy',
+  description: 'Vývoj počtu osobních rekordů (PR) v čase. Sloupcový graf ukazuje nové PR za týden, čára kumulativní součet všech PR.',
+  calculation: 'Nové PR = záznamy označené jako is_pr=true. Kumulativní součet = průběžný celkový počet PR od začátku období. Trend porovnává aktuální období s předchozím.',
+};
+
 export function PRTrendCard({ days = 90, clientId, isLoading: externalLoading }: PRTrendCardProps) {
   const { data: trendData = [], isLoading: trendLoading } = usePRTrendWeekly(days, clientId);
   const { data: stats, isLoading: statsLoading } = usePRStats(days, clientId);
@@ -43,7 +49,7 @@ export function PRTrendCard({ days = 90, clientId, isLoading: externalLoading }:
     <AnalyticsCard
       title="Osobní rekordy"
       icon={Trophy}
-      helpText="Vývoj počtu osobních rekordů (PR) v čase. Sloupcový graf = nové PR za týden, čára = kumulativní součet."
+      helpContent={HELP_CONTENT}
       isLoading={isLoading}
     >
       <div className="space-y-4">

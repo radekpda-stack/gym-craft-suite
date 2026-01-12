@@ -18,7 +18,13 @@ interface LoadDistributionCardProps {
   helpText?: string;
 }
 
-export function LoadDistributionCard({ data, detailData, isLoading, helpText }: LoadDistributionCardProps) {
+const HELP_CONTENT = {
+  title: 'Rozložení zátěže',
+  description: 'Zobrazuje procentuální rozložení tréninkového objemu mezi hlavní svalové skupiny. Porovnává vybrané klienty (Výběr) s průměrem všech klientů (Průměr).',
+  calculation: '% podíl = (objem dané svalové skupiny ÷ celkový objem) × 100. High-level: Horní/Dolní část + Core. Detail: Jednotlivé svaly.',
+};
+
+export function LoadDistributionCard({ data, detailData, isLoading }: LoadDistributionCardProps) {
   const [mode, setMode] = useState<'high-level' | 'detail'>('high-level');
   
   const displayData = mode === 'detail' && detailData?.length ? detailData : data;
@@ -53,7 +59,7 @@ export function LoadDistributionCard({ data, detailData, isLoading, helpText }: 
       isLoading={isLoading}
       isEmpty={isEmpty}
       actions={<div className="flex items-center gap-2">{modeToggle}{legend}</div>}
-      helpText={helpText}
+      helpContent={HELP_CONTENT}
     >
       <div className={mode === 'detail' ? "h-[280px]" : "h-[180px]"}>
         <ResponsiveContainer width="100%" height="100%">

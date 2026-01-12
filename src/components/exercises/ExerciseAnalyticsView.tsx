@@ -17,13 +17,6 @@ const PERIOD_OPTIONS: { value: AnalyticsPeriod; label: string }[] = [
   { value: 90, label: '90 dní' },
 ];
 
-// Help texts for analytics cards
-const HELP_TEXTS = {
-  volume: 'Týdenní souhrn tréninkového objemu (sets × reps × kg). Čárkovaná čára = průměr všech klientů.',
-  loadDistribution: 'Procentuální rozložení objemu mezi svalovými skupinami. Výběr = vybraní klienti, Průměr = celá databáze.',
-  movementPatterns: 'Které pohybové vzorce (squat, hinge, push, pull...) se v tréninku objevují nejčastěji.',
-};
-
 export function ExerciseAnalyticsView() {
   const [period, setPeriod] = useState<AnalyticsPeriod>(30);
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('all');
@@ -91,7 +84,6 @@ export function ExerciseAnalyticsView() {
             data={data?.volumeTimeline || []}
             comparisonMode={comparisonMode}
             isLoading={isLoading}
-            helpText={HELP_TEXTS.volume}
           />
         </AnalyticsGridItem>
 
@@ -110,7 +102,6 @@ export function ExerciseAnalyticsView() {
             data={data?.loadDistribution || []}
             detailData={data?.loadDistributionDetail || []}
             isLoading={isLoading}
-            helpText={HELP_TEXTS.loadDistribution}
           />
         </AnalyticsGridItem>
 
@@ -121,7 +112,6 @@ export function ExerciseAnalyticsView() {
             coverage={data?.movementPatternsCoverage}
             totalEntries={data?.movementPatternsTotalEntries}
             isLoading={isLoading}
-            helpText={HELP_TEXTS.movementPatterns}
           />
         </AnalyticsGridItem>
 

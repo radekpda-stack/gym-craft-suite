@@ -37,7 +37,13 @@ const PATTERN_COLORS: Record<string, string> = {
   mobility: 'bg-sky-500',
 };
 
-export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, isLoading, helpText }: MovementPatternsCardProps) {
+const HELP_CONTENT = {
+  title: 'Pohybové vzorce',
+  description: 'Analýza zastoupení základních pohybových vzorců v tréninku. Pomáhá identifikovat, které vzorce jsou dobře pokryté a které chybí.',
+  calculation: 'Každý cvik je přiřazen k pohybovému vzorci (dřep, hip hinge, tlak, tah...). Graf ukazuje počet záznamů pro každý vzorec a jeho procentuální podíl na celku.',
+};
+
+export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, isLoading }: MovementPatternsCardProps) {
   const isEmpty = !data || data.length === 0;
   const maxCount = Math.max(...(data?.map(d => d.count) || [1]), 1);
   const totalCounted = data?.reduce((sum, d) => sum + d.count, 0) || 0;
@@ -48,7 +54,7 @@ export function MovementPatternsCard({ data, coverage = 100, totalEntries = 0, i
       icon={Layers}
       isLoading={isLoading}
       isEmpty={isEmpty}
-      helpText={helpText}
+      helpContent={HELP_CONTENT}
     >
       <div className="h-[200px] flex flex-col justify-start space-y-2 overflow-hidden">
         {coverage < 100 && totalEntries > 0 && (
