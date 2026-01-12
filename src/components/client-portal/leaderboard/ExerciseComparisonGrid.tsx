@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import { ExerciseWithPercentile } from '@/hooks/useExercisePercentiles';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { 
   useStrengthExerciseLeaderboard, 
   useCardioExerciseLeaderboard,
@@ -125,10 +126,12 @@ function CardioMetricToggle({
 
 function LeaderboardRow({ 
   entry, 
-  isCurrentClient 
+  isCurrentClient,
+  currentClientName
 }: { 
   entry: ExerciseLeaderboardEntry; 
   isCurrentClient: boolean;
+  currentClientName?: string;
 }) {
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -138,6 +141,10 @@ function LeaderboardRow({
       default: return <span className="text-xs font-medium text-muted-foreground">{rank}</span>;
     }
   };
+
+  // For current client, always show their real name instead of anonymous name
+  const displayName = isCurrentClient && currentClientName ? currentClientName : entry.nickname;
+  const displayInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <div className={cn(
@@ -155,15 +162,15 @@ function LeaderboardRow({
         entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
         "bg-muted text-muted-foreground"
       )}>
-        {entry.nickname.charAt(0).toUpperCase()}
+        {displayInitial}
       </div>
       <div className="flex-1 min-w-0">
         <span className={cn(
           "text-sm font-medium truncate block",
           isCurrentClient && "text-primary",
-          entry.is_anonymous && "italic text-muted-foreground"
+          !isCurrentClient && entry.is_anonymous && "italic text-muted-foreground"
         )}>
-          {entry.nickname}
+          {displayName}
           {isCurrentClient && <span className="text-xs ml-1 opacity-70">(Ty)</span>}
         </span>
       </div>
@@ -177,6 +184,7 @@ function ExerciseCard({
   exerciseType,
   trainerId,
   clientId,
+  clientName,
   isExpanded,
   onToggle,
 }: {
@@ -184,6 +192,7 @@ function ExerciseCard({
   exerciseType: 'strength' | 'cardio';
   trainerId: string | undefined;
   clientId: string | undefined;
+  clientName: string | undefined;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -322,6 +331,7 @@ function ExerciseCard({
                       key={entry.client_id}
                       entry={entry}
                       isCurrentClient={entry.client_id === clientId}
+                      currentClientName={clientName}
                     />
                   ))}
                 </div>
@@ -434,6 +444,9 @@ export default function ExerciseComparisonGrid({
   // Track which exercise is currently expanded (only one at a time)
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
 
+  // Get client profile for displaying real name
+  const { clientProfile } = useClientPortal();
+
   const handleToggle = (exerciseName: string) => {
     setExpandedExercise(prev => prev === exerciseName ? null : exerciseName);
   };
@@ -447,6 +460,7 @@ export default function ExerciseComparisonGrid({
           exerciseType={exerciseType}
           trainerId={trainerId}
           clientId={clientId}
+          clientName={clientProfile?.name}
           isExpanded={expandedExercise === exercise.exercise_name}
           onToggle={() => handleToggle(exercise.exercise_name)}
         />
