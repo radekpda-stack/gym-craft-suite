@@ -265,25 +265,6 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                 </motion.div>
               )}
 
-              {/* Top Exercises */}
-              {summary.topExercises.length > 0 && (
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 1.1 }}
-                  className="space-y-2"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">Top cviky</p>
-                  {summary.topExercises.slice(0, 3).map((exercise, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <span className="truncate flex-1">{exercise.name}</span>
-                      <span className="text-muted-foreground ml-2">
-                        {formatVolume(exercise.volume)} • {exercise.sets}s
-                      </span>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
 
               {/* Close Button */}
               <motion.div
