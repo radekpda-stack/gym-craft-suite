@@ -67,12 +67,14 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Helper function to format distance
+  // Helper function to format distance (input is in meters)
   const formatDistance = (meters: number) => {
-    if (meters >= 100) {
-      return `${(meters / 100).toFixed(0)} cm`;
+    if (meters >= 1) {
+      // Show in meters with 2 decimal places for values >= 1m
+      return `${meters.toFixed(2)} m`;
     }
-    return `${meters.toFixed(0)} cm`;
+    // Show in cm for values < 1m
+    return `${Math.round(meters * 100)} cm`;
   };
 
   // Render appropriate PR value based on metric type
