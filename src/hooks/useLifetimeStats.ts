@@ -68,12 +68,13 @@ export function useLifetimeStats() {
 
   return useQuery({
     queryKey: ["lifetime-stats", isDemo],
+    staleTime: 1000 * 60 * 5, // 5 minutes - this data doesn't change often
     queryFn: async (): Promise<LifetimeStats> => {
       if (isDemo) {
         return DEMO_STATS;
       }
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel with specific columns
       const [
         trainingStatsResult,
         trainingTypesResult,
@@ -81,30 +82,30 @@ export function useLifetimeStats() {
         productStatsResult,
         clientStatsResult,
       ] = await Promise.all([
-        // Training stats
+        // Training stats - only needed columns
         supabase
           .from("training_sessions")
           .select("client_id, duration, final_price, date")
           .eq("status", "completed"),
         
-        // Training types breakdown - simplified to use training_type directly
+        // Training types breakdown - only needed columns
         supabase
           .from("training_sessions")
           .select("id, training_type")
           .eq("status", "completed"),
         
-        // Finance stats
+        // Finance stats - only needed columns
         supabase
           .from("credit_transactions")
           .select("type, amount"),
         
-        // Product stats
+        // Product stats - only needed columns
         supabase
           .from("credit_transactions")
           .select("product_id, amount")
           .eq("type", "product"),
         
-        // Client stats
+        // Client stats - only needed columns
         supabase
           .from("clients")
           .select("id, is_archived, created_at")
@@ -132,21 +133,25 @@ export function useLifetimeStats() {
       const firstTrainingDate = sortedDates[0] || null;
       const lastTrainingDate = sortedDates[sortedDates.length - 1] || null;
 
-      // Training types - simplified categorization using training_type directly
-      const strengthTrainings = trainingTypes.filter(
-        t => t.training_type === "strength"
-      ).length;
-      
-      const cardioTrainings = trainingTypes.filter(
-        t => ["cardio", "hiit", "running"].includes(t.training_type || "")
-      ).length;
-      
-      const conditioningTrainings = trainingTypes.filter(
-        t => ["conditioning", "functional", "mobility"].includes(t.training_type || "")
-      ).length;
-      
-      // Other = everything else
-      const otherTrainings = Math.max(0, totalTrainings - strengthTrainings - cardioTrainings - conditioningTrainings);
+      // Training types - single pass through data using reduce
+      const typeCounts = trainingTypes.reduce((acc, t) => {
+        const type = t.training_type || '';
+        if (type === 'strength') {
+          acc.strength++;
+        } else if (['cardio', 'hiit', 'running'].includes(type)) {
+          acc.cardio++;
+        } else if (['conditioning', 'functional', 'mobility'].includes(type)) {
+          acc.conditioning++;
+        } else {
+          acc.other++;
+        }
+        return acc;
+      }, { strength: 0, cardio: 0, conditioning: 0, other: 0 });
+
+      const strengthTrainings = typeCounts.strength;
+      const cardioTrainings = typeCounts.cardio;
+      const conditioningTrainings = typeCounts.conditioning;
+      const otherTrainings = typeCounts.other;
 
       // Finance stats
       // Income received = payments (positive amounts) + manual additions (positive)

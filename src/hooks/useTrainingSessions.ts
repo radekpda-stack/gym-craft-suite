@@ -101,6 +101,7 @@ export function useTrainingSessions(clientId?: string) {
   
   return useQuery({
     queryKey: ["training_sessions", clientId, isDemo],
+    staleTime: 1000 * 60 * 2, // 2 minutes
     queryFn: async () => {
       // In demo mode, return demo training data
       if (isDemo && demoTraining) {
@@ -152,29 +153,29 @@ export function useTrainingSessions(clientId?: string) {
       // 1. Primary client (client_id = clientId) 
       // 2. OR a participant (via training_participants table)
       if (clientId) {
-        // First, get session IDs where client is a participant
-        const { data: participantSessions } = await supabase
-          .from("training_participants")
-          .select("training_session_id")
-          .eq("client_id", clientId);
+        // Fetch primary sessions and participant sessions in parallel
+        const [participantResult, primaryResult] = await Promise.all([
+          supabase
+            .from("training_participants")
+            .select("training_session_id")
+            .eq("client_id", clientId),
+          supabase
+            .from("training_sessions")
+            .select("id, client_id, date, duration, notes, subjective_rating, status, canceled_at, is_late_cancellation, cancellation_reason, participant_count, recurrence_type, recurrence_end_date, parent_session_id, created_at, updated_at, user_id, payment_status, final_price, payment_method, training_type, training_goal, rpe, rir, total_volume, intensity_notes, subjective_difficulty, trainer_went_well, trainer_problems, trainer_recommendations, prep_notes, pain_reported, pain_notes, client_rpe, training_load")
+            .eq("client_id", clientId)
+            .order("date", { ascending: false })
+        ]);
         
-        const participantSessionIds = participantSessions?.map(p => p.training_session_id) || [];
+        if (primaryResult.error) throw primaryResult.error;
         
-        // Get all sessions where client is primary
-        const { data: primarySessions, error: primaryError } = await supabase
-          .from("training_sessions")
-          .select("*")
-          .eq("client_id", clientId)
-          .order("date", { ascending: false });
-        
-        if (primaryError) throw primaryError;
+        const participantSessionIds = participantResult.data?.map(p => p.training_session_id) || [];
         
         // Get sessions where client is participant but not primary
         let participantOnlySessions: TrainingSession[] = [];
         if (participantSessionIds.length > 0) {
           const { data: partSessions, error: partError } = await supabase
             .from("training_sessions")
-            .select("*")
+            .select("id, client_id, date, duration, notes, subjective_rating, status, canceled_at, is_late_cancellation, cancellation_reason, participant_count, recurrence_type, recurrence_end_date, parent_session_id, created_at, updated_at, user_id, payment_status, final_price, payment_method, training_type, training_goal, rpe, rir, total_volume, intensity_notes, subjective_difficulty, trainer_went_well, trainer_problems, trainer_recommendations, prep_notes, pain_reported, pain_notes, client_rpe, training_load")
             .in("id", participantSessionIds)
             .neq("client_id", clientId)
             .order("date", { ascending: false });
@@ -184,7 +185,7 @@ export function useTrainingSessions(clientId?: string) {
         }
         
         // Combine and sort by date
-        const allSessions = [...(primarySessions || []), ...participantOnlySessions] as TrainingSession[];
+        const allSessions = [...(primaryResult.data || []), ...participantOnlySessions] as TrainingSession[];
         
         // Add clientRole to each session
         const sessionsWithRole = allSessions.map(session => ({
@@ -198,10 +199,10 @@ export function useTrainingSessions(clientId?: string) {
         return sessionsWithRole as (TrainingSession & { clientRole: 'primary' | 'participant' })[];
       }
       
-      // If no clientId, get all sessions
+      // If no clientId, get all sessions with specific columns
       const { data, error } = await supabase
         .from("training_sessions")
-        .select("*")
+        .select("id, client_id, date, duration, notes, subjective_rating, status, canceled_at, is_late_cancellation, cancellation_reason, participant_count, recurrence_type, recurrence_end_date, parent_session_id, created_at, updated_at, user_id, payment_status, final_price, payment_method, training_type, training_goal, rpe, rir, total_volume, intensity_notes, subjective_difficulty, trainer_went_well, trainer_problems, trainer_recommendations, prep_notes, pain_reported, pain_notes, client_rpe, training_load")
         .order("date", { ascending: false });
         
       if (error) throw error;
@@ -213,12 +214,13 @@ export function useTrainingSessions(clientId?: string) {
 export function useTrainingSession(trainingId?: string) {
   return useQuery({
     queryKey: ["training_session", trainingId],
+    staleTime: 1000 * 60 * 1, // 1 minute for single session
     queryFn: async () => {
       if (!trainingId) return null;
       
       const { data, error } = await supabase
         .from("training_sessions")
-        .select("*")
+        .select("id, client_id, date, duration, notes, subjective_rating, status, canceled_at, is_late_cancellation, cancellation_reason, participant_count, recurrence_type, recurrence_end_date, parent_session_id, created_at, updated_at, user_id, payment_status, final_price, payment_method, training_type, training_goal, rpe, rir, total_volume, intensity_notes, subjective_difficulty, trainer_went_well, trainer_problems, trainer_recommendations, prep_notes, pain_reported, pain_notes, client_rpe, training_load")
         .eq("id", trainingId)
         .single();
       
@@ -428,8 +430,7 @@ export function useCreateTrainingSession() {
         description: message,
       });
     },
-    onError: (error) => {
-      console.error("Error creating training:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit trénink.",
@@ -597,8 +598,7 @@ export function useUpdateTrainingSession() {
         });
       }
     },
-    onError: (error) => {
-      console.error("Error updating training:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se aktualizovat trénink.",
@@ -641,8 +641,7 @@ export function useDeleteTrainingSession() {
         description: "Trénink byl úspěšně odstraněn.",
       });
     },
-    onError: (error) => {
-      console.error("Error deleting training:", error);
+    onError: () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se smazat trénink.",
