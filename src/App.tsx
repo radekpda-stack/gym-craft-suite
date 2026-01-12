@@ -182,42 +182,42 @@ const App = () => (
                       <SessionTrackingProvider>
                         <Layout>
                         <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/clients" element={<Clients />} />
-                          <Route path="/clients/:id" element={<ClientDetail />} />
+                          <Route path="/" element={<LazyRouteWrapper><Index /></LazyRouteWrapper>} />
+                          <Route path="/clients" element={<LazyRouteWrapper><Clients /></LazyRouteWrapper>} />
+                          <Route path="/clients/:id" element={<LazyRouteWrapper><ClientDetail /></LazyRouteWrapper>} />
                           <Route path="/trainings" element={<Navigate to="/schedule" replace />} />
-                          <Route path="/trainings/:id" element={<TrainingDetail />} />
-                          <Route path="/records" element={<Records />} />
+                          <Route path="/trainings/:id" element={<LazyRouteWrapper><TrainingDetail /></LazyRouteWrapper>} />
+                          <Route path="/records" element={<LazyRouteWrapper><Records /></LazyRouteWrapper>} />
                           <Route path="/calendar" element={<Navigate to="/schedule" replace />} />
-                          <Route path="/schedule" element={<SchedulePage />} />
-                          <Route path="/canceled" element={<CanceledTrainings />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="/feedback-overview" element={<FeedbackOverview />} />
-                          <Route path="/sales" element={<Sales />} />
-                          <Route path="/pr-history" element={<PRHistory />} />
-                          <Route path="/app-usage" element={<AppUsageStats />} />
-                          <Route path="/statistics" element={<Statistics />} />
-                          <Route path="/statistics/analytics" element={<FinanceAnalytics />} />
-                          <Route path="/clients/analytics" element={<ClientAnalytics />} />
-                          <Route path="performance" element={<PerformanceHub />} />
+                          <Route path="/schedule" element={<LazyRouteWrapper><SchedulePage /></LazyRouteWrapper>} />
+                          <Route path="/canceled" element={<LazyRouteWrapper><CanceledTrainings /></LazyRouteWrapper>} />
+                          <Route path="/settings" element={<LazyRouteWrapper><Settings /></LazyRouteWrapper>} />
+                          <Route path="/feedback-overview" element={<LazyRouteWrapper><FeedbackOverview /></LazyRouteWrapper>} />
+                          <Route path="/sales" element={<LazyRouteWrapper><Sales /></LazyRouteWrapper>} />
+                          <Route path="/pr-history" element={<LazyRouteWrapper><PRHistory /></LazyRouteWrapper>} />
+                          <Route path="/app-usage" element={<LazyRouteWrapper><AppUsageStats /></LazyRouteWrapper>} />
+                          <Route path="/statistics" element={<LazyRouteWrapper><Statistics /></LazyRouteWrapper>} />
+                          <Route path="/statistics/analytics" element={<LazyRouteWrapper><FinanceAnalytics /></LazyRouteWrapper>} />
+                          <Route path="/clients/analytics" element={<LazyRouteWrapper><ClientAnalytics /></LazyRouteWrapper>} />
+                          <Route path="performance" element={<LazyRouteWrapper><PerformanceHub /></LazyRouteWrapper>} />
                           <Route path="exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
-                          <Route path="exercises/analytics" element={<ExerciseAnalytics />} />
-                          <Route path="exercises/:id" element={<ExerciseDetail />} />
+                          <Route path="exercises/analytics" element={<LazyRouteWrapper><ExerciseAnalytics /></LazyRouteWrapper>} />
+                          <Route path="exercises/:id" element={<LazyRouteWrapper><ExerciseDetail /></LazyRouteWrapper>} />
                           <Route path="tests" element={<Navigate to="/performance?tab=tests" replace />} />
-                          <Route path="tests/:id" element={<TestDetail />} />
+                          <Route path="tests/:id" element={<LazyRouteWrapper><TestDetail /></LazyRouteWrapper>} />
                           <Route path="challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
-                          <Route path="/nutrition" element={<NutritionPage />} />
-                          <Route path="/nutrition/client/:clientId" element={<NutritionClientDetail />} />
-                          <Route path="/nutrition/campaigns/:id" element={<NutritionCampaignDetail />} />
-                          <Route path="/training-templates" element={<TrainingTemplates />} />
-                          <Route path="/client-portal" element={<ClientPortalAdmin />} />
+                          <Route path="/nutrition" element={<LazyRouteWrapper><NutritionPage /></LazyRouteWrapper>} />
+                          <Route path="/nutrition/client/:clientId" element={<LazyRouteWrapper><NutritionClientDetail /></LazyRouteWrapper>} />
+                          <Route path="/nutrition/campaigns/:id" element={<LazyRouteWrapper><NutritionCampaignDetail /></LazyRouteWrapper>} />
+                          <Route path="/training-templates" element={<LazyRouteWrapper><TrainingTemplates /></LazyRouteWrapper>} />
+                          <Route path="/client-portal" element={<LazyRouteWrapper><ClientPortalAdmin /></LazyRouteWrapper>} />
                           
-                          <Route path="/my-profile" element={<MyProfile />} />
-                          <Route path="/notes" element={<Notes />} />
-                          <Route path="/expenses" element={<Expenses />} />
-                          <Route path="/admin/user-approvals" element={<UserApprovals />} />
-                          <Route path="/admin/performance-import" element={<PerformanceImport />} />
-                          <Route path="/admin/price-migration" element={<PriceMigration />} />
+                          <Route path="/my-profile" element={<LazyRouteWrapper><MyProfile /></LazyRouteWrapper>} />
+                          <Route path="/notes" element={<LazyRouteWrapper><Notes /></LazyRouteWrapper>} />
+                          <Route path="/expenses" element={<LazyRouteWrapper><Expenses /></LazyRouteWrapper>} />
+                          <Route path="/admin/user-approvals" element={<LazyRouteWrapper><UserApprovals /></LazyRouteWrapper>} />
+                          <Route path="/admin/performance-import" element={<LazyRouteWrapper><PerformanceImport /></LazyRouteWrapper>} />
+                          <Route path="/admin/price-migration" element={<LazyRouteWrapper><PriceMigration /></LazyRouteWrapper>} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Layout>

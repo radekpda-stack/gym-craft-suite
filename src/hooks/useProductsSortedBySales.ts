@@ -6,46 +6,32 @@ interface ProductWithSalesCount extends Product {
   total_sold: number;
 }
 
-interface DbProduct {
-  id: string;
-  name: string;
-  price: number;
-  purchase_price: number;
-  category: string;
-  kind: string;
-  credit_delta: number;
-  is_active: boolean;
-  stock_quantity: number;
-  low_stock_threshold: number;
-  created_at: string;
-  updated_at: string;
-  user_id: string | null;
-  xp_bonus: number;
-}
-
 export function useProductsSortedBySales(activeOnly = false) {
   return useQuery({
     queryKey: ["products_sorted_by_sales", activeOnly],
+    staleTime: 1000 * 60 * 2, // 2 minutes cache
     queryFn: async () => {
-      // Fetch products
-      let productsQuery = supabase
-        .from("products")
-        .select("*");
-
-      if (activeOnly) {
-        productsQuery = productsQuery.eq("is_active", true);
-      }
-
-      const { data: products, error: productsError } = await productsQuery;
-      if (productsError) throw productsError;
-
-      // Fetch sales counts from sales_order_items
-      const { data: salesData, error: salesError } = await supabase
+      // Fetch products and sales data in parallel for better performance
+      const salesPromise = supabase
         .from("sales_order_items")
         .select("product_id, quantity");
 
-      // Fallback to credit_transactions if sales_order_items is empty
+      const productsPromise = activeOnly 
+        ? supabase.from("products").select("*").eq("is_active", true)
+        : supabase.from("products").select("*");
+
+      const [productsResult, salesResult] = await Promise.all([
+        productsPromise,
+        salesPromise
+      ]);
+
+      if (productsResult.error) throw productsResult.error;
+      const products = productsResult.data;
+
+      // Process sales counts
       let salesCounts: Record<string, number> = {};
+      const salesData = salesResult.data;
+      const salesError = salesResult.error;
 
       if (!salesError && salesData && salesData.length > 0) {
         // Group by product_id and sum quantities
