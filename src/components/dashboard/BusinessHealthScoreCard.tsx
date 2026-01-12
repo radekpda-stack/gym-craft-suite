@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
-import { Info, ChevronRight, TrendingUp, TrendingDown, Minus, Activity, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Info, ChevronRight, TrendingUp, TrendingDown, Minus, Activity, Sparkles, Users, CreditCard, BarChart3, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -49,16 +49,48 @@ const STATUS_CONFIG = {
 };
 
 const METRIC_CONFIG = {
-  retention: { label: 'Retence', icon: '👥' },
-  creditHealth: { label: 'Kredity', icon: '💳' },
-  revenueTrend: { label: 'Příjmy', icon: '📈' },
-  payments: { label: 'Platby', icon: '✓' },
+  retention: { 
+    label: 'Retence', 
+    icon: Users,
+    emoji: '👥',
+    tooltip: 'Procento aktivních klientů za posledních 60 dní. Vysoká retence znamená spokojené a loajální klienty.',
+    detailTitle: 'Retence klientů',
+    detailDescription: 'Kolik procent vašich klientů bylo aktivních za posledních 60 dní. Aktivní klient je ten, který měl alespoň jeden trénink.',
+    calculation: 'aktivní klienti (60 dní) ÷ celkový počet klientů × 100'
+  },
+  creditHealth: { 
+    label: 'Kredity', 
+    icon: CreditCard,
+    emoji: '💳',
+    tooltip: 'Procento klientů s kladným kreditem. Nízké číslo může znamenat problémy s cash flow.',
+    detailTitle: 'Zdraví kreditů',
+    detailDescription: 'Podíl klientů, kteří mají kladný zůstatek kreditu. Sleduje finanční stabilitu vašeho podnikání.',
+    calculation: 'klienti s kladným kreditem ÷ celkový počet klientů × 100'
+  },
+  revenueTrend: { 
+    label: 'Příjmy', 
+    icon: BarChart3,
+    emoji: '📈',
+    tooltip: 'Změna příjmů oproti minulému měsíci. Kladné číslo znamená růst vašeho podnikání.',
+    detailTitle: 'Trend příjmů',
+    detailDescription: 'Procentuální změna příjmů oproti předchozímu měsíci. Ukazuje růst nebo pokles vašeho podnikání.',
+    calculation: '(příjmy tento měsíc - příjmy minulý měsíc) ÷ příjmy minulý měsíc × 100'
+  },
+  payments: { 
+    label: 'Platby', 
+    icon: CheckCircle,
+    emoji: '✓',
+    tooltip: 'Procento zaplacených tréninků. Nízké číslo může znamenat problémy s inkasem plateb.',
+    detailTitle: 'Platební morálka',
+    detailDescription: 'Kolik procent tréninků bylo zaplaceno. Vysoké číslo znamená dobrou platební morálku klientů.',
+    calculation: 'zaplacené tréninky ÷ celkové tréninky × 100'
+  },
 } as const;
 
 export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
   const { data, isLoading } = useBusinessHealthScore();
   const [detailOpen, setDetailOpen] = useState(false);
-
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
   if (isLoading) {
     return (
       <Card className="overflow-hidden bg-card/50 backdrop-blur-xl border-border/50">
@@ -275,39 +307,144 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
                 const displayValue = isRevenue && comp.value > 0 ? `+${comp.value}` : comp.value;
                 const isPositive = comp.value >= 70;
                 const isNeutral = comp.value >= 50 && comp.value < 70;
+                const isExpanded = expandedMetric === key;
+                const IconComponent = metricConfig.icon;
                 
                 return (
-                  <motion.div
-                    key={key}
-                    className={cn(
-                      'relative p-3 rounded-xl text-center',
-                      'bg-background/40 backdrop-blur-sm',
-                      'border border-border/20',
-                      'transition-all duration-300',
-                      'hover:bg-background/60 hover:border-border/40'
-                    )}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.15 * index + 0.4 }}
-                    whileHover={{ y: -2 }}
-                  >
-                    <div className="text-base mb-1">{metricConfig.icon}</div>
-                    <div className={cn(
-                      'font-bold text-base tabular-nums',
-                      isPositive ? 'text-emerald-400' : 
-                      isNeutral ? 'text-foreground' : 
-                      comp.value < 0 ? 'text-red-400' :
-                      'text-amber-400'
-                    )}>
-                      {displayValue}%
-                    </div>
-                    <div className="text-muted-foreground/60 text-[10px] font-medium mt-0.5">
-                      {metricConfig.label}
-                    </div>
-                  </motion.div>
+                  <TooltipProvider key={key}>
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <motion.div
+                          className={cn(
+                            'relative p-3 rounded-xl text-center cursor-pointer',
+                            'bg-background/40 backdrop-blur-sm',
+                            'border border-border/20',
+                            'transition-all duration-300',
+                            'hover:bg-background/60 hover:border-border/40',
+                            isExpanded && 'ring-2 ring-primary/50 bg-background/60'
+                          )}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.15 * index + 0.4 }}
+                          whileHover={{ y: -2 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedMetric(isExpanded ? null : key);
+                          }}
+                        >
+                          <div className="flex justify-center mb-1">
+                            <IconComponent className={cn(
+                              'w-4 h-4',
+                              isPositive ? 'text-emerald-400' : 
+                              isNeutral ? 'text-muted-foreground' : 
+                              comp.value < 0 ? 'text-red-400' :
+                              'text-amber-400'
+                            )} />
+                          </div>
+                          <div className={cn(
+                            'font-bold text-base tabular-nums',
+                            isPositive ? 'text-emerald-400' : 
+                            isNeutral ? 'text-foreground' : 
+                            comp.value < 0 ? 'text-red-400' :
+                            'text-amber-400'
+                          )}>
+                            {displayValue}%
+                          </div>
+                          <div className="text-muted-foreground/60 text-[10px] font-medium mt-0.5">
+                            {metricConfig.label}
+                          </div>
+                          
+                          {/* Expand indicator */}
+                          <motion.div 
+                            className="absolute -bottom-0.5 left-1/2 -translate-x-1/2"
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                          >
+                            <ChevronRight className="w-3 h-3 text-muted-foreground/40 rotate-90" />
+                          </motion.div>
+                        </motion.div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">{metricConfig.tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })}
             </motion.div>
+            
+            {/* Expanded metric detail */}
+            <AnimatePresence mode="wait">
+              {expandedMetric && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className={cn(
+                    'mt-3 p-4 rounded-xl',
+                    'bg-background/50 backdrop-blur-sm',
+                    'border border-border/30'
+                  )}>
+                    {(() => {
+                      const metricConfig = METRIC_CONFIG[expandedMetric as keyof typeof METRIC_CONFIG];
+                      const comp = data.components[expandedMetric as keyof typeof data.components];
+                      if (!metricConfig || !comp) return null;
+                      
+                      const IconComponent = metricConfig.icon;
+                      const isPositive = comp.value >= 70;
+                      const isNeutral = comp.value >= 50 && comp.value < 70;
+                      
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              'p-2 rounded-lg',
+                              isPositive ? 'bg-emerald-500/10' : 
+                              isNeutral ? 'bg-muted/30' : 
+                              comp.value < 0 ? 'bg-red-500/10' :
+                              'bg-amber-500/10'
+                            )}>
+                              <IconComponent className={cn(
+                                'w-5 h-5',
+                                isPositive ? 'text-emerald-400' : 
+                                isNeutral ? 'text-muted-foreground' : 
+                                comp.value < 0 ? 'text-red-400' :
+                                'text-amber-400'
+                              )} />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm">{metricConfig.detailTitle}</h4>
+                              <span className={cn(
+                                'text-lg font-bold',
+                                isPositive ? 'text-emerald-400' : 
+                                isNeutral ? 'text-foreground' : 
+                                comp.value < 0 ? 'text-red-400' :
+                                'text-amber-400'
+                              )}>
+                                {comp.value > 0 && expandedMetric === 'revenueTrend' ? '+' : ''}{comp.value}%
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {metricConfig.detailDescription}
+                          </p>
+                          
+                          <div className="pt-2 border-t border-border/20">
+                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                              <Info className="w-3 h-3" />
+                              <span className="font-medium">Výpočet:</span> {metricConfig.calculation}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Insight pill */}
             {data.insights.length > 0 && (
