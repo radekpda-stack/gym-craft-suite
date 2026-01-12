@@ -88,10 +88,10 @@ function GenderFilterToggle({
         Vše
       </ToggleGroupItem>
       <ToggleGroupItem value="male" aria-label="Muži" className="gap-1 px-2 text-xs">
-        👨
+        <span className="text-sm font-medium">♂</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="female" aria-label="Ženy" className="gap-1 px-2 text-xs">
-        👩
+        <span className="text-sm font-medium">♀</span>
       </ToggleGroupItem>
     </ToggleGroup>
   );
