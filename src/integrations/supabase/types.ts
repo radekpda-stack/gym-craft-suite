@@ -762,6 +762,66 @@ export type Database = {
           },
         ]
       }
+      challenge_guest_profiles: {
+        Row: {
+          age: number | null
+          challenge_id: string
+          created_at: string | null
+          email: string | null
+          first_name: string
+          height_cm: number | null
+          id: string
+          last_name: string
+          participant_token_hash: string
+          sex: string | null
+          updated_at: string | null
+          weight_kg: number | null
+        }
+        Insert: {
+          age?: number | null
+          challenge_id: string
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          height_cm?: number | null
+          id?: string
+          last_name: string
+          participant_token_hash: string
+          sex?: string | null
+          updated_at?: string | null
+          weight_kg?: number | null
+        }
+        Update: {
+          age?: number | null
+          challenge_id?: string
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          height_cm?: number | null
+          id?: string
+          last_name?: string
+          participant_token_hash?: string
+          sex?: string | null
+          updated_at?: string | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_guest_profiles_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_guest_profiles_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_participants: {
         Row: {
           challenge_id: string
@@ -793,6 +853,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "challenge_participants_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -805,6 +872,180 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      challenge_public_chat: {
+        Row: {
+          challenge_id: string
+          client_id: string | null
+          created_at: string | null
+          guest_profile_id: string | null
+          id: string
+          message: string
+        }
+        Insert: {
+          challenge_id: string
+          client_id?: string | null
+          created_at?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          message: string
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string | null
+          created_at?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_public_chat_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_chat_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_chat_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_chat_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "challenge_public_chat_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_guest_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_public_results: {
+        Row: {
+          challenge_id: string
+          client_id: string | null
+          guest_profile_id: string | null
+          id: string
+          is_verified: boolean | null
+          metrics_data: Json
+          photo_urls: string[] | null
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          challenge_id: string
+          client_id?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          is_verified?: boolean | null
+          metrics_data?: Json
+          photo_urls?: string[] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          is_verified?: boolean | null
+          metrics_data?: Json
+          photo_urls?: string[] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_public_results_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_results_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "challenge_public_results_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_guest_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_result_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          reaction_type: string
+          result_id: string
+          visitor_token_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reaction_type: string
+          result_id: string
+          visitor_token_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reaction_type?: string
+          result_id?: string
+          visitor_token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_result_reactions_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_public_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_result_reactions_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_leaderboard"
+            referencedColumns: ["result_id"]
           },
         ]
       }
@@ -878,6 +1119,13 @@ export type Database = {
             columns: ["challenge_id"]
             isOneToOne: false
             referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_submissions_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
             referencedColumns: ["id"]
           },
           {
@@ -1005,6 +1253,13 @@ export type Database = {
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "challenge_teams_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
         ]
       }
       challenges: {
@@ -1020,12 +1275,18 @@ export type Database = {
           fixed_time_s: number | null
           id: string
           instructions: string | null
+          is_public: boolean | null
           is_team_challenge: boolean | null
+          leaderboard_config: Json | null
           max_team_size: number | null
+          metrics_config: Json | null
           min_team_size: number | null
           primary_metric: string
+          public_settings: Json | null
+          public_slug: string | null
           published_to_portal_clients: boolean | null
           ranking_mode: string | null
+          require_photo_proof: boolean | null
           requires_video: boolean | null
           scoring_type: string
           secondary_metric: string | null
@@ -1054,12 +1315,18 @@ export type Database = {
           fixed_time_s?: number | null
           id?: string
           instructions?: string | null
+          is_public?: boolean | null
           is_team_challenge?: boolean | null
+          leaderboard_config?: Json | null
           max_team_size?: number | null
+          metrics_config?: Json | null
           min_team_size?: number | null
           primary_metric?: string
+          public_settings?: Json | null
+          public_slug?: string | null
           published_to_portal_clients?: boolean | null
           ranking_mode?: string | null
+          require_photo_proof?: boolean | null
           requires_video?: boolean | null
           scoring_type?: string
           secondary_metric?: string | null
@@ -1088,12 +1355,18 @@ export type Database = {
           fixed_time_s?: number | null
           id?: string
           instructions?: string | null
+          is_public?: boolean | null
           is_team_challenge?: boolean | null
+          leaderboard_config?: Json | null
           max_team_size?: number | null
+          metrics_config?: Json | null
           min_team_size?: number | null
           primary_metric?: string
+          public_settings?: Json | null
+          public_slug?: string | null
           published_to_portal_clients?: boolean | null
           ranking_mode?: string | null
+          require_photo_proof?: boolean | null
           requires_video?: boolean | null
           scoring_type?: string
           secondary_metric?: string | null
@@ -6231,6 +6504,13 @@ export type Database = {
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "peer_challenges_source_challenge_id_fkey"
+            columns: ["source_challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
         ]
       }
       performance_metrics: {
@@ -9932,6 +10212,116 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_public_challenge: {
+        Row: {
+          description: string | null
+          end_at: string | null
+          id: string | null
+          instructions: string | null
+          leaderboard_config: Json | null
+          metrics_config: Json | null
+          public_settings: Json | null
+          public_slug: string | null
+          require_photo_proof: boolean | null
+          start_at: string | null
+          status: string | null
+          title: string | null
+          vod_url: string | null
+        }
+        Insert: {
+          description?: string | null
+          end_at?: string | null
+          id?: string | null
+          instructions?: string | null
+          leaderboard_config?: Json | null
+          metrics_config?: Json | null
+          public_settings?: Json | null
+          public_slug?: string | null
+          require_photo_proof?: boolean | null
+          start_at?: string | null
+          status?: string | null
+          title?: string | null
+          vod_url?: string | null
+        }
+        Update: {
+          description?: string | null
+          end_at?: string | null
+          id?: string | null
+          instructions?: string | null
+          leaderboard_config?: Json | null
+          metrics_config?: Json | null
+          public_settings?: Json | null
+          public_slug?: string | null
+          require_photo_proof?: boolean | null
+          start_at?: string | null
+          status?: string | null
+          title?: string | null
+          vod_url?: string | null
+        }
+        Relationships: []
+      }
+      vw_public_chat: {
+        Row: {
+          author_initials: string | null
+          author_type: string | null
+          challenge_id: string | null
+          created_at: string | null
+          id: string | null
+          message: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_public_chat_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_chat_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_public_leaderboard: {
+        Row: {
+          challenge_id: string | null
+          clap_count: number | null
+          display_initials: string | null
+          fire_count: number | null
+          guest_age: number | null
+          is_verified: boolean | null
+          like_count: number | null
+          metrics_data: Json | null
+          mind_blown_count: number | null
+          muscle_count: number | null
+          participant_type: string | null
+          photo_urls: string[] | null
+          result_id: string | null
+          sex: string | null
+          smile_count: number | null
+          submitted_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_public_results_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_public_results_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "vw_public_challenge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_top_errors_24h: {
         Row: {
           error_type: string | null
@@ -9991,6 +10381,7 @@ export type Database = {
       clean_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_diagnostics: { Args: never; Returns: Json }
       complete_expired_peer_challenges: { Args: never; Returns: number }
+      generate_public_slug: { Args: never; Returns: string }
       generate_search_name: {
         Args: { name_cs: string; name_en: string }
         Returns: string
@@ -10013,6 +10404,10 @@ export type Database = {
       get_or_create_challenge_pseudonym: {
         Args: { p_challenge_id: string; p_client_id: string }
         Returns: string
+      }
+      get_public_challenge_stats: {
+        Args: { p_challenge_id: string }
+        Returns: Json
       }
       get_training_session_all_tags: {
         Args: { p_session_id: string }
