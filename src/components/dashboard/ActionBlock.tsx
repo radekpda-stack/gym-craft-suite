@@ -127,8 +127,8 @@ const ActionRow = memo(function ActionRow({ task, onDismiss, onClick }: ActionRo
 function SuccessState({ messages }: { messages: string[] }) {
   return (
     <div className="flex items-center gap-4 p-4">
-      <div className="p-3 rounded-xl bg-emerald-500/10">
-        <Sparkles className="w-6 h-6 text-emerald-500" />
+      <div className="p-3 rounded-xl bg-success/10">
+        <Sparkles className="w-6 h-6 text-success" />
       </div>
       <div className="flex-1">
         <p className="font-medium text-foreground">Vše v pořádku!</p>
@@ -138,7 +138,7 @@ function SuccessState({ messages }: { messages: string[] }) {
           </p>
         )}
       </div>
-      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+      <CheckCircle2 className="w-5 h-5 text-success" />
     </div>
   );
 }
@@ -178,7 +178,7 @@ export function ActionBlock({ data, isLoading }: ActionBlockProps) {
         <div className="flex items-center gap-2">
           <Zap className={cn(
             'w-5 h-5',
-            allClear ? 'text-emerald-500' : 'text-warning'
+            allClear ? 'text-success' : 'text-warning'
           )} />
           <h2 className="font-semibold text-foreground">
             {allClear ? 'Vše vyřešeno' : 'Vyžadují pozornost'}

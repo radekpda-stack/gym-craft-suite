@@ -239,7 +239,7 @@ export function SalesHistory() {
                             </span>
                           )}
                           {hasXP && (
-                            <span className="flex items-center gap-1 text-amber-500">
+                            <span className="flex items-center gap-1 text-warning">
                               <Sparkles className="w-3 h-3" />
                               +{order.xp_earned} XP
                             </span>

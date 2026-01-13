@@ -78,10 +78,10 @@ const calorieLevelLabel = (level?: string): string => {
 };
 
 const trendLabel = (trend?: string): { label: string; icon: React.ReactNode } => {
-  if (trend === 'increasing') return { label: 'Rostoucí', icon: <TrendingUp className="h-4 w-4 text-amber-500" /> };
-  if (trend === 'decreasing') return { label: 'Klesající', icon: <TrendingUp className="h-4 w-4 text-blue-500 rotate-180" /> };
-  if (trend === 'irregular') return { label: 'Nepravidelný', icon: <AlertTriangle className="h-4 w-4 text-amber-500" /> };
-  return { label: 'Stabilní', icon: <CheckCircle className="h-4 w-4 text-green-500" /> };
+  if (trend === 'increasing') return { label: 'Rostoucí', icon: <TrendingUp className="h-4 w-4 text-warning" /> };
+  if (trend === 'decreasing') return { label: 'Klesající', icon: <TrendingUp className="h-4 w-4 text-accent rotate-180" /> };
+  if (trend === 'irregular') return { label: 'Nepravidelný', icon: <AlertTriangle className="h-4 w-4 text-warning" /> };
+  return { label: 'Stabilní', icon: <CheckCircle className="h-4 w-4 text-success" /> };
 };
 
 export function NutritionAnalysisCard({ 
@@ -161,7 +161,7 @@ export function NutritionAnalysisCard({
                   <ul className="text-sm space-y-1">
                     {weeklySummary.client_strengths.map((s, i) => (
                       <li key={i} className="flex items-start gap-1">
-                        <span className="text-green-500">•</span> {s}
+                        <span className="text-success">•</span> {s}
                       </li>
                     ))}
                   </ul>
@@ -176,7 +176,7 @@ export function NutritionAnalysisCard({
                   <ul className="text-sm space-y-1">
                     {weeklySummary.client_weaknesses.map((s, i) => (
                       <li key={i} className="flex items-start gap-1">
-                        <span className="text-amber-500">•</span> {s}
+                        <span className="text-warning">•</span> {s}
                       </li>
                     ))}
                   </ul>
@@ -191,7 +191,7 @@ export function NutritionAnalysisCard({
                   <ul className="text-sm space-y-1">
                     {weeklySummary.client_recommendations.map((s, i) => (
                       <li key={i} className="flex items-start gap-1">
-                        <span className="text-blue-500">{i + 1}.</span> {s}
+                        <span className="text-accent">{i + 1}.</span> {s}
                       </li>
                     ))}
                   </ul>

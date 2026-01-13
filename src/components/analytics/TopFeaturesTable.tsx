@@ -22,7 +22,7 @@ export function TopFeaturesTable({ topFeatures, leastUsedFeatures }: TopFeatures
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-4 h-4 text-success" />
             Nejpoužívanější funkce
           </CardTitle>
         </CardHeader>
@@ -63,7 +63,7 @@ export function TopFeaturesTable({ topFeatures, leastUsedFeatures }: TopFeatures
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <TrendingDown className="w-4 h-4 text-amber-500" />
+            <TrendingDown className="w-4 h-4 text-warning" />
             Nejméně používané funkce
           </CardTitle>
         </CardHeader>

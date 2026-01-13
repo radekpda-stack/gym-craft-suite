@@ -35,56 +35,56 @@ const SOURCE_CONFIG: Record<string, { icon: React.ElementType; label: string; co
   workout_base: {
     icon: Dumbbell,
     label: 'Trénink',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
+    color: 'text-accent',
+    bgColor: 'bg-accent/10',
   },
   workout_type: {
     icon: Flame,
     label: 'HIIT bonus',
-    color: 'text-red-500',
-    bgColor: 'bg-red-500/10',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
   },
   morning_bonus: {
     icon: Sun,
     label: 'Ranní bonus',
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   weekend_bonus: {
     icon: Calendar,
     label: 'Víkendový bonus',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
   },
   weekly_streak: {
     icon: Link,
     label: 'Týdenní série',
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   pr_bonus: {
     icon: Trophy,
     label: 'Osobní rekord',
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   badge: {
     icon: Award,
     label: 'Badge bonus',
-    color: 'text-emerald-500',
-    bgColor: 'bg-emerald-500/10',
+    color: 'text-success',
+    bgColor: 'bg-success/10',
   },
   challenge: {
     icon: Trophy,
     label: 'Výzva',
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   bonus: {
     icon: Gift,
     label: 'Bonus',
-    color: 'text-pink-500',
-    bgColor: 'bg-pink-500/10',
+    color: 'text-accent',
+    bgColor: 'bg-accent/10',
   },
 };
 
@@ -175,7 +175,7 @@ export function XPBreakdownCard({ clientId }: XPBreakdownCardProps) {
                       }
                     </p>
                   </div>
-                  <span className={`text-sm font-bold ${event.xp_amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className={`text-sm font-bold ${event.xp_amount > 0 ? 'text-success' : 'text-destructive'}`}>
                     {event.xp_amount > 0 ? '+' : ''}{event.xp_amount} XP
                   </span>
                 </div>

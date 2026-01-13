@@ -138,10 +138,10 @@ export function TestsContent() {
                 </div>
               </CardContent>
             </Card>
-            <Card className={cn(kpi.soon > 0 && 'border-yellow-500/50')}>
+            <Card className={cn(kpi.soon > 0 && 'border-warning/50')}>
               <CardContent className="py-4">
                 <div className="flex items-center gap-3">
-                  <Clock className={cn('w-5 h-5', kpi.soon > 0 ? 'text-yellow-500' : 'text-muted-foreground')} />
+                  <Clock className={cn('w-5 h-5', kpi.soon > 0 ? 'text-warning' : 'text-muted-foreground')} />
                   <div>
                     <p className="text-2xl font-bold">{kpi.soon}</p>
                     <p className="text-xs text-muted-foreground">Brzy</p>
