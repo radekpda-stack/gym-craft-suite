@@ -12,6 +12,7 @@ import { OperatingExpensesCard } from './OperatingExpensesCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { RevenueWaterfallCard } from './RevenueWaterfallCard';
+import { MonthlyIncomeCard } from './MonthlyIncomeCard';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/charts';
@@ -27,8 +28,9 @@ import { TrainingIncomeModal } from './modals/TrainingIncomeModal';
 import { ProductIncomeModal } from './modals/ProductIncomeModal';
 import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 import { CancellationDetailModal } from './modals/CancellationDetailModal';
+import { MonthlyIncomeDetailModal } from './modals/MonthlyIncomeDetailModal';
 
-type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | null;
+type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | 'monthly-history' | null;
 
 export function FinanceStatsSection() {
   const navigate = useNavigate();
@@ -143,8 +145,9 @@ export function FinanceStatsSection() {
         <RevenueByParticipantsCard />
       </div>
 
-      {/* Cancellation Stats - single row */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4">
+      {/* Monthly Income History */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
         <CancellationStatsCard onClick={() => setActiveModal('cancellation')} />
       </div>
 
@@ -176,6 +179,10 @@ export function FinanceStatsSection() {
       />
       <CancellationDetailModal 
         open={activeModal === 'cancellation'} 
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      />
+      <MonthlyIncomeDetailModal 
+        open={activeModal === 'monthly-history'} 
         onOpenChange={(open) => !open && setActiveModal(null)}
       />
     </div>
