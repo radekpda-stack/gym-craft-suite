@@ -20,7 +20,9 @@ import {
   Send,
   Loader2,
   Medal,
-  Zap
+  Zap,
+  Copy,
+  Check
 } from 'lucide-react';
 import { formatDistanceToNow, format, isPast } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -28,6 +30,7 @@ import { usePeerChallenge, useSubmitPeerChallengeResult, usePeerChallengeLeaderb
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { cn } from '@/lib/utils';
 import { XPBetSelector } from './XPBetSelector';
+import { toast } from 'sonner';
 
 interface PeerChallengeDetailModalProps {
   challengeId: string;
@@ -42,6 +45,7 @@ export function PeerChallengeDetailModal({
 }: PeerChallengeDetailModalProps) {
   const [score, setScore] = useState('');
   const [note, setNote] = useState('');
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const { clientId } = useClientPortal();
   const { data: challenge, isLoading } = usePeerChallenge(challengeId);
@@ -64,6 +68,18 @@ export function PeerChallengeDetailModal({
   const totalXPPool = challenge?.peer_challenge_participants?.reduce(
     (sum: number, p: any) => sum + (p.xp_bet || 0), 0
   ) || 0;
+
+  // Check if user is the creator
+  const isCreator = myParticipation?.role === 'creator';
+  const inviteCode = challenge?.invite_code;
+
+  const handleCopyCode = async () => {
+    if (!inviteCode) return;
+    await navigator.clipboard.writeText(inviteCode);
+    setCopiedCode(true);
+    toast.success('Kód zkopírován');
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   const handleSubmit = async () => {
     if (!score || !challengeId) return;
@@ -154,6 +170,30 @@ export function PeerChallengeDetailModal({
                 <div className="text-lg font-bold text-yellow-600">
                   {totalXPPool.toLocaleString()} XP
                 </div>
+              </div>
+            )}
+
+            {/* Invite Code Section - only for creator */}
+            {isCreator && inviteCode && challenge.challenge_type !== 'duel' && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Kód pro pozvání</div>
+                  <div className="font-mono text-lg font-bold tracking-widest">
+                    {inviteCode}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyCode}
+                >
+                  {copiedCode ? (
+                    <Check className="h-4 w-4 mr-1 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-1" />
+                  )}
+                  {copiedCode ? 'Zkopírováno' : 'Kopírovat'}
+                </Button>
               </div>
             )}
 

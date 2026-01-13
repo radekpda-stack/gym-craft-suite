@@ -13,7 +13,8 @@ import {
   ChevronDown,
   Users,
   Swords,
-  Globe
+  Globe,
+  Link2
 } from 'lucide-react';
 import { 
   useMyPeerChallenges,
@@ -30,11 +31,13 @@ import { PeerChallengesOnboarding } from './PeerChallengesOnboarding';
 import { PeerChallengeDetailModal } from './PeerChallengeDetailModal';
 import { XPBettingStats } from './XPBettingStats';
 import { XPBettingInfo } from './XPBettingInfo';
+import { JoinByCodeDialog } from './JoinByCodeDialog';
 import { cn } from '@/lib/utils';
 
 export function PeerChallengesSection() {
   const [isOpen, setIsOpen] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
   const [onboardingSeen, setOnboardingSeen] = useState(true); // Default to true to avoid flash
@@ -141,6 +144,18 @@ export function PeerChallengesSection() {
                   }}
                 >
                   <HelpCircle className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowJoinDialog(true);
+                  }}
+                >
+                  <Link2 className="h-4 w-4 mr-1" />
+                  Kódem
                 </Button>
                 <Button
                   variant="outline"
@@ -256,6 +271,11 @@ export function PeerChallengesSection() {
       <PeerChallengesOnboarding
         open={showOnboarding}
         onClose={handleOnboardingClose}
+      />
+
+      <JoinByCodeDialog
+        open={showJoinDialog}
+        onClose={() => setShowJoinDialog(false)}
       />
 
       {selectedChallengeId && (
