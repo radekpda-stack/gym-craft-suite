@@ -84,12 +84,6 @@ export default function Index() {
           <ClientsInDebtCard />
         </SectionErrorBoundary>
 
-        {/* 📅 Trainings & Calendar - Combined Card */}
-        <SectionErrorBoundary section="Tréninky" compact>
-          <TrainingsCalendarCard data={data} isLoading={isLoading} />
-        </SectionErrorBoundary>
-
-
         {/* 👥 Client Progress - NEW */}
         <SectionErrorBoundary section="Pokrok klientů" compact>
           <ClientProgressCard />
