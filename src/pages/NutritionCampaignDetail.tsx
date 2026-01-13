@@ -214,7 +214,7 @@ export default function NutritionCampaignDetail() {
     if (recordingRate >= 80) {
       result.push({
         type: 'pattern',
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        icon: <CheckCircle2 className="h-5 w-5 text-success" />,
         title: 'Kvalitní vedení záznamů',
         description: `Klient zapisuje pravidelně (${recordingRate}% dní). To ukazuje na disciplínu a motivaci.`,
         severity: 'info',
@@ -222,7 +222,7 @@ export default function NutritionCampaignDetail() {
     } else if (recordingRate >= 50) {
       result.push({
         type: 'issue',
-        icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
+        icon: <AlertTriangle className="h-5 w-5 text-warning" />,
         title: 'Nepravidelné záznamy',
         description: `Klient zapisuje pouze ${recordingRate}% dní. Chybějící dny ztěžují analýzu.`,
         severity: 'warning',
@@ -230,7 +230,7 @@ export default function NutritionCampaignDetail() {
     } else {
       result.push({
         type: 'issue',
-        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        icon: <XCircle className="h-5 w-5 text-destructive" />,
         title: 'Velmi slabé vedení záznamů',
         description: `Pouze ${recordingRate}% dní má záznamy. Kampaň nemá dostatek dat pro spolehlivou analýzu.`,
         severity: 'error',
@@ -242,7 +242,7 @@ export default function NutritionCampaignDetail() {
     if (avgMeals < 2) {
       result.push({
         type: 'issue',
-        icon: <Utensils className="h-5 w-5 text-amber-500" />,
+        icon: <Utensils className="h-5 w-5 text-warning" />,
         title: 'Málo jídel denně',
         description: `Průměrně ${avgMeals.toFixed(1)} jídla/den. Klient pravděpodobně vynechává jídla nebo nezapisuje vše.`,
         severity: 'warning',
@@ -254,7 +254,7 @@ export default function NutritionCampaignDetail() {
     if (avgDrinks < 3) {
       result.push({
         type: 'issue',
-        icon: <Droplets className="h-5 w-5 text-blue-500" />,
+        icon: <Droplets className="h-5 w-5 text-accent" />,
         title: 'Nedostatečná hydratace',
         description: `Průměrně ${avgDrinks.toFixed(1)} nápojů/den. Doporučte zvýšit příjem tekutin.`,
         severity: 'warning',
@@ -262,7 +262,7 @@ export default function NutritionCampaignDetail() {
     } else {
       result.push({
         type: 'pattern',
-        icon: <Droplets className="h-5 w-5 text-blue-500" />,
+        icon: <Droplets className="h-5 w-5 text-accent" />,
         title: 'Dobrý pitný režim',
         description: `Průměrně ${avgDrinks.toFixed(1)} nápojů/den. Klient dbá na hydrataci.`,
         severity: 'info',
@@ -274,7 +274,7 @@ export default function NutritionCampaignDetail() {
     if (avgCoffee > 4) {
       result.push({
         type: 'issue',
-        icon: <Coffee className="h-5 w-5 text-amber-600" />,
+        icon: <Coffee className="h-5 w-5 text-warning" />,
         title: 'Vysoká spotřeba kávy',
         description: `Průměrně ${avgCoffee.toFixed(1)} káv/den. Může ovlivňovat spánek a hladinu stresu.`,
         severity: 'warning',
@@ -289,7 +289,7 @@ export default function NutritionCampaignDetail() {
     if (qualityRatio >= 60) {
       result.push({
         type: 'pattern',
-        icon: <TrendingUp className="h-5 w-5 text-green-500" />,
+        icon: <TrendingUp className="h-5 w-5 text-success" />,
         title: 'Kvalitní stravování',
         description: `${Math.round(qualityRatio)}% jídel hodnoceno jako kvalitní. Výborná volba potravin.`,
         severity: 'info',
@@ -297,7 +297,7 @@ export default function NutritionCampaignDetail() {
     } else if (poorQuality > goodQuality) {
       result.push({
         type: 'issue',
-        icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
+        icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
         title: 'Nízká kvalita stravy',
         description: `Více nekvalitních než kvalitních jídel. Zaměřte se na zlepšení výběru potravin.`,
         severity: 'error',
@@ -309,21 +309,21 @@ export default function NutritionCampaignDetail() {
     if (issueCount === 0) {
       result.push({
         type: 'recommendation',
-        icon: <Lightbulb className="h-5 w-5 text-green-500" />,
+        icon: <Lightbulb className="h-5 w-5 text-success" />,
         title: 'Doporučení pro trenéra',
         description: 'Klient vede záznamy dobře a stravuje se kvalitně. Můžete přejít k pokročilejším cílům.',
       });
     } else if (issueCount <= 2) {
       result.push({
         type: 'recommendation',
-        icon: <Lightbulb className="h-5 w-5 text-amber-500" />,
+        icon: <Lightbulb className="h-5 w-5 text-warning" />,
         title: 'Doporučení pro trenéra',
         description: 'Zaměřte se na řešení identifikovaných problémů. Nastavte konkrétní denní cíle.',
       });
     } else {
       result.push({
         type: 'recommendation',
-        icon: <Lightbulb className="h-5 w-5 text-red-500" />,
+        icon: <Lightbulb className="h-5 w-5 text-destructive" />,
         title: 'Doporučení pro trenéra',
         description: 'Více problémů vyžaduje pozornost. Navrhněte schůzku s klientem a stanovte priority.',
       });
@@ -428,14 +428,14 @@ export default function NutritionCampaignDetail() {
             <div className="flex items-center gap-4">
               <div className={cn(
                 "p-3 rounded-lg",
-                campaignStats?.isCompleted ? "bg-green-500/10" : campaignStats?.isActive ? "bg-blue-500/10" : "bg-red-500/10"
+                campaignStats?.isCompleted ? "bg-success/10" : campaignStats?.isActive ? "bg-accent/10" : "bg-destructive/10"
               )}>
                 {campaignStats?.isCompleted ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 ) : campaignStats?.isActive ? (
-                  <Clock className="h-5 w-5 text-blue-600" />
+                  <Clock className="h-5 w-5 text-accent" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-red-600" />
+                  <XCircle className="h-5 w-5 text-destructive" />
                 )}
               </div>
               <div>
@@ -470,8 +470,8 @@ export default function NutritionCampaignDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-blue-500/10">
-                <Droplets className="h-5 w-5 text-blue-600" />
+              <div className="p-3 rounded-lg bg-accent/10">
+                <Droplets className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{campaignStats?.drinkCount || 0}</p>
@@ -484,8 +484,8 @@ export default function NutritionCampaignDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-amber-500/10">
-                <Coffee className="h-5 w-5 text-amber-600" />
+              <div className="p-3 rounded-lg bg-warning/10">
+                <Coffee className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{campaignStats?.coffeeCount || 0}</p>
@@ -529,8 +529,8 @@ export default function NutritionCampaignDetail() {
                     value={campaignStats?.completionRate || 0} 
                     className={cn(
                       "h-3",
-                      (campaignStats?.completionRate || 0) >= 70 ? "bg-green-100" : 
-                      (campaignStats?.completionRate || 0) >= 40 ? "bg-amber-100" : "bg-red-100"
+                      (campaignStats?.completionRate || 0) >= 70 ? "bg-success/20" : 
+                      (campaignStats?.completionRate || 0) >= 40 ? "bg-warning/20" : "bg-destructive/20"
                     )}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -570,8 +570,8 @@ export default function NutritionCampaignDetail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {insights.slice(0, 3).map((insight, i) => (
               <Card key={i} className={cn(
-                insight.severity === 'error' && "border-red-200 bg-red-50/50 dark:bg-red-950/10",
-                insight.severity === 'warning' && "border-amber-200 bg-amber-50/50 dark:bg-amber-950/10"
+                insight.severity === 'error' && "border-destructive/30 bg-destructive/5",
+                insight.severity === 'warning' && "border-warning/30 bg-warning/5"
               )}>
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
@@ -622,13 +622,13 @@ export default function NutritionCampaignDetail() {
                         </div>
                         <div className="flex items-center gap-2">
                           {day.issues.length > 0 && (
-                            <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          <Badge variant="outline" className="text-warning border-warning/30">
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               {day.issues.length} problémů
                             </Badge>
                           )}
                           {day.hasEntries ? (
-                            <Badge className="bg-green-500/10 text-green-600 border-green-300">
+                            <Badge className="bg-success/10 text-success border-success/30">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               {day.totalEntries} záznamů
                             </Badge>
@@ -641,7 +641,7 @@ export default function NutritionCampaignDetail() {
                         <div className="mt-2 pt-2 border-t">
                           <div className="flex flex-wrap gap-1">
                             {day.issues.map((issue, i) => (
-                              <span key={i} className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">
+                              <span key={i} className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded">
                                 {issue}
                               </span>
                             ))}
@@ -672,16 +672,16 @@ export default function NutritionCampaignDetail() {
             <div className="grid grid-cols-1 gap-4">
               {insights.map((insight, i) => (
                 <Card key={i} className={cn(
-                  insight.severity === 'error' && "border-red-200 bg-red-50/50 dark:bg-red-950/10",
-                  insight.severity === 'warning' && "border-amber-200 bg-amber-50/50 dark:bg-amber-950/10"
+                  insight.severity === 'error' && "border-destructive/30 bg-destructive/5",
+                  insight.severity === 'warning' && "border-warning/30 bg-warning/5"
                 )}>
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
                       <div className={cn(
                         "p-2 rounded-lg",
-                        insight.type === 'pattern' && "bg-blue-100 dark:bg-blue-900/20",
-                        insight.type === 'issue' && "bg-amber-100 dark:bg-amber-900/20",
-                        insight.type === 'recommendation' && "bg-green-100 dark:bg-green-900/20"
+                        insight.type === 'pattern' && "bg-accent/10",
+                        insight.type === 'issue' && "bg-warning/10",
+                        insight.type === 'recommendation' && "bg-success/10"
                       )}>
                         {insight.icon}
                       </div>
@@ -747,7 +747,7 @@ export default function NutritionCampaignDetail() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-amber-500" />
+                <Lightbulb className="h-5 w-5 text-warning" />
                 Automatická doporučení
               </CardTitle>
               <CardDescription>

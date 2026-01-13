@@ -270,7 +270,7 @@ export function TrainerDiaryInput() {
                 
                 {/* Success badge */}
                 {ocrComplete && !isProcessing && (
-                  <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                  <div className="absolute top-2 right-2 bg-success text-success-foreground px-2 py-1 rounded-full text-xs flex items-center gap-1">
                     <Check className="w-3 h-3" />
                     Rozpoznáno
                   </div>
