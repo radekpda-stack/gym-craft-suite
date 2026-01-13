@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useChurnRisk } from '@/hooks/useChurnRisk';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, TrendingDown, CreditCard, XCircle, Frown, Clock, ChevronRight } from 'lucide-react';
+import { AlertTriangle, TrendingDown, CreditCard, XCircle, Frown, Clock, ChevronRight, Users, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 const RISK_ICONS: Record<string, React.ElementType> = {
   'Pokles frekvence >50%': TrendingDown,
   'Nezaplaceno >14 dní': CreditCard,
+  'Záporný kredit': Wallet,
+  'Sdílený budget v mínusu': Users,
   'Vysoká míra zrušení': XCircle,
   'Klesající spokojenost': Frown,
   'Dlouhá pauza': Clock,
@@ -17,6 +19,8 @@ const RISK_ICONS: Record<string, React.ElementType> = {
 const RISK_COLORS: Record<string, string> = {
   'Pokles frekvence >50%': 'text-warning',
   'Nezaplaceno >14 dní': 'text-destructive',
+  'Záporný kredit': 'text-destructive',
+  'Sdílený budget v mínusu': 'text-warning',
   'Vysoká míra zrušení': 'text-warning',
   'Klesající spokojenost': 'text-primary',
   'Dlouhá pauza': 'text-accent',
