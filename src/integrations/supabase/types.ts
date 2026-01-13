@@ -9704,16 +9704,27 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
-      rpc_add_credit_lot: {
-        Args: {
-          p_amount_czk: number
-          p_client_id: string
-          p_note?: string
-          p_source?: string
-          p_user_id?: string
-        }
-        Returns: Json
-      }
+      rpc_add_credit_lot:
+        | {
+            Args: {
+              p_amount_czk: number
+              p_client_id: string
+              p_note?: string
+              p_source?: string
+              p_user_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount_czk: number
+              p_client_id: string
+              p_note: string
+              p_source: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       rpc_apply_credit_delta: {
         Args: {
           p_client_id: string
