@@ -436,7 +436,7 @@ export function ExerciseDetailOverview({
                       "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
                       idx === 0 && "bg-primary/20 text-primary",
                       idx === 1 && "bg-muted text-muted-foreground",
-                      idx === 2 && "bg-orange-500/20 text-orange-600",
+                      idx === 2 && "bg-warning/20 text-warning",
                       idx > 2 && "bg-muted text-muted-foreground"
                     )}>
                       {idx + 1}

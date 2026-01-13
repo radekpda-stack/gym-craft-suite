@@ -55,24 +55,24 @@ function getTrendInfo(trend: 'improving' | 'declining' | 'stable' | null) {
       return {
         icon: <TrendingDown className="h-4 w-4" />,
         label: 'Zrychluje se',
-        color: 'text-green-500',
-        bgColor: 'bg-green-500/10',
+        color: 'text-success',
+        bgColor: 'bg-success/10',
         description: 'Tempo klesá = zlepšuješ se!',
       };
     case 'declining':
       return {
         icon: <TrendingUp className="h-4 w-4" />,
         label: 'Zpomaluje se',
-        color: 'text-orange-500',
-        bgColor: 'bg-orange-500/10',
+        color: 'text-warning',
+        bgColor: 'bg-warning/10',
         description: 'Tempo roste = je třeba potrénovat',
       };
     case 'stable':
       return {
         icon: <Minus className="h-4 w-4" />,
         label: 'Stabilní',
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-500/10',
+        color: 'text-accent',
+        bgColor: 'bg-accent/10',
         description: 'Tempo se drží na stejné úrovni',
       };
     default:
@@ -259,10 +259,10 @@ export function ClientPortalPaceTrendCard() {
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-warning/10 to-transparent border border-warning/20"
                 >
-                  <div className="p-2 rounded-full bg-amber-500/20">
-                    <Trophy className="h-4 w-4 text-amber-500" />
+                  <div className="p-2 rounded-full bg-warning/20">
+                    <Trophy className="h-4 w-4 text-warning" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Nejlepší tempo</p>
@@ -389,7 +389,7 @@ export function ClientPortalPaceTrendCard() {
                 <span>Tempo</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                <div className="w-3 h-3 rounded-full bg-warning" />
                 <span>Osobní rekord</span>
               </div>
             </div>

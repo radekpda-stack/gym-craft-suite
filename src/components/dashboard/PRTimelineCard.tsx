@@ -406,8 +406,8 @@ export function PRTimelineCard() {
                     <div className={cn(
                       'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
                       i === 0 ? 'bg-warning text-warning-foreground' : 
-                      i === 1 ? 'bg-slate-400 text-slate-900' :
-                      i === 2 ? 'bg-amber-700 text-amber-100' :
+                      i === 1 ? 'bg-muted text-muted-foreground' :
+                      i === 2 ? 'bg-warning/60 text-warning-foreground' :
                       'bg-secondary text-muted-foreground'
                     )}>
                       {i < 3 ? <Crown className="w-3 h-3" /> : i + 1}

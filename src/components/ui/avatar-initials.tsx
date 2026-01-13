@@ -15,14 +15,14 @@ const sizeClasses = {
 // Generate consistent color based on name
 function getColorFromName(name: string): string {
   const colors = [
-    'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-    'bg-green-500/15 text-green-700 dark:text-green-400',
-    'bg-purple-500/15 text-purple-700 dark:text-purple-400',
-    'bg-orange-500/15 text-orange-700 dark:text-orange-400',
-    'bg-pink-500/15 text-pink-700 dark:text-pink-400',
-    'bg-teal-500/15 text-teal-700 dark:text-teal-400',
-    'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400',
-    'bg-rose-500/15 text-rose-700 dark:text-rose-400',
+    'bg-accent/15 text-accent',
+    'bg-success/15 text-success',
+    'bg-primary/15 text-primary',
+    'bg-warning/15 text-warning',
+    'bg-destructive/15 text-destructive',
+    'bg-muted text-muted-foreground',
+    'bg-accent/20 text-accent',
+    'bg-primary/20 text-primary',
   ];
   
   let hash = 0;

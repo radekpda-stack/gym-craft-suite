@@ -70,18 +70,18 @@ function getExerciseTypeBadge(exercise: Exercise) {
   
   switch (type) {
     case 'height':
-      badges.push(<Badge key="height" variant="secondary" className="text-[10px] shrink-0 bg-purple-500/10 text-purple-600">výška</Badge>);
+      badges.push(<Badge key="height" variant="secondary" className="text-[10px] shrink-0 bg-primary/10 text-primary">výška</Badge>);
       break;
     case 'distance':
-      badges.push(<Badge key="distance" variant="secondary" className="text-[10px] shrink-0 bg-blue-500/10 text-blue-600">délka</Badge>);
+      badges.push(<Badge key="distance" variant="secondary" className="text-[10px] shrink-0 bg-accent/10 text-accent">délka</Badge>);
       break;
     case 'time':
-      badges.push(<Badge key="time" variant="secondary" className="text-[10px] shrink-0 bg-amber-500/10 text-amber-600">čas</Badge>);
+      badges.push(<Badge key="time" variant="secondary" className="text-[10px] shrink-0 bg-warning/10 text-warning">čas</Badge>);
       break;
   }
   
   if (exercise.is_unilateral) {
-    badges.push(<Badge key="unilateral" variant="secondary" className="text-[10px] shrink-0 bg-cyan-500/10 text-cyan-600">L/R</Badge>);
+    badges.push(<Badge key="unilateral" variant="secondary" className="text-[10px] shrink-0 bg-accent/10 text-accent">L/R</Badge>);
   }
   
   return badges.length > 0 ? <div className="flex gap-1">{badges}</div> : null;
@@ -262,8 +262,8 @@ export function QuickExerciseAdd({
     if (!isUnilateral) return null;
     
     return (
-      <div className="space-y-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-        <div className="flex items-center gap-2 text-sm font-medium text-cyan-600">
+      <div className="space-y-2 p-3 rounded-lg bg-accent/5 border border-accent/20">
+        <div className="flex items-center gap-2 text-sm font-medium text-accent">
           <Footprints className="w-4 h-4" />
           Strana
         </div>
@@ -314,7 +314,7 @@ export function QuickExerciseAdd({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
-                    <ArrowUp className="w-4 h-4 text-purple-500" />
+                    <ArrowUp className="w-4 h-4 text-primary" />
                     Výška (cm)
                   </FormLabel>
                   <div className="flex items-center gap-2">
@@ -374,7 +374,7 @@ export function QuickExerciseAdd({
                     variant="outline"
                     className={cn(
                       "h-11 px-3 text-base font-semibold",
-                      form.watch('height_cm') === height && "bg-purple-500/10 border-purple-500 text-purple-600"
+                      form.watch('height_cm') === height && "bg-primary/10 border-primary text-primary"
                     )}
                     onClick={() => form.setValue('height_cm', height)}
                   >
@@ -400,7 +400,7 @@ export function QuickExerciseAdd({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
-                    <ArrowRight className="w-4 h-4 text-blue-500" />
+                    <ArrowRight className="w-4 h-4 text-accent" />
                     Vzdálenost (cm)
                   </FormLabel>
                   <div className="flex items-center gap-2">
@@ -460,7 +460,7 @@ export function QuickExerciseAdd({
                     variant="outline"
                     className={cn(
                       "h-11 px-3 text-base font-semibold",
-                      form.watch('distance_cm') === dist && "bg-blue-500/10 border-blue-500 text-blue-600"
+                      form.watch('distance_cm') === dist && "bg-accent/10 border-accent text-accent"
                     )}
                     onClick={() => form.setValue('distance_cm', dist)}
                   >

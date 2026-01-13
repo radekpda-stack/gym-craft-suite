@@ -69,13 +69,13 @@ function NotificationItem({
             notification.type === "feedback_reminder"
               ? "bg-primary/20 text-primary"
               : notification.type === "trainer_pr_challenge"
-              ? "bg-amber-500/20 text-amber-600"
+              ? "bg-warning/20 text-warning"
               : notification.type === "beat_trainer"
-              ? "bg-green-500/20 text-green-600"
+              ? "bg-success/20 text-success"
               : notification.type === "broadcast"
-              ? "bg-blue-500/20 text-blue-600"
+              ? "bg-accent/20 text-accent"
               : notification.type === "credentials_change_required"
-              ? "bg-orange-500/20 text-orange-600"
+              ? "bg-warning/20 text-warning"
               : "bg-muted text-muted-foreground"
           )}
         >
@@ -140,7 +140,7 @@ function NotificationItem({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-6 text-xs bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 text-orange-600"
+                  className="h-6 text-xs bg-warning/10 border-warning/30 hover:bg-warning/20 text-warning"
                   onClick={() => onAction?.(notification)}
                 >
                   Nastavit

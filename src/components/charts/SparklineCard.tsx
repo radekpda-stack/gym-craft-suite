@@ -26,22 +26,22 @@ const VARIANT_COLORS = {
   success: {
     stroke: 'hsl(142 76% 45%)',
     fill: 'hsl(142 76% 45%)',
-    text: 'text-green-500',
+    text: 'text-success',
   },
   warning: {
     stroke: 'hsl(38 92% 50%)',
     fill: 'hsl(38 92% 50%)',
-    text: 'text-amber-500',
+    text: 'text-warning',
   },
   destructive: {
     stroke: 'hsl(0 84% 60%)',
     fill: 'hsl(0 84% 60%)',
-    text: 'text-red-500',
+    text: 'text-destructive',
   },
   blue: {
     stroke: 'hsl(217 91% 60%)',
     fill: 'hsl(217 91% 60%)',
-    text: 'text-blue-500',
+    text: 'text-accent',
   },
 };
 
@@ -96,8 +96,8 @@ export function SparklineCard({
                 {hasTrend && (
                   <div className={cn(
                     'flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded',
-                    isPositive && 'bg-green-500/10 text-green-500',
-                    isNegative && 'bg-red-500/10 text-red-500',
+                    isPositive && 'bg-success/10 text-success',
+                    isNegative && 'bg-destructive/10 text-destructive',
                     !isPositive && !isNegative && 'bg-muted text-muted-foreground'
                   )}>
                     <TrendIcon className="h-3 w-3" />

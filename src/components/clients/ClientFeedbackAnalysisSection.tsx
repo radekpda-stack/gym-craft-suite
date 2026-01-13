@@ -56,7 +56,7 @@ export function ClientFeedbackAnalysisSection({
                       <span className="text-destructive">{redFlags} red flag</span>
                     )}
                     {warnings > 0 && (
-                      <span className="text-amber-500">{warnings} varování</span>
+                      <span className="text-warning">{warnings} varování</span>
                     )}
                     <span className="text-muted-foreground">{totalFeedbacks} feedbacků</span>
                   </div>

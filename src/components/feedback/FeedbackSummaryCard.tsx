@@ -41,13 +41,13 @@ function MetricBadge({
   const percentage = (value / max) * 100;
   const getColorClass = () => {
     if (invertColor) {
-      if (percentage <= 30) return 'bg-green-500/20 text-green-600 border-green-500/30';
-      if (percentage <= 60) return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30';
-      return 'bg-red-500/20 text-red-600 border-red-500/30';
+      if (percentage <= 30) return 'bg-success/20 text-success border-success/30';
+      if (percentage <= 60) return 'bg-warning/20 text-warning border-warning/30';
+      return 'bg-destructive/20 text-destructive border-destructive/30';
     } else {
-      if (percentage >= 70) return 'bg-green-500/20 text-green-600 border-green-500/30';
-      if (percentage >= 40) return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30';
-      return 'bg-red-500/20 text-red-600 border-red-500/30';
+      if (percentage >= 70) return 'bg-success/20 text-success border-success/30';
+      if (percentage >= 40) return 'bg-warning/20 text-warning border-warning/30';
+      return 'bg-destructive/20 text-destructive border-destructive/30';
     }
   };
 
@@ -72,15 +72,15 @@ export function FeedbackSummaryCard({
 
   return (
     <>
-      <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 space-y-3">
+      <div className="p-4 rounded-lg bg-success/10 border border-success/20 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
+            <Badge className="bg-success/20 text-success border-success/30">
               Feedback vyplněn
             </Badge>
             {feedback.is_red_flag && (
-              <Badge className="bg-red-500/20 text-red-600 border-red-500/30 flex items-center gap-1">
+              <Badge className="bg-destructive/20 text-destructive border-destructive/30 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
                 Red Flag
               </Badge>
@@ -148,12 +148,12 @@ export function FeedbackSummaryCard({
 
         {/* Expanded Content */}
         {expanded && (
-          <div className="pt-2 border-t border-green-500/20 space-y-2">
+          <div className="pt-2 border-t border-success/20 space-y-2">
             {/* Red Flag Reasons */}
             {feedback.is_red_flag && feedback.red_flag_reasons && (
-              <div className="p-2 rounded bg-red-500/10 text-sm">
-                <p className="font-medium text-red-600 mb-1">Důvody upozornění:</p>
-                <ul className="text-red-600/80 list-disc list-inside text-xs">
+              <div className="p-2 rounded bg-destructive/10 text-sm">
+                <p className="font-medium text-destructive mb-1">Důvody upozornění:</p>
+                <ul className="text-destructive/80 list-disc list-inside text-xs">
                   {feedback.red_flag_reasons.map((reason, i) => (
                     <li key={i}>{reason}</li>
                   ))}
@@ -163,7 +163,7 @@ export function FeedbackSummaryCard({
 
             {/* Pain Area */}
             {feedback.pain && feedback.pain >= 4 && feedback.pain_area && (
-              <p className="text-sm text-orange-600">
+              <p className="text-sm text-warning">
                 <AlertTriangle className="w-3 h-3 inline mr-1" />
                 Bolest: {feedback.pain_area}
                 {feedback.pain_area_other && ` - ${feedback.pain_area_other}`}

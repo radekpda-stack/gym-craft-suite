@@ -155,9 +155,9 @@ export function EditEntryDialog({
   };
 
   const getIcon = () => {
-    if (type === 'food') return <Utensils className="w-5 h-5 text-orange-500" />;
-    if (type === 'drink') return <Droplets className="w-5 h-5 text-blue-500" />;
-    return <Coffee className="w-5 h-5 text-amber-600" />;
+    if (type === 'food') return <Utensils className="w-5 h-5 text-warning" />;
+    if (type === 'drink') return <Droplets className="w-5 h-5 text-accent" />;
+    return <Coffee className="w-5 h-5 text-warning" />;
   };
 
   return (

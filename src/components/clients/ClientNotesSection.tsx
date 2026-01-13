@@ -65,8 +65,8 @@ export function ClientNotesSection({ notes, onAddNote, defaultOpen = false }: Cl
       <CollapsibleTrigger asChild>
         <button className="w-full glass rounded-2xl p-4 flex items-center justify-between hover:bg-secondary/30 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-amber-500/10">
-              <StickyNote className="w-5 h-5 text-amber-500" />
+            <div className="p-2 rounded-xl bg-warning/10">
+              <StickyNote className="w-5 h-5 text-warning" />
             </div>
             <div className="text-left">
               <p className="font-medium text-foreground">Poznámky trenéra</p>
