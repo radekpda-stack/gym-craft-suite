@@ -8,7 +8,7 @@ import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
-import { BusinessHealthScoreCard } from '@/components/dashboard/BusinessHealthScoreCard';
+import { BusinessYieldScoreCard } from '@/components/dashboard/BusinessYieldScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
 import { ClientsInDebtCard } from '@/components/dashboard/ClientsInDebtCard';
@@ -37,7 +37,7 @@ export default function Index() {
 
         {/* 📊 Business Health Score - NEW */}
         <SectionErrorBoundary section="Business Health" compact>
-          <BusinessHealthScoreCard />
+          <BusinessYieldScoreCard />
         </SectionErrorBoundary>
 
         {/* 🏆 Career Milestone Card */}
