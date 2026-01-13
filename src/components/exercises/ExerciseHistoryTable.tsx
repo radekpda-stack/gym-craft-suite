@@ -75,6 +75,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           avg_speed_kmh,
           rpe,
           distance_meters,
+          height_cm,
           level,
           resistance,
           metrics_json,
@@ -117,11 +118,14 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         const timeSeconds = entry.time_seconds;
         const timeMs = (entry as any).time_ms as number | null | undefined;
         const distanceMeters = (entry as any).distance_meters as number | null | undefined;
+        const heightCm = (entry as any).height_cm as number | null | undefined;
 
         // Determine entry type
         const hasTime = !!timeSeconds && timeSeconds > 0;
         const hasWeight = weight > 0;
         const hasDistance = !!distanceMeters && distanceMeters > 0;
+        const hasHeight = !!heightCm && heightCm > 0;
+        const isJumpType = hasHeight || (hasDistance && (metricCategory === 'jump_height' || metricCategory === 'jump_distance' || metricCategory === 'plyometric'));
 
         // Get performance display using fallback logic
         const performanceDisplay = getPerformanceDisplay({
@@ -137,20 +141,24 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         const metricsJson = (entry as any).metrics_json as { assistance_bands?: BandType[] } | null;
         const assistanceBands = metricsJson?.assistance_bands || [];
 
+        // For jumps: use height_cm if available, otherwise distance_meters converted to cm
+        const jumpValueCm = hasHeight ? heightCm : (hasDistance ? Math.round((distanceMeters || 0) * 100) : null);
+
         return {
           id: entry.id,
-          type: hasTime ? ('time' as const) : hasDistance ? ('jump' as const) : ('strength' as const),
+          type: hasTime ? ('time' as const) : isJumpType ? ('jump' as const) : ('strength' as const),
           date: entry.date,
           clientId: entry.client_id,
           clientName: (entry.clients as any)?.name || 'Neznámý',
           weight: hasWeight ? weight : null,
           reps: hasWeight ? reps : null,
-          sets: hasWeight || hasDistance ? sets : null,
+          sets: hasWeight || isJumpType ? sets : null,
           volume: hasWeight ? volume : null,
           timeSeconds: hasTime ? timeSeconds : null,
           timeMs: hasTime ? (timeMs ?? null) : null,
           distanceMeters: hasDistance ? distanceMeters : null,
-          distanceCm: hasDistance ? Math.round((distanceMeters || 0) * 100) : null,
+          heightCm: hasHeight ? heightCm : null,
+          jumpValueCm: isJumpType ? jumpValueCm : null,
           notes: entry.notes,
           // NOTE: we will re-compute PR in UI so edits reflect immediately
           isPR: false,
@@ -179,14 +187,14 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       for (const [, list] of groups) {
         const timeRows = list.filter(r => r.timeSeconds && r.timeSeconds > 0);
         const weightRows = list.filter(r => r.weight && r.weight > 0);
-        const distanceRows = list.filter(r => r.distanceMeters && r.distanceMeters > 0);
+        const jumpRows = list.filter(r => r.jumpValueCm && r.jumpValueCm > 0);
 
-        // Priority: Jump (distance/height) > Time > Strength
+        // Priority: Jump (height/distance) > Time > Strength
         const isJumpType = metricCategory === 'jump_height' || metricCategory === 'jump_distance' || metricCategory === 'plyometric';
-        if (isJumpType && distanceRows.length) {
-          // For jumps: higher distance/height is better
-          const best = distanceRows
-            .map(r => ({ id: r.id, v: r.distanceMeters!, date: r.date }))
+        if (isJumpType && jumpRows.length) {
+          // For jumps: higher value is better
+          const best = jumpRows
+            .map(r => ({ id: r.id, v: r.jumpValueCm!, date: r.date }))
             .sort((a, b) => b.v - a.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
           if (best) prIds.add(best.id);
         } else if (isTimeBased && timeRows.length) {
@@ -339,7 +347,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                         {row.sets ? `${row.sets}×` : '1×'}
                       </TableCell>
                       <TableCell className="text-right font-medium whitespace-nowrap">
-                        {row.distanceCm ? `${row.distanceCm} cm` : '-'}
+                        {row.jumpValueCm ? `${row.jumpValueCm} cm` : '-'}
                       </TableCell>
                       <TableCell className="text-center hidden sm:table-cell">
                         {row.rpe ? (
@@ -392,7 +400,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       </TableCell>
                       <TableCell className="text-right font-medium whitespace-nowrap">
                         <div className="flex flex-col items-end gap-0.5">
-                          <span>{row.weight ? `${row.weight} kg` : row.distanceCm ? `${row.distanceCm} cm` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}</span>
+                          <span>{row.weight ? `${row.weight} kg` : row.jumpValueCm ? `${row.jumpValueCm} cm` : row.timeSeconds ? formatTimeDisplay(row.timeSeconds) : '-'}</span>
                           {data?.isPullUp && row.assistanceBands && row.assistanceBands.length > 0 && (
                             <AssistanceBandBadges bands={row.assistanceBands} className="justify-end" />
                           )}

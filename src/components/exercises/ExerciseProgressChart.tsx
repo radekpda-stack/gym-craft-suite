@@ -70,7 +70,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       // Fetch all data from exercise_entries (includes both strength and time-based)
       let query = supabase
         .from('exercise_entries')
-        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, avg_watts, max_watts, pace_sec_per_500m, distance_meters, clients(name)')
+        .select('weight_kg, reps, sets, time_seconds, date, client_id, is_pr, avg_watts, max_watts, pace_sec_per_500m, distance_meters, height_cm, clients(name)')
         .eq('exercise_id', exerciseId)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date');
@@ -91,7 +91,10 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         const avgWatts = (entry as any).avg_watts || 0;
         const pace500m = (entry as any).pace_sec_per_500m || 0;
         const distanceMeters = (entry as any).distance_meters || 0;
-        const distanceCm = distanceMeters > 0 ? Math.round(distanceMeters * 100) : 0;
+        const heightCm = (entry as any).height_cm || 0;
+        
+        // For jumps: use height_cm if available, otherwise convert distance_meters to cm
+        const jumpValueCm = heightCm > 0 ? heightCm : (distanceMeters > 0 ? Math.round(distanceMeters * 100) : 0);
         
         // Brzycki formula for 1RM estimate
         const estimated1RM = reps > 0 && reps < 15 && weight > 0 
@@ -109,7 +112,8 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
           avgWatts,
           pace500m,
           distanceMeters,
-          distanceCm,
+          heightCm,
+          jumpValueCm,
           clientName: (entry.clients as any)?.name,
           isPR: entry.is_pr,
         };
@@ -119,14 +123,13 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
       const strengthData = processedData.filter(d => d.weight > 0);
       const timeData = processedData.filter(d => d.timeSeconds && d.timeSeconds > 0);
       const wattsData = processedData.filter(d => d.avgWatts > 0);
-      const distanceData = processedData.filter(d => d.distanceMeters > 0);
+      const jumpData = processedData.filter(d => d.jumpValueCm > 0);
 
-      // Recompute true PRs for distance data (best = highest)
-      const distancePRIds = new Set<string>();
-      if (distanceData.length > 0) {
+      // Recompute true PRs for jump data (best = highest)
+      if (jumpData.length > 0) {
         // Group by client
-        const clientGroups = new Map<string, typeof distanceData>();
-        distanceData.forEach(d => {
+        const clientGroups = new Map<string, typeof jumpData>();
+        jumpData.forEach(d => {
           const clientName = d.clientName || 'unknown';
           const list = clientGroups.get(clientName) ?? [];
           list.push(d);
@@ -135,7 +138,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         
         // Find best for each client
         clientGroups.forEach((entries) => {
-          const best = entries.reduce((a, b) => a.distanceMeters > b.distanceMeters ? a : b);
+          const best = entries.reduce((a, b) => a.jumpValueCm > b.jumpValueCm ? a : b);
           // Mark this entry as true PR (we use date as unique identifier since we don't have id here)
           (best as any).isTruePR = true;
         });
@@ -145,11 +148,11 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         strengthData,
         timeData,
         wattsData,
-        distanceData,
+        jumpData,
         hasStrength: strengthData.length > 0,
         hasTime: timeData.length > 0,
         hasWatts: wattsData.length > 0,
-        hasDistance: distanceData.length > 0,
+        hasJump: jumpData.length > 0,
         isTimeBased,
         isJumpExercise,
       };
@@ -167,7 +170,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     );
   }
 
-  const hasData = data?.hasStrength || data?.hasTime || data?.hasWatts || data?.hasDistance;
+  const hasData = data?.hasStrength || data?.hasTime || data?.hasWatts || data?.hasJump;
 
   if (!hasData) {
     return (
@@ -200,7 +203,7 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
   // Determine what to show based on exercise type and available data
   const showStrength = !data.isTimeBased && !data.isJumpExercise && data.hasStrength;
   const showTime = (data.isTimeBased || exerciseType === 'cardio') && !data.isJumpExercise && data.hasTime;
-  const showDistance = data.isJumpExercise && data.hasDistance;
+  const showJump = data.isJumpExercise && data.hasJump;
 
   return (
     <div className="space-y-4">
@@ -218,32 +221,32 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
         </Select>
       </div>
 
-      {/* Distance-based charts (for jump exercises) */}
-      {showDistance && (
+      {/* Jump height/distance charts (for plyometric exercises) */}
+      {showJump && (
         <Card className="analytics-chart">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Ruler className="h-5 w-5 text-primary" />
-                Vzdálenost × datum
+                Výška/vzdálenost skoku × datum
               </CardTitle>
               <StatInfoTooltip
-                title="Vývoj vzdálenosti"
-                description="Graf zobrazuje vývoj vzdálenosti/výšky skoků v průběhu tréninků. Vyšší = lepší výkon."
-                calculation="Každý bod představuje zaznamenanou vzdálenost v cm."
+                title="Vývoj skoků"
+                description="Graf zobrazuje vývoj výšky nebo vzdálenosti skoků v průběhu tréninků. Vyšší = lepší výkon."
+                calculation="Každý bod představuje zaznamenanou výšku/vzdálenost v cm."
               />
             </div>
           </CardHeader>
           <CardContent>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.distanceData}>
+                <LineChart data={data.jumpData}>
                   <defs>
-                    <linearGradient id="distanceLineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <linearGradient id="jumpLineGradient" x1="0" y1="0" x2="1" y2="0">
                       <stop offset="0%" stopColor={COLORS[0]} stopOpacity={0.6} />
                       <stop offset="100%" stopColor={COLORS[0]} stopOpacity={1} />
                     </linearGradient>
-                    <filter id="distanceGlow">
+                    <filter id="jumpGlow">
                       <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
                       <feMerge>
                         <feMergeNode in="coloredBlur"/>
@@ -271,27 +274,27 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
                       borderRadius: '8px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
-                    formatter={(value: number) => [`${value} cm`, 'Vzdálenost']}
+                    formatter={(value: number) => [`${value} cm`, 'Výška/vzdálenost']}
                     labelFormatter={(label) => `Datum: ${label}`}
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="distanceCm" 
-                    stroke="url(#distanceLineGradient)" 
+                    dataKey="jumpValueCm" 
+                    stroke="url(#jumpLineGradient)" 
                     strokeWidth={3} 
                     dot={(props) => {
                       const { cx, cy, payload, index } = props;
                       const isPR = (payload as any).isTruePR || payload.isPR;
                       return (
                         <circle 
-                          key={`dot-distance-${index}`}
+                          key={`dot-jump-${index}`}
                           cx={cx} 
                           cy={cy} 
                           r={isPR ? 8 : 4} 
                           fill={COLORS[0]} 
                           stroke="hsl(var(--background))" 
                           strokeWidth={isPR ? 3 : 2}
-                          filter={isPR ? "url(#distanceGlow)" : undefined}
+                          filter={isPR ? "url(#jumpGlow)" : undefined}
                         />
                       );
                     }}
