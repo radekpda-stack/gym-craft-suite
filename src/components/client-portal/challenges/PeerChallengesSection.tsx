@@ -26,6 +26,8 @@ import { PendingInvitationsSection } from './PendingInvitationsSection';
 import { CreatePeerChallengeDialog } from './CreatePeerChallengeDialog';
 import { PeerChallengesOnboarding } from './PeerChallengesOnboarding';
 import { PeerChallengeDetailModal } from './PeerChallengeDetailModal';
+import { XPBettingStats } from './XPBettingStats';
+import { XPBettingInfo } from './XPBettingInfo';
 import { cn } from '@/lib/utils';
 
 export function PeerChallengesSection() {
@@ -142,6 +144,9 @@ export function PeerChallengesSection() {
                 </div>
               ) : (
                 <>
+                  {/* XP Betting Stats */}
+                  <XPBettingStats />
+
                   {/* Pending invitations */}
                   <PendingInvitationsSection
                     invitations={invitations}
@@ -208,6 +213,9 @@ export function PeerChallengesSection() {
                       </Button>
                     </div>
                   )}
+
+                  {/* XP Betting Info */}
+                  <XPBettingInfo />
                 </>
               )}
             </div>

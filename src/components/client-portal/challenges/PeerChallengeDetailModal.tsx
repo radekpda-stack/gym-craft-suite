@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { 
   Trophy, 
   Clock, 
@@ -18,13 +19,15 @@ import {
   Users,
   Send,
   Loader2,
-  Medal
+  Medal,
+  Zap
 } from 'lucide-react';
 import { formatDistanceToNow, format, isPast } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { usePeerChallenge, useSubmitPeerChallengeResult, usePeerChallengeLeaderboard } from '@/hooks/usePeerChallenges';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { cn } from '@/lib/utils';
+import { XPBetSelector } from './XPBetSelector';
 
 interface PeerChallengeDetailModalProps {
   challengeId: string;
@@ -52,6 +55,15 @@ export function PeerChallengeDetailModal({
     (p: any) => p.client_id === clientId
   );
   const participantCount = challenge?.peer_challenge_participants?.length || 0;
+  const myXPBet = myParticipation?.xp_bet || 0;
+  const xpBettingEnabled = (challenge as any)?.xp_bet_enabled ?? true; // Default to enabled
+  const xpBetMin = (challenge as any)?.xp_bet_min || 10;
+  const xpBetMax = (challenge as any)?.xp_bet_max || 500;
+
+  // Calculate total XP pool
+  const totalXPPool = challenge?.peer_challenge_participants?.reduce(
+    (sum: number, p: any) => sum + (p.xp_bet || 0), 0
+  ) || 0;
 
   const handleSubmit = async () => {
     if (!score || !challengeId) return;
@@ -132,6 +144,32 @@ export function PeerChallengeDetailModal({
               </div>
             </div>
 
+            {/* XP Pool info */}
+            {totalXPPool > 0 && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  <span className="text-sm font-medium">XP v sázce</span>
+                </div>
+                <div className="text-lg font-bold text-yellow-600">
+                  {totalXPPool.toLocaleString()} XP
+                </div>
+              </div>
+            )}
+
+            {/* XP Betting Section */}
+            {!isEnded && myParticipation?.status === 'accepted' && xpBettingEnabled && (
+              <>
+                <Separator />
+                <XPBetSelector
+                  challengeId={challengeId}
+                  currentBet={myXPBet}
+                  minBet={xpBetMin}
+                  maxBet={xpBetMax}
+                />
+              </>
+            )}
+
             {/* Leaderboard */}
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -145,36 +183,48 @@ export function PeerChallengeDetailModal({
                 </div>
               ) : (
                 <div className="border rounded-lg divide-y">
-                  {leaderboard.map((entry, index) => (
-                    <div 
-                      key={entry.client_id}
-                      className={cn(
-                        "flex items-center gap-3 p-3",
-                        entry.is_me && "bg-primary/5"
-                      )}
-                    >
-                      <div className="w-8 text-center">
-                        {index === 0 ? (
-                          <Medal className="h-5 w-5 text-yellow-500 mx-auto" />
-                        ) : index === 1 ? (
-                          <Medal className="h-5 w-5 text-gray-400 mx-auto" />
-                        ) : index === 2 ? (
-                          <Medal className="h-5 w-5 text-orange-400 mx-auto" />
-                        ) : (
-                          <span className="text-muted-foreground font-medium">{index + 1}</span>
+                  {leaderboard.map((entry, index) => {
+                    // Find participant's bet
+                    const participantBet = challenge?.peer_challenge_participants?.find(
+                      (p: any) => p.client_id === entry.client_id
+                    )?.xp_bet || 0;
+                    
+                    return (
+                      <div 
+                        key={entry.client_id}
+                        className={cn(
+                          "flex items-center gap-3 p-3",
+                          entry.is_me && "bg-primary/5"
                         )}
+                      >
+                        <div className="w-8 text-center">
+                          {index === 0 ? (
+                            <Medal className="h-5 w-5 text-yellow-500 mx-auto" />
+                          ) : index === 1 ? (
+                            <Medal className="h-5 w-5 text-gray-400 mx-auto" />
+                          ) : index === 2 ? (
+                            <Medal className="h-5 w-5 text-orange-400 mx-auto" />
+                          ) : (
+                            <span className="text-muted-foreground font-medium">{index + 1}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("font-medium", entry.is_me && "text-primary")}>
+                            {entry.display_name}
+                            {entry.is_me && ' (ty)'}
+                          </span>
+                          {participantBet > 0 && (
+                            <span className="ml-2 text-xs text-yellow-600">
+                              🎲 {participantBet} XP
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-bold text-lg">
+                          {entry.best_score}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={cn("font-medium", entry.is_me && "text-primary")}>
-                          {entry.display_name}
-                          {entry.is_me && ' (ty)'}
-                        </span>
-                      </div>
-                      <div className="font-bold text-lg">
-                        {entry.best_score}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
