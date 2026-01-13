@@ -41,7 +41,7 @@ export function IntensityStatsCard() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Flame className="h-4 w-4 text-orange-500" />
+          <Flame className="h-4 w-4 text-warning" />
           Intenzita tréninků
         </CardTitle>
       </CardHeader>
@@ -50,7 +50,7 @@ export function IntensityStatsCard() {
         <div className="grid grid-cols-2 gap-3">
           <div className={cn('p-3 rounded-lg text-center', intensity.bg)}>
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Flame className="h-4 w-4 text-orange-500" />
+              <Flame className="h-4 w-4 text-warning" />
               <span className={cn('text-2xl font-bold', intensity.color)}>
                 {data.avgRPE.toFixed(1)}
               </span>
@@ -59,7 +59,7 @@ export function IntensityStatsCard() {
           </div>
           <div className="p-3 rounded-lg bg-secondary/50 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Battery className="h-4 w-4 text-emerald-500" />
+              <Battery className="h-4 w-4 text-success" />
               <span className="text-2xl font-bold">{data.avgRIR.toFixed(1)}</span>
             </div>
             <p className="text-xs text-muted-foreground">Ø RIR</p>

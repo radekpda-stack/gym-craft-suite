@@ -36,8 +36,8 @@ const TaskRow = memo(function TaskRow({
   const Icon = TASK_ICONS[task.type];
   
   const getSeverityColor = () => {
-    if (task.severity === 'error') return 'text-red-400';
-    if (task.severity === 'warning') return 'text-amber-400';
+    if (task.severity === 'error') return 'text-destructive';
+    if (task.severity === 'warning') return 'text-warning';
     return 'text-muted-foreground';
   };
   
@@ -69,8 +69,8 @@ const TaskRow = memo(function TaskRow({
 function AllClearState({ messages }: { messages: string[] }) {
   return (
     <div className="text-center py-6">
-      <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 mb-3">
-        <Sparkles className="w-6 h-6 text-emerald-400" />
+      <div className="inline-flex p-3 rounded-2xl bg-success/10 mb-3">
+        <Sparkles className="w-6 h-6 text-success" />
       </div>
       <p className="text-sm font-medium text-foreground mb-1">Vše v pořádku!</p>
       {messages.length > 0 && (
@@ -111,16 +111,16 @@ export function AttentionCard({ data, isLoading }: AttentionCardProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {allClear ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-success" />
           ) : (
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <AlertTriangle className="w-4 h-4 text-warning" />
           )}
           <span className="text-sm font-semibold text-foreground">
             {allClear ? 'Vše OK' : 'Vyžaduje pozornost'}
           </span>
         </div>
         {!allClear && totalTasksCount > 0 && (
-          <span className="text-xs text-amber-400 font-medium">
+          <span className="text-xs text-warning font-medium">
             {totalTasksCount}
           </span>
         )}

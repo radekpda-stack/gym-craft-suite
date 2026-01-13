@@ -14,22 +14,22 @@ interface UsageRecommendationsProps {
 function getRecommendationIcon(type: Recommendation['type']) {
   switch (type) {
     case 'success':
-      return <CheckCircle className="w-4 h-4 text-emerald-500" />;
+      return <CheckCircle className="w-4 h-4 text-success" />;
     case 'warning':
-      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      return <AlertTriangle className="w-4 h-4 text-warning" />;
     case 'info':
-      return <Info className="w-4 h-4 text-blue-500" />;
+      return <Info className="w-4 h-4 text-accent" />;
   }
 }
 
 function getRecommendationStyles(type: Recommendation['type']) {
   switch (type) {
     case 'success':
-      return 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900';
+      return 'bg-success/10 border-success/20';
     case 'warning':
-      return 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900';
+      return 'bg-warning/10 border-warning/20';
     case 'info':
-      return 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900';
+      return 'bg-accent/10 border-accent/20';
   }
 }
 
