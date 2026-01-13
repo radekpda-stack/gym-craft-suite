@@ -25,14 +25,14 @@ interface TrainingItemProps {
 const TrainingItem = memo(function TrainingItem({ item, isNext, onClick }: TrainingItemProps) {
   const getStatusStyles = () => {
     if (item.status === 'cancelled') return 'opacity-50';
-    if (item.status === 'completed') return 'bg-emerald-500/10';
+    if (item.status === 'completed') return 'bg-success/10';
     if (isNext) return 'bg-primary/10';
     return 'bg-secondary/30';
   };
   
   const getStatusIcon = () => {
     if (item.status === 'cancelled') return <XCircle className="w-4 h-4 text-muted-foreground" />;
-    if (item.status === 'completed') return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    if (item.status === 'completed') return <CheckCircle2 className="w-4 h-4 text-success" />;
     return <Clock className="w-4 h-4 text-muted-foreground" />;
   };
 
@@ -165,7 +165,7 @@ function WeekMiniOverview({ weekSchedule }: { weekSchedule: ScheduleItem[] }) {
           {day.total > 0 ? (
             <span className={cn(
               'text-[10px] font-medium tabular-nums',
-              day.completed === day.total ? 'text-emerald-500' : 'text-muted-foreground'
+              day.completed === day.total ? 'text-success' : 'text-muted-foreground'
             )}>
               {day.completed}/{day.total}
             </span>
@@ -305,7 +305,7 @@ export const TrainingsCalendarCard = memo(function TrainingsCalendarCard({
               {viewMode === 'today' ? 'Dnešní tréninky' : 'Tento týden'}
             </span>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               <span className="text-sm font-semibold tabular-nums">
                 {completedCount}/{totalCount}
               </span>

@@ -108,7 +108,7 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-yellow-500" />
+            <Trophy className="w-5 h-5 text-warning" />
             Osobní rekordy
           </CardTitle>
         </CardHeader>
@@ -129,7 +129,7 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-yellow-500" />
+            <Trophy className="w-5 h-5 text-warning" />
             Osobní rekordy
           </CardTitle>
           <Badge variant="outline" className="text-xs">

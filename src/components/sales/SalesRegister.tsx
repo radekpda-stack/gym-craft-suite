@@ -87,7 +87,7 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
 
       {/* Credit delta for topups */}
       {product.kind === 'credit_topup' && product.credit_delta > 0 && (
-        <p className="text-xs text-amber-600 mt-1">
+        <p className="text-xs text-warning mt-1">
           +{formatCurrency(product.credit_delta)} kredit
         </p>
       )}
@@ -291,9 +291,9 @@ export function SalesRegister() {
   const getProductIcon = (product: Product) => {
     switch (product.kind) {
       case 'service':
-        return <Wrench className="w-3.5 h-3.5 text-blue-500" />;
+        return <Wrench className="w-3.5 h-3.5 text-accent" />;
       case 'credit_topup':
-        return <Coins className="w-3.5 h-3.5 text-amber-500" />;
+        return <Coins className="w-3.5 h-3.5 text-warning" />;
       default:
         return <Package className="w-3.5 h-3.5 text-primary" />;
     }
@@ -464,7 +464,7 @@ export function SalesRegister() {
             {groupedProducts.services.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Wrench className="w-4 h-4 text-blue-500" />
+                  <Wrench className="w-4 h-4 text-accent" />
                   <span className="text-sm font-medium text-muted-foreground">Služby</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.services.length})</span>
                 </div>
@@ -510,7 +510,7 @@ export function SalesRegister() {
             {groupedProducts.creditTopups.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Coins className="w-4 h-4 text-amber-500" />
+                  <Coins className="w-4 h-4 text-warning" />
                   <span className="text-sm font-medium text-muted-foreground">Dobití kreditu</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.creditTopups.length})</span>
                 </div>

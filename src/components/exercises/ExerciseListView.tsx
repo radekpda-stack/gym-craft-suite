@@ -509,8 +509,8 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                       className={cn(
                                         "w-4 h-4 transition-colors",
                                         isFavorite(exercise.id) 
-                                          ? "text-yellow-500 fill-yellow-500" 
-                                          : "text-muted-foreground hover:text-yellow-500"
+                                          ? "text-warning fill-warning" 
+                                          : "text-muted-foreground hover:text-warning"
                                       )} 
                                     />
                                   </Button>

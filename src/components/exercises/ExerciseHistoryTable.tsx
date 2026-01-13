@@ -321,7 +321,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                       {row.side && (row.side === 'left' || row.side === 'right') && (
                         <span className={cn(
                           "text-[10px] font-bold px-1 rounded",
-                          row.side === 'left' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                          row.side === 'left' ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
                         )}>
                           {row.side === 'left' ? 'L' : 'R'}
                         </span>

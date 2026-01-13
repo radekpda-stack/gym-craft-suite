@@ -90,7 +90,7 @@ export function SimpleStatsCard({ workoutDates }: SimpleStatsCardProps) {
             <div className="flex items-center gap-2">
               <div className={cn(
                 "w-12 h-12 rounded-xl flex items-center justify-center",
-                stats.streak > 0 ? "bg-orange-500/10 text-orange-500" : "bg-muted text-muted-foreground"
+                stats.streak > 0 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
               )}>
                 <Flame className="w-6 h-6" />
               </div>
