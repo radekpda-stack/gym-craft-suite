@@ -23,14 +23,14 @@ const actionIcons: Record<ActionType, React.ReactNode> = {
 
 const actionColors: Record<ActionType, { bg: string; text: string; border: string }> = {
   feedback: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-500',
-    border: 'border-amber-500/30 hover:border-amber-500/50',
+    bg: 'bg-warning/10',
+    text: 'text-warning',
+    border: 'border-warning/30 hover:border-warning/50',
   },
   prediagnostic: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-500',
-    border: 'border-blue-500/30 hover:border-blue-500/50',
+    bg: 'bg-accent/10',
+    text: 'text-accent',
+    border: 'border-accent/30 hover:border-accent/50',
   },
   profile: {
     bg: 'bg-muted',
@@ -53,7 +53,7 @@ function ActionItem({ action, index }: { action: PendingAction; index: number })
       <Card className={cn(
         "transition-all cursor-pointer",
         colors.border,
-        action.urgency === 'high' && "ring-1 ring-amber-500/20"
+        action.urgency === 'high' && "ring-1 ring-warning/20"
       )}>
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
@@ -67,7 +67,7 @@ function ActionItem({ action, index }: { action: PendingAction; index: number })
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium truncate">{action.title}</p>
                 {action.urgency === 'high' && (
-                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-warning shrink-0" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
@@ -114,9 +114,9 @@ export function ClientActionRequired() {
         {/* Header */}
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Bell className="w-5 h-5 text-amber-500" />
+            <Bell className="w-5 h-5 text-warning" />
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-warning text-warning-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                 {count}
               </span>
             )}

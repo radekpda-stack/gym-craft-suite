@@ -48,18 +48,16 @@ export default function ClientPortalOverview() {
   }, [trackPageMount]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* 1. Header */}
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold truncate">
-              Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
-            </h1>
-            <p className="text-muted-foreground text-sm">Jak ti to jde</p>
-          </div>
-          <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate">
+            Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Tvůj tréninkový přehled</p>
         </div>
+        <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
       </div>
 
       {/* 2. ACTION REQUIRED - Hero section for pending tasks */}

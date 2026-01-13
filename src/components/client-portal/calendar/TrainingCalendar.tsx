@@ -49,15 +49,15 @@ function DayCell({
         compact ? "p-0.5" : "p-1",
         !isCurrentMonth && "opacity-30",
         today && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-        day.hasWorkout && intensity === 1 && "bg-green-500/20",
-        day.hasWorkout && intensity === 2 && "bg-green-500/40",
-        day.hasWorkout && intensity === 3 && "bg-green-500/60",
-        day.hasWorkout && intensity >= 4 && "bg-green-500/80",
+        day.hasWorkout && intensity === 1 && "bg-success/20",
+        day.hasWorkout && intensity === 2 && "bg-success/40",
+        day.hasWorkout && intensity === 3 && "bg-success/60",
+        day.hasWorkout && intensity >= 4 && "bg-success/80",
       )}
     >
       <span className={cn(
         "text-xs font-medium",
-        day.hasWorkout && intensity >= 3 && "text-white",
+        day.hasWorkout && intensity >= 3 && "text-success-foreground",
         !isCurrentMonth && "text-muted-foreground"
       )}>
         {format(day.date, 'd')}
@@ -68,14 +68,14 @@ function DayCell({
           {day.workoutCount > 1 ? (
             <span className={cn(
               "text-[9px] font-bold",
-              intensity >= 3 ? "text-white" : "text-green-600"
+              intensity >= 3 ? "text-success-foreground" : "text-success"
             )}>
               ×{day.workoutCount}
             </span>
           ) : (
             <Dumbbell className={cn(
               "w-2.5 h-2.5",
-              intensity >= 3 ? "text-white" : "text-green-600"
+              intensity >= 3 ? "text-success-foreground" : "text-success"
             )} />
           )}
         </div>
@@ -84,7 +84,7 @@ function DayCell({
       {day.hasWorkout && compact && (
         <div className={cn(
           "absolute bottom-0.5 w-1 h-1 rounded-full",
-          intensity >= 3 ? "bg-white" : "bg-green-500"
+          intensity >= 3 ? "bg-success-foreground" : "bg-success"
         )} />
       )}
     </motion.div>
@@ -192,19 +192,19 @@ export function TrainingCalendar({ className, compact = false }: TrainingCalenda
         {/* Legend */}
         <div className="flex items-center justify-center gap-3 mt-3 text-[10px] text-muted-foreground">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-500/20" />
+            <div className="w-3 h-3 rounded bg-success/20" />
             <span>1×</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-500/40" />
+            <div className="w-3 h-3 rounded bg-success/40" />
             <span>2×</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-500/60" />
+            <div className="w-3 h-3 rounded bg-success/60" />
             <span>3×</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-500/80" />
+            <div className="w-3 h-3 rounded bg-success/80" />
             <span>4+</span>
           </div>
         </div>

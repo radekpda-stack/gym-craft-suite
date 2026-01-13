@@ -94,15 +94,15 @@ export default function ClientPortalChat() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          Chat s trenérem
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Pošlete zprávu svému trenérovi
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <MessageCircle className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold">Chat s trenérem</h1>
+          <p className="text-muted-foreground text-sm">Pošli zprávu svému trenérovi</p>
+        </div>
       </div>
 
       <Card className="flex flex-col h-[calc(100vh-16rem)] md:h-[calc(100vh-14rem)]">

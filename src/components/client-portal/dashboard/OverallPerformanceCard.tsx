@@ -14,13 +14,13 @@ interface OverallPerformanceCardProps {
 
 function getPercentileStyle(percentile: number) {
   if (percentile >= 75) return { 
-    color: 'text-emerald-600 dark:text-emerald-400', 
-    bg: 'bg-emerald-500/10',
+    color: 'text-success', 
+    bg: 'bg-success/10',
     label: `Top ${Math.round(100 - percentile)}%` 
   };
   if (percentile >= 50) return { 
-    color: 'text-amber-600 dark:text-amber-400', 
-    bg: 'bg-amber-500/10',
+    color: 'text-warning', 
+    bg: 'bg-warning/10',
     label: 'Nad průměr' 
   };
   if (percentile >= 25) return { 
@@ -29,8 +29,8 @@ function getPercentileStyle(percentile: number) {
     label: 'Průměr' 
   };
   return { 
-    color: 'text-orange-600 dark:text-orange-400', 
-    bg: 'bg-orange-500/10',
+    color: 'text-destructive', 
+    bg: 'bg-destructive/10',
     label: 'Pod průměrem' 
   };
 }
@@ -104,7 +104,7 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
             {/* Strongest exercise */}
             {benchmarks.strongestExercise && (
               <div className="p-3 rounded-xl bg-muted/50 space-y-1">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-1.5 text-success">
                   <Trophy className="w-3.5 h-3.5" />
                   <span className="text-xs font-medium">Nejsilnější</span>
                 </div>
@@ -134,8 +134,8 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
 
           {/* Weakest exercise hint */}
           {benchmarks.weakestExercise && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/5 border border-orange-500/10">
-              <Dumbbell className="w-4 h-4 text-orange-500 shrink-0" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+              <Dumbbell className="w-4 h-4 text-destructive shrink-0" />
               <p className="text-xs text-muted-foreground">
                 <span className="font-medium capitalize">{benchmarks.weakestExercise.name}</span> – prostor ke zlepšení
               </p>

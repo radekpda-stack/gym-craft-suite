@@ -186,13 +186,16 @@ export default function ClientPortalWorkoutDiary() {
   const isSaving = createLog.isPending || completeAssignedWorkout.isPending;
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-6 pb-20">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">📓 Můj deník</h1>
-        <p className="text-muted-foreground text-sm">
-          Zaznamenávej, co děláš mimo tréninky se mnou. Trenér uvidí tvou aktivitu a může ti lépe poradit.
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Dumbbell className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold">Můj deník</h1>
+          <p className="text-muted-foreground text-sm">Zaznamenávej aktivity mimo tréninky</p>
+        </div>
       </div>
 
       {/* Tabs */}

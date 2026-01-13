@@ -42,8 +42,8 @@ export default function ClientPortalLeaderboard() {
         className="space-y-3"
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <Dumbbell className="w-4 h-4 text-blue-500" />
+          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+            <Dumbbell className="w-4 h-4 text-accent" />
           </div>
           <h2 className="text-lg font-semibold">Síla</h2>
           <span className="text-sm text-muted-foreground">
@@ -68,8 +68,8 @@ export default function ClientPortalLeaderboard() {
         className="space-y-3"
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-            <Heart className="w-4 h-4 text-green-500" />
+          <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+            <Heart className="w-4 h-4 text-success" />
           </div>
           <h2 className="text-lg font-semibold">Kardio</h2>
           <span className="text-sm text-muted-foreground">
