@@ -27,7 +27,7 @@ export function VolumeTimelineCardNew({ data, isLoading }: VolumeTimelineCardNew
   return (
     <AnalyticsCard
       title="Objem v čase"
-      icon={<Weight className="w-4 h-4" />}
+      icon={Weight}
       helpContent={HELP_CONTENT}
       isLoading={isLoading}
       isEmpty={isEmpty}

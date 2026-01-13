@@ -1,159 +1,46 @@
 import { useState } from 'react';
-import { useExerciseAnalyticsNew, type AnalyticsPeriod, type ComparisonMode } from '@/hooks/useExerciseAnalyticsNew';
-import { AnalyticsKPICards } from './analytics/AnalyticsKPICards';
-import { AnalyticsGrid, AnalyticsGridItem } from './analytics/AnalyticsGrid';
-import { VolumeTimelineCard } from './analytics/VolumeTimelineCard';
-import { LoadDistributionCard } from './analytics/LoadDistributionCard';
-import { MovementPatternsCard } from './analytics/MovementPatternsCard';
-import { TopExercisesCard } from './analytics/TopExercisesCard';
-import { PRTrendCard } from './analytics/PRTrendCard';
-import { IntensityTrendCard } from './analytics/IntensityTrendCard';
-import { TrainingFrequencyCard } from './analytics/TrainingFrequencyCard';
-import { CategoryDistributionCard } from './analytics/CategoryDistributionCard';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClientSearchSelect } from '@/components/ui/client-search-select';
-import { useClients } from '@/hooks/useClients';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { StrengthAnalyticsView } from './analytics/StrengthAnalyticsView';
+import { CardioAnalyticsView } from './analytics/CardioAnalyticsView';
+import { SkillAnalyticsView } from './analytics/SkillAnalyticsView';
+import { Dumbbell, Heart, Brain } from 'lucide-react';
 
-const PERIOD_OPTIONS: { value: AnalyticsPeriod; label: string }[] = [
-  { value: 7 as AnalyticsPeriod, label: '7 dní' },
-  { value: 30, label: '30 dní' },
-  { value: 90, label: '90 dní' },
-];
+type ExerciseTab = 'strength' | 'cardio' | 'skill';
 
 export function ExerciseAnalyticsView() {
-  const [period, setPeriod] = useState<AnalyticsPeriod>(30);
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('all');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-
-  const { data: clients = [] } = useClients();
-  const { data, isLoading } = useExerciseAnalyticsNew(period, comparisonMode, selectedClientId);
-
-  const handlePeriodChange = (value: string) => {
-    const numValue = Number(value);
-    if (!isNaN(numValue)) {
-      setPeriod(numValue as AnalyticsPeriod);
-    }
-  };
-
-  const handleClientChange = (value: string) => {
-    if (!value) {
-      setSelectedClientId(null);
-      setComparisonMode('all');
-    } else {
-      setSelectedClientId(value);
-      setComparisonMode('client');
-    }
-  };
-
-  const periodLabel = PERIOD_OPTIONS.find(p => p.value === period)?.label || '30 dní';
-  const periodDays = typeof period === 'number' ? period : 90;
+  const [activeTab, setActiveTab] = useState<ExerciseTab>('strength');
 
   return (
     <div className="space-y-4">
-      {/* Filters Row */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Period Segmented Control */}
-        <Tabs value={String(period)} onValueChange={handlePeriodChange} className="w-full sm:w-auto">
-          <TabsList className="grid grid-cols-3 w-full sm:w-auto">
-            {PERIOD_OPTIONS.map((opt) => (
-              <TabsTrigger key={opt.value} value={String(opt.value)} className="text-xs sm:text-sm px-3">
-                {opt.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      {/* Sub-tabs for exercise types */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ExerciseTab)}>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="strength" className="flex items-center gap-1.5">
+            <Dumbbell className="w-3.5 h-3.5" />
+            <span>Síla</span>
+          </TabsTrigger>
+          <TabsTrigger value="cardio" className="flex items-center gap-1.5">
+            <Heart className="w-3.5 h-3.5" />
+            <span>Kardio</span>
+          </TabsTrigger>
+          <TabsTrigger value="skill" className="flex items-center gap-1.5">
+            <Brain className="w-3.5 h-3.5" />
+            <span>Skill</span>
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Client Dropdown */}
-        <ClientSearchSelect
-          clients={clients}
-          value={selectedClientId || ''}
-          onValueChange={handleClientChange}
-          placeholder="Všichni klienti"
-          allowAll
-          allLabel="Všichni klienti"
-          filterArchived
-          className="w-full sm:w-[180px]"
-        />
-      </div>
+        <TabsContent value="strength" className="mt-4">
+          <StrengthAnalyticsView />
+        </TabsContent>
 
-      {/* KPI Cards */}
-      <AnalyticsKPICards data={data} isLoading={isLoading} />
+        <TabsContent value="cardio" className="mt-4">
+          <CardioAnalyticsView />
+        </TabsContent>
 
-      {/* Analytics Charts Grid */}
-      <AnalyticsGrid>
-        {/* Volume Timeline - spans 2 columns */}
-        <AnalyticsGridItem className="md:col-span-2">
-          <VolumeTimelineCard
-            data={data?.volumeTimeline || []}
-            comparisonMode={comparisonMode}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Training Frequency */}
-        <AnalyticsGridItem>
-          <TrainingFrequencyCard
-            days={periodDays}
-            clientId={selectedClientId}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* PR Trend Card */}
-        <AnalyticsGridItem>
-          <PRTrendCard
-            days={periodDays}
-            clientId={selectedClientId}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Intensity (RPE) Trend */}
-        <AnalyticsGridItem>
-          <IntensityTrendCard
-            days={periodDays}
-            clientId={selectedClientId}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Category Distribution */}
-        <AnalyticsGridItem>
-          <CategoryDistributionCard
-            days={periodDays}
-            clientId={selectedClientId}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Load Distribution */}
-        <AnalyticsGridItem>
-          <LoadDistributionCard
-            data={data?.loadDistribution || []}
-            detailData={data?.loadDistributionDetail || []}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Movement Patterns */}
-        <AnalyticsGridItem>
-          <MovementPatternsCard
-            data={data?.movementPatterns || []}
-            coverage={data?.movementPatternsCoverage}
-            totalEntries={data?.movementPatternsTotalEntries}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-
-        {/* Top Exercises - full width */}
-        <AnalyticsGridItem className="md:col-span-2">
-          <TopExercisesCard
-            data={data?.topExercises || []}
-            periodLabel={periodLabel}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-      </AnalyticsGrid>
+        <TabsContent value="skill" className="mt-4">
+          <SkillAnalyticsView />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
