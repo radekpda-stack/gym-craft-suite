@@ -351,3 +351,155 @@ export function calculateAsymmetry(leftValue: number | null, rightValue: number 
   
   return Math.abs(leftValue - rightValue) / maxVal * 100;
 }
+
+// ========================================================
+// Entry Preparation Helper
+// ========================================================
+
+export interface EntryInput {
+  client_id: string;
+  exercise_id?: string | null;
+  exercise_name: string;
+  side?: string | null;
+  weight_kg?: number | null;
+  height_cm?: number | null;
+  distance_meters?: number | null;
+  time_seconds?: number | null;
+  time_ms?: number | null;
+  avg_watts?: number | null;
+  pace_sec_per_500m?: number | null;
+  is_bodyweight?: boolean;
+  reps?: number | null;
+  // For plyometrics
+  attempt_values?: number[] | null;
+}
+
+export interface PreparedEntryFields {
+  metric_key: MetricKey;
+  side_scope: SideScope;
+  pr_scope_key: string;
+  is_pr: boolean;
+}
+
+/**
+ * Prepare entry with computed PR fields
+ * Use this before inserting a new exercise_entry
+ */
+export async function prepareEntryWithPR(
+  entry: EntryInput,
+  excludeEntryId?: string
+): Promise<{
+  fields: PreparedEntryFields;
+  oldValue: number | null;
+}> {
+  const metricKey = determineMetricKey(entry);
+  const sideScope = normalizeSideScope(entry.side);
+  
+  const prScopeKey = generatePRScopeKey({
+    clientId: entry.client_id,
+    exerciseId: entry.exercise_id || null,
+    exerciseName: entry.exercise_name,
+    metricKey,
+    sideScope,
+  });
+  
+  const { isPR, oldValue } = await checkIsPR(entry, excludeEntryId);
+  
+  return {
+    fields: {
+      metric_key: metricKey,
+      side_scope: sideScope,
+      pr_scope_key: prScopeKey,
+      is_pr: isPR,
+    },
+    oldValue,
+  };
+}
+
+/**
+ * Recompute PRs after update/delete and return the new PR entry id (if any)
+ * Returns the id of the entry that is now the PR, or null if no PR
+ */
+export async function recomputeAndGetNewPR(entry: {
+  client_id: string;
+  exercise_id?: string | null;
+  exercise_name: string;
+  side?: string | null;
+  weight_kg?: number | null;
+  height_cm?: number | null;
+  distance_meters?: number | null;
+  time_seconds?: number | null;
+  avg_watts?: number | null;
+  pace_sec_per_500m?: number | null;
+  is_bodyweight?: boolean;
+  reps?: number | null;
+}): Promise<string | null> {
+  const metricKey = determineMetricKey(entry);
+  const sideScope = normalizeSideScope(entry.side);
+  const rule = METRIC_RULES[metricKey];
+  
+  if (rule === 'none') return null;
+  
+  const column = METRIC_COLUMN_MAP[metricKey];
+  
+  // Build query to get all entries for this scope, ordered chronologically
+  let query = supabase
+    .from('exercise_entries')
+    .select('id, weight_kg, height_cm, distance_meters, time_seconds, avg_watts, pace_sec_per_500m, reps, date, created_at')
+    .eq('client_id', entry.client_id)
+    .not(column, 'is', null);
+  
+  if (entry.exercise_id) {
+    query = query.eq('exercise_id', entry.exercise_id);
+  } else {
+    query = query.eq('exercise_name', entry.exercise_name);
+  }
+  
+  if (sideScope === 'left' || sideScope === 'right') {
+    query = query.eq('side_scope', sideScope);
+  }
+  
+  query = query.order('date', { ascending: true }).order('created_at', { ascending: true });
+  
+  const { data: entries, error } = await query;
+  
+  if (error || !entries || entries.length === 0) {
+    return null;
+  }
+  
+  // Recompute PRs chronologically
+  let runningBest: number | null = null;
+  let currentPRId: string | null = null;
+  const updates: { id: string; is_pr: boolean }[] = [];
+  
+  for (const e of entries) {
+    const value = (e as Record<string, unknown>)[column] as number;
+    let isPR = false;
+    
+    if (runningBest === null) {
+      isPR = true;
+      runningBest = value;
+      currentPRId = e.id;
+    } else if (rule === 'higher' && value > runningBest) {
+      isPR = true;
+      runningBest = value;
+      currentPRId = e.id;
+    } else if (rule === 'lower' && value < runningBest) {
+      isPR = true;
+      runningBest = value;
+      currentPRId = e.id;
+    }
+    
+    updates.push({ id: e.id, is_pr: isPR });
+  }
+  
+  // Batch update all entries
+  for (const update of updates) {
+    await supabase
+      .from('exercise_entries')
+      .update({ is_pr: update.is_pr })
+      .eq('id', update.id);
+  }
+  
+  return currentPRId;
+}

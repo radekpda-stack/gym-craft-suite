@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { prepareEntryWithPR, recomputePRsAfterChange } from '@/lib/prEngine';
 
 export type TrainingStatus = 'scheduled' | 'in_progress' | 'completed' | 'canceled';
 
@@ -941,41 +942,53 @@ async function syncWorkoutToExerciseEntries(
 
     // For each exercise, find the best set and upsert to exercise_entries
     for (const group of Object.values(exerciseGroups)) {
-      // Find best set (highest weight × reps)
+      // Check if this is a time-based exercise
+      const hasTimeData = group.entries.some((e: any) => e.time_seconds && e.time_seconds > 0);
+      
       let bestSet = group.entries[0];
-      let bestVolume = (bestSet.weight_kg || 0) * (bestSet.reps || 0);
-
-      for (const entry of group.entries) {
-        const volume = (entry.weight_kg || 0) * (entry.reps || 0);
-        if (volume > bestVolume) {
-          bestSet = entry;
-          bestVolume = volume;
+      
+      if (hasTimeData) {
+        // For time-based: find lowest time
+        let bestTime = bestSet.time_seconds || Infinity;
+        for (const entry of group.entries) {
+          if (entry.time_seconds && entry.time_seconds > 0 && entry.time_seconds < bestTime) {
+            bestSet = entry;
+            bestTime = entry.time_seconds;
+          }
+        }
+      } else {
+        // For strength: find highest weight × reps
+        let bestVolume = (bestSet.weight_kg || 0) * (bestSet.reps || 0);
+        for (const entry of group.entries) {
+          const volume = (entry.weight_kg || 0) * (entry.reps || 0);
+          if (volume > bestVolume) {
+            bestSet = entry;
+            bestVolume = volume;
+          }
         }
       }
 
       // Check if entry already exists for this exercise and date
       const { data: existingEntry } = await supabase
         .from('exercise_entries')
-        .select('id, weight_kg')
+        .select('id')
         .eq('client_id', clientId)
         .eq('exercise_name', group.exercise_name)
         .eq('date', exerciseDate)
         .eq('user_id', userId)
         .maybeSingle();
 
-      // Check if this is a PR (compare against all previous records)
-      const { data: previousBest } = await supabase
-        .from('exercise_entries')
-        .select('weight_kg')
-        .eq('client_id', clientId)
-        .eq('exercise_name', group.exercise_name)
-        .eq('user_id', userId)
-        .neq('date', exerciseDate)
-        .order('weight_kg', { ascending: false, nullsFirst: false })
-        .limit(1);
-
-      const isPR = !previousBest || previousBest.length === 0 || 
-        (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
+      // Use PR Engine to prepare entry with computed fields
+      const { fields } = await prepareEntryWithPR({
+        client_id: clientId,
+        exercise_id: group.exercise_id,
+        exercise_name: group.exercise_name,
+        weight_kg: bestSet.weight_kg,
+        time_seconds: bestSet.time_seconds,
+        distance_meters: bestSet.distance_meters,
+        avg_watts: bestSet.watts,
+        reps: bestSet.reps,
+      }, existingEntry?.id);
 
       const entryData = {
         client_id: clientId,
@@ -984,10 +997,18 @@ async function syncWorkoutToExerciseEntries(
         sets: group.entries.length,
         reps: bestSet.reps,
         weight_kg: bestSet.weight_kg,
-        is_pr: isPR,
+        time_seconds: bestSet.time_seconds,
+        distance_meters: bestSet.distance_meters,
+        is_pr: fields.is_pr,
+        metric_key: fields.metric_key,
+        side_scope: fields.side_scope,
+        pr_scope_key: fields.pr_scope_key,
         date: exerciseDate,
         user_id: userId,
         notes: bestSet.notes || '',
+        avg_watts: bestSet.watts,
+        level: bestSet.level,
+        resistance: bestSet.resistance,
       };
 
       if (existingEntry) {
@@ -1010,6 +1031,18 @@ async function syncWorkoutToExerciseEntries(
           console.error('Error inserting exercise entry:', insertError);
         }
       }
+
+      // Recompute PRs for the affected scope to ensure consistency
+      await recomputePRsAfterChange({
+        client_id: clientId,
+        exercise_id: group.exercise_id,
+        exercise_name: group.exercise_name,
+        weight_kg: bestSet.weight_kg,
+        time_seconds: bestSet.time_seconds,
+        distance_meters: bestSet.distance_meters,
+        avg_watts: bestSet.watts,
+        reps: bestSet.reps,
+      });
     }
   } catch (error) {
     console.error('Error syncing workout entries:', error);

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { getTimeMs } from '@/lib/timeUtils';
+import { checkIsPR as prEngineCheckIsPR, prepareEntryWithPR, recomputePRsAfterChange } from '@/lib/prEngine';
 
 export type PerformanceSource = 'training_session' | 'coach_manual' | 'client_self_report' | 'import' | 'challenge_manual';
 export type PerformanceStatus = 'approved' | 'pending' | 'rejected';
@@ -199,49 +200,24 @@ function getExerciseKeywords(exerciseName: string): string[] {
   return [name.split(' ')[0]];
 }
 
-// Check if this is a PR
+// Check if this is a PR - now uses PR Engine
 async function checkIsPR(
   clientId: string,
   exerciseId: string,
   entry: PerformanceLogInput,
   isTimeBased: boolean
 ): Promise<boolean> {
-  const { data: existingEntries } = await supabase
-    .from('exercise_entries')
-    .select('time_ms, time_seconds, weight_kg, reps, distance_meters')
-    .eq('client_id', clientId)
-    .eq('exercise_id', exerciseId)
-    .eq('status', 'approved');
-  
-  if (!existingEntries?.length) return true;
-  
-  if (isTimeBased) {
-    const newTimeMs = entry.time_ms || (entry.time_seconds ? entry.time_seconds * 1000 : null);
-    if (!newTimeMs) return false;
-    
-    // For time-based with fixed distance, check only matching distances
-    const relevantEntries = entry.distance_meters 
-      ? existingEntries.filter(e => e.distance_meters === entry.distance_meters)
-      : existingEntries;
-    
-    if (!relevantEntries.length) return true;
-    
-    const bestTime = Math.min(...relevantEntries.map(e => getTimeMs(e) || Infinity));
-    return newTimeMs < bestTime;
-  } else {
-    // Weight-based PR
-    if (entry.weight_kg) {
-      const bestWeight = Math.max(...existingEntries.map(e => e.weight_kg || 0));
-      return entry.weight_kg > bestWeight;
-    }
-    // Reps-based PR
-    if (entry.reps) {
-      const bestReps = Math.max(...existingEntries.map(e => e.reps || 0));
-      return entry.reps > bestReps;
-    }
-  }
-  
-  return false;
+  const { isPR } = await prEngineCheckIsPR({
+    client_id: clientId,
+    exercise_id: exerciseId,
+    exercise_name: entry.exercise_name,
+    weight_kg: entry.weight_kg,
+    time_seconds: entry.time_seconds,
+    distance_meters: entry.distance_meters,
+    avg_watts: entry.avg_watts,
+    reps: entry.reps,
+  });
+  return isPR;
 }
 
 export function useCreatePerformanceLog() {
