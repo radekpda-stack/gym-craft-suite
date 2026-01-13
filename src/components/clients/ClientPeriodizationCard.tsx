@@ -40,8 +40,8 @@ export function ClientPeriodizationCard({ clientId, defaultOpen = false }: Clien
 
   const TrendIcon = ({ trend }: { trend: 'increasing' | 'stable' | 'decreasing' }) => {
     switch (trend) {
-      case 'increasing': return <TrendingUp className="w-3 h-3 text-green-500" />;
-      case 'decreasing': return <TrendingDown className="w-3 h-3 text-red-500" />;
+      case 'increasing': return <TrendingUp className="w-3 h-3 text-success" />;
+      case 'decreasing': return <TrendingDown className="w-3 h-3 text-destructive" />;
       default: return <Minus className="w-3 h-3 text-muted-foreground" />;
     }
   };

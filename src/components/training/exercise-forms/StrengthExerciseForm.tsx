@@ -96,7 +96,7 @@ export function StrengthExerciseForm({
             {exercise.name_cs || exercise.name}
           </h3>
           <div className="flex gap-2 mt-1">
-            <Badge variant="secondary" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+            <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
               <Dumbbell className="w-3 h-3 mr-1" />
               SÍLA
             </Badge>

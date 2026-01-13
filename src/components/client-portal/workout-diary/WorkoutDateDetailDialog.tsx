@@ -43,7 +43,7 @@ export function WorkoutDateDetailDialog({
                   <div className="flex items-center gap-3 mb-3">
                     <div className={cn(
                       "w-10 h-10 rounded-lg flex items-center justify-center",
-                      entry.is_coached ? "bg-primary/10 text-primary" : "bg-green-500/10",
+                      entry.is_coached ? "bg-primary/10 text-primary" : "bg-success/10",
                       !entry.is_coached && getWorkoutTypeColor(entry.workout_type)
                     )}>
                       {entry.is_coached ? <User className="w-5 h-5" /> : <WorkoutIcon className="w-5 h-5" />}

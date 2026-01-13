@@ -152,7 +152,7 @@ export default function ClientPortalPurchases() {
                             )}
                             {/* Item discount badge */}
                             {(item.discountAmount ?? 0) > 0 && (
-                              <Badge variant="secondary" className="gap-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              <Badge variant="secondary" className="gap-1 text-xs bg-success/10 text-success">
                                 <Percent className="w-3 h-3" />
                                 {item.discountType === 'percent' && item.discountValue
                                   ? `-${item.discountValue}%`
@@ -166,7 +166,7 @@ export default function ClientPortalPurchases() {
                                 <span className="text-xs text-muted-foreground line-through">
                                   {formatCurrency(item.total)}
                                 </span>
-                                <span className="font-medium text-green-600 dark:text-green-400">
+                                <span className="font-medium text-success">
                                   {formatCurrency(item.totalAfterDiscount || item.total - item.discountAmount)}
                                 </span>
                               </div>
@@ -181,7 +181,7 @@ export default function ClientPortalPurchases() {
                     {/* Order-level discount */}
                     {(purchase.totalDiscount ?? 0) > 0 && (
                       <div className="flex items-center justify-between text-sm py-2 border-t border-dashed">
-                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                        <div className="flex items-center gap-2 text-success">
                           <Percent className="w-4 h-4" />
                           <span>
                             Sleva na objednávku
@@ -190,7 +190,7 @@ export default function ClientPortalPurchases() {
                               : ''}
                           </span>
                         </div>
-                        <span className="font-medium text-green-600 dark:text-green-400">
+                        <span className="font-medium text-success">
                           -{formatCurrency(purchase.totalDiscount)}
                         </span>
                       </div>

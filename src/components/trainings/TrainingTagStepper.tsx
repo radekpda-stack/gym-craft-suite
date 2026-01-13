@@ -164,22 +164,22 @@ export function TrainingTagStepper({
           </Badge>
         )}
         {selectedFocusNames.map((name) => (
-          <Badge key={name} variant="secondary" className="text-xs bg-blue-500/15 text-blue-600 dark:text-blue-400 border-0">
+          <Badge key={name} variant="secondary" className="text-xs bg-accent/15 text-accent border-0">
             {name}
           </Badge>
         ))}
         {selectedIntensityName && (
-          <Badge variant="secondary" className="text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0">
+          <Badge variant="secondary" className="text-xs bg-warning/15 text-warning border-0">
             {selectedIntensityName}
           </Badge>
         )}
         {selectedBodyPartNames.map((name) => (
-          <Badge key={name} variant="secondary" className="text-xs bg-purple-500/15 text-purple-600 dark:text-purple-400 border-0">
+          <Badge key={name} variant="secondary" className="text-xs bg-primary/15 text-primary border-0">
             {name}
           </Badge>
         ))}
         {coachRPE && (
-          <Badge variant="secondary" className="text-xs bg-rose-500/15 text-rose-600 dark:text-rose-400 border-0">
+          <Badge variant="secondary" className="text-xs bg-destructive/15 text-destructive border-0">
             RPE {coachRPE}
           </Badge>
         )}
@@ -213,17 +213,17 @@ export function TrainingTagStepper({
         ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20' 
         : 'bg-muted/60 hover:bg-muted text-foreground',
       focus: selected 
-        ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-500/20' 
-        : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300',
+        ? 'bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/20' 
+        : 'bg-accent/10 hover:bg-accent/20 text-accent',
       intensity: selected 
-        ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/20' 
-        : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+        ? 'bg-warning text-warning-foreground shadow-sm ring-2 ring-warning/20' 
+        : 'bg-warning/10 hover:bg-warning/20 text-warning',
       bodyPart: selected 
-        ? 'bg-purple-500 text-white shadow-sm ring-2 ring-purple-500/20' 
-        : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300',
+        ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20' 
+        : 'bg-primary/10 hover:bg-primary/20 text-primary',
       category: selected 
-        ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-600/30' 
-        : 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+        ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30' 
+        : 'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30',
       default: selected 
         ? 'bg-primary text-primary-foreground shadow-sm' 
         : 'bg-muted hover:bg-muted/80 text-foreground',
@@ -311,7 +311,7 @@ export function TrainingTagStepper({
           return (
             <div 
               key={categoryKey} 
-              className="pl-2 pt-2 border-l-2 border-purple-500/30 ml-2"
+              className="pl-2 pt-2 border-l-2 border-primary/30 ml-2"
             >
               <div className="flex flex-wrap gap-2">
                 {childNames.map((childName) => {
@@ -412,7 +412,7 @@ export function TrainingTagStepper({
         />
         {/* Validační upozornění */}
         {trainingStatus === 'completed' && !coachRPE && (
-          <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-400">
+          <div className="mt-2 p-2 bg-warning/10 border border-warning/20 rounded-md text-xs text-warning">
             ⚠️ RPE je povinné pro dokončené tréninky
           </div>
         )}

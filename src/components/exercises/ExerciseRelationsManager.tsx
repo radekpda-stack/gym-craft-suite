@@ -13,31 +13,31 @@ const RELATION_TYPE_CONFIG: Record<RelationType, { label: string; icon: React.Re
   progression: {
     label: 'Progrese',
     icon: <ArrowRight className="w-3 h-3" />,
-    color: 'bg-green-500/10 text-green-600 border-green-500/30',
+    color: 'bg-success/10 text-success border-success/30',
     description: 'Těžší varianta cviku',
   },
   regression: {
     label: 'Regrese',
     icon: <ArrowLeft className="w-3 h-3" />,
-    color: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    color: 'bg-accent/10 text-accent border-accent/30',
     description: 'Jednodušší varianta cviku',
   },
   variant: {
     label: 'Varianta',
     icon: <RefreshCw className="w-3 h-3" />,
-    color: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+    color: 'bg-primary/10 text-primary border-primary/30',
     description: 'Podobná varianta cviku',
   },
   alternative: {
     label: 'Alternativa',
     icon: <Zap className="w-3 h-3" />,
-    color: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+    color: 'bg-warning/10 text-warning border-warning/30',
     description: 'Záměnný cvik',
   },
   prep: {
     label: 'Příprava',
     icon: <Link2 className="w-3 h-3" />,
-    color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+    color: 'bg-warning/10 text-warning border-warning/30',
     description: 'Přípravný cvik',
   },
 };

@@ -105,8 +105,8 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
-            <Check className="w-8 h-8 text-emerald-500" />
+          <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+            <Check className="w-8 h-8 text-success" />
           </div>
           <h3 className="text-lg font-medium">Klient vytvořen</h3>
           <p className="text-sm text-muted-foreground">
@@ -132,11 +132,11 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
               onClick={copyToClipboard}
               className={cn(
                 "shrink-0 transition-colors",
-                copied && "bg-emerald-500/10 border-emerald-500/50"
+                copied && "bg-success/10 border-success/50"
               )}
             >
               {copied ? (
-                <Check className="w-4 h-4 text-emerald-500" />
+                <Check className="w-4 h-4 text-success" />
               ) : (
                 <Copy className="w-4 h-4" />
               )}
@@ -170,11 +170,11 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+        <div className="p-3 rounded-lg bg-success/10 border border-success/20">
           <div className="flex items-start gap-3">
-            <Mail className="w-5 h-5 text-emerald-500 mt-0.5" />
+            <Mail className="w-5 h-5 text-success mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-emerald-700 dark:text-emerald-400">
+              <p className="font-medium text-success">
                 Odkaz pro klienta
               </p>
               <p className="text-muted-foreground text-xs mt-1">

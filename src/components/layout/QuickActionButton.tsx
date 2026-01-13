@@ -44,16 +44,16 @@ interface QuickAction {
 
 // All available actions
 const allActionsConfig: QuickAction[] = [
-  { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-pink-500' },
-  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-amber-500' },
+  { id: 'sale', icon: ShoppingBag, label: 'Nový prodej', color: 'bg-primary' },
+  { id: 'credit', icon: Wallet, label: 'Dobít kredit', color: 'bg-warning' },
   { id: 'training', icon: Dumbbell, label: 'Nový trénink', color: 'bg-primary' },
-  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-purple-500' },
-  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-green-500' },
-  { id: 'performance', icon: Trophy, label: 'Zapsat výkon', color: 'bg-emerald-500' },
-  { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-blue-500' },
-  { id: 'prediagnostic', icon: ClipboardList, label: 'Pozvat klienta', color: 'bg-violet-500' },
+  { id: 'diagnostic', icon: Stethoscope, label: 'Nová diagnostika', color: 'bg-primary' },
+  { id: 'measurement', icon: Activity, label: 'Nové měření', color: 'bg-success' },
+  { id: 'performance', icon: Trophy, label: 'Zapsat výkon', color: 'bg-success' },
+  { id: 'client', icon: UserPlus, label: 'Nový klient', color: 'bg-accent' },
+  { id: 'prediagnostic', icon: ClipboardList, label: 'Pozvat klienta', color: 'bg-primary' },
   { id: 'exercise', icon: Dumbbell, label: 'Nový cvik', color: 'bg-primary' },
-  { id: 'stock', icon: Package, label: 'Přidat zboží', color: 'bg-cyan-500' },
+  { id: 'stock', icon: Package, label: 'Přidat zboží', color: 'bg-accent' },
 ];
 
 // Route-specific action configurations

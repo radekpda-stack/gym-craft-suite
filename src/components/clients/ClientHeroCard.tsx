@@ -105,13 +105,13 @@ export function ClientHeroCard({
         
         <div className="flex items-center gap-2 flex-wrap">
           {isOnLegacyPricing && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-lg flex items-center gap-1">
+            <span className="text-xs text-warning font-medium px-2 py-1 bg-warning/10 rounded-lg flex items-center gap-1">
               <History className="w-3 h-3" />
               Stará cena
             </span>
           )}
           {client.custom_training_price != null && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-lg flex items-center gap-1">
+            <span className="text-xs text-warning font-medium px-2 py-1 bg-warning/10 rounded-lg flex items-center gap-1">
               <Tag className="w-3 h-3" />
               {client.custom_training_price} Kč
             </span>

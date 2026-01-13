@@ -36,15 +36,15 @@ const WORKOUT_ICONS: Record<string, React.ComponentType<{ className?: string }>>
 };
 
 const WORKOUT_COLORS: Record<string, string> = {
-  strength: 'text-orange-500 bg-orange-500/10',
-  cardio: 'text-blue-500 bg-blue-500/10',
-  run: 'text-emerald-500 bg-emerald-500/10',
-  mobility: 'text-purple-500 bg-purple-500/10',
-  swimming: 'text-cyan-500 bg-cyan-500/10',
-  other: 'text-pink-500 bg-pink-500/10',
-  hiit: 'text-red-500 bg-red-500/10',
-  recovery: 'text-green-500 bg-green-500/10',
-  conditioning: 'text-amber-500 bg-amber-500/10',
+  strength: 'text-warning bg-warning/10',
+  cardio: 'text-accent bg-accent/10',
+  run: 'text-success bg-success/10',
+  mobility: 'text-primary bg-primary/10',
+  swimming: 'text-accent bg-accent/10',
+  other: 'text-primary bg-primary/10',
+  hiit: 'text-destructive bg-destructive/10',
+  recovery: 'text-success bg-success/10',
+  conditioning: 'text-warning bg-warning/10',
 };
 
 const FEELING_EMOJIS = ['', '😩', '😕', '😐', '😊', '🔥'];

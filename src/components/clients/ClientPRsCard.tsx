@@ -33,15 +33,15 @@ function getMetricIcon(metricType: MetricType) {
 function getMetricColor(metricType: MetricType) {
   switch (metricType) {
     case 'weight':
-      return "bg-blue-500/20 text-blue-500";
+      return "bg-accent/20 text-accent";
     case 'time':
-      return "bg-green-500/20 text-green-500";
+      return "bg-success/20 text-success";
     case 'reps':
-      return "bg-purple-500/20 text-purple-500";
+      return "bg-primary/20 text-primary";
     case 'distance':
-      return "bg-orange-500/20 text-orange-500";
+      return "bg-warning/20 text-warning";
     case 'power':
-      return "bg-yellow-500/20 text-yellow-500";
+      return "bg-warning/20 text-warning";
     default:
       return "bg-muted text-muted-foreground";
   }
