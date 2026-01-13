@@ -6409,8 +6409,13 @@ export type Database = {
           end_at: string
           id: string
           invite_code: string | null
+          is_public: boolean | null
+          leaderboard_config: Json | null
           max_participants: number | null
+          metrics_config: Json | null
           primary_metric: string
+          public_slug: string | null
+          require_photo_proof: boolean | null
           scoring_type: string
           source_challenge_id: string | null
           source_type: string
@@ -6436,8 +6441,13 @@ export type Database = {
           end_at: string
           id?: string
           invite_code?: string | null
+          is_public?: boolean | null
+          leaderboard_config?: Json | null
           max_participants?: number | null
+          metrics_config?: Json | null
           primary_metric?: string
+          public_slug?: string | null
+          require_photo_proof?: boolean | null
           scoring_type?: string
           source_challenge_id?: string | null
           source_type?: string
@@ -6463,8 +6473,13 @@ export type Database = {
           end_at?: string
           id?: string
           invite_code?: string | null
+          is_public?: boolean | null
+          leaderboard_config?: Json | null
           max_participants?: number | null
+          metrics_config?: Json | null
           primary_metric?: string
+          public_slug?: string | null
+          require_photo_proof?: boolean | null
           scoring_type?: string
           source_challenge_id?: string | null
           source_type?: string
