@@ -12,6 +12,7 @@ import { BusinessYieldScoreCard } from '@/components/dashboard/BusinessYieldScor
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
 import { ClientsInDebtCard } from '@/components/dashboard/ClientsInDebtCard';
+import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
@@ -39,6 +40,21 @@ export default function Index() {
         <SectionErrorBoundary section="Business Health" compact>
           <BusinessYieldScoreCard />
         </SectionErrorBoundary>
+
+        {/* 💡 Dashboard Insights */}
+        {data && (
+          <SectionErrorBoundary section="Postřehy" compact>
+            <DashboardInsights
+              trends={data.trends}
+              finance={data.finance}
+              weeklySummary={data.weeklySummary}
+              capacity={data.capacity}
+              todaySchedule={data.todaySchedule}
+              todayEstimatedIncome={data.todayEstimatedIncome}
+              isLoading={isLoading}
+            />
+          </SectionErrorBoundary>
+        )}
 
         {/* 🏆 Career Milestone Card */}
         {layout.showCareerMilestone && (
