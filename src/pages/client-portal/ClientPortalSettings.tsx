@@ -114,11 +114,15 @@ export default function ClientPortalSettings() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Key className="w-6 h-6" />
-          Nastavení
-        </h1>
-        <p className="text-muted-foreground mt-1">Správa vašeho účtu a preferencí</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Key className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Nastavení</h1>
+            <p className="text-muted-foreground text-sm">Správa účtu a preferencí</p>
+          </div>
+        </div>
       </motion.div>
 
       <Tabs defaultValue="profile" className="w-full">

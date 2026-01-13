@@ -115,9 +115,9 @@ export default function ClientPortalChallenges() {
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-4 w-4 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-4 w-4 text-warning" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-4 w-4 text-warning/80" />;
     return null;
   };
 
@@ -273,12 +273,14 @@ export default function ClientPortalChallenges() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Trophy className="h-6 w-6 text-amber-500" />
-          Výzvy
-        </h1>
-        <p className="text-muted-foreground">Zapoj se do aktuálních výzev</p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+          <Trophy className="w-5 h-5 text-warning" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold">Výzvy</h1>
+          <p className="text-muted-foreground text-sm">Zapoj se do aktuálních výzev</p>
+        </div>
       </div>
 
       {/* Tabs for Active/Completed */}
@@ -373,7 +375,7 @@ export default function ClientPortalChallenges() {
                                 )}
                               >
                                 <div className="flex items-center gap-2">
-                                  {isBest && <Trophy className="h-4 w-4 text-amber-500" />}
+                                {isBest && <Trophy className="h-4 w-4 text-warning" />}
                                   <span className="font-medium">
                                     {formatChallengeScore(sub.score_primary, activeChallenges[0].primary_metric)}
                                   </span>

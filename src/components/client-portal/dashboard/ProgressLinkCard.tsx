@@ -15,12 +15,12 @@ export function ProgressLinkCard({ delay = 0 }: ProgressLinkCardProps) {
       transition={{ delay }}
     >
       <Link to="/zona/progress">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:border-blue-500/40 transition-colors cursor-pointer h-full">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border-accent/20 hover:border-accent/40 transition-colors cursor-pointer h-full">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-blue-500" />
+                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-accent" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Pokrok</p>

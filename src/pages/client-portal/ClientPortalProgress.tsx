@@ -19,7 +19,7 @@ import { ProgressSummaryCards } from '@/components/client-portal/progress/Progre
 import { ClientPortalPRsCard } from '@/components/client-portal/progress/ClientPortalPRsCard';
 import { ClientExerciseBenchmarks } from '@/components/client-portal/progress/ClientExerciseBenchmarks';
 import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
-import { Bike, PersonStanding } from 'lucide-react';
+import { Bike, PersonStanding, TrendingUp } from 'lucide-react';
 
 export default function ClientPortalProgress() {
   const { clientAccount, clientId } = useClientPortal();
@@ -117,9 +117,14 @@ export default function ClientPortalProgress() {
     <div className="space-y-6">
       {/* Header with period filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Pokrok</h1>
-          <p className="text-muted-foreground">Sleduj své zlepšení</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Pokrok</h1>
+            <p className="text-muted-foreground text-sm">Sleduj své zlepšení</p>
+          </div>
         </div>
         <PeriodFilter value={period} onChange={setPeriod} />
       </div>

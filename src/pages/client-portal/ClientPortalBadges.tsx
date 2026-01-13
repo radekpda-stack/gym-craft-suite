@@ -187,7 +187,7 @@ export default function ClientPortalBadges() {
       </div>
 
       {/* XP History */}
-      <XPHistoryCard limit={5} className="bg-gradient-to-br from-yellow-500/10 via-background to-yellow-500/5 border-yellow-500/20" />
+      <XPHistoryCard limit={5} className="bg-gradient-to-br from-warning/10 via-background to-warning/5 border-warning/20" />
       
       {/* Filters - Simplified */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>

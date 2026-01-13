@@ -47,9 +47,12 @@ export default function ClientPortalAttendance() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Calendar className="w-5 h-5 text-primary" />
+        </div>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">Docházka</h1>
+          <h1 className="text-xl font-bold">Docházka</h1>
           <p className="text-muted-foreground text-sm">Historie absolvovaných tréninků</p>
         </div>
       </div>
@@ -126,19 +129,19 @@ export default function ClientPortalAttendance() {
             {/* Week Streak */}
             <Card className={cn(
               "transition-all",
-              comprehensiveStats.currentWeekStreak >= 4 && "border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-transparent"
+              comprehensiveStats.currentWeekStreak >= 4 && "border-warning/30 bg-gradient-to-br from-warning/10 to-transparent"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Flame className={cn(
                     "w-4 h-4",
-                    comprehensiveStats.currentWeekStreak >= 4 && "text-orange-500"
+                    comprehensiveStats.currentWeekStreak >= 4 && "text-warning"
                   )} />
                   <span className="text-xs font-medium">Týdenní streak</span>
                 </div>
                 <p className={cn(
                   "text-2xl font-bold",
-                  comprehensiveStats.currentWeekStreak >= 4 && "text-orange-500"
+                  comprehensiveStats.currentWeekStreak >= 4 && "text-warning"
                 )}>
                   {comprehensiveStats.currentWeekStreak}
                 </p>
@@ -162,13 +165,13 @@ export default function ClientPortalAttendance() {
 
             {/* Best Month */}
             <Card className={cn(
-              comprehensiveStats.bestMonth && "border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent"
+              comprehensiveStats.bestMonth && "border-warning/30 bg-gradient-to-br from-warning/10 to-transparent"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Trophy className={cn(
                     "w-4 h-4",
-                    comprehensiveStats.bestMonth && "text-yellow-500"
+                    comprehensiveStats.bestMonth && "text-warning"
                   )} />
                   <span className="text-xs font-medium">Nejlepší měsíc</span>
                 </div>
