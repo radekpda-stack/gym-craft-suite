@@ -38,6 +38,8 @@ export interface ChurnRiskData {
 const CHURN_RULES = {
   frequencyDrop50: { weight: 2, label: 'Pokles frekvence >50%', severity: 'high' as const },
   unpaid14Days: { weight: 2, label: 'Nezaplaceno >14 dní', severity: 'high' as const },
+  negativeCredit: { weight: 2, label: 'Záporný kredit', severity: 'high' as const },
+  sharedBudgetMinus: { weight: 1, label: 'Sdílený budget v mínusu', severity: 'medium' as const },
   highCancelRate: { weight: 1, label: 'Vysoká míra zrušení', severity: 'medium' as const },
   decliningBodyFeel: { weight: 1, label: 'Klesající spokojenost', severity: 'medium' as const },
   longPause: { weight: 1, label: 'Dlouhá pauza', severity: 'medium' as const },
@@ -53,7 +55,7 @@ const generateDemoChurnData = (): ChurnRiskData => {
       riskScore: 85,
       riskFactors: [
         { label: 'Pokles frekvence >50%', severity: 'high' },
-        { label: 'Nezaplaceno >14 dní', severity: 'high' },
+        { label: 'Záporný kredit', severity: 'high' },
         { label: 'Dlouhá pauza', severity: 'medium' },
       ],
       recommendedAction: 'Kontaktovat klienta a nabídnout individuální plán',
@@ -71,9 +73,9 @@ const generateDemoChurnData = (): ChurnRiskData => {
       riskScore: 72,
       riskFactors: [
         { label: 'Vysoká míra zrušení', severity: 'medium' },
-        { label: 'Nezaplaceno >14 dní', severity: 'high' },
+        { label: 'Záporný kredit', severity: 'high' },
       ],
-      recommendedAction: 'Zjistit důvod častého rušení a řešit platbu',
+      recommendedAction: 'Zjistit důvod častého rušení a doplnit kredit',
       daysSinceLastTraining: 8,
       frequencyChange: -30,
       unpaidAmount: 1600,
@@ -127,16 +129,22 @@ export function useChurnRisk() {
       if (!user) throw new Error('Not authenticated');
 
       const now = new Date();
-      const thirtyDaysAgo = subMonths(now, 1);
       const sixtyDaysAgo = subMonths(now, 2);
       const thisMonthStart = startOfMonth(now);
       const lastMonthStart = startOfMonth(subMonths(now, 1));
 
-      // Fetch all necessary data in parallel
-      const [clientsResult, sessionsResult, transactionsResult, feedbackResult] = await Promise.all([
+      // Fetch all necessary data in parallel - including budget info
+      const [
+        clientsResult, 
+        sessionsResult, 
+        transactionsResult, 
+        feedbackResult,
+        budgetMembersResult,
+        budgetGroupsResult
+      ] = await Promise.all([
         supabase
           .from('clients')
-          .select('id, name, is_archived, credit_balance')
+          .select('id, name, is_archived, credit_balance, payment_mode')
           .eq('user_id', user.id)
           .eq('is_archived', false)
           .eq('is_system', false),
@@ -158,12 +166,32 @@ export function useChurnRisk() {
           .from('training_feedback')
           .select('client_id, body_feel, created_at')
           .gte('created_at', sixtyDaysAgo.toISOString()),
+        
+        // Budget members - to check if client is in shared budget
+        supabase
+          .from('client_budget_members')
+          .select('client_id, group_id')
+          .eq('user_id', user.id),
+        
+        // Budget groups - to check shared balance
+        supabase
+          .from('client_budget_groups')
+          .select('id, shared_balance')
+          .eq('user_id', user.id),
       ]);
 
       const clients = clientsResult.data || [];
       const sessions = sessionsResult.data || [];
-      const transactions = transactionsResult.data || [];
       const feedback = feedbackResult.data || [];
+      const budgetMembers = budgetMembersResult.data || [];
+      const budgetGroups = budgetGroupsResult.data || [];
+
+      // Create lookup maps for budget info
+      const clientBudgetMap = new Map<string, string>(); // client_id → group_id
+      const groupBalanceMap = new Map<string, number>(); // group_id → shared_balance
+
+      budgetMembers.forEach(m => clientBudgetMap.set(m.client_id, m.group_id));
+      budgetGroups.forEach(g => groupBalanceMap.set(g.id, g.shared_balance ?? 0));
 
       const churnClients: ChurnRiskClient[] = [];
 
@@ -172,6 +200,13 @@ export function useChurnRisk() {
         const completedSessions = clientSessions.filter(s => s.status === 'completed');
         const cancelledSessions = clientSessions.filter(s => s.status === 'canceled');
         
+        // Check budget context
+        const groupId = clientBudgetMap.get(client.id);
+        const isInSharedBudget = !!groupId;
+        const sharedBalance = groupId ? groupBalanceMap.get(groupId) ?? 0 : 0;
+        const isCashOnly = client.payment_mode === 'cash_only';
+        const creditBalance = client.credit_balance ?? 0;
+
         // Calculate metrics
         const lastSession = completedSessions
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -189,9 +224,9 @@ export function useChurnRisk() {
           ? Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100)
           : 0;
 
-        // Unpaid trainings
+        // Unpaid trainings - only truly pending payments (not paid_credit, paid_cash, etc.)
         const unpaidSessions = clientSessions.filter(s => 
-          s.status === 'completed' && s.payment_status !== 'paid'
+          s.status === 'completed' && s.payment_status === 'pending'
         );
         const unpaidAmount = unpaidSessions.reduce((sum, s) => sum + (s.final_price || 0), 0);
         const oldestUnpaid = unpaidSessions
@@ -222,8 +257,23 @@ export function useChurnRisk() {
           totalWeight += CHURN_RULES.frequencyDrop50.weight;
         }
 
-        // Rule 2: Unpaid >14 days
-        if (unpaidDays > 14) {
+        // Rule 2a: Negative individual credit (not in shared budget)
+        if (!isInSharedBudget && creditBalance < 0) {
+          riskFactors.push({ label: CHURN_RULES.negativeCredit.label, severity: CHURN_RULES.negativeCredit.severity });
+          totalWeight += CHURN_RULES.negativeCredit.weight;
+        }
+
+        // Rule 2b: Shared budget in minus
+        if (isInSharedBudget && sharedBalance < 0) {
+          riskFactors.push({ label: CHURN_RULES.sharedBudgetMinus.label, severity: CHURN_RULES.sharedBudgetMinus.severity });
+          totalWeight += CHURN_RULES.sharedBudgetMinus.weight;
+        }
+
+        // Rule 2c: Unpaid >14 days - ONLY for clients who are:
+        // - NOT cash_only (they pay on the spot)
+        // - NOT in a shared budget with positive balance
+        const isSharedBudgetOk = isInSharedBudget && sharedBalance >= 0;
+        if (!isCashOnly && !isSharedBudgetOk && !isInSharedBudget && unpaidDays > 14 && unpaidAmount > 0) {
           riskFactors.push({ label: CHURN_RULES.unpaid14Days.label, severity: CHURN_RULES.unpaid14Days.severity });
           totalWeight += CHURN_RULES.unpaid14Days.weight;
         }
@@ -253,7 +303,9 @@ export function useChurnRisk() {
 
           // Generate recommended action
           let recommendedAction = 'Kontaktovat klienta';
-          if (unpaidDays > 14) {
+          if (creditBalance < 0 || (isInSharedBudget && sharedBalance < 0)) {
+            recommendedAction = 'Doplnit kredit a konzultovat platební podmínky';
+          } else if (unpaidDays > 14) {
             recommendedAction = 'Vyřešit nezaplacenou částku a zjistit důvod';
           } else if (frequencyChange <= -50) {
             recommendedAction = 'Nabídnout motivační balíček nebo konzultaci';
