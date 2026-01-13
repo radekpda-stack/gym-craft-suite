@@ -14,7 +14,7 @@ export function ProgressLinkCard({ delay = 0 }: ProgressLinkCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
     >
-      <Link to="/client/progress">
+      <Link to="/zona/progress">
         <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:border-blue-500/40 transition-colors cursor-pointer h-full">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">

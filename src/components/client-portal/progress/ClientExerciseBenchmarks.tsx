@@ -81,7 +81,7 @@ export function ClientExerciseBenchmarks({ clientId }: ClientExerciseBenchmarksP
             <Badge 
               variant="outline" 
               className="cursor-pointer hover:bg-muted"
-              onClick={() => navigate('/client/leaderboard')}
+              onClick={() => navigate('/zona/leaderboard')}
             >
               Žebříček
               <ChevronRight className="w-3 h-3 ml-1" />

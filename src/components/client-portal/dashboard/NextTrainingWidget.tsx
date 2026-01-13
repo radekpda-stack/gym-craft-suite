@@ -43,7 +43,7 @@ export function NextTrainingWidget({ className }: NextTrainingWidgetProps) {
             <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
               <CalendarClock className="w-6 h-6 text-blue-500" />
             </div>
-            <Link to="/client/attendance">
+            <Link to="/zona/attendance">
               <Button variant="ghost" size="sm" className="gap-1 text-xs">
                 Docházka <ChevronRight className="w-4 h-4" />
               </Button>
@@ -95,7 +95,7 @@ export function NextTrainingWidget({ className }: NextTrainingWidgetProps) {
               <p className="text-sm text-muted-foreground">
                 Dohodněte s trenérem další termín.
               </p>
-              <Link to="/client/attendance">
+              <Link to="/zona/attendance">
                 <Button variant="secondary" size="sm" className="mt-2">
                   Zobrazit docházku
                 </Button>

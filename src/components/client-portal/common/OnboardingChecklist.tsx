@@ -39,14 +39,14 @@ export function OnboardingChecklist({
       id: 'benchmarks',
       title: 'Zapni anonymní srovnání',
       description: 'Porovnej své výsledky s ostatními (volitelné)',
-      link: '/client/settings',
+      link: '/zona/settings',
       isCompleted: hasAnonymousBenchmarks,
     },
     {
       id: 'measurement',
       title: 'Přidej první měření',
       description: 'Zaznamenej váhu nebo tělesný tuk',
-      link: '/client/progress',
+      link: '/zona/progress',
       isCompleted: hasMeasurement,
     },
     {
@@ -59,7 +59,7 @@ export function OnboardingChecklist({
       id: 'nutrition',
       title: 'Vyplň první den kampaně',
       description: 'Začni sledovat svou stravu',
-      link: '/client/nutrition',
+      link: '/zona/nutrition',
       isCompleted: hasNutritionEntry,
     },
   ];
