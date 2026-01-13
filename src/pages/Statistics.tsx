@@ -1,13 +1,12 @@
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BarChart3, DollarSign, Dumbbell, Users, Activity, Trophy } from 'lucide-react';
+import { ArrowLeft, BarChart3, DollarSign, Users, Activity, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FinanceStatsSection } from '@/components/statistics/FinanceStatsSection';
-import { ExerciseStatsSection } from '@/components/statistics/ExerciseStatsSection';
 import { ClientStatsSection } from '@/components/statistics/ClientStatsSection';
 import { TrainingStatsSection } from '@/components/statistics/TrainingStatsSection';
-import { LifetimeStatsSection } from '@/components/statistics/LifetimeStatsSection';
+import { CareerStatsSection } from '@/components/statistics/CareerStatsSection';
 
 export default function Statistics() {
   usePageTracking('statistics');
@@ -32,9 +31,9 @@ export default function Statistics() {
         </div>
       </div>
 
-      {/* Category Tabs */}
+      {/* Category Tabs - 4 categories only */}
       <Tabs defaultValue="career" className="w-full">
-        <TabsList className="w-full grid grid-cols-5 h-auto p-1 mb-6">
+        <TabsList className="w-full grid grid-cols-4 h-auto p-1 mb-6">
           <TabsTrigger value="career" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <Trophy className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Kariéra</span>
@@ -47,10 +46,6 @@ export default function Statistics() {
             <Activity className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Tréninky</span>
           </TabsTrigger>
-          <TabsTrigger value="exercises" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
-            <Dumbbell className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Cviky</span>
-          </TabsTrigger>
           <TabsTrigger value="clients" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
             <Users className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Klienti</span>
@@ -58,7 +53,7 @@ export default function Statistics() {
         </TabsList>
 
         <TabsContent value="career" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <LifetimeStatsSection />
+          <CareerStatsSection />
         </TabsContent>
 
         <TabsContent value="finance" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
@@ -67,10 +62,6 @@ export default function Statistics() {
 
         <TabsContent value="trainings" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
           <TrainingStatsSection />
-        </TabsContent>
-
-        <TabsContent value="exercises" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <ExerciseStatsSection />
         </TabsContent>
 
         <TabsContent value="clients" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
