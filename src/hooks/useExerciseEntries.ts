@@ -127,9 +127,15 @@ export function useExerciseEntries(clientId?: string) {
       let isPR = false;
       let oldValue: number | undefined = undefined;
       
+      // Helper: Determine if we need to filter by side for PR evaluation
+      // For unilateral exercises (side = left/right), PR is evaluated per-side
+      // For bilateral (side = both/none/null), PR is evaluated globally
+      const entrySide = entry.side;
+      const shouldFilterBySide = entrySide === 'left' || entrySide === 'right';
+      
       // Check if this is a distance-based PR (higher is better - for jumps)
       if (entry.distance_meters && entry.distance_meters > 0) {
-        const { data: existingEntries } = await supabase
+        let query = supabase
           .from('exercise_entries')
           .select('distance_meters')
           .eq('client_id', entry.client_id)
@@ -137,6 +143,12 @@ export function useExerciseEntries(clientId?: string) {
           .not('distance_meters', 'is', null)
           .order('distance_meters', { ascending: false })
           .limit(1);
+        
+        if (shouldFilterBySide) {
+          query = query.eq('side', entrySide);
+        }
+        
+        const { data: existingEntries } = await query;
 
         if (existingEntries?.length && existingEntries[0].distance_meters !== null) {
           oldValue = existingEntries[0].distance_meters;
@@ -147,7 +159,7 @@ export function useExerciseEntries(clientId?: string) {
       }
       // Check if this is a time-based PR (lower is better - for cardio)
       else if (entry.time_seconds && entry.time_seconds > 0) {
-        const { data: existingEntries } = await supabase
+        let query = supabase
           .from('exercise_entries')
           .select('time_seconds')
           .eq('client_id', entry.client_id)
@@ -155,6 +167,12 @@ export function useExerciseEntries(clientId?: string) {
           .not('time_seconds', 'is', null)
           .order('time_seconds', { ascending: true })
           .limit(1);
+        
+        if (shouldFilterBySide) {
+          query = query.eq('side', entrySide);
+        }
+        
+        const { data: existingEntries } = await query;
 
         if (existingEntries?.length && existingEntries[0].time_seconds !== null) {
           oldValue = existingEntries[0].time_seconds;
@@ -165,7 +183,7 @@ export function useExerciseEntries(clientId?: string) {
       }
       // Check if this is a weight-based PR (higher is better - for strength)
       else if (entry.weight_kg && entry.weight_kg > 0) {
-        const { data: existingEntries } = await supabase
+        let query = supabase
           .from('exercise_entries')
           .select('weight_kg')
           .eq('client_id', entry.client_id)
@@ -173,6 +191,12 @@ export function useExerciseEntries(clientId?: string) {
           .not('weight_kg', 'is', null)
           .order('weight_kg', { ascending: false })
           .limit(1);
+        
+        if (shouldFilterBySide) {
+          query = query.eq('side', entrySide);
+        }
+        
+        const { data: existingEntries } = await query;
 
         if (existingEntries?.length && existingEntries[0].weight_kg !== null) {
           oldValue = existingEntries[0].weight_kg;
