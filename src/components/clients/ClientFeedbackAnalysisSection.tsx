@@ -1,6 +1,6 @@
 /**
  * ClientFeedbackAnalysisSection - Main section for client feedback analysis
- * Combines table, chart, and tag aggregations
+ * Combines table, chart, tag aggregations, and recovery insights
  * Part of section B) and C) in the implementation plan
  */
 
@@ -14,12 +14,16 @@ import {
   Table as TableIcon, 
   TrendingUp,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Battery,
+  MapPin
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { FeedbackTrainingTable } from './FeedbackTrainingTable';
 import { FeedbackTimelineChart } from './FeedbackTimelineChart';
 import { FeedbackTagAggregation } from './FeedbackTagAggregation';
+import { RecoveryInsightsCard } from '@/components/feedback/RecoveryInsightsCard';
+import { PainAreaTimeline } from '@/components/feedback/PainAreaTimeline';
 import { useFeedbackWithTags } from '@/hooks/useFeedbackWithTags';
 
 interface ClientFeedbackAnalysisSectionProps {
@@ -83,6 +87,10 @@ export function ClientFeedbackAnalysisSection({
                   <BarChart3 className="h-4 w-4" />
                   Podle tagů
                 </TabsTrigger>
+                <TabsTrigger value="recovery" className="gap-1.5">
+                  <Battery className="h-4 w-4" />
+                  Regenerace
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="table" className="mt-0">
@@ -95,6 +103,13 @@ export function ClientFeedbackAnalysisSection({
               
               <TabsContent value="tags" className="mt-0">
                 <FeedbackTagAggregation clientId={clientId} />
+              </TabsContent>
+              
+              <TabsContent value="recovery" className="mt-0">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <RecoveryInsightsCard clientId={clientId} />
+                  <PainAreaTimeline clientId={clientId} />
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>

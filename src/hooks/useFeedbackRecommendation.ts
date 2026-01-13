@@ -10,12 +10,14 @@ export interface FeedbackRecommendation {
 
 interface FeedbackValues {
   pain?: number | null;
-  pain_type?: 'muscle' | 'joint' | null;
+  pain_type?: 'muscle' | 'joint' | 'tendon' | null;
   energy_rating?: number | null;
   body_feel?: number | null;
   soreness?: number | null;
   difficulty?: number | null;
   sleep_after?: 'poor' | 'average' | 'good' | null;
+  sleep_hours?: number | null;
+  fun?: number | null;
   is_red_flag?: boolean;
 }
 
@@ -57,12 +59,23 @@ export function calculateRecommendation(
 
   if (feedback.pain_type === 'joint' && feedback.pain && feedback.pain >= thresholds.painMedium) {
     level = 'red';
-    reasons.push('Kloubní/šlachová bolest');
+    reasons.push('Kloubní bolest');
+  }
+
+  if (feedback.pain_type === 'tendon' && feedback.pain && feedback.pain >= thresholds.painMedium) {
+    level = 'red';
+    reasons.push('Šlachová bolest');
   }
 
   if (feedback.body_feel && feedback.body_feel <= thresholds.bodyFeelLow) {
     level = 'red';
     reasons.push(`Špatný pocit v těle (${feedback.body_feel}/10)`);
+  }
+
+  // Check for sleep deprivation as red flag
+  if (feedback.sleep_hours != null && feedback.sleep_hours < 5) {
+    level = 'red';
+    reasons.push(`Kritický nedostatek spánku (${feedback.sleep_hours}h)`);
   }
 
   // YELLOW level conditions (only if not already red)
