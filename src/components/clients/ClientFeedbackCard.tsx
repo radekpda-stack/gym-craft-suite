@@ -148,7 +148,7 @@ export function ClientFeedbackCard({
                 </div>
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <Battery className="w-3 h-3 text-orange-500" />
+                    <Battery className="w-3 h-3 text-warning" />
                     <p className="text-lg font-bold text-foreground">
                       {stats.avgSoreness > 0 ? stats.avgSoreness.toFixed(1) : stats.avgFatigue.toFixed(1)}
                     </p>
@@ -157,7 +157,7 @@ export function ClientFeedbackCard({
                 </div>
                 <div className="p-2 rounded-xl bg-secondary/50 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <Brain className="w-3 h-3 text-green-500" />
+                    <Brain className="w-3 h-3 text-success" />
                     <p className="text-lg font-bold text-foreground">
                       {stats.avgBodyFeel > 0 ? stats.avgBodyFeel.toFixed(1) : stats.avgMood.toFixed(1)}
                     </p>

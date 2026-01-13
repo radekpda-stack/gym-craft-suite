@@ -438,9 +438,9 @@ export function StockManagement() {
                     </>
                   )}
                   {/* XP Bonus field */}
-                  <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                  <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
                     <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-violet-500" />
+                      <Sparkles className="w-4 h-4 text-accent" />
                       <Label>XP Bonus při nákupu</Label>
                     </div>
                     <Input
@@ -560,7 +560,7 @@ export function StockManagement() {
                 )}
                 {/* XP Bonus in edit mode */}
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <Sparkles className="w-4 h-4 text-accent" />
                   <Label className="text-xs whitespace-nowrap">XP:</Label>
                   <Input
                     type="number"
@@ -585,9 +585,9 @@ export function StockManagement() {
                   <div className={cn(
                     "p-2.5 rounded-xl shrink-0",
                     product.kind === 'service' 
-                      ? "bg-blue-500/10 text-blue-500"
+                      ? "bg-accent/10 text-accent"
                       : product.kind === 'credit_topup'
-                        ? "bg-emerald-500/10 text-emerald-500"
+                        ? "bg-success/10 text-success"
                         : "bg-primary/10 text-primary"
                   )}>
                     {isLowStock(product) && product.is_active ? (
@@ -605,7 +605,7 @@ export function StockManagement() {
                         </Badge>
                       )}
                       {product.kind === 'credit_topup' && (
-                        <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-xs">
+                        <Badge variant="outline" className="text-success border-success/50 text-xs">
                           +{(product.credit_delta || 0).toLocaleString('cs-CZ')} Kč kredit
                         </Badge>
                       )}

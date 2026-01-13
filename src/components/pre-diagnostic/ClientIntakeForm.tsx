@@ -570,7 +570,7 @@ export function ClientIntakeForm({
             className={cn(
               "flex-1 p-4 rounded-lg transition-colors text-center font-medium",
               formData.has_pain === false 
-                ? "bg-green-500/20 border-2 border-green-500 text-green-700" 
+                ? "bg-success/20 border-2 border-success text-success" 
                 : "bg-secondary/50 hover:bg-secondary/70"
             )}
           >
@@ -728,7 +728,7 @@ export function ClientIntakeForm({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm text-green-600">Ulevuje</Label>
+                  <Label className="text-sm text-success">Ulevuje</Label>
                   <div className="flex flex-wrap gap-1">
                     {RELIEVERS.map((item) => (
                       <Badge
@@ -736,7 +736,7 @@ export function ClientIntakeForm({
                         variant={entry.relievers.includes(item) ? 'default' : 'outline'}
                         className={cn(
                           "cursor-pointer text-xs",
-                          entry.relievers.includes(item) && "bg-green-500 hover:bg-green-600"
+                          entry.relievers.includes(item) && "bg-success hover:bg-success/90"
                         )}
                         onClick={() => togglePainArrayField(entry.id, 'relievers', item)}
                       >

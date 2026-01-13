@@ -211,7 +211,7 @@ export function MyProfileWorkoutDiary({ clientId }: MyProfileWorkoutDiaryProps) 
                                 <Dumbbell className="w-4 h-4 text-muted-foreground" />
                                 <span>{ex.exercise_name}</span>
                                 {(ex.is_personal_record || ex.is_pr) && (
-                                  <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">PR</Badge>
+                                  <Badge className="bg-warning/20 text-warning text-xs">PR</Badge>
                                 )}
                               </div>
                               <span className="text-muted-foreground">

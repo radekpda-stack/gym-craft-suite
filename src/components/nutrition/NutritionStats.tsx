@@ -90,8 +90,8 @@ export function NutritionStats({ food, drinks, coffee, startDate, endDate }: Nut
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                <Utensils className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <Utensils className="h-4 w-4 text-warning" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalMeals}</p>
@@ -104,8 +104,8 @@ export function NutritionStats({ food, drinks, coffee, startDate, endDate }: Nut
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Droplets className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Droplets className="h-4 w-4 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{(stats.totalWaterMl / 1000).toFixed(1)}l</p>
@@ -118,8 +118,8 @@ export function NutritionStats({ food, drinks, coffee, startDate, endDate }: Nut
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                <Coffee className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <Coffee className="h-4 w-4 text-warning" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalCoffee}</p>
@@ -132,8 +132,8 @@ export function NutritionStats({ food, drinks, coffee, startDate, endDate }: Nut
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <TrendingUp className="h-4 w-4 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.avgMealsPerDay.toFixed(1)}</p>
@@ -149,7 +149,7 @@ export function NutritionStats({ food, drinks, coffee, startDate, endDate }: Nut
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-blue-500" />
+              <Droplets className="h-4 w-4 text-accent" />
               Dnešní pitný režim
             </CardTitle>
           </CardHeader>

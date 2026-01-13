@@ -29,9 +29,9 @@ export function TeamLeaderboardClient({
   myTeamId,
 }: TeamLeaderboardClientProps) {
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-warning/70" />;
     return null;
   };
 
@@ -40,7 +40,7 @@ export function TeamLeaderboardClient({
     const change = team.previous_rank - team.rank;
     if (change > 0) {
       return (
-        <span className="flex items-center text-green-500 text-xs">
+        <span className="flex items-center text-success text-xs">
           <ChevronUp className="h-3 w-3" />
           {change}
         </span>
@@ -48,7 +48,7 @@ export function TeamLeaderboardClient({
     }
     if (change < 0) {
       return (
-        <span className="flex items-center text-red-500 text-xs">
+        <span className="flex items-center text-destructive text-xs">
           <ChevronDown className="h-3 w-3" />
           {Math.abs(change)}
         </span>
@@ -73,7 +73,7 @@ export function TeamLeaderboardClient({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-amber-500" />
+          <Trophy className="h-5 w-5 text-warning" />
           Týmový žebříček
         </CardTitle>
       </CardHeader>

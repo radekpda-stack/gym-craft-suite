@@ -24,7 +24,7 @@ function MissionItem({ goal, index }: { goal: WeeklyGoal; index: number }) {
       className={cn(
         "p-3 rounded-lg border transition-all",
         isCompleted 
-          ? "bg-green-500/10 border-green-500/30" 
+          ? "bg-success/10 border-success/30" 
           : "bg-secondary/30 border-transparent hover:bg-secondary/50"
       )}
     >
@@ -32,10 +32,10 @@ function MissionItem({ goal, index }: { goal: WeeklyGoal; index: number }) {
         {/* Status icon */}
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-          isCompleted ? "bg-green-500/20" : "bg-primary/10"
+          isCompleted ? "bg-success/20" : "bg-primary/10"
         )}>
           {isCompleted ? (
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <CheckCircle2 className="w-4 h-4 text-success" />
           ) : (
             <Target className="w-4 h-4 text-primary" />
           )}
@@ -46,7 +46,7 @@ function MissionItem({ goal, index }: { goal: WeeklyGoal; index: number }) {
           <div className="flex items-center justify-between gap-2">
             <span className={cn(
               "text-sm font-medium truncate",
-              isCompleted && "text-green-600 dark:text-green-400"
+              isCompleted && "text-success"
             )}>
               {goal.label}
             </span>
@@ -55,8 +55,8 @@ function MissionItem({ goal, index }: { goal: WeeklyGoal; index: number }) {
               className={cn(
                 "shrink-0 gap-1 text-xs",
                 isCompleted 
-                  ? "bg-green-500/10 text-green-600" 
-                  : "bg-yellow-500/10 text-yellow-600"
+                  ? "bg-success/10 text-success" 
+                  : "bg-warning/10 text-warning"
               )}
             >
               <Zap className="w-3 h-3" />
@@ -70,13 +70,13 @@ function MissionItem({ goal, index }: { goal: WeeklyGoal; index: number }) {
               value={Math.min(progress, 100)} 
               className={cn(
                 "h-1.5",
-                isCompleted && "[&>div]:bg-green-500"
+                isCompleted && "[&>div]:bg-success"
               )}
             />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{goal.current} / {goal.target}</span>
               {isCompleted && (
-                <span className="text-green-600 font-medium">Splněno!</span>
+                <span className="text-success font-medium">Splněno!</span>
               )}
             </div>
           </div>
@@ -116,7 +116,7 @@ export function WeeklyMissionsCard({ className }: WeeklyMissionsCardProps) {
   return (
     <Card className={cn(
       "transition-all",
-      allCompleted && "border-green-500/30 bg-green-500/5",
+      allCompleted && "border-success/30 bg-success/5",
       className
     )}>
       <CardHeader className="pb-2">
@@ -138,7 +138,7 @@ export function WeeklyMissionsCard({ className }: WeeklyMissionsCardProps) {
               variant={allCompleted ? 'default' : 'secondary'}
               className={cn(
                 "gap-1",
-                allCompleted && "bg-green-500"
+                allCompleted && "bg-success"
               )}
             >
               <CheckCircle2 className="w-3 h-3" />
@@ -169,7 +169,7 @@ export function WeeklyMissionsCard({ className }: WeeklyMissionsCardProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-2 text-green-600 font-medium flex items-center justify-center gap-2"
+            className="text-center py-2 text-success font-medium flex items-center justify-center gap-2"
           >
             <span className="text-lg">🎉</span>
             <span>Všechny mise splněny!</span>

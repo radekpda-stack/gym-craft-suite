@@ -122,8 +122,8 @@ export function TrainingFrequencyCard({ days = 90, clientId, isLoading: external
 
   const getTrendIcon = () => {
     if (!data) return <Minus className="w-4 h-4" />;
-    if (data.change > 0.5) return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (data.change < -0.5) return <TrendingDown className="w-4 h-4 text-red-500" />;
+    if (data.change > 0.5) return <TrendingUp className="w-4 h-4 text-success" />;
+    if (data.change < -0.5) return <TrendingDown className="w-4 h-4 text-destructive" />;
     return <Minus className="w-4 h-4 text-muted-foreground" />;
   };
 

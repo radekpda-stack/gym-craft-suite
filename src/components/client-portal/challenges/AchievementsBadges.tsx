@@ -17,12 +17,12 @@ interface AchievementsBadgesProps {
 }
 
 const achievementConfig: Record<string, { icon: React.ElementType; label: string; color: string }> = {
-  'challenge_completed': { icon: Trophy, label: 'Výzva dokončena', color: 'text-amber-500' },
+  'challenge_completed': { icon: Trophy, label: 'Výzva dokončena', color: 'text-warning' },
   'pr_set': { icon: Zap, label: 'Osobní rekord', color: 'text-primary' },
-  'streak_7': { icon: Flame, label: '7 dní v řadě', color: 'text-orange-500' },
-  'streak_30': { icon: Flame, label: '30 dní v řadě', color: 'text-red-500' },
+  'streak_7': { icon: Flame, label: '7 dní v řadě', color: 'text-warning' },
+  'streak_30': { icon: Flame, label: '30 dní v řadě', color: 'text-destructive' },
   'first_measurement': { icon: Target, label: 'První měření', color: 'text-success' },
-  'first_challenge': { icon: Star, label: 'První výzva', color: 'text-blue-500' },
+  'first_challenge': { icon: Star, label: 'První výzva', color: 'text-accent' },
 };
 
 export function AchievementsBadges({ 
@@ -62,8 +62,8 @@ export function AchievementsBadges({
       <CardContent className="space-y-4">
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-3 rounded-xl bg-orange-500/10">
-            <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+          <div className="text-center p-3 rounded-xl bg-warning/10">
+            <Flame className="w-6 h-6 text-warning mx-auto mb-1" />
             <p className="text-xl font-bold">{streakCount}</p>
             <p className="text-xs text-muted-foreground">Streak</p>
           </div>
@@ -72,8 +72,8 @@ export function AchievementsBadges({
             <p className="text-xl font-bold">{prCount}</p>
             <p className="text-xs text-muted-foreground">PR</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-amber-500/10">
-            <Trophy className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+          <div className="text-center p-3 rounded-xl bg-warning/10">
+            <Trophy className="w-6 h-6 text-warning mx-auto mb-1" />
             <p className="text-xl font-bold">{achievements.filter(a => a.type === 'challenge_completed').length}</p>
             <p className="text-xs text-muted-foreground">Výzvy</p>
           </div>

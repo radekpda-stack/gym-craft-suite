@@ -44,24 +44,24 @@ type ClientStatus = 'ok' | 'warning' | 'risk';
 const STATUS_CONFIG = {
   ok: {
     icon: CheckCircle2,
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    text: 'text-emerald-600',
-    dot: 'bg-emerald-500',
+    bg: 'bg-success/10',
+    border: 'border-success/30',
+    text: 'text-success',
+    dot: 'bg-success',
   },
   warning: {
     icon: AlertTriangle,
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    text: 'text-amber-600',
-    dot: 'bg-amber-500',
+    bg: 'bg-warning/10',
+    border: 'border-warning/30',
+    text: 'text-warning',
+    dot: 'bg-warning',
   },
   risk: {
     icon: AlertTriangle,
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/30',
-    text: 'text-red-600',
-    dot: 'bg-red-500',
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/30',
+    text: 'text-destructive',
+    dot: 'bg-destructive',
   },
 };
 
