@@ -10,6 +10,10 @@ interface ClientTrend {
   severity: 'warning' | 'critical';
   redFlagCount14Days: number;
   complianceRate: number | null; // percentage of filled feedbacks
+  // New fields for enhanced analytics
+  enjoymentDecline?: boolean;
+  sleepIssues?: boolean;
+  recurringPainAreas?: string[];
 }
 
 export function useFeedbackTrends() {
@@ -103,11 +107,42 @@ export function useFeedbackTrends() {
           reasons.push(`Energie ↓ poslední 3 feedbacky (Ø ${avgEnergy.toFixed(1)})`);
         }
 
-        // Check for repeated low fun (<= 4 for 3 sessions)
+        // Check for repeated low fun (<= 4 for 3 sessions) - ENJOYMENT DECLINE
         const lowFunCount = last3.filter(f => f.fun && f.fun <= 4).length;
+        let enjoymentDecline = false;
         if (lowFunCount >= 3) {
           issues.push('Nízká motivace');
           reasons.push(`Zábava ↓ poslední 3 feedbacky`);
+          enjoymentDecline = true;
+        }
+
+        // Check for declining fun trend (compare last 3 vs previous 3)
+        if (!enjoymentDecline && feedbacks.length >= 6) {
+          const prev3 = feedbacks.slice(3, 6);
+          const last3Fun = last3.filter(f => f.fun != null).map(f => f.fun!);
+          const prev3Fun = prev3.filter(f => f.fun != null).map(f => f.fun!);
+          if (last3Fun.length >= 2 && prev3Fun.length >= 2) {
+            const last3Avg = last3Fun.reduce((a, b) => a + b, 0) / last3Fun.length;
+            const prev3Avg = prev3Fun.reduce((a, b) => a + b, 0) / prev3Fun.length;
+            if (prev3Avg - last3Avg >= 2) {
+              issues.push('Klesající motivace');
+              reasons.push(`Zábava klesla z ${prev3Avg.toFixed(1)} na ${last3Avg.toFixed(1)}`);
+              enjoymentDecline = true;
+            }
+          }
+        }
+
+        // Check for sleep issues (poor sleep in recent feedbacks)
+        let sleepIssues = false;
+        const poorSleepCount = feedbacks.slice(0, 5).filter(f => 
+          (f as any).sleep_after === 'poor'
+        ).length;
+        if (poorSleepCount >= 2) {
+          sleepIssues = true;
+          if (!issues.includes('Problémy se spánkem')) {
+            issues.push('Problémy se spánkem');
+            reasons.push(`${poorSleepCount}× špatný spánek za posledních 5 tréninků`);
+          }
         }
 
         // Add red flag reason if applicable
@@ -127,11 +162,13 @@ export function useFeedbackTrends() {
             clientId: client.id,
             clientName: client.name,
             issues,
-            reasons: reasons.slice(0, 2), // Max 2 reasons
+            reasons: reasons.slice(0, 3), // Max 3 reasons (increased from 2)
             lastFeedbackDate: last3[0].training_date,
             severity,
             redFlagCount14Days,
             complianceRate,
+            enjoymentDecline,
+            sleepIssues,
           });
         }
       }
