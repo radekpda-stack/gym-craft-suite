@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { notifyClientsAboutTrainerPR, isTrainerClient, checkClientBeatTrainer } from '@/lib/trainerPRNotifications';
 import { notifyAboutPR } from '@/lib/prNotifications';
+import { prepareEntryWithPR, recomputePRsAfterChange } from '@/lib/prEngine';
 import type { Json } from '@/integrations/supabase/types';
 export type ExerciseEntrySide = 'left' | 'right' | 'both' | 'none';
 
@@ -124,102 +125,43 @@ export function useExerciseEntries(clientId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      let isPR = false;
-      let oldValue: number | undefined = undefined;
-      
-      // Helper: Determine if we need to filter by side for PR evaluation
-      // For unilateral exercises (side = left/right), PR is evaluated per-side
-      // For bilateral (side = both/none/null), PR is evaluated globally
-      const entrySide = entry.side;
-      const shouldFilterBySide = entrySide === 'left' || entrySide === 'right';
-      
-      // Check if this is a distance-based PR (higher is better - for jumps)
-      if (entry.distance_meters && entry.distance_meters > 0) {
-        let query = supabase
-          .from('exercise_entries')
-          .select('distance_meters')
-          .eq('client_id', entry.client_id)
-          .eq('exercise_name', entry.exercise_name)
-          .not('distance_meters', 'is', null)
-          .order('distance_meters', { ascending: false })
-          .limit(1);
-        
-        if (shouldFilterBySide) {
-          query = query.eq('side', entrySide);
-        }
-        
-        const { data: existingEntries } = await query;
-
-        if (existingEntries?.length && existingEntries[0].distance_meters !== null) {
-          oldValue = existingEntries[0].distance_meters;
-          isPR = entry.distance_meters > oldValue;
-        } else {
-          isPR = true;
-        }
-      }
-      // Check if this is a time-based PR (lower is better - for cardio)
-      else if (entry.time_seconds && entry.time_seconds > 0) {
-        let query = supabase
-          .from('exercise_entries')
-          .select('time_seconds')
-          .eq('client_id', entry.client_id)
-          .eq('exercise_name', entry.exercise_name)
-          .not('time_seconds', 'is', null)
-          .order('time_seconds', { ascending: true })
-          .limit(1);
-        
-        if (shouldFilterBySide) {
-          query = query.eq('side', entrySide);
-        }
-        
-        const { data: existingEntries } = await query;
-
-        if (existingEntries?.length && existingEntries[0].time_seconds !== null) {
-          oldValue = existingEntries[0].time_seconds;
-          isPR = entry.time_seconds < oldValue;
-        } else {
-          isPR = true;
-        }
-      }
-      // Check if this is a weight-based PR (higher is better - for strength)
-      else if (entry.weight_kg && entry.weight_kg > 0) {
-        let query = supabase
-          .from('exercise_entries')
-          .select('weight_kg')
-          .eq('client_id', entry.client_id)
-          .eq('exercise_name', entry.exercise_name)
-          .not('weight_kg', 'is', null)
-          .order('weight_kg', { ascending: false })
-          .limit(1);
-        
-        if (shouldFilterBySide) {
-          query = query.eq('side', entrySide);
-        }
-        
-        const { data: existingEntries } = await query;
-
-        if (existingEntries?.length && existingEntries[0].weight_kg !== null) {
-          oldValue = existingEntries[0].weight_kg;
-          isPR = entry.weight_kg > oldValue;
-        } else {
-          isPR = true;
-        }
-      }
+      // Use PR Engine to prepare entry with computed fields
+      const { fields, oldValue } = await prepareEntryWithPR({
+        client_id: entry.client_id,
+        exercise_id: entry.exercise_id,
+        exercise_name: entry.exercise_name,
+        side: entry.side,
+        weight_kg: entry.weight_kg,
+        height_cm: entry.height_cm,
+        distance_meters: entry.distance_meters,
+        time_seconds: entry.time_seconds,
+        avg_watts: entry.avg_watts,
+        pace_sec_per_500m: entry.pace_sec_per_500m,
+        is_bodyweight: entry.is_bodyweight,
+        reps: entry.reps,
+      });
 
       const { data, error } = await supabase
         .from('exercise_entries')
-        .insert({ ...entry, user_id: user.id, is_pr: isPR })
+        .insert({ 
+          ...entry, 
+          user_id: user.id, 
+          is_pr: fields.is_pr,
+          metric_key: fields.metric_key,
+          side_scope: fields.side_scope,
+          pr_scope_key: fields.pr_scope_key,
+        })
         .select('*, clients(id, name)')
         .single();
 
       if (error) throw error;
 
       // Send PR notification to trainer (for client PRs)
-      if (isPR && !isTrainerClient(entry.client_id)) {
+      if (fields.is_pr && !isTrainerClient(entry.client_id)) {
         const clientName = (data as any).clients?.name || 'Klient';
         const metricType = entry.time_seconds ? 'time' : 'weight';
-        const value = entry.time_seconds || entry.weight_kg || 0;
-        const unit = entry.time_seconds ? 's' : 'kg';
+        const value = entry.time_seconds || entry.weight_kg || entry.distance_meters || entry.height_cm || 0;
+        const unit = entry.time_seconds ? 's' : entry.distance_meters ? 'm' : entry.height_cm ? 'cm' : 'kg';
 
         notifyAboutPR({
           trainerId: user.id,
@@ -229,30 +171,30 @@ export function useExerciseEntries(clientId?: string) {
           value,
           unit,
           metricType,
-          oldValue: oldValue !== undefined && isPR && oldValue !== value ? oldValue : undefined,
+          oldValue: oldValue !== null && fields.is_pr && oldValue !== value ? oldValue : undefined,
           entryId: data.id,
           entryDate: entry.date
         }).catch(console.error);
       }
 
       // If this is a trainer's PR, notify clients who do the same exercise
-      if (isPR && isTrainerClient(entry.client_id)) {
+      if (fields.is_pr && isTrainerClient(entry.client_id)) {
         notifyClientsAboutTrainerPR({
           exerciseName: entry.exercise_name,
           weightKg: entry.weight_kg ?? null,
           timeSeconds: entry.time_seconds ?? null,
           userId: user.id,
-        }).catch(console.error); // Fire and forget
+        }).catch(console.error);
       }
 
       // If this is a client's PR, check if they beat the trainer
-      if (isPR && !isTrainerClient(entry.client_id)) {
+      if (fields.is_pr && !isTrainerClient(entry.client_id)) {
         checkClientBeatTrainer({
           clientId: entry.client_id,
           exerciseName: entry.exercise_name,
           weightKg: entry.weight_kg ?? null,
           timeSeconds: entry.time_seconds ?? null,
-        }).catch(console.error); // Fire and forget
+        }).catch(console.error);
       }
 
       return data;
@@ -272,6 +214,13 @@ export function useExerciseEntries(clientId?: string) {
 
   const updateEntry = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExerciseEntry> & { id: string }) => {
+      // First, get the current entry to know the scope for PR recomputation
+      const { data: oldEntry } = await supabase
+        .from('exercise_entries')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { data, error } = await supabase
         .from('exercise_entries')
         .update(updates)
@@ -280,6 +229,24 @@ export function useExerciseEntries(clientId?: string) {
         .single();
 
       if (error) throw error;
+
+      // Recompute PRs for the affected scope after update
+      if (oldEntry) {
+        await recomputePRsAfterChange({
+          client_id: oldEntry.client_id,
+          exercise_id: oldEntry.exercise_id,
+          exercise_name: oldEntry.exercise_name,
+          side: oldEntry.side,
+          weight_kg: data.weight_kg,
+          time_seconds: data.time_seconds,
+          distance_meters: data.distance_meters,
+          height_cm: data.height_cm,
+          avg_watts: data.avg_watts,
+          is_bodyweight: data.is_bodyweight,
+          reps: data.reps,
+        });
+      }
+
       return data;
     },
     onSuccess: (_data, vars) => {
@@ -300,8 +267,32 @@ export function useExerciseEntries(clientId?: string) {
 
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
+      // First, get the entry to know the scope for PR recomputation
+      const { data: entryToDelete } = await supabase
+        .from('exercise_entries')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase.from('exercise_entries').delete().eq('id', id);
       if (error) throw error;
+
+      // Recompute PRs for the affected scope after delete
+      if (entryToDelete) {
+        await recomputePRsAfterChange({
+          client_id: entryToDelete.client_id,
+          exercise_id: entryToDelete.exercise_id,
+          exercise_name: entryToDelete.exercise_name,
+          side: entryToDelete.side,
+          weight_kg: entryToDelete.weight_kg,
+          time_seconds: entryToDelete.time_seconds,
+          distance_meters: entryToDelete.distance_meters,
+          height_cm: entryToDelete.height_cm,
+          avg_watts: entryToDelete.avg_watts,
+          is_bodyweight: entryToDelete.is_bodyweight,
+          reps: entryToDelete.reps,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });

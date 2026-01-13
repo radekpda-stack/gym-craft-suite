@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { prepareEntryWithPR, recomputePRsAfterChange } from '@/lib/prEngine';
 
 export interface WorkoutEntry {
   id: string;
@@ -345,36 +346,6 @@ export function useSyncToClientStats() {
           }
         }
 
-        // Check if this is a PR - use target_client_id for correct comparison
-        let isPR = false;
-        if (isTimeBased) {
-          // Time-based PR: lower is better
-          const { data: previousBest } = await supabase
-            .from('exercise_entries')
-            .select('time_seconds')
-            .eq('client_id', group.target_client_id)
-            .eq('exercise_name', group.exercise_name)
-            .not('time_seconds', 'is', null)
-            .order('time_seconds', { ascending: true })
-            .limit(1);
-
-          isPR = !previousBest || previousBest.length === 0 || 
-            (bestSet.time_seconds || Infinity) < (previousBest[0].time_seconds || Infinity);
-        } else {
-          // Strength PR: higher weight is better
-          const { data: previousBest } = await supabase
-            .from('exercise_entries')
-            .select('weight_kg')
-            .eq('client_id', group.target_client_id)
-            .eq('exercise_name', group.exercise_name)
-            .not('weight_kg', 'is', null)
-            .order('weight_kg', { ascending: false })
-            .limit(1);
-
-          isPR = !previousBest || previousBest.length === 0 || 
-            (bestSet.weight_kg || 0) > (previousBest[0].weight_kg || 0);
-        }
-
         // First delete any existing entry for this exercise in this session for this client
         await supabase
           .from('exercise_entries')
@@ -384,8 +355,19 @@ export function useSyncToClientStats() {
           .eq('client_id', group.target_client_id)
           .eq('user_id', user.id);
 
+        // Use PR Engine to prepare entry with computed fields
+        const { fields } = await prepareEntryWithPR({
+          client_id: group.target_client_id,
+          exercise_id: group.exercise_id,
+          exercise_name: group.exercise_name,
+          weight_kg: bestSet.weight_kg,
+          time_seconds: bestSet.time_seconds,
+          distance_meters: bestSet.distance_meters,
+          avg_watts: (bestSet as any).watts,
+          reps: bestSet.reps,
+        });
+
         // Create exercise entry for client stats with training_session_id
-        // Uses target_client_id to sync to correct participant
         const { error: insertError } = await supabase
           .from('exercise_entries')
           .insert({
@@ -398,7 +380,10 @@ export function useSyncToClientStats() {
             time_seconds: bestSet.time_seconds,
             time_ms: (bestSet as any).time_ms,
             distance_meters: bestSet.distance_meters,
-            is_pr: isPR,
+            is_pr: fields.is_pr,
+            metric_key: fields.metric_key,
+            side_scope: fields.side_scope,
+            pr_scope_key: fields.pr_scope_key,
             date: trainingDate.split('T')[0],
             user_id: user.id,
             notes: bestSet.notes || '',
@@ -411,6 +396,18 @@ export function useSyncToClientStats() {
         if (insertError) {
           console.error('Error syncing exercise entry:', insertError);
         }
+
+        // Recompute PRs for the affected scope to ensure consistency
+        await recomputePRsAfterChange({
+          client_id: group.target_client_id,
+          exercise_id: group.exercise_id,
+          exercise_name: group.exercise_name,
+          weight_kg: bestSet.weight_kg,
+          time_seconds: bestSet.time_seconds,
+          distance_meters: bestSet.distance_meters,
+          avg_watts: (bestSet as any).watts,
+          reps: bestSet.reps,
+        });
       }
     },
     onSuccess: () => {
