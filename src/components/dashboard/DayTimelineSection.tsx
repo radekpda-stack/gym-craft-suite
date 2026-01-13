@@ -60,10 +60,10 @@ const TimelineBlock = memo(function TimelineBlock({
   const getIconColor = () => {
     if (item.status === 'cancelled') return 'text-muted-foreground/40';
     if (item.status === 'completed') {
-      if (item.hasIssue) return 'text-amber-400/70';
-      return 'text-emerald-400/70';
+      if (item.hasIssue) return 'text-warning/70';
+      return 'text-success/70';
     }
-    return 'text-blue-400/70';
+    return 'text-accent/70';
   };
 
   const StatusIcon = getStatusIcon();
@@ -97,7 +97,7 @@ const TimelineBlock = memo(function TimelineBlock({
         </div>
         
         {item.status === 'completed' && !item.hasFeedback && (
-          <span className="text-[10px] font-medium text-amber-400/80 px-2 py-0.5 rounded-full bg-amber-400/10">
+          <span className="text-[10px] font-medium text-warning/80 px-2 py-0.5 rounded-full bg-warning/10">
             FB
           </span>
         )}
@@ -109,7 +109,7 @@ const TimelineBlock = memo(function TimelineBlock({
           variant="ghost"
           size="icon"
           onClick={handleComplete}
-          className="h-8 w-8 rounded-full shrink-0 text-emerald-400/70 hover:text-emerald-400 hover:bg-emerald-400/10"
+          className="h-8 w-8 rounded-full shrink-0 text-success/70 hover:text-success hover:bg-success/10"
         >
           <Check className="w-4 h-4" />
         </Button>

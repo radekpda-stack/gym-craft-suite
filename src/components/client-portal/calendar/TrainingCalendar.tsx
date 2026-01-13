@@ -131,7 +131,7 @@ export function TrainingCalendar({ className, compact = false }: TrainingCalenda
               {totalWorkouts}
             </Badge>
             {totalXp > 0 && (
-              <Badge variant="secondary" className="gap-1 text-xs bg-yellow-500/10 text-yellow-600">
+              <Badge variant="secondary" className="gap-1 text-xs bg-warning/10 text-warning">
                 <Zap className="w-3 h-3" />
                 {totalXp}
               </Badge>

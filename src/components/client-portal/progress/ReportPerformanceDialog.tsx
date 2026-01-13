@@ -227,8 +227,8 @@ export function ReportPerformanceDialog({ trigger }: ReportPerformanceDialogProp
           </DialogDescription>
         </DialogHeader>
 
-        <Alert variant="default" className="bg-amber-500/10 border-amber-500/30">
-          <AlertCircle className="h-4 w-4 text-amber-500" />
+        <Alert variant="default" className="bg-warning/10 border-warning/30">
+          <AlertCircle className="h-4 w-4 text-warning" />
           <AlertDescription className="text-sm">
             Výkon bude čekat na schválení trenérem před započítáním do statistik.
           </AlertDescription>

@@ -42,7 +42,7 @@ export function XPHistoryCard({ limit = 10, showHeader = true, className }: XPHi
         {showHeader && (
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="w-4 h-4 text-yellow-500" />
+              <History className="w-4 h-4 text-warning" />
               Historie XP
             </CardTitle>
           </CardHeader>
@@ -75,12 +75,12 @@ export function XPHistoryCard({ limit = 10, showHeader = true, className }: XPHi
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="w-4 h-4 text-yellow-500" />
+              <History className="w-4 h-4 text-warning" />
               Historie XP
             </CardTitle>
             <div className="flex items-center gap-2">
               {todayXP > 0 && (
-                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 gap-1">
+                <Badge variant="secondary" className="bg-warning/10 text-warning gap-1">
                   <TrendingUp className="w-3 h-3" />
                   +{todayXP} dnes
                 </Badge>
@@ -132,7 +132,7 @@ export function XPHistoryCard({ limit = 10, showHeader = true, className }: XPHi
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-sm font-bold text-yellow-600">
+                          <span className="text-sm font-bold text-warning">
                             +{event.xp_amount}
                           </span>
                         </div>

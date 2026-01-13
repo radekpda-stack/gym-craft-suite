@@ -130,7 +130,7 @@ export function CelebrationToast({ celebration, onDismiss }: CelebrationToastPro
 
       {/* Sparkle decorations */}
       <motion.div
-        className="absolute top-3 right-10 text-amber-400"
+        className="absolute top-3 right-10 text-warning"
         animate={{ 
           scale: [1, 1.2, 1],
           opacity: [0.5, 1, 0.5],

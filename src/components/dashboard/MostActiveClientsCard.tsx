@@ -74,7 +74,7 @@ export function MostActiveClientsCard() {
     <Card className="glass">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" />
+          <Flame className="h-4 w-4 text-warning" />
           Nejaktivnější klienti tento měsíc
         </CardTitle>
       </CardHeader>
@@ -98,9 +98,9 @@ export function MostActiveClientsCard() {
                 <div
                   className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0',
-                    index === 0 && 'bg-orange-500/20 text-orange-500',
-                    index === 1 && 'bg-amber-500/20 text-amber-500',
-                    index === 2 && 'bg-yellow-500/20 text-yellow-600',
+                    index === 0 && 'bg-warning/20 text-warning',
+                    index === 1 && 'bg-warning/20 text-warning',
+                    index === 2 && 'bg-warning/20 text-warning',
                     index > 2 && 'bg-secondary text-muted-foreground'
                   )}
                 >

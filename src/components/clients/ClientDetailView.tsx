@@ -237,8 +237,8 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                 className={cn(
                   'p-1.5 rounded-lg transition-all flex-shrink-0',
                   client.is_favorite
-                    ? 'text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20'
-                    : 'text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10'
+                    ? 'text-warning bg-warning/10 hover:bg-warning/20'
+                    : 'text-muted-foreground hover:text-warning hover:bg-warning/10'
                 )}
                 aria-label={client.is_favorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
               >

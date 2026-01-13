@@ -18,8 +18,8 @@ const SECTION_CONFIG = {
   },
   bodyPart: {
     title: 'Partie těla',
-    color: 'text-emerald-500',
-    bgColor: 'bg-emerald-500/10',
+    color: 'text-success',
+    bgColor: 'bg-success/10',
     tooltip: {
       description: "Které části těla trénujete nejčastěji.",
       calculation: "Počet přiřazených štítků typu 'body_part' k dokončeným tréninkům."
@@ -27,8 +27,8 @@ const SECTION_CONFIG = {
   },
   intensity: {
     title: 'Intenzita',
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
     tooltip: {
       description: "Rozložení intenzity vašich tréninků.",
       calculation: "Počet přiřazených štítků typu 'intensity' k dokončeným tréninkům."
@@ -141,13 +141,13 @@ export function GlobalTagDistributionCard({
         
         <DistributionSection
           sectionKey="bodyPart"
-          icon={<Activity className="h-4 w-4 text-emerald-500" />}
+          icon={<Activity className="h-4 w-4 text-success" />}
           distribution={bodyPartDistribution}
         />
         
         <DistributionSection
           sectionKey="intensity"
-          icon={<Zap className="h-4 w-4 text-amber-500" />}
+          icon={<Zap className="h-4 w-4 text-warning" />}
           distribution={intensityDistribution}
         />
       </CardContent>

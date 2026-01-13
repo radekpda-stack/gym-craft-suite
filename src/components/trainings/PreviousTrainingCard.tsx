@@ -40,7 +40,7 @@ export function PreviousTrainingCard({ training }: PreviousTrainingCardProps) {
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Hodnocení</span>
             <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <Star className="w-3.5 h-3.5 text-warning fill-warning" />
               <span className="text-sm font-medium text-foreground">
                 {training.subjective_rating}/10
               </span>
