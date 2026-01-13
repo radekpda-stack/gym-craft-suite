@@ -498,7 +498,7 @@ export function TrainingDetailView({
             });
             const newTagIds = [...otherTags, ...validIds];
             setSelectedTagIds(newTagIds);
-            if (onTagsChange) onTagsChange(newTagIds);
+            debouncedSaveTags(newTagIds);
           }}
           intensityTagId={intensityTagId}
           onIntensityTagChange={(id) => {
@@ -510,7 +510,7 @@ export function TrainingDetailView({
             const validId = id && tags.some(t => t.id === id) ? id : null;
             const newTagIds = validId ? [...otherTags, validId] : otherTags;
             setSelectedTagIds(newTagIds);
-            if (onTagsChange) onTagsChange(newTagIds);
+            debouncedSaveTags(newTagIds);
           }}
           bodyPartTagIds={bodyPartTagIds}
           onBodyPartTagsChange={(ids) => {
@@ -522,7 +522,7 @@ export function TrainingDetailView({
             });
             const newTagIds = [...otherTags, ...validIds];
             setSelectedTagIds(newTagIds);
-            if (onTagsChange) onTagsChange(newTagIds);
+            debouncedSaveTags(newTagIds);
           }}
           coachRPE={coachRPE}
           onCoachRPEChange={async (rpe) => {
