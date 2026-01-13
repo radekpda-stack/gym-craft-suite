@@ -41,10 +41,11 @@ export function useFinancialStats() {
 
       if (transError) throw transError;
 
-      // Fetch all clients for credit balance
+      // Fetch all clients for listing
       const { data: clients, error: clientError } = await supabase
         .from("clients")
-        .select("id, name, credit_balance");
+        .select("id, name")
+        .eq("is_archived", false);
 
       if (clientError) throw clientError;
 
@@ -93,8 +94,19 @@ export function useFinancialStats() {
 
       const productProfit = productIncome - productCost;
 
-      const totalCredit = clients?.reduce((sum, c) => sum + (c.credit_balance || 0), 0) || 0;
-      const clientsWithLowCredit = clients?.filter(c => (c.credit_balance || 0) < 500).length || 0;
+      // Calculate total credit from payment transactions (ledger-based)
+      const totalCredit = paymentTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) - 
+                          Math.abs(trainingTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)) -
+                          Math.abs(productTransactions.reduce((sum, t) => sum + (t.amount || 0), 0));
+      
+      // Clients with low credit - count based on ledger balances
+      const clientBalances = new Map<string, number>();
+      transactions?.forEach(t => {
+        if (!t.group_id && t.client_id) {
+          clientBalances.set(t.client_id, (clientBalances.get(t.client_id) || 0) + (t.amount || 0));
+        }
+      });
+      const clientsWithLowCredit = Array.from(clientBalances.values()).filter(b => b < 500).length;
 
       // Yearly calculations
       const yearlyPayments = paymentTransactions.filter(t => {

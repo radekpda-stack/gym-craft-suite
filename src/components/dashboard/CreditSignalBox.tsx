@@ -37,53 +37,76 @@ export function CreditSignalBox() {
   const { data, isLoading } = useQuery({
     queryKey: ['credit-signal-stats', lowCreditThreshold],
     queryFn: async (): Promise<CreditStats> => {
-      // Get all non-archived clients
-      const { data: clients } = await supabase
-        .from('clients')
-        .select('id, credit_balance, payment_mode')
-        .eq('is_archived', false);
+      // Get all data in parallel
+      const [clientsResult, budgetMembersResult, budgetGroupsResult, transactionsResult] = await Promise.all([
+        supabase.from('clients').select('id, payment_mode').eq('is_archived', false),
+        supabase.from('client_budget_members').select('client_id, group_id'),
+        supabase.from('client_budget_groups').select('id, shared_balance'),
+        supabase.from('credit_transactions').select('client_id, group_id, amount'),
+      ]);
       
-      // Get clients in shared budgets to exclude from individual count
-      const { data: budgetMembers } = await supabase
-        .from('client_budget_members')
-        .select('client_id');
+      const clients = clientsResult.data || [];
+      const budgetMembers = budgetMembersResult.data || [];
+      const budgetGroups = budgetGroupsResult.data || [];
+      const transactions = transactionsResult.data || [];
       
-      const sharedBudgetClientIds = new Set((budgetMembers || []).map(m => m.client_id));
+      // Build maps for efficient lookups
+      const clientGroupMap = new Map<string, string>();
+      budgetMembers.forEach((m: any) => clientGroupMap.set(m.client_id, m.group_id));
+      
+      const groupBalanceMap = new Map<string, number>();
+      budgetGroups.forEach((g: any) => groupBalanceMap.set(g.id, g.shared_balance || 0));
+      
+      // Calculate ledger balance per individual client (not in groups)
+      const clientLedgerBalance = new Map<string, number>();
+      transactions.forEach((t: any) => {
+        if (!t.group_id && t.client_id) {
+          clientLedgerBalance.set(t.client_id, (clientLedgerBalance.get(t.client_id) || 0) + (t.amount || 0));
+        }
+      });
+      
+      // Track which groups we've already counted
+      const countedGroups = new Set<string>();
       
       const stats: CreditStats = { ok: 0, low: 0, none: 0, cashOnly: 0 };
       
-      (clients || []).forEach((c: any) => {
-        // Skip clients in shared budgets - they're handled by the group
-        if (sharedBudgetClientIds.has(c.id)) return;
-        
+      clients.forEach((c: any) => {
         const paymentMode = c.payment_mode || 'credit';
         
-        // cash_only clients are counted separately and don't appear in alerts
+        // cash_only clients are counted separately
         if (paymentMode === 'cash_only') {
           stats.cashOnly++;
           return;
         }
         
-        const balance = c.credit_balance || 0;
+        const groupId = clientGroupMap.get(c.id);
         
-        // For 'mixed' mode, only count as problem if balance is negative (unpaid services)
+        // If in a group, count the group balance only once
+        if (groupId) {
+          if (countedGroups.has(groupId)) return;
+          countedGroups.add(groupId);
+          const balance = groupBalanceMap.get(groupId) || 0;
+          
+          if (balance <= 0) stats.none++;
+          else if (balance < lowCreditThreshold) stats.low++;
+          else stats.ok++;
+          return;
+        }
+        
+        // Individual client - use ledger balance
+        const balance = clientLedgerBalance.get(c.id) || 0;
+        
+        // For 'mixed' mode, only count as problem if balance is negative
         if (paymentMode === 'mixed') {
-          if (balance < 0) {
-            stats.none++;
-          } else {
-            stats.ok++;
-          }
+          if (balance < 0) stats.none++;
+          else stats.ok++;
           return;
         }
         
         // Standard 'credit' mode
-        if (balance <= 0) {
-          stats.none++;
-        } else if (balance < lowCreditThreshold) {
-          stats.low++;
-        } else {
-          stats.ok++;
-        }
+        if (balance <= 0) stats.none++;
+        else if (balance < lowCreditThreshold) stats.low++;
+        else stats.ok++;
       });
       
       return stats;

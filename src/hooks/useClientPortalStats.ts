@@ -144,15 +144,29 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
       }
 
       // Get current balance (always shown, no filter)
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .select('credit_balance')
-        .eq('id', clientId)
-        .single();
+      // Get current balance from shared budget or ledger (not stale credit_balance field)
+      // First check if client is in a budget group
+      const { data: budgetMembership } = await supabase
+        .from('client_budget_members')
+        .select('group_id, client_budget_groups(shared_balance)')
+        .eq('client_id', clientId)
+        .maybeSingle();
 
-      if (clientError) throw clientError;
-
-      const balance = client?.credit_balance ?? 0;
+      let balance = 0;
+      
+      if (budgetMembership?.client_budget_groups) {
+        // Client is in a shared budget - use group balance
+        balance = (budgetMembership.client_budget_groups as any).shared_balance || 0;
+      } else {
+        // Individual client - calculate from ledger
+        const { data: transactions } = await supabase
+          .from('credit_transactions')
+          .select('amount')
+          .eq('client_id', clientId)
+          .is('group_id', null);
+        
+        balance = (transactions || []).reduce((sum, t) => sum + (t.amount || 0), 0);
+      }
 
       // Get credit_history_start_at from client_accounts
       const { data: accountData } = await supabase
