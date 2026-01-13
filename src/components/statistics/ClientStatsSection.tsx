@@ -8,6 +8,8 @@ import { ClientAgeCard } from './ClientAgeCard';
 import { ClientFeedbackCard } from './ClientFeedbackCard';
 import { ClientTagsCard } from './ClientTagsCard';
 import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
+import { CohortRetentionCard } from './CohortRetentionCard';
+import { ChurnRiskCard } from './ChurnRiskCard';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -67,6 +69,12 @@ export function ClientStatsSection() {
 
       {/* Top clients by LTV */}
       <ClientLTVRankingCard limit={5} />
+
+      {/* Cohort Retention and Churn Risk */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CohortRetentionCard />
+        <ChurnRiskCard />
+      </div>
 
       {/* Active vs At Risk clients */}
       <ClientAnalyticsCard />
