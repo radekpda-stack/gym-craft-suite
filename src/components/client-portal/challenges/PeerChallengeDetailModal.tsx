@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format, isPast } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { usePeerChallengeDetail, useSubmitResult } from '@/hooks/usePeerChallenges';
+import { usePeerChallenge, useSubmitPeerChallengeResult, usePeerChallengeLeaderboard } from '@/hooks/usePeerChallenges';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { cn } from '@/lib/utils';
 
 interface PeerChallengeDetailModalProps {
@@ -39,17 +40,25 @@ export function PeerChallengeDetailModal({
   const [score, setScore] = useState('');
   const [note, setNote] = useState('');
 
-  const { data: challenge, isLoading } = usePeerChallengeDetail(challengeId);
-  const submitResult = useSubmitResult();
+  const { clientId } = useClientPortal();
+  const { data: challenge, isLoading } = usePeerChallenge(challengeId);
+  const { data: leaderboard = [] } = usePeerChallengeLeaderboard(challengeId);
+  const submitResult = useSubmitPeerChallengeResult();
 
   const isEnded = challenge ? isPast(new Date(challenge.end_at)) : false;
+  
+  // Find my participation status
+  const myParticipation = challenge?.peer_challenge_participants?.find(
+    (p: any) => p.client_id === clientId
+  );
+  const participantCount = challenge?.peer_challenge_participants?.length || 0;
 
   const handleSubmit = async () => {
     if (!score || !challengeId) return;
 
     await submitResult.mutateAsync({
       challengeId,
-      scorePrimary: parseFloat(score),
+      score: parseFloat(score),
       note: note || undefined,
     });
 
@@ -110,7 +119,7 @@ export function PeerChallengeDetailModal({
               </div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{challenge.participant_count} účastníků</span>
+                <span>{participantCount} účastníků</span>
               </div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="h-4 w-4" />
@@ -130,13 +139,13 @@ export function PeerChallengeDetailModal({
                 Žebříček
               </h3>
               
-              {challenge.leaderboard.length === 0 ? (
+              {leaderboard.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground border rounded-lg">
                   Zatím žádné výsledky
                 </div>
               ) : (
                 <div className="border rounded-lg divide-y">
-                  {challenge.leaderboard.map((entry, index) => (
+                  {leaderboard.map((entry, index) => (
                     <div 
                       key={entry.client_id}
                       className={cn(
@@ -171,7 +180,7 @@ export function PeerChallengeDetailModal({
             </div>
 
             {/* Submit form */}
-            {!isEnded && challenge.my_participation_status === 'accepted' && (
+            {!isEnded && myParticipation?.status === 'accepted' && (
               <div className="border rounded-lg p-4 bg-muted/30">
                 <h3 className="font-semibold mb-3">Odeslat výsledek</h3>
                 <div className="space-y-3">

@@ -273,8 +273,10 @@ export function usePeerChallengeLeaderboard(challengeId: string | null) {
           client_id: pId,
           display_name: displayName,
           score: best?.score || 0,
+          best_score: best?.score || 0,
           rank: 0, // Will be set after sorting
           is_current_user: pId === clientId,
+          is_me: pId === clientId,
           submission_count: best?.count || 0,
         });
       }
