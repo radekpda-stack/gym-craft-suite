@@ -3798,6 +3798,8 @@ export type Database = {
       }
       exercise_entries: {
         Row: {
+          attempt_count: number | null
+          attempt_values: Json | null
           avg_heart_rate: number | null
           avg_speed_kmh: number | null
           avg_watts: number | null
@@ -3820,15 +3822,18 @@ export type Database = {
           max_heart_rate: number | null
           max_speed_kmh: number | null
           max_watts: number | null
+          metric_key: string | null
           metrics_json: Json | null
           notes: string | null
           pace_sec_per_500m: number | null
           pace_sec_per_km: number | null
+          pr_scope_key: string | null
           reps: number | null
           resistance: number | null
           rpe: number | null
           sets: number
           side: string | null
+          side_scope: string | null
           source: string | null
           status: string | null
           strokes: number | null
@@ -3845,6 +3850,8 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          attempt_count?: number | null
+          attempt_values?: Json | null
           avg_heart_rate?: number | null
           avg_speed_kmh?: number | null
           avg_watts?: number | null
@@ -3867,15 +3874,18 @@ export type Database = {
           max_heart_rate?: number | null
           max_speed_kmh?: number | null
           max_watts?: number | null
+          metric_key?: string | null
           metrics_json?: Json | null
           notes?: string | null
           pace_sec_per_500m?: number | null
           pace_sec_per_km?: number | null
+          pr_scope_key?: string | null
           reps?: number | null
           resistance?: number | null
           rpe?: number | null
           sets?: number
           side?: string | null
+          side_scope?: string | null
           source?: string | null
           status?: string | null
           strokes?: number | null
@@ -3892,6 +3902,8 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          attempt_count?: number | null
+          attempt_values?: Json | null
           avg_heart_rate?: number | null
           avg_speed_kmh?: number | null
           avg_watts?: number | null
@@ -3914,15 +3926,18 @@ export type Database = {
           max_heart_rate?: number | null
           max_speed_kmh?: number | null
           max_watts?: number | null
+          metric_key?: string | null
           metrics_json?: Json | null
           notes?: string | null
           pace_sec_per_500m?: number | null
           pace_sec_per_km?: number | null
+          pr_scope_key?: string | null
           reps?: number | null
           resistance?: number | null
           rpe?: number | null
           sets?: number
           side?: string | null
+          side_scope?: string | null
           source?: string | null
           status?: string | null
           strokes?: number | null
@@ -4284,6 +4299,7 @@ export type Database = {
           instructions_en: string | null
           is_archived: boolean
           is_bodyweight: boolean
+          is_plyometric: boolean | null
           is_time_based: boolean
           is_unilateral: boolean
           movement_pattern: string | null
@@ -4330,6 +4346,7 @@ export type Database = {
           instructions_en?: string | null
           is_archived?: boolean
           is_bodyweight?: boolean
+          is_plyometric?: boolean | null
           is_time_based?: boolean
           is_unilateral?: boolean
           movement_pattern?: string | null
@@ -4376,6 +4393,7 @@ export type Database = {
           instructions_en?: string | null
           is_archived?: boolean
           is_bodyweight?: boolean
+          is_plyometric?: boolean | null
           is_time_based?: boolean
           is_unilateral?: boolean
           movement_pattern?: string | null
