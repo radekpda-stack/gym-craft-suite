@@ -336,9 +336,9 @@ export default function FeedbackOverview() {
   // Helper to get status color based on hours since training
   const getTimeBadge = (hours: number) => {
     if (hours < 24) {
-      return { color: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', label: 'Čerstvé', icon: '🟢' };
+      return { color: 'bg-success/20 text-success', label: 'Čerstvé', icon: '🟢' };
     } else if (hours < 48) {
-      return { color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', label: 'Je čas', icon: '🟠' };
+      return { color: 'bg-warning/20 text-warning', label: 'Je čas', icon: '🟠' };
     } else {
       return { color: 'bg-destructive/20 text-destructive', label: 'Zpožděné', icon: '🔴' };
     }
@@ -349,19 +349,19 @@ export default function FeedbackOverview() {
     switch (status) {
       case 'completed':
         return { 
-          color: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', 
+          color: 'bg-success/20 text-success', 
           label: 'Vyplněn', 
           Icon: CheckCircle2 
         };
       case 'sent_pending':
         return { 
-          color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400', 
+          color: 'bg-accent/20 text-accent', 
           label: 'Odesláno e-mailem', 
           Icon: Mail 
         };
       case 'link_copied':
         return { 
-          color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', 
+          color: 'bg-warning/20 text-warning', 
           label: 'Odkaz zkopírován', 
           Icon: Copy 
         };
@@ -437,12 +437,12 @@ export default function FeedbackOverview() {
       if (item.feedback?.is_red_flag) {
         return { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/20' };
       }
-      return { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/20' };
+      return { icon: CheckCircle2, color: 'text-success', bg: 'bg-success/20' };
     }
     if (item.isExpired) {
       return { icon: XCircle, color: 'text-muted-foreground', bg: 'bg-muted' };
     }
-    return { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/20' };
+    return { icon: Clock, color: 'text-warning', bg: 'bg-warning/20' };
   };
 
   // Count unfilled for filter badge

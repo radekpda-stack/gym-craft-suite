@@ -154,8 +154,8 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
         <Card className="glass-subtle">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Flame className="w-5 h-5 text-green-500" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <Flame className="w-5 h-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -170,8 +170,8 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
         <Card className="glass-subtle">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Snowflake className="w-5 h-5 text-blue-500" />
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Snowflake className="w-5 h-5 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -186,8 +186,8 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
         <Card className="glass-subtle">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <TrendingUp className="w-5 h-5 text-purple-500" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -212,13 +212,13 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
               className={`flex items-start gap-3 p-4 rounded-xl ${
                 warning.type === 'warning'
                   ? 'bg-warning/10 border border-warning/20'
-                  : 'bg-blue-500/10 border border-blue-500/20'
+                  : 'bg-accent/10 border border-accent/20'
               }`}
             >
               {warning.type === 'warning' ? (
                 <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
               ) : (
-                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <Info className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
               )}
               <p className="text-sm">{warning.message}</p>
             </div>
@@ -288,12 +288,12 @@ export function TrainingHistoryTab({ clientId, clientName }: TrainingHistoryTabP
                       <Dumbbell className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium">{exercise.exerciseName}</span>
                       {exercise.trendDirection === 'up' && (
-                        <Badge className="bg-green-500/20 text-green-400 text-xs">
+                        <Badge className="bg-success/20 text-success text-xs">
                           ↑ Progrese
                         </Badge>
                       )}
                       {exercise.trendDirection === 'down' && (
-                        <Badge className="bg-red-500/20 text-red-400 text-xs">
+                        <Badge className="bg-destructive/20 text-destructive text-xs">
                           ↓ Pokles
                         </Badge>
                       )}

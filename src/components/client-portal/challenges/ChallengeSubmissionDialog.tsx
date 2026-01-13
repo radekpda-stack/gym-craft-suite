@@ -198,9 +198,9 @@ export function ChallengeSubmissionDialog({
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-4 w-4 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-4 w-4 text-warning" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-4 w-4 text-warning/70" />;
     return null;
   };
 
@@ -213,7 +213,7 @@ export function ChallengeSubmissionDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-500" />
+            <Trophy className="h-5 w-5 text-warning" />
             Odeslat výsledek
           </DialogTitle>
           <DialogDescription>
@@ -387,7 +387,7 @@ export function ChallengeSubmissionDialog({
                             )}
                           >
                             <div className="flex items-center gap-2">
-                              {isBest && <Trophy className="h-3 w-3 text-amber-500" />}
+                              {isBest && <Trophy className="h-3 w-3 text-warning" />}
                               <span className="text-sm font-medium">
                                 {formatChallengeScore(sub.score_primary, challenge.primary_metric)}
                                 {getMetricLabel(challenge.primary_metric, challenge.unit_label) && (

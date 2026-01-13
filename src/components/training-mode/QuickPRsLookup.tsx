@@ -30,13 +30,13 @@ function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
 function getMetricColor(metricType: ExercisePR['metricType']) {
   switch (metricType) {
     case 'weight':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+      return 'bg-warning/10 text-warning border-warning/20';
     case 'time':
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      return 'bg-accent/10 text-accent border-accent/20';
     case 'reps':
-      return 'bg-green-500/10 text-green-600 border-green-500/20';
+      return 'bg-success/10 text-success border-success/20';
     case 'distance':
-      return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      return 'bg-primary/10 text-primary border-primary/20';
     default:
       return 'bg-muted text-muted-foreground';
   }

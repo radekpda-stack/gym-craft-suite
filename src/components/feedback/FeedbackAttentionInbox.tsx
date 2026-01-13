@@ -67,9 +67,9 @@ const PRIORITY_CONFIG = {
     priority: 2,
     icon: Clock,
     label: 'Čeká > 24h',
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
-    borderColor: 'border-amber-500/30',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
+    borderColor: 'border-warning/30',
   },
   expired: {
     priority: 3,

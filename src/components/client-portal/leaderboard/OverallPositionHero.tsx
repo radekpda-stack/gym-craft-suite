@@ -19,9 +19,9 @@ function getPercentileMessage(percentile: number): { text: string; emoji: string
 }
 
 function getPercentileColor(percentile: number): string {
-  if (percentile >= 75) return 'text-emerald-500';
-  if (percentile >= 50) return 'text-amber-500';
-  if (percentile >= 25) return 'text-orange-500';
+  if (percentile >= 75) return 'text-success';
+  if (percentile >= 50) return 'text-warning';
+  if (percentile >= 25) return 'text-warning';
   return 'text-muted-foreground';
 }
 
@@ -121,16 +121,16 @@ export default function OverallPositionHero({ clientId }: OverallPositionHeroPro
             <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {benchmarks.strongestExercise && (
                 <motion.div 
-                  className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/10"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-4 h-4 text-success" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Nejsilnější</p>
+                    <p className="text-xs text-success font-medium">Nejsilnější</p>
                     <p className="font-semibold truncate capitalize">{benchmarks.strongestExercise.name}</p>
                   </div>
                 </motion.div>
@@ -138,16 +138,16 @@ export default function OverallPositionHero({ clientId }: OverallPositionHeroPro
               
               {benchmarks.weakestExercise && (
                 <motion.div 
-                  className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-warning/5 border border-warning/10"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                    <TrendingDown className="w-4 h-4 text-orange-500" />
+                  <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                    <TrendingDown className="w-4 h-4 text-warning" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Prostor ke zlepšení</p>
+                    <p className="text-xs text-warning font-medium">Prostor ke zlepšení</p>
                     <p className="font-semibold truncate capitalize">{benchmarks.weakestExercise.name}</p>
                   </div>
                 </motion.div>

@@ -163,7 +163,7 @@ export function PaymentTagsManagement() {
                   <Button 
                     size="icon" 
                     variant="ghost" 
-                    className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                    className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
                     onClick={handleUpdateTag} 
                     disabled={updateSetting.isPending || !editValue.trim()}
                   >

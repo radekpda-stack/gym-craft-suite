@@ -44,7 +44,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 const STATUS_CONFIG: Record<AssignedWorkout['status'], { label: string; color: string; icon: typeof CheckCircle }> = {
   pending: { label: 'Čeká', color: 'bg-muted text-muted-foreground', icon: Clock },
-  in_progress: { label: 'Probíhá', color: 'bg-blue-500/10 text-blue-500', icon: Play },
+  in_progress: { label: 'Probíhá', color: 'bg-accent/10 text-accent', icon: Play },
   completed: { label: 'Dokončeno', color: 'bg-success/10 text-success', icon: CheckCircle },
   skipped: { label: 'Přeskočeno', color: 'bg-warning/10 text-warning', icon: SkipForward },
 };
