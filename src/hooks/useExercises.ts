@@ -76,6 +76,7 @@ export interface Exercise {
   is_time_based: boolean;
   default_unit: DefaultUnit;
   supported_metrics: string[] | null;
+  exercise_type_v2: 'strength' | 'cardio' | 'mixed' | 'plyometric' | null;
   video_url: string | null;
   image_url: string | null;
   source: Source;

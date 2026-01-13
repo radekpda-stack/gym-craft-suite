@@ -181,9 +181,10 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         const weightRows = list.filter(r => r.weight && r.weight > 0);
         const distanceRows = list.filter(r => r.distanceMeters && r.distanceMeters > 0);
 
-        // Priority: Jump (distance) > Time > Strength
-        if (distanceRows.length && metricCategory === 'jump') {
-          // For jumps: higher distance is better
+        // Priority: Jump (distance/height) > Time > Strength
+        const isJumpType = metricCategory === 'jump_height' || metricCategory === 'jump_distance' || metricCategory === 'plyometric';
+        if (isJumpType && distanceRows.length) {
+          // For jumps: higher distance/height is better
           const best = distanceRows
             .map(r => ({ id: r.id, v: r.distanceMeters!, date: r.date }))
             .sort((a, b) => b.v - a.v || new Date(a.date).getTime() - new Date(b.date).getTime())[0];
@@ -206,7 +207,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
       // Check if this exercise is a pull-up type
       const exerciseName = exerciseData?.name_cs || exerciseData?.name || '';
       const isPullUp = isPullUpExercise(exerciseName);
-      const isJumpExercise = metricCategory === 'jump';
+      const isJumpExercise = metricCategory === 'jump_height' || metricCategory === 'jump_distance' || metricCategory === 'plyometric';
 
       return { rows, isTimeBased, isJumpExercise, metricCategory, isPullUp };
     },

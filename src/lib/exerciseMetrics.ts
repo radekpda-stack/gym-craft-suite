@@ -1,21 +1,91 @@
 // Exercise metrics utilities - performance display, formatting, and fallback logic
 
-export type ExerciseMetricCategory = 'rower' | 'skierg' | 'treadmill' | 'bike' | 'cardio' | 'jump' | 'strength';
+export type ExerciseMetricCategory = 
+  | 'rower' 
+  | 'skierg' 
+  | 'treadmill' 
+  | 'bike' 
+  | 'cardio' 
+  | 'jump_height'    // Vertical jumps (CMJ, SJ, DJ, Box Jump)
+  | 'jump_distance'  // Horizontal jumps (Long Jump, Broad Jump)
+  | 'plyometric'     // Generic plyometric
+  | 'strength';
 
 /**
- * Detect the metric category from exercise name or category
+ * Detect the metric category from exercise name, category, or supported_metrics
  */
 export function detectExerciseMetricCategory(
   exerciseName: string,
-  exerciseCategory?: string
+  exerciseCategory?: string,
+  exerciseTypeV2?: string | null,
+  supportedMetrics?: string[] | null
 ): ExerciseMetricCategory {
   const nameLower = exerciseName.toLowerCase();
   const categoryLower = (exerciseCategory || '').toLowerCase();
   
-  // Jump exercises (skok do dálky, skok do výšky, etc.)
+  // If exercise_type_v2 is provided, use it as primary source
+  if (exerciseTypeV2 === 'plyometric') {
+    // Check supported_metrics to determine jump type
+    if (supportedMetrics?.includes('height_cm')) {
+      return 'jump_height';
+    }
+    if (supportedMetrics?.includes('distance_meters')) {
+      return 'jump_distance';
+    }
+    // Fallback to name-based detection for plyometrics
+    if (nameLower.includes('skok do dálky') || nameLower.includes('long jump') || 
+        nameLower.includes('broad jump') || nameLower.includes('horizontal')) {
+      return 'jump_distance';
+    }
+    if (nameLower.includes('cmj') || nameLower.includes('squat jump') || 
+        nameLower.includes('drop jump') || nameLower.includes('box jump') ||
+        nameLower.includes('výskok') || nameLower.includes('vertikální')) {
+      return 'jump_height';
+    }
+    return 'plyometric';
+  }
+  
+  if (exerciseTypeV2 === 'cardio') {
+    // Rower / Veslo
+    if (nameLower.includes('veslo') || nameLower.includes('rower') || nameLower.includes('veslování')) {
+      return 'rower';
+    }
+    // SkiErg / SkillUp
+    if (nameLower.includes('skierg') || nameLower.includes('ski erg') || 
+        nameLower.includes('skillup') || nameLower.includes('skill up') ||
+        nameLower.includes('skyark')) {
+      return 'skierg';
+    }
+    // Treadmill / Běžecký pás
+    if (nameLower.includes('běh') || nameLower.includes('pás') || 
+        nameLower.includes('treadmill') || nameLower.includes('běžecký') ||
+        nameLower.includes('running')) {
+      return 'treadmill';
+    }
+    // Bike / Kolo
+    if (nameLower.includes('kolo') || nameLower.includes('bike') || 
+        nameLower.includes('cykl') || nameLower.includes('spinning') ||
+        nameLower.includes('assault')) {
+      return 'bike';
+    }
+    return 'cardio';
+  }
+  
+  // Fallback to heuristic detection (for backwards compatibility)
+  // Jump exercises - check for height vs distance
   if (nameLower.includes('skok') || nameLower.includes('jump') ||
-      (categoryLower.includes('plyometrics') && nameLower.includes('jump'))) {
-    return 'jump';
+      categoryLower.includes('plyometrics') || categoryLower.includes('plyometrie')) {
+    if (nameLower.includes('skok do dálky') || nameLower.includes('long jump') || 
+        nameLower.includes('broad jump') || nameLower.includes('horizontal')) {
+      return 'jump_distance';
+    }
+    if (nameLower.includes('cmj') || nameLower.includes('squat jump') || 
+        nameLower.includes('drop jump') || nameLower.includes('box jump') ||
+        nameLower.includes('výskok') || nameLower.includes('vertikální') ||
+        nameLower.includes('countermovement')) {
+      return 'jump_height';
+    }
+    return 'plyometric';
   }
   
   // Rower / Veslo
@@ -49,6 +119,20 @@ export function detectExerciseMetricCategory(
   }
   
   return 'strength';
+}
+
+/**
+ * Check if category is any type of jump
+ */
+export function isJumpCategory(category: ExerciseMetricCategory): boolean {
+  return category === 'jump_height' || category === 'jump_distance' || category === 'plyometric';
+}
+
+/**
+ * Check if category is any type of cardio
+ */
+export function isCardioCategory(category: ExerciseMetricCategory): boolean {
+  return category === 'rower' || category === 'skierg' || category === 'treadmill' || category === 'bike' || category === 'cardio';
 }
 
 /**
@@ -113,10 +197,12 @@ export interface ExerciseEntryMetrics {
   pace_sec_per_500m?: number | null;
   pace_sec_per_km?: number | null;
   avg_speed_kmh?: number | null;
+  max_speed_kmh?: number | null;
   time_seconds?: number | null;
   cadence_spm?: number | null;
   rpe?: number | null;
   distance_meters?: number | null;
+  height_cm?: number | null;
 }
 
 export interface PerformanceDisplay {
@@ -241,8 +327,31 @@ export function getPerformanceDisplay(
     return { value: '-', label: '', unit: '', raw: null };
   }
   
-  // Jump exercises - show distance in cm
-  if (category === 'jump') {
+  // Jump exercises - show height or distance
+  if (category === 'jump_height' || category === 'plyometric') {
+    // Prefer height_cm for vertical jumps
+    if (entry.height_cm && entry.height_cm > 0) {
+      return {
+        value: `${Math.round(entry.height_cm)}`,
+        label: 'Výška',
+        unit: 'cm',
+        raw: entry.height_cm,
+      };
+    }
+    // Fallback to distance if height not available
+    if (entry.distance_meters && entry.distance_meters > 0) {
+      const distanceCm = Math.round(entry.distance_meters * 100);
+      return {
+        value: `${distanceCm}`,
+        label: 'Vzdálenost',
+        unit: 'cm',
+        raw: entry.distance_meters,
+      };
+    }
+    return { value: '-', label: '', unit: '', raw: null };
+  }
+  
+  if (category === 'jump_distance') {
     if (entry.distance_meters && entry.distance_meters > 0) {
       const distanceCm = Math.round(entry.distance_meters * 100);
       return {

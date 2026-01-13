@@ -183,11 +183,17 @@ export function QuickLogDialog({
                    selectedExercise?.category?.toLowerCase().includes('cardio');
   
   const exerciseCategory = selectedExercise 
-    ? detectExerciseMetricCategory(selectedExercise.name_cs || selectedExercise.name || '', selectedExercise.category)
+    ? detectExerciseMetricCategory(
+        selectedExercise.name_cs || selectedExercise.name || '', 
+        selectedExercise.category,
+        (selectedExercise as { exercise_type_v2?: string | null }).exercise_type_v2 ?? null,
+        selectedExercise.supported_metrics
+      )
     : 'strength';
 
-  const showCardioMetrics = exerciseCategory !== 'strength' && exerciseCategory !== 'jump';
-  const isJumpExercise = exerciseCategory === 'jump';
+  const isJumpExercise = exerciseCategory === 'jump_height' || exerciseCategory === 'jump_distance' || exerciseCategory === 'plyometric';
+  const isHeightJump = exerciseCategory === 'jump_height';
+  const showCardioMetrics = exerciseCategory !== 'strength' && !isJumpExercise;
   const isUnilateral = selectedExercise?.is_unilateral || false;
   const rpeValue = form.watch('rpe');
   
