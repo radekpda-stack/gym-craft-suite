@@ -204,14 +204,14 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.8 }}
-                  className="p-4 rounded-xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30"
+                  className="p-4 rounded-xl bg-gradient-to-r from-warning/20 to-warning/10 border border-warning/30"
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-5 h-5 text-yellow-500" />
-                    <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                    <Award className="w-5 h-5 text-warning" />
+                    <span className="font-semibold text-warning">
                       Nové osobní rekordy!
                     </span>
-                    <Badge className="bg-yellow-500 text-white ml-auto">
+                    <Badge className="bg-warning text-warning-foreground ml-auto">
                       {summary.newPRs.length} PR
                     </Badge>
                   </div>

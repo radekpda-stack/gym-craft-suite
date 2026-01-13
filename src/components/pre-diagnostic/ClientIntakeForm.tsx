@@ -536,9 +536,9 @@ export function ClientIntakeForm({
               className={cn(
                 "flex-1 py-2 rounded-lg transition-colors text-sm font-medium",
                 formData.stress_level === n
-                  ? n <= 2 ? "bg-green-500 text-white" 
-                    : n === 3 ? "bg-yellow-500 text-white"
-                    : "bg-red-500 text-white"
+                  ? n <= 2 ? "bg-success text-success-foreground" 
+                    : n === 3 ? "bg-warning text-warning-foreground"
+                    : "bg-destructive text-destructive-foreground"
                   : "bg-secondary/50 hover:bg-secondary/70"
               )}
             >

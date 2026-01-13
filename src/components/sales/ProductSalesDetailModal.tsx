@@ -74,14 +74,14 @@ export function ProductSalesDetailModal({
                 <p className="text-lg font-bold">{formatCurrency(data.totalCost)}</p>
               </div>
 
-              <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 mb-1">
+              <div className="bg-success/10 rounded-lg p-3 border border-success/20">
+                <div className="flex items-center gap-1.5 text-success mb-1">
                   <Banknote className="w-3.5 h-3.5" />
                   <span className="text-xs">Zisk</span>
                 </div>
                 <p className={cn(
                   "text-lg font-bold",
-                  data.totalProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                  data.totalProfit >= 0 ? "text-success" : "text-destructive"
                 )}>
                   {formatCurrency(data.totalProfit)}
                 </p>
@@ -201,7 +201,7 @@ export function ProductSalesDetailModal({
                               <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
                                 <p className="font-medium">Tržby: {formatCurrency(d.revenue)}</p>
                                 <p className="text-xs">Náklady: {formatCurrency(d.cost)}</p>
-                                <p className="text-xs text-emerald-500">Marže: {d.margin.toFixed(1)}%</p>
+                                <p className="text-xs text-success">Marže: {d.margin.toFixed(1)}%</p>
                               </div>
                             );
                           }
@@ -283,9 +283,9 @@ export function ProductSalesDetailModal({
                       <div className="flex items-center gap-2">
                         <span className={cn(
                           "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                          index === 0 ? "bg-amber-500 text-white" :
-                          index === 1 ? "bg-slate-400 text-white" :
-                          index === 2 ? "bg-orange-700 text-white" :
+                          index === 0 ? "bg-warning text-warning-foreground" :
+                          index === 1 ? "bg-muted-foreground text-background" :
+                          index === 2 ? "bg-warning/70 text-warning-foreground" :
                           "bg-secondary text-muted-foreground"
                         )}>
                           {index + 1}

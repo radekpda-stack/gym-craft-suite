@@ -71,7 +71,7 @@ export default function Settings() {
         ? 'Profil, heslo a jazyk' 
         : 'Profile, password and language',
       icon: User,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-accent',
     },
     {
       id: 'company',
@@ -80,7 +80,7 @@ export default function Settings() {
         ? 'Firemní údaje, ceny a balíčky' 
         : 'Company details, pricing and packages',
       icon: Building2,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-warning',
     },
     {
       id: 'app',
@@ -89,7 +89,7 @@ export default function Settings() {
         ? 'Moduly, vzhled a personalizace' 
         : 'Modules, appearance and personalization',
       icon: Boxes,
-      iconColor: 'text-purple-500',
+      iconColor: 'text-primary',
     },
     {
       id: 'system',
@@ -98,7 +98,7 @@ export default function Settings() {
         ? 'Export dat a technické funkce' 
         : 'Data export and technical functions',
       icon: Wrench,
-      iconColor: 'text-rose-500',
+      iconColor: 'text-muted-foreground',
     },
     {
       id: 'admin',
@@ -107,7 +107,7 @@ export default function Settings() {
         ? 'Správa uživatelů a cviků' 
         : 'User and exercise management',
       icon: Shield,
-      iconColor: 'text-red-500',
+      iconColor: 'text-destructive',
       badge: 'Admin',
       hidden: !isAdmin,
     },

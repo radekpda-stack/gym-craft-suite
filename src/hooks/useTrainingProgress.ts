@@ -200,16 +200,16 @@ export function useWeeklySummary(clientId?: string) {
 }
 
 export const TRAINING_TYPES = {
-  strength: { label: 'Silový', color: 'bg-blue-500' },
-  conditioning: { label: 'Kondiční', color: 'bg-orange-500' },
-  hiit: { label: 'HIIT', color: 'bg-red-500' },
-  cardio: { label: 'Kardio', color: 'bg-pink-500' },
-  running: { label: 'Běh', color: 'bg-green-500' },
-  mobility: { label: 'Mobilita', color: 'bg-teal-500' },
-  flexibility: { label: 'Flexibilita', color: 'bg-cyan-500' },
-  regeneration: { label: 'Regenerace', color: 'bg-purple-500' },
-  functional: { label: 'Funkční', color: 'bg-indigo-500' },
-  diagnostic: { label: 'Diagnostický', color: 'bg-yellow-500' },
+  strength: { label: 'Silový', color: 'bg-accent' },
+  conditioning: { label: 'Kondiční', color: 'bg-warning' },
+  hiit: { label: 'HIIT', color: 'bg-destructive' },
+  cardio: { label: 'Kardio', color: 'bg-primary' },
+  running: { label: 'Běh', color: 'bg-success' },
+  mobility: { label: 'Mobilita', color: 'bg-muted-foreground' },
+  flexibility: { label: 'Flexibilita', color: 'bg-accent/70' },
+  regeneration: { label: 'Regenerace', color: 'bg-primary/80' },
+  functional: { label: 'Funkční', color: 'bg-accent/80' },
+  diagnostic: { label: 'Diagnostický', color: 'bg-warning' },
   other: { label: 'Jiný', color: 'bg-muted' },
 } as const;
 
