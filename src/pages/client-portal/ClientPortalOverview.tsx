@@ -22,9 +22,6 @@ import { Button } from '@/components/ui/button';
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
 import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
-import { GamificationBadge } from '@/components/client-portal/gamification/GamificationBadge';
-import { DailyCheckinCard } from '@/components/client-portal/gamification/DailyCheckinCard';
-import { WeeklyMissionsCard } from '@/components/client-portal/gamification/WeeklyMissionsCard';
 import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
@@ -52,7 +49,7 @@ export default function ClientPortalOverview() {
 
   return (
     <div className="space-y-5">
-      {/* 1. Header with Gamification Badge */}
+      {/* 1. Header */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -63,36 +60,27 @@ export default function ClientPortalOverview() {
           </div>
           <PeriodChips value={period} onChange={setPeriod} options={periodOptions} />
         </div>
-        
-        {/* Gamification Badge */}
-        <GamificationBadge />
       </div>
 
-      {/* 2. Daily Check-in Card */}
-      <DailyCheckinCard />
-
-      {/* 3. ACTION REQUIRED - Hero section for pending tasks */}
+      {/* 2. ACTION REQUIRED - Hero section for pending tasks */}
       <ClientActionRequired />
 
-      {/* 4. Hero Stats Row - Credit + Next Training */}
+      {/* 3. Hero Stats Row - Credit + Next Training */}
       <HeroStatsRow period={period} />
 
-      {/* 5. Quick Actions - 4 main icons */}
+      {/* 4. Quick Actions - 4 main icons */}
       <ClientQuickActions />
 
-      {/* 6. Weekly Missions */}
-      <WeeklyMissionsCard />
-
-      {/* 7. Training Calendar */}
+      {/* 5. Training Calendar */}
       <TrainingCalendar />
 
-      {/* 8. Overall Performance Card */}
+      {/* 6. Overall Performance Card */}
       {clientId && <OverallPerformanceCard clientId={clientId} />}
 
-      {/* 9. Active Challenges */}
+      {/* 7. Active Challenges */}
       <ActiveChallengeWidget />
 
-      {/* 10. Progress Link */}
+      {/* 8. Progress Link */}
       <ProgressLinkCard delay={0.25} />
 
       {/* 8. Recent Activity - Collapsible */}
