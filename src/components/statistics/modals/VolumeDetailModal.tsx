@@ -62,11 +62,11 @@ export function VolumeDetailModal({ open, onOpenChange }: VolumeDetailModalProps
               <p className="text-sm text-muted-foreground">Trend</p>
               <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                 {trendPositive ? (
-                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <TrendingUp className="h-5 w-5 text-success" />
                 ) : (
-                  <TrendingDown className="h-5 w-5 text-red-500" />
+                  <TrendingDown className="h-5 w-5 text-destructive" />
                 )}
-                <span className={trendPositive ? 'text-green-500' : 'text-red-500'}>
+                <span className={trendPositive ? 'text-success' : 'text-destructive'}>
                   {trendPositive ? '+' : ''}{data?.trend || 0}%
                 </span>
               </div>

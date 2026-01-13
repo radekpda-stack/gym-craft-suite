@@ -38,8 +38,8 @@ const TaskRow = memo(function TaskRow({
   const Icon = TASK_ICONS[task.type];
   
   const getSeverityColor = () => {
-    if (task.severity === 'error') return 'text-red-400';
-    if (task.severity === 'warning') return 'text-amber-400';
+    if (task.severity === 'error') return 'text-destructive';
+    if (task.severity === 'warning') return 'text-warning';
     return 'text-muted-foreground';
   };
   
@@ -54,8 +54,8 @@ const TaskRow = memo(function TaskRow({
     >
       <div className={cn(
         'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-        task.severity === 'error' ? 'bg-red-500/10' : 
-        task.severity === 'warning' ? 'bg-amber-500/10' : 'bg-muted/50'
+        task.severity === 'error' ? 'bg-destructive/10' : 
+        task.severity === 'warning' ? 'bg-warning/10' : 'bg-muted/50'
       )}>
         <Icon className={cn('w-5 h-5', getSeverityColor())} />
       </div>
@@ -78,9 +78,9 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
   const navigate = useNavigate();
   
   const getStatusDot = () => {
-    if (client.status === 'error') return 'bg-red-500';
-    if (client.status === 'warning') return 'bg-amber-400';
-    return 'bg-emerald-400';
+    if (client.status === 'error') return 'bg-destructive';
+    if (client.status === 'warning') return 'bg-warning';
+    return 'bg-success';
   };
   
   return (
@@ -96,12 +96,12 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
         {client.name}
       </span>
       {client.isFavorite && (
-        <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+        <Star className="w-3 h-3 text-warning fill-warning shrink-0" />
       )}
       <span className={cn(
         'text-xs tabular-nums shrink-0',
-        client.creditBalance <= 0 ? 'text-red-400' : 
-        client.creditBalance < 500 ? 'text-amber-400' : 
+        client.creditBalance <= 0 ? 'text-destructive' : 
+        client.creditBalance < 500 ? 'text-warning' : 
         'text-muted-foreground'
       )}>
         {client.creditBalance.toLocaleString('cs-CZ')} Kč
@@ -113,8 +113,8 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
 function AllClearState({ messages }: { messages: string[] }) {
   return (
     <div className="text-center py-8">
-      <div className="inline-flex p-4 rounded-3xl bg-emerald-500/10 mb-4">
-        <Sparkles className="w-8 h-8 text-emerald-400" />
+      <div className="inline-flex p-4 rounded-3xl bg-success/10 mb-4">
+        <Sparkles className="w-8 h-8 text-success" />
       </div>
       <p className="text-base font-semibold text-foreground mb-1">Vše v pořádku!</p>
       {messages.length > 0 && (
@@ -164,12 +164,12 @@ export function HeroAttentionCard({ data, isLoading }: HeroAttentionCardProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           {allClear ? (
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-success" />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
           )}
           <div>
@@ -182,7 +182,7 @@ export function HeroAttentionCard({ data, isLoading }: HeroAttentionCardProps) {
           </div>
         </div>
         {!allClear && (
-          <span className="text-2xl font-bold text-amber-400 tabular-nums">
+          <span className="text-2xl font-bold text-warning tabular-nums">
             {totalTasksCount}
           </span>
         )}
@@ -226,7 +226,7 @@ export function HeroAttentionCard({ data, isLoading }: HeroAttentionCardProps) {
               <span className="text-sm font-medium text-foreground">Klienti</span>
             </div>
             {problemCount > 0 && (
-              <span className="text-xs text-amber-400 flex items-center gap-1">
+              <span className="text-xs text-warning flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {problemCount}
               </span>

@@ -55,7 +55,7 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-blue-500" />
+            <Activity className="h-5 w-5 text-accent" />
             Kardio statistiky - detail
           </DialogTitle>
         </DialogHeader>
@@ -63,8 +63,8 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
         <div className="space-y-6">
           {/* Main metrics grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-blue-500/10 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-blue-600 mb-2">
+            <div className="bg-accent/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-accent mb-2">
                 <Route className="h-4 w-4" />
                 <span className="text-sm font-medium">Celková vzdálenost</span>
               </div>
@@ -72,8 +72,8 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
               <p className="text-xs text-muted-foreground mt-1">za posledních 6 měsíců</p>
             </div>
 
-            <div className="bg-purple-500/10 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-purple-600 mb-2">
+            <div className="bg-primary/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-primary mb-2">
                 <Clock className="h-4 w-4" />
                 <span className="text-sm font-medium">Celkový čas</span>
               </div>
@@ -81,16 +81,16 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
               <p className="text-xs text-muted-foreground mt-1">aktivního kardia</p>
             </div>
 
-            <div className="bg-rose-500/10 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-rose-600 mb-2">
+            <div className="bg-destructive/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-destructive mb-2">
                 <Heart className="h-4 w-4" />
                 <span className="text-sm font-medium">Ø Tepová frekvence</span>
               </div>
               <p className="text-3xl font-bold">{data?.avgHeartRate || '—'} <span className="text-lg font-normal">bpm</span></p>
             </div>
 
-            <div className="bg-orange-500/10 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-orange-600 mb-2">
+            <div className="bg-warning/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-warning mb-2">
                 <Flame className="h-4 w-4" />
                 <span className="text-sm font-medium">Spálené kalorie</span>
               </div>

@@ -53,18 +53,18 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
 
   const getReadinessColor = () => {
     switch (data.readinessLevel) {
-      case 'high': return 'text-green-500';
-      case 'medium': return 'text-yellow-500';
-      case 'low': return 'text-red-500';
+      case 'high': return 'text-success';
+      case 'medium': return 'text-warning';
+      case 'low': return 'text-destructive';
       default: return 'text-muted-foreground';
     }
   };
 
   const getReadinessBg = () => {
     switch (data.readinessLevel) {
-      case 'high': return 'bg-green-500/10 border-green-500/30';
-      case 'medium': return 'bg-yellow-500/10 border-yellow-500/30';
-      case 'low': return 'bg-red-500/10 border-red-500/30';
+      case 'high': return 'bg-success/10 border-success/30';
+      case 'medium': return 'bg-warning/10 border-warning/30';
+      case 'low': return 'bg-destructive/10 border-destructive/30';
       default: return 'bg-secondary/50 border-border';
     }
   };
@@ -72,11 +72,11 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
   const getIntensityBadge = () => {
     switch (data.intensityRecommendation) {
       case 'increase':
-        return <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1"><TrendingUp className="w-3 h-3" />Zvýšit</Badge>;
+        return <Badge className="bg-success/20 text-success border-success/30 gap-1"><TrendingUp className="w-3 h-3" />Zvýšit</Badge>;
       case 'reduce':
-        return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 gap-1"><TrendingDown className="w-3 h-3" />Snížit</Badge>;
+        return <Badge className="bg-warning/20 text-warning border-warning/30 gap-1"><TrendingDown className="w-3 h-3" />Snížit</Badge>;
       case 'deload':
-        return <Badge className="bg-red-500/20 text-red-600 border-red-500/30 gap-1"><Battery className="w-3 h-3" />Deload</Badge>;
+        return <Badge className="bg-destructive/20 text-destructive border-destructive/30 gap-1"><Battery className="w-3 h-3" />Deload</Badge>;
       default:
         return <Badge variant="secondary" className="gap-1"><Activity className="w-3 h-3" />Normální</Badge>;
     }
@@ -84,9 +84,9 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
 
   const getFeedbackValueColor = (value: number, isInverted = false) => {
     const threshold = isInverted ? 10 - value : value;
-    if (threshold >= 7) return 'text-green-500';
-    if (threshold >= 4) return 'text-yellow-500';
-    return 'text-red-500';
+    if (threshold >= 7) return 'text-success';
+    if (threshold >= 4) return 'text-warning';
+    return 'text-destructive';
   };
 
   const renderValueBar = (value: number, max: number = 10) => {
@@ -168,7 +168,7 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
                   <div className="flex items-center gap-1">
                     <Flame className={cn(
                       'w-3 h-3',
-                      data.trainingStreak >= 4 ? 'text-orange-500' : 'text-muted-foreground'
+                      data.trainingStreak >= 4 ? 'text-warning' : 'text-muted-foreground'
                     )} />
                     <span className="font-bold text-foreground">
                       {data.trainingStreak}
@@ -249,14 +249,14 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
                   >
                     <div className="flex items-center gap-2">
                       {item.type === 'base' && <Minus className="w-3 h-3 text-muted-foreground" />}
-                      {item.type === 'positive' && <Check className="w-3 h-3 text-green-500" />}
-                      {item.type === 'negative' && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                      {item.type === 'positive' && <Check className="w-3 h-3 text-success" />}
+                      {item.type === 'negative' && <AlertTriangle className="w-3 h-3 text-destructive" />}
                       <span className="text-muted-foreground">{item.label}</span>
                     </div>
                     <span className={cn(
                       'font-medium tabular-nums',
-                      item.type === 'positive' && 'text-green-500',
-                      item.type === 'negative' && 'text-red-500',
+                      item.type === 'positive' && 'text-success',
+                      item.type === 'negative' && 'text-destructive',
                       item.type === 'base' && 'text-foreground'
                     )}>
                       {item.type !== 'base' && item.value > 0 ? '+' : ''}{item.value}
@@ -317,7 +317,7 @@ export function ClientReadinessCard({ clientId }: ClientReadinessCardProps) {
                   </div>
                   {/* Red flag indicator */}
                   {data.lastFeedback.isRedFlag && (
-                    <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-2 py-1 rounded mt-2">
+                    <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-2 py-1 rounded mt-2">
                       <AlertTriangle className="w-3 h-3" />
                       <span className="text-xs font-medium">Red flag zaznamenán</span>
                     </div>

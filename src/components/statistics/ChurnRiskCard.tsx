@@ -15,11 +15,11 @@ const RISK_ICONS: Record<string, React.ElementType> = {
 };
 
 const RISK_COLORS: Record<string, string> = {
-  'Pokles frekvence >50%': 'text-orange-500',
-  'Nezaplaceno >14 dní': 'text-red-500',
-  'Vysoká míra zrušení': 'text-amber-500',
-  'Klesající spokojenost': 'text-purple-500',
-  'Dlouhá pauza': 'text-blue-500',
+  'Pokles frekvence >50%': 'text-warning',
+  'Nezaplaceno >14 dní': 'text-destructive',
+  'Vysoká míra zrušení': 'text-warning',
+  'Klesající spokojenost': 'text-primary',
+  'Dlouhá pauza': 'text-accent',
 };
 
 function getRiskBadgeVariant(score: number): 'destructive' | 'secondary' {
@@ -42,7 +42,7 @@ export function ChurnRiskCard() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTriangle className="h-4 w-4 text-warning" />
             Rizikoví klienti
           </CardTitle>
           {totalAtRisk > 0 && (
@@ -58,7 +58,7 @@ export function ChurnRiskCard() {
       <CardContent>
         {clients.length === 0 ? (
           <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 mb-3">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-success/10 mb-3">
               <span className="text-2xl">🎉</span>
             </div>
             <p className="text-sm text-muted-foreground">

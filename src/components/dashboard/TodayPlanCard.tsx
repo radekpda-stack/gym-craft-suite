@@ -17,8 +17,8 @@ const TrainingRow = memo(function TrainingRow({ item }: { item: ScheduleItem }) 
   
   const getStatusIcon = () => {
     if (item.status === 'cancelled') return <XCircle className="w-3.5 h-3.5 text-muted-foreground/50" />;
-    if (item.status === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
-    return <Clock className="w-3.5 h-3.5 text-blue-400" />;
+    if (item.status === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-success" />;
+    return <Clock className="w-3.5 h-3.5 text-accent" />;
   };
   
   return (
