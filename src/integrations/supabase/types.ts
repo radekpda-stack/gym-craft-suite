@@ -5954,6 +5954,7 @@ export type Database = {
           invited_at: string
           joined_at: string | null
           role: string
+          settled_at: string | null
           status: string
           xp_bet: number | null
           xp_result: number | null
@@ -5967,6 +5968,7 @@ export type Database = {
           invited_at?: string
           joined_at?: string | null
           role?: string
+          settled_at?: string | null
           status?: string
           xp_bet?: number | null
           xp_result?: number | null
@@ -5980,6 +5982,7 @@ export type Database = {
           invited_at?: string
           joined_at?: string | null
           role?: string
+          settled_at?: string | null
           status?: string
           xp_bet?: number | null
           xp_result?: number | null
@@ -10195,7 +10198,7 @@ export type Database = {
       }
       settle_peer_challenge_xp_bets: {
         Args: { p_challenge_id: string }
-        Returns: Json
+        Returns: undefined
       }
       update_client_balance_atomic: {
         Args: { p_client_id: string; p_delta: number }
