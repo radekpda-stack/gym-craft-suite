@@ -85,7 +85,7 @@ export function TrainingDurationCard() {
         {/* Details */}
         <div className="grid grid-cols-2 gap-3 text-center">
           <div className="p-2 bg-muted/30 rounded-lg">
-            <div className="flex items-center justify-center gap-1 text-emerald-500">
+            <div className="flex items-center justify-center gap-1 text-success">
               <Timer className="h-3 w-3" />
               <span className="text-lg font-semibold">{data.totalHours}</span>
             </div>
@@ -102,12 +102,12 @@ export function TrainingDurationCard() {
         {/* Min/Max */}
         <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
           <div className="flex items-center gap-1 min-w-0">
-            <TrendingDown className="h-3 w-3 text-blue-500 shrink-0" />
+            <TrendingDown className="h-3 w-3 text-accent shrink-0" />
             <span className="text-muted-foreground shrink-0">Min:</span>
             <span className="font-medium truncate">{data.shortestDuration}m</span>
           </div>
           <div className="flex items-center gap-1 justify-end min-w-0">
-            <TrendingUp className="h-3 w-3 text-orange-500 shrink-0" />
+            <TrendingUp className="h-3 w-3 text-warning shrink-0" />
             <span className="text-muted-foreground shrink-0">Max:</span>
             <span className="font-medium truncate">{data.longestDuration}m</span>
           </div>

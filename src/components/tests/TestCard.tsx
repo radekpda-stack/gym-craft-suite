@@ -24,8 +24,8 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 const dueStatusConfig: Record<TestDueStatus, { label: string; className: string }> = {
   due: { label: 'Splatné', className: 'bg-destructive text-destructive-foreground' },
-  soon: { label: 'Brzy', className: 'bg-yellow-500 text-white' },
-  ok: { label: 'OK', className: 'bg-green-500 text-white' },
+  soon: { label: 'Brzy', className: 'bg-warning text-warning-foreground' },
+  ok: { label: 'OK', className: 'bg-success text-success-foreground' },
 };
 
 export function TestCard({ definition, stats, onClick }: TestCardProps) {
@@ -47,7 +47,7 @@ export function TestCard({ definition, stats, onClick }: TestCardProps) {
       className={cn(
         'cursor-pointer hover:shadow-md transition-all hover:scale-[1.02]',
         dueStatus === 'due' && 'border-destructive/50',
-        dueStatus === 'soon' && 'border-yellow-500/50'
+        dueStatus === 'soon' && 'border-warning/50'
       )}
       onClick={onClick}
     >
