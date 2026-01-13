@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, 
   HelpCircle, 
@@ -14,12 +15,14 @@ import {
   Users,
   Swords,
   Globe,
-  Link2
+  Link2,
+  History
 } from 'lucide-react';
 import { 
   useMyPeerChallenges,
   usePeerChallengeInvitations,
   useRespondToInvitation,
+  useCompletedPeerChallenges,
 } from '@/hooks/usePeerChallenges';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,10 +35,13 @@ import { PeerChallengeDetailModal } from './PeerChallengeDetailModal';
 import { XPBettingStats } from './XPBettingStats';
 import { XPBettingInfo } from './XPBettingInfo';
 import { JoinByCodeDialog } from './JoinByCodeDialog';
+import { PublicChallengesSection } from './PublicChallengesSection';
+import { CompletedPeerChallengesSection } from './CompletedPeerChallengesSection';
 import { cn } from '@/lib/utils';
 
 export function PeerChallengesSection() {
   const [isOpen, setIsOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -44,6 +50,7 @@ export function PeerChallengesSection() {
 
   const { clientId } = useClientPortal();
   const { data: challenges = [], isLoading: loadingChallenges } = useMyPeerChallenges();
+  const { data: completedChallenges = [] } = useCompletedPeerChallenges();
   const { data: invitations = [], isLoading: loadingInvitations } = usePeerChallengeInvitations();
   const respondToInvitation = useRespondToInvitation();
 
@@ -178,7 +185,7 @@ export function PeerChallengesSection() {
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <div className="p-4 pt-0 space-y-6">
+            <div className="p-4 pt-0 space-y-4">
               {isLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-24 w-full" />
@@ -189,72 +196,104 @@ export function PeerChallengesSection() {
                   {/* XP Betting Stats */}
                   <XPBettingStats />
 
-                  {/* Pending invitations */}
-                  <PendingInvitationsSection
-                    invitations={invitations}
-                    onAccept={handleAcceptInvitation}
-                    onDecline={handleDeclineInvitation}
-                    isLoading={respondToInvitation.isPending}
-                  />
+                  {/* Tabs for Active / Completed */}
+                  <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'completed')}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="active" className="text-xs sm:text-sm">
+                        Aktivní
+                        {activeChallenges.length > 0 && (
+                          <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                            {activeChallenges.length}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="completed" className="text-xs sm:text-sm">
+                        <History className="h-3.5 w-3.5 mr-1.5" />
+                        Dokončené
+                        {completedChallenges.length > 0 && (
+                          <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                            {completedChallenges.length}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
 
-                  {/* Active duels */}
-                  {duels.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Swords className="h-4 w-4 text-orange-500" />
-                        Aktivní duely
-                      </h4>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {duels.map((duel) => (
-                          <DuelCardWrapper
-                            key={duel.id}
-                            challenge={duel}
-                            onClick={() => setSelectedChallengeId(duel.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    <TabsContent value="active" className="mt-4 space-y-6">
+                      {/* Pending invitations */}
+                      <PendingInvitationsSection
+                        invitations={invitations}
+                        onAccept={handleAcceptInvitation}
+                        onDecline={handleDeclineInvitation}
+                        isLoading={respondToInvitation.isPending}
+                      />
 
-                  {/* Group & public challenges */}
-                  {groupChallenges.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-green-500" />
-                        Skupinové & veřejné výzvy
-                      </h4>
-                      <div className="grid gap-3">
-                        {groupChallenges.map((challenge) => (
-                          <PeerChallengeCard
-                            key={challenge.id}
-                            challenge={challenge}
-                            onClick={() => setSelectedChallengeId(challenge.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                      {/* Public challenges to join */}
+                      <PublicChallengesSection />
 
-                  {/* Empty state */}
-                  {activeChallenges.length === 0 && invitations.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                      <p className="font-medium">Zatím žádné výzvy</p>
-                      <p className="text-sm mt-1">Vytvoř první výzvu a vyzvi ostatní!</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={handleCreateClick}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Vytvořit výzvu
-                      </Button>
-                    </div>
-                  )}
+                      {/* Active duels */}
+                      {duels.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium flex items-center gap-2">
+                            <Swords className="h-4 w-4 text-orange-500" />
+                            Aktivní duely
+                          </h4>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {duels.map((duel) => (
+                              <DuelCardWrapper
+                                key={duel.id}
+                                challenge={duel}
+                                onClick={() => setSelectedChallengeId(duel.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {/* XP Betting Info */}
-                  <XPBettingInfo />
+                      {/* Group & public challenges */}
+                      {groupChallenges.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-green-500" />
+                            Moje skupinové & veřejné výzvy
+                          </h4>
+                          <div className="grid gap-3">
+                            {groupChallenges.map((challenge) => (
+                              <PeerChallengeCard
+                                key={challenge.id}
+                                challenge={challenge}
+                                onClick={() => setSelectedChallengeId(challenge.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Empty state */}
+                      {activeChallenges.length === 0 && invitations.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                          <p className="font-medium">Zatím žádné aktivní výzvy</p>
+                          <p className="text-sm mt-1">Vytvoř první výzvu a vyzvi ostatní!</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={handleCreateClick}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Vytvořit výzvu
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* XP Betting Info */}
+                      <XPBettingInfo />
+                    </TabsContent>
+
+                    <TabsContent value="completed" className="mt-4">
+                      <CompletedPeerChallengesSection />
+                    </TabsContent>
+                  </Tabs>
                 </>
               )}
             </div>

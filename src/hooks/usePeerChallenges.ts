@@ -378,7 +378,7 @@ export function useCreatePeerChallenge() {
           joined_at: new Date().toISOString(),
         });
 
-      // Add invited clients
+      // Add invited clients and send notifications
       if (data.invited_client_ids?.length) {
         const invites = data.invited_client_ids.map(id => ({
           challenge_id: challenge.id,
@@ -388,6 +388,21 @@ export function useCreatePeerChallenge() {
         }));
 
         await supabase.from('peer_challenge_participants').insert(invites);
+
+        // Send notifications to invited clients
+        const notifications = data.invited_client_ids.map(id => ({
+          client_id: id,
+          type: 'peer_challenge_invited',
+          title: data.challenge_type === 'duel' ? 'Nová výzva k duelu!' : 'Nová peer výzva!',
+          message: `Byl jsi pozván do výzvy: ${data.title}`,
+          metadata: {
+            challenge_id: challenge.id,
+            challenge_type: data.challenge_type,
+          },
+          action_url: '/client-portal/challenges?tab=challenges',
+        }));
+
+        await supabase.from('client_portal_notifications').insert(notifications);
       }
 
       // Log activity
@@ -639,6 +654,100 @@ export function useMyPeerChallenges() {
         }));
     },
     enabled: !!clientId,
+  });
+}
+
+// Get completed peer challenges for current client
+export function useCompletedPeerChallenges() {
+  const { clientId } = useClientPortal();
+
+  return useQuery({
+    queryKey: ['completed-peer-challenges', clientId],
+    queryFn: async () => {
+      if (!clientId) return [];
+
+      const { data, error } = await supabase
+        .from('peer_challenge_participants')
+        .select(`
+          *,
+          peer_challenges(*)
+        `)
+        .eq('client_id', clientId)
+        .eq('status', 'accepted');
+
+      if (error) throw error;
+
+      // Filter completed challenges
+      return (data || [])
+        .filter(p => p.peer_challenges && (
+          p.peer_challenges.status === 'completed' || 
+          new Date(p.peer_challenges.end_at) <= new Date()
+        ))
+        .map(p => ({
+          ...p.peer_challenges,
+          my_role: p.role,
+          my_rank: p.final_rank,
+          xp_result: p.xp_result,
+          xp_bet: p.xp_bet,
+          participant_count: 0, // Will need separate query if needed
+        }))
+        .sort((a, b) => new Date(b.end_at).getTime() - new Date(a.end_at).getTime());
+    },
+    enabled: !!clientId,
+  });
+}
+
+// Cancel a peer challenge (client version - creator only)
+export function useClientCancelPeerChallenge() {
+  const queryClient = useQueryClient();
+  const { clientId } = useClientPortal();
+
+  return useMutation({
+    mutationFn: async (challengeId: string) => {
+      if (!clientId) throw new Error('Not authenticated');
+
+      // Verify client is the creator
+      const { data: challenge, error: chError } = await supabase
+        .from('peer_challenges')
+        .select('created_by_client_id')
+        .eq('id', challengeId)
+        .single();
+
+      if (chError || !challenge) throw new Error('Výzva nenalezena');
+      if (challenge.created_by_client_id !== clientId) {
+        throw new Error('Pouze tvůrce může zrušit výzvu');
+      }
+
+      // Check if there are any submissions
+      const { count } = await supabase
+        .from('peer_challenge_submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('challenge_id', challengeId);
+
+      if (count && count > 0) {
+        throw new Error('Nelze zrušit výzvu, která má již odeslané výsledky');
+      }
+
+      const { error } = await supabase
+        .from('peer_challenges')
+        .update({ status: 'cancelled' })
+        .eq('id', challengeId)
+        .eq('created_by_client_id', clientId);
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('peer_challenge_activity_log').insert({
+        challenge_id: challengeId,
+        actor_type: 'client',
+        actor_id: clientId,
+        action: 'cancelled',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['peer-challenges'] });
+      queryClient.invalidateQueries({ queryKey: ['my-peer-challenges'] });
+    },
   });
 }
 
