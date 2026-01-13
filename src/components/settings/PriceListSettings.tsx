@@ -211,15 +211,15 @@ export function PriceListSettings() {
 
       {/* Upcoming Price List */}
       {hasUpcoming ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span className="font-medium text-amber-600 dark:text-amber-400">
+              <Clock className="w-4 h-4 text-warning" />
+              <span className="font-medium text-warning">
                 Naplánovaná změna cen
               </span>
             </div>
-            <Badge variant="outline" className="border-amber-500/50 text-amber-600">
+            <Badge variant="outline" className="border-warning/50 text-warning">
               za {daysUntil} {daysUntil === 1 ? 'den' : daysUntil < 5 ? 'dny' : 'dní'}
             </Badge>
           </div>

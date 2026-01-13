@@ -65,10 +65,10 @@ interface NutritionAnalysisCardProps {
 
 const scoreToLabel = (score?: number): { label: string; color: string } => {
   if (score === undefined || score === null) return { label: 'Nehodnoceno', color: 'text-muted-foreground' };
-  if (score >= 4) return { label: 'Výborný', color: 'text-green-600' };
-  if (score >= 3) return { label: 'Dobrý', color: 'text-blue-600' };
-  if (score >= 2) return { label: 'Průměrný', color: 'text-amber-600' };
-  return { label: 'K zlepšení', color: 'text-red-600' };
+  if (score >= 4) return { label: 'Výborný', color: 'text-success' };
+  if (score >= 3) return { label: 'Dobrý', color: 'text-accent' };
+  if (score >= 2) return { label: 'Průměrný', color: 'text-warning' };
+  return { label: 'K zlepšení', color: 'text-destructive' };
 };
 
 const calorieLevelLabel = (level?: string): string => {
@@ -155,7 +155,7 @@ export function NutritionAnalysisCard({
             <div className="grid md:grid-cols-3 gap-4">
               {weeklySummary.client_strengths && weeklySummary.client_strengths.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-sm font-medium text-green-600 flex items-center gap-1">
+                  <span className="text-sm font-medium text-success flex items-center gap-1">
                     <CheckCircle className="h-4 w-4" /> Silné stránky
                   </span>
                   <ul className="text-sm space-y-1">
@@ -170,7 +170,7 @@ export function NutritionAnalysisCard({
 
               {weeklySummary.client_weaknesses && weeklySummary.client_weaknesses.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-sm font-medium text-amber-600 flex items-center gap-1">
+                  <span className="text-sm font-medium text-warning flex items-center gap-1">
                     <AlertTriangle className="h-4 w-4" /> Slabiny
                   </span>
                   <ul className="text-sm space-y-1">
@@ -185,7 +185,7 @@ export function NutritionAnalysisCard({
 
               {weeklySummary.client_recommendations && weeklySummary.client_recommendations.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-sm font-medium text-blue-600 flex items-center gap-1">
+                  <span className="text-sm font-medium text-accent flex items-center gap-1">
                     <Sparkles className="h-4 w-4" /> Doporučení
                   </span>
                   <ul className="text-sm space-y-1">
@@ -210,7 +210,7 @@ export function NutritionAnalysisCard({
               <CollapsibleContent className="pt-4 space-y-3 border-t mt-2">
                 {weeklySummary.trainer_risks && weeklySummary.trainer_risks.length > 0 && (
                   <div>
-                    <span className="text-sm font-medium text-red-600">⚠️ Rizika:</span>
+                    <span className="text-sm font-medium text-destructive">⚠️ Rizika:</span>
                     <ul className="text-sm mt-1 space-y-1">
                       {weeklySummary.trainer_risks.map((r, i) => (
                         <li key={i}>• {r}</li>
@@ -330,23 +330,23 @@ function DailyAnalysisItem({
 
             {/* Ultra processed warning */}
             {analysis.ultra_processed && analysis.ultra_processed.length > 0 && (
-              <div className="p-2 rounded bg-amber-50 dark:bg-amber-950/20 text-sm">
-                <span className="text-amber-600 font-medium">Ultra-processed:</span>{' '}
-                <span className="text-amber-700 dark:text-amber-400">{analysis.ultra_processed.join(', ')}</span>
+              <div className="p-2 rounded bg-warning/10 text-sm">
+                <span className="text-warning font-medium">Ultra-processed:</span>{' '}
+                <span className="text-warning/80">{analysis.ultra_processed.join(', ')}</span>
               </div>
             )}
 
             {/* Feedback */}
             <div className="grid md:grid-cols-2 gap-3">
               {analysis.feedback_positive && (
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                  <span className="text-sm font-medium text-green-700 dark:text-green-400">✓ Co bylo dobré:</span>
+                <div className="p-3 rounded-lg bg-success/10">
+                  <span className="text-sm font-medium text-success">✓ Co bylo dobré:</span>
                   <p className="text-sm mt-1">{analysis.feedback_positive}</p>
                 </div>
               )}
               {analysis.feedback_improve && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20">
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">→ Co zlepšit:</span>
+                <div className="p-3 rounded-lg bg-warning/10">
+                  <span className="text-sm font-medium text-warning">→ Co zlepšit:</span>
                   <p className="text-sm mt-1">{analysis.feedback_improve}</p>
                 </div>
               )}

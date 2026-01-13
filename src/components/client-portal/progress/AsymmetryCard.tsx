@@ -53,15 +53,15 @@ function AsymmetryBar({ result }: { result: AsymmetryResult }) {
         <div className="flex-1 flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground w-4">L</span>
           <div className="flex-1 h-4 bg-muted rounded-sm overflow-hidden">
-            <div 
-              className={cn(
-                "h-full rounded-sm transition-all",
-                result.dominantSide === 'left' 
-                  ? (isTimeBased ? 'bg-green-500' : 'bg-primary') 
-                  : 'bg-muted-foreground/40'
-              )}
-              style={{ width: `${leftWidth}%` }}
-            />
+              <div 
+                className={cn(
+                  "h-full rounded-sm transition-all",
+                  result.dominantSide === 'left' 
+                    ? (isTimeBased ? 'bg-success' : 'bg-primary') 
+                    : 'bg-muted-foreground/40'
+                )}
+                style={{ width: `${leftWidth}%` }}
+              />
           </div>
           <span className="text-xs font-medium w-14 text-right">
             {formatValue(result.leftBest)}
@@ -77,15 +77,15 @@ function AsymmetryBar({ result }: { result: AsymmetryResult }) {
             {formatValue(result.rightBest)}
           </span>
           <div className="flex-1 h-4 bg-muted rounded-sm overflow-hidden">
-            <div 
-              className={cn(
-                "h-full rounded-sm transition-all float-right",
-                result.dominantSide === 'right' 
-                  ? (isTimeBased ? 'bg-green-500' : 'bg-primary') 
-                  : 'bg-muted-foreground/40'
-              )}
-              style={{ width: `${rightWidth}%` }}
-            />
+              <div 
+                className={cn(
+                  "h-full rounded-sm transition-all float-right",
+                  result.dominantSide === 'right' 
+                    ? (isTimeBased ? 'bg-success' : 'bg-primary') 
+                    : 'bg-muted-foreground/40'
+                )}
+                style={{ width: `${rightWidth}%` }}
+              />
           </div>
           <span className="text-xs font-medium text-muted-foreground w-4 text-right">R</span>
         </div>
@@ -189,15 +189,15 @@ export function AsymmetryCard({ clientId, maxItems = 5, className }: AsymmetryCa
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-green-500/20" />
+            <div className="w-3 h-3 rounded-sm bg-success/20" />
             <span>&lt;10%</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-yellow-500/20" />
+            <div className="w-3 h-3 rounded-sm bg-warning/20" />
             <span>10-20%</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-red-500/20" />
+            <div className="w-3 h-3 rounded-sm bg-destructive/20" />
             <span>&gt;20%</span>
           </div>
         </div>

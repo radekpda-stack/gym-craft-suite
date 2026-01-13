@@ -50,7 +50,7 @@ export function CapacityKPICard() {
 
   // Determine color based on utilization
   const getUtilizationColor = (percent: number) => {
-    if (percent >= 80) return 'text-green-500';
+    if (percent >= 80) return 'text-success';
     if (percent >= 50) return 'text-primary';
     if (percent >= 30) return 'text-warning';
     return 'text-muted-foreground';
@@ -63,7 +63,7 @@ export function CapacityKPICard() {
       : Minus;
 
   const trendColor = trend !== null && trend > 0 
-    ? 'text-green-500' 
+    ? 'text-success' 
     : trend !== null && trend < 0 
       ? 'text-destructive' 
       : 'text-muted-foreground';

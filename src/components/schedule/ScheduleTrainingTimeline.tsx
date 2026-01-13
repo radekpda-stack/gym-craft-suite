@@ -64,14 +64,14 @@ const TimelineItem = memo(function TimelineItem({
 
   const getStatusIcon = () => {
     if (session.status === 'canceled') return <XCircle className="w-4 h-4 text-muted-foreground" />;
-    if (session.status === 'completed') return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    if (session.status === 'completed') return <CheckCircle2 className="w-4 h-4 text-success" />;
     if (isFocused) return <Play className="w-5 h-5 text-primary" />;
     return <Clock className="w-4 h-4 text-muted-foreground" />;
   };
 
   const getBackgroundStyles = () => {
     if (session.status === 'canceled') return 'bg-muted/30 opacity-50';
-    if (session.status === 'completed') return 'bg-emerald-500/10 border-emerald-500/20';
+    if (session.status === 'completed') return 'bg-success/10 border-success/20';
     if (isFocused) return 'bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border-primary/30 shadow-lg shadow-primary/10';
     if (isPast) return 'bg-muted/20 border-border/30';
     return 'bg-secondary/30 border-border/30';
@@ -136,7 +136,7 @@ const TimelineItem = memo(function TimelineItem({
           </span>
         )}
         {session.status === 'completed' && (
-          <span className="text-[10px] text-emerald-500 font-medium">
+          <span className="text-[10px] text-success font-medium">
             ✓ Hotovo
           </span>
         )}

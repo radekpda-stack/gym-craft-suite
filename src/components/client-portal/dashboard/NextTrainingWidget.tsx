@@ -37,11 +37,11 @@ export function NextTrainingWidget({ className }: NextTrainingWidgetProps) {
       transition={{ delay: 0.15 }}
       className={className}
     >
-      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border-accent/20">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-              <CalendarClock className="w-6 h-6 text-blue-500" />
+            <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center">
+              <CalendarClock className="w-6 h-6 text-accent" />
             </div>
             <Link to="/zona/attendance">
               <Button variant="ghost" size="sm" className="gap-1 text-xs">
@@ -61,7 +61,7 @@ export function NextTrainingWidget({ className }: NextTrainingWidgetProps) {
               <p className="text-sm text-muted-foreground mb-1">
                 Další trénink
               </p>
-              <p className="text-3xl font-bold tracking-tight text-blue-500">
+              <p className="text-3xl font-bold tracking-tight text-accent">
                 {formatRelativeDate(nextTraining.date)}
               </p>
               

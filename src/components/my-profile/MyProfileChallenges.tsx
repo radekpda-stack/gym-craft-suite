@@ -118,13 +118,13 @@ function ChallengeCard({ challenge, isActive }: { challenge: any; isActive: bool
           <CardTitle className="text-base">{challenge.title}</CardTitle>
           <div className="flex gap-2">
             {hasWon && (
-              <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
+              <Badge className="bg-warning/20 text-warning border-warning/30">
                 <Trophy className="w-3 h-3 mr-1" />
                 Výherce
               </Badge>
             )}
             {isActive ? (
-              <Badge variant="outline" className="border-green-500/30 text-green-600">
+              <Badge variant="outline" className="border-success/30 text-success">
                 Probíhá
               </Badge>
             ) : (

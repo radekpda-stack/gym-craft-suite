@@ -100,8 +100,8 @@ export function AddWorkoutDialog({
 
               {/* Running-specific fields */}
               {isRunWorkout && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
+                <div className="p-3 bg-success/10 border border-success/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-success font-medium text-sm">
                     <Footprints className="w-4 h-4" />
                     Běžecké metriky
                   </div>
@@ -201,8 +201,8 @@ export function AddWorkoutDialog({
 
               {/* Running-specific fields in detailed mode */}
               {isRunWorkout && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
+                <div className="p-3 bg-success/10 border border-success/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-success font-medium text-sm">
                     <Footprints className="w-4 h-4" />
                     Běžecké metriky
                   </div>
