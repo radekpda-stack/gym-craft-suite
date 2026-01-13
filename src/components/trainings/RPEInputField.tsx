@@ -31,16 +31,16 @@ const RPE_DESCRIPTIONS: Record<number, string> = {
 };
 
 const RPE_COLORS: Record<number, string> = {
-  1: 'bg-green-500',
-  2: 'bg-green-400',
-  3: 'bg-lime-400',
-  4: 'bg-lime-500',
-  5: 'bg-yellow-400',
-  6: 'bg-yellow-500',
-  7: 'bg-orange-400',
-  8: 'bg-orange-500',
-  9: 'bg-red-400',
-  10: 'bg-red-500',
+  1: 'bg-success',
+  2: 'bg-success/80',
+  3: 'bg-success/60',
+  4: 'bg-warning/60',
+  5: 'bg-warning/70',
+  6: 'bg-warning',
+  7: 'bg-warning',
+  8: 'bg-destructive/70',
+  9: 'bg-destructive/85',
+  10: 'bg-destructive',
 };
 
 export function RPEInputField({

@@ -266,15 +266,15 @@ export function UserManagementSettings() {
           <div className="text-xs text-muted-foreground">Celkem</div>
         </div>
         <div className="glass-subtle rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-amber-500">{stats.pending}</div>
+          <div className="text-2xl font-bold text-warning">{stats.pending}</div>
           <div className="text-xs text-muted-foreground">Čekající</div>
         </div>
         <div className="glass-subtle rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-green-500">{stats.approved}</div>
+          <div className="text-2xl font-bold text-success">{stats.approved}</div>
           <div className="text-xs text-muted-foreground">Schválení</div>
         </div>
         <div className="glass-subtle rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-rose-500">{stats.suspended}</div>
+          <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
           <div className="text-xs text-muted-foreground">Pozastavení</div>
         </div>
       </div>

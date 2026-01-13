@@ -108,30 +108,30 @@ const ACTIVITY_LABELS: Record<string, string> = {
 // Color coding for different activity types
 const ACTIVITY_COLORS: Record<string, string> = {
   // Green - positive actions (adding data, achievements)
-  measurement_weight_added: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  measurement_bodyfat_added: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  cardio_entry_added: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  cardio_time_added: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  workout_logged: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  exercise_added: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  performance_reported: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  pr_achieved: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  measurement_weight_added: 'bg-success/10 text-success',
+  measurement_bodyfat_added: 'bg-success/10 text-success',
+  cardio_entry_added: 'bg-success/10 text-success',
+  cardio_time_added: 'bg-success/10 text-success',
+  workout_logged: 'bg-success/10 text-success',
+  exercise_added: 'bg-success/10 text-success',
+  performance_reported: 'bg-success/10 text-success',
+  pr_achieved: 'bg-warning/10 text-warning',
   
   // Blue - navigation/viewing
-  login: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  portal_login: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  page_view: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
-  page_mount: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  login: 'bg-accent/10 text-accent',
+  portal_login: 'bg-accent/10 text-accent',
+  page_view: 'bg-muted text-muted-foreground',
+  page_mount: 'bg-muted text-muted-foreground',
   
   // Yellow/orange - profile changes
-  credentials_changed: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  profile_updated: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  credentials_changed: 'bg-warning/10 text-warning',
+  profile_updated: 'bg-warning/10 text-warning',
   
   // Purple - challenges & badges
-  challenge_joined: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  challenge_submitted: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  badge_earned: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  level_up: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  challenge_joined: 'bg-primary/10 text-primary',
+  challenge_submitted: 'bg-primary/10 text-primary',
+  badge_earned: 'bg-primary/10 text-primary',
+  level_up: 'bg-primary/10 text-primary',
   
   default: 'bg-primary/10 text-primary',
 };

@@ -52,7 +52,7 @@ export function ExercisesDetailModal({ open, onOpenChange, stats }: ExercisesDet
                 {stats.maxWeightLifted.weight} kg • {stats.maxWeightLifted.client}
               </p>
             </div>
-            <Trophy className="w-5 h-5 text-yellow-500" />
+            <Trophy className="w-5 h-5 text-warning" />
           </div>
         </div>
       )}
@@ -86,7 +86,7 @@ export function ExercisesDetailModal({ open, onOpenChange, stats }: ExercisesDet
       {/* Least used exercises */}
       <div className="pt-4">
         <div className="flex items-center gap-2 mb-2">
-          <TrendingDown className="w-4 h-4 text-amber-500" />
+          <TrendingDown className="w-4 h-4 text-warning" />
           <p className="text-sm font-medium">
             {language === 'cs' ? 'Nejméně používané cviky' : 'Least used exercises'}
           </p>
@@ -95,7 +95,7 @@ export function ExercisesDetailModal({ open, onOpenChange, stats }: ExercisesDet
           {stats.leastUsedExercises.slice(0, 5).map((exercise, idx) => (
             <div key={idx} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-500 text-xs flex items-center justify-center font-medium">
+                <span className="w-5 h-5 rounded-full bg-warning/10 text-warning text-xs flex items-center justify-center font-medium">
                   {idx + 1}
                 </span>
                 <span className="truncate">{exercise.name}</span>

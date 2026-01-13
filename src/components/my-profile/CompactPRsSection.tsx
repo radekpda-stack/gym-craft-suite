@@ -116,13 +116,13 @@ function getPRDisplay(pr: PREntry): { value: string; secondary?: string } {
 function getTypeIcon(type: PREntry['type']) {
   switch (type) {
     case 'cardio':
-      return { icon: Timer, colorClass: 'bg-green-500/10 text-green-500' };
+      return { icon: Timer, colorClass: 'bg-success/10 text-success' };
     case 'distance':
-      return { icon: Ruler, colorClass: 'bg-orange-500/10 text-orange-500' };
+      return { icon: Ruler, colorClass: 'bg-warning/10 text-warning' };
     case 'strength':
       return { icon: Dumbbell, colorClass: 'bg-primary/10 text-primary' };
     case 'reps':
-      return { icon: Dumbbell, colorClass: 'bg-purple-500/10 text-purple-500' };
+      return { icon: Dumbbell, colorClass: 'bg-accent/10 text-accent' };
     default:
       return { icon: Dumbbell, colorClass: 'bg-primary/10 text-primary' };
   }
@@ -192,7 +192,7 @@ export function CompactPRsSection({ clientId, onViewAll }: CompactPRsSectionProp
     return (
       <div className="glass rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Trophy className="w-4 h-4 text-yellow-500" />
+          <Trophy className="w-4 h-4 text-warning" />
           <span className="font-semibold text-sm">Osobní rekordy</span>
         </div>
         <div className="text-center py-6 text-muted-foreground text-sm">
@@ -208,8 +208,8 @@ export function CompactPRsSection({ clientId, onViewAll }: CompactPRsSectionProp
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-            <Trophy className="w-4 h-4 text-yellow-500" />
+          <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+            <Trophy className="w-4 h-4 text-warning" />
           </div>
           <span className="font-semibold text-sm">Osobní rekordy</span>
         </div>

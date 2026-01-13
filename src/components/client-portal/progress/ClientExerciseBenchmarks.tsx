@@ -14,13 +14,13 @@ interface ClientExerciseBenchmarksProps {
 
 function getPercentileStyle(percentile: number) {
   if (percentile >= 75) return { 
-    color: 'text-emerald-600 dark:text-emerald-400', 
-    progressColor: 'bg-emerald-500',
+    color: 'text-success', 
+    progressColor: 'bg-success',
     label: `Top ${Math.round(100 - percentile)}%` 
   };
   if (percentile >= 50) return { 
-    color: 'text-amber-600 dark:text-amber-400', 
-    progressColor: 'bg-amber-500',
+    color: 'text-warning', 
+    progressColor: 'bg-warning',
     label: 'Nad průměr' 
   };
   if (percentile >= 25) return { 
@@ -29,8 +29,8 @@ function getPercentileStyle(percentile: number) {
     label: 'Průměr' 
   };
   return { 
-    color: 'text-orange-600 dark:text-orange-400', 
-    progressColor: 'bg-orange-500',
+    color: 'text-destructive', 
+    progressColor: 'bg-destructive',
     label: 'Pod průměrem' 
   };
 }

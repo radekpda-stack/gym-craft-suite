@@ -128,9 +128,9 @@ export function ClientAnalyticsCard() {
                     <div
                       className={cn(
                         'w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0',
-                        index === 0 && 'bg-orange-500/20 text-orange-500',
-                        index === 1 && 'bg-amber-500/20 text-amber-500',
-                        index === 2 && 'bg-yellow-500/20 text-yellow-600',
+                        index === 0 && 'bg-warning/20 text-warning',
+                        index === 1 && 'bg-warning/15 text-warning',
+                        index === 2 && 'bg-warning/10 text-warning',
                         index > 2 && 'bg-secondary text-muted-foreground'
                       )}
                     >
