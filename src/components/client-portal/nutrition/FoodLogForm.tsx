@@ -261,16 +261,16 @@ export function FoodLogForm({
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => handleSelectType('food')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-warning/10 hover:bg-warning/20 transition-colors"
                 >
-                  <Utensils className="w-6 h-6 text-orange-500" />
+                  <Utensils className="w-6 h-6 text-warning" />
                   <span className="text-sm font-medium">Jídlo</span>
                 </button>
                 <button
                   onClick={() => handleSelectType('drink')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
-                  <Droplets className="w-6 h-6 text-blue-500" />
+                  <Droplets className="w-6 h-6 text-accent" />
                   <span className="text-sm font-medium">Pití</span>
                 </button>
                 <button

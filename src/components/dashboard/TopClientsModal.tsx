@@ -222,7 +222,7 @@ export function TopClientsModal({
                     'w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0',
                     index === 0 && 'bg-warning/20 text-warning',
                     index === 1 && 'bg-muted text-muted-foreground',
-                    index === 2 && 'bg-orange-500/20 text-orange-500',
+                    index === 2 && 'bg-warning/20 text-warning',
                     index > 2 && 'bg-secondary text-muted-foreground'
                   )}
                 >

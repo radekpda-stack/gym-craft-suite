@@ -214,7 +214,7 @@ export function CartPanel({
         </p>
       )}
       {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-warning">
           Klientovi bude připsán kredit z dobíjecích položek
         </p>
       )}

@@ -18,12 +18,12 @@ function GoalItem({ goal }: { goal: WeeklyGoal }) {
   return (
     <div className={cn(
       'p-3 rounded-lg border transition-colors',
-      isCompleted ? 'bg-green-500/10 border-green-500/30' : 'bg-secondary/30 border-transparent'
+      isCompleted ? 'bg-success/10 border-success/30' : 'bg-secondary/30 border-transparent'
     )}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {isCompleted ? (
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <CheckCircle2 className="w-4 h-4 text-success" />
           ) : (
             <Target className="w-4 h-4 text-muted-foreground" />
           )}
@@ -70,7 +70,7 @@ export function ClientWeeklyGoals({ clientId }: ClientWeeklyGoalsProps) {
               {completedCount}/{goals.length}
             </Badge>
             {totalXP > 0 && (
-              <Badge className="gap-1 bg-amber-500/20 text-amber-600 border-amber-500/30">
+              <Badge className="gap-1 bg-warning/20 text-warning border-warning/30">
                 <Zap className="w-3 h-3" />
                 +{totalXP} XP
               </Badge>

@@ -94,11 +94,11 @@ export function PaceTrendWidget() {
   const getTrendIcon = () => {
     switch (trend) {
       case 'improving':
-        return <TrendingDown className="h-4 w-4 text-green-500" />;
+        return <TrendingDown className="h-4 w-4 text-success" />;
       case 'declining':
-        return <TrendingUp className="h-4 w-4 text-orange-500" />;
+        return <TrendingUp className="h-4 w-4 text-warning" />;
       case 'stable':
-        return <Minus className="h-4 w-4 text-blue-500" />;
+        return <Minus className="h-4 w-4 text-accent" />;
       default:
         return null;
     }
@@ -136,7 +136,7 @@ export function PaceTrendWidget() {
               {/* Best pace with trophy */}
               {bestPace && (
                 <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <Trophy className="h-4 w-4 text-warning" />
                   <span className="text-lg font-bold text-foreground">
                     {formatPaceDisplay(bestPace.paceNormalized)}
                   </span>
@@ -149,7 +149,7 @@ export function PaceTrendWidget() {
                 <div className="flex items-center gap-1">
                   {getTrendIcon()}
                   <span className={`text-xs font-medium ${
-                    improvement > 0 ? 'text-green-500' : 'text-orange-500'
+                    improvement > 0 ? 'text-success' : 'text-warning'
                   }`}>
                     {improvement > 0 ? '+' : ''}{improvement.toFixed(1)}% {improvement > 0 ? 'rychlejší' : 'pomalejší'}
                   </span>

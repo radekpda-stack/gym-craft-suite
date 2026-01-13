@@ -159,7 +159,7 @@ export function BadgeEarnedCelebration({ show, badgeName, badgeIcon, onComplete 
                 repeat: 2,
                 repeatType: 'reverse',
               }}
-              className="w-24 h-24 mx-auto mb-4 rounded-2xl bg-purple-500/20 flex items-center justify-center text-5xl"
+              className="w-24 h-24 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center text-5xl"
             >
               {badgeIcon}
             </motion.div>

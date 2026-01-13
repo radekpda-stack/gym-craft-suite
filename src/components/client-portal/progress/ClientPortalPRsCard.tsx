@@ -152,7 +152,7 @@ export function ClientPortalPRsCard() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-yellow-500" />
+            <Trophy className="w-5 h-5 text-warning" />
             Moje osobní rekordy
           </CardTitle>
         </CardHeader>
@@ -170,7 +170,7 @@ export function ClientPortalPRsCard() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-yellow-500" />
+            <Trophy className="w-5 h-5 text-warning" />
             Moje osobní rekordy
           </CardTitle>
           <Badge variant="outline" className="text-xs">

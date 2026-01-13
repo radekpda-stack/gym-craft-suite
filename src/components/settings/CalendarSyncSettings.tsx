@@ -536,7 +536,7 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
             <div className={cn(
               "p-3 rounded-lg text-sm",
               testResult.valid 
-                ? "bg-green-500/10 text-green-600 border border-green-500/20"
+                ? "bg-success/10 text-success border border-success/20"
                 : "bg-destructive/10 text-destructive border border-destructive/20"
             )}>
               {testResult.valid ? (

@@ -116,15 +116,15 @@ const getIntensityColor = (intensity: number): string => {
 };
 
 const getIntensityBgColor = (intensity: number): string => {
-  if (intensity <= 3) return 'bg-amber-400';
-  if (intensity <= 6) return 'bg-orange-500';
-  return 'bg-red-500';
+  if (intensity <= 3) return 'bg-warning';
+  if (intensity <= 6) return 'bg-warning';
+  return 'bg-destructive';
 };
 
 const getIntensityBorder = (intensity: number): string => {
-  if (intensity <= 3) return 'border-amber-400';
-  if (intensity <= 6) return 'border-orange-500';
-  return 'border-red-500';
+  if (intensity <= 3) return 'border-warning';
+  if (intensity <= 6) return 'border-warning';
+  return 'border-destructive';
 };
 
 // Professional anatomical male silhouette - front view
@@ -830,15 +830,15 @@ export const BodyPainSelector: React.FC<BodyPainSelectorProps> = ({
       {/* Legend */}
       <div className="flex justify-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+          <div className="w-2.5 h-2.5 rounded-full bg-warning" />
           <span>{t.mild}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+          <div className="w-2.5 h-2.5 rounded-full bg-warning" />
           <span>4-6</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
           <span>{t.severe}</span>
         </div>
       </div>

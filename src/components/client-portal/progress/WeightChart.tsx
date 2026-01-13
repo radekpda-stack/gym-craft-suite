@@ -53,7 +53,7 @@ export function WeightChart({ data, isLoading }: WeightChartProps) {
   const changePercent = ((change / firstValue) * 100).toFixed(1);
 
   const TrendIcon = change < 0 ? TrendingDown : change > 0 ? TrendingUp : Minus;
-  const trendColor = change < 0 ? 'text-green-600' : change > 0 ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = change < 0 ? 'text-success' : change > 0 ? 'text-destructive' : 'text-muted-foreground';
 
   const chartData = data.map(d => ({
     date: format(parseISO(d.date), 'd. M.', { locale: cs }),

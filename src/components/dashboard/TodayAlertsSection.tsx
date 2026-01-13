@@ -26,16 +26,16 @@ interface TodayAlertsSectionProps {
 function AlertItem({ alert, onClick }: { alert: TodayAlert; onClick: () => void }) {
   const severityStyles = {
     error: 'border-l-destructive bg-destructive/5 hover:bg-destructive/10',
-    warning: 'border-l-orange-500 bg-orange-500/5 hover:bg-orange-500/10',
-    info: 'border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10',
-    success: 'border-l-green-500 bg-green-500/5 hover:bg-green-500/10',
+    warning: 'border-l-warning bg-warning/5 hover:bg-warning/10',
+    info: 'border-l-accent bg-accent/5 hover:bg-accent/10',
+    success: 'border-l-success bg-success/5 hover:bg-success/10',
   };
   
   const iconStyles = {
     error: 'text-destructive',
-    warning: 'text-orange-500',
-    info: 'text-blue-500',
-    success: 'text-green-500',
+    warning: 'text-warning',
+    info: 'text-accent',
+    success: 'text-success',
   };
   
   const typeIcons = {

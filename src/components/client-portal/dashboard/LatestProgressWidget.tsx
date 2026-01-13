@@ -35,11 +35,11 @@ export function LatestProgressWidget({ className }: LatestProgressWidgetProps) {
       transition={{ delay: 0.05 }}
       className={className}
     >
-      <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-warning/10 via-warning/5 to-transparent border-warning/20">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-amber-500" />
+            <div className="w-12 h-12 rounded-2xl bg-warning/10 flex items-center justify-center">
+              <Trophy className="w-6 h-6 text-warning" />
             </div>
             <Link to="/zona/progress">
               <Button variant="ghost" size="sm" className="gap-1 text-xs">
@@ -57,7 +57,7 @@ export function LatestProgressWidget({ className }: LatestProgressWidgetProps) {
           ) : latestPR ? (
             <>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning/20 text-warning">
                   PR!
                 </span>
                 <span className="text-sm font-medium truncate">
@@ -76,7 +76,7 @@ export function LatestProgressWidget({ className }: LatestProgressWidgetProps) {
                 </p>
               ) : (
                 <div className="flex items-baseline gap-2">
-                  <Timer className="w-5 h-5 text-amber-500" />
+                  <Timer className="w-5 h-5 text-warning" />
                   <p className="text-4xl font-bold tracking-tight">
                     {formatDuration(latestPR.value)}
                   </p>
