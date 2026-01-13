@@ -43,8 +43,8 @@ export function CardioStatsCard() {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Activity className="h-5 w-5 text-blue-500" />
+            <div className="p-2 rounded-lg bg-accent/10">
+              <Activity className="h-5 w-5 text-accent" />
             </div>
             <div>
               <div className="flex items-center gap-1">

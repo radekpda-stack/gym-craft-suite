@@ -111,21 +111,21 @@ export function StatsOverviewCard() {
       icon: <Users className="w-4 h-4" />,
       value: stats.activeClients,
       label: language === 'cs' ? 'klientů' : 'clients',
-      color: 'text-blue-500',
+      color: 'text-accent',
     },
     {
       id: 'income' as const,
       icon: <Wallet className="w-4 h-4" />,
       value: formatCurrency(stats.totalIncome),
       label: language === 'cs' ? 'příjem' : 'income',
-      color: 'text-green-500',
+      color: 'text-success',
     },
     {
       id: 'exercises' as const,
       icon: <Activity className="w-4 h-4" />,
       value: stats.totalExerciseEntries.toLocaleString(),
       label: language === 'cs' ? 'cviků' : 'exercises',
-      color: 'text-purple-500',
+      color: 'text-primary',
     },
   ];
 
@@ -138,14 +138,14 @@ export function StatsOverviewCard() {
         : '-',
     },
     {
-      icon: <Wallet className="w-4 h-4 text-green-500" />,
+      icon: <Wallet className="w-4 h-4 text-success" />,
       label: language === 'cs' ? 'Největší útrata' : 'Highest spent',
       value: stats.topClientsBySpent[0]
         ? `${stats.topClientsBySpent[0].name} (${formatCurrency(stats.topClientsBySpent[0].amount)})`
         : '-',
     },
     {
-      icon: <ShoppingBag className="w-4 h-4 text-purple-500" />,
+      icon: <ShoppingBag className="w-4 h-4 text-primary" />,
       label: language === 'cs' ? 'Nejvíce produktů' : 'Most products',
       value: stats.topClientByProducts
         ? `${stats.topClientByProducts.name} (${stats.topClientByProducts.count}×)`

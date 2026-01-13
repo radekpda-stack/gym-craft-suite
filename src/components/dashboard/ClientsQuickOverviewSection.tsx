@@ -37,7 +37,7 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
             {client.name}
           </span>
           {client.isFavorite && (
-            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+            <Star className="w-3 h-3 text-warning fill-warning" />
           )}
         </div>
         <p className="text-xs text-muted-foreground/60">
@@ -55,7 +55,7 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
           showAmount
         />
         {client.unpaidCount > 0 && (
-          <span className="text-[10px] text-red-400/80 bg-red-500/10 px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] text-destructive/80 bg-destructive/10 px-1.5 py-0.5 rounded-full">
             {client.unpaidCount}
           </span>
         )}

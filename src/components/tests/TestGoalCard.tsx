@@ -183,13 +183,13 @@ export function TestGoalCard({ definition, clientId, currentValue, prValue }: Te
   }
   
   return (
-    <Card className={achieved ? 'border-green-500/50 bg-green-500/5' : undefined}>
+    <Card className={achieved ? 'border-success/50 bg-success/5' : undefined}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Target className={`w-4 h-4 ${achieved ? 'text-green-500' : 'text-primary'}`} />
+            <Target className={`w-4 h-4 ${achieved ? 'text-success' : 'text-primary'}`} />
             Cíl
-            {achieved && <Badge className="bg-green-500">Dosaženo!</Badge>}
+            {achieved && <Badge className="bg-success text-success-foreground">Dosaženo!</Badge>}
           </CardTitle>
           <div className="flex gap-1">
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => {
@@ -243,8 +243,8 @@ export function TestGoalCard({ definition, clientId, currentValue, prValue }: Te
                 </>
               ) : (
                 <>
-                  <Check className="w-3 h-3 text-green-500" />
-                  <span className="text-green-600">Lepší o {formatValue(goal!.target_value - currentValue)}</span>
+                  <Check className="w-3 h-3 text-success" />
+                  <span className="text-success">Lepší o {formatValue(goal!.target_value - currentValue)}</span>
                 </>
               )
             ) : (
@@ -255,8 +255,8 @@ export function TestGoalCard({ definition, clientId, currentValue, prValue }: Te
                 </>
               ) : (
                 <>
-                  <Check className="w-3 h-3 text-green-500" />
-                  <span className="text-green-600">Lepší o {formatValue(currentValue - goal!.target_value)}</span>
+                  <Check className="w-3 h-3 text-success" />
+                  <span className="text-success">Lepší o {formatValue(currentValue - goal!.target_value)}</span>
                 </>
               )
             )}

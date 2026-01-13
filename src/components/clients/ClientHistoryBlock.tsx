@@ -178,13 +178,13 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
   const StatusIcon = ({ status }: { status?: string }) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 className="w-4 h-4 text-success" />;
       case 'scheduled':
-        return <Clock className="w-4 h-4 text-blue-500" />;
+        return <Clock className="w-4 h-4 text-accent" />;
       case 'canceled':
         return <XCircle className="w-4 h-4 text-destructive" />;
       case 'pending':
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
+        return <AlertCircle className="w-4 h-4 text-warning" />;
       default:
         return <Calendar className="w-4 h-4 text-muted-foreground" />;
     }
@@ -217,13 +217,13 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
     const getStatusStyles = () => {
       switch (item.status) {
         case 'completed':
-          return 'border-l-4 border-l-green-500 bg-green-500/5 hover:bg-green-500/10';
+          return 'border-l-4 border-l-success bg-success/5 hover:bg-success/10';
         case 'scheduled':
-          return 'border-l-4 border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10';
+          return 'border-l-4 border-l-accent bg-accent/5 hover:bg-accent/10';
         case 'canceled':
           return 'border-l-4 border-l-destructive bg-muted/50 hover:bg-muted/70';
         case 'pending':
-          return 'border-l-4 border-l-orange-500 bg-orange-500/5 hover:bg-orange-500/10';
+          return 'border-l-4 border-l-warning bg-warning/5 hover:bg-warning/10';
         default:
           return 'border-l-4 border-l-border bg-secondary/30 hover:bg-secondary/50';
       }
@@ -253,10 +253,10 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
       >
         <div className={cn(
           'flex items-center justify-center w-10 h-10 rounded-full shrink-0',
-          item.status === 'completed' && 'bg-green-500/10',
-          item.status === 'scheduled' && 'bg-blue-500/10',
+          item.status === 'completed' && 'bg-success/10',
+          item.status === 'scheduled' && 'bg-accent/10',
           item.status === 'canceled' && 'bg-destructive/10',
-          item.status === 'pending' && 'bg-orange-500/10',
+          item.status === 'pending' && 'bg-warning/10',
           !item.status && 'bg-secondary'
         )}>
           <StatusIcon status={item.status} />
@@ -401,10 +401,10 @@ export function ClientHistoryBlock({ clientId, notes }: ClientHistoryBlockProps)
               parsedNotes.map((note) => (
                 <div
                   key={note.id}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl border-l-4 border-l-amber-500 bg-amber-500/5 transition-all duration-200 hover:bg-amber-500/10"
+                  className="w-full flex items-start gap-4 p-4 rounded-xl border-l-4 border-l-warning bg-warning/5 transition-all duration-200 hover:bg-warning/10"
                 >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 shrink-0">
-                    <StickyNote className="w-5 h-5 text-amber-500" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10 shrink-0">
+                    <StickyNote className="w-5 h-5 text-warning" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{note.text}</p>
@@ -463,9 +463,9 @@ function NutritionTab({ clientId }: { clientId: string }) {
   const StatusIcon = ({ status }: { status?: string }) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 className="w-4 h-4 text-success" />;
       case 'scheduled':
-        return <Clock className="w-4 h-4 text-blue-500" />;
+        return <Clock className="w-4 h-4 text-accent" />;
       default:
         return <Calendar className="w-4 h-4 text-muted-foreground" />;
     }

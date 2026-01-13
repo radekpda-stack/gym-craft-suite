@@ -101,7 +101,7 @@ export function TestContextForm({ sessionId, expanded = false, onSave }: TestCon
             {/* Sleep */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Moon className="w-4 h-4 text-indigo-500" />
+                <Moon className="w-4 h-4 text-primary" />
                 <Label className="font-medium">Spánek</Label>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -135,7 +135,7 @@ export function TestContextForm({ sessionId, expanded = false, onSave }: TestCon
             {/* Energy & Stress */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-500" />
+                <Zap className="w-4 h-4 text-warning" />
                 <Label className="font-medium">Energie & Stres</Label>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -172,7 +172,7 @@ export function TestContextForm({ sessionId, expanded = false, onSave }: TestCon
             {/* Nutrition */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-red-500" />
+                <Heart className="w-4 h-4 text-destructive" />
                 <Label className="font-medium">Výživa</Label>
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -218,7 +218,7 @@ export function TestContextForm({ sessionId, expanded = false, onSave }: TestCon
             {/* Hydration & Training */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Droplets className="w-4 h-4 text-blue-500" />
+                <Droplets className="w-4 h-4 text-accent" />
                 <Label className="font-medium">Hydratace & Regenerace</Label>
               </div>
               <div className="grid grid-cols-2 gap-4">

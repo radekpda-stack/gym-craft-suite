@@ -35,7 +35,7 @@ export function RevenueWaterfallCard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             {isPositive ? (
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
+              <TrendingUp className="h-4 w-4 text-success" />
             ) : (
               <TrendingDown className="h-4 w-4 text-destructive" />
             )}
@@ -59,10 +59,10 @@ export function RevenueWaterfallCard() {
           </ToggleGroup>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className={`text-lg font-bold ${isPositive ? 'text-emerald-500' : 'text-destructive'}`}>
+          <span className={`text-lg font-bold ${isPositive ? 'text-success' : 'text-destructive'}`}>
             {isPositive ? '+' : ''}{formatCurrency(netChange)}
           </span>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${isPositive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-destructive/10 text-destructive'}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded ${isPositive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
             {isPositive ? '+' : ''}{netChangePercent.toFixed(1)}%
           </span>
         </div>
@@ -91,9 +91,9 @@ export function RevenueWaterfallCard() {
                         </div>
                         <span className={`text-xs font-medium shrink-0 ml-2 ${
                           isTotal 
-                            ? (item.value >= 0 ? 'text-emerald-500' : 'text-destructive')
+                            ? (item.value >= 0 ? 'text-success' : 'text-destructive')
                             : item.value >= 0 
-                              ? 'text-emerald-500' 
+                              ? 'text-success' 
                               : 'text-destructive'
                         }`}>
                           {item.value >= 0 ? '+' : ''}{formatCurrency(item.value)}
@@ -104,10 +104,10 @@ export function RevenueWaterfallCard() {
                           className={`h-full rounded transition-all group-hover:opacity-80 ${
                             isTotal
                               ? item.value >= 0 
-                                ? 'bg-emerald-500' 
+                                ? 'bg-success' 
                                 : 'bg-destructive'
                               : item.value >= 0
-                                ? 'bg-emerald-500/70'
+                                ? 'bg-success/70'
                                 : 'bg-destructive/70'
                           }`}
                           style={{ width: `${barWidth}%` }}

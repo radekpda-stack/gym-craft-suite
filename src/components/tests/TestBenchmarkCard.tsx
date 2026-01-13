@@ -15,11 +15,11 @@ interface TestBenchmarkCardProps {
 }
 
 const ratingConfig = {
-  excellent: { label: 'Výborný', color: 'bg-green-500', textColor: 'text-green-600' },
-  good: { label: 'Dobrý', color: 'bg-blue-500', textColor: 'text-blue-600' },
-  average: { label: 'Průměrný', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
-  below_average: { label: 'Podprůměrný', color: 'bg-orange-500', textColor: 'text-orange-600' },
-  poor: { label: 'Slabý', color: 'bg-red-500', textColor: 'text-red-600' },
+  excellent: { label: 'Výborný', color: 'bg-success', textColor: 'text-success' },
+  good: { label: 'Dobrý', color: 'bg-accent', textColor: 'text-accent' },
+  average: { label: 'Průměrný', color: 'bg-warning', textColor: 'text-warning' },
+  below_average: { label: 'Podprůměrný', color: 'bg-warning', textColor: 'text-warning' },
+  poor: { label: 'Slabý', color: 'bg-destructive', textColor: 'text-destructive' },
 };
 
 export function TestBenchmarkCard({ definition, currentValue, clientAge = 30, clientGender = 'male' }: TestBenchmarkCardProps) {
@@ -176,15 +176,15 @@ export function TestBenchmarkCard({ definition, currentValue, clientAge = 30, cl
             {isBetterLower ? (
               currentValue < benchmark.percentile_50 ? (
                 <>
-                  <TrendingDown className="w-4 h-4 text-green-500" />
-                  <span className="text-green-600">
+                  <TrendingDown className="w-4 h-4 text-success" />
+                  <span className="text-success">
                     O {formatValue(benchmark.percentile_50 - currentValue)} lepší než medián
                   </span>
                 </>
               ) : currentValue > benchmark.percentile_50 ? (
                 <>
-                  <TrendingUp className="w-4 h-4 text-red-500" />
-                  <span className="text-red-600">
+                  <TrendingUp className="w-4 h-4 text-destructive" />
+                  <span className="text-destructive">
                     O {formatValue(currentValue - benchmark.percentile_50)} horší než medián
                   </span>
                 </>
@@ -197,15 +197,15 @@ export function TestBenchmarkCard({ definition, currentValue, clientAge = 30, cl
             ) : (
               currentValue > benchmark.percentile_50 ? (
                 <>
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                  <span className="text-green-600">
+                  <TrendingUp className="w-4 h-4 text-success" />
+                  <span className="text-success">
                     O {formatValue(currentValue - benchmark.percentile_50)} lepší než medián
                   </span>
                 </>
               ) : currentValue < benchmark.percentile_50 ? (
                 <>
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                  <span className="text-red-600">
+                  <TrendingDown className="w-4 h-4 text-destructive" />
+                  <span className="text-destructive">
                     O {formatValue(benchmark.percentile_50 - currentValue)} horší než medián
                   </span>
                 </>

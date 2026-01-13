@@ -15,9 +15,9 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
   const navigate = useNavigate();
   
   const getStatusDot = () => {
-    if (client.status === 'error') return 'bg-red-500';
-    if (client.status === 'warning') return 'bg-amber-400';
-    return 'bg-emerald-400';
+    if (client.status === 'error') return 'bg-destructive';
+    if (client.status === 'warning') return 'bg-warning';
+    return 'bg-success';
   };
   
   return (
@@ -38,7 +38,7 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
       
       {/* Favorite indicator */}
       {client.isFavorite && (
-        <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+        <Star className="w-3 h-3 text-warning fill-warning shrink-0" />
       )}
       
       {/* Credit level indicator with leaves */}
@@ -93,7 +93,7 @@ export function ClientStatusCard({ data, isLoading }: ClientStatusCardProps) {
           <span className="text-sm font-semibold text-foreground">Klienti</span>
         </div>
         {problemCount > 0 && (
-          <span className="text-xs text-amber-400 flex items-center gap-1">
+          <span className="text-xs text-warning flex items-center gap-1">
             <AlertCircle className="w-3 h-3" />
             {problemCount}
           </span>
