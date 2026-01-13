@@ -161,6 +161,7 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           performanceDisplay,
           assistanceBands,
           side: (entry as any).side as 'left' | 'right' | 'both' | 'none' | null,
+          avgWatts: (entry as any).avg_watts as number | null,
         };
       });
 
@@ -289,7 +290,8 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                 ) : isTimeBased ? (
                   <>
                     <TableHead className="text-right min-w-[70px]">Čas</TableHead>
-                    <TableHead className="text-right min-w-[80px] hidden sm:table-cell">Tempo</TableHead>
+                    <TableHead className="text-right min-w-[60px] hidden sm:table-cell">Tempo</TableHead>
+                    <TableHead className="text-right min-w-[50px] hidden sm:table-cell">Watty</TableHead>
                     <TableHead className="text-center w-[60px] hidden md:table-cell">Lvl</TableHead>
                     <TableHead className="text-center w-[45px] hidden sm:table-cell">RPE</TableHead>
                     <TableHead className="max-w-[100px] hidden lg:table-cell">Pozn.</TableHead>
@@ -358,6 +360,9 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
                         {row.performanceDisplay?.value 
                           ? `${row.performanceDisplay.value}${row.performanceDisplay.unit ? ` ${row.performanceDisplay.unit}` : ''}`
                           : '-'}
+                      </TableCell>
+                      <TableCell className="text-right text-sm hidden sm:table-cell">
+                        {row.avgWatts ? `${Math.round(row.avgWatts)} W` : '-'}
                       </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground hidden md:table-cell">
                         {row.level || row.resistance ? (

@@ -146,17 +146,8 @@ export function getPerformanceDisplay(
   category: ExerciseMetricCategory
 ): PerformanceDisplay {
   if (category === 'rower' || category === 'skierg') {
-    // Priority 1: Watts
-    if (entry.avg_watts && entry.avg_watts > 0) {
-      return {
-        value: `${Math.round(entry.avg_watts)}`,
-        label: 'Výkon',
-        unit: 'W',
-        raw: entry.avg_watts,
-      };
-    }
-    
-    // Priority 2: Pace /500m (stored)
+    // For "Tempo" column - show pace, NOT watts
+    // Priority 1: Pace /500m (stored)
     if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) {
       const mins = Math.floor(entry.pace_sec_per_500m / 60);
       const secs = (entry.pace_sec_per_500m % 60).toFixed(1);
@@ -168,7 +159,7 @@ export function getPerformanceDisplay(
       };
     }
     
-    // Priority 3: Calculate pace from time and distance
+    // Priority 2: Calculate pace from time and distance
     if (entry.time_seconds && entry.time_seconds > 0) {
       // Get distance - default to 500m for rower/skierg if not specified
       const distance = entry.distance_meters && entry.distance_meters > 0 
