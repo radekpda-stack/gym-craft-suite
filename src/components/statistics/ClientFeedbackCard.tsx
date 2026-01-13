@@ -15,9 +15,9 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
   const getScoreDisplay = (score: number, max: number = 10) => {
     const percentage = (score / max) * 100;
     if (score === 0) return { color: 'text-muted-foreground', label: 'Bez dat' };
-    if (percentage >= 80) return { color: 'text-emerald-500', label: 'Výborné' };
-    if (percentage >= 60) return { color: 'text-amber-500', label: 'Dobré' };
-    return { color: 'text-red-500', label: 'Ke zlepšení' };
+    if (percentage >= 80) return { color: 'text-success', label: 'Výborné' };
+    if (percentage >= 60) return { color: 'text-warning', label: 'Dobré' };
+    return { color: 'text-destructive', label: 'Ke zlepšení' };
   };
 
   const bodyFeelDisplay = getScoreDisplay(avgBodyFeel, 10);
@@ -60,7 +60,7 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-rose-500" />
+              <Heart className="h-4 w-4 text-destructive" />
               <span className="text-sm">Pocit těla</span>
             </div>
             <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-rose-400 to-rose-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-destructive/70 to-destructive rounded-full transition-all duration-500"
               style={{ width: `${(avgBodyFeel / 10) * 100}%` }}
             />
           </div>
@@ -83,7 +83,7 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-warning" />
               <span className="text-sm">Sedí mi trénink</span>
             </div>
             <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-warning/70 to-warning rounded-full transition-all duration-500"
               style={{ width: `${(avgSessionFit / 10) * 100}%` }}
             />
           </div>

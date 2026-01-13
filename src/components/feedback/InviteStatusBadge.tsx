@@ -37,17 +37,17 @@ const PHASE_CONFIG: Record<InvitePhase, {
   sent: {
     label: 'Odesláno',
     icon: Send,
-    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    className: 'bg-accent/10 text-accent border-accent/20',
   },
   opened: {
     label: 'Otevřeno',
     icon: Eye,
-    className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+    className: 'bg-warning/10 text-warning border-warning/20',
   },
   completed: {
     label: 'Dokončeno',
     icon: Check,
-    className: 'bg-green-500/10 text-green-600 border-green-500/20',
+    className: 'bg-success/10 text-success border-success/20',
   },
   expired: {
     label: 'Vypršelo',

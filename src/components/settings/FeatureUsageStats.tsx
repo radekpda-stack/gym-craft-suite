@@ -237,7 +237,7 @@ export function FeatureUsageStats() {
         <Card className="glass">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
               <span className="text-sm text-muted-foreground">Úspěšnost</span>
             </div>
             <div className="text-2xl font-bold">{successRate?.toFixed(1) || 100}%</div>
@@ -255,7 +255,7 @@ export function FeatureUsageStats() {
         </Card>
         <Card className="glass">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-amber-500">{unusedFeatures.length}</div>
+            <div className="text-2xl font-bold text-warning">{unusedFeatures.length}</div>
             <p className="text-sm text-muted-foreground">Nepoužívaných</p>
           </CardContent>
         </Card>
@@ -459,8 +459,8 @@ export function FeatureUsageStats() {
                 </Card>
                 <Card className="glass">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                       <span className="text-sm text-muted-foreground">Aktivita</span>
                     </div>
                     <div className="text-2xl font-bold">{portalStats.activeClientsPercent}%</div>
@@ -544,7 +544,7 @@ export function FeatureUsageStats() {
                 <Card className="glass">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <TrendingUp className="h-4 w-4 text-success" />
                       Nejnavštěvovanější stránky
                     </CardTitle>
                   </CardHeader>
@@ -610,10 +610,10 @@ export function FeatureUsageStats() {
 
               {/* Inactive Clients + Least Used Features */}
               <div className="grid md:grid-cols-2 gap-6">
-                <Card className="glass border-amber-500/20">
+                <Card className="glass border-warning/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <AlertTriangle className="h-4 w-4 text-warning" />
                       Neaktivní klienti s přístupem
                     </CardTitle>
                   </CardHeader>
@@ -624,7 +624,7 @@ export function FeatureUsageStats() {
                           inactiveClients.map((client) => (
                             <div 
                               key={client.clientId}
-                              className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10"
+                              className="flex items-center justify-between p-2 rounded-lg bg-warning/10"
                             >
                               <div>
                                 <p className="text-sm font-medium">{client.clientName}</p>
@@ -637,7 +637,7 @@ export function FeatureUsageStats() {
                             </div>
                           ))
                         ) : (
-                          <div className="flex items-center justify-center py-8 gap-2 text-green-500">
+                          <div className="flex items-center justify-center py-8 gap-2 text-success">
                             <CheckCircle2 className="h-5 w-5" />
                             <span className="text-sm">Všichni klienti jsou aktivní!</span>
                           </div>
@@ -742,20 +742,20 @@ export function FeatureUsageStats() {
                 <Card className="glass">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                       <span className="text-sm text-muted-foreground">Dokončených</span>
                     </div>
-                    <div className="text-2xl font-bold text-green-600">{formStats.completedForms}</div>
+                    <div className="text-2xl font-bold text-success">{formStats.completedForms}</div>
                     <p className="text-xs text-muted-foreground">{formStats.overallCompletionRate}% úspěšnost</p>
                   </CardContent>
                 </Card>
                 <Card className="glass">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="h-4 w-4 text-destructive" />
                       <span className="text-sm text-muted-foreground">Opuštěných</span>
                     </div>
-                    <div className="text-2xl font-bold text-red-600">{formStats.abandonedForms}</div>
+                    <div className="text-2xl font-bold text-destructive">{formStats.abandonedForms}</div>
                   </CardContent>
                 </Card>
                 <Card className="glass">
@@ -776,10 +776,10 @@ export function FeatureUsageStats() {
 
               {/* Problematic Fields */}
               {formStats.topProblematicFields.length > 0 && (
-                <Card className="glass border-amber-500/20">
+                <Card className="glass border-warning/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-amber-500" />
+                      <AlertTriangle className="h-5 w-5 text-warning" />
                       Problematická pole (zdržují vyplnění)
                     </CardTitle>
                   </CardHeader>
@@ -789,21 +789,21 @@ export function FeatureUsageStats() {
                         {formStats.topProblematicFields.map((field, i) => (
                           <div 
                             key={field.fieldName}
-                            className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10"
+                            className="flex items-center justify-between p-3 rounded-lg bg-warning/10"
                           >
                             <div>
                               <p className="font-medium">{field.fieldName}</p>
                               <div className="flex gap-3 text-xs text-muted-foreground">
                                 <span>Ø {Math.round(field.avgTimeMs / 1000)}s</span>
                                 {field.validationErrors > 0 && (
-                                  <span className="text-red-500">{field.validationErrors} chyb</span>
+                                  <span className="text-destructive">{field.validationErrors} chyb</span>
                                 )}
                                 {field.skipRate > 0 && (
-                                  <span className="text-amber-600">{field.skipRate}% přeskočeno</span>
+                                  <span className="text-warning">{field.skipRate}% přeskočeno</span>
                                 )}
                               </div>
                             </div>
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/50">
+                            <Badge variant="outline" className="text-warning border-warning/50">
                               {field.occurrences}× zobrazeno
                             </Badge>
                           </div>
@@ -1179,7 +1179,7 @@ export function FeatureUsageStats() {
                         <Badge variant="secondary" className="font-mono">
                           {feature.count}×
                         </Badge>
-                        {i === 0 && <TrendingUp className="h-4 w-4 text-green-500" />}
+                        {i === 0 && <TrendingUp className="h-4 w-4 text-success" />}
                       </div>
                     </div>
                   ))}
@@ -1198,7 +1198,7 @@ export function FeatureUsageStats() {
           <Card className="glass">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <AlertTriangle className="h-5 w-5 text-warning" />
                 Nepoužívané funkce ({unusedFeatures.length})
               </CardTitle>
             </CardHeader>
@@ -1211,7 +1211,7 @@ export function FeatureUsageStats() {
                   {unusedFeatures.map(feature => (
                     <div 
                       key={feature.name}
-                      className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                      className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20"
                     >
                       <div>
                         <p className="font-medium">{feature.label}</p>
@@ -1219,14 +1219,14 @@ export function FeatureUsageStats() {
                           {CATEGORY_LABELS[feature.category] || feature.category}
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+                      <Badge variant="outline" className="text-warning border-warning/50">
                         0 použití
                       </Badge>
                     </div>
                   ))}
                   {unusedFeatures.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground flex flex-col items-center gap-2">
-                      <CheckCircle2 className="h-8 w-8 text-green-500" />
+                      <CheckCircle2 className="h-8 w-8 text-success" />
                       <p>Všechny funkce jsou využívány!</p>
                     </div>
                   )}

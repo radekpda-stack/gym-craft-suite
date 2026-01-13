@@ -61,7 +61,7 @@ function TrendArrow({ value }: { value: number }) {
   return (
     <Icon className={cn(
       'w-3 h-3',
-      value > 0 ? 'text-emerald-400/70' : 'text-red-400/70'
+      value > 0 ? 'text-success/70' : 'text-destructive/70'
     )} />
   );
 }
@@ -90,7 +90,7 @@ function Metric({ icon: Icon, value, label, trend, warning, error, onClick }: Me
     >
       <Icon className={cn(
         'w-4 h-4',
-        error ? 'text-red-400' : warning ? 'text-amber-400' : 'text-muted-foreground/60'
+        error ? 'text-destructive' : warning ? 'text-warning' : 'text-muted-foreground/60'
       )} />
       <div className="flex items-baseline gap-1.5">
         <span className="text-lg font-semibold text-foreground">{value}</span>
