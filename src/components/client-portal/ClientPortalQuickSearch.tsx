@@ -38,7 +38,7 @@ export function ClientPortalQuickSearch() {
       return <Badge variant="outline" className="text-muted-foreground text-xs">Bez přístupu</Badge>;
     }
     if (account.is_active) {
-      return <Badge variant="default" className="bg-green-600 text-xs">Aktivní</Badge>;
+      return <Badge variant="default" className="bg-success text-xs">Aktivní</Badge>;
     }
     return <Badge variant="secondary" className="text-xs">Neaktivní</Badge>;
   };

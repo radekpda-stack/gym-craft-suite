@@ -41,9 +41,9 @@ export function ExerciseStatsSection() {
   const totalPRs = stats?.totalPRs || 0;
 
   const getIntensityLabel = (rpe: number) => {
-    if (rpe >= 8) return { label: 'Vysoká', color: 'text-red-500' };
-    if (rpe >= 6) return { label: 'Střední', color: 'text-amber-500' };
-    return { label: 'Nízká', color: 'text-green-500' };
+    if (rpe >= 8) return { label: 'Vysoká', color: 'text-destructive' };
+    if (rpe >= 6) return { label: 'Střední', color: 'text-warning' };
+    return { label: 'Nízká', color: 'text-success' };
   };
 
   return (
@@ -95,8 +95,8 @@ export function ExerciseStatsSection() {
           onClick={() => setShowPRsModal(true)}
         >
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
-              <Trophy className="h-5 w-5 text-amber-500" />
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Trophy className="h-5 w-5 text-warning" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm text-muted-foreground">Osobní rekordy</p>

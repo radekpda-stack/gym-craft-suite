@@ -83,9 +83,9 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
   });
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-warning/70" />;
     return <span className="text-muted-foreground font-medium">{rank}.</span>;
   };
 
@@ -161,7 +161,7 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-500" />
+            <Trophy className="h-5 w-5 text-warning" />
             Správa výsledků: {challenge.title}
           </DialogTitle>
           <DialogDescription>
@@ -171,10 +171,10 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
 
         {/* XP Settings */}
         <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-          <Star className="h-4 w-4 text-amber-500" />
+          <Star className="h-4 w-4 text-warning" />
           <span className="text-sm font-medium">XP za umístění:</span>
           <div className="flex items-center gap-1">
-            <Trophy className="h-4 w-4 text-amber-500" />
+            <Trophy className="h-4 w-4 text-warning" />
             <Input
               type="number"
               value={xpValues[1]}
@@ -192,7 +192,7 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
             />
           </div>
           <div className="flex items-center gap-1">
-            <Award className="h-4 w-4 text-amber-700" />
+            <Award className="h-4 w-4 text-warning/70" />
             <Input
               type="number"
               value={xpValues[3]}
@@ -225,7 +225,7 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
                   key={sub.id}
                   className={cn(
                     "flex items-center gap-4 p-3 rounded-lg border transition-all",
-                    isWinner && "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
+                    isWinner && "bg-warning/10 border-warning/30",
                     sub.status === 'rejected' && "opacity-50",
                     index < 3 && !isWinner && "bg-muted/30"
                   )}
@@ -271,9 +271,9 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
                           size="icon"
                           className={cn(
                             "h-8 w-8",
-                            winnerRank === rank && rank === 1 && "bg-amber-500 hover:bg-amber-600",
-                            winnerRank === rank && rank === 2 && "bg-gray-400 hover:bg-gray-500",
-                            winnerRank === rank && rank === 3 && "bg-amber-700 hover:bg-amber-800"
+                            winnerRank === rank && rank === 1 && "bg-warning hover:bg-warning/90",
+                            winnerRank === rank && rank === 2 && "bg-muted-foreground hover:bg-muted-foreground/90",
+                            winnerRank === rank && rank === 3 && "bg-warning/70 hover:bg-warning/60"
                           )}
                           onClick={() => toggleWinner(sub.id, rank)}
                           disabled={sub.status === 'rejected'}
@@ -288,7 +288,7 @@ export function ChallengeWinnerManager({ challenge, open, onOpenChange }: Challe
                     <Button
                       variant={winnerRank === 1 ? 'default' : 'outline'}
                       size="icon"
-                      className={cn("h-8 w-8", winnerRank === 1 && "bg-amber-500 hover:bg-amber-600")}
+                      className={cn("h-8 w-8", winnerRank === 1 && "bg-warning hover:bg-warning/90")}
                       onClick={() => toggleWinner(sub.id, 1)}
                       disabled={sub.status === 'rejected'}
                     >

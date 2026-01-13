@@ -44,7 +44,7 @@ export function StatDetailModal({
 
   const getTrendColor = (trend: number | undefined) => {
     if (trend === undefined || trend === 0) return 'text-muted-foreground';
-    return trend > 0 ? 'text-emerald-500' : 'text-red-500';
+    return trend > 0 ? 'text-success' : 'text-destructive';
   };
 
   return (

@@ -112,7 +112,7 @@ export function RevenueByParticipantsCard() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-blue-500" />
+              <User className="h-4 w-4 text-accent" />
               <span className="text-sm">Solo (1 účastník)</span>
             </div>
             <div className="text-right">
@@ -124,7 +124,7 @@ export function RevenueByParticipantsCard() {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              className="h-full bg-accent rounded-full transition-all duration-500"
               style={{ width: `${getPercentage(data.solo)}%` }}
             />
           </div>
@@ -134,7 +134,7 @@ export function RevenueByParticipantsCard() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-emerald-500" />
+              <Users className="h-4 w-4 text-success" />
               <span className="text-sm">Duo (2 účastníci)</span>
             </div>
             <div className="text-right">
@@ -146,7 +146,7 @@ export function RevenueByParticipantsCard() {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              className="h-full bg-success rounded-full transition-all duration-500"
               style={{ width: `${getPercentage(data.duo)}%` }}
             />
           </div>
@@ -156,7 +156,7 @@ export function RevenueByParticipantsCard() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UsersRound className="h-4 w-4 text-amber-500" />
+              <UsersRound className="h-4 w-4 text-warning" />
               <span className="text-sm">Skupina (3+ účastníků)</span>
             </div>
             <div className="text-right">
@@ -168,7 +168,7 @@ export function RevenueByParticipantsCard() {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-amber-500 rounded-full transition-all duration-500"
+              className="h-full bg-warning rounded-full transition-all duration-500"
               style={{ width: `${getPercentage(data.group)}%` }}
             />
           </div>

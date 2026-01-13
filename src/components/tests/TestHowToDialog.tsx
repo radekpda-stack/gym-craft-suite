@@ -95,7 +95,7 @@ export function TestHowToDialog({ open, onOpenChange, definition }: TestHowToDia
                 <ul className="space-y-2">
                   {definition.standardization_checklist.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
                       <span className="text-muted-foreground">{item}</span>
                     </li>
                   ))}

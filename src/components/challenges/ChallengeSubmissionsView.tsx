@@ -59,9 +59,9 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
   });
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-warning/70" />;
     return <span className="text-muted-foreground font-medium">{rank}.</span>;
   };
 

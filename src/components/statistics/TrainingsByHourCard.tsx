@@ -39,10 +39,10 @@ export function TrainingsByHourCard() {
   }, [hourlyData]);
 
   const getTimeOfDayIcon = (hour: number) => {
-    if (hour >= 6 && hour < 12) return <Sunrise className="h-3 w-3 text-amber-500" />;
-    if (hour >= 12 && hour < 17) return <Sun className="h-3 w-3 text-yellow-500" />;
-    if (hour >= 17 && hour < 21) return <Sunset className="h-3 w-3 text-orange-500" />;
-    return <Moon className="h-3 w-3 text-indigo-500" />;
+    if (hour >= 6 && hour < 12) return <Sunrise className="h-3 w-3 text-warning" />;
+    if (hour >= 12 && hour < 17) return <Sun className="h-3 w-3 text-warning" />;
+    if (hour >= 17 && hour < 21) return <Sunset className="h-3 w-3 text-warning" />;
+    return <Moon className="h-3 w-3 text-primary" />;
   };
 
   const getBarColor = (hour: number, maxCount: number, count: number) => {

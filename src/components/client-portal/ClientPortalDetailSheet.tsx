@@ -172,7 +172,7 @@ export function ClientPortalDetailSheet({ client, open, onOpenChange }: ClientPo
       return <Badge variant="outline" className="text-muted-foreground">Bez přístupu</Badge>;
     }
     if (client.is_active) {
-      return <Badge variant="default" className="bg-green-600">Aktivní</Badge>;
+      return <Badge variant="default" className="bg-success">Aktivní</Badge>;
     }
     return <Badge variant="secondary">Deaktivovaný</Badge>;
   };

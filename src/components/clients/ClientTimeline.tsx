@@ -57,13 +57,13 @@ const EVENT_CONFIG: Record<TimelineEventType, {
 }> = {
   training_completed: {
     icon: CheckCircle,
-    color: 'text-green-600',
-    bgColor: 'bg-green-500/10',
+    color: 'text-success',
+    bgColor: 'bg-success/10',
   },
   training_scheduled: {
     icon: Calendar,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-500/10',
+    color: 'text-accent',
+    bgColor: 'bg-accent/10',
   },
   training_cancelled: {
     icon: XCircle,
@@ -77,23 +77,23 @@ const EVENT_CONFIG: Record<TimelineEventType, {
   },
   feedback_requested: {
     icon: Clock,
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   measurement: {
     icon: Scale,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-500/10',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
   },
   diagnostic: {
     icon: Stethoscope,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-500/10',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
   },
   credit_change: {
     icon: CreditCard,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-500/10',
+    color: 'text-success',
+    bgColor: 'bg-success/10',
   },
   note_added: {
     icon: MessageSquare,
@@ -102,8 +102,8 @@ const EVENT_CONFIG: Record<TimelineEventType, {
   },
   media_uploaded: {
     icon: Image,
-    color: 'text-pink-600',
-    bgColor: 'bg-pink-500/10',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
   },
 };
 
@@ -309,7 +309,7 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                             </Badge>
                           )}
                           {event.isRedFlag && isResolved && (
-                            <Badge variant="outline" className="h-4 text-[10px] px-1 border-green-500/50 text-green-600 gap-0.5">
+                            <Badge variant="outline" className="h-4 text-[10px] px-1 border-success/50 text-success gap-0.5">
                               <CheckCheck className="w-2.5 h-2.5" />
                               Vyřešeno
                             </Badge>
@@ -371,7 +371,7 @@ export function ClientTimeline({ clientId, defaultLimit = 20, showFilters = true
                         variant="outline" 
                         className={cn(
                           'text-[10px] h-4 px-1 mt-1',
-                          event.metadata.amount > 0 ? 'border-green-500/50 text-green-600' : 'border-red-500/50 text-red-600'
+                          event.metadata.amount > 0 ? 'border-success/50 text-success' : 'border-destructive/50 text-destructive'
                         )}
                       >
                         {event.metadata.amount > 0 ? '+' : ''}{event.metadata.amount} Kč

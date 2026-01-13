@@ -147,7 +147,7 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold">{entry.exercise_name}</span>
                             {isActualPR && (
-                              <Badge className="gap-1 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                              <Badge className="gap-1 bg-warning/20 text-warning border-warning/30">
                                 <Trophy className="w-3 h-3" /> PR
                               </Badge>
                             )}
