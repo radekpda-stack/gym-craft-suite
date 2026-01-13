@@ -8,7 +8,7 @@
  * 4. Previous training as collapsible
  * 5. Single optional note with toggle
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useForm } from 'react-hook-form';
@@ -146,6 +146,30 @@ export function TrainingDetailView({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showNote, setShowNote] = useState(!!training.notes);
   const [coachRPE, setCoachRPE] = useState<number | null>(training.rpe || null);
+  
+  // Debounce ref for tag saves
+  const tagSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Debounced tag save function
+  const debouncedSaveTags = useCallback((newTagIds: string[]) => {
+    if (tagSaveTimeoutRef.current) {
+      clearTimeout(tagSaveTimeoutRef.current);
+    }
+    tagSaveTimeoutRef.current = setTimeout(() => {
+      if (onTagsChange) {
+        onTagsChange(newTagIds);
+      }
+    }, 800); // Save after 800ms of no changes
+  }, [onTagsChange]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tagSaveTimeoutRef.current) {
+        clearTimeout(tagSaveTimeoutRef.current);
+      }
+    };
+  }, []);
   
   const { data: tags = [] } = useTags();
   
