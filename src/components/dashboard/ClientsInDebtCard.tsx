@@ -60,7 +60,7 @@ export function ClientsInDebtCard() {
       const [clientsResult, budgetMembersResult, transactionsResult] = await Promise.all([
         supabase
           .from('clients')
-          .select('id, name')
+          .select('id, name, payment_mode')
           .eq('user_id', user.id)
           .eq('is_archived', false),
         supabase
@@ -93,17 +93,20 @@ export function ClientsInDebtCard() {
         }
       });
 
-      // Filter to clients with actual debt
+      // Filter to clients with actual debt (excluding cash_only and budget group members)
       return (clientsResult.data || [])
+        .filter(c => {
+          // Exclude cash_only clients - they don't use credit system
+          if ((c as any).payment_mode === 'cash_only') return false;
+          
+          // Exclude clients in budget groups - their balance is managed at group level
+          if (clientGroupMap.has(c.id)) return false;
+          
+          return true;
+        })
         .map(c => {
-          const groupInfo = clientGroupMap.get(c.id);
-          
-          // If client is in a budget group, use the shared balance
-          // Otherwise, use ledger-calculated balance
-          const effectiveBalance = groupInfo
-            ? groupInfo.sharedBalance
-            : (clientLedgerBalance.get(c.id) || 0);
-          
+          // Use ledger-calculated balance for individual clients
+          const effectiveBalance = clientLedgerBalance.get(c.id) || 0;
           const hasDebt = effectiveBalance < 0;
           
           return {
