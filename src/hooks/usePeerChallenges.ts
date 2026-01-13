@@ -249,10 +249,18 @@ export function usePeerChallengeLeaderboard(challengeId: string | null) {
         if (isBetter) {
           bestByClient.set(sub.client_id, { 
             score: sub.score_primary, 
-            count: (current?.count || 0) + 1 
+            count: current ? current.count + 1 : 1 
           });
         } else if (current) {
-          current.count++;
+          bestByClient.set(sub.client_id, { 
+            score: current.score, 
+            count: current.count + 1 
+          });
+        } else {
+          bestByClient.set(sub.client_id, { 
+            score: sub.score_primary, 
+            count: 1 
+          });
         }
       }
 
@@ -322,6 +330,20 @@ export function useCreatePeerChallenge() {
     }) => {
       if (!clientId || !trainerId) throw new Error('Not authenticated');
 
+      // Map scoring_type from form value to DB value
+      const dbScoringType = data.scoring_type === 'time_lower_better' 
+        ? 'time_lower_better' 
+        : 'value_higher_better';
+      
+      // Map primary_metric from form value to DB value
+      const dbPrimaryMetric = data.primary_metric === 'time_lower_better' || data.primary_metric === 'time_higher_better'
+        ? 'time_seconds'
+        : data.primary_metric === 'distance'
+          ? 'distance_m'
+          : data.primary_metric === 'weight'
+            ? 'weight_kg'
+            : 'reps';
+
       // Create the challenge
       const { data: challenge, error } = await supabase
         .from('peer_challenges')
@@ -333,10 +355,11 @@ export function useCreatePeerChallenge() {
           challenge_type: data.challenge_type,
           source_type: data.source_type,
           source_challenge_id: data.source_challenge_id,
-          primary_metric: data.primary_metric,
-          scoring_type: data.scoring_type,
+          primary_metric: dbPrimaryMetric,
+          scoring_type: dbScoringType,
           target_value: data.target_value,
           unit_label: data.unit_label,
+          start_at: new Date().toISOString(),
           end_at: data.end_at,
         })
         .select()
@@ -616,6 +639,60 @@ export function useMyPeerChallenges() {
         }));
     },
     enabled: !!clientId,
+  });
+}
+
+// Get duel opponent info (for DuelCard)
+export function useDuelOpponent(challengeId: string | null) {
+  const { clientId } = useClientPortal();
+
+  return useQuery({
+    queryKey: ['duel-opponent', challengeId, clientId],
+    queryFn: async () => {
+      if (!challengeId || !clientId) return null;
+
+      // Get all accepted participants except me
+      const { data: participants, error: pError } = await supabase
+        .from('peer_challenge_participants')
+        .select('client_id')
+        .eq('challenge_id', challengeId)
+        .eq('status', 'accepted')
+        .neq('client_id', clientId);
+
+      if (pError) throw pError;
+
+      const opponent = participants?.[0];
+      if (!opponent) return null;
+
+      // Get opponent's best score
+      const { data: submissions } = await supabase
+        .from('peer_challenge_submissions')
+        .select('score_primary')
+        .eq('challenge_id', challengeId)
+        .eq('client_id', opponent.client_id)
+        .order('score_primary', { ascending: false })
+        .limit(1);
+
+      // Get opponent's leaderboard settings for display name
+      const { data: settings } = await supabase
+        .from('client_leaderboard_settings')
+        .select('leaderboard_visible, leaderboard_nickname')
+        .eq('client_id', opponent.client_id)
+        .maybeSingle();
+
+      const displayName = getClientDisplayName(
+        opponent.client_id,
+        settings?.leaderboard_visible === true,
+        settings?.leaderboard_nickname
+      );
+
+      return {
+        client_id: opponent.client_id,
+        display_name: displayName,
+        best_score: submissions?.[0]?.score_primary ?? null,
+      };
+    },
+    enabled: !!challengeId && !!clientId,
   });
 }
 

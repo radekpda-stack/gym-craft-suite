@@ -47,7 +47,7 @@ export function CreatePeerChallengeDialog({ open, onClose }: CreatePeerChallenge
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('reps');
-  const [scoringType, setScoringType] = useState('higher_better');
+  const [scoringType, setScoringType] = useState('value_higher_better');
   const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 7));
   const [selectedOpponent, setSelectedOpponent] = useState<string>('');
 
@@ -60,7 +60,7 @@ export function CreatePeerChallengeDialog({ open, onClose }: CreatePeerChallenge
     if (value === 'time_lower_better') {
       setScoringType('time_lower_better');
     } else {
-      setScoringType('higher_better');
+      setScoringType('value_higher_better');
     }
   };
 
@@ -105,7 +105,7 @@ export function CreatePeerChallengeDialog({ open, onClose }: CreatePeerChallenge
     setTitle('');
     setDescription('');
     setPrimaryMetric('reps');
-    setScoringType('higher_better');
+    setScoringType('value_higher_better');
     setEndDate(addDays(new Date(), 7));
     setSelectedOpponent('');
   };
