@@ -708,8 +708,8 @@ export function QuickLogDialog({
               <div className="space-y-4">
                 {/* Side selector for unilateral exercises */}
                 {isUnilateral && (
-                  <div className="space-y-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                    <div className="flex items-center gap-2 text-sm font-medium text-cyan-600">
+                  <div className="space-y-2 p-3 rounded-lg bg-accent/5 border border-accent/20">
+                    <div className="flex items-center gap-2 text-sm font-medium text-accent">
                       <Footprints className="w-4 h-4" />
                       Strana (noha)
                     </div>
