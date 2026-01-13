@@ -11,6 +11,7 @@ import { CancellationStatsCard } from './CancellationStatsCard';
 import { OperatingExpensesCard } from './OperatingExpensesCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
+import { RevenueWaterfallCard } from './RevenueWaterfallCard';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/charts';
@@ -136,7 +137,9 @@ export function FinanceStatsSection() {
         <OperatingExpensesCard />
       </div>
 
+      {/* Revenue Waterfall and Revenue by Participants */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <RevenueWaterfallCard />
         <RevenueByParticipantsCard />
       </div>
 

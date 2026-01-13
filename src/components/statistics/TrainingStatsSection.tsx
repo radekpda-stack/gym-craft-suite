@@ -4,6 +4,7 @@ import { TrainingHeroKPI } from './TrainingHeroKPI';
 import { TrainingTypeDistributionCard } from './TrainingTypeDistributionCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { TrainingDurationCard } from './TrainingDurationCard';
+import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -71,6 +72,9 @@ export function TrainingStatsSection() {
         <TrainingTypeDistributionCard distribution={stats.trainingTypeDistribution} />
         <TrainingDurationCard />
       </div>
+
+      {/* Interactive Heatmap */}
+      <InteractiveHeatmapCard />
 
       {/* Tag Distribution */}
       <GlobalTagDistributionCard
