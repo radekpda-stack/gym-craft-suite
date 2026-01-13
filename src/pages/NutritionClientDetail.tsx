@@ -389,20 +389,20 @@ export default function NutritionClientDetail() {
 
       {/* Week Stats */}
       <div className="grid grid-cols-4 gap-2">
-        <div className="bg-orange-500/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-orange-500">{weekStats.totalFood}</div>
+        <div className="bg-warning/10 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-warning">{weekStats.totalFood}</div>
           <div className="text-[10px] text-muted-foreground uppercase">Jídel</div>
         </div>
-        <div className="bg-blue-500/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-blue-500">{weekStats.totalDrinks}</div>
+        <div className="bg-accent/10 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-accent">{weekStats.totalDrinks}</div>
           <div className="text-[10px] text-muted-foreground uppercase">Nápojů</div>
         </div>
-        <div className="bg-cyan-500/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-cyan-500">{Math.round(weekStats.waterMl / 1000 * 10) / 10}l</div>
+        <div className="bg-accent/10 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-accent">{Math.round(weekStats.waterMl / 1000 * 10) / 10}l</div>
           <div className="text-[10px] text-muted-foreground uppercase">Vody</div>
         </div>
-        <div className="bg-amber-600/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-amber-600">{weekStats.totalCoffee}</div>
+        <div className="bg-warning/10 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-warning">{weekStats.totalCoffee}</div>
           <div className="text-[10px] text-muted-foreground uppercase">Kávy</div>
         </div>
       </div>

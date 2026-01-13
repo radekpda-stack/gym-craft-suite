@@ -101,7 +101,7 @@ export function PRTimelineCard() {
             <p className="text-base sm:text-lg font-bold text-foreground">{data.prVelocity}</p>
           </div>
 
-          <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 overflow-hidden">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-accent/10 border border-accent/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
               <GenderIcon gender="male" className="w-3 h-3 shrink-0" />
               <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">Muži</span>
@@ -109,7 +109,7 @@ export function PRTimelineCard() {
             <p className="text-base sm:text-lg font-bold text-foreground">{data.genderStats.male.count}</p>
           </div>
 
-          <div className="p-2 sm:p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20 overflow-hidden">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-accent/10 border border-accent/20 overflow-hidden">
             <div className="flex items-center gap-1 mb-0.5">
               <GenderIcon gender="female" className="w-3 h-3 shrink-0" />
               <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">Ženy</span>
@@ -335,7 +335,7 @@ export function PRTimelineCard() {
               {/* Gender stats cards */}
               {data && (
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                  <div className="p-3 rounded-xl bg-accent/10 border border-accent/20 space-y-2">
                     <div className="flex items-center gap-2">
                       <GenderIcon gender="male" className="w-4 h-4" />
                       <span className="text-sm font-semibold text-foreground">Muži</span>
@@ -359,7 +359,7 @@ export function PRTimelineCard() {
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 space-y-2">
+                  <div className="p-3 rounded-xl bg-accent/10 border border-accent/20 space-y-2">
                     <div className="flex items-center gap-2">
                       <GenderIcon gender="female" className="w-4 h-4" />
                       <span className="text-sm font-semibold text-foreground">Ženy</span>

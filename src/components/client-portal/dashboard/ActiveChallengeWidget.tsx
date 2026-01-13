@@ -42,16 +42,16 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
   const isUrgent = endDate.getTime() - Date.now() < 72 * 60 * 60 * 1000; // < 72h
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-5 w-5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+    if (rank === 1) return <Crown className="h-5 w-5 text-warning" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-warning/70" />;
     return null;
   };
 
   const getRankBgClass = (rank: number) => {
-    if (rank === 1) return 'bg-gradient-to-r from-amber-500/20 to-amber-500/5';
-    if (rank === 2) return 'bg-gradient-to-r from-gray-300/20 to-gray-300/5 dark:from-gray-600/20 dark:to-gray-600/5';
-    if (rank === 3) return 'bg-gradient-to-r from-amber-700/20 to-amber-700/5';
+    if (rank === 1) return 'bg-gradient-to-r from-warning/20 to-warning/5';
+    if (rank === 2) return 'bg-gradient-to-r from-muted/40 to-muted/10';
+    if (rank === 3) return 'bg-gradient-to-r from-warning/15 to-warning/5';
     return '';
   };
 
@@ -62,17 +62,17 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
       transition={{ delay: 0.1 }}
       className={className}
     >
-      <Card className="relative overflow-hidden border-purple-500/20">
+      <Card className="relative overflow-hidden border-primary/20">
         {/* Header section */}
-        <CardHeader className="pb-3 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent">
+        <CardHeader className="pb-3 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-purple-500" />
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-0 text-[10px]">
+                  <Badge variant="secondary" className="bg-primary/20 text-primary border-0 text-[10px]">
                     Aktivní výzva
                   </Badge>
                   {isUrgent && (
@@ -161,9 +161,9 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
                           <div className={cn(
                             "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                            entry.rank === 1 ? "bg-amber-500/20 text-amber-600" :
-                            entry.rank === 2 ? "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
-                            entry.rank === 3 ? "bg-amber-700/20 text-amber-700" :
+                            entry.rank === 1 ? "bg-warning/20 text-warning" :
+                            entry.rank === 2 ? "bg-muted text-muted-foreground" :
+                            entry.rank === 3 ? "bg-warning/15 text-warning/80" :
                             entry.is_you ? "bg-primary/20 text-primary" :
                             "bg-muted text-muted-foreground"
                           )}>

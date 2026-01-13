@@ -200,7 +200,7 @@ export function DiaryCalendarView({ entries, onDateSelect }: DiaryCalendarViewPr
                         <div className="w-2 h-2 rounded-full bg-primary" title="S trenérem" />
                       )}
                       {hasSelfWorkout && (
-                        <div className="w-2 h-2 rounded-full bg-green-500" title="Samostatně" />
+                        <div className="w-2 h-2 rounded-full bg-success" title="Samostatně" />
                       )}
                     </div>
                   )}
@@ -215,7 +215,7 @@ export function DiaryCalendarView({ entries, onDateSelect }: DiaryCalendarViewPr
                             key={entry.id}
                             className={cn(
                               "text-xs px-1.5 py-0.5 rounded flex items-center gap-1 truncate",
-                              entry.is_coached ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-700 dark:text-green-400"
+                              entry.is_coached ? "bg-primary/20 text-primary" : "bg-success/20 text-success"
                             )}
                           >
                             {entry.is_coached ? (

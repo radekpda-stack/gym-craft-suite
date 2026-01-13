@@ -407,14 +407,14 @@ export function SalesStatistics() {
             </div>
 
             {/* Čistý zisk */}
-            <div className="glass rounded-xl p-4 border border-emerald-500/30 bg-emerald-500/5">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2">
+            <div className="glass rounded-xl p-4 border border-success/30 bg-success/5">
+              <div className="flex items-center gap-2 text-success mb-2">
                 <Banknote className="w-4 h-4" />
                 <span className="text-xs font-medium">Čistý zisk</span>
               </div>
               <p className={cn(
                 "text-2xl font-bold",
-                stats.totalProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                stats.totalProfit >= 0 ? "text-success" : "text-destructive"
               )}>
                 {formatCurrency(stats.totalProfit)}
               </p>

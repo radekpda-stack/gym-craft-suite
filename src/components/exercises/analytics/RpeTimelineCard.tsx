@@ -16,10 +16,10 @@ const HELP_CONTENT = {
 
 // RPE zones for legend
 const RPE_ZONES = [
-  { range: '1-4', label: 'Nízká', color: 'bg-green-500' },
-  { range: '5-6', label: 'Střední', color: 'bg-yellow-500' },
-  { range: '7-8', label: 'Vysoká', color: 'bg-orange-500' },
-  { range: '9-10', label: 'Max', color: 'bg-red-500' },
+  { range: '1-4', label: 'Nízká', color: 'bg-success' },
+  { range: '5-6', label: 'Střední', color: 'bg-warning' },
+  { range: '7-8', label: 'Vysoká', color: 'bg-warning' },
+  { range: '9-10', label: 'Max', color: 'bg-destructive' },
 ];
 
 export function RpeTimelineCard({ data, isLoading }: RpeTimelineCardProps) {

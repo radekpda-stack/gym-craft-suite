@@ -29,8 +29,8 @@ const MATCH_TYPE_LABELS: Record<string, string> = {
 };
 
 function getScoreColor(score: number): string {
-  if (score >= 90) return 'text-green-600 bg-green-500/10 border-green-500/30';
-  if (score >= 70) return 'text-amber-600 bg-amber-500/10 border-amber-500/30';
+  if (score >= 90) return 'text-success bg-success/10 border-success/30';
+  if (score >= 70) return 'text-warning bg-warning/10 border-warning/30';
   return 'text-muted-foreground bg-muted/50 border-border';
 }
 
