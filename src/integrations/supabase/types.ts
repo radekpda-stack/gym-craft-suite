@@ -2055,6 +2055,7 @@ export type Database = {
           notify_water_reminder: boolean | null
           onboarding_completed: boolean | null
           onboarding_steps_done: Json | null
+          peer_challenges_onboarding_seen: boolean | null
           time_format: string | null
           updated_at: string
           weight_unit: string | null
@@ -2070,6 +2071,7 @@ export type Database = {
           notify_water_reminder?: boolean | null
           onboarding_completed?: boolean | null
           onboarding_steps_done?: Json | null
+          peer_challenges_onboarding_seen?: boolean | null
           time_format?: string | null
           updated_at?: string
           weight_unit?: string | null
@@ -2085,6 +2087,7 @@ export type Database = {
           notify_water_reminder?: boolean | null
           onboarding_completed?: boolean | null
           onboarding_steps_done?: Json | null
+          peer_challenges_onboarding_seen?: boolean | null
           time_format?: string | null
           updated_at?: string
           weight_unit?: string | null
@@ -5901,6 +5904,242 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      peer_challenge_activity_log: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_type: string
+          challenge_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          actor_type: string
+          challenge_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_type?: string
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peer_challenge_activity_log_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "peer_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      peer_challenge_participants: {
+        Row: {
+          challenge_id: string
+          client_id: string
+          id: string
+          invited_at: string
+          joined_at: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          challenge_id: string
+          client_id: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peer_challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "peer_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenge_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenge_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      peer_challenge_submissions: {
+        Row: {
+          challenge_id: string
+          client_id: string
+          id: string
+          media_urls: string[] | null
+          note: string | null
+          score_primary: number
+          submitted_at: string
+        }
+        Insert: {
+          challenge_id: string
+          client_id: string
+          id?: string
+          media_urls?: string[] | null
+          note?: string | null
+          score_primary: number
+          submitted_at?: string
+        }
+        Update: {
+          challenge_id?: string
+          client_id?: string
+          id?: string
+          media_urls?: string[] | null
+          note?: string | null
+          score_primary?: number
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peer_challenge_submissions_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "peer_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenge_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenge_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      peer_challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string
+          created_by_client_id: string
+          description: string | null
+          end_at: string
+          id: string
+          invite_code: string | null
+          max_participants: number | null
+          primary_metric: string
+          scoring_type: string
+          source_challenge_id: string | null
+          source_type: string
+          start_at: string
+          status: string
+          target_value: number | null
+          title: string
+          trainer_comment: string | null
+          trainer_comment_at: string | null
+          trainer_id: string
+          unit_label: string | null
+          updated_at: string
+        }
+        Insert: {
+          challenge_type?: string
+          created_at?: string
+          created_by_client_id: string
+          description?: string | null
+          end_at: string
+          id?: string
+          invite_code?: string | null
+          max_participants?: number | null
+          primary_metric?: string
+          scoring_type?: string
+          source_challenge_id?: string | null
+          source_type?: string
+          start_at?: string
+          status?: string
+          target_value?: number | null
+          title: string
+          trainer_comment?: string | null
+          trainer_comment_at?: string | null
+          trainer_id: string
+          unit_label?: string | null
+          updated_at?: string
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string
+          created_by_client_id?: string
+          description?: string | null
+          end_at?: string
+          id?: string
+          invite_code?: string | null
+          max_participants?: number | null
+          primary_metric?: string
+          scoring_type?: string
+          source_challenge_id?: string | null
+          source_type?: string
+          start_at?: string
+          status?: string
+          target_value?: number | null
+          title?: string
+          trainer_comment?: string | null
+          trainer_comment_at?: string | null
+          trainer_id?: string
+          unit_label?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peer_challenges_created_by_client_id_fkey"
+            columns: ["created_by_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenges_created_by_client_id_fkey"
+            columns: ["created_by_client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "peer_challenges_source_challenge_id_fkey"
+            columns: ["source_challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
           },
         ]
       }
