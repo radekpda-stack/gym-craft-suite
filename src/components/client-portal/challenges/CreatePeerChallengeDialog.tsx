@@ -253,7 +253,7 @@ export function CreatePeerChallengeDialog({ open, onClose }: CreatePeerChallenge
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Zobrazují se pouze klienti, kteří jsou viditelní v žebříčku
+                      Klienti bez povolení jsou zobrazeni pod přezdívkou
                     </p>
                   </div>
                 )}
