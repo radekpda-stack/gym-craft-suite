@@ -23,6 +23,9 @@ import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { ProductSearchAndFilters } from './ProductSearchAndFilters';
 import { CartPanel } from './CartPanel';
+import { FavoriteProducts } from './FavoriteProducts';
+import { RecentSales } from './RecentSales';
+import { useRecentSales, RecentSale } from '@/hooks/useRecentSales';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -310,6 +313,37 @@ export function SalesRegister() {
     }
   };
 
+  // Handle repeating a recent sale
+  const handleRepeatSale = useCallback((sale: RecentSale) => {
+    // Clear current cart
+    cart.clear();
+    
+    // Add items from the sale
+    sale.items.forEach(item => {
+      const product = products.find(p => p.id === item.product_id);
+      if (product) {
+        // Add the product the specified number of times
+        for (let i = 0; i < item.quantity; i++) {
+          cart.addItem(product);
+        }
+      }
+    });
+    
+    // Set the client if one existed
+    if (sale.client_id) {
+      setSelectedClient(sale.client_id);
+      setNoClient(false);
+    } else {
+      setSelectedClient('');
+      setNoClient(true);
+    }
+    
+    // Set payment method from sale
+    if (sale.payment_method) {
+      setPaymentMethod(sale.payment_method as PaymentMethod);
+    }
+  }, [cart, products]);
+
   // Check if checkout is disabled
   const checkoutDisabled = useMemo(() => {
     if (isProcessing) return true;
@@ -389,6 +423,16 @@ export function SalesRegister() {
             </div>
           )}
         </div>
+
+        {/* Recent Sales - Quick Repeat */}
+        <RecentSales onRepeatSale={handleRepeatSale} />
+
+        {/* Favorite Products */}
+        <FavoriteProducts
+          products={products}
+          onAddToCart={(product) => cart.addItem(product)}
+          getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
+        />
 
         {/* Search and Filters */}
         <div className="glass rounded-xl p-4">

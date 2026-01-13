@@ -420,7 +420,16 @@ export function SalesStatistics() {
                 <span className="text-xs">Tržby celkem</span>
               </div>
               <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalRevenue)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{PERIODS.find(p => p.value === period)?.label}</p>
+              <div className="flex items-center gap-2 mt-1">
+                {stats.previousPeriod ? (
+                  <ComparisonBadge 
+                    currentValue={stats.totalRevenue}
+                    previousValue={stats.previousPeriod.totalRevenue}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">{PERIODS.find(p => p.value === period)?.label}</span>
+                )}
+              </div>
             </div>
 
             {/* Náklady */}
@@ -430,7 +439,17 @@ export function SalesStatistics() {
                 <span className="text-xs">Náklady</span>
               </div>
               <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalCosts)}</p>
-              <p className="text-xs text-muted-foreground mt-1">nákupní ceny</p>
+              <div className="flex items-center gap-2 mt-1">
+                {stats.previousPeriod ? (
+                  <ComparisonBadge 
+                    currentValue={stats.totalCosts}
+                    previousValue={stats.previousPeriod.totalCosts}
+                    invert
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">nákupní ceny</span>
+                )}
+              </div>
             </div>
 
             {/* Čistý zisk */}
@@ -445,9 +464,16 @@ export function SalesStatistics() {
               )}>
                 {formatCurrency(stats.totalProfit)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                marže {stats.profitMargin.toFixed(1)}%
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                {stats.previousPeriod ? (
+                  <ComparisonBadge 
+                    currentValue={stats.totalProfit}
+                    previousValue={stats.previousPeriod.totalProfit}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">marže {stats.profitMargin.toFixed(1)}%</span>
+                )}
+              </div>
             </div>
 
             {/* Počet prodejů */}
@@ -457,9 +483,32 @@ export function SalesStatistics() {
                 <span className="text-xs">Počet prodejů</span>
               </div>
               <p className="text-2xl font-bold text-foreground">{stats.totalOrders}</p>
-              <p className="text-xs text-muted-foreground mt-1">transakcí</p>
+              <div className="flex items-center gap-2 mt-1">
+                {stats.previousPeriod ? (
+                  <ComparisonBadge 
+                    currentValue={stats.totalOrders}
+                    previousValue={stats.previousPeriod.totalOrders}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">transakcí</span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* AI Insights */}
+          {stats.trendData.length > 0 && (
+            <SalesInsights
+              totalRevenue={stats.totalRevenue}
+              totalProfit={stats.totalProfit}
+              profitMargin={stats.profitMargin}
+              totalOrders={stats.totalOrders}
+              trendData={stats.trendData}
+              topProducts={stats.topProducts}
+              byPaymentMethod={stats.byPaymentMethod}
+              previousPeriod={stats.previousPeriod}
+            />
+          )}
 
           {/* Trend Chart - Full Width */}
           <div className="glass rounded-xl p-4">
