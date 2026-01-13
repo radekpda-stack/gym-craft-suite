@@ -50,7 +50,7 @@ export function FinanceAnalyticsDetailView({ data }: FinanceAnalyticsDetailViewP
               <div className="text-2xl font-bold">{formatCurrency(data.totalIncome)}</div>
               <div className="text-xs text-muted-foreground">Celkový příjem</div>
               {data.previousPeriod && (
-                <div className={`text-xs mt-1 ${incomeChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`text-xs mt-1 ${incomeChange >= 0 ? 'text-success' : 'text-destructive'}`}>
                   {incomeChange >= 0 ? '+' : ''}{incomeChange.toFixed(1)}% vs minulé období
                 </div>
               )}

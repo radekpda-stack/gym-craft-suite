@@ -84,12 +84,12 @@ export function NutritionHistory({ sessions, isLoading, currentSessionId }: Nutr
               )}
             >
               <div className="flex items-center gap-3">
-                <div className={cn(
+              <div className={cn(
                   "p-2 rounded-full",
-                  isCompleted ? "bg-green-500/10" : "bg-muted"
+                  isCompleted ? "bg-success/10" : "bg-muted"
                 )}>
                   {isCompleted ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : (
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   )}
@@ -109,7 +109,7 @@ export function NutritionHistory({ sessions, isLoading, currentSessionId }: Nutr
               <Badge 
                 variant="outline" 
                 className={cn(
-                  isCompleted && "bg-green-500/10 text-green-600 border-green-500/20"
+                  isCompleted && "bg-success/10 text-success border-success/20"
                 )}
               >
                 {isCompleted ? 'Dokončeno' : 'Neaktivní'}

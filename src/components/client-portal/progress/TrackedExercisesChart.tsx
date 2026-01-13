@@ -77,7 +77,7 @@ export function TrackedExercisesChart({ exercises, isLoading }: TrackedExercises
             const change = lastWeight - firstWeight;
             
             const TrendIcon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
-            const trendColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-500' : 'text-muted-foreground';
+            const trendColor = change > 0 ? 'text-success' : change < 0 ? 'text-destructive' : 'text-muted-foreground';
             
             const chartData = data.map(d => ({
               date: format(parseISO(d.date), 'd. M.', { locale: cs }),

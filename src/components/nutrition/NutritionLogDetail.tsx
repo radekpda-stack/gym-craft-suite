@@ -403,9 +403,9 @@ function FoodEntryCard({ entry, onDelete }: { entry: NutritionFoodEntry; onDelet
   };
 
   const qualityLabels: Record<string, { text: string; color: string }> = {
-    good: { text: 'Dobrá volba', color: 'text-green-600' },
-    normal: { text: 'Neutrální', color: 'text-yellow-600' },
-    poor: { text: 'Špatná volba', color: 'text-red-600' },
+    good: { text: 'Dobrá volba', color: 'text-success' },
+    normal: { text: 'Neutrální', color: 'text-warning' },
+    poor: { text: 'Špatná volba', color: 'text-destructive' },
   };
 
   const satiationLabels: Record<string, string> = {

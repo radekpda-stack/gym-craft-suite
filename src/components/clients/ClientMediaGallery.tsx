@@ -52,8 +52,8 @@ export function ClientMediaGallery({ clientId, defaultOpen = false }: ClientMedi
       <CollapsibleTrigger asChild>
         <button className="w-full glass rounded-2xl p-4 flex items-center justify-between hover:bg-secondary/30 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/10">
-              <Camera className="w-5 h-5 text-purple-500" />
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Camera className="w-5 h-5 text-primary" />
             </div>
             <div className="text-left">
               <p className="font-medium text-foreground">Média & fotky</p>
@@ -66,7 +66,7 @@ export function ClientMediaGallery({ clientId, defaultOpen = false }: ClientMedi
           </div>
           <div className="flex items-center gap-2">
             {totalMedia > 0 && (
-              <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 border-0">
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
                 {totalMedia}
               </Badge>
             )}

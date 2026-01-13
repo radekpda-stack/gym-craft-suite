@@ -90,12 +90,12 @@ const MetricBadge = ({
     if (inverted) {
       // For pain: low is good, high is bad
       if (ratio >= 0.7) return 'bg-destructive/20 text-destructive';
-      if (ratio >= 0.5) return 'bg-amber-500/20 text-amber-600';
+      if (ratio >= 0.5) return 'bg-warning/20 text-warning';
       return 'bg-success/20 text-success';
     } else {
       // For positive metrics: high is good
       if (ratio >= 0.7) return 'bg-success/20 text-success';
-      if (ratio >= 0.4) return 'bg-amber-500/20 text-amber-600';
+      if (ratio >= 0.4) return 'bg-warning/20 text-warning';
       return 'bg-destructive/20 text-destructive';
     }
   };
@@ -117,7 +117,7 @@ const MetricBadge = ({
 const SuggestionCard = ({ suggestion }: { suggestion: CoachSuggestion }) => {
   const priorityColors = {
     high: 'border-destructive/50 bg-destructive/5',
-    medium: 'border-amber-500/50 bg-amber-500/5',
+    medium: 'border-warning/50 bg-warning/5',
     low: 'border-primary/50 bg-primary/5',
   };
 
@@ -129,7 +129,7 @@ const SuggestionCard = ({ suggestion }: { suggestion: CoachSuggestion }) => {
       <Lightbulb className={cn(
         'w-4 h-4 mt-0.5 shrink-0',
         suggestion.priority === 'high' ? 'text-destructive' :
-        suggestion.priority === 'medium' ? 'text-amber-500' : 'text-primary'
+        suggestion.priority === 'medium' ? 'text-warning' : 'text-primary'
       )} />
       <p className="text-sm">{suggestion.message}</p>
     </div>

@@ -225,13 +225,13 @@ export function GamificationProgressCard() {
               <p className="text-lg font-bold">{stats.totalWorkouts}</p>
               <p className="text-[10px] text-muted-foreground">Celkem</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-blue-500/10">
-              <Trophy className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+            <div className="text-center p-3 rounded-xl bg-accent/10">
+              <Trophy className="w-5 h-5 text-accent mx-auto mb-1" />
               <p className="text-lg font-bold">{stats.monthlyWorkouts}</p>
               <p className="text-[10px] text-muted-foreground">Tento měsíc</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-orange-500/10">
-              <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+            <div className="text-center p-3 rounded-xl bg-warning/10">
+              <Flame className="w-5 h-5 text-warning mx-auto mb-1" />
               <p className="text-lg font-bold">{stats.currentStreak}</p>
               <p className="text-[10px] text-muted-foreground">Dní v řadě</p>
             </div>
@@ -343,7 +343,7 @@ export function GamificationCompactWidget() {
             </div>
             <div className="text-center">
               <div className="flex items-center gap-1">
-                <Flame className="w-4 h-4 text-orange-500" />
+                <Flame className="w-4 h-4 text-warning" />
                 <span className="font-bold">{stats.currentStreak}</span>
               </div>
               <p className="text-[10px] text-muted-foreground">Streak</p>
