@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBusinessYieldScore, YieldPillar } from '@/hooks/useBusinessYieldScore';
 import { cn } from '@/lib/utils';
-import { BusinessHealthDetailModal } from './BusinessHealthDetailModal';
+import { BusinessYieldDetailModal } from './BusinessYieldDetailModal';
 
 const STATUS_CONFIG = {
   excellent: {
@@ -217,7 +217,7 @@ export const BusinessYieldScoreCard = memo(function BusinessYieldScoreCard() {
         </Card>
       </motion.div>
 
-      <BusinessHealthDetailModal open={detailOpen} onOpenChange={setDetailOpen} />
+      <BusinessYieldDetailModal open={detailOpen} onOpenChange={setDetailOpen} />
     </>
   );
 });
