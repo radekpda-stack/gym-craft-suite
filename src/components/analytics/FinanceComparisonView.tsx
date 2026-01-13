@@ -240,7 +240,7 @@ function AverageComparison({ data }: { data: FinanceAnalyticsData }) {
               >
                 <span className="font-medium">{item.fullName}</span>
                 <div className="text-right">
-                  <span className={`font-bold ${item.diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className={`font-bold ${item.diff >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {item.diff >= 0 ? '+' : ''}{formatCurrency(item.diff)}
                   </span>
                   <span className="text-xs text-muted-foreground ml-2">
@@ -335,7 +335,7 @@ function HistoryComparison({ data }: { data: FinanceAnalyticsData }) {
               <div className="text-sm text-muted-foreground mb-2">
                 Předchozí: {formatCurrency(item.previous)}
               </div>
-              <div className={`text-sm font-medium ${item.diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <div className={`text-sm font-medium ${item.diff >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {item.diff >= 0 ? '+' : ''}{formatCurrency(item.diff)} 
                 <span className="ml-1">({item.diffPercent >= 0 ? '+' : ''}{item.diffPercent.toFixed(1)}%)</span>
               </div>

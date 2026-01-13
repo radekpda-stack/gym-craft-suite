@@ -15,10 +15,10 @@ export function MeasurementsCard({ stats }: MeasurementsCardProps) {
   const total = measurements + diagnostics + photos + voiceNotes;
 
   const items = [
-    { label: 'Měření', value: measurements, icon: Ruler, color: 'text-blue-500' },
-    { label: 'Diagnostiky', value: diagnostics, icon: ClipboardCheck, color: 'text-emerald-500' },
-    { label: 'Fotografie', value: photos, icon: Camera, color: 'text-purple-500' },
-    { label: 'Hlasové záznamy', value: voiceNotes, icon: Mic, color: 'text-amber-500' },
+    { label: 'Měření', value: measurements, icon: Ruler, color: 'text-accent' },
+    { label: 'Diagnostiky', value: diagnostics, icon: ClipboardCheck, color: 'text-success' },
+    { label: 'Fotografie', value: photos, icon: Camera, color: 'text-primary' },
+    { label: 'Hlasové záznamy', value: voiceNotes, icon: Mic, color: 'text-warning' },
   ];
 
   return (

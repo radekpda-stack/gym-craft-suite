@@ -29,10 +29,10 @@ export function IntensityDetailModal({ open, onOpenChange }: IntensityDetailModa
   const monthlyTrend = data?.monthlyTrend || [];
 
   const getIntensityLabel = (rpe: number) => {
-    if (rpe >= 8) return { label: 'Vysoká', color: 'text-red-500', bg: 'bg-red-500/10' };
-    if (rpe >= 6) return { label: 'Střední', color: 'text-amber-500', bg: 'bg-amber-500/10' };
-    if (rpe >= 4) return { label: 'Nízká', color: 'text-green-500', bg: 'bg-green-500/10' };
-    return { label: 'Velmi nízká', color: 'text-blue-500', bg: 'bg-blue-500/10' };
+    if (rpe >= 8) return { label: 'Vysoká', color: 'text-destructive', bg: 'bg-destructive/10' };
+    if (rpe >= 6) return { label: 'Střední', color: 'text-warning', bg: 'bg-warning/10' };
+    if (rpe >= 4) return { label: 'Nízká', color: 'text-success', bg: 'bg-success/10' };
+    return { label: 'Velmi nízká', color: 'text-accent', bg: 'bg-accent/10' };
   };
 
   const intensityInfo = getIntensityLabel(avgRPE);
@@ -70,13 +70,13 @@ export function IntensityDetailModal({ open, onOpenChange }: IntensityDetailModa
               <p className="text-sm text-muted-foreground">Trend</p>
               <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                 {trend > 1 ? (
-                  <TrendingUp className="h-5 w-5 text-red-500" />
+                  <TrendingUp className="h-5 w-5 text-destructive" />
                 ) : trend < -1 ? (
-                  <TrendingDown className="h-5 w-5 text-green-500" />
+                  <TrendingDown className="h-5 w-5 text-success" />
                 ) : (
                   <Minus className="h-5 w-5 text-muted-foreground" />
                 )}
-                <span className={trend > 1 ? 'text-red-500' : trend < -1 ? 'text-green-500' : 'text-muted-foreground'}>
+                <span className={trend > 1 ? 'text-destructive' : trend < -1 ? 'text-success' : 'text-muted-foreground'}>
                   {trend > 0 ? '+' : ''}{trend.toFixed(0)}%
                 </span>
               </div>
@@ -141,19 +141,19 @@ export function IntensityDetailModal({ open, onOpenChange }: IntensityDetailModa
             <h4 className="font-medium mb-3">Škála RPE (Rate of Perceived Exertion)</h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-green-500/20 text-green-600 flex items-center justify-center font-medium">1-4</span>
+                <span className="w-6 h-6 rounded bg-success/20 text-success flex items-center justify-center font-medium">1-4</span>
                 <span className="text-muted-foreground">Lehké – zotavovací trénink</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-amber-500/20 text-amber-600 flex items-center justify-center font-medium">5-6</span>
+                <span className="w-6 h-6 rounded bg-warning/20 text-warning flex items-center justify-center font-medium">5-6</span>
                 <span className="text-muted-foreground">Střední – běžný trénink</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-orange-500/20 text-orange-600 flex items-center justify-center font-medium">7-8</span>
+                <span className="w-6 h-6 rounded bg-warning/20 text-warning flex items-center justify-center font-medium">7-8</span>
                 <span className="text-muted-foreground">Těžké – intenzivní trénink</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-red-500/20 text-red-600 flex items-center justify-center font-medium">9-10</span>
+                <span className="w-6 h-6 rounded bg-destructive/20 text-destructive flex items-center justify-center font-medium">9-10</span>
                 <span className="text-muted-foreground">Maximum – testování limitů</span>
               </div>
             </div>

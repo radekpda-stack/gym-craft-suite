@@ -102,10 +102,10 @@ export function PendingPerformancesCard() {
 
   return (
     <>
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-warning/30 bg-warning/5">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="h-5 w-5 text-amber-500" />
+            <Clock className="h-5 w-5 text-warning" />
             Čekající na schválení
             <Badge variant="secondary" className="ml-auto">
               {pendingPerformances.length}
@@ -164,7 +164,7 @@ export function PendingPerformancesCard() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-100"
+                  className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
                   onClick={() => handleApprove(performance.id)}
                   disabled={approvePerformance.isPending}
                   title="Schválit"
@@ -174,7 +174,7 @@ export function PendingPerformancesCard() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleReject(performance.id)}
                   disabled={approvePerformance.isPending}
                   title="Zamítnout"

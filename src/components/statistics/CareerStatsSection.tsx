@@ -60,7 +60,7 @@ function KPICard({
             {trend && (
               <div className={cn(
                 "flex items-center gap-1 text-xs mt-1",
-                trend.value > 0 ? "text-emerald-500" : trend.value < 0 ? "text-red-500" : "text-muted-foreground"
+                trend.value > 0 ? "text-success" : trend.value < 0 ? "text-destructive" : "text-muted-foreground"
               )}>
                 <TrendingUp className={cn("h-3 w-3", trend.value < 0 && "rotate-180")} />
                 <span>{trend.value > 0 ? '+' : ''}{trend.value}% {trend.label}</span>
@@ -91,9 +91,9 @@ function InsightsBlock({ insights }: { insights: { type: 'success' | 'warning' |
             key={idx}
             className={cn(
               "flex items-start gap-2 p-2 rounded-lg text-sm",
-              insight.type === 'success' && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-              insight.type === 'warning' && "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-              insight.type === 'info' && "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+              insight.type === 'success' && "bg-success/10 text-success",
+              insight.type === 'warning' && "bg-warning/10 text-warning",
+              insight.type === 'info' && "bg-accent/10 text-accent"
             )}
           >
             {insight.type === 'success' && <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />}
@@ -213,40 +213,40 @@ export function CareerStatsSection() {
           icon={Clock}
           label="Celkem hodin"
           value={`${stats.totalHours.toLocaleString('cs-CZ')} h`}
-          iconColor="text-blue-500"
-          iconBg="bg-blue-500/10"
+          iconColor="text-accent"
+          iconBg="bg-accent/10"
         />
         <KPICard
           icon={Users}
           label="Unikátních klientů"
           value={stats.uniqueClients}
           subValue="se kterými jste trénoval/a"
-          iconColor="text-purple-500"
-          iconBg="bg-purple-500/10"
+          iconColor="text-primary"
+          iconBg="bg-primary/10"
         />
         <KPICard
           icon={UserCheck}
           label="Aktivní klienti (30d)"
           value={analytics?.activeClients30Days || 0}
           trend={analytics?.vsLastMonth ? { value: analytics.vsLastMonth.clients, label: 'vs minulý měsíc' } : undefined}
-          iconColor="text-emerald-500"
-          iconBg="bg-emerald-500/10"
+          iconColor="text-success"
+          iconBg="bg-success/10"
         />
         <KPICard
           icon={Gauge}
           label="Vytíženost kapacity"
           value={`${analytics?.capacityUtilization || 0}%`}
           subValue="max 6h/den"
-          iconColor="text-amber-500"
-          iconBg="bg-amber-500/10"
+          iconColor="text-warning"
+          iconBg="bg-warning/10"
         />
         <KPICard
           icon={Banknote}
           label="Hodinová sazba"
           value={formatCurrency(stats.avgHourlyRate)}
           subValue="průměrně"
-          iconColor="text-emerald-500"
-          iconBg="bg-emerald-500/10"
+          iconColor="text-success"
+          iconBg="bg-success/10"
         />
       </div>
 
@@ -267,15 +267,15 @@ export function CareerStatsSection() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/10">
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/10">
               <p className="text-lg font-bold">{stats.strengthTrainings}</p>
               <p className="text-xs text-muted-foreground">Silové</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/10">
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/10">
               <p className="text-lg font-bold">{stats.cardioTrainings}</p>
               <p className="text-xs text-muted-foreground">Kardio</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/10">
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/10">
               <p className="text-lg font-bold">{stats.conditioningTrainings}</p>
               <p className="text-xs text-muted-foreground">Kondiční</p>
             </div>
