@@ -119,8 +119,8 @@ export function CreditSignalBox() {
       icon: CheckCircle2,
       label: 'V pořádku',
       value: data?.ok || 0,
-      color: 'text-green-500',
-      bg: 'bg-green-500/10',
+      color: 'text-success',
+      bg: 'bg-success/10',
       tooltip: 'Klienti s dostatečným kreditem',
     },
     {
@@ -128,8 +128,8 @@ export function CreditSignalBox() {
       icon: AlertTriangle,
       label: 'Nízký kredit',
       value: data?.low || 0,
-      color: 'text-orange-500',
-      bg: 'bg-orange-500/10',
+      color: 'text-warning',
+      bg: 'bg-warning/10',
       tooltip: `Kredit pod ${lowCreditThreshold} Kč`,
     },
     {

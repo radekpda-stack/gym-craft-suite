@@ -121,12 +121,12 @@ export function ClientProgressTab({ clientId, clientName }: ClientProgressTabPro
             <span className="text-muted-foreground text-sm">záznamů</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-green-400" />
+            <TrendingUp className="w-5 h-5 text-success" />
             <span className="font-semibold">{uniqueExercises.length}</span>
             <span className="text-muted-foreground text-sm">cviků</span>
           </div>
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
+            <Trophy className="w-5 h-5 text-warning" />
             <span className="font-semibold">{prsCount}</span>
             <span className="text-muted-foreground text-sm">PR</span>
           </div>
@@ -232,7 +232,7 @@ export function ClientProgressTab({ clientId, clientName }: ClientProgressTabPro
                             {exercise.name}
                           </CardTitle>
                           {exercise.hasPR && (
-                            <Badge className="gap-1 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                            <Badge className="gap-1 bg-warning/20 text-warning border-warning/30">
                               <Trophy className="w-3 h-3" /> PR
                             </Badge>
                           )}

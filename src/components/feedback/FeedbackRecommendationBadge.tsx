@@ -16,21 +16,21 @@ const levelConfig: Record<RecommendationLevel, {
 }> = {
   green: {
     icon: CheckCircle,
-    bgClass: 'bg-green-500/10',
-    textClass: 'text-green-700',
-    borderClass: 'border-green-500/30',
+    bgClass: 'bg-success/10',
+    textClass: 'text-success',
+    borderClass: 'border-success/30',
   },
   yellow: {
     icon: AlertTriangle,
-    bgClass: 'bg-yellow-500/10',
-    textClass: 'text-yellow-700',
-    borderClass: 'border-yellow-500/30',
+    bgClass: 'bg-warning/10',
+    textClass: 'text-warning',
+    borderClass: 'border-warning/30',
   },
   red: {
     icon: XCircle,
-    bgClass: 'bg-red-500/10',
-    textClass: 'text-red-700',
-    borderClass: 'border-red-500/30',
+    bgClass: 'bg-destructive/10',
+    textClass: 'text-destructive',
+    borderClass: 'border-destructive/30',
   },
 };
 

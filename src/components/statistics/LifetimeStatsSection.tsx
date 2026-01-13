@@ -229,18 +229,18 @@ export function LifetimeStatsSection() {
             />
           </div>
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/10">
-              <Zap className="h-5 w-5 mx-auto mb-1.5 text-orange-500" />
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/10">
+              <Zap className="h-5 w-5 mx-auto mb-1.5 text-warning" />
               <p className="text-lg font-bold">{stats.strengthTrainings}</p>
               <p className="text-xs text-muted-foreground">Silové</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/10">
-              <Heart className="h-5 w-5 mx-auto mb-1.5 text-red-500" />
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/10">
+              <Heart className="h-5 w-5 mx-auto mb-1.5 text-destructive" />
               <p className="text-lg font-bold">{stats.cardioTrainings}</p>
               <p className="text-xs text-muted-foreground">Kardio</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/10">
-              <Activity className="h-5 w-5 mx-auto mb-1.5 text-blue-500" />
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/10">
+              <Activity className="h-5 w-5 mx-auto mb-1.5 text-accent" />
               <p className="text-lg font-bold">{stats.conditioningTrainings}</p>
               <p className="text-xs text-muted-foreground">Kondiční</p>
             </div>

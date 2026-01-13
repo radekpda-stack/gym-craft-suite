@@ -299,7 +299,7 @@ export function ClientPortalDetailSheet({ client, open, onOpenChange }: ClientPo
                         {showPassword ? (client.portal_password || '-') : '••••••••'}
                       </code>
                       {client.credentials_changed_at && (
-                        <Badge variant="outline" className="ml-2 text-amber-600 dark:text-amber-500 border-amber-500/50 text-[10px]">
+                        <Badge variant="outline" className="ml-2 text-warning border-warning/50 text-[10px]">
                           Změněno klientem
                         </Badge>
                       )}

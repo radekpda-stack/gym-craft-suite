@@ -75,20 +75,20 @@ export function XPLevelCard({ clientId }: XPLevelCardProps) {
 
           {/* Stats Row */}
           <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10">
-              <Flame className="w-4 h-4 text-orange-500" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10">
+              <Flame className="w-4 h-4 text-warning" />
               <div>
                 <p className="text-xs text-muted-foreground">Série</p>
-                <p className="font-semibold text-orange-500">
+                <p className="font-semibold text-warning">
                   {streak?.currentStreak || 0} {streak?.currentStreak === 1 ? 'týden' : streak?.currentStreak && streak.currentStreak >= 2 && streak.currentStreak <= 4 ? 'týdny' : 'týdnů'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10">
-              <TrendingUp className="w-4 h-4 text-green-500" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10">
+              <TrendingUp className="w-4 h-4 text-success" />
               <div>
                 <p className="text-xs text-muted-foreground">Nejdelší série</p>
-                <p className="font-semibold text-green-500">
+                <p className="font-semibold text-success">
                   {streak?.longestStreak || 0} {streak?.longestStreak === 1 ? 'týden' : streak?.longestStreak && streak.longestStreak >= 2 && streak.longestStreak <= 4 ? 'týdny' : 'týdnů'}
                 </p>
               </div>

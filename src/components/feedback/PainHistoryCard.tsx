@@ -246,7 +246,7 @@ export function PainHistoryCard({ clientId }: PainHistoryCardProps) {
                 className={cn(
                   "text-xs flex items-center gap-1",
                   trend > 0.5 && "border-destructive text-destructive",
-                  trend < -0.5 && "border-green-500 text-green-500"
+                  trend < -0.5 && "border-success text-success"
                 )}
               >
                 {trend > 0.5 ? (

@@ -11,17 +11,17 @@ const STATUS_CONFIG = {
   pending: {
     label: 'Čeká na vyřízení',
     icon: Clock,
-    className: 'bg-yellow-500/10 text-yellow-600',
+    className: 'bg-warning/10 text-warning',
   },
   fulfilled: {
     label: 'Splněno',
     icon: CheckCircle2,
-    className: 'bg-green-500/10 text-green-600',
+    className: 'bg-success/10 text-success',
   },
   cancelled: {
     label: 'Zrušeno',
     icon: XCircle,
-    className: 'bg-red-500/10 text-red-600',
+    className: 'bg-destructive/10 text-destructive',
   },
 };
 
@@ -48,7 +48,7 @@ function RedemptionItem({ redemption }: { redemption: RewardRedemption }) {
       </div>
       
       <div className="text-right">
-        <div className="flex items-center gap-1 text-amber-500 font-medium text-sm">
+        <div className="flex items-center gap-1 text-warning font-medium text-sm">
           <Coins className="w-3 h-3" />
           -{redemption.lp_spent}
         </div>
