@@ -51,6 +51,7 @@ const formSchema = z.object({
   notes: z.string().optional(),
   // Extended metrics
   distance_meters: z.number().nullable().optional(),
+  height_cm: z.number().nullable().optional(), // For height-based jumps
   avg_watts: z.number().nullable().optional(),
   max_watts: z.number().nullable().optional(),
   pace_sec_per_500m: z.number().nullable().optional(),
@@ -118,8 +119,9 @@ export function QuickLogDialog({
       sets: 1,
       time_ms: null,
       notes: '',
-      distance_meters: null,
-      avg_watts: null,
+        distance_meters: null,
+        height_cm: null,
+        avg_watts: null,
       max_watts: null,
       pace_sec_per_500m: null,
       pace_sec_per_km: null,
@@ -158,6 +160,7 @@ export function QuickLogDialog({
         time_ms: null,
         notes: '',
         distance_meters: defaultDistance,
+        height_cm: null,
         avg_watts: null,
         max_watts: null,
         pace_sec_per_500m: null,
@@ -243,6 +246,7 @@ export function QuickLogDialog({
         is_pr: false,
         // Extended metrics
         distance_meters: data.distance_meters ?? null,
+        height_cm: data.height_cm ?? null, // For height-based jumps
         avg_watts: data.avg_watts ?? null,
         max_watts: data.max_watts ?? null,
         pace_sec_per_500m: pace500m != null ? Math.round(pace500m) : null,
@@ -710,7 +714,7 @@ export function QuickLogDialog({
                 </Collapsible>
               </div>
             ) : isJumpExercise ? (
-              /* Jump exercises - distance in cm */
+              /* Jump exercises - height (cm) or distance (m) */
               <div className="space-y-4">
                 {/* Side selector for unilateral exercises */}
                 {isUnilateral && (
@@ -726,32 +730,63 @@ export function QuickLogDialog({
                   </div>
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="distance_meters"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        <Ruler className="w-3 h-3" />
-                        Vzdálenost / Výška (cm) *
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="např. 250"
-                          value={field.value ? Math.round(field.value * 100) : ''}
-                          onChange={(e) => field.onChange(e.target.value ? Math.round(parseFloat(e.target.value)) / 100 : null)}
-                          className="h-11"
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Zadejte vzdálenost skoku v centimetrech
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Height-based jumps (CMJ, SJ, DJ, Box Jump) */}
+                {isHeightJump ? (
+                  <FormField
+                    control={form.control}
+                    name="height_cm"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          <Ruler className="w-3 h-3" />
+                          Výška skoku (cm) *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="např. 45"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Zadejte výšku skoku v centimetrech
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  /* Distance-based jumps (Long Jump, Broad Jump) */
+                  <FormField
+                    control={form.control}
+                    name="distance_meters"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          <Ruler className="w-3 h-3" />
+                          Vzdálenost skoku (cm) *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="např. 250"
+                            value={field.value ? Math.round(field.value * 100) : ''}
+                            onChange={(e) => field.onChange(e.target.value ? Math.round(parseFloat(e.target.value)) / 100 : null)}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Zadejte vzdálenost skoku v centimetrech
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 {/* Sets for jumps */}
                 <div className="grid grid-cols-2 gap-3">

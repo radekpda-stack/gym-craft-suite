@@ -14,6 +14,7 @@ export interface CircuitExercise {
   reps?: number | null;
   time_seconds?: number | null;
   distance_meters?: number | null;
+  height_cm?: number | null; // For height-based jumps
   weight_kg?: number | null;
   notes?: string | null;
   sort_order: number;
@@ -79,7 +80,7 @@ export function CircuitExerciseItem({
             </div>
 
             {/* Parameters */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Opakování</Label>
                 <Input
@@ -124,6 +125,22 @@ export function CircuitExerciseItem({
                     })
                   }
                   placeholder="200"
+                  className="h-8"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Výška (cm)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={exercise.height_cm ?? ''}
+                  onChange={(e) =>
+                    onUpdate({
+                      height_cm: e.target.value === '' ? null : parseInt(e.target.value),
+                    })
+                  }
+                  placeholder="45"
                   className="h-8"
                 />
               </div>
