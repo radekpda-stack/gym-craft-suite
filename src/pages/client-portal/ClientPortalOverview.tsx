@@ -20,13 +20,13 @@ import { Button } from '@/components/ui/button';
 
 // Dashboard widgets
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
-import { ProgressLinkCard } from '@/components/client-portal/dashboard/ProgressLinkCard';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
 import { ClientActionRequired } from '@/components/client-portal/dashboard/ClientActionRequired';
 import { HeroStatsRow } from '@/components/client-portal/dashboard/HeroStatsRow';
+import { ClientInsightsCard } from '@/components/client-portal/dashboard/ClientInsightsCard';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -63,25 +63,25 @@ export default function ClientPortalOverview() {
       {/* 2. ACTION REQUIRED - Hero section for pending tasks */}
       <ClientActionRequired />
 
-      {/* 3. Hero Stats Row - Credit + Next Training */}
+      {/* 3. Hero Stats Row - Credit + Streak + Next Training */}
       <HeroStatsRow period={period} />
 
-      {/* 4. Quick Actions - 4 main icons */}
+      {/* 4. Insights Card - Personalized insights from data */}
+      <ClientInsightsCard />
+
+      {/* 5. Quick Actions - 4 main icons */}
       <ClientQuickActions />
 
-      {/* 5. Training Calendar */}
+      {/* 6. Training Calendar */}
       <TrainingCalendar />
 
-      {/* 6. Overall Performance Card */}
+      {/* 7. Overall Performance Card */}
       {clientId && <OverallPerformanceCard clientId={clientId} />}
 
-      {/* 7. Active Challenges */}
+      {/* 8. Active Challenges */}
       <ActiveChallengeWidget />
 
-      {/* 8. Progress Link */}
-      <ProgressLinkCard delay={0.25} />
-
-      {/* 8. Recent Activity - Collapsible */}
+      {/* 9. Recent Activity - Collapsible */}
       {recentActivity && recentActivity.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
