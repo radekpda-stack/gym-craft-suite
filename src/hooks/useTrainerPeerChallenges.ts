@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useUser } from '@/hooks/useUser';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface TrainerPeerChallenge {
   id: string;
@@ -23,7 +23,7 @@ export interface TrainerPeerChallenge {
 
 // Fetch all peer challenges for trainer's clients
 export function useTrainerPeerChallenges() {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: ['trainer-peer-challenges', user?.id],
@@ -59,7 +59,7 @@ export function useTrainerPeerChallenges() {
 
 // Fetch single peer challenge with full details for trainer
 export function useTrainerPeerChallengeDetail(challengeId: string | null) {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: ['trainer-peer-challenge-detail', challengeId],
@@ -86,7 +86,7 @@ export function useTrainerPeerChallengeDetail(challengeId: string | null) {
         .from('peer_challenge_participants')
         .select(`
           *,
-          clients(id, first_name, last_name)
+          clients(id, name)
         `)
         .eq('challenge_id', challengeId);
 
@@ -97,7 +97,7 @@ export function useTrainerPeerChallengeDetail(challengeId: string | null) {
         .from('peer_challenge_submissions')
         .select(`
           *,
-          clients(id, first_name, last_name)
+          clients(id, name)
         `)
         .eq('challenge_id', challengeId)
         .order('score_primary', { 
@@ -283,7 +283,7 @@ export function useExportPeerChallengeResults() {
         .from('peer_challenge_submissions')
         .select(`
           *,
-          clients(first_name, last_name)
+          clients(name)
         `)
         .eq('challenge_id', challengeId)
         .order('score_primary', { ascending: false });
@@ -294,7 +294,7 @@ export function useExportPeerChallengeResults() {
       const headers = ['Pořadí', 'Jméno', 'Skóre', 'Poznámka', 'Datum'];
       const rows = submissions.map((s, i) => [
         i + 1,
-        `${s.clients?.first_name || ''} ${s.clients?.last_name || ''}`.trim(),
+        (s.clients as any)?.name || '',
         s.score_primary,
         s.note || '',
         new Date(s.submitted_at).toLocaleDateString('cs'),

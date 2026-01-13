@@ -52,9 +52,69 @@ export interface LeaderboardEntry {
   client_id: string;
   display_name: string;
   score: number;
+  best_score: number;
   rank: number;
   is_current_user: boolean;
+  is_me: boolean;
   submission_count: number;
+}
+
+export interface PeerChallengeInvitation {
+  participant_id: string;
+  challenge_id: string;
+  challenge_title: string;
+  challenge_type: string;
+  primary_metric: string;
+  end_at: string;
+  invited_by_name: string;
+  participant_count: number;
+}
+
+export interface PeerChallengeWithDetails extends PeerChallenge {
+  participant_count: number;
+  my_submission: { score_primary: number } | null;
+  my_rank: number | null;
+  my_participation_status: string | null;
+  leaderboard: LeaderboardEntry[];
+}
+
+// Alias exports for components
+export { usePeerChallenge as usePeerChallengeDetail };
+export { useSubmitPeerChallengeResult as useSubmitResult };
+
+export function usePeerChallengeInvitations() {
+  const { clientId } = useClientPortal();
+  
+  return useQuery({
+    queryKey: ['peer-challenge-invitations', clientId],
+    queryFn: async (): Promise<PeerChallengeInvitation[]> => {
+      if (!clientId) return [];
+      
+      const { data, error } = await supabase
+        .from('peer_challenge_participants')
+        .select(`
+          id,
+          challenge_id,
+          peer_challenges(title, challenge_type, primary_metric, end_at)
+        `)
+        .eq('client_id', clientId)
+        .eq('status', 'pending');
+      
+      if (error) throw error;
+      
+      return (data || []).map(d => ({
+        participant_id: d.id,
+        challenge_id: d.challenge_id,
+        challenge_title: (d.peer_challenges as any)?.title || '',
+        challenge_type: (d.peer_challenges as any)?.challenge_type || '',
+        primary_metric: (d.peer_challenges as any)?.primary_metric || '',
+        end_at: (d.peer_challenges as any)?.end_at || '',
+        invited_by_name: 'Klient',
+        participant_count: 0,
+      }));
+    },
+    enabled: !!clientId,
+  });
 }
 
 // Fetch all peer challenges for the current client
