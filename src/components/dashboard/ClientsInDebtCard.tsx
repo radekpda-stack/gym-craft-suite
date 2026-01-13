@@ -49,32 +49,73 @@ export function ClientsInDebtCard() {
   const navigate = useNavigate();
   const createTransaction = useCreateTransaction();
   
-  // Fetch clients with debt using credit_balance directly (source of truth)
+  // Fetch clients with debt using ledger-based balance and respecting shared budgets
   const { data: clientsInDebt = [], isLoading } = useQuery({
     queryKey: ['clients-in-debt'],
     queryFn: async (): Promise<ClientDebt[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Get all non-archived clients with negative credit_balance
-      // credit_balance < 0 = client owes money (debt)
-      const { data: clientsWithDebt, error } = await supabase
-        .from('clients')
-        .select('id, name, credit_balance')
-        .eq('user_id', user.id)
-        .eq('is_archived', false)
-        .lt('credit_balance', 0)
-        .order('credit_balance', { ascending: true });
+      // Get all data in parallel
+      const [clientsResult, budgetMembersResult, transactionsResult] = await Promise.all([
+        supabase
+          .from('clients')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('is_archived', false),
+        supabase
+          .from('client_budget_members')
+          .select('client_id, group_id, client_budget_groups(id, shared_balance)')
+          .eq('user_id', user.id),
+        supabase
+          .from('credit_transactions')
+          .select('client_id, group_id, amount'),
+      ]);
 
-      if (error) throw error;
+      if (clientsResult.error) throw clientsResult.error;
 
-      return (clientsWithDebt || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        debt: Math.abs(c.credit_balance || 0),
-        unpaidCount: 0, // Not tracking unpaid sessions separately anymore
-        hasNegativeCredit: true,
-      }));
+      // Build map of client -> group info
+      const clientGroupMap = new Map<string, { groupId: string; sharedBalance: number }>();
+      (budgetMembersResult.data || []).forEach((m: any) => {
+        if (m.client_budget_groups) {
+          clientGroupMap.set(m.client_id, {
+            groupId: m.group_id,
+            sharedBalance: m.client_budget_groups.shared_balance || 0,
+          });
+        }
+      });
+
+      // Calculate ledger balance per client (only for clients NOT in groups)
+      const clientLedgerBalance = new Map<string, number>();
+      (transactionsResult.data || []).forEach((t: any) => {
+        if (!t.group_id && t.client_id) {
+          clientLedgerBalance.set(t.client_id, (clientLedgerBalance.get(t.client_id) || 0) + (t.amount || 0));
+        }
+      });
+
+      // Filter to clients with actual debt
+      return (clientsResult.data || [])
+        .map(c => {
+          const groupInfo = clientGroupMap.get(c.id);
+          
+          // If client is in a budget group, use the shared balance
+          // Otherwise, use ledger-calculated balance
+          const effectiveBalance = groupInfo
+            ? groupInfo.sharedBalance
+            : (clientLedgerBalance.get(c.id) || 0);
+          
+          const hasDebt = effectiveBalance < 0;
+          
+          return {
+            id: c.id,
+            name: c.name,
+            debt: hasDebt ? Math.abs(effectiveBalance) : 0,
+            unpaidCount: 0,
+            hasNegativeCredit: hasDebt,
+          };
+        })
+        .filter(c => c.hasNegativeCredit)
+        .sort((a, b) => b.debt - a.debt);
     },
     staleTime: 60000,
   });
