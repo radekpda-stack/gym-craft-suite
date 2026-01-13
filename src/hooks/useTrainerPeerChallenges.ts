@@ -272,12 +272,20 @@ export function useCancelPeerChallenge() {
 export function useExportPeerChallengeResults() {
   return useMutation({
     mutationFn: async (challengeId: string) => {
-      // Fetch full data
+      // Fetch full data including scoring_type
       const { data: challenge } = await supabase
         .from('peer_challenges')
-        .select('title')
+        .select('title, scoring_type')
         .eq('id', challengeId)
         .single();
+
+      // Get participants with XP data
+      const { data: participants } = await supabase
+        .from('peer_challenge_participants')
+        .select('client_id, xp_bet, xp_result, final_rank')
+        .eq('challenge_id', challengeId);
+
+      const participantMap = new Map(participants?.map(p => [p.client_id, p]) || []);
 
       const { data: submissions } = await supabase
         .from('peer_challenge_submissions')
@@ -286,19 +294,26 @@ export function useExportPeerChallengeResults() {
           clients(name)
         `)
         .eq('challenge_id', challengeId)
-        .order('score_primary', { ascending: false });
+        .order('score_primary', { 
+          ascending: challenge?.scoring_type === 'time_lower_better' 
+        });
 
       if (!submissions) return;
 
-      // Create CSV
-      const headers = ['Pořadí', 'Jméno', 'Skóre', 'Poznámka', 'Datum'];
-      const rows = submissions.map((s, i) => [
-        i + 1,
-        (s.clients as any)?.name || '',
-        s.score_primary,
-        s.note || '',
-        new Date(s.submitted_at).toLocaleDateString('cs'),
-      ]);
+      // Create CSV with XP data
+      const headers = ['Pořadí', 'Jméno', 'Skóre', 'XP sázka', 'XP výsledek', 'Poznámka', 'Datum'];
+      const rows = submissions.map((s, i) => {
+        const participant = participantMap.get(s.client_id);
+        return [
+          i + 1,
+          (s.clients as any)?.name || '',
+          s.score_primary,
+          participant?.xp_bet || 0,
+          participant?.xp_result || 0,
+          s.note || '',
+          new Date(s.submitted_at).toLocaleDateString('cs'),
+        ];
+      });
 
       const csv = [
         headers.join(';'),
