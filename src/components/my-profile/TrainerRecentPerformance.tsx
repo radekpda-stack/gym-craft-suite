@@ -168,19 +168,19 @@ export function TrainerRecentPerformance({ clientId }: TrainerRecentPerformanceP
             className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors"
           >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              entry.type === 'strength' ? 'bg-orange-500/10' : 'bg-blue-500/10'
+              entry.type === 'strength' ? 'bg-warning/10' : 'bg-accent/10'
             }`}>
               {entry.type === 'strength' ? (
-                <Dumbbell className="w-4 h-4 text-orange-500" />
+                <Dumbbell className="w-4 h-4 text-warning" />
               ) : (
-                <Timer className="w-4 h-4 text-blue-500" />
+                <Timer className="w-4 h-4 text-accent" />
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm truncate">{entry.exerciseName}</span>
                 {entry.isPR && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-600 font-medium">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/20 text-warning font-medium">
                     PR
                   </span>
                 )}

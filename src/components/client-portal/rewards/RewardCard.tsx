@@ -83,7 +83,7 @@ export function RewardCard({ reward, lpBalance, index = 0 }: RewardCardProps) {
         )}>
           {quantityLeft !== null && quantityLeft <= 3 && (
             <Badge 
-              className="absolute top-2 right-2 bg-orange-500 text-white"
+              className="absolute top-2 right-2 bg-warning text-warning-foreground"
               variant="secondary"
             >
               Zbývá {quantityLeft}
@@ -116,7 +116,7 @@ export function RewardCard({ reward, lpBalance, index = 0 }: RewardCardProps) {
           
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-amber-500 font-semibold">
+              <div className="flex items-center gap-1 text-warning font-semibold">
                 <Coins className="w-4 h-4" />
                 {reward.lp_cost} LP
               </div>

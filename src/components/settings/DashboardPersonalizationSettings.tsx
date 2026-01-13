@@ -48,7 +48,7 @@ export function DashboardPersonalizationSettings() {
             >
               <div className="flex items-center gap-2">
                 {isVisible ? (
-                  <Eye className="h-4 w-4 text-green-500" />
+                  <Eye className="h-4 w-4 text-success" />
                 ) : (
                   <EyeOff className="h-4 w-4 text-muted-foreground" />
                 )}

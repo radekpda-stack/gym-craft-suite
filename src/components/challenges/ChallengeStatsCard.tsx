@@ -127,7 +127,7 @@ export function ChallengeStatsCard({ challenge, className }: ChallengeStatsCardP
             <>
               <div className="p-3 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <Trophy className="h-4 w-4 text-warning" />
                   <span className="text-xs">Nejlepší</span>
                 </div>
                 <p className="text-lg font-bold">
