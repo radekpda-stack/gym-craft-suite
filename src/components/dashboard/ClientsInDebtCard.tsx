@@ -49,93 +49,32 @@ export function ClientsInDebtCard() {
   const navigate = useNavigate();
   const createTransaction = useCreateTransaction();
   
-  // Fetch clients with debt using ledger-calculated balance (sum of transactions)
+  // Fetch clients with debt using credit_balance directly (source of truth)
   const { data: clientsInDebt = [], isLoading } = useQuery({
     queryKey: ['clients-in-debt'],
     queryFn: async (): Promise<ClientDebt[]> => {
-      // Get all non-archived clients with their budget group info and calculate real balance from transactions
-      const [clientsResult, unpaidResult, transactionsResult] = await Promise.all([
-        supabase
-          .from('clients')
-          .select(`
-            id,
-            name,
-            client_budget_members (
-              group_id,
-              client_budget_groups (
-                id,
-                shared_balance
-              )
-            )
-          `)
-          .eq('is_archived', false),
-        supabase
-          .from('training_sessions')
-          .select('id, client_id, final_price')
-          .eq('status', 'completed')
-          .eq('payment_status', 'pending'),
-        // Get all credit transactions to calculate real balance
-        supabase
-          .from('credit_transactions')
-          .select('client_id, amount, group_id'),
-      ]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
 
-      if (clientsResult.error) throw clientsResult.error;
+      // Get all non-archived clients with negative credit_balance
+      // credit_balance < 0 = client owes money (debt)
+      const { data: clientsWithDebt, error } = await supabase
+        .from('clients')
+        .select('id, name, credit_balance')
+        .eq('user_id', user.id)
+        .eq('is_archived', false)
+        .lt('credit_balance', 0)
+        .order('credit_balance', { ascending: true });
 
-      // Calculate real balance from transactions (ledger-based)
-      const clientBalanceMap = new Map<string, number>();
-      const groupBalanceMap = new Map<string, number>();
-      
-      (transactionsResult.data || []).forEach(t => {
-        if (t.group_id) {
-          // Group transaction - add to group balance
-          groupBalanceMap.set(t.group_id, (groupBalanceMap.get(t.group_id) || 0) + (t.amount || 0));
-        } else {
-          // Individual transaction
-          clientBalanceMap.set(t.client_id, (clientBalanceMap.get(t.client_id) || 0) + (t.amount || 0));
-        }
-      });
+      if (error) throw error;
 
-      // Build map of unpaid amounts per client
-      const unpaidByClient = new Map<string, { count: number; amount: number }>();
-      (unpaidResult.data || []).forEach(t => {
-        const current = unpaidByClient.get(t.client_id) || { count: 0, amount: 0 };
-        unpaidByClient.set(t.client_id, {
-          count: current.count + 1,
-          amount: current.amount + (t.final_price || 0),
-        });
-      });
-
-      // Filter to clients with effective negative balance OR unpaid sessions
-      return (clientsResult.data || [])
-        .map(c => {
-          // Check if client is in a budget group
-          const budgetMember = c.client_budget_members?.[0];
-          const groupId = budgetMember?.client_budget_groups?.id;
-          
-          // Use ledger-calculated balance (sum of transactions)
-          // For group members, use group balance; otherwise individual balance
-          const effectiveBalance = groupId
-            ? (groupBalanceMap.get(groupId) || 0)
-            : (clientBalanceMap.get(c.id) || 0);
-          
-          const unpaidInfo = unpaidByClient.get(c.id) || { count: 0, amount: 0 };
-          const hasNegativeCredit = effectiveBalance < 0;
-          
-          // Total debt = negative credit (if any) + unpaid sessions amount
-          const creditDebt = hasNegativeCredit ? Math.abs(effectiveBalance) : 0;
-          const totalDebt = creditDebt + unpaidInfo.amount;
-          
-          return {
-            id: c.id,
-            name: c.name,
-            debt: totalDebt,
-            unpaidCount: unpaidInfo.count,
-            hasNegativeCredit,
-          };
-        })
-        .filter(c => c.debt > 0)
-        .sort((a, b) => b.debt - a.debt);
+      return (clientsWithDebt || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        debt: Math.abs(c.credit_balance || 0),
+        unpaidCount: 0, // Not tracking unpaid sessions separately anymore
+        hasNegativeCredit: true,
+      }));
     },
     staleTime: 60000,
   });
