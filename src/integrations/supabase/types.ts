@@ -5949,29 +5949,41 @@ export type Database = {
         Row: {
           challenge_id: string
           client_id: string
+          final_rank: number | null
           id: string
           invited_at: string
           joined_at: string | null
           role: string
           status: string
+          xp_bet: number | null
+          xp_result: number | null
+          xp_settled_at: string | null
         }
         Insert: {
           challenge_id: string
           client_id: string
+          final_rank?: number | null
           id?: string
           invited_at?: string
           joined_at?: string | null
           role?: string
           status?: string
+          xp_bet?: number | null
+          xp_result?: number | null
+          xp_settled_at?: string | null
         }
         Update: {
           challenge_id?: string
           client_id?: string
+          final_rank?: number | null
           id?: string
           invited_at?: string
           joined_at?: string | null
           role?: string
           status?: string
+          xp_bet?: number | null
+          xp_result?: number | null
+          xp_settled_at?: string | null
         }
         Relationships: [
           {
@@ -6049,6 +6061,69 @@ export type Database = {
           },
         ]
       }
+      peer_challenge_xp_stats: {
+        Row: {
+          best_streak: number | null
+          biggest_loss: number | null
+          biggest_win: number | null
+          client_id: string
+          created_at: string | null
+          current_streak: number | null
+          draws: number | null
+          losses: number | null
+          total_bets: number | null
+          total_lost: number | null
+          total_won: number | null
+          updated_at: string | null
+          wins: number | null
+        }
+        Insert: {
+          best_streak?: number | null
+          biggest_loss?: number | null
+          biggest_win?: number | null
+          client_id: string
+          created_at?: string | null
+          current_streak?: number | null
+          draws?: number | null
+          losses?: number | null
+          total_bets?: number | null
+          total_lost?: number | null
+          total_won?: number | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Update: {
+          best_streak?: number | null
+          biggest_loss?: number | null
+          biggest_win?: number | null
+          client_id?: string
+          created_at?: string | null
+          current_streak?: number | null
+          draws?: number | null
+          losses?: number | null
+          total_bets?: number | null
+          total_lost?: number | null
+          total_won?: number | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peer_challenge_xp_stats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peer_challenge_xp_stats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       peer_challenges: {
         Row: {
           challenge_type: string
@@ -6072,6 +6147,10 @@ export type Database = {
           trainer_id: string
           unit_label: string | null
           updated_at: string
+          xp_bet_amount: number | null
+          xp_bet_enabled: boolean | null
+          xp_bet_max: number | null
+          xp_bet_min: number | null
         }
         Insert: {
           challenge_type?: string
@@ -6095,6 +6174,10 @@ export type Database = {
           trainer_id: string
           unit_label?: string | null
           updated_at?: string
+          xp_bet_amount?: number | null
+          xp_bet_enabled?: boolean | null
+          xp_bet_max?: number | null
+          xp_bet_min?: number | null
         }
         Update: {
           challenge_type?: string
@@ -6118,6 +6201,10 @@ export type Database = {
           trainer_id?: string
           unit_label?: string | null
           updated_at?: string
+          xp_bet_amount?: number | null
+          xp_bet_enabled?: boolean | null
+          xp_bet_max?: number | null
+          xp_bet_min?: number | null
         }
         Relationships: [
           {
@@ -10104,6 +10191,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      settle_peer_challenge_xp_bets: {
+        Args: { p_challenge_id: string }
+        Returns: Json
       }
       update_client_balance_atomic: {
         Args: { p_client_id: string; p_delta: number }
