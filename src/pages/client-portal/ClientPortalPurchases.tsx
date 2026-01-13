@@ -151,7 +151,7 @@ export default function ClientPortalPurchases() {
                               <span className="text-muted-foreground">×{item.quantity}</span>
                             )}
                             {/* Item discount badge */}
-                            {item.discountAmount && item.discountAmount > 0 && (
+                            {(item.discountAmount ?? 0) > 0 && (
                               <Badge variant="secondary" className="gap-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                 <Percent className="w-3 h-3" />
                                 {item.discountType === 'percent' && item.discountValue
@@ -161,7 +161,7 @@ export default function ClientPortalPurchases() {
                             )}
                           </div>
                           <div className="text-right">
-                            {item.discountAmount && item.discountAmount > 0 ? (
+                            {(item.discountAmount ?? 0) > 0 ? (
                               <div className="flex flex-col items-end">
                                 <span className="text-xs text-muted-foreground line-through">
                                   {formatCurrency(item.total)}
@@ -179,7 +179,7 @@ export default function ClientPortalPurchases() {
                     </div>
 
                     {/* Order-level discount */}
-                    {purchase.totalDiscount && purchase.totalDiscount > 0 && (
+                    {(purchase.totalDiscount ?? 0) > 0 && (
                       <div className="flex items-center justify-between text-sm py-2 border-t border-dashed">
                         <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                           <Percent className="w-4 h-4" />
