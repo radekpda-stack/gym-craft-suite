@@ -36,6 +36,7 @@ import { ChallengeHeroCard } from '@/components/client-portal/challenges/Challen
 import { TeamJoinCreate } from '@/components/client-portal/challenges/TeamJoinCreate';
 import { TeamManagement } from '@/components/client-portal/challenges/TeamManagement';
 import { TeamLeaderboardClient } from '@/components/client-portal/challenges/TeamLeaderboardClient';
+import { PeerChallengesSection } from '@/components/client-portal/challenges/PeerChallengesSection';
 import { formatChallengeScore, formatChallengeScoreFull, getMetricLabel, formatCountdown, getCountdownVariant } from '@/lib/challengeUtils';
 import { format, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -301,15 +302,22 @@ export default function ClientPortalChallenges() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-4 space-y-4">
+        <TabsContent value="active" className="mt-4 space-y-6">
+          {/* Peer Challenges Section - Mezi klienty */}
+          <PeerChallengesSection />
+
           {activeChallenges.length === 0 ? (
             <Card className="text-center py-12">
               <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="font-medium mb-2">Momentálně nejsou žádné aktivní výzvy</p>
+              <p className="font-medium mb-2">Momentálně nejsou žádné aktivní trenérské výzvy</p>
               <p className="text-sm text-muted-foreground">Tvůj trenér brzy vyhlásí novou výzvu!</p>
             </Card>
           ) : (
             <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Trenérské výzvy
+              </h3>
               {/* Hero card for first challenge */}
               {activeChallenges[0] && (
                 <ChallengeHeroCard

@@ -18,6 +18,7 @@ import { ChallengeEditor } from '@/components/challenges/ChallengeEditor';
 import { ChallengeSubmissionsView } from '@/components/challenges/ChallengeSubmissionsView';
 import { ChallengeWinnerManager } from '@/components/challenges/ChallengeWinnerManager';
 import { ChallengeStatsCard } from '@/components/challenges/ChallengeStatsCard';
+import { PeerChallengesTrainerView } from '@/components/challenges/PeerChallengesTrainerView';
 import { useSeedChallenges } from '@/hooks/useSeedChallenges';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format, isAfter, isBefore } from 'date-fns';
@@ -284,6 +285,10 @@ export default function Challenges() {
             <Archive className="h-4 w-4" />
             Archiv ({archivedChallenges.length})
           </TabsTrigger>
+          <TabsTrigger value="peer" className="gap-2">
+            <Users className="h-4 w-4" />
+            Klientské
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="published" className="mt-4">
@@ -328,6 +333,10 @@ export default function Challenges() {
               {archivedChallenges.map(renderChallengeCard)}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="peer" className="mt-4">
+          <PeerChallengesTrainerView />
         </TabsContent>
       </Tabs>
 
