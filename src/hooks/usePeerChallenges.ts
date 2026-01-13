@@ -327,6 +327,12 @@ export function useCreatePeerChallenge() {
       unit_label?: string;
       end_at: string;
       invited_client_ids?: string[];
+      // New public challenge fields
+      is_public?: boolean;
+      public_slug?: string;
+      require_photo_proof?: boolean;
+      metrics_config?: any;
+      leaderboard_config?: any;
     }) => {
       if (!clientId || !trainerId) throw new Error('Not authenticated');
 
@@ -361,6 +367,12 @@ export function useCreatePeerChallenge() {
           unit_label: data.unit_label,
           start_at: new Date().toISOString(),
           end_at: data.end_at,
+          // New public challenge fields
+          is_public: data.is_public || false,
+          public_slug: data.public_slug || null,
+          require_photo_proof: data.require_photo_proof || false,
+          metrics_config: data.metrics_config || null,
+          leaderboard_config: data.leaderboard_config || null,
         })
         .select()
         .single();

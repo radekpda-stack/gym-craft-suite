@@ -44,6 +44,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
 const FeedbackOverview = lazy(() => import("./pages/FeedbackOverview"));
 const PublicNutritionLog = lazy(() => import("./pages/PublicNutritionLog"));
+const PublicChallenge = lazy(() => import("./pages/PublicChallenge"));
 const Sales = lazy(() => import("./pages/Sales"));
 const PRHistory = lazy(() => import("./pages/PRHistory"));
 const AppUsageStats = lazy(() => import("./pages/AppUsageStats"));
@@ -129,6 +130,8 @@ const App = () => (
               <Route path="/nutrition-log/:token" element={<PublicNutritionLog />} />
               <Route path="/pre-diagnostic/:token" element={<PreDiagnosticFormPage />} />
               <Route path="/intake/:token" element={<ClientIntakePage />} />
+              {/* Public challenge page - no auth required */}
+              <Route path="/challenge/:slug" element={<PublicChallenge />} />
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               
