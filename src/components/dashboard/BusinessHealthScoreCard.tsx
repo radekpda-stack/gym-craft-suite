@@ -11,40 +11,40 @@ import { getStatusLabel } from '@/utils/healthInsightsGenerator';
 
 const STATUS_CONFIG = {
   excellent: {
-    gradient: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
-    accentGradient: 'from-emerald-400 to-green-500',
-    ring: 'ring-emerald-500/30',
-    text: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    glow: '0 0 40px rgba(16, 185, 129, 0.15)',
-    pulseColor: 'bg-emerald-400',
+    gradient: 'from-success/20 via-success/5 to-transparent',
+    accentGradient: 'from-success to-success/70',
+    ring: 'ring-success/30',
+    text: 'text-success',
+    bg: 'bg-success/10',
+    glow: '0 0 40px hsl(var(--success) / 0.15)',
+    pulseColor: 'bg-success',
   },
   good: {
     gradient: 'from-primary/20 via-primary/5 to-transparent',
-    accentGradient: 'from-primary to-violet-500',
+    accentGradient: 'from-primary to-primary/70',
     ring: 'ring-primary/30',
     text: 'text-primary',
     bg: 'bg-primary/10',
-    glow: '0 0 40px rgba(139, 92, 246, 0.15)',
+    glow: '0 0 40px hsl(var(--primary) / 0.15)',
     pulseColor: 'bg-primary',
   },
   warning: {
-    gradient: 'from-amber-500/20 via-amber-500/5 to-transparent',
-    accentGradient: 'from-amber-400 to-orange-500',
-    ring: 'ring-amber-500/30',
-    text: 'text-amber-400',
-    bg: 'bg-amber-500/10',
-    glow: '0 0 40px rgba(245, 158, 11, 0.15)',
-    pulseColor: 'bg-amber-400',
+    gradient: 'from-warning/20 via-warning/5 to-transparent',
+    accentGradient: 'from-warning to-warning/70',
+    ring: 'ring-warning/30',
+    text: 'text-warning',
+    bg: 'bg-warning/10',
+    glow: '0 0 40px hsl(var(--warning) / 0.15)',
+    pulseColor: 'bg-warning',
   },
   critical: {
-    gradient: 'from-red-500/20 via-red-500/5 to-transparent',
-    accentGradient: 'from-red-400 to-rose-500',
-    ring: 'ring-red-500/30',
-    text: 'text-red-400',
-    bg: 'bg-red-500/10',
-    glow: '0 0 40px rgba(239, 68, 68, 0.2)',
-    pulseColor: 'bg-red-400',
+    gradient: 'from-destructive/20 via-destructive/5 to-transparent',
+    accentGradient: 'from-destructive to-destructive/70',
+    ring: 'ring-destructive/30',
+    text: 'text-destructive',
+    bg: 'bg-destructive/10',
+    glow: '0 0 40px hsl(var(--destructive) / 0.2)',
+    pulseColor: 'bg-destructive',
   },
 };
 
@@ -253,8 +253,8 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
                   <motion.span
                     className={cn(
                       'text-xs flex items-center gap-1 px-2 py-1 rounded-full',
-                      weekChange > 0 ? 'text-emerald-400 bg-emerald-500/10' : 
-                      weekChange < 0 ? 'text-red-400 bg-red-500/10' : 
+                      weekChange > 0 ? 'text-success bg-success/10' : 
+                      weekChange < 0 ? 'text-destructive bg-destructive/10' : 
                       'text-muted-foreground bg-muted/20'
                     )}
                     initial={{ opacity: 0, x: -10 }}
@@ -335,18 +335,18 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
                           <div className="flex justify-center mb-1">
                             <IconComponent className={cn(
                               'w-4 h-4',
-                              isPositive ? 'text-emerald-400' : 
+                              isPositive ? 'text-success' : 
                               isNeutral ? 'text-muted-foreground' : 
-                              comp.value < 0 ? 'text-red-400' :
-                              'text-amber-400'
+                              comp.value < 0 ? 'text-destructive' :
+                              'text-warning'
                             )} />
                           </div>
                           <div className={cn(
                             'font-bold text-base tabular-nums',
-                            isPositive ? 'text-emerald-400' : 
+                            isPositive ? 'text-success' : 
                             isNeutral ? 'text-foreground' : 
-                            comp.value < 0 ? 'text-red-400' :
-                            'text-amber-400'
+                            comp.value < 0 ? 'text-destructive' :
+                            'text-warning'
                           )}>
                             {displayValue}%
                           </div>
@@ -401,27 +401,27 @@ export const BusinessHealthScoreCard = memo(function BusinessHealthScoreCard() {
                           <div className="flex items-center gap-2">
                             <div className={cn(
                               'p-2 rounded-lg',
-                              isPositive ? 'bg-emerald-500/10' : 
+                              isPositive ? 'bg-success/10' : 
                               isNeutral ? 'bg-muted/30' : 
-                              comp.value < 0 ? 'bg-red-500/10' :
-                              'bg-amber-500/10'
+                              comp.value < 0 ? 'bg-destructive/10' :
+                              'bg-warning/10'
                             )}>
                               <IconComponent className={cn(
                                 'w-5 h-5',
-                                isPositive ? 'text-emerald-400' : 
+                                isPositive ? 'text-success' : 
                                 isNeutral ? 'text-muted-foreground' : 
-                                comp.value < 0 ? 'text-red-400' :
-                                'text-amber-400'
+                                comp.value < 0 ? 'text-destructive' :
+                                'text-warning'
                               )} />
                             </div>
                             <div>
                               <h4 className="font-semibold text-sm">{metricConfig.detailTitle}</h4>
                               <span className={cn(
                                 'text-lg font-bold',
-                                isPositive ? 'text-emerald-400' : 
+                                isPositive ? 'text-success' : 
                                 isNeutral ? 'text-foreground' : 
-                                comp.value < 0 ? 'text-red-400' :
-                                'text-amber-400'
+                                comp.value < 0 ? 'text-destructive' :
+                                'text-warning'
                               )}>
                                 {comp.value > 0 && expandedMetric === 'revenueTrend' ? '+' : ''}{comp.value}%
                               </span>

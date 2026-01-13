@@ -23,9 +23,9 @@ interface ChallengeHistoryProps {
 export function ChallengeHistory({ completedChallenges, isLoading }: ChallengeHistoryProps) {
   const getRankIcon = (rank?: number) => {
     if (!rank) return null;
-    if (rank === 1) return <Trophy className="h-5 w-5 text-amber-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+    if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+    if (rank === 3) return <Award className="h-5 w-5 text-warning/70" />;
     return null;
   };
 
@@ -93,7 +93,7 @@ export function ChallengeHistory({ completedChallenges, isLoading }: ChallengeHi
               <div className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center",
                 challenge.rank && challenge.rank <= 3 
-                  ? "bg-amber-500/10" 
+                  ? "bg-warning/10" 
                   : "bg-muted"
               )}>
                 {getRankIcon(challenge.rank) || (

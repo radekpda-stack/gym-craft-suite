@@ -126,11 +126,11 @@ export function TodayEntries({
           {food.map((entry) => (
             <div
               key={entry.id}
-              className="flex flex-col gap-2 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-warning/5 border border-warning/10"
             >
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-                  <Utensils className="w-4 h-4 text-orange-500" />
+                <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                  <Utensils className="w-4 h-4 text-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -169,11 +169,11 @@ export function TodayEntries({
           {drinks.map((entry) => (
             <div
               key={entry.id}
-              className="flex flex-col gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-accent/5 border border-accent/10"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                  <Droplets className="w-4 h-4 text-blue-500" />
+                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                  <Droplets className="w-4 h-4 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -211,11 +211,11 @@ export function TodayEntries({
           {coffee.map((entry) => (
             <div
               key={entry.id}
-              className="flex flex-col gap-2 p-3 rounded-lg bg-amber-600/5 border border-amber-600/10"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-warning/5 border border-warning/10"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-600/10 flex items-center justify-center shrink-0">
-                  <Coffee className="w-4 h-4 text-amber-600" />
+                <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                  <Coffee className="w-4 h-4 text-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

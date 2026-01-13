@@ -293,9 +293,9 @@ export function TrainingFeedbackSection({
 
       <CardContent className="space-y-3">
         {status === 'received' && !feedbackData && (
-          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-            <Check className="w-8 h-8 mx-auto mb-2 text-green-500" />
-            <p className="text-sm font-medium text-green-600">Zpětná vazba byla vyplněna</p>
+          <div className="p-4 rounded-lg bg-success/10 border border-success/20 text-center">
+            <Check className="w-8 h-8 mx-auto mb-2 text-success" />
+            <p className="text-sm font-medium text-success">Zpětná vazba byla vyplněna</p>
           </div>
         )}
 
@@ -316,7 +316,7 @@ export function TrainingFeedbackSection({
                 <Button
                   variant={copied ? 'default' : 'outline'}
                   onClick={handleCopyLink}
-                  className={cn('w-full', copied && 'bg-green-600 hover:bg-green-700')}
+                  className={cn('w-full', copied && 'bg-success hover:bg-success/90')}
                 >
                   {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copied ? 'Zkopírováno!' : 'Rychle kopírovat'}

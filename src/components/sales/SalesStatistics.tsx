@@ -733,17 +733,17 @@ export function SalesStatistics() {
                     onClick={() => handleProductClick(product.productId, product.name)}
                     className={cn(
                       "grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_repeat(4,80px)_24px] gap-2 items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
-                      index === 0 ? "bg-amber-500/10" : 
-                      index === 1 ? "bg-slate-400/10" :
-                      index === 2 ? "bg-orange-700/10" : "bg-secondary/30"
+                      index === 0 ? "bg-warning/10" : 
+                      index === 1 ? "bg-muted/30" :
+                      index === 2 ? "bg-warning/5" : "bg-secondary/30"
                     )}
                   >
                     {/* Rank badge */}
                     <span className={cn(
                       "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                      index === 0 ? "bg-amber-500 text-white" : 
-                      index === 1 ? "bg-slate-400 text-white" :
-                      index === 2 ? "bg-orange-700 text-white" : "bg-secondary text-muted-foreground"
+                      index === 0 ? "bg-warning text-warning-foreground" : 
+                      index === 1 ? "bg-muted-foreground text-background" :
+                      index === 2 ? "bg-warning/70 text-warning-foreground" : "bg-secondary text-muted-foreground"
                     )}>
                       {index + 1}
                     </span>
@@ -755,7 +755,7 @@ export function SalesStatistics() {
                       <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground sm:hidden">
                         <span>{product.quantity}×</span>
                         <span>{formatCurrency(product.revenue)}</span>
-                        <span className={product.profit >= 0 ? "text-emerald-600" : "text-destructive"}>
+                        <span className={product.profit >= 0 ? "text-success" : "text-destructive"}>
                           +{formatCurrency(product.profit)}
                         </span>
                         <span>({product.margin.toFixed(0)}%)</span>
@@ -768,7 +768,7 @@ export function SalesStatistics() {
                     <span className="hidden sm:block text-right text-sm text-muted-foreground">{formatCurrency(product.costs)}</span>
                     <span className={cn(
                       "hidden sm:block text-right text-sm font-medium",
-                      product.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                      product.profit >= 0 ? "text-success" : "text-destructive"
                     )}>
                       {formatCurrency(product.profit)}
                     </span>
