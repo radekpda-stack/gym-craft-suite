@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     // Find all peer challenges that should be completed
     const { data: expiredChallenges, error: fetchError } = await supabase
       .from("peer_challenges")
-      .select("id, title, xp_betting_enabled")
+      .select("id, title, xp_bet_enabled")
       .eq("status", "active")
       .lt("end_at", new Date().toISOString());
 
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       }
 
       // If XP betting is enabled, settle the bets
-      if (challenge.xp_betting_enabled) {
+      if (challenge.xp_bet_enabled) {
         const { error: settleError } = await supabase.rpc("settle_peer_challenge_xp_bets", {
           p_challenge_id: challenge.id,
         });
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       for (const participant of participants || []) {
         let message = `Výzva "${challenge.title}" skončila.`;
         
-        if (challenge.xp_betting_enabled && participant.xp_result !== null) {
+        if (challenge.xp_bet_enabled && participant.xp_result !== null) {
           if (participant.xp_result > 0) {
             message += ` Získal jsi +${participant.xp_result} XP! 🎉`;
           } else if (participant.xp_result < 0) {
