@@ -72,7 +72,7 @@ export function TrainingQuickMenu({
                 featureTracker.track('context_menu_complete_training', 'trainings');
                 onComplete?.();
               }} 
-              className="gap-2 text-green-500"
+              className="gap-2 text-success"
             >
               <Check className="w-4 h-4" />
               Dokončit

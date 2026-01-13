@@ -49,7 +49,7 @@ export function AppRefreshSettings() {
     <div className="space-y-4">
       {/* Clear Cache Button */}
       <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/30">
-        <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+        <div className="p-2 rounded-lg bg-warning/10 text-warning shrink-0">
           <Trash2 className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">

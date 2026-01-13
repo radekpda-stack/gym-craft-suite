@@ -91,7 +91,7 @@ function AggregationCard({
             </span>
           )}
           {aggregation.warningCount > 0 && (
-            <span className="text-amber-500 flex items-center gap-1">
+            <span className="text-warning flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
               {aggregation.warningCount} varování
             </span>
@@ -134,11 +134,11 @@ function MetricDisplay({
     colorClass = 'text-destructive font-medium';
     barColor = 'bg-destructive';
   } else if (goodness < 0.6) {
-    colorClass = 'text-amber-500';
-    barColor = 'bg-amber-500';
+    colorClass = 'text-warning';
+    barColor = 'bg-warning';
   } else {
-    colorClass = 'text-emerald-600';
-    barColor = 'bg-emerald-500';
+    colorClass = 'text-success';
+    barColor = 'bg-success';
   }
   
   return (

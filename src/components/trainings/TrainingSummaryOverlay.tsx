@@ -163,7 +163,7 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   className="p-4 rounded-xl bg-muted/50"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Target className="w-4 h-4 text-green-500" />
+                    <Target className="w-4 h-4 text-success" />
                     <span className="text-xs text-muted-foreground">Série</span>
                   </div>
                   <p className="text-2xl font-bold">{summary.totalSets}</p>
@@ -176,7 +176,7 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   className="p-4 rounded-xl bg-muted/50"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className="w-4 h-4 text-blue-500" />
+                    <TrendingUp className="w-4 h-4 text-accent" />
                     <span className="text-xs text-muted-foreground">Cviky</span>
                   </div>
                   <p className="text-2xl font-bold">{summary.exerciseCount}</p>
@@ -189,7 +189,7 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   className="p-4 rounded-xl bg-muted/50"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Flame className="w-4 h-4 text-orange-500" />
+                    <Flame className="w-4 h-4 text-warning" />
                     <span className="text-xs text-muted-foreground">RPE</span>
                   </div>
                   <p className="text-2xl font-bold">
@@ -228,7 +228,7 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                         <div className="flex items-center gap-2">
                           <span className="font-bold">{pr.value} {pr.unit}</span>
                           {pr.improvement > 0 && (
-                            <Badge variant="outline" className="text-green-500 border-green-500/50">
+                            <Badge variant="outline" className="text-success border-success/50">
                               +{pr.improvement} {pr.unit}
                             </Badge>
                           )}
@@ -245,10 +245,10 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 1 }}
-                  className="flex items-center justify-center gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20"
+                  className="flex items-center justify-center gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20"
                 >
-                  <Flame className="w-6 h-6 text-orange-500" />
-                  <span className="font-semibold text-orange-600 dark:text-orange-400">
+                  <Flame className="w-6 h-6 text-warning" />
+                  <span className="font-semibold text-warning">
                     {summary.streakDays} dní v řadě!
                   </span>
                   <div className="flex gap-0.5">

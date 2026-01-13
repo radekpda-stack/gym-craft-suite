@@ -84,12 +84,12 @@ export function SkillExerciseForm({
             {exercise.name_cs || exercise.name}
           </h3>
           <div className="flex gap-2 mt-1">
-            <Badge variant="secondary" className="bg-cyan-500/10 text-cyan-500 border-cyan-500/20">
+            <Badge variant="secondary" className="bg-accent/10 text-accent border-accent/20">
               <Target className="w-3 h-3 mr-1" />
               SKILL
             </Badge>
             {isBreakthrough && (
-              <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+              <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
                 <Star className="w-3 h-3 mr-1" />
                 PRŮLOM
               </Badge>
@@ -136,7 +136,7 @@ export function SkillExerciseForm({
           {/* Successful */}
           <div>
             <Label className="flex items-center gap-2 mb-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-success" />
               Úspěšné
             </Label>
             <Input
@@ -155,7 +155,7 @@ export function SkillExerciseForm({
         {successRate !== null && (
           <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-background">
             <span className="text-sm text-muted-foreground">Úspěšnost:</span>
-            <span className={`text-lg font-bold ${successRate >= 80 ? 'text-green-500' : successRate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+            <span className={`text-lg font-bold ${successRate >= 80 ? 'text-success' : successRate >= 50 ? 'text-warning' : 'text-destructive'}`}>
               {successRate}%
             </span>
           </div>

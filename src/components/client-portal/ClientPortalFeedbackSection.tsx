@@ -189,19 +189,19 @@ function FeedbackForm({ feedback, onComplete, onCancel }: FeedbackFormProps) {
             </p>
             <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
               <div className="text-center">
-                <span className="font-medium text-green-500">1-3</span>
+                <span className="font-medium text-success">1-3</span>
                 <p>rezerva</p>
               </div>
               <div className="text-center">
-                <span className="font-medium text-yellow-500">4-6</span>
+                <span className="font-medium text-warning">4-6</span>
                 <p>kontrola</p>
               </div>
               <div className="text-center">
-                <span className="font-medium text-orange-500">7-8</span>
+                <span className="font-medium text-warning">7-8</span>
                 <p>na hraně</p>
               </div>
               <div className="text-center">
-                <span className="font-medium text-red-500">9-10</span>
+                <span className="font-medium text-destructive">9-10</span>
                 <p>maximum</p>
               </div>
             </div>

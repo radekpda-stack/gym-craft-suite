@@ -57,7 +57,7 @@ export function CardioProgressChart({ data, title, icon: Icon = Timer, isLoading
 
   // For time, lower is better
   const TrendIcon = change < 0 ? TrendingDown : change > 0 ? TrendingUp : Minus;
-  const trendColor = change < 0 ? 'text-green-600' : change > 0 ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = change < 0 ? 'text-success' : change > 0 ? 'text-destructive' : 'text-muted-foreground';
 
   const formatTime = (seconds: number) => {
     // Support centiseconds if present

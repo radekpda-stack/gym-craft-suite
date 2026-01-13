@@ -464,8 +464,8 @@ export function ProgressEntryForm({ onSuccess }: ProgressEntryFormProps) {
                           className={cn(
                             "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
                             currentWeight === lastEntryData.suggestedWeight
-                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                              : "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20"
+                              ? "bg-success/20 text-success border border-success/30"
+                              : "bg-success/10 text-success hover:bg-success/20 border border-success/20"
                           )}
                         >
                           <TrendingUp className="w-3 h-3" />

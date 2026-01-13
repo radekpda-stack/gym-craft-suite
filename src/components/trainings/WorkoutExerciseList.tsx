@@ -203,11 +203,11 @@ export function WorkoutExerciseList({
                     <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                     <div>
                       <h4 className="font-medium text-foreground flex items-center gap-2">
-                        {isCardioGroup && <Timer className="w-4 h-4 text-green-500" />}
+                        {isCardioGroup && <Timer className="w-4 h-4 text-success" />}
                         {group.exercise_name}
                         {/* Cardio badge - show best time */}
                         {isCardioGroup && bestCardioSet?.time_seconds && (
-                          <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-500">
+                          <Badge variant="secondary" className="text-xs bg-success/20 text-success">
                             {formatTimeDisplay(bestCardioSet.time_seconds)}
                             {bestCardioSet.distance_meters && ` / ${bestCardioSet.distance_meters}m`}
                           </Badge>
@@ -226,7 +226,7 @@ export function WorkoutExerciseList({
                         )}
                         {/* Show PR badge if any set has is_pr */}
                         {group.sets.some(s => s.is_pr) && (
-                          <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-xs">
+                          <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">
                             <Trophy className="w-3 h-3 mr-1" />
                             PR
                           </Badge>
@@ -391,7 +391,7 @@ export function WorkoutExerciseList({
                             <span className="font-medium flex items-center gap-1">
                               {set.time_seconds ? formatTimeDisplay(set.time_seconds) : '-'}
                               {set.is_pr && (
-                                <Trophy className="w-3 h-3 text-amber-500" />
+                                <Trophy className="w-3 h-3 text-warning" />
                               )}
                             </span>
                             <span className="font-medium">
@@ -425,7 +425,7 @@ export function WorkoutExerciseList({
                             <span className="font-medium flex items-center gap-1">
                               {set.weight_kg ? `${set.weight_kg} kg` : '-'}
                               {set.is_pr && (
-                                <Trophy className="w-3 h-3 text-amber-500" />
+                                <Trophy className="w-3 h-3 text-warning" />
                               )}
                             </span>
                             <span className="font-medium">

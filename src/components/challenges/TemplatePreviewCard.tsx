@@ -22,11 +22,11 @@ interface TemplatePreviewCardProps {
 
 const formatLabels: Record<WorkoutFormat, { label: string; icon: React.ReactNode; color: string }> = {
   standard: { label: 'Klasický', icon: <Dumbbell className="h-4 w-4" />, color: 'bg-muted' },
-  amrap: { label: 'AMRAP', icon: <RefreshCw className="h-4 w-4" />, color: 'bg-orange-500/10 text-orange-600' },
-  emom: { label: 'EMOM', icon: <Clock className="h-4 w-4" />, color: 'bg-blue-500/10 text-blue-600' },
-  for_time: { label: 'For Time', icon: <Target className="h-4 w-4" />, color: 'bg-green-500/10 text-green-600' },
-  tabata: { label: 'Tabata', icon: <Zap className="h-4 w-4" />, color: 'bg-red-500/10 text-red-600' },
-  circuit: { label: 'Circuit', icon: <RotateCcw className="h-4 w-4" />, color: 'bg-purple-500/10 text-purple-600' },
+  amrap: { label: 'AMRAP', icon: <RefreshCw className="h-4 w-4" />, color: 'bg-warning/10 text-warning' },
+  emom: { label: 'EMOM', icon: <Clock className="h-4 w-4" />, color: 'bg-accent/10 text-accent' },
+  for_time: { label: 'For Time', icon: <Target className="h-4 w-4" />, color: 'bg-success/10 text-success' },
+  tabata: { label: 'Tabata', icon: <Zap className="h-4 w-4" />, color: 'bg-destructive/10 text-destructive' },
+  circuit: { label: 'Circuit', icon: <RotateCcw className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
 };
 
 function formatTime(seconds: number): string {
