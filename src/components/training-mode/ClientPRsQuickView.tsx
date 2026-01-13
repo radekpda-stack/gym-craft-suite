@@ -22,11 +22,11 @@ function PRIcon({ metricType }: { metricType: ExercisePR['metricType'] }) {
     case 'weight':
       return <Dumbbell className="w-4 h-4 text-primary" />;
     case 'time':
-      return <Timer className="w-4 h-4 text-blue-500" />;
+      return <Timer className="w-4 h-4 text-accent" />;
     case 'reps':
-      return <Hash className="w-4 h-4 text-green-500" />;
+      return <Hash className="w-4 h-4 text-success" />;
     default:
-      return <Trophy className="w-4 h-4 text-amber-500" />;
+      return <Trophy className="w-4 h-4 text-warning" />;
   }
 }
 
@@ -61,10 +61,10 @@ function PRItem({ pr }: { pr: ExercisePR }) {
       <div className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-semibold truncate">{pr.exerciseName}</p>
-          {pr.side && (pr.side === 'left' || pr.side === 'right') && (
+        {pr.side && (pr.side === 'left' || pr.side === 'right') && (
             <span className={cn(
               "text-[10px] font-bold px-1 rounded shrink-0",
-              pr.side === 'left' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+              pr.side === 'left' ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
             )}>
               {pr.side === 'left' ? 'L' : 'R'}
             </span>
@@ -167,7 +167,7 @@ export function ClientPRsQuickView({
           className="flex items-center justify-between w-full group"
         >
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Trophy className="w-4 h-4 text-amber-500" />
+            <Trophy className="w-4 h-4 text-warning" />
             <span className="font-semibold text-foreground">PRka - {getShortName(getClientName(participantIds[0]))}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -195,7 +195,7 @@ export function ClientPRsQuickView({
         className="flex items-center justify-between w-full"
       >
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Trophy className="w-4 h-4 text-amber-500" />
+          <Trophy className="w-4 h-4 text-warning" />
           <span className="font-semibold text-foreground">PRka účastníků</span>
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">

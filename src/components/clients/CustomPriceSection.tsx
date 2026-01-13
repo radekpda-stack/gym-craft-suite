@@ -212,7 +212,7 @@ export function CustomPriceSection({
 
       {/* Warning when exhausted */}
       {isEnabled && isExhausted && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <div className="text-xs">
             <p className="font-medium">Předplacený kredit vyčerpán!</p>

@@ -25,9 +25,9 @@ function TrendBadge({ value, suffix = '%' }: { value: number | undefined; suffix
   return (
     <span className={cn(
       "inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded",
-      isPositive && "text-green-500 bg-green-500/10",
+      isPositive && "text-success bg-success/10",
       isNeutral && "text-muted-foreground bg-muted",
-      !isPositive && !isNeutral && "text-red-500 bg-red-500/10"
+      !isPositive && !isNeutral && "text-destructive bg-destructive/10"
     )}>
       <Icon className="w-3 h-3" />
       {Math.abs(value)}{suffix}

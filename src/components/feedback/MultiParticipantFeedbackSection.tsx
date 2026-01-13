@@ -207,7 +207,7 @@ function ParticipantFeedbackRow({
             size="sm"
             variant={copied ? 'default' : 'ghost'}
             onClick={handleCopyLink}
-            className={cn(copied && 'bg-green-600 hover:bg-green-700')}
+            className={cn(copied && 'bg-success hover:bg-success/90')}
           >
             {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
           </Button>

@@ -80,9 +80,9 @@ function XPLeaderboardRow({ entry, currentClientId }: { entry: XPLeaderboardEntr
     <div className={cn(
       "flex items-center gap-3 p-2 rounded-lg transition-all",
       isCurrentUser 
-        ? "bg-yellow-500/10 border border-yellow-500/20" 
+        ? "bg-warning/10 border border-warning/20" 
         : "hover:bg-muted/50",
-      entry.rank <= 3 && "bg-gradient-to-r from-yellow-500/5 to-transparent"
+      entry.rank <= 3 && "bg-gradient-to-r from-warning/5 to-transparent"
     )}>
       <div className="w-6 flex items-center justify-center shrink-0">
         {getRankIcon(entry.rank)}
@@ -163,7 +163,7 @@ export default function GamificationSection({ clientId }: GamificationSectionPro
               <div className="flex items-center gap-2">
                 {/* Quick stats badges */}
                 {currentXPEntry && (
-                  <Badge variant="outline" className="gap-1 text-yellow-600 border-yellow-500/30 bg-yellow-500/5">
+                  <Badge variant="outline" className="gap-1 text-warning border-warning/30 bg-warning/5">
                     <Zap className="w-3 h-3" />
                     #{currentXPEntry.rank}
                   </Badge>
@@ -182,8 +182,8 @@ export default function GamificationSection({ clientId }: GamificationSectionPro
           <CardContent className="pt-0 space-y-4">
             {/* Visibility warning */}
             {(!settings || !settings.leaderboard_visible) && (
-              <div className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                <p className="text-xs text-blue-600 dark:text-blue-400">
+              <div className="p-2 rounded-lg bg-accent/5 border border-accent/20">
+                <p className="text-xs text-accent">
                   📛 Jsi anonymní. Změň to v nastavení.
                 </p>
               </div>

@@ -124,10 +124,10 @@ function BadgeCard({
   isLocked: boolean;
 }) {
   const rarityColors: Record<string, string> = {
-    common: 'border-slate-400/30 bg-slate-500/10',
-    rare: 'border-blue-400/30 bg-blue-500/10',
-    epic: 'border-purple-400/30 bg-purple-500/10',
-    legendary: 'border-yellow-400/30 bg-yellow-500/10',
+    common: 'border-muted-foreground/30 bg-muted/50',
+    rare: 'border-accent/30 bg-accent/10',
+    epic: 'border-primary/30 bg-primary/10',
+    legendary: 'border-warning/30 bg-warning/10',
   };
 
   return (

@@ -81,8 +81,8 @@ export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogPro
 
         {credentials ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <p className="text-sm font-medium text-green-600 mb-1 flex items-center gap-2">
+            <div className="p-4 rounded-lg bg-success/10 border border-success/20">
+              <p className="text-sm font-medium text-success mb-1 flex items-center gap-2">
                 <Check className="w-4 h-4" />
                 Přístup vytvořen pro: {credentials.clientName}
               </p>
@@ -117,8 +117,8 @@ export function InviteClientDialog({ open, onOpenChange }: InviteClientDialogPro
               </div>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+            <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+              <p className="text-sm text-warning">
                 ⚠️ Heslo se zobrazuje pouze nyní. Po zavření dialogu ho již nebude možné zobrazit.
               </p>
             </div>

@@ -86,10 +86,10 @@ export function CardioExerciseForm({
   };
 
   const getRpeColor = (value: number) => {
-    if (value <= 3) return 'text-green-500';
-    if (value <= 5) return 'text-yellow-500';
-    if (value <= 7) return 'text-orange-500';
-    return 'text-red-500';
+    if (value <= 3) return 'text-success';
+    if (value <= 5) return 'text-warning';
+    if (value <= 7) return 'text-warning';
+    return 'text-destructive';
   };
 
   const getRpeLabel = (value: number) => {
@@ -109,11 +109,11 @@ export function CardioExerciseForm({
             {exercise.name_cs || exercise.name}
           </h3>
           <div className="flex gap-2 mt-1">
-            <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+            <Badge variant="secondary" className="bg-accent/10 text-accent border-accent/20">
               CARDIO
             </Badge>
             {isTest && (
-              <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+              <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
                 <FlaskConical className="w-3 h-3 mr-1" />
                 TEST
               </Badge>
