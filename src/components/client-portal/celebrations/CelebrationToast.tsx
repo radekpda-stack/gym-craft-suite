@@ -189,7 +189,7 @@ export function CelebrationToast({ celebration, onDismiss }: CelebrationToastPro
             </motion.p>
 
             {/* XP Bonus */}
-            {celebration.data.xpBonus && celebration.data.xpBonus > 0 && (
+            {(celebration.data.xpBonus ?? 0) > 0 && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}

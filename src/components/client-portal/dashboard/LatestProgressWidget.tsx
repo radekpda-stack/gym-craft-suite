@@ -41,7 +41,7 @@ export function LatestProgressWidget({ className }: LatestProgressWidgetProps) {
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
               <Trophy className="w-6 h-6 text-amber-500" />
             </div>
-            <Link to="/client/progress">
+            <Link to="/zona/progress">
               <Button variant="ghost" size="sm" className="gap-1 text-xs">
                 Pokrok <ChevronRight className="w-4 h-4" />
               </Button>
@@ -100,7 +100,7 @@ export function LatestProgressWidget({ className }: LatestProgressWidgetProps) {
               <p className="text-sm text-muted-foreground">
                 Jakmile překonáš svůj výkon, objeví se zde tvůj osobní rekord.
               </p>
-              <Link to="/client/progress">
+              <Link to="/zona/progress">
                 <Button variant="secondary" size="sm" className="mt-2">
                   Zobrazit pokrok
                 </Button>

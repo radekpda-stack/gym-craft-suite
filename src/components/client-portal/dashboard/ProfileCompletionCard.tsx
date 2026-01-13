@@ -117,7 +117,7 @@ export function ProfileCompletionCard() {
               </div>
 
               {/* CTA Button */}
-              <Link to="/client/settings">
+              <Link to="/zona/settings">
                 <Button size="sm" variant="outline" className="w-full gap-2 bg-background/50 hover:bg-background">
                   Doplnit údaje
                   <ChevronRight className="w-4 h-4" />

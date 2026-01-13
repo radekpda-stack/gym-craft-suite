@@ -228,7 +228,7 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                       </p>
                     </div>
                     {challenge.allow_multiple_attempts && (
-                      <Link to="/client/challenges">
+                      <Link to="/zona/challenges">
                         <Button variant="outline" size="sm">
                           Vylepšit výsledek
                         </Button>
@@ -236,7 +236,7 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
                     )}
                   </div>
                 ) : (
-                  <Link to="/client/challenges" className="block">
+                  <Link to="/zona/challenges" className="block">
                     <Button className="w-full gap-2" size="lg">
                       <Trophy className="w-4 h-4" />
                       Odeslat výsledek

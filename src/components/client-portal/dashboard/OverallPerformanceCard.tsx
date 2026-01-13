@@ -70,7 +70,7 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
     >
       <Card 
         className="cursor-pointer hover:border-primary/30 transition-colors"
-        onClick={() => navigate('/client/leaderboard')}
+        onClick={() => navigate('/zona/leaderboard')}
       >
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center justify-between">
