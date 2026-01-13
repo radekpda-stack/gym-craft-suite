@@ -81,6 +81,8 @@ export function useClientPurchaseHistory(clientId: string | undefined) {
       }));
     },
     enabled: !!clientId,
+    staleTime: 1000 * 30, // 30 seconds - refresh more often for purchases
+    refetchOnWindowFocus: true,
   });
 }
 

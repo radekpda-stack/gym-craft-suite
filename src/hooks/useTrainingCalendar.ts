@@ -41,7 +41,8 @@ export function useMonthlyWorkouts(clientId?: string, month?: Date) {
     queryFn: async (): Promise<CalendarWorkout[]> => {
       if (!clientId) return [];
       
-      const { data, error } = await supabase
+      // Fetch from client_confirmed_workouts (client-confirmed workouts)
+      const { data: confirmedWorkouts, error: confirmedError } = await supabase
         .from('client_confirmed_workouts')
         .select('id, performed_date, workout_type, xp, training_session_id')
         .eq('client_id', clientId)
@@ -49,15 +50,50 @@ export function useMonthlyWorkouts(clientId?: string, month?: Date) {
         .lte('performed_date', format(monthEnd, 'yyyy-MM-dd'))
         .order('performed_date', { ascending: true });
       
-      if (error) throw error;
+      if (confirmedError) throw confirmedError;
       
-      return (data ?? []).map(w => ({
+      // Also fetch from training_sessions (trainer-confirmed sessions)
+      const { data: trainingSessions, error: sessionsError } = await supabase
+        .from('training_sessions')
+        .select('id, date, training_type, status')
+        .eq('client_id', clientId)
+        .eq('status', 'completed')
+        .gte('date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('date', format(monthEnd, 'yyyy-MM-dd'))
+        .order('date', { ascending: true });
+      
+      if (sessionsError) throw sessionsError;
+      
+      // Get session IDs that are already in confirmed workouts
+      const confirmedSessionIds = new Set(
+        (confirmedWorkouts ?? [])
+          .map(w => w.training_session_id)
+          .filter(Boolean)
+      );
+      
+      // Map confirmed workouts
+      const workoutsFromConfirmed: CalendarWorkout[] = (confirmedWorkouts ?? []).map(w => ({
         id: w.id,
         date: w.performed_date,
         workout_type: w.workout_type,
         xp: w.xp,
         training_session_id: w.training_session_id,
       }));
+      
+      // Add training sessions that aren't already represented in confirmed workouts
+      const workoutsFromSessions: CalendarWorkout[] = (trainingSessions ?? [])
+        .filter(s => !confirmedSessionIds.has(s.id))
+        .map(s => ({
+          id: s.id,
+          date: format(parseISO(s.date), 'yyyy-MM-dd'),
+          workout_type: s.training_type || 'personal',
+          xp: 0, // Training sessions don't have XP by default
+          training_session_id: s.id,
+        }));
+      
+      // Combine and sort by date
+      return [...workoutsFromConfirmed, ...workoutsFromSessions]
+        .sort((a, b) => a.date.localeCompare(b.date));
     },
     enabled: !!clientId,
   });
