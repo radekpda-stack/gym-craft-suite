@@ -9963,6 +9963,7 @@ export type Database = {
         Args: { p_client_id: string; p_source?: string; p_xp_amount: number }
         Returns: undefined
       }
+      auto_complete_expired_peer_challenges: { Args: never; Returns: undefined }
       bulk_create_client_portals: {
         Args: { p_trainer_id: string }
         Returns: Json
