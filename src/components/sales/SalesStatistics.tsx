@@ -44,6 +44,8 @@ import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { ProductSalesDetailModal } from './ProductSalesDetailModal';
+import { SalesInsights } from './SalesInsights';
+import { ComparisonBadge } from './ComparisonBadge';
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'all';
 
@@ -80,219 +82,244 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Ostatní',
 };
 
-// Hook for combined statistics (sales_orders + credit_transactions fallback)
+// Helper to get date range for a period
+function getDateRange(period: Period, offset = 0) {
+  const now = new Date();
+  let fromDate: Date | null = null;
+  let toDate: Date | null = null;
+
+  switch (period) {
+    case 'today':
+      fromDate = startOfDay(subDays(now, offset));
+      toDate = offset > 0 ? startOfDay(subDays(now, offset - 1)) : null;
+      break;
+    case 'week':
+      fromDate = subDays(now, 7 + (offset * 7));
+      toDate = offset > 0 ? subDays(now, offset * 7) : null;
+      break;
+    case 'month':
+      fromDate = startOfMonth(subMonths(now, offset));
+      toDate = offset > 0 ? startOfMonth(subMonths(now, offset - 1)) : null;
+      break;
+    case 'year':
+      fromDate = subMonths(now, 12 + (offset * 12));
+      toDate = offset > 0 ? subMonths(now, offset * 12) : null;
+      break;
+    case 'all':
+      fromDate = null;
+      toDate = null;
+      break;
+  }
+  
+  return { fromDate, toDate };
+}
+
+// Fetch stats for a period
+async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
+  const { fromDate, toDate } = getDateRange(period, offset);
+
+  // Try new sales_orders first
+  let ordersQuery = supabase
+    .from('sales_orders')
+    .select('id, total_amount, payment_method, payment_status, created_at')
+    .eq('payment_status', 'completed');
+  
+  if (fromDate) {
+    ordersQuery = ordersQuery.gte('created_at', fromDate.toISOString());
+  }
+  if (toDate) {
+    ordersQuery = ordersQuery.lt('created_at', toDate.toISOString());
+  }
+  
+  const { data: orders } = await ordersQuery;
+
+  // Get order items if we have orders
+  let orderItems: any[] = [];
+  if (orders && orders.length > 0) {
+    const { data: items } = await supabase
+      .from('sales_order_items')
+      .select('*, products(purchase_price, category)')
+      .in('order_id', orders.map(o => o.id));
+    orderItems = items || [];
+  }
+
+  // Fallback to credit_transactions if no orders
+  let legacySales: any[] = [];
+  if (!orders || orders.length === 0) {
+    let legacyQuery = supabase
+      .from('credit_transactions')
+      .select('*, products(id, name, price, category, purchase_price)')
+      .eq('type', 'product');
+    
+    if (fromDate) {
+      legacyQuery = legacyQuery.gte('created_at', fromDate.toISOString());
+    }
+    if (toDate) {
+      legacyQuery = legacyQuery.lt('created_at', toDate.toISOString());
+    }
+    
+    const { data: transactions } = await legacyQuery;
+    legacySales = transactions || [];
+  }
+
+  // Calculate stats
+  let totalRevenue = 0;
+  let totalCosts = 0;
+  let totalOrders = 0;
+  const byPaymentMethod: Record<string, { count: number; revenue: number }> = {
+    cash: { count: 0, revenue: 0 },
+    card: { count: 0, revenue: 0 },
+    bank: { count: 0, revenue: 0 },
+    credit: { count: 0, revenue: 0 },
+  };
+  const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number; category: string }> = {};
+  const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number; costs: number }> = {};
+
+  if (orders && orders.length > 0) {
+    totalOrders = orders.length;
+    orders.forEach(order => {
+      totalRevenue += order.total_amount || 0;
+      const method = order.payment_method || 'cash';
+      if (byPaymentMethod[method]) {
+        byPaymentMethod[method].count++;
+        byPaymentMethod[method].revenue += order.total_amount || 0;
+      }
+
+      const dateKey = order.created_at.split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
+      }
+      dailyData[dateKey].revenue += order.total_amount || 0;
+      dailyData[dateKey].count++;
+    });
+
+    orderItems.forEach(item => {
+      const key = item.product_id;
+      const purchasePrice = item.products?.purchase_price || 0;
+      const itemCost = purchasePrice * item.quantity;
+      totalCosts += itemCost;
+
+      if (!productStats[key]) {
+        productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0, costs: 0, category: item.products?.category || 'other' };
+      }
+      productStats[key].quantity += item.quantity;
+      productStats[key].revenue += item.line_total;
+      productStats[key].costs += itemCost;
+
+      const order = orders.find(o => o.id === item.order_id);
+      if (order) {
+        const dateKey = order.created_at.split('T')[0];
+        if (dailyData[dateKey]) {
+          dailyData[dateKey].profit += item.line_total - itemCost;
+          dailyData[dateKey].costs += itemCost;
+        }
+      }
+    });
+  } else if (legacySales.length > 0) {
+    totalOrders = legacySales.length;
+    legacySales.forEach(sale => {
+      const amount = Math.abs(sale.amount || 0);
+      const purchasePrice = sale.products?.purchase_price || 0;
+      totalRevenue += amount;
+      totalCosts += purchasePrice;
+      
+      const method = sale.payment_method || 'credit';
+      if (byPaymentMethod[method]) {
+        byPaymentMethod[method].count++;
+        byPaymentMethod[method].revenue += amount;
+      }
+
+      const dateKey = sale.created_at.split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
+      }
+      dailyData[dateKey].revenue += amount;
+      dailyData[dateKey].count++;
+      dailyData[dateKey].profit += amount - purchasePrice;
+      dailyData[dateKey].costs += purchasePrice;
+
+      if (sale.product_id && sale.products) {
+        const key = sale.product_id;
+        if (!productStats[key]) {
+          productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0, costs: 0, category: sale.products?.category || 'other' };
+        }
+        productStats[key].quantity++;
+        productStats[key].revenue += amount;
+        productStats[key].costs += purchasePrice;
+      }
+    });
+  }
+
+  const totalProfit = totalRevenue - totalCosts;
+  const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+  const topProducts = Object.entries(productStats)
+    .map(([id, stats]) => ({ 
+      productId: id, 
+      ...stats,
+      profit: stats.revenue - stats.costs,
+      margin: stats.revenue > 0 ? ((stats.revenue - stats.costs) / stats.revenue) * 100 : 0
+    }))
+    .sort((a, b) => b.quantity - a.quantity);
+
+  const trendData = Object.values(dailyData)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({
+      ...d,
+      margin: d.revenue > 0 ? ((d.revenue - d.costs) / d.revenue) * 100 : 0
+    }));
+
+  const categoryStats: Record<string, { name: string; revenue: number; count: number }> = {};
+  topProducts.forEach(p => {
+    const cat = p.category || 'other';
+    const catLabel = CATEGORY_LABELS[cat] || cat;
+    if (!categoryStats[cat]) {
+      categoryStats[cat] = { name: catLabel, revenue: 0, count: 0 };
+    }
+    categoryStats[cat].revenue += p.revenue;
+    categoryStats[cat].count += p.quantity;
+  });
+
+  const categoryData = Object.values(categoryStats).sort((a, b) => b.revenue - a.revenue);
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const avgProfit = totalOrders > 0 ? totalProfit / totalOrders : 0;
+
+  return {
+    totalRevenue,
+    totalCosts,
+    totalProfit,
+    profitMargin,
+    totalOrders,
+    avgOrderValue,
+    avgProfit,
+    byPaymentMethod,
+    topProducts,
+    trendData,
+    categoryData,
+  };
+}
+
+// Hook for combined statistics with period comparison
 function useCombinedSalesStats(period: Period) {
   const { data: products = [] } = useProducts();
   
   return useQuery({
     queryKey: ['combined_sales_stats', period],
     queryFn: async () => {
-      const now = new Date();
-      let fromDate: Date | null = null;
-
-      switch (period) {
-        case 'today':
-          fromDate = startOfDay(now);
-          break;
-        case 'week':
-          fromDate = subDays(now, 7);
-          break;
-        case 'month':
-          fromDate = startOfMonth(now);
-          break;
-        case 'year':
-          fromDate = subMonths(now, 12);
-          break;
-        case 'all':
-          fromDate = null;
-          break;
-      }
-
-      // Try new sales_orders first
-      let ordersQuery = supabase
-        .from('sales_orders')
-        .select('id, total_amount, payment_method, payment_status, created_at')
-        .eq('payment_status', 'completed');
-      
-      if (fromDate) {
-        ordersQuery = ordersQuery.gte('created_at', fromDate.toISOString());
-      }
-      
-      const { data: orders } = await ordersQuery;
-
-      // Get order items if we have orders - include product for purchase_price
-      let orderItems: any[] = [];
-      if (orders && orders.length > 0) {
-        const { data: items } = await supabase
-          .from('sales_order_items')
-          .select('*, products(purchase_price, category)')
-          .in('order_id', orders.map(o => o.id));
-        orderItems = items || [];
-      }
-
-      // Fallback to credit_transactions if no orders
-      let legacySales: any[] = [];
-      if (!orders || orders.length === 0) {
-        let legacyQuery = supabase
-          .from('credit_transactions')
-          .select('*, products(id, name, price, category, purchase_price)')
-          .eq('type', 'product');
-        
-        if (fromDate) {
-          legacyQuery = legacyQuery.gte('created_at', fromDate.toISOString());
-        }
-        
-        const { data: transactions } = await legacyQuery;
-        legacySales = transactions || [];
-      }
-
-      // Calculate stats
-      let totalRevenue = 0;
-      let totalCosts = 0;
-      let totalOrders = 0;
-      const byPaymentMethod: Record<string, { count: number; revenue: number }> = {
-        cash: { count: 0, revenue: 0 },
-        card: { count: 0, revenue: 0 },
-        bank: { count: 0, revenue: 0 },
-        credit: { count: 0, revenue: 0 },
-      };
-      const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number; category: string }> = {};
-      const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number; costs: number }> = {};
-
-      if (orders && orders.length > 0) {
-        // Use new orders
-        totalOrders = orders.length;
-        orders.forEach(order => {
-          totalRevenue += order.total_amount || 0;
-          const method = order.payment_method || 'cash';
-          if (byPaymentMethod[method]) {
-            byPaymentMethod[method].count++;
-            byPaymentMethod[method].revenue += order.total_amount || 0;
-          }
-
-          // Daily aggregation - profit calculated later
-          const dateKey = order.created_at.split('T')[0];
-          if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
-          }
-          dailyData[dateKey].revenue += order.total_amount || 0;
-          dailyData[dateKey].count++;
-        });
-
-        // Product stats from order items - include costs
-        orderItems.forEach(item => {
-          const key = item.product_id;
-          const purchasePrice = item.products?.purchase_price || 0;
-          const itemCost = purchasePrice * item.quantity;
-          totalCosts += itemCost;
-
-          if (!productStats[key]) {
-            productStats[key] = { name: item.name_snapshot, quantity: 0, revenue: 0, costs: 0, category: item.products?.category || 'other' };
-          }
-          productStats[key].quantity += item.quantity;
-          productStats[key].revenue += item.line_total;
-          productStats[key].costs += itemCost;
-
-          // Add profit and costs to daily data
-          const order = orders.find(o => o.id === item.order_id);
-          if (order) {
-            const dateKey = order.created_at.split('T')[0];
-            if (dailyData[dateKey]) {
-              dailyData[dateKey].profit += item.line_total - itemCost;
-              dailyData[dateKey].costs += itemCost;
-            }
-          }
-        });
-      } else if (legacySales.length > 0) {
-        // Use legacy transactions
-        totalOrders = legacySales.length;
-        legacySales.forEach(sale => {
-          const amount = Math.abs(sale.amount || 0);
-          const purchasePrice = sale.products?.purchase_price || 0;
-          totalRevenue += amount;
-          totalCosts += purchasePrice;
-          
-          const method = sale.payment_method || 'credit';
-          if (byPaymentMethod[method]) {
-            byPaymentMethod[method].count++;
-            byPaymentMethod[method].revenue += amount;
-          }
-
-          // Daily aggregation with profit
-          const dateKey = sale.created_at.split('T')[0];
-          if (!dailyData[dateKey]) {
-            dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
-          }
-          dailyData[dateKey].revenue += amount;
-          dailyData[dateKey].count++;
-          dailyData[dateKey].profit += amount - purchasePrice;
-          dailyData[dateKey].costs += purchasePrice;
-
-          // Product stats with costs
-          if (sale.product_id && sale.products) {
-            const key = sale.product_id;
-            if (!productStats[key]) {
-              productStats[key] = { name: sale.products.name, quantity: 0, revenue: 0, costs: 0, category: sale.products?.category || 'other' };
-            }
-            productStats[key].quantity++;
-            productStats[key].revenue += amount;
-            productStats[key].costs += purchasePrice;
-          }
-        });
-      }
-
-      // Calculate profit and margin
-      const totalProfit = totalRevenue - totalCosts;
-      const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-      // Sort products by quantity (most sold first)
-      const topProducts = Object.entries(productStats)
-        .map(([id, stats]) => ({ 
-          productId: id, 
-          ...stats,
-          profit: stats.revenue - stats.costs,
-          margin: stats.revenue > 0 ? ((stats.revenue - stats.costs) / stats.revenue) * 100 : 0
-        }))
-        .sort((a, b) => b.quantity - a.quantity);
-
-      // Sort trend data and calculate margin trend
-      const trendData = Object.values(dailyData)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map(d => ({
-          ...d,
-          margin: d.revenue > 0 ? ((d.revenue - d.costs) / d.revenue) * 100 : 0
-        }));
-
-      // Category stats
-      const categoryStats: Record<string, { name: string; revenue: number; count: number }> = {};
-      topProducts.forEach(p => {
-        const cat = p.category || 'other';
-        const catLabel = CATEGORY_LABELS[cat] || cat;
-        if (!categoryStats[cat]) {
-          categoryStats[cat] = { name: catLabel, revenue: 0, count: 0 };
-        }
-        categoryStats[cat].revenue += p.revenue;
-        categoryStats[cat].count += p.quantity;
-      });
-
-      const categoryData = Object.values(categoryStats).sort((a, b) => b.revenue - a.revenue);
-
-      // Calculate average order value
-      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-      const avgProfit = totalOrders > 0 ? totalProfit / totalOrders : 0;
+      // Fetch current and previous period in parallel
+      const [current, previous] = await Promise.all([
+        fetchPeriodStats(period, products, 0),
+        period !== 'all' ? fetchPeriodStats(period, products, 1) : null,
+      ]);
 
       return {
-        totalRevenue,
-        totalCosts,
-        totalProfit,
-        profitMargin,
-        totalOrders,
-        avgOrderValue,
-        avgProfit,
-        byPaymentMethod,
-        topProducts,
-        trendData,
-        categoryData,
+        ...current,
+        previousPeriod: previous ? {
+          totalRevenue: previous.totalRevenue,
+          totalCosts: previous.totalCosts,
+          totalProfit: previous.totalProfit,
+          totalOrders: previous.totalOrders,
+        } : undefined,
       };
     },
   });
