@@ -14,7 +14,11 @@ export type MetricKey =
   | 'distance_meters' 
   | 'time_seconds' 
   | 'avg_watts' 
+  | 'max_watts'
+  | 'avg_speed_kmh'
+  | 'max_speed_kmh'
   | 'pace_sec_per_500m' 
+  | 'pace_sec_per_km'
   | 'bw_reps' 
   | 'reps'
   | 'unknown';
@@ -28,7 +32,11 @@ export const METRIC_RULES: Record<MetricKey, 'higher' | 'lower' | 'none'> = {
   distance_meters: 'higher',
   time_seconds: 'lower',
   avg_watts: 'higher',
+  max_watts: 'higher',
+  avg_speed_kmh: 'higher',
+  max_speed_kmh: 'higher',
   pace_sec_per_500m: 'lower',
+  pace_sec_per_km: 'lower',
   bw_reps: 'higher',
   reps: 'higher',
   unknown: 'none',
@@ -41,7 +49,11 @@ export const METRIC_COLUMN_MAP: Record<MetricKey, string> = {
   distance_meters: 'distance_meters',
   time_seconds: 'time_seconds',
   avg_watts: 'avg_watts',
+  max_watts: 'max_watts',
+  avg_speed_kmh: 'avg_speed_kmh',
+  max_speed_kmh: 'max_speed_kmh',
   pace_sec_per_500m: 'pace_sec_per_500m',
+  pace_sec_per_km: 'pace_sec_per_km',
   bw_reps: 'reps', // bodyweight uses reps column
   reps: 'reps',
   unknown: 'weight_kg',
@@ -72,17 +84,35 @@ export function determineMetricKey(entry: {
   distance_meters?: number | null;
   time_seconds?: number | null;
   avg_watts?: number | null;
+  max_watts?: number | null;
+  avg_speed_kmh?: number | null;
+  max_speed_kmh?: number | null;
   pace_sec_per_500m?: number | null;
+  pace_sec_per_km?: number | null;
   is_bodyweight?: boolean;
   reps?: number | null;
 }): MetricKey {
+  // Priority order for metric detection:
+  // 1. Strength: weight is king
   if (entry.weight_kg && entry.weight_kg > 0) return 'weight_kg';
+  // 2. Plyometrics: height for vertical jumps
   if (entry.height_cm && entry.height_cm > 0) return 'height_cm';
+  // 3. Plyometrics: distance for horizontal jumps
   if (entry.distance_meters && entry.distance_meters > 0) return 'distance_meters';
+  // 4. Cardio: time (lower is better for tests)
   if (entry.time_seconds && entry.time_seconds > 0) return 'time_seconds';
+  // 5. Cardio: power metrics
   if (entry.avg_watts && entry.avg_watts > 0) return 'avg_watts';
+  if (entry.max_watts && entry.max_watts > 0) return 'max_watts';
+  // 6. Cardio: speed metrics (for treadmill/running)
+  if (entry.avg_speed_kmh && entry.avg_speed_kmh > 0) return 'avg_speed_kmh';
+  if (entry.max_speed_kmh && entry.max_speed_kmh > 0) return 'max_speed_kmh';
+  // 7. Cardio: pace metrics
   if (entry.pace_sec_per_500m && entry.pace_sec_per_500m > 0) return 'pace_sec_per_500m';
+  if (entry.pace_sec_per_km && entry.pace_sec_per_km > 0) return 'pace_sec_per_km';
+  // 8. Bodyweight reps
   if (entry.is_bodyweight && entry.reps && entry.reps > 0) return 'bw_reps';
+  // 9. Regular reps
   if (entry.reps && entry.reps > 0) return 'reps';
   return 'unknown';
 }
