@@ -21,7 +21,7 @@ export function PRTimelineCardNew({ data, isLoading }: PRTimelineCardNewProps) {
   return (
     <AnalyticsCard
       title="PR trend"
-      icon={<Trophy className="w-4 h-4 text-amber-500" />}
+      icon={Trophy}
       helpContent={HELP_CONTENT}
       isLoading={isLoading}
       isEmpty={isEmpty}

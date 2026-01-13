@@ -34,7 +34,7 @@ export function RpeTimelineCard({ data, isLoading }: RpeTimelineCardProps) {
   return (
     <AnalyticsCard
       title="Intenzita (RPE)"
-      icon={<Activity className="w-4 h-4" />}
+      icon={Activity}
       helpContent={HELP_CONTENT}
       isLoading={isLoading}
       isEmpty={isEmpty}
