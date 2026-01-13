@@ -32,13 +32,13 @@ import { ExerciseAutocomplete } from './ExerciseAutocomplete';
 
 // Simplified workout types with large icons
 const SIMPLE_WORKOUT_TYPES = [
-  { value: 'strength', label: 'Posilovna', icon: Dumbbell, color: 'text-orange-500 bg-orange-500/10', isCardio: false },
-  { value: 'run', label: 'Běh', icon: Footprints, color: 'text-emerald-500 bg-emerald-500/10', isCardio: true },
-  { value: 'cycling', label: 'Kolo', icon: Bike, color: 'text-blue-500 bg-blue-500/10', isCardio: true },
-  { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-teal-500 bg-teal-500/10', isCardio: true },
-  { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-cyan-500 bg-cyan-500/10', isCardio: true },
-  { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-purple-500 bg-purple-500/10', isCardio: false },
-  { value: 'other', label: 'Jiné', icon: Sparkles, color: 'text-pink-500 bg-pink-500/10', isCardio: false },
+  { value: 'strength', label: 'Posilovna', icon: Dumbbell, color: 'text-warning bg-warning/10', isCardio: false },
+  { value: 'run', label: 'Běh', icon: Footprints, color: 'text-success bg-success/10', isCardio: true },
+  { value: 'cycling', label: 'Kolo', icon: Bike, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-primary bg-primary/10', isCardio: false },
+  { value: 'other', label: 'Jiné', icon: Sparkles, color: 'text-primary bg-primary/10', isCardio: false },
 ];
 
 // Duration options

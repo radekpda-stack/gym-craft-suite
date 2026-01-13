@@ -111,11 +111,11 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
                 {lastResult.milestone ? '🎉 Milestone!' : 'Check-in úspěšný!'}
               </p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
+                <Badge className="bg-warning/20 text-warning border-warning/30">
                   <Zap className="w-3 h-3 mr-1" />
                   +{lastResult.xp} XP
                 </Badge>
-                <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">
+                <Badge className="bg-warning/20 text-warning border-warning/30">
                   <Flame className="w-3 h-3 mr-1" />
                   {lastResult.streak} {lastResult.streak === 1 ? 'den' : lastResult.streak < 5 ? 'dny' : 'dní'}
                 </Badge>
@@ -155,7 +155,7 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
                 {currentStreak > 0 && (
                   <Badge 
                     variant="secondary" 
-                    className="gap-1 bg-orange-500/10 text-orange-600 border-orange-500/30"
+                    className="gap-1 bg-warning/10 text-warning border-warning/30"
                   >
                     <Flame className="w-3 h-3" />
                     {currentStreak} {currentStreak === 1 ? 'den' : currentStreak < 5 ? 'dny' : 'dní'}

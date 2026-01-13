@@ -41,7 +41,7 @@ export function SettingsSection({
           "flex items-start gap-2 p-3 rounded-lg text-sm",
           impact.type === 'warning' 
             ? "bg-warning/10 text-warning border border-warning/20" 
-            : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+            : "bg-accent/10 text-accent border border-accent/20"
         )}>
           {impact.type === 'warning' ? (
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />

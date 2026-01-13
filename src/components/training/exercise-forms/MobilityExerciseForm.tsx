@@ -72,7 +72,7 @@ export function MobilityExerciseForm({
             {exercise.name_cs || exercise.name}
           </h3>
           <div className="flex gap-2 mt-1">
-            <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
               <Activity className="w-3 h-3 mr-1" />
               MOBILITA
             </Badge>

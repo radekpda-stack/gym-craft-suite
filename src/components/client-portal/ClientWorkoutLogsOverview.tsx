@@ -52,9 +52,9 @@ export function ClientWorkoutLogsOverview() {
   const getStatusBadge = (status: string | undefined) => {
     switch (status) {
       case 'planned':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-500/50 bg-yellow-500/10">Plánovaný</Badge>;
+        return <Badge variant="outline" className="text-warning border-warning/50 bg-warning/10">Plánovaný</Badge>;
       case 'completed':
-        return <Badge variant="outline" className="text-green-600 border-green-500/50 bg-green-500/10">Dokončený</Badge>;
+        return <Badge variant="outline" className="text-success border-success/50 bg-success/10">Dokončený</Badge>;
       case 'reviewed':
         return <Badge variant="outline" className="text-primary border-primary/50 bg-primary/10">Zkontrolován</Badge>;
       default:
@@ -167,11 +167,11 @@ export function ClientWorkoutLogsOverview() {
                           {log.notes && <p className="text-sm text-muted-foreground italic mb-3">{log.notes}</p>}
                           
                           {log.exercises?.map((ex, idx) => (
-                            <div key={ex.id || idx} className={cn("p-2 rounded text-sm", ex.is_personal_record ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-secondary/30")}>
+                            <div key={ex.id || idx} className={cn("p-2 rounded text-sm", ex.is_personal_record ? "bg-warning/10 border border-warning/30" : "bg-secondary/30")}>
                               <div className="flex items-center justify-between">
                                 <span className="font-medium flex items-center gap-2">
                                   {ex.exercise_name}
-                                  {ex.is_personal_record && <Trophy className="w-3 h-3 text-yellow-500" />}
+                                  {ex.is_personal_record && <Trophy className="w-3 h-3 text-warning" />}
                                 </span>
                                 {ex.rpe && <Badge variant="secondary">RPE {ex.rpe}</Badge>}
                               </div>
