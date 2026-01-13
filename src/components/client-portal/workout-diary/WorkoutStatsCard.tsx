@@ -203,7 +203,7 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4, onExport }: WorkoutStat
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-            <Flame className={cn("w-5 h-5", stats.streak > 0 ? "text-orange-500" : "text-muted-foreground")} />
+            <Flame className={cn("w-5 h-5", stats.streak > 0 ? "text-warning" : "text-muted-foreground")} />
             <div>
               <div className="text-lg font-bold">{stats.streak}</div>
               <div className="text-xs text-muted-foreground">Série dní</div>
@@ -211,7 +211,7 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4, onExport }: WorkoutStat
           </div>
 
           <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-            <TrendingUp className="w-5 h-5 text-blue-500" />
+            <TrendingUp className="w-5 h-5 text-accent" />
             <div>
               <div className="text-lg font-bold">{stats.volume > 0 ? `${(stats.volume / 1000).toFixed(1)}t` : '0'}</div>
               <div className="text-xs text-muted-foreground">Objem</div>
@@ -220,7 +220,7 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4, onExport }: WorkoutStat
 
           {stats.duration > 0 && (
             <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <Clock className="w-5 h-5 text-green-500" />
+              <Clock className="w-5 h-5 text-success" />
               <div>
                 <div className="text-lg font-bold">{stats.duration} min</div>
                 <div className="text-xs text-muted-foreground">Čas</div>
@@ -230,7 +230,7 @@ export function WorkoutStatsCard({ logs, weeklyGoal = 4, onExport }: WorkoutStat
 
           {stats.prs > 0 && (
             <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <Trophy className="w-5 h-5 text-yellow-500" />
+              <Trophy className="w-5 h-5 text-warning" />
               <div>
                 <div className="text-lg font-bold">{stats.prs}</div>
                 <div className="text-xs text-muted-foreground">PR</div>

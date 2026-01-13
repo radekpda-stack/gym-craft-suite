@@ -52,9 +52,9 @@ export function CancellationStatsCard({ onClick }: CancellationStatsCardProps) {
   }
 
   const getSeverityColor = (rate: number) => {
-    if (rate <= 5) return 'text-green-500';
-    if (rate <= 10) return 'text-yellow-500';
-    if (rate <= 20) return 'text-orange-500';
+    if (rate <= 5) return 'text-success';
+    if (rate <= 10) return 'text-warning';
+    if (rate <= 20) return 'text-warning';
     return 'text-destructive';
   };
 
@@ -113,12 +113,12 @@ export function CancellationStatsCard({ onClick }: CancellationStatsCardProps) {
         </div>
 
         {/* Late Cancellations */}
-        <div className="bg-orange-500/10 rounded-lg p-3">
-          <div className="flex items-center gap-1.5 text-xs text-orange-500/80 mb-1">
+        <div className="bg-warning/10 rounded-lg p-3">
+          <div className="flex items-center gap-1.5 text-xs text-warning/80 mb-1">
             <Clock className="w-3.5 h-3.5" />
             Pozdní zrušení
           </div>
-          <div className="text-xl font-bold text-orange-500">{stats.lateCancellations}</div>
+          <div className="text-xl font-bold text-warning">{stats.lateCancellations}</div>
           <div className="text-xs text-muted-foreground">
             {stats.lateCancellationRate.toFixed(0)}% ze zrušených
           </div>

@@ -105,7 +105,7 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', damping: 10, stiffness: 100 }}
-              className="w-24 h-24 mx-auto rounded-full bg-amber-500/20 border-4 border-amber-500 flex items-center justify-center"
+              className="w-24 h-24 mx-auto rounded-full bg-warning/20 border-4 border-warning flex items-center justify-center"
             >
               <span className="text-4xl">{data.badgeIcon || '🏆'}</span>
             </motion.div>
@@ -115,7 +115,7 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               transition={{ delay: 0.3 }}
             >
               <h2 className="text-3xl font-bold">Nový odznak!</h2>
-              <p className="text-xl text-amber-500 mt-2">{data.badgeName}</p>
+              <p className="text-xl text-warning mt-2">{data.badgeName}</p>
               {data.badgeRarity && (
                 <p className="text-sm text-muted-foreground capitalize">{data.badgeRarity}</p>
               )}
@@ -141,9 +141,9 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               initial={{ scale: 0 }}
               animate={{ scale: [0, 1.2, 1] }}
               transition={{ duration: 0.5 }}
-              className="w-24 h-24 mx-auto rounded-full bg-yellow-500/20 border-4 border-yellow-500 flex items-center justify-center"
+              className="w-24 h-24 mx-auto rounded-full bg-warning/20 border-4 border-warning flex items-center justify-center"
             >
-              <Trophy className="w-12 h-12 text-yellow-500" />
+              <Trophy className="w-12 h-12 text-warning" />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -151,7 +151,7 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               transition={{ delay: 0.3 }}
             >
               <h2 className="text-3xl font-bold">Nový rekord! 🎉</h2>
-              <p className="text-xl text-yellow-500 mt-2">{data.prName}</p>
+              <p className="text-xl text-warning mt-2">{data.prName}</p>
               <p className="text-2xl font-bold mt-1">{data.prValue}</p>
             </motion.div>
             {data.xpBonus && (
@@ -175,9 +175,9 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', damping: 10, stiffness: 100 }}
-              className="w-24 h-24 mx-auto rounded-full bg-orange-500/20 border-4 border-orange-500 flex items-center justify-center"
+              className="w-24 h-24 mx-auto rounded-full bg-warning/20 border-4 border-warning flex items-center justify-center"
             >
-              <Flame className="w-12 h-12 text-orange-500" />
+              <Flame className="w-12 h-12 text-warning" />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -185,7 +185,7 @@ export function CelebrationOverlay({ type, data, onClose }: CelebrationOverlayPr
               transition={{ delay: 0.3 }}
             >
               <h2 className="text-3xl font-bold">Série! 🔥</h2>
-              <p className="text-xl text-orange-500 mt-2">
+              <p className="text-xl text-warning mt-2">
                 {data.streakWeeks} {data.streakWeeks === 1 ? 'týden' : data.streakWeeks && data.streakWeeks >= 2 && data.streakWeeks <= 4 ? 'týdny' : 'týdnů'} v řadě
               </p>
             </motion.div>

@@ -66,7 +66,7 @@ export function CancellationDetailModal({ open, onOpenChange }: CancellationDeta
             <div className="text-xs text-muted-foreground">Celkem zrušeno</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-500">{stats.lateCancellations}</div>
+            <div className="text-2xl font-bold text-warning">{stats.lateCancellations}</div>
             <div className="text-xs text-muted-foreground">Pozdní zrušení</div>
           </div>
           <div className="text-center">
@@ -164,7 +164,7 @@ export function CancellationDetailModal({ open, onOpenChange }: CancellationDeta
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <div className="bg-muted/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <AlertTriangle className="h-4 w-4 text-warning" />
                   Míra pozdních zrušení
                 </div>
                 <div className="text-2xl font-bold">{stats.lateCancellationRate.toFixed(1)}%</div>
@@ -210,7 +210,7 @@ export function CancellationDetailModal({ open, onOpenChange }: CancellationDeta
                 variant={historyFilter === 'late' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setHistoryFilter('late')}
-                className={historyFilter === 'late' ? '' : 'border-orange-500/50 text-orange-500 hover:bg-orange-500/10'}
+                className={historyFilter === 'late' ? '' : 'border-warning/50 text-warning hover:bg-warning/10'}
               >
                 <Clock className="h-3.5 w-3.5 mr-1" />
                 Pozdní ({stats.lateCancellations})
@@ -290,7 +290,7 @@ function ClientCancellationRow({ client }: { client: ClientCancellationSummary }
           <span className="w-16 text-muted-foreground">Pozdní:</span>
           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-orange-500 rounded-full transition-all"
+              className="h-full bg-warning rounded-full transition-all"
               style={{ width: `${latePercentage}%` }}
             />
           </div>
@@ -342,7 +342,7 @@ function CancellationHistoryRow({ cancellation }: { cancellation: CancellationRe
         
         <div className="flex flex-col items-end gap-1 shrink-0">
           {cancellation.isLate ? (
-            <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/30">
+            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
               <Clock className="h-3 w-3 mr-1" />
               Pozdní
             </Badge>

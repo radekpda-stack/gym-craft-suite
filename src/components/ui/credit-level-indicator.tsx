@@ -32,24 +32,24 @@ function getActiveLeaves(balance: number): number {
 
 function getLeafColor(isActive: boolean, isNegative: boolean, index: number, activeCount: number) {
   if (isNegative) {
-    return 'text-red-500/80';
+    return 'text-destructive/80';
   }
   
   if (!isActive) {
     return 'text-muted-foreground/20';
   }
   
-  // Gradient from emerald to lime for active leaves
+  // Gradient from success to warning for active leaves
   if (activeCount >= 4) {
-    return 'text-emerald-400';
+    return 'text-success';
   }
   if (activeCount === 3) {
-    return 'text-lime-400';
+    return 'text-success';
   }
   if (activeCount === 2) {
-    return 'text-amber-400';
+    return 'text-warning';
   }
-  return 'text-orange-400';
+  return 'text-warning';
 }
 
 export function CreditLevelIndicator({ 
@@ -95,8 +95,8 @@ export function CreditLevelIndicator({
       {showAmount && (
         <span className={cn(
           'ml-1.5 text-xs tabular-nums font-medium',
-          isNegative ? 'text-red-400' : 
-          activeLeaves <= 2 ? 'text-amber-400' : 
+          isNegative ? 'text-destructive' : 
+          activeLeaves <= 2 ? 'text-warning' : 
           'text-muted-foreground'
         )}>
           {creditBalance.toLocaleString('cs-CZ')} Kč

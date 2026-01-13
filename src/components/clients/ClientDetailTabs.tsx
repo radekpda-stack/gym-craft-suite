@@ -146,7 +146,7 @@ export function ClientDetailTabs({
                   variant={tab.badgeVariant === 'destructive' ? 'destructive' : 'secondary'}
                   className={cn(
                     "h-5 min-w-5 px-1 text-[10px]",
-                    tab.badgeVariant === 'warning' && "bg-amber-500/20 text-amber-600 border-amber-500/30"
+                    tab.badgeVariant === 'warning' && "bg-warning/20 text-warning border-warning/30"
                   )}
                 >
                   {tab.badge}
