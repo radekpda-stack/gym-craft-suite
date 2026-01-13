@@ -82,9 +82,9 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
     <Card className={cn(
       "relative overflow-hidden transition-all duration-300",
       checkedInToday 
-        ? "bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border-green-500/30" 
+        ? "bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/30" 
         : status.streakAtRisk
-          ? "bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border-orange-500/30"
+          ? "bg-gradient-to-br from-warning/10 via-warning/5 to-transparent border-warning/30"
           : "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/30",
       className
     )}>
@@ -102,9 +102,9 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
                 transition={{ duration: 0.5 }}
               >
                 {lastResult.milestone ? (
-                  <Trophy className="w-12 h-12 text-yellow-500 mb-2" />
+                  <Trophy className="w-12 h-12 text-warning mb-2" />
                 ) : (
-                  <Flame className="w-12 h-12 text-orange-500 mb-2" />
+                  <Flame className="w-12 h-12 text-warning mb-2" />
                 )}
               </motion.div>
               <p className="text-lg font-bold">
@@ -130,14 +130,14 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={cn(
+                <div className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center",
-                    checkedInToday ? "bg-green-500/20" : "bg-orange-500/20"
+                    checkedInToday ? "bg-success/20" : "bg-warning/20"
                   )}>
                     {checkedInToday ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <CheckCircle2 className="w-4 h-4 text-success" />
                     ) : (
-                      <Flame className="w-4 h-4 text-orange-500" />
+                      <Flame className="w-4 h-4 text-warning" />
                     )}
                   </div>
                   <div>
@@ -175,9 +175,9 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
                       className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
                         day.isChecked 
-                          ? "bg-green-500 text-white" 
+                          ? "bg-success text-success-foreground" 
                           : day.isCurrentDay && !checkedInToday
-                            ? "bg-orange-500/20 border-2 border-orange-500 border-dashed text-orange-500"
+                            ? "bg-warning/20 border-2 border-warning border-dashed text-warning"
                             : "bg-muted text-muted-foreground"
                       )}
                     >
@@ -199,7 +199,7 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
                   className={cn(
                     "w-full gap-2",
                     status.streakAtRisk 
-                      ? "bg-orange-500 hover:bg-orange-600" 
+                      ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
                       : "bg-primary hover:bg-primary/90"
                   )}
                   size="sm"
@@ -225,11 +225,11 @@ export function DailyCheckinCard({ className }: DailyCheckinCardProps) {
               {checkedInToday && longestStreak > 0 && (
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-yellow-500" />
+                    <Trophy className="w-3 h-3 text-warning" />
                     Nejdelší: {longestStreak} {longestStreak === 1 ? 'den' : longestStreak < 5 ? 'dny' : 'dní'}
                   </span>
                   <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                    <CheckCircle2 className="w-3 h-3 text-success" />
                     Celkem: {streak?.total_checkins ?? 0}
                   </span>
                 </div>

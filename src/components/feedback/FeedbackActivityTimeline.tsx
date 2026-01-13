@@ -126,8 +126,8 @@ export function FeedbackActivityTimeline() {
       case 'completed':
         return {
           icon: CheckCircle2,
-          color: 'text-emerald-500',
-          bgColor: 'bg-emerald-500/10',
+          color: 'text-success',
+          bgColor: 'bg-success/10',
           label: 'vyplnil/a feedback',
         };
       case 'red_flag':
@@ -147,8 +147,8 @@ export function FeedbackActivityTimeline() {
       case 'waiting':
         return {
           icon: Clock,
-          color: 'text-amber-500',
-          bgColor: 'bg-amber-500/10',
+          color: 'text-warning',
+          bgColor: 'bg-warning/10',
           label: 'čeká',
         };
       case 'expired':

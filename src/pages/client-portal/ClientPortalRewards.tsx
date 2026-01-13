@@ -65,12 +65,12 @@ export default function ClientPortalRewards() {
       </div>
 
       {/* LP Balance Card */}
-      <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
+      <Card className="border-warning/20 bg-gradient-to-br from-warning/5 to-transparent">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-amber-500/10 border-2 border-amber-500 flex items-center justify-center">
-                <Coins className="w-6 h-6 text-amber-500" />
+              <div className="w-14 h-14 rounded-full bg-warning/10 border-2 border-warning flex items-center justify-center">
+                <Coins className="w-6 h-6 text-warning" />
               </div>
               <div>
                 <p className="text-3xl font-bold">{lpBalance}</p>
@@ -78,7 +78,7 @@ export default function ClientPortalRewards() {
               </div>
             </div>
             {currentMilestone && (
-              <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 text-base px-3 py-1">
+              <Badge variant="secondary" className="bg-warning/10 text-warning text-base px-3 py-1">
                 {currentMilestone.icon} {currentMilestone.name}
               </Badge>
             )}
@@ -101,7 +101,7 @@ export default function ClientPortalRewards() {
       {/* Milestones */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-500" />
+          <Sparkles className="w-5 h-5 text-warning" />
           Věrnostní úrovně
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -114,13 +114,13 @@ export default function ClientPortalRewards() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: milestone.points / 1000 * 0.3 }}
               >
-                <Card className={`text-center ${achieved ? 'border-amber-500/50 bg-amber-500/5' : 'opacity-60'}`}>
+                <Card className={`text-center ${achieved ? 'border-warning/50 bg-warning/5' : 'opacity-60'}`}>
                   <CardContent className="pt-4 pb-3">
                     <span className="text-2xl">{milestone.icon}</span>
                     <p className="font-medium mt-1">{milestone.name}</p>
                     <p className="text-xs text-muted-foreground">{milestone.points} LP</p>
                     {achieved && (
-                      <Badge className="mt-2 bg-amber-500 text-white">Dosaženo</Badge>
+                      <Badge className="mt-2 bg-warning text-warning-foreground">Dosaženo</Badge>
                     )}
                   </CardContent>
                 </Card>

@@ -75,13 +75,13 @@ function ScaleBar({
   const percentage = (value / max) * 100;
   const getColor = () => {
     if (invertColor) {
-      if (percentage <= 30) return 'bg-green-500';
-      if (percentage <= 60) return 'bg-yellow-500';
-      return 'bg-red-500';
+      if (percentage <= 30) return 'bg-success';
+      if (percentage <= 60) return 'bg-warning';
+      return 'bg-destructive';
     } else {
-      if (percentage >= 70) return 'bg-green-500';
-      if (percentage >= 40) return 'bg-yellow-500';
-      return 'bg-red-500';
+      if (percentage >= 70) return 'bg-success';
+      if (percentage >= 40) return 'bg-warning';
+      return 'bg-destructive';
     }
   };
 
@@ -173,9 +173,9 @@ export function FeedbackDetailDialog({
 
             {/* Red Flag Reasons */}
             {feedback.is_red_flag && feedback.red_flag_reasons && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <p className="text-sm font-medium text-red-700 mb-1">Důvody upozornění:</p>
-                <ul className="text-sm text-red-600 list-disc list-inside">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm font-medium text-destructive mb-1">Důvody upozornění:</p>
+                <ul className="text-sm text-destructive list-disc list-inside">
                   {feedback.red_flag_reasons.map((reason, i) => (
                     <li key={i}>{reason}</li>
                   ))}
@@ -295,9 +295,9 @@ export function FeedbackDetailDialog({
                           key={area}
                           className={cn(
                             "flex items-center justify-between p-2 rounded-lg border",
-                            intensity >= 7 ? "bg-red-500/10 border-red-500/30" :
-                            intensity >= 4 ? "bg-orange-500/10 border-orange-500/30" :
-                            "bg-yellow-500/10 border-yellow-500/30"
+                            intensity >= 7 ? "bg-destructive/10 border-destructive/30" :
+                            intensity >= 4 ? "bg-warning/10 border-warning/30" :
+                            "bg-warning/5 border-warning/20"
                           )}
                         >
                           <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ export function FeedbackDetailDialog({
                             {isNew !== undefined && (
                               <Badge variant="outline" className={cn(
                                 "text-[10px] px-1.5 py-0",
-                                isNew ? "border-orange-500 text-orange-600" : "border-blue-500 text-blue-600"
+                                isNew ? "border-warning text-warning" : "border-accent text-accent"
                               )}>
                                 {isNew ? 'Nová' : 'Známá'}
                               </Badge>
@@ -313,9 +313,9 @@ export function FeedbackDetailDialog({
                           </div>
                           <span className={cn(
                             "text-sm font-bold",
-                            intensity >= 7 ? "text-red-600" :
-                            intensity >= 4 ? "text-orange-600" :
-                            "text-yellow-600"
+                            intensity >= 7 ? "text-destructive" :
+                            intensity >= 4 ? "text-warning" :
+                            "text-warning/80"
                           )}>
                             {intensity}/10
                           </span>

@@ -47,7 +47,7 @@ export function ClientDashboardCard({
 
   const badgeColors = {
     default: 'bg-primary/10 text-primary',
-    warning: 'bg-amber-500/10 text-amber-600',
+    warning: 'bg-warning/10 text-warning',
     error: 'bg-destructive/10 text-destructive',
   };
 
@@ -69,7 +69,7 @@ export function ClientDashboardCard({
             <span className="text-primary shrink-0">{icon}</span>
             <h3 className="font-semibold text-foreground truncate">{title}</h3>
             {isFavorite && (
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
+              <Star className="w-4 h-4 text-warning fill-warning shrink-0" />
             )}
             {badge !== undefined && badge > 0 && (
               <span className={cn(
@@ -108,7 +108,7 @@ export function ClientDashboardCard({
                 {metric.trend && (
                   <span className={cn(
                     'ml-1',
-                    metric.trend === 'up' && 'text-emerald-500',
+                    metric.trend === 'up' && 'text-success',
                     metric.trend === 'down' && 'text-destructive'
                   )}>
                     {trendIcons[metric.trend]}

@@ -213,7 +213,7 @@ export function ClientPurchaseHistory({ clientId }: ClientPurchaseHistoryProps) 
                         transaction.payment_method === 'cash' 
                           ? "bg-success/10 text-success" 
                           : transaction.payment_method === 'card'
-                          ? "bg-blue-500/10 text-blue-500"
+                          ? "bg-accent/10 text-accent"
                           : "bg-primary/10 text-primary"
                       )}>
                         <PaymentIcon className="w-3 h-3" />

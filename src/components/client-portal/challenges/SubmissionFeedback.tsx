@@ -117,7 +117,7 @@ export function SubmissionFeedback({
       <DialogContent className="max-w-sm text-center">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
+            <Sparkles className="h-5 w-5 text-warning" />
             Výsledek odeslán!
           </DialogTitle>
           <DialogDescription>{challengeTitle}</DialogDescription>
@@ -138,7 +138,7 @@ export function SubmissionFeedback({
           {improvement != null && improvement !== 0 && (
             <div className={cn(
               "flex items-center justify-center gap-2 text-lg font-medium",
-              isImproved ? "text-green-500" : "text-muted-foreground"
+              isImproved ? "text-success" : "text-muted-foreground"
             )}>
               {isImproved ? (
                 <>
@@ -173,7 +173,7 @@ export function SubmissionFeedback({
             <div className="flex items-center justify-center gap-2">
               <Trophy className={cn(
                 "h-5 w-5",
-                rank === 1 ? "text-amber-500" : rank === 2 ? "text-gray-400" : rank === 3 ? "text-amber-700" : "text-muted-foreground"
+                rank === 1 ? "text-warning" : rank === 2 ? "text-muted-foreground" : rank === 3 ? "text-warning/70" : "text-muted-foreground"
               )} />
               <span className="text-lg">
                 {rank}. místo z {totalParticipants}

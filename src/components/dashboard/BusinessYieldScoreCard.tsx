@@ -10,10 +10,10 @@ import { BusinessYieldDetailModal } from './BusinessYieldDetailModal';
 
 const STATUS_CONFIG = {
   excellent: {
-    gradient: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
-    ring: 'ring-emerald-500/30',
-    text: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
+    gradient: 'from-success/20 via-success/5 to-transparent',
+    ring: 'ring-success/30',
+    text: 'text-success',
+    bg: 'bg-success/10',
     label: 'Skvělé',
   },
   good: {
@@ -24,17 +24,17 @@ const STATUS_CONFIG = {
     label: 'Stabilní',
   },
   warning: {
-    gradient: 'from-amber-500/20 via-amber-500/5 to-transparent',
-    ring: 'ring-amber-500/30',
-    text: 'text-amber-400',
-    bg: 'bg-amber-500/10',
+    gradient: 'from-warning/20 via-warning/5 to-transparent',
+    ring: 'ring-warning/30',
+    text: 'text-warning',
+    bg: 'bg-warning/10',
     label: 'Vyžaduje pozornost',
   },
   critical: {
-    gradient: 'from-red-500/20 via-red-500/5 to-transparent',
-    ring: 'ring-red-500/30',
-    text: 'text-red-400',
-    bg: 'bg-red-500/10',
+    gradient: 'from-destructive/20 via-destructive/5 to-transparent',
+    ring: 'ring-destructive/30',
+    text: 'text-destructive',
+    bg: 'bg-destructive/10',
     label: 'Rizikové',
   },
 };
@@ -65,7 +65,7 @@ function PillarBar({ pillar, pillarKey }: { pillar: YieldPillar; pillarKey: keyo
               <motion.div
                 className={cn(
                   'h-full rounded-full',
-                  isPositive ? 'bg-emerald-500' : isNeutral ? 'bg-amber-500' : 'bg-red-500'
+                  isPositive ? 'bg-success' : isNeutral ? 'bg-warning' : 'bg-destructive'
                 )}
                 initial={{ width: 0 }}
                 animate={{ width: `${pillar.score}%` }}
@@ -75,14 +75,14 @@ function PillarBar({ pillar, pillarKey }: { pillar: YieldPillar; pillarKey: keyo
             <div className="flex items-center justify-between mt-0.5">
               <span className={cn(
                 'text-xs font-medium',
-                isPositive ? 'text-emerald-400' : isNeutral ? 'text-amber-400' : 'text-red-400'
+                isPositive ? 'text-success' : isNeutral ? 'text-warning' : 'text-destructive'
               )}>
                 {pillar.score}
               </span>
               {pillar.trend !== 'stable' && (
                 <span className={cn(
                   'text-[10px]',
-                  pillar.trend === 'up' ? 'text-emerald-400' : 'text-red-400'
+                  pillar.trend === 'up' ? 'text-success' : 'text-destructive'
                 )}>
                   {pillar.trend === 'up' ? '↑' : '↓'}
                 </span>
@@ -182,8 +182,8 @@ export const BusinessYieldScoreCard = memo(function BusinessYieldScoreCard() {
                   </span>
                   <span className={cn(
                     'text-xs flex items-center gap-1 px-2 py-0.5 rounded-full',
-                    data.weekChange > 0 ? 'text-emerald-400 bg-emerald-500/10' :
-                    data.weekChange < 0 ? 'text-red-400 bg-red-500/10' :
+                    data.weekChange > 0 ? 'text-success bg-success/10' :
+                    data.weekChange < 0 ? 'text-destructive bg-destructive/10' :
                     'text-muted-foreground bg-muted/20'
                   )}>
                     {data.weekChange > 0 ? <TrendingUp className="w-3 h-3" /> :
