@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 
 interface XPBetSelectorProps {
   challengeId: string;
+  challengeType?: 'duel' | 'private' | 'public';
   currentBet?: number;
   minBet?: number;
   maxBet?: number;
@@ -34,6 +35,7 @@ const QUICK_BETS = [10, 25, 50, 100, 200];
 
 export function XPBetSelector({
   challengeId,
+  challengeType = 'duel',
   currentBet = 0,
   minBet = 10,
   maxBet = 500,
@@ -184,16 +186,44 @@ export function XPBetSelector({
 
         {/* Potential outcomes */}
         {betAmount > 0 && (
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="p-2 rounded bg-green-500/10 text-center">
-              <div className="text-green-600 font-bold">+{betAmount * 2} XP</div>
-              <div className="text-xs text-muted-foreground">Při výhře</div>
+          challengeType === 'duel' ? (
+            // Duel: simple win/lose
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="p-2 rounded bg-green-500/10 text-center">
+                <div className="text-green-600 font-bold">+{betAmount * 2} XP</div>
+                <div className="text-xs text-muted-foreground">Při výhře</div>
+              </div>
+              <div className="p-2 rounded bg-red-500/10 text-center">
+                <div className="text-red-600 font-bold">-{betAmount} XP</div>
+                <div className="text-xs text-muted-foreground">Při prohře</div>
+              </div>
             </div>
-            <div className="p-2 rounded bg-red-500/10 text-center">
-              <div className="text-red-600 font-bold">-{betAmount} XP</div>
-              <div className="text-xs text-muted-foreground">Při prohře</div>
+          ) : (
+            // Group challenge: tiered outcomes
+            <div className="space-y-2 text-sm">
+              <div className="text-xs text-muted-foreground text-center mb-2">
+                Výplata podle umístění:
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="p-1.5 rounded bg-green-500/10 text-center">
+                  <div className="text-green-600 font-bold text-xs">+{betAmount * 2} XP</div>
+                  <div className="text-[10px] text-muted-foreground">Top 25%</div>
+                </div>
+                <div className="p-1.5 rounded bg-green-500/5 text-center">
+                  <div className="text-green-600 font-bold text-xs">+{Math.floor(betAmount * 0.5)} XP</div>
+                  <div className="text-[10px] text-muted-foreground">25-50%</div>
+                </div>
+                <div className="p-1.5 rounded bg-red-500/5 text-center">
+                  <div className="text-red-600 font-bold text-xs">-{Math.floor(betAmount * 0.5)} XP</div>
+                  <div className="text-[10px] text-muted-foreground">50-75%</div>
+                </div>
+                <div className="p-1.5 rounded bg-red-500/10 text-center">
+                  <div className="text-red-600 font-bold text-xs">-{betAmount} XP</div>
+                  <div className="text-[10px] text-muted-foreground">Spodních 25%</div>
+                </div>
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* Confirm button */}

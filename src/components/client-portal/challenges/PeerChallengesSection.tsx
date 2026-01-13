@@ -20,8 +20,10 @@ import {
   usePeerChallengeInvitations,
   useRespondToInvitation,
 } from '@/hooks/usePeerChallenges';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { supabase } from '@/integrations/supabase/client';
 import { PeerChallengeCard } from './PeerChallengeCard';
-import { DuelCard } from './DuelCard';
+import { DuelCardWrapper } from './DuelCardWrapper';
 import { PendingInvitationsSection } from './PendingInvitationsSection';
 import { CreatePeerChallengeDialog } from './CreatePeerChallengeDialog';
 import { PeerChallengesOnboarding } from './PeerChallengesOnboarding';
@@ -35,11 +37,29 @@ export function PeerChallengesSection() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
-  const [onboardingSeen, setOnboardingSeen] = useState(false);
+  const [onboardingSeen, setOnboardingSeen] = useState(true); // Default to true to avoid flash
 
+  const { clientId } = useClientPortal();
   const { data: challenges = [], isLoading: loadingChallenges } = useMyPeerChallenges();
   const { data: invitations = [], isLoading: loadingInvitations } = usePeerChallengeInvitations();
   const respondToInvitation = useRespondToInvitation();
+
+  // Load onboarding state from DB
+  useEffect(() => {
+    const loadOnboardingState = async () => {
+      if (!clientId) return;
+      
+      const { data } = await supabase
+        .from('client_preferences')
+        .select('peer_challenges_onboarding_seen')
+        .eq('client_id', clientId)
+        .maybeSingle();
+      
+      setOnboardingSeen(data?.peer_challenges_onboarding_seen ?? false);
+    };
+    
+    loadOnboardingState();
+  }, [clientId]);
 
   const activeChallenges = (challenges as any[]).filter((c: any) => c?.status === 'active');
   const duels = activeChallenges.filter((c: any) => c?.challenge_type === 'duel');
@@ -61,10 +81,17 @@ export function PeerChallengesSection() {
     setShowOnboarding(true);
   };
 
-  const handleOnboardingClose = (dontShowAgain: boolean) => {
+  const handleOnboardingClose = async (dontShowAgain: boolean) => {
     setShowOnboarding(false);
-    if (dontShowAgain) {
+    if (dontShowAgain && clientId) {
       setOnboardingSeen(true);
+      // Save to DB
+      await supabase
+        .from('client_preferences')
+        .upsert({
+          client_id: clientId,
+          peer_challenges_onboarding_seen: true,
+        }, { onConflict: 'client_id' });
     }
     // Open create dialog after onboarding
     setShowCreateDialog(true);
@@ -164,12 +191,9 @@ export function PeerChallengesSection() {
                       </h4>
                       <div className="grid gap-3 sm:grid-cols-2">
                         {duels.map((duel) => (
-                          <DuelCard
+                          <DuelCardWrapper
                             key={duel.id}
                             challenge={duel}
-                            myScore={duel.my_submission?.score_primary ?? null}
-                            opponentScore={null} // TODO: Get opponent score
-                            opponentName="Soupeř" // TODO: Get opponent name
                             onClick={() => setSelectedChallengeId(duel.id)}
                           />
                         ))}

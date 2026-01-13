@@ -9986,6 +9986,7 @@ export type Database = {
       }
       clean_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_diagnostics: { Args: never; Returns: Json }
+      complete_expired_peer_challenges: { Args: never; Returns: number }
       generate_search_name: {
         Args: { name_cs: string; name_en: string }
         Returns: string
