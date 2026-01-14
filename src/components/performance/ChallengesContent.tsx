@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles, Copy, Download, Award, Search } from 'lucide-react';
+import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles, Copy, Download, Award, Search, Globe, ExternalLink, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,11 @@ import { ChallengeEditor } from '@/components/challenges/ChallengeEditor';
 import { ChallengeSubmissionsView } from '@/components/challenges/ChallengeSubmissionsView';
 import { ChallengeWinnerManager } from '@/components/challenges/ChallengeWinnerManager';
 import { ChallengeStatsCard } from '@/components/challenges/ChallengeStatsCard';
+import { QuickPublicSettingsDialog } from '@/components/challenges/QuickPublicSettingsDialog';
 import { useSeedChallenges } from '@/hooks/useSeedChallenges';
 import { format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 export function ChallengesContent() {
   const { data: challenges, isLoading } = useChallenges();
@@ -37,6 +39,22 @@ export function ChallengesContent() {
   const [managingWinners, setManagingWinners] = useState<Challenge | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStats, setSelectedStats] = useState<Challenge | null>(null);
+  const [publicSettingsChallenge, setPublicSettingsChallenge] = useState<Challenge | null>(null);
+
+  const copyPublicLink = async (slug: string) => {
+    const url = `${window.location.origin}/challenge/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Odkaz zkopírován');
+    } catch {
+      toast.error('Nepodařilo se zkopírovat odkaz');
+    }
+  };
+
+  const openPublicPage = (slug: string) => {
+    const url = `${window.location.origin}/challenge/${slug}`;
+    window.open(url, '_blank');
+  };
 
   // Auto-archive expired challenges on mount
   useEffect(() => {
@@ -113,7 +131,15 @@ export function ChallengesContent() {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg">{challenge.title}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">{challenge.title}</CardTitle>
+              {challenge.is_public && (
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Veřejná
+                </Badge>
+              )}
+            </div>
             <CardDescription className="line-clamp-2">
               {challenge.description || 'Bez popisu'}
             </CardDescription>
@@ -142,6 +168,24 @@ export function ChallengesContent() {
                   <Trophy className="h-4 w-4 mr-2" />
                   Statistiky
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Public challenge actions */}
+                <DropdownMenuItem onClick={() => setPublicSettingsChallenge(challenge)}>
+                  <Globe className="h-4 w-4 mr-2" />
+                  Veřejné nastavení
+                </DropdownMenuItem>
+                {challenge.is_public && challenge.public_slug && (
+                  <>
+                    <DropdownMenuItem onClick={() => copyPublicLink(challenge.public_slug!)}>
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Kopírovat odkaz
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openPublicPage(challenge.public_slug!)}>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Otevřít stránku
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => duplicateChallenge.mutate(challenge)}>
                   <Copy className="h-4 w-4 mr-2" />
@@ -353,6 +397,13 @@ export function ChallengesContent() {
           </div>
         </div>
       )}
+
+      {/* Public Settings Dialog */}
+      <QuickPublicSettingsDialog
+        challenge={publicSettingsChallenge}
+        open={!!publicSettingsChallenge}
+        onOpenChange={(open) => !open && setPublicSettingsChallenge(null)}
+      />
     </div>
   );
 }
