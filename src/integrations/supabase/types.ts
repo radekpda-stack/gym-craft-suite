@@ -10393,6 +10393,10 @@ export type Database = {
           xp_to_next: number
         }[]
       }
+      can_client_create_peer_challenge: {
+        Args: { p_client_id: string; p_trainer_id: string }
+        Returns: boolean
+      }
       clean_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_diagnostics: { Args: never; Returns: Json }
       complete_expired_peer_challenges: { Args: never; Returns: number }
