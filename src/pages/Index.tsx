@@ -16,6 +16,7 @@ import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 import { TrainingsCalendarCard } from '@/components/dashboard/TrainingsCalendarCard';
+import { FollowupsDashboardWidget } from '@/components/dashboard/FollowupsDashboardWidget';
 
 export default function Index() {
   usePageTracking('dashboard');
@@ -95,6 +96,11 @@ export default function Index() {
             <PendingPerformancesCard />
           </SectionErrorBoundary>
         )}
+
+        {/* 📝 Follow-ups Widget */}
+        <SectionErrorBoundary section="Připomenutí" compact>
+          <FollowupsDashboardWidget />
+        </SectionErrorBoundary>
         
       </div>
       
