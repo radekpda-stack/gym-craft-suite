@@ -51,7 +51,7 @@ export function TrainingStatsSection() {
             <ToggleGroupItem
               key={option.value}
               value={String(option.value)}
-              className="text-xs sm:text-sm px-2 sm:px-3 data-[state=on]:bg-background"
+              className="text-xs sm:text-sm px-2 sm:px-3 data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               {option.label}
             </ToggleGroupItem>
