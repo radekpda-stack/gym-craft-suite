@@ -40,6 +40,7 @@ import { ClientInjuryHistory } from './ClientInjuryHistory';
 import { ClientChatSection } from './ClientChatSection';
 import { ClientNotesSection } from './ClientNotesSection';
 import { ClientCommunicationLog } from './ClientCommunicationLog';
+import { ClientFollowupHistory } from './ClientFollowupHistory';
 import { ClientAdminBlock } from './ClientAdminBlock';
 import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 import { ClientProfileTab } from './ClientProfileTab';
@@ -246,6 +247,9 @@ export function ClientDetailTabs({
 
       {/* Tab: Communication */}
       <TabsContent value="communication" className="mt-0 space-y-4">
+        {/* Followup History */}
+        <ClientFollowupHistory clientId={client.id} />
+        
         {/* Chat */}
         <div className="bg-card border border-border rounded-2xl p-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">

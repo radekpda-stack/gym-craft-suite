@@ -8962,6 +8962,74 @@ export type Database = {
           },
         ]
       }
+      training_followups: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string | null
+          followup_type: string | null
+          id: string
+          is_resolved: boolean | null
+          resolved_at: string | null
+          resolved_in_training_id: string | null
+          training_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string | null
+          followup_type?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_in_training_id?: string | null
+          training_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string | null
+          followup_type?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_in_training_id?: string | null
+          training_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_followups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_followups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "training_followups_resolved_in_training_id_fkey"
+            columns: ["resolved_in_training_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_followups_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_packages: {
         Row: {
           created_at: string | null

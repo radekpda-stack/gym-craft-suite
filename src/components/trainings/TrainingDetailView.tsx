@@ -54,6 +54,8 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { ClientProfilePanel } from '@/components/trainings/ClientProfilePanel';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
+import { PreviousFollowupAlert } from '@/components/trainings/PreviousFollowupAlert';
+import { FollowupInput } from '@/components/trainings/FollowupInput';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -463,6 +465,14 @@ export function TrainingDetailView({
       {/* Client Profile Panel - show restrictions/alerts */}
       {client && <ClientProfilePanel client={client} />}
 
+      {/* FOLLOWUP ALERT - show unresolved followups from previous trainings */}
+      {training.status === 'scheduled' && (
+        <PreviousFollowupAlert 
+          clientId={training.client_id} 
+          currentTrainingId={training.id}
+        />
+      )}
+
       {/* PARTICIPANTS - show for scheduled/in_progress trainings */}
       {(training.status === 'scheduled' || training.status === 'in_progress') && (
         <TrainingParticipantsManager
@@ -613,6 +623,14 @@ export function TrainingDetailView({
             />
           </div>
         )}
+      </div>
+
+      {/* FOLLOWUP INPUT - add reminders for next training */}
+      <div className="glass rounded-xl p-4">
+        <FollowupInput 
+          trainingSessionId={training.id} 
+          clientId={training.client_id} 
+        />
       </div>
 
       {/* Feedback Section - Only for completed trainings */}
