@@ -72,6 +72,16 @@ export const clientFormSchema = z.object({
   stress_level: z.number().optional().nullable(),
   dietary_restrictions: z.array(z.string()).optional().nullable(),
   supplements: z.array(z.string()).optional().nullable(),
+  // Pre-diagnostic data fields
+  height: z.number().optional().nullable(),
+  weight: z.number().optional().nullable(),
+  sleep_quality: z.string().optional().nullable(),
+  pain_areas: z.array(z.string()).optional().nullable(),
+  injury_history: z.string().optional().nullable(),
+  surgery_history: z.string().optional().nullable(),
+  movement_frequency: z.string().optional().nullable(),
+  daily_activity_type: z.string().optional().nullable(),
+  training_dislikes: z.array(z.string()).optional().nullable(),
 });
 
 export type ClientFormValues = z.infer<typeof clientFormSchema>;

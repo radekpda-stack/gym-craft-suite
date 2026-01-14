@@ -45,6 +45,16 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     stress_level: null,
     dietary_restrictions: null,
     supplements: null,
+    // Pre-diagnostic data fields
+    height: null,
+    weight: null,
+    sleep_quality: null,
+    pain_areas: null,
+    injury_history: null,
+    surgery_history: null,
+    movement_frequency: null,
+    daily_activity_type: null,
+    training_dislikes: null,
     // Price transition fields
     grandfathered_credit: null,
     grandfathered_at: null,

@@ -36,6 +36,16 @@ export interface Client {
   stress_level: number | null;
   dietary_restrictions: string[] | null;
   supplements: string[] | null;
+  // Pre-diagnostic data fields
+  height: number | null;
+  weight: number | null;
+  sleep_quality: string | null;
+  pain_areas: string[] | null;
+  injury_history: string | null;
+  surgery_history: string | null;
+  movement_frequency: string | null;
+  daily_activity_type: string | null;
+  training_dislikes: string[] | null;
   // Custom pricing fields
   custom_training_price: number | null;
   custom_price_note: string | null;
