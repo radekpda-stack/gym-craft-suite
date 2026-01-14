@@ -10393,8 +10393,20 @@ export type Database = {
           xp_to_next: number
         }[]
       }
+      can_client_add_peer_challenge_participant: {
+        Args: { p_challenge_id: string }
+        Returns: boolean
+      }
       can_client_create_peer_challenge: {
         Args: { p_client_id: string; p_trainer_id: string }
+        Returns: boolean
+      }
+      can_client_view_peer_challenge: {
+        Args: { p_challenge_id: string }
+        Returns: boolean
+      }
+      can_trainer_manage_peer_challenge: {
+        Args: { p_challenge_id: string }
         Returns: boolean
       }
       clean_old_login_attempts: { Args: never; Returns: undefined }
