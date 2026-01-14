@@ -14,7 +14,7 @@ export function GenderIcon({ gender, className, showLabel = false }: GenderIconP
   return (
     <span 
       className={cn(
-        "inline-flex items-center gap-1 text-sm",
+        "inline-flex items-center gap-1 text-sm shrink-0 whitespace-nowrap",
         isMale ? "text-primary/70" : "text-accent/70",
         className
       )}
@@ -24,7 +24,7 @@ export function GenderIcon({ gender, className, showLabel = false }: GenderIconP
         {isMale ? "♂" : "♀"}
       </span>
       {showLabel && (
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground truncate">
           {isMale ? "Muž" : "Žena"}
         </span>
       )}
