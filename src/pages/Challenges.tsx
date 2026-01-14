@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles, Copy, Download, Award, Search } from 'lucide-react';
+import { Plus, Trophy, Archive, Clock, MoreVertical, Users, Play, Pause, Sparkles, Copy, Download, Award, Search, Globe, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,10 +19,12 @@ import { ChallengeSubmissionsView } from '@/components/challenges/ChallengeSubmi
 import { ChallengeWinnerManager } from '@/components/challenges/ChallengeWinnerManager';
 import { ChallengeStatsCard } from '@/components/challenges/ChallengeStatsCard';
 import { PeerChallengesTrainerView } from '@/components/challenges/PeerChallengesTrainerView';
+import { QuickPublicSettingsDialog } from '@/components/challenges/QuickPublicSettingsDialog';
 import { useSeedChallenges } from '@/hooks/useSeedChallenges';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 export default function Challenges() {
   usePageTracking('challenges');
@@ -40,6 +42,7 @@ export default function Challenges() {
   const [managingWinners, setManagingWinners] = useState<Challenge | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStats, setSelectedStats] = useState<Challenge | null>(null);
+  const [publicSettingsChallenge, setPublicSettingsChallenge] = useState<Challenge | null>(null);
 
   // Auto-archive expired challenges on mount
   useEffect(() => {
@@ -111,12 +114,36 @@ export default function Challenges() {
     }
   };
 
+  const copyPublicLink = async (challenge: Challenge) => {
+    if (!challenge.public_slug) return;
+    const url = `${window.location.origin}/challenge/${challenge.public_slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Veřejný odkaz zkopírován');
+    } catch {
+      toast.error('Nepodařilo se zkopírovat odkaz');
+    }
+  };
+
+  const openPublicPage = (challenge: Challenge) => {
+    if (!challenge.public_slug) return;
+    window.open(`${window.location.origin}/challenge/${challenge.public_slug}`, '_blank');
+  };
+
   const renderChallengeCard = (challenge: Challenge) => (
     <Card key={challenge.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg">{challenge.title}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">{challenge.title}</CardTitle>
+              {challenge.is_public && (
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Veřejná
+                </Badge>
+              )}
+            </div>
             <CardDescription className="line-clamp-2">
               {challenge.description || 'Bez popisu'}
             </CardDescription>
@@ -145,6 +172,24 @@ export default function Challenges() {
                   <Trophy className="h-4 w-4 mr-2" />
                   Statistiky
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Public challenge options */}
+                <DropdownMenuItem onClick={() => setPublicSettingsChallenge(challenge)}>
+                  <Globe className="h-4 w-4 mr-2" />
+                  Veřejné nastavení
+                </DropdownMenuItem>
+                {challenge.is_public && challenge.public_slug && (
+                  <>
+                    <DropdownMenuItem onClick={() => copyPublicLink(challenge)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Kopírovat odkaz
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openPublicPage(challenge)}>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Otevřít stránku
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => duplicateChallenge.mutate(challenge)}>
                   <Copy className="h-4 w-4 mr-2" />
@@ -378,6 +423,13 @@ export default function Challenges() {
           </div>
         </div>
       )}
+
+      {/* Quick Public Settings Dialog */}
+      <QuickPublicSettingsDialog
+        challenge={publicSettingsChallenge}
+        open={!!publicSettingsChallenge}
+        onOpenChange={(open) => !open && setPublicSettingsChallenge(null)}
+      />
     </div>
   );
 }
