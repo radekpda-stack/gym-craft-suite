@@ -8,12 +8,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Trash2 } from 'lucide-react';
 import { ExerciseEntry, useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { TimeInput } from '@/components/ui/time-input';
 import { secondsToMs, msToSeconds } from '@/lib/timeUtils';
@@ -28,7 +41,7 @@ interface EditEntryDialogProps {
 }
 
 export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: EditEntryDialogProps) {
-  const { updateEntry } = useExerciseEntries();
+  const { updateEntry, deleteEntry } = useExerciseEntries();
 
   const [sets, setSets] = useState(1);
   const [reps, setReps] = useState<string>('');
@@ -152,6 +165,13 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
 
     onOpenChange(false);
   };
+
+  const handleDelete = async () => {
+    if (!entry) return;
+    await deleteEntry.mutateAsync(entry.id);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -159,6 +179,9 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
           <DialogTitle>
             Upravit záznam: {entry?.exercise_name}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Upravte hodnoty záznamu cviku
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
@@ -348,13 +371,41 @@ export function EditEntryDialog({ entry, metricCategory, open, onOpenChange }: E
           </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Zrušit
-          </Button>
-          <Button onClick={handleSave} disabled={updateEntry.isPending}>
-            {updateEntry.isPending ? 'Ukládám...' : 'Uložit'}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full sm:w-auto sm:mr-auto">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Smazat
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Smazat záznam?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tato akce je nevratná. Záznam cviku bude trvale odstraněn.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteEntry.isPending ? 'Mažu...' : 'Smazat'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
+              Zrušit
+            </Button>
+            <Button onClick={handleSave} disabled={updateEntry.isPending} className="flex-1 sm:flex-none">
+              {updateEntry.isPending ? 'Ukládám...' : 'Uložit'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
