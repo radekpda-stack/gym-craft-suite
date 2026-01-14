@@ -2,6 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Database, Json } from '@/integrations/supabase/types';
+
+type ChallengeInsert = Database['public']['Tables']['challenges']['Insert'];
+type ChallengeUpdate = Database['public']['Tables']['challenges']['Update'];
+
+export interface MetricConfig {
+  key: string;
+  label: string;
+  unit: string;
+  type: 'number' | 'integer' | 'time';
+  required: boolean;
+  min?: number;
+  max?: number;
+  order: number;
+}
+
+export interface LeaderboardConfig {
+  primary_metric_key: string;
+  direction: 'max' | 'min';
+  tie_breakers: string[];
+}
 
 export interface Challenge {
   id: string;
@@ -27,6 +48,12 @@ export interface Challenge {
   tie_breaker: 'earliest_submission' | 'coach_confirmed_first' | 'same_rank';
   // Training template link
   training_template_id: string | null;
+  // Public challenge settings
+  is_public: boolean;
+  public_slug: string | null;
+  require_photo_proof: boolean;
+  metrics_config: MetricConfig[] | null;
+  leaderboard_config: LeaderboardConfig | null;
 }
 
 export interface ChallengeSubmission {
@@ -62,7 +89,15 @@ export function useChallenges() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Challenge[];
+      
+      // Map DB data to Challenge interface, parsing JSONB fields
+      return (data || []).map(row => ({
+        ...row,
+        is_public: row.is_public ?? false,
+        require_photo_proof: row.require_photo_proof ?? false,
+        metrics_config: row.metrics_config as unknown as MetricConfig[] | null,
+        leaderboard_config: row.leaderboard_config as unknown as LeaderboardConfig | null,
+      })) as Challenge[];
     },
     enabled: !!user?.id,
   });
@@ -94,7 +129,7 @@ export function useCreateChallenge() {
 
   return useMutation({
     mutationFn: async (challenge: Partial<Challenge>) => {
-      const insertData = {
+      const insertData: ChallengeInsert = {
         title: challenge.title!,
         description: challenge.description,
         instructions: challenge.instructions,
@@ -113,6 +148,12 @@ export function useCreateChallenge() {
         ranking_mode: challenge.ranking_mode || 'top3',
         tie_breaker: challenge.tie_breaker || 'earliest_submission',
         training_template_id: challenge.training_template_id || null,
+        // Public challenge settings
+        is_public: challenge.is_public ?? false,
+        public_slug: challenge.public_slug || null,
+        require_photo_proof: challenge.require_photo_proof ?? false,
+        metrics_config: (challenge.metrics_config as unknown) as Json || null,
+        leaderboard_config: (challenge.leaderboard_config as unknown) as Json || null,
       };
 
       const { data, error } = await supabase
@@ -140,9 +181,20 @@ export function useUpdateChallenge() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Challenge> & { id: string }) => {
+      // Build update data, handling JSONB fields properly
+      const updateData: ChallengeUpdate = {};
+      
+      Object.entries(updates).forEach(([key, value]) => {
+        if (key === 'metrics_config' || key === 'leaderboard_config') {
+          (updateData as Record<string, unknown>)[key] = (value as Json) || null;
+        } else {
+          (updateData as Record<string, unknown>)[key] = value;
+        }
+      });
+
       const { data, error } = await supabase
         .from('challenges')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -157,6 +209,18 @@ export function useUpdateChallenge() {
     onError: (error) => {
       console.error('Update challenge error:', error);
       toast.error('Nepodařilo se aktualizovat výzvu');
+    },
+  });
+}
+
+// Hook for generating unique public slug
+export function useGeneratePublicSlug() {
+  return useMutation({
+    mutationFn: async (baseSlug?: string) => {
+      const slug = baseSlug || '';
+      const randomPart = Math.random().toString(36).substring(2, 8);
+      const timestamp = Date.now().toString(36);
+      return slug ? `${slug}-${randomPart}` : `${randomPart}${timestamp}`;
     },
   });
 }

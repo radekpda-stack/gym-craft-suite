@@ -13,6 +13,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Challenge } from './useChallenges';
+import { Database } from '@/integrations/supabase/types';
+
+type ChallengeInsert = Database['public']['Tables']['challenges']['Insert'];
 
 interface ManageSubmissionsParams {
   action: 'approve' | 'reject' | 'award_winners';
@@ -142,16 +145,31 @@ export function useDuplicateChallenge() {
 
   return useMutation({
     mutationFn: async (challenge: Challenge) => {
-      const { id, created_at, updated_at, ...rest } = challenge;
-      
       // Create a copy with new dates
       const now = new Date();
       const duration = new Date(challenge.end_at).getTime() - new Date(challenge.start_at).getTime();
       
-      const newChallenge = {
-        ...rest,
+      const newChallenge: ChallengeInsert = {
         title: `${challenge.title} (kopie)`,
-        status: 'draft' as const,
+        description: challenge.description,
+        instructions: challenge.instructions,
+        vod_url: challenge.vod_url,
+        status: 'draft',
+        scoring_type: challenge.scoring_type,
+        primary_metric: challenge.primary_metric,
+        secondary_metric: challenge.secondary_metric,
+        unit_label: challenge.unit_label,
+        allow_multiple_attempts: challenge.allow_multiple_attempts,
+        requires_video: challenge.requires_video,
+        published_to_portal_clients: challenge.published_to_portal_clients,
+        ranking_mode: challenge.ranking_mode,
+        tie_breaker: challenge.tie_breaker,
+        training_template_id: challenge.training_template_id,
+        is_public: false, // Reset public status for copy
+        public_slug: null, // Reset slug for copy
+        require_photo_proof: challenge.require_photo_proof,
+        metrics_config: challenge.metrics_config ? JSON.parse(JSON.stringify(challenge.metrics_config)) : null,
+        leaderboard_config: challenge.leaderboard_config ? JSON.parse(JSON.stringify(challenge.leaderboard_config)) : null,
         start_at: now.toISOString(),
         end_at: new Date(now.getTime() + duration).toISOString(),
         created_by_user_id: user!.id,
