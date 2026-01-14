@@ -3003,6 +3003,7 @@ export type Database = {
           custom_price_credit_limit: number | null
           custom_price_note: string | null
           custom_training_price: number | null
+          daily_activity_type: string | null
           dietary_restrictions: string[] | null
           email: string | null
           feedback_enabled: boolean | null
@@ -3011,7 +3012,9 @@ export type Database = {
           grandfathered_credit: number | null
           handedness: string | null
           health_restrictions: string | null
+          height: number | null
           id: string
+          injury_history: string | null
           is_archived: boolean
           is_favorite: boolean
           is_self_profile: boolean
@@ -3019,23 +3022,29 @@ export type Database = {
           lock_set_at: string | null
           lock_set_by: string | null
           locked_price_list_id: string | null
+          movement_frequency: string | null
           name: string
           notes: string | null
           occupation: string | null
+          pain_areas: string[] | null
           payment_mode: string | null
           phone: string | null
           price_lock_mode: string | null
           sitting_hours_daily: number | null
           sleep_hours: number | null
+          sleep_quality: string | null
           sports_history: string | null
           stress_level: number | null
           supplements: string[] | null
+          surgery_history: string | null
           system_key: string | null
+          training_dislikes: string[] | null
           training_goals: string[] | null
           training_start_date: string | null
           updated_at: string
           use_legacy_pricing: boolean | null
           user_id: string | null
+          weight: number | null
         }
         Insert: {
           allow_anonymous_benchmarks?: boolean | null
@@ -3047,6 +3056,7 @@ export type Database = {
           custom_price_credit_limit?: number | null
           custom_price_note?: string | null
           custom_training_price?: number | null
+          daily_activity_type?: string | null
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
@@ -3055,7 +3065,9 @@ export type Database = {
           grandfathered_credit?: number | null
           handedness?: string | null
           health_restrictions?: string | null
+          height?: number | null
           id?: string
+          injury_history?: string | null
           is_archived?: boolean
           is_favorite?: boolean
           is_self_profile?: boolean
@@ -3063,23 +3075,29 @@ export type Database = {
           lock_set_at?: string | null
           lock_set_by?: string | null
           locked_price_list_id?: string | null
+          movement_frequency?: string | null
           name: string
           notes?: string | null
           occupation?: string | null
+          pain_areas?: string[] | null
           payment_mode?: string | null
           phone?: string | null
           price_lock_mode?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
+          sleep_quality?: string | null
           sports_history?: string | null
           stress_level?: number | null
           supplements?: string[] | null
+          surgery_history?: string | null
           system_key?: string | null
+          training_dislikes?: string[] | null
           training_goals?: string[] | null
           training_start_date?: string | null
           updated_at?: string
           use_legacy_pricing?: boolean | null
           user_id?: string | null
+          weight?: number | null
         }
         Update: {
           allow_anonymous_benchmarks?: boolean | null
@@ -3091,6 +3109,7 @@ export type Database = {
           custom_price_credit_limit?: number | null
           custom_price_note?: string | null
           custom_training_price?: number | null
+          daily_activity_type?: string | null
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
@@ -3099,7 +3118,9 @@ export type Database = {
           grandfathered_credit?: number | null
           handedness?: string | null
           health_restrictions?: string | null
+          height?: number | null
           id?: string
+          injury_history?: string | null
           is_archived?: boolean
           is_favorite?: boolean
           is_self_profile?: boolean
@@ -3107,23 +3128,29 @@ export type Database = {
           lock_set_at?: string | null
           lock_set_by?: string | null
           locked_price_list_id?: string | null
+          movement_frequency?: string | null
           name?: string
           notes?: string | null
           occupation?: string | null
+          pain_areas?: string[] | null
           payment_mode?: string | null
           phone?: string | null
           price_lock_mode?: string | null
           sitting_hours_daily?: number | null
           sleep_hours?: number | null
+          sleep_quality?: string | null
           sports_history?: string | null
           stress_level?: number | null
           supplements?: string[] | null
+          surgery_history?: string | null
           system_key?: string | null
+          training_dislikes?: string[] | null
           training_goals?: string[] | null
           training_start_date?: string | null
           updated_at?: string
           use_legacy_pricing?: boolean | null
           user_id?: string | null
+          weight?: number | null
         }
         Relationships: [
           {

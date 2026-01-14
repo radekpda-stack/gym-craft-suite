@@ -41,6 +41,16 @@ export interface Client {
   stress_level: number | null;
   dietary_restrictions: string[] | null;
   supplements: string[] | null;
+  // Pre-diagnostic data fields
+  height: number | null;
+  weight: number | null;
+  sleep_quality: string | null;
+  pain_areas: string[] | null;
+  injury_history: string | null;
+  surgery_history: string | null;
+  movement_frequency: string | null;
+  daily_activity_type: string | null;
+  training_dislikes: string[] | null;
   // Price transition fields
   grandfathered_credit: number | null;
   grandfathered_at: string | null;
@@ -319,6 +329,17 @@ export function useUpdateClient() {
       if (values.stress_level !== undefined) updateData.stress_level = values.stress_level;
       if (values.dietary_restrictions !== undefined) updateData.dietary_restrictions = values.dietary_restrictions;
       if (values.supplements !== undefined) updateData.supplements = values.supplements;
+      
+      // Pre-diagnostic fields - only if explicitly provided
+      if (values.height !== undefined) updateData.height = values.height;
+      if (values.weight !== undefined) updateData.weight = values.weight;
+      if (values.sleep_quality !== undefined) updateData.sleep_quality = values.sleep_quality;
+      if (values.pain_areas !== undefined) updateData.pain_areas = values.pain_areas;
+      if (values.injury_history !== undefined) updateData.injury_history = values.injury_history;
+      if (values.surgery_history !== undefined) updateData.surgery_history = values.surgery_history;
+      if (values.movement_frequency !== undefined) updateData.movement_frequency = values.movement_frequency;
+      if (values.daily_activity_type !== undefined) updateData.daily_activity_type = values.daily_activity_type;
+      if (values.training_dislikes !== undefined) updateData.training_dislikes = values.training_dislikes;
 
       // Custom pricing fields
       if (hasCustomPriceUpdate) updateData.custom_training_price = rest.custom_training_price;

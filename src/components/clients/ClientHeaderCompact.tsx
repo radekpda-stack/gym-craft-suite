@@ -42,6 +42,10 @@ import {
   Moon,
   Activity,
   Dumbbell,
+  Ruler,
+  Scale,
+  Armchair,
+  Cake,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -110,6 +114,10 @@ export function ClientHeaderCompact({
   const [editOccupation, setEditOccupation] = useState(client.occupation || '');
   const [editSleepHours, setEditSleepHours] = useState<number | null>(client.sleep_hours);
   const [editStressLevel, setEditStressLevel] = useState<number | null>(client.stress_level);
+  const [editBirthDate, setEditBirthDate] = useState(client.birth_date || '');
+  const [editHeight, setEditHeight] = useState<number | null>(client.height ?? null);
+  const [editWeight, setEditWeight] = useState<number | null>(client.weight ?? null);
+  const [editSittingHours, setEditSittingHours] = useState<number | null>(client.sitting_hours_daily);
 
   // Calculate age from birth_date
   const age = client.birth_date 
@@ -154,6 +162,10 @@ export function ClientHeaderCompact({
     setEditOccupation(client.occupation || '');
     setEditSleepHours(client.sleep_hours);
     setEditStressLevel(client.stress_level);
+    setEditBirthDate(client.birth_date || '');
+    setEditHeight(client.height ?? null);
+    setEditWeight(client.weight ?? null);
+    setEditSittingHours(client.sitting_hours_daily);
     setIsEditingProfile(true);
   };
 
@@ -167,6 +179,10 @@ export function ClientHeaderCompact({
         occupation: editOccupation || null,
         sleep_hours: editSleepHours,
         stress_level: editStressLevel,
+        birthDate: editBirthDate || undefined,
+        height: editHeight,
+        weight: editWeight,
+        sitting_hours_daily: editSittingHours,
       });
       toast({ title: 'Profil aktualizován' });
     }
@@ -563,7 +579,8 @@ export function ClientHeaderCompact({
               {isEditingProfile ? (
                 // Edit mode
                 <div className="space-y-3 bg-secondary/30 rounded-xl p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {/* Contact */}
                     <div className="space-y-1.5">
                       <label className="text-xs text-muted-foreground">Telefon</label>
                       <Input
@@ -583,6 +600,19 @@ export function ClientHeaderCompact({
                         className="h-9"
                       />
                     </div>
+                    
+                    {/* Date of birth */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Datum narození</label>
+                      <Input
+                        type="date"
+                        value={editBirthDate}
+                        onChange={(e) => setEditBirthDate(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+
+                    {/* Gender */}
                     <div className="space-y-1.5">
                       <label className="text-xs text-muted-foreground">Pohlaví</label>
                       <div className="flex gap-2">
@@ -606,6 +636,8 @@ export function ClientHeaderCompact({
                         </Button>
                       </div>
                     </div>
+                    
+                    {/* Handedness */}
                     <div className="space-y-1.5">
                       <label className="text-xs text-muted-foreground">Dominantní ruka</label>
                       <div className="flex gap-2">
@@ -629,12 +661,53 @@ export function ClientHeaderCompact({
                         </Button>
                       </div>
                     </div>
+                    
+                    {/* Physical measurements */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Výška (cm)</label>
+                      <Input
+                        type="number"
+                        min={100}
+                        max={250}
+                        value={editHeight ?? ''}
+                        onChange={(e) => setEditHeight(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="175"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Váha (kg)</label>
+                      <Input
+                        type="number"
+                        min={30}
+                        max={300}
+                        step={0.1}
+                        value={editWeight ?? ''}
+                        onChange={(e) => setEditWeight(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="70"
+                        className="h-9"
+                      />
+                    </div>
+                    
+                    {/* Lifestyle */}
                     <div className="space-y-1.5">
                       <label className="text-xs text-muted-foreground">Zaměstnání</label>
                       <Input
                         value={editOccupation}
                         onChange={(e) => setEditOccupation(e.target.value)}
                         placeholder="Programátor, učitel..."
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={24}
+                        value={editSittingHours ?? ''}
+                        onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="8"
                         className="h-9"
                       />
                     </div>
@@ -650,7 +723,9 @@ export function ClientHeaderCompact({
                         className="h-9"
                       />
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
+                    
+                    {/* Stress level */}
+                    <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
                       <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
                       <div className="flex gap-2">
                         {[1, 2, 3, 4, 5].map((level) => (
@@ -678,7 +753,7 @@ export function ClientHeaderCompact({
                   </div>
                 </div>
               ) : (
-                // Display mode
+                // Display mode - only show filled values
                 <div className="bg-secondary/30 rounded-xl p-3">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                     {/* Contact */}
@@ -695,15 +770,39 @@ export function ClientHeaderCompact({
                       </a>
                     )}
                     
-                    {/* Personal info */}
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>{getGenderLabel(client.gender)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Hand className="w-4 h-4" />
-                      <span>{getHandednessLabel(client.handedness)}</span>
-                    </div>
+                    {/* Personal info - only show if filled */}
+                    {client.gender && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <User className="w-4 h-4" />
+                        <span>{client.gender === 'male' ? 'Muž' : 'Žena'}{age ? `, ${age} let` : ''}</span>
+                      </div>
+                    )}
+                    {!client.gender && age && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Cake className="w-4 h-4" />
+                        <span>{age} let</span>
+                      </div>
+                    )}
+                    {client.handedness && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Hand className="w-4 h-4" />
+                        <span>{client.handedness === 'right' ? 'Pravák' : client.handedness === 'left' ? 'Levák' : 'Obouruký'}</span>
+                      </div>
+                    )}
+                    
+                    {/* Physical measurements */}
+                    {client.height && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Ruler className="w-4 h-4" />
+                        <span>{client.height} cm</span>
+                      </div>
+                    )}
+                    {client.weight && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Scale className="w-4 h-4" />
+                        <span>{client.weight} kg</span>
+                      </div>
+                    )}
                     
                     {/* Lifestyle */}
                     {client.occupation && (
@@ -712,13 +811,19 @@ export function ClientHeaderCompact({
                         <span>{client.occupation}</span>
                       </div>
                     )}
-                    {client.sleep_hours !== null && (
+                    {client.sitting_hours_daily !== null && client.sitting_hours_daily !== undefined && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Armchair className="w-4 h-4" />
+                        <span>{client.sitting_hours_daily}h sezení</span>
+                      </div>
+                    )}
+                    {client.sleep_hours !== null && client.sleep_hours !== undefined && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Moon className="w-4 h-4" />
                         <span>{client.sleep_hours}h spánku</span>
                       </div>
                     )}
-                    {client.stress_level !== null && (
+                    {client.stress_level !== null && client.stress_level !== undefined && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Activity className="w-4 h-4" />
                         <span>Stres: {client.stress_level}/5</span>
