@@ -92,7 +92,7 @@ export function useClients() {
       const [clientsResult, ledgerResult] = await Promise.all([
         supabase
           .from("clients")
-          .select("id, name, email, phone, training_goals, notes, health_restrictions, credit_balance, birth_date, is_favorite, is_archived, feedback_enabled, gender, payment_mode, created_at, updated_at, user_id, training_start_date, custom_training_price, custom_price_note, custom_price_credit_limit, handedness, occupation, sitting_hours_daily, sports_history, current_activities, sleep_hours, stress_level, dietary_restrictions, supplements, grandfathered_credit, grandfathered_at, use_legacy_pricing")
+          .select("id, name, email, phone, training_goals, notes, health_restrictions, credit_balance, birth_date, is_favorite, is_archived, feedback_enabled, gender, payment_mode, created_at, updated_at, user_id, training_start_date, custom_training_price, custom_price_note, custom_price_credit_limit, handedness, occupation, sitting_hours_daily, sports_history, current_activities, sleep_hours, stress_level, dietary_restrictions, supplements, height, weight, sleep_quality, pain_areas, injury_history, surgery_history, movement_frequency, daily_activity_type, training_dislikes, grandfathered_credit, grandfathered_at, use_legacy_pricing")
           .order("is_favorite", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase
