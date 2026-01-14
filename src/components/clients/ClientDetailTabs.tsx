@@ -46,6 +46,7 @@ import { ClientProfileTab } from './ClientProfileTab';
 import { useCommunicationMetrics, useHealthMetrics } from '@/hooks/useClientDashboardMetrics';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
 import { Client } from '@/hooks/useClients';
+import { ClientFormValues } from '@/lib/validations/client';
 
 interface ClientDetailTabsProps {
   client: Client;
@@ -56,7 +57,7 @@ interface ClientDetailTabsProps {
   budgetGroupName?: string | null;
   onAddNote: (note: string) => Promise<void>;
   onArchive: () => Promise<void>;
-  onUpdateClient?: (data: Partial<Client>) => Promise<void>;
+  onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
 }
 
 export function ClientDetailTabs({

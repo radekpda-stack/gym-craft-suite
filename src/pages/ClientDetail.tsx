@@ -5,7 +5,6 @@ import { startOfMonth, isAfter } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
 import { useSharedBudgetBalance, useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
-import { ClientFormValues } from '@/lib/validations/client';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
@@ -191,6 +190,9 @@ export default function ClientDetail() {
         budgetGroupName={sharedBudgetInfo?.groupName}
         onAddNote={handleAddNote}
         onArchive={handleArchive}
+        onUpdateClient={async (data) => {
+          await updateClient.mutateAsync({ id: client.id, values: data });
+        }}
       />
 
       {/* Mobile FAB + Bottom Sheet */}
