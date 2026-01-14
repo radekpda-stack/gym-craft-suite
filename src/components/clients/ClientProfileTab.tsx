@@ -41,6 +41,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Client } from '@/hooks/useClients';
+import { ClientFormValues } from '@/lib/validations/client';
 import { useClientPreDiagnostic, usePreDiagnosticAnswers } from '@/hooks/usePreDiagnosticForms';
 import { useSyncPreDiagnosticToClient, usePreviewPreDiagnosticSync } from '@/hooks/useSyncPreDiagnosticToClient';
 import { toast } from 'sonner';
@@ -48,7 +49,7 @@ import { cn } from '@/lib/utils';
 
 interface ClientProfileTabProps {
   client: Client;
-  onUpdateClient?: (data: Partial<Client>) => Promise<void>;
+  onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
 }
 
 interface EditableFieldProps {
@@ -146,11 +147,12 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     if (!onUpdateClient) return;
     
     try {
+      // Convert to ClientFormValues format (camelCase)
       await onUpdateClient({
-        occupation: editData.occupation || null,
-        sleep_hours: editData.sleep_hours ? Number(editData.sleep_hours) : null,
-        stress_level: editData.stress_level ? Number(editData.stress_level) : null,
-        health_restrictions: editData.health_restrictions,
+        occupation: editData.occupation || undefined,
+        sleep_hours: editData.sleep_hours ? Number(editData.sleep_hours) : undefined,
+        stress_level: editData.stress_level ? Number(editData.stress_level) : undefined,
+        healthRestrictions: editData.health_restrictions,
         notes: editData.notes,
       });
       setIsEditing(false);

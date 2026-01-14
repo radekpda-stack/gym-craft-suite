@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import { CreditLedgerExportDialog } from '@/components/credit/CreditLedgerExportDialog';
 import { ClientPerformanceExportDialog } from '@/components/clients/ClientPerformanceExportDialog';
+import { ClientQuickAddButton } from '@/components/clients/ClientQuickAddButton';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -340,6 +341,17 @@ export function ClientHeaderCompact({
             >
               <Copy className="w-3 h-3 text-muted-foreground" />
             </Button>
+          )}
+
+          {/* Quick Add Button */}
+          {onUpdateClient && (
+            <ClientQuickAddButton
+              clientId={client.id}
+              clientNotes={client.notes || ''}
+              clientHealthRestrictions={client.health_restrictions || ''}
+              clientGoals={client.training_goals || []}
+              onUpdateClient={onUpdateClient}
+            />
           )}
         </div>
 
