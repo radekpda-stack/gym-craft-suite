@@ -651,18 +651,18 @@ export function ClientHeaderCompact({
                             type="date"
                             value={editBirthDate}
                             onChange={(e) => setEditBirthDate(e.target.value)}
-                            className="h-9"
+                            className="h-9 max-w-[160px]"
                           />
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Pohlaví</label>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 justify-center max-w-[160px]">
                             <Button
                               type="button"
                               variant={editGender === 'male' ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setEditGender('male')}
-                              className="flex-1"
+                              className="px-4"
                             >
                               Muž
                             </Button>
@@ -671,7 +671,7 @@ export function ClientHeaderCompact({
                               variant={editGender === 'female' ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setEditGender('female')}
-                              className="flex-1"
+                              className="px-4"
                             >
                               Žena
                             </Button>
