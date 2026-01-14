@@ -131,6 +131,9 @@ export function ClientHeaderCompact({
   const [editSportsHistory, setEditSportsHistory] = useState(client.sports_history || '');
   const [editInjuryHistory, setEditInjuryHistory] = useState(client.injury_history || '');
   const [editSurgeryHistory, setEditSurgeryHistory] = useState(client.surgery_history || '');
+  const [editCurrentActivities, setEditCurrentActivities] = useState((client.current_activities || []).join(', '));
+  const [editPainAreas, setEditPainAreas] = useState((client.pain_areas || []).join(', '));
+  const [editTrainingDislikes, setEditTrainingDislikes] = useState((client.training_dislikes || []).join(', '));
 
   // Calculate age from birth_date
   const age = client.birth_date 
@@ -185,7 +188,17 @@ export function ClientHeaderCompact({
     setEditSportsHistory(client.sports_history || '');
     setEditInjuryHistory(client.injury_history || '');
     setEditSurgeryHistory(client.surgery_history || '');
+    setEditCurrentActivities((client.current_activities || []).join(', '));
+    setEditPainAreas((client.pain_areas || []).join(', '));
+    setEditTrainingDislikes((client.training_dislikes || []).join(', '));
     setIsEditingProfile(true);
+  };
+
+  // Helper to parse comma-separated string to array
+  const parseCommaSeparated = (value: string): string[] | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.split(',').map(s => s.trim()).filter(s => s.length > 0);
   };
 
   const handleSaveProfile = async () => {
@@ -208,6 +221,9 @@ export function ClientHeaderCompact({
         sports_history: editSportsHistory || null,
         injury_history: editInjuryHistory || null,
         surgery_history: editSurgeryHistory || null,
+        current_activities: parseCommaSeparated(editCurrentActivities),
+        pain_areas: parseCommaSeparated(editPainAreas),
+        training_dislikes: parseCommaSeparated(editTrainingDislikes),
       });
       toast({ title: 'Profil aktualizován' });
     }
@@ -602,247 +618,283 @@ export function ClientHeaderCompact({
           >
             <div className="pt-3 pb-1">
               {isEditingProfile ? (
-                // Edit mode - comprehensive form
-                <div className="space-y-4 bg-secondary/30 rounded-xl p-4 border border-border/50 shadow-lg">
-                  {/* Section: Základní informace */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Základní informace</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Telefon</label>
-                        <Input
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          placeholder="+420..."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Email</label>
-                        <Input
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          placeholder="email@example.com"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Datum narození</label>
-                        <Input
-                          type="date"
-                          value={editBirthDate}
-                          onChange={(e) => setEditBirthDate(e.target.value)}
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Pohlaví</label>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={editGender === 'male' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setEditGender('male')}
-                            className="flex-1"
-                          >
-                            Muž
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={editGender === 'female' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setEditGender('female')}
-                            className="flex-1"
-                          >
-                            Žena
-                          </Button>
+                // Edit mode - comprehensive form with sticky buttons
+                <div className="bg-secondary/30 rounded-xl border border-border/50 shadow-lg overflow-hidden">
+                  {/* Scrollable form content */}
+                  <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
+                    {/* Section: Základní informace */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Základní informace</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Telefon</label>
+                          <Input
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            placeholder="+420..."
+                            className="h-9"
+                          />
                         </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Dominantní ruka</label>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={editHandedness === 'right' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setEditHandedness('right')}
-                            className="flex-1"
-                          >
-                            Pravák
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={editHandedness === 'left' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setEditHandedness('left')}
-                            className="flex-1"
-                          >
-                            Levák
-                          </Button>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Email</label>
+                          <Input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="h-9"
+                          />
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section: Tělesné parametry */}
-                  <div className="space-y-3 pt-3 border-t border-border/30">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tělesné parametry</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Výška (cm)</label>
-                        <Input
-                          type="number"
-                          min={100}
-                          max={250}
-                          value={editHeight ?? ''}
-                          onChange={(e) => setEditHeight(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="175"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Váha (kg)</label>
-                        <Input
-                          type="number"
-                          min={30}
-                          max={300}
-                          step={0.1}
-                          value={editWeight ?? ''}
-                          onChange={(e) => setEditWeight(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="70"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section: Životní styl */}
-                  <div className="space-y-3 pt-3 border-t border-border/30">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Životní styl</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Zaměstnání</label>
-                        <Input
-                          value={editOccupation}
-                          onChange={(e) => setEditOccupation(e.target.value)}
-                          placeholder="Programátor, učitel..."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Typ denní aktivity</label>
-                        <Input
-                          value={editDailyActivityType}
-                          onChange={(e) => setEditDailyActivityType(e.target.value)}
-                          placeholder="Sedavé, aktivní..."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={24}
-                          value={editSittingHours ?? ''}
-                          onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="8"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Hodiny spánku</label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={24}
-                          value={editSleepHours ?? ''}
-                          onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="7"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Kvalita spánku</label>
-                        <Input
-                          value={editSleepQuality}
-                          onChange={(e) => setEditSleepQuality(e.target.value)}
-                          placeholder="Dobrá, špatná..."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((level) => (
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Datum narození</label>
+                          <Input
+                            type="date"
+                            value={editBirthDate}
+                            onChange={(e) => setEditBirthDate(e.target.value)}
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Pohlaví</label>
+                          <div className="flex gap-2">
                             <Button
-                              key={level}
                               type="button"
-                              variant={editStressLevel === level ? 'default' : 'outline'}
+                              variant={editGender === 'male' ? 'default' : 'outline'}
                               size="sm"
-                              onClick={() => setEditStressLevel(level)}
-                              className="flex-1 px-2"
+                              onClick={() => setEditGender('male')}
+                              className="flex-1"
                             >
-                              {level}
+                              Muž
                             </Button>
-                          ))}
+                            <Button
+                              type="button"
+                              variant={editGender === 'female' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditGender('female')}
+                              className="flex-1"
+                            >
+                              Žena
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Dominantní ruka</label>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={editHandedness === 'right' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditHandedness('right')}
+                              className="flex-1"
+                            >
+                              Pravák
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={editHandedness === 'left' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditHandedness('left')}
+                              className="flex-1"
+                            >
+                              Levák
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Section: Sport a pohyb */}
-                  <div className="space-y-3 pt-3 border-t border-border/30">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sport a pohyb</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Frekvence pohybu</label>
-                        <Input
-                          value={editMovementFrequency}
-                          onChange={(e) => setEditMovementFrequency(e.target.value)}
-                          placeholder="2-3× týdně..."
-                          className="h-9"
-                        />
+                    {/* Section: Tělesné parametry */}
+                    <div className="space-y-3 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tělesné parametry</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Výška (cm)</label>
+                          <Input
+                            type="number"
+                            min={100}
+                            max={250}
+                            value={editHeight ?? ''}
+                            onChange={(e) => setEditHeight(e.target.value ? Number(e.target.value) : null)}
+                            placeholder="175"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Váha (kg)</label>
+                          <Input
+                            type="number"
+                            min={30}
+                            max={300}
+                            step={0.1}
+                            value={editWeight ?? ''}
+                            onChange={(e) => setEditWeight(e.target.value ? Number(e.target.value) : null)}
+                            placeholder="70"
+                            className="h-9"
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <label className="text-xs text-muted-foreground">Sportovní historie</label>
+                    </div>
+
+                    {/* Section: Životní styl */}
+                    <div className="space-y-3 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Životní styl</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Zaměstnání</label>
+                          <Input
+                            value={editOccupation}
+                            onChange={(e) => setEditOccupation(e.target.value)}
+                            placeholder="Programátor, učitel..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Typ denní aktivity</label>
+                          <Input
+                            value={editDailyActivityType}
+                            onChange={(e) => setEditDailyActivityType(e.target.value)}
+                            placeholder="Sedavé, aktivní..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={24}
+                            value={editSittingHours ?? ''}
+                            onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
+                            placeholder="8"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Hodiny spánku</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={24}
+                            value={editSleepHours ?? ''}
+                            onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
+                            placeholder="7"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Kvalita spánku</label>
+                          <Input
+                            value={editSleepQuality}
+                            onChange={(e) => setEditSleepQuality(e.target.value)}
+                            placeholder="Dobrá, špatná..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <Button
+                                key={level}
+                                type="button"
+                                variant={editStressLevel === level ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setEditStressLevel(level)}
+                                className="flex-1 px-2"
+                              >
+                                {level}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section: Sport a pohyb */}
+                    <div className="space-y-3 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sport a pohyb</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Frekvence pohybu</label>
+                          <Input
+                            value={editMovementFrequency}
+                            onChange={(e) => setEditMovementFrequency(e.target.value)}
+                            placeholder="2-3× týdně..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Aktuální aktivity</label>
+                          <Input
+                            value={editCurrentActivities}
+                            onChange={(e) => setEditCurrentActivities(e.target.value)}
+                            placeholder="Jóga, běh, posilovna..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-xs text-muted-foreground">Sportovní historie</label>
+                          <Input
+                            value={editSportsHistory}
+                            onChange={(e) => setEditSportsHistory(e.target.value)}
+                            placeholder="Fotbal 10 let, běh..."
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section: Zdraví */}
+                    <div className="space-y-3 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdraví</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-xs text-muted-foreground">Bolestivá místa</label>
+                          <Input
+                            value={editPainAreas}
+                            onChange={(e) => setEditPainAreas(e.target.value)}
+                            placeholder="Záda, kolena, ramena..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Historie zranění</label>
+                          <Input
+                            value={editInjuryHistory}
+                            onChange={(e) => setEditInjuryHistory(e.target.value)}
+                            placeholder="Zlomenina kotníku 2020..."
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Historie operací</label>
+                          <Input
+                            value={editSurgeryHistory}
+                            onChange={(e) => setEditSurgeryHistory(e.target.value)}
+                            placeholder="Operace kolena 2019..."
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section: Tréninkové preference */}
+                    <div className="space-y-3 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tréninkové preference</h4>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Co nemá rád v tréninku</label>
                         <Input
-                          value={editSportsHistory}
-                          onChange={(e) => setEditSportsHistory(e.target.value)}
-                          placeholder="Fotbal 10 let, běh..."
+                          value={editTrainingDislikes}
+                          onChange={(e) => setEditTrainingDislikes(e.target.value)}
+                          placeholder="Kardio, burpees, planky..."
                           className="h-9"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Section: Zdraví */}
-                  <div className="space-y-3 pt-3 border-t border-border/30">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdraví</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Historie zranění</label>
-                        <Input
-                          value={editInjuryHistory}
-                          onChange={(e) => setEditInjuryHistory(e.target.value)}
-                          placeholder="Zlomenina kotníku 2020..."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Historie operací</label>
-                        <Input
-                          value={editSurgeryHistory}
-                          onChange={(e) => setEditSurgeryHistory(e.target.value)}
-                          placeholder="Operace kolena 2019..."
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-border/30">
+                  {/* Sticky footer with buttons */}
+                  <div className="flex justify-end gap-2 p-3 border-t border-border/50 bg-secondary/50 sticky bottom-0">
                     <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(false)}>
                       Zrušit
                     </Button>
