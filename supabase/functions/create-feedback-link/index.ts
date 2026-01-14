@@ -57,21 +57,27 @@ serve(async (req) => {
 
     const { client_id, training_id, send_channel, base_url } = parseResult.data;
 
+    // Production URL - always use this for public links
+    const PRODUCTION_URL = "https://justmoveasistent.lovable.app";
+    
     const getBaseUrl = () => {
-      // 1) explicit base_url from frontend (preferred)
-      if (base_url) return base_url.replace(/\/$/, "");
+      // 1) explicit base_url from frontend (preferred) - but only if it's the production URL
+      if (base_url) {
+        const cleanUrl = base_url.replace(/\/$/, "");
+        // Only use base_url if it's the production domain
+        if (cleanUrl === PRODUCTION_URL || cleanUrl.includes("justmoveasistent.lovable.app")) {
+          return cleanUrl;
+        }
+      }
 
-      // 2) forwarded host/proto (common in production)
-      const xfProto = req.headers.get("x-forwarded-proto");
-      const xfHost = req.headers.get("x-forwarded-host");
-      if (xfProto && xfHost) return `${xfProto}://${xfHost}`;
-
-      // 3) origin / referer fallback
+      // 2) Check origin/referer - only use if it's production
       const origin = req.headers.get("origin");
-      if (origin) return origin.replace(/\/$/, "");
+      if (origin?.includes("justmoveasistent.lovable.app")) {
+        return origin.replace(/\/$/, "");
+      }
 
       const referer = req.headers.get("referer");
-      if (referer) {
+      if (referer?.includes("justmoveasistent.lovable.app")) {
         try {
           const u = new URL(referer);
           return `${u.protocol}//${u.host}`;
@@ -80,8 +86,8 @@ serve(async (req) => {
         }
       }
 
-      // last resort fallback
-      return "https://zukmwqfqmfuyqpxfjqil.lovable.app";
+      // Always fallback to production URL for public-facing links
+      return PRODUCTION_URL;
     };
 
     const resolvedBaseUrl = getBaseUrl();

@@ -56,6 +56,9 @@ export function ClientActionsBar({
   
   const createNutritionSession = useCreateNutritionLogSession();
 
+  // Always use production URL for public feedback links
+  const PRODUCTION_BASE_URL = 'https://justmoveasistent.lovable.app';
+
   const handleGenerateFeedbackLink = async () => {
     if (!lastCompletedTrainingId) {
       toast({ title: 'Není dostupný trénink pro feedback', variant: 'destructive' });
@@ -76,7 +79,8 @@ export function ClientActionsBar({
       
       if (error) throw error;
       
-      const link = `${window.location.origin}/feedback/${data.token}`;
+      // Always use production URL for public-facing links
+      const link = `${PRODUCTION_BASE_URL}/feedback/${data.token}`;
       setGeneratedLink({ type: 'feedback', url: link, label: 'Odkaz na zpětnou vazbu' });
       await navigator.clipboard.writeText(link);
       toast({ title: 'Odkaz zkopírován do schránky' });

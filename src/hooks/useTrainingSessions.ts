@@ -555,7 +555,8 @@ export function useUpdateTrainingSession() {
               body: {
                 client_id: oldTraining.client_id,
                 training_id: id,
-                base_url: typeof window !== 'undefined' ? window.location.origin : undefined,
+                // Always use production URL for public feedback links
+                base_url: 'https://justmoveasistent.lovable.app',
               },
             });
           }
@@ -863,7 +864,8 @@ export function useCompleteTrainingSession() {
             body: {
               client_id,
               training_id: id,
-              base_url: typeof window !== 'undefined' ? window.location.origin : undefined,
+              // Always use production URL for public feedback links
+              base_url: 'https://justmoveasistent.lovable.app',
             },
           });
         }
