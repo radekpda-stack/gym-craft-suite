@@ -125,6 +125,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     stress_level: client.stress_level?.toString() || '',
     health_restrictions: client.health_restrictions || '',
     notes: client.notes || '',
+    birth_date: client.birth_date || '',
+    sports_history: client.sports_history || '',
   });
 
   // Calculate age
@@ -139,6 +141,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       stress_level: client.stress_level?.toString() || '',
       health_restrictions: client.health_restrictions || '',
       notes: client.notes || '',
+      birth_date: client.birth_date || '',
+      sports_history: client.sports_history || '',
     });
     setIsEditing(true);
   };
@@ -147,13 +151,15 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     if (!onUpdateClient) return;
     
     try {
-      // Convert to ClientFormValues format (camelCase)
+      // Use camelCase to match ClientFormValues schema
       await onUpdateClient({
         occupation: editData.occupation || undefined,
         sleep_hours: editData.sleep_hours ? Number(editData.sleep_hours) : undefined,
         stress_level: editData.stress_level ? Number(editData.stress_level) : undefined,
         healthRestrictions: editData.health_restrictions,
         notes: editData.notes,
+        birthDate: editData.birth_date || undefined,
+        sports_history: editData.sports_history || undefined,
       });
       setIsEditing(false);
       toast.success('Profil aktualizován');
@@ -218,20 +224,29 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Age - read only */}
+          {/* Birth date - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Calendar className="w-4 h-4" />
-              <span>Věk</span>
+              <span>Datum narození</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {age ? `${age} let` : '—'}
-              {client.birth_date && (
-                <span className="text-muted-foreground text-xs ml-1">
-                  (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
-                </span>
-              )}
-            </p>
+            {isEditing ? (
+              <Input
+                type="date"
+                value={editData.birth_date}
+                onChange={(e) => setEditData(d => ({ ...d, birth_date: e.target.value }))}
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {age ? `${age} let` : '—'}
+                {client.birth_date && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Gender - read only */}
@@ -370,6 +385,26 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             </div>
           </div>
         )}
+
+        {/* Sports History - editable */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+            <Dumbbell className="w-4 h-4" />
+            <span>Sportovní historie</span>
+          </div>
+          {isEditing ? (
+            <Textarea
+              value={editData.sports_history}
+              onChange={(e) => setEditData(d => ({ ...d, sports_history: e.target.value }))}
+              placeholder="Předchozí sporty, úrazy, zkušenosti..."
+              className="min-h-[60px] text-sm"
+            />
+          ) : (
+            <p className="font-medium text-foreground text-sm whitespace-pre-wrap">
+              {client.sports_history || <span className="text-muted-foreground italic">—</span>}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Pre-diagnostic Summary with Sync */}

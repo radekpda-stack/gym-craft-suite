@@ -459,6 +459,17 @@ export function ClientHeaderCompact({
             <Mail className="w-4 h-4 text-muted-foreground" />
           </a>
         )}
+        
+        {/* Quick Add Button - Mobile */}
+        {onUpdateClient && (
+          <ClientQuickAddButton
+            clientId={client.id}
+            clientNotes={client.notes || ''}
+            clientHealthRestrictions={client.health_restrictions || ''}
+            clientGoals={client.training_goals || []}
+            onUpdateClient={onUpdateClient}
+          />
+        )}
       </div>
 
       {/* Tags row */}

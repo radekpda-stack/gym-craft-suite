@@ -33,7 +33,7 @@ import { ClientTrainingLoadCard } from './ClientTrainingLoadCard';
 import { ClientPRsCard } from './ClientPRsCard';
 import { ClientTagAnalyticsCard } from './ClientTagAnalyticsCard';
 import { ClientFeedbackRecovery } from './ClientFeedbackRecovery';
-import { ClientPreDiagnosticSection } from './ClientPreDiagnosticSection';
+
 import { ClientDiagnosticsSection } from './ClientDiagnosticsSection';
 import { ClientPainMapPreview } from './ClientPainMapPreview';
 import { ClientInjuryHistory } from './ClientInjuryHistory';
@@ -222,13 +222,12 @@ export function ClientDetailTabs({
 
       {/* Tab: Health */}
       <TabsContent value="health" className="mt-0 space-y-4">
-        {/* Pre-diagnostics */}
+        {/* Diagnostics (without pre-diagnostic - it's in Profile tab) */}
         <div className="bg-card border border-border rounded-2xl p-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Heart className="w-5 h-5 text-primary" />
             Diagnostika
           </h3>
-          <ClientPreDiagnosticSection clientId={client.id} clientName={client.name} />
           <ClientDiagnosticsSection clientId={client.id} clientName={client.name} />
         </div>
         
