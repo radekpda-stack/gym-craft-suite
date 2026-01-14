@@ -46,6 +46,13 @@ import {
   Scale,
   Armchair,
   Cake,
+  Heart,
+  Brain,
+  Target,
+  Footprints,
+  XCircle,
+  Stethoscope,
+  Scissors,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -118,6 +125,12 @@ export function ClientHeaderCompact({
   const [editHeight, setEditHeight] = useState<number | null>(client.height ?? null);
   const [editWeight, setEditWeight] = useState<number | null>(client.weight ?? null);
   const [editSittingHours, setEditSittingHours] = useState<number | null>(client.sitting_hours_daily);
+  const [editSleepQuality, setEditSleepQuality] = useState(client.sleep_quality || '');
+  const [editMovementFrequency, setEditMovementFrequency] = useState(client.movement_frequency || '');
+  const [editDailyActivityType, setEditDailyActivityType] = useState(client.daily_activity_type || '');
+  const [editSportsHistory, setEditSportsHistory] = useState(client.sports_history || '');
+  const [editInjuryHistory, setEditInjuryHistory] = useState(client.injury_history || '');
+  const [editSurgeryHistory, setEditSurgeryHistory] = useState(client.surgery_history || '');
 
   // Calculate age from birth_date
   const age = client.birth_date 
@@ -166,6 +179,12 @@ export function ClientHeaderCompact({
     setEditHeight(client.height ?? null);
     setEditWeight(client.weight ?? null);
     setEditSittingHours(client.sitting_hours_daily);
+    setEditSleepQuality(client.sleep_quality || '');
+    setEditMovementFrequency(client.movement_frequency || '');
+    setEditDailyActivityType(client.daily_activity_type || '');
+    setEditSportsHistory(client.sports_history || '');
+    setEditInjuryHistory(client.injury_history || '');
+    setEditSurgeryHistory(client.surgery_history || '');
     setIsEditingProfile(true);
   };
 
@@ -183,6 +202,12 @@ export function ClientHeaderCompact({
         height: editHeight,
         weight: editWeight,
         sitting_hours_daily: editSittingHours,
+        sleep_quality: editSleepQuality || null,
+        movement_frequency: editMovementFrequency || null,
+        daily_activity_type: editDailyActivityType || null,
+        sports_history: editSportsHistory || null,
+        injury_history: editInjuryHistory || null,
+        surgery_history: editSurgeryHistory || null,
       });
       toast({ title: 'Profil aktualizován' });
     }
@@ -573,277 +598,436 @@ export function ClientHeaderCompact({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+            className="overflow-hidden relative z-40"
           >
-            <div className="pt-3 pb-1 space-y-3">
+            <div className="pt-3 pb-1">
               {isEditingProfile ? (
-                // Edit mode
-                <div className="space-y-3 bg-secondary/30 rounded-xl p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {/* Contact */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Telefon</label>
-                      <Input
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        placeholder="+420..."
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Email</label>
-                      <Input
-                        type="email"
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        placeholder="email@example.com"
-                        className="h-9"
-                      />
-                    </div>
-                    
-                    {/* Date of birth */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Datum narození</label>
-                      <Input
-                        type="date"
-                        value={editBirthDate}
-                        onChange={(e) => setEditBirthDate(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-
-                    {/* Gender */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Pohlaví</label>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={editGender === 'male' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setEditGender('male')}
-                          className="flex-1"
-                        >
-                          Muž
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editGender === 'female' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setEditGender('female')}
-                          className="flex-1"
-                        >
-                          Žena
-                        </Button>
+                // Edit mode - comprehensive form
+                <div className="space-y-4 bg-secondary/30 rounded-xl p-4 border border-border/50 shadow-lg">
+                  {/* Section: Základní informace */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Základní informace</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Telefon</label>
+                        <Input
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="+420..."
+                          className="h-9"
+                        />
                       </div>
-                    </div>
-                    
-                    {/* Handedness */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Dominantní ruka</label>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={editHandedness === 'right' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setEditHandedness('right')}
-                          className="flex-1"
-                        >
-                          Pravák
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editHandedness === 'left' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setEditHandedness('left')}
-                          className="flex-1"
-                        >
-                          Levák
-                        </Button>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Email</label>
+                        <Input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="email@example.com"
+                          className="h-9"
+                        />
                       </div>
-                    </div>
-                    
-                    {/* Physical measurements */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Výška (cm)</label>
-                      <Input
-                        type="number"
-                        min={100}
-                        max={250}
-                        value={editHeight ?? ''}
-                        onChange={(e) => setEditHeight(e.target.value ? Number(e.target.value) : null)}
-                        placeholder="175"
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Váha (kg)</label>
-                      <Input
-                        type="number"
-                        min={30}
-                        max={300}
-                        step={0.1}
-                        value={editWeight ?? ''}
-                        onChange={(e) => setEditWeight(e.target.value ? Number(e.target.value) : null)}
-                        placeholder="70"
-                        className="h-9"
-                      />
-                    </div>
-                    
-                    {/* Lifestyle */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Zaměstnání</label>
-                      <Input
-                        value={editOccupation}
-                        onChange={(e) => setEditOccupation(e.target.value)}
-                        placeholder="Programátor, učitel..."
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={24}
-                        value={editSittingHours ?? ''}
-                        onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
-                        placeholder="8"
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-muted-foreground">Hodiny spánku</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={24}
-                        value={editSleepHours ?? ''}
-                        onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
-                        placeholder="7"
-                        className="h-9"
-                      />
-                    </div>
-                    
-                    {/* Stress level */}
-                    <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
-                      <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((level) => (
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Datum narození</label>
+                        <Input
+                          type="date"
+                          value={editBirthDate}
+                          onChange={(e) => setEditBirthDate(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Pohlaví</label>
+                        <div className="flex gap-2">
                           <Button
-                            key={level}
                             type="button"
-                            variant={editStressLevel === level ? 'default' : 'outline'}
+                            variant={editGender === 'male' ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => setEditStressLevel(level)}
+                            onClick={() => setEditGender('male')}
                             className="flex-1"
                           >
-                            {level}
+                            Muž
                           </Button>
-                        ))}
+                          <Button
+                            type="button"
+                            variant={editGender === 'female' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setEditGender('female')}
+                            className="flex-1"
+                          >
+                            Žena
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Dominantní ruka</label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={editHandedness === 'right' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setEditHandedness('right')}
+                            className="flex-1"
+                          >
+                            Pravák
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={editHandedness === 'left' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setEditHandedness('left')}
+                            className="flex-1"
+                          >
+                            Levák
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 pt-2">
+
+                  {/* Section: Tělesné parametry */}
+                  <div className="space-y-3 pt-3 border-t border-border/30">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tělesné parametry</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Výška (cm)</label>
+                        <Input
+                          type="number"
+                          min={100}
+                          max={250}
+                          value={editHeight ?? ''}
+                          onChange={(e) => setEditHeight(e.target.value ? Number(e.target.value) : null)}
+                          placeholder="175"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Váha (kg)</label>
+                        <Input
+                          type="number"
+                          min={30}
+                          max={300}
+                          step={0.1}
+                          value={editWeight ?? ''}
+                          onChange={(e) => setEditWeight(e.target.value ? Number(e.target.value) : null)}
+                          placeholder="70"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Životní styl */}
+                  <div className="space-y-3 pt-3 border-t border-border/30">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Životní styl</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Zaměstnání</label>
+                        <Input
+                          value={editOccupation}
+                          onChange={(e) => setEditOccupation(e.target.value)}
+                          placeholder="Programátor, učitel..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Typ denní aktivity</label>
+                        <Input
+                          value={editDailyActivityType}
+                          onChange={(e) => setEditDailyActivityType(e.target.value)}
+                          placeholder="Sedavé, aktivní..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={24}
+                          value={editSittingHours ?? ''}
+                          onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
+                          placeholder="8"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Hodiny spánku</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={24}
+                          value={editSleepHours ?? ''}
+                          onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
+                          placeholder="7"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Kvalita spánku</label>
+                        <Input
+                          value={editSleepQuality}
+                          onChange={(e) => setEditSleepQuality(e.target.value)}
+                          placeholder="Dobrá, špatná..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <Button
+                              key={level}
+                              type="button"
+                              variant={editStressLevel === level ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditStressLevel(level)}
+                              className="flex-1 px-2"
+                            >
+                              {level}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Sport a pohyb */}
+                  <div className="space-y-3 pt-3 border-t border-border/30">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sport a pohyb</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Frekvence pohybu</label>
+                        <Input
+                          value={editMovementFrequency}
+                          onChange={(e) => setEditMovementFrequency(e.target.value)}
+                          placeholder="2-3× týdně..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <label className="text-xs text-muted-foreground">Sportovní historie</label>
+                        <Input
+                          value={editSportsHistory}
+                          onChange={(e) => setEditSportsHistory(e.target.value)}
+                          placeholder="Fotbal 10 let, běh..."
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Zdraví */}
+                  <div className="space-y-3 pt-3 border-t border-border/30">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdraví</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Historie zranění</label>
+                        <Input
+                          value={editInjuryHistory}
+                          onChange={(e) => setEditInjuryHistory(e.target.value)}
+                          placeholder="Zlomenina kotníku 2020..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">Historie operací</label>
+                        <Input
+                          value={editSurgeryHistory}
+                          onChange={(e) => setEditSurgeryHistory(e.target.value)}
+                          placeholder="Operace kolena 2019..."
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-border/30">
                     <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(false)}>
                       Zrušit
                     </Button>
                     <Button size="sm" onClick={handleSaveProfile}>
-                      Uložit
+                      Uložit změny
                     </Button>
                   </div>
                 </div>
               ) : (
-                // Display mode - only show filled values
-                <div className="bg-secondary/30 rounded-xl p-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                    {/* Contact */}
-                    {client.phone && (
-                      <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span>{client.phone}</span>
-                      </a>
-                    )}
-                    {client.email && (
-                      <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors truncate">
-                        <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{client.email}</span>
-                      </a>
-                    )}
-                    
-                    {/* Personal info - only show if filled */}
-                    {client.gender && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        <span>{client.gender === 'male' ? 'Muž' : 'Žena'}{age ? `, ${age} let` : ''}</span>
-                      </div>
-                    )}
-                    {!client.gender && age && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Cake className="w-4 h-4" />
-                        <span>{age} let</span>
-                      </div>
-                    )}
-                    {client.handedness && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Hand className="w-4 h-4" />
-                        <span>{client.handedness === 'right' ? 'Pravák' : client.handedness === 'left' ? 'Levák' : 'Obouruký'}</span>
-                      </div>
-                    )}
-                    
-                    {/* Physical measurements */}
-                    {client.height && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Ruler className="w-4 h-4" />
-                        <span>{client.height} cm</span>
-                      </div>
-                    )}
-                    {client.weight && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Scale className="w-4 h-4" />
-                        <span>{client.weight} kg</span>
-                      </div>
-                    )}
-                    
-                    {/* Lifestyle */}
-                    {client.occupation && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Briefcase className="w-4 h-4" />
-                        <span>{client.occupation}</span>
-                      </div>
-                    )}
-                    {client.sitting_hours_daily !== null && client.sitting_hours_daily !== undefined && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Armchair className="w-4 h-4" />
-                        <span>{client.sitting_hours_daily}h sezení</span>
-                      </div>
-                    )}
-                    {client.sleep_hours !== null && client.sleep_hours !== undefined && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Moon className="w-4 h-4" />
-                        <span>{client.sleep_hours}h spánku</span>
-                      </div>
-                    )}
-                    {client.stress_level !== null && client.stress_level !== undefined && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Activity className="w-4 h-4" />
-                        <span>Stres: {client.stress_level}/5</span>
-                      </div>
-                    )}
-                    
-                    {/* Sports */}
-                    {client.current_activities && client.current_activities.length > 0 && (
-                      <div className="flex items-center gap-2 text-muted-foreground col-span-2 sm:col-span-3">
-                        <Dumbbell className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{client.current_activities.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
+                // Display mode - only show filled values, organized by sections
+                <div className="bg-secondary/30 rounded-xl p-4 border border-border/50 shadow-lg space-y-4">
                   
+                  {/* Section: Základní informace */}
+                  {(client.phone || client.email || client.gender || age || client.handedness) && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Základní informace</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                        {client.phone && (
+                          <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                            <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{client.phone}</span>
+                          </a>
+                        )}
+                        {client.email && (
+                          <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors min-w-0">
+                            <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{client.email}</span>
+                          </a>
+                        )}
+                        {(client.gender || age) && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <User className="w-4 h-4 shrink-0" />
+                            <span>
+                              {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : ''}
+                              {client.gender && age ? ', ' : ''}
+                              {age ? `${age} let` : ''}
+                            </span>
+                          </div>
+                        )}
+                        {client.handedness && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Hand className="w-4 h-4 shrink-0" />
+                            <span>{client.handedness === 'right' ? 'Pravák' : client.handedness === 'left' ? 'Levák' : 'Obouruký'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Tělesné parametry */}
+                  {(client.height || client.weight) && (
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tělesné parametry</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                        {client.height && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Ruler className="w-4 h-4 shrink-0" />
+                            <span>{client.height} cm</span>
+                          </div>
+                        )}
+                        {client.weight && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Scale className="w-4 h-4 shrink-0" />
+                            <span>{client.weight} kg</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Životní styl */}
+                  {(client.occupation || client.daily_activity_type || client.sitting_hours_daily !== null || client.sleep_hours !== null || client.sleep_quality || client.stress_level !== null) && (
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Životní styl</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                        {client.occupation && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Briefcase className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{client.occupation}</span>
+                          </div>
+                        )}
+                        {client.daily_activity_type && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Footprints className="w-4 h-4 shrink-0" />
+                            <span>{client.daily_activity_type}</span>
+                          </div>
+                        )}
+                        {client.sitting_hours_daily !== null && client.sitting_hours_daily !== undefined && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Armchair className="w-4 h-4 shrink-0" />
+                            <span>{client.sitting_hours_daily}h sezení denně</span>
+                          </div>
+                        )}
+                        {client.sleep_hours !== null && client.sleep_hours !== undefined && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Moon className="w-4 h-4 shrink-0" />
+                            <span>{client.sleep_hours}h spánku</span>
+                          </div>
+                        )}
+                        {client.sleep_quality && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Moon className="w-4 h-4 shrink-0" />
+                            <span>Kvalita: {client.sleep_quality}</span>
+                          </div>
+                        )}
+                        {client.stress_level !== null && client.stress_level !== undefined && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Brain className="w-4 h-4 shrink-0" />
+                            <span>Stres: {client.stress_level}/5</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Sport a pohyb */}
+                  {(client.movement_frequency || client.sports_history || (client.current_activities && client.current_activities.length > 0)) && (
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sport a pohyb</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        {client.movement_frequency && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Dumbbell className="w-4 h-4 shrink-0" />
+                            <span>{client.movement_frequency}</span>
+                          </div>
+                        )}
+                        {client.current_activities && client.current_activities.length > 0 && (
+                          <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+                            <Activity className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{client.current_activities.join(', ')}</span>
+                          </div>
+                        )}
+                        {client.sports_history && (
+                          <div className="flex items-start gap-2 text-muted-foreground sm:col-span-2">
+                            <Target className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span className="break-words">{client.sports_history}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Zdraví */}
+                  {(client.pain_areas && client.pain_areas.length > 0) || client.injury_history || client.surgery_history ? (
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdraví</h4>
+                      <div className="grid grid-cols-1 gap-2 text-sm">
+                        {client.pain_areas && client.pain_areas.length > 0 && (
+                          <div className="flex items-start gap-2 text-warning">
+                            <Heart className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span className="break-words">Bolesti: {client.pain_areas.join(', ')}</span>
+                          </div>
+                        )}
+                        {client.injury_history && (
+                          <div className="flex items-start gap-2 text-muted-foreground">
+                            <Stethoscope className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span className="break-words">Zranění: {client.injury_history}</span>
+                          </div>
+                        )}
+                        {client.surgery_history && (
+                          <div className="flex items-start gap-2 text-muted-foreground">
+                            <Scissors className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span className="break-words">Operace: {client.surgery_history}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Section: Tréninkové preference */}
+                  {client.training_dislikes && client.training_dislikes.length > 0 && (
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tréninkové preference</h4>
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive/70" />
+                        <span className="break-words">Nemá rád: {client.training_dislikes.join(', ')}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {onUpdateClient && (
-                    <div className="flex justify-end pt-3 mt-3 border-t border-border/50">
+                    <div className="flex justify-end pt-3 border-t border-border/30">
                       <Button variant="outline" size="sm" onClick={handleStartEditProfile} className="gap-1.5">
                         <Edit2 className="w-3.5 h-3.5" />
-                        Upravit
+                        Upravit profil
                       </Button>
                     </div>
                   )}
