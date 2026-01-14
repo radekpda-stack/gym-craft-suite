@@ -46,6 +46,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { TemplateSelectorForChallenge } from './TemplateSelectorForChallenge';
+import { PublicChallengeSettingsSection } from './PublicChallengeSettingsSection';
 
 interface ChallengeEditorProps {
   open: boolean;
@@ -81,6 +82,11 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
   const [minTeamSize, setMinTeamSize] = useState(2);
   const [maxTeamSize, setMaxTeamSize] = useState(4);
   const [teamScoringMode, setTeamScoringMode] = useState<string>('sum');
+  
+  // Public challenge settings
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicSlug, setPublicSlug] = useState('');
+  const [requirePhotoProof, setRequirePhotoProof] = useState(false);
 
   useEffect(() => {
     if (challenge) {
@@ -104,6 +110,10 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setMinTeamSize((challenge as any).min_team_size || 2);
       setMaxTeamSize((challenge as any).max_team_size || 4);
       setTeamScoringMode((challenge as any).team_scoring_mode || 'sum');
+      // Public settings
+      setIsPublic(challenge.is_public || false);
+      setPublicSlug(challenge.public_slug || '');
+      setRequirePhotoProof(challenge.require_photo_proof || false);
     } else {
       // Reset form
       setTitle('');
@@ -125,6 +135,10 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       setMinTeamSize(2);
       setMaxTeamSize(4);
       setTeamScoringMode('sum');
+      // Reset public settings
+      setIsPublic(false);
+      setPublicSlug('');
+      setRequirePhotoProof(false);
     }
   }, [challenge, open]);
 
@@ -196,6 +210,10 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
       min_team_size: minTeamSize,
       max_team_size: maxTeamSize,
       team_scoring_mode: teamScoringMode,
+      // Public settings
+      is_public: isPublic,
+      public_slug: isPublic ? publicSlug : null,
+      require_photo_proof: requirePhotoProof,
     };
 
     if (challenge) {
@@ -568,6 +586,16 @@ export function ChallengeEditor({ open, onOpenChange, challenge }: ChallengeEdit
               )}
             </div>
           </div>
+
+          {/* Public Challenge Settings */}
+          <PublicChallengeSettingsSection
+            isPublic={isPublic}
+            publicSlug={publicSlug}
+            requirePhotoProof={requirePhotoProof}
+            onIsPublicChange={setIsPublic}
+            onPublicSlugChange={setPublicSlug}
+            onRequirePhotoProofChange={setRequirePhotoProof}
+          />
         </div>
 
         <DialogFooter>
