@@ -54,6 +54,9 @@ export function ClientFeedbackCard({
     ? differenceInDays(new Date(), new Date(lastFeedback.training_date))
     : null;
 
+  // Always use production URL for public feedback links
+  const PRODUCTION_BASE_URL = 'https://justmoveasistent.lovable.app';
+
   const handleGenerateFeedbackLink = async () => {
     if (!lastCompletedTrainingId) {
       toast({ title: 'Žádný dokončený trénink pro feedback', variant: 'destructive' });
@@ -76,7 +79,8 @@ export function ClientFeedbackCard({
       
       if (error) throw error;
       
-      const link = `${window.location.origin}/feedback/${data.token}`;
+      // Always use production URL for public-facing links
+      const link = `${PRODUCTION_BASE_URL}/feedback/${data.token}`;
       await navigator.clipboard.writeText(link);
       toast({ title: 'Odkaz zkopírován do schránky' });
     } catch (error) {
