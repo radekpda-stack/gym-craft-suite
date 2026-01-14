@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Loader2, Send, Save, User, Briefcase, Activity, AlertTriangle, Moon, Target, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Send, Save, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PreDiagnosticWelcome } from './PreDiagnosticWelcome';
 import type { PreDiagnosticFormData } from '@/pages/PreDiagnosticFormPage';
 
@@ -26,30 +27,82 @@ interface Props {
   clientName?: string;
 }
 
-// Simplified steps for the questionnaire
+// Simplified steps - consolidated from 7 to 5
 const STEPS = [
-  { id: 'identity', title: 'Základní údaje', icon: User, description: 'Řekni nám o sobě' },
-  { id: 'lifestyle', title: 'Denní režim', icon: Briefcase, description: 'Tvůj typický den' },
-  { id: 'movement', title: 'Pohyb', icon: Activity, description: 'Tvé pohybové aktivity' },
-  { id: 'sleep', title: 'Spánek', icon: Moon, description: 'Regenerace a odpočinek' },
-  { id: 'pain', title: 'Bolest nebo omezení', icon: AlertTriangle, description: 'Aktuální stav' },
-  { id: 'goals', title: 'Cíle', icon: Target, description: 'Co chceš dosáhnout' },
-  { id: 'final', title: 'Doplnění', icon: MessageSquare, description: 'Poslední poznámky' },
+  { 
+    id: 'about', 
+    title: 'O tobě', 
+    emoji: '👤',
+    description: 'Základní info a tvůj typický den'
+  },
+  { 
+    id: 'movement', 
+    title: 'Pohyb a spánek', 
+    emoji: '🏃',
+    description: 'Jak se hýbeš a jak odpočíváš'
+  },
+  { 
+    id: 'health', 
+    title: 'Zdraví', 
+    emoji: '🩺',
+    description: 'Bolesti, úrazy nebo omezení'
+  },
+  { 
+    id: 'goals', 
+    title: 'Tvé cíle', 
+    emoji: '🎯',
+    description: 'Co chceš dosáhnout'
+  },
+  { 
+    id: 'final', 
+    title: 'Na závěr', 
+    emoji: '💬',
+    description: 'Ještě něco důležitého?'
+  },
 ];
 
+// Identity step for new clients
+const IDENTITY_STEP = { 
+  id: 'identity', 
+  title: 'Kdo jsi?', 
+  emoji: '📝',
+  description: 'Abychom tě mohli identifikovat'
+};
+
 const PAIN_AREAS = [
-  'krk', 'ramena', 'horní záda', 'bederní páteř', 
-  'kyčle', 'kolena', 'kotníky', 'zápěstí', 'lokty'
+  { value: 'krk', emoji: '🔵' },
+  { value: 'ramena', emoji: '🔵' },
+  { value: 'horní záda', emoji: '🔵' },
+  { value: 'bederní páteř', emoji: '🔵' },
+  { value: 'kyčle', emoji: '🔵' },
+  { value: 'kolena', emoji: '🔵' },
+  { value: 'kotníky', emoji: '🔵' },
+  { value: 'zápěstí', emoji: '🔵' },
+  { value: 'lokty', emoji: '🔵' },
 ];
 
 const CURRENT_ACTIVITIES = [
-  'běh', 'posilovna', 'jóga', 'plavání', 'cyklistika', 
-  'chůze', 'skupinové lekce', 'bojové sporty', 'tenis', 'golf'
+  { value: 'běh', emoji: '🏃' },
+  { value: 'posilovna', emoji: '🏋️' },
+  { value: 'jóga', emoji: '🧘' },
+  { value: 'plavání', emoji: '🏊' },
+  { value: 'cyklistika', emoji: '🚴' },
+  { value: 'chůze', emoji: '🚶' },
+  { value: 'skupinové lekce', emoji: '👥' },
+  { value: 'bojové sporty', emoji: '🥊' },
+  { value: 'tenis', emoji: '🎾' },
+  { value: 'golf', emoji: '⛳' },
 ];
 
 const GOALS = [
-  'zhubnout', 'nabrat svaly', 'zlepšit kondici', 'zbavit se bolesti',
-  'lepší pohyblivost', 'prevence zranění', 'sportovní výkon', 'celkové zdraví'
+  { value: 'zhubnout', emoji: '⚖️' },
+  { value: 'nabrat svaly', emoji: '💪' },
+  { value: 'zlepšit kondici', emoji: '❤️' },
+  { value: 'zbavit se bolesti', emoji: '🩹' },
+  { value: 'lepší pohyblivost', emoji: '🤸' },
+  { value: 'prevence zranění', emoji: '🛡️' },
+  { value: 'sportovní výkon', emoji: '🏆' },
+  { value: 'celkové zdraví', emoji: '✨' },
 ];
 
 export function PreDiagnosticFormContent({
@@ -65,8 +118,8 @@ export function PreDiagnosticFormContent({
   const [showWelcome, setShowWelcome] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Skip identity step for existing clients
-  const visibleSteps = isNewClient ? STEPS : STEPS.filter(s => s.id !== 'identity');
+  // Add identity step for new clients at the beginning
+  const visibleSteps = isNewClient ? [IDENTITY_STEP, ...STEPS] : STEPS;
   const totalSteps = visibleSteps.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
@@ -137,17 +190,22 @@ export function PreDiagnosticFormContent({
     switch (step.id) {
       case 'identity':
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <p className="text-muted-foreground text-sm">
+              Vyplň prosím základní údaje, abychom věděli, s kým máme tu čest. 😊
+            </p>
+            
             <div className="space-y-2">
               <Label htmlFor="name">Jméno a příjmení *</Label>
               <Input
                 id="name"
                 value={formData.name || ''}
                 onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Jan Novák"
+                placeholder="Např. Jan Novák"
                 className="bg-secondary/50"
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -159,8 +217,9 @@ export function PreDiagnosticFormContent({
                 className="bg-secondary/50"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
+              <Label htmlFor="phone">Telefon (volitelné)</Label>
               <Input
                 id="phone"
                 value={formData.phone || ''}
@@ -169,25 +228,41 @@ export function PreDiagnosticFormContent({
                 className="bg-secondary/50"
               />
             </div>
+            
             <div className="space-y-2">
               <Label>Pohlaví</Label>
-              <RadioGroup
-                value={formData.gender || ''}
-                onValueChange={(v) => updateField('gender', v)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2 p-3 rounded-lg bg-secondary/50 flex-1">
-                  <RadioGroupItem value="male" id="male" />
-                  <Label htmlFor="male" className="cursor-pointer">Muž</Label>
-                </div>
-                <div className="flex items-center space-x-2 p-3 rounded-lg bg-secondary/50 flex-1">
-                  <RadioGroupItem value="female" id="female" />
-                  <Label htmlFor="female" className="cursor-pointer">Žena</Label>
-                </div>
-              </RadioGroup>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateField('gender', 'male')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.gender === 'male' 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">👨</span>
+                  <span className="text-sm font-medium">Muž</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField('gender', 'female')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.gender === 'female' 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">👩</span>
+                  <span className="text-sm font-medium">Žena</span>
+                </button>
+              </div>
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="birth_date">Datum narození</Label>
+              <Label htmlFor="birth_date">Datum narození (volitelné)</Label>
               <Input
                 id="birth_date"
                 type="date"
@@ -199,43 +274,48 @@ export function PreDiagnosticFormContent({
           </div>
         );
 
-      case 'lifestyle':
+      case 'about':
         return (
           <div className="space-y-6">
+            <p className="text-muted-foreground text-sm">
+              Řekni mi něco o sobě a o tom, jak vypadá tvůj běžný den. 📅
+            </p>
+
             <div className="space-y-3">
-              <Label className="text-base">Jaký typ povolání vykonáváš?</Label>
-              <RadioGroup
-                value={formData.daily_activity_type || ''}
-                onValueChange={(v) => updateField('daily_activity_type', v)}
-                className="space-y-2"
-              >
-                <div className="flex items-start space-x-3 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                  <RadioGroupItem value="sedentary" id="sedentary" className="mt-0.5" />
-                  <Label htmlFor="sedentary" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Převážně sedavé</span>
-                    <p className="text-sm text-muted-foreground mt-0.5">Většinu dne sedím u počítače</p>
-                  </Label>
-                </div>
-                <div className="flex items-start space-x-3 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                  <RadioGroupItem value="combined" id="combined" className="mt-0.5" />
-                  <Label htmlFor="combined" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Kombinace sezení a pohybu</span>
-                    <p className="text-sm text-muted-foreground mt-0.5">Střídám práci u stolu s pohybem</p>
-                  </Label>
-                </div>
-                <div className="flex items-start space-x-3 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                  <RadioGroupItem value="physical" id="physical" className="mt-0.5" />
-                  <Label htmlFor="physical" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Převážně fyzicky aktivní</span>
-                    <p className="text-sm text-muted-foreground mt-0.5">Většinu dne jsem na nohou nebo v pohybu</p>
-                  </Label>
-                </div>
-              </RadioGroup>
+              <Label className="text-base font-medium">Jak trávíš většinu pracovního dne?</Label>
+              <div className="space-y-2">
+                {[
+                  { value: 'sedentary', emoji: '🪑', label: 'Většinou sedím', desc: 'Kancelář, práce u počítače' },
+                  { value: 'combined', emoji: '🔄', label: 'Střídám sezení a pohyb', desc: 'Mix práce u stolu a na nohou' },
+                  { value: 'physical', emoji: '🚶', label: 'Jsem hodně v pohybu', desc: 'Fyzická práce, neustále na nohou' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateField('daily_activity_type', option.value)}
+                    className={cn(
+                      "w-full flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                      formData.daily_activity_type === option.value 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <span className="text-2xl">{option.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium block">{option.label}</span>
+                      <span className="text-sm text-muted-foreground">{option.desc}</span>
+                    </div>
+                    {formData.daily_activity_type === option.value && (
+                      <Check className="w-5 h-5 text-primary mt-0.5" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="height">Výška (cm)</Label>
+                <Label htmlFor="height">📏 Výška (cm)</Label>
                 <Input
                   id="height"
                   type="number"
@@ -246,7 +326,7 @@ export function PreDiagnosticFormContent({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="weight">Váha (kg)</Label>
+                <Label htmlFor="weight">⚖️ Váha (kg)</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -257,203 +337,321 @@ export function PreDiagnosticFormContent({
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="age">🎂 Věk</Label>
+              <Input
+                id="age"
+                type="number"
+                value={formData.age || ''}
+                onChange={(e) => updateField('age', parseInt(e.target.value) || undefined)}
+                placeholder="35"
+                className="bg-secondary/50"
+              />
+            </div>
           </div>
         );
 
       case 'movement':
         return (
           <div className="space-y-6">
+            <p className="text-muted-foreground text-sm">
+              Povídej, jak to máš s pohybem a odpočinkem. 💪
+            </p>
+
             <div className="space-y-3">
-              <Label className="text-base">Kolik pohybu máš běžně za týden?</Label>
-              <RadioGroup
-                value={formData.movement_frequency || ''}
-                onValueChange={(v) => updateField('movement_frequency', v)}
-                className="space-y-2"
-              >
+              <Label className="text-base font-medium">Kolik pohybu máš běžně za týden?</Label>
+              <div className="space-y-2">
                 {[
-                  { value: 'very_little', label: 'Velmi málo', desc: 'Téměř žádný cílený pohyb' },
-                  { value: 'little', label: 'Spíše málo', desc: '1-2× týdně' },
-                  { value: 'moderate', label: 'Přiměřeně', desc: '3-4× týdně' },
-                  { value: 'lot', label: 'Hodně', desc: '5× a více týdně' },
+                  { value: 'very_little', emoji: '😴', label: 'Téměř žádný', desc: 'Nemám čas nebo motivaci' },
+                  { value: 'little', emoji: '🚶', label: '1–2× týdně', desc: 'Občas si zajdu zacvičit' },
+                  { value: 'moderate', emoji: '🏃', label: '3–4× týdně', desc: 'Pravidelně sportuji' },
+                  { value: 'lot', emoji: '💪', label: '5× a více', desc: 'Sport je můj životní styl' },
                 ].map((option) => (
-                  <div 
-                    key={option.value} 
-                    className="flex items-start space-x-3 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateField('movement_frequency', option.value)}
+                    className={cn(
+                      "w-full flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                      formData.movement_frequency === option.value 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
+                    )}
                   >
-                    <RadioGroupItem value={option.value} id={option.value} className="mt-0.5" />
-                    <Label htmlFor={option.value} className="flex-1 cursor-pointer">
-                      <span className="font-medium">{option.label}</span>
-                      <p className="text-sm text-muted-foreground mt-0.5">{option.desc}</p>
-                    </Label>
-                  </div>
+                    <span className="text-2xl">{option.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium block">{option.label}</span>
+                      <span className="text-sm text-muted-foreground">{option.desc}</span>
+                    </div>
+                    {formData.movement_frequency === option.value && (
+                      <Check className="w-5 h-5 text-primary mt-0.5" />
+                    )}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-base">Aktuální pohybové aktivity</Label>
+              <Label className="text-base font-medium">Co děláš za aktivity? (vyber všechny)</Label>
               <div className="flex flex-wrap gap-2">
                 {CURRENT_ACTIVITIES.map((activity) => (
                   <Badge
-                    key={activity}
-                    variant={(formData.current_activities || []).includes(activity) ? 'default' : 'outline'}
-                    className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/90"
-                    onClick={() => toggleArrayField('current_activities', activity)}
+                    key={activity.value}
+                    variant={(formData.current_activities || []).includes(activity.value) ? 'default' : 'outline'}
+                    className="cursor-pointer px-3 py-2 text-sm hover:bg-primary/90 transition-all"
+                    onClick={() => toggleArrayField('current_activities', activity.value)}
                   >
-                    {activity}
+                    <span className="mr-1">{activity.emoji}</span>
+                    {activity.value}
                   </Badge>
                 ))}
               </div>
               <Input
-                placeholder="Jiné aktivity..."
+                placeholder="Něco jiného? Napiš..."
                 value={formData.current_activities_other || ''}
                 onChange={(e) => updateField('current_activities_other', e.target.value)}
                 className="bg-secondary/50 mt-2"
               />
             </div>
-          </div>
-        );
 
-      case 'sleep':
-        return (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">Jak hodnotíš svůj spánek?</Label>
-              <RadioGroup
-                value={formData.sleep_quality || ''}
-                onValueChange={(v) => updateField('sleep_quality', v)}
-                className="space-y-2"
-              >
-                {[
-                  { value: 'very_good', label: 'Velmi dobrý', desc: 'Vstávám odpočatý/á' },
-                  { value: 'good', label: 'Spíše dobrý', desc: 'Občas se necítím úplně fit' },
-                  { value: 'bad', label: 'Spíše špatný', desc: 'Často jsem unavený/á' },
-                  { value: 'very_bad', label: 'Velmi špatný', desc: 'Trpím chronickou únavou' },
-                ].map((option) => (
-                  <div 
-                    key={option.value} 
-                    className="flex items-start space-x-3 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors"
-                  >
-                    <RadioGroupItem value={option.value} id={`sleep-${option.value}`} className="mt-0.5" />
-                    <Label htmlFor={`sleep-${option.value}`} className="flex-1 cursor-pointer">
-                      <span className="font-medium">{option.label}</span>
-                      <p className="text-sm text-muted-foreground mt-0.5">{option.desc}</p>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+            <div className="pt-4 border-t">
+              <div className="space-y-3">
+                <Label className="text-base font-medium">😴 Jak spíš?</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'very_good', emoji: '😊', label: 'Skvěle' },
+                    { value: 'good', emoji: '🙂', label: 'Docela dobře' },
+                    { value: 'bad', emoji: '😕', label: 'Spíš špatně' },
+                    { value: 'very_bad', emoji: '😩', label: 'Velmi špatně' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateField('sleep_quality', option.value)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all text-center",
+                        formData.sleep_quality === option.value 
+                          ? "border-primary bg-primary/10" 
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <span className="text-xl block mb-1">{option.emoji}</span>
+                      <span className="text-sm">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-base">Průměrná délka spánku</Label>
-              <RadioGroup
-                value={formData.sleep_hours_avg || ''}
-                onValueChange={(v) => updateField('sleep_hours_avg', v)}
-                className="grid grid-cols-2 gap-2"
-              >
-                {['méně než 5 h', '5-6 h', '6-7 h', '7-8 h', 'více než 8 h'].map((hours) => (
-                  <div 
-                    key={hours} 
-                    className="flex items-center space-x-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors"
+              <Label className="text-base font-medium">⏰ Kolik hodin spíš v průměru?</Label>
+              <div className="flex flex-wrap gap-2">
+                {['méně než 5h', '5–6h', '6–7h', '7–8h', '8h+'].map((hours) => (
+                  <Badge
+                    key={hours}
+                    variant={formData.sleep_hours_avg === hours ? 'default' : 'outline'}
+                    className="cursor-pointer px-4 py-2 text-sm hover:bg-primary/90 transition-all"
+                    onClick={() => updateField('sleep_hours_avg', hours)}
                   >
-                    <RadioGroupItem value={hours} id={`hours-${hours}`} />
-                    <Label htmlFor={`hours-${hours}`} className="cursor-pointer">{hours}</Label>
-                  </div>
+                    {hours}
+                  </Badge>
                 ))}
-              </RadioGroup>
+              </div>
             </div>
           </div>
         );
 
-      case 'pain':
+      case 'health':
         return (
           <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">Máš aktuálně bolest nebo omezení pohybu?</Label>
-              <RadioGroup
-                value={formData.has_pain !== undefined ? (formData.has_pain ? 'yes' : 'no') : ''}
-                onValueChange={(v) => updateField('has_pain', v === 'yes')}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors flex-1">
-                  <RadioGroupItem value="no" id="pain-no" />
-                  <Label htmlFor="pain-no" className="cursor-pointer font-medium">Ne</Label>
-                </div>
-                <div className="flex items-center space-x-2 p-4 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors flex-1">
-                  <RadioGroupItem value="yes" id="pain-yes" />
-                  <Label htmlFor="pain-yes" className="cursor-pointer font-medium">Ano</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <p className="text-muted-foreground text-sm">
+              Abych ti mohl připravit bezpečný trénink, potřebuji vědět o případných omezeních. 🏥
+            </p>
 
-            {formData.has_pain && (
-              <>
-                <div className="space-y-3">
-                  <Label className="text-base">Kde tě bolí?</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {PAIN_AREAS.map((area) => (
-                      <Badge
-                        key={area}
-                        variant={(formData.pain_areas || []).includes(area) ? 'destructive' : 'outline'}
-                        className="cursor-pointer px-3 py-1.5 text-sm"
-                        onClick={() => toggleArrayField('pain_areas', area)}
-                      >
-                        {area}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="pain_details">Popis bolesti (volitelné)</Label>
-                  <Textarea
-                    id="pain_details"
-                    value={formData.pain_type || ''}
-                    onChange={(e) => updateField('pain_type', e.target.value)}
-                    placeholder="Popiš bolest, kdy se objevuje, jak dlouho trvá..."
-                    className="bg-secondary/50 min-h-[80px]"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="space-y-3 pt-2">
-              <div className="p-4 rounded-lg bg-secondary/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="has_injury" className="cursor-pointer">Měl/a jsi nějaký úraz?</Label>
-                  <Checkbox
-                    id="has_injury"
-                    checked={formData.has_injury || false}
-                    onCheckedChange={(v) => updateField('has_injury', v)}
-                  />
-                </div>
-                {formData.has_injury && (
-                  <Input
-                    placeholder="Jaký úraz?"
-                    value={formData.injury_details || ''}
-                    onChange={(e) => updateField('injury_details', e.target.value)}
-                    className="bg-background/50"
-                  />
-                )}
+            {/* Pain section */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Bolí tě aktuálně něco?</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateField('has_pain', false)}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.has_pain === false 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">😊</span>
+                  <span className="text-sm font-medium">Ne, nic mě nebolí</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField('has_pain', true)}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.has_pain === true 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">🤕</span>
+                  <span className="text-sm font-medium">Ano, něco mě bolí</span>
+                </button>
               </div>
 
-              <div className="p-4 rounded-lg bg-secondary/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="has_surgery" className="cursor-pointer">Prodělal/a jsi operaci?</Label>
-                  <Checkbox
-                    id="has_surgery"
-                    checked={formData.has_surgery || false}
-                    onCheckedChange={(v) => updateField('has_surgery', v)}
-                  />
-                </div>
-                {formData.has_surgery && (
-                  <Input
-                    placeholder="Jakou operaci?"
-                    value={formData.surgery_details || ''}
-                    onChange={(e) => updateField('surgery_details', e.target.value)}
-                    className="bg-background/50"
-                  />
+              <AnimatePresence>
+                {formData.has_pain && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    <div className="space-y-3">
+                      <Label>Kde tě to bolí? (vyber všechna místa)</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {PAIN_AREAS.map((area) => (
+                          <Badge
+                            key={area.value}
+                            variant={(formData.pain_areas || []).includes(area.value) ? 'destructive' : 'outline'}
+                            className="cursor-pointer px-3 py-2 text-sm transition-all"
+                            onClick={() => toggleArrayField('pain_areas', area.value)}
+                          >
+                            {area.value}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="pain_details">Popiš tu bolest (volitelné)</Label>
+                      <Textarea
+                        id="pain_details"
+                        value={formData.pain_type || ''}
+                        onChange={(e) => updateField('pain_type', e.target.value)}
+                        placeholder="Kdy se objevuje? Jak dlouho trvá? Co ji zhoršuje?"
+                        className="bg-secondary/50 min-h-[80px]"
+                      />
+                    </div>
+                  </motion.div>
                 )}
+              </AnimatePresence>
+            </div>
+
+            {/* Injury & Surgery section */}
+            <div className="pt-4 border-t space-y-4">
+              <Label className="text-base font-medium">Historie zdraví</Label>
+              
+              <div className="space-y-3">
+                <div className={cn(
+                  "p-4 rounded-xl border-2 transition-all",
+                  formData.has_injury ? "border-primary bg-primary/5" : "border-border"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">🩹</span>
+                      <Label htmlFor="has_injury" className="cursor-pointer font-medium">
+                        Měl/a jsi nějaký úraz?
+                      </Label>
+                    </div>
+                    <Checkbox
+                      id="has_injury"
+                      checked={formData.has_injury || false}
+                      onCheckedChange={(v) => updateField('has_injury', v)}
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {formData.has_injury && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3"
+                      >
+                        <Input
+                          placeholder="Jaký úraz? Kdy to bylo?"
+                          value={formData.injury_details || ''}
+                          onChange={(e) => updateField('injury_details', e.target.value)}
+                          className="bg-background/50"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className={cn(
+                  "p-4 rounded-xl border-2 transition-all",
+                  formData.has_surgery ? "border-primary bg-primary/5" : "border-border"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">🏥</span>
+                      <Label htmlFor="has_surgery" className="cursor-pointer font-medium">
+                        Prodělal/a jsi operaci?
+                      </Label>
+                    </div>
+                    <Checkbox
+                      id="has_surgery"
+                      checked={formData.has_surgery || false}
+                      onCheckedChange={(v) => updateField('has_surgery', v)}
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {formData.has_surgery && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3"
+                      >
+                        <Input
+                          placeholder="Jakou operaci? Kdy to bylo?"
+                          value={formData.surgery_details || ''}
+                          onChange={(e) => updateField('surgery_details', e.target.value)}
+                          className="bg-background/50"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className={cn(
+                  "p-4 rounded-xl border-2 transition-all",
+                  formData.takes_medication ? "border-primary bg-primary/5" : "border-border"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">💊</span>
+                      <Label htmlFor="takes_medication" className="cursor-pointer font-medium">
+                        Bereš nějaké léky?
+                      </Label>
+                    </div>
+                    <Checkbox
+                      id="takes_medication"
+                      checked={formData.takes_medication || false}
+                      onCheckedChange={(v) => updateField('takes_medication', v)}
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {formData.takes_medication && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3"
+                      >
+                        <Input
+                          placeholder="Jaké léky?"
+                          value={formData.medication_details || ''}
+                          onChange={(e) => updateField('medication_details', e.target.value)}
+                          className="bg-background/50"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </div>
@@ -462,22 +660,32 @@ export function PreDiagnosticFormContent({
       case 'goals':
         return (
           <div className="space-y-6">
+            <p className="text-muted-foreground text-sm">
+              Pojďme si říct, kam směřujeme! Co je pro tebe nejdůležitější? 🎯
+            </p>
+
             <div className="space-y-3">
-              <Label className="text-base">Co je tvůj hlavní cíl?</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-base font-medium">Vyber svůj hlavní cíl</Label>
+              <div className="grid grid-cols-2 gap-2">
                 {GOALS.map((goal) => (
-                  <Badge
-                    key={goal}
-                    variant={formData.main_goal === goal ? 'default' : 'outline'}
-                    className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/90"
-                    onClick={() => updateField('main_goal', goal)}
+                  <button
+                    key={goal.value}
+                    type="button"
+                    onClick={() => updateField('main_goal', goal.value)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all text-center",
+                      formData.main_goal === goal.value 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
+                    )}
                   >
-                    {goal}
-                  </Badge>
+                    <span className="text-xl block mb-1">{goal.emoji}</span>
+                    <span className="text-sm">{goal.value}</span>
+                  </button>
                 ))}
               </div>
               <Input
-                placeholder="Jiný cíl..."
+                placeholder="Nebo napiš svůj vlastní cíl..."
                 value={formData.main_goal_other || ''}
                 onChange={(e) => updateField('main_goal_other', e.target.value)}
                 className="bg-secondary/50 mt-2"
@@ -485,23 +693,23 @@ export function PreDiagnosticFormContent({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="training_preferences">Jaký trénink preferuješ? (volitelné)</Label>
+              <Label htmlFor="training_preferences">❤️ Co tě na tréninku baví?</Label>
               <Textarea
                 id="training_preferences"
                 value={formData.training_preferences || ''}
                 onChange={(e) => updateField('training_preferences', e.target.value)}
-                placeholder="Co tě baví, co ti vyhovuje..."
+                placeholder="Co máš rád/a? Co ti vyhovuje? Jaký styl preferuješ?"
                 className="bg-secondary/50 min-h-[80px]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="training_dislikes">Čemu se chceš vyhnout? (volitelné)</Label>
+              <Label htmlFor="training_dislikes">👎 Čemu se chceš vyhnout?</Label>
               <Textarea
                 id="training_dislikes"
                 value={formData.training_dislikes || ''}
                 onChange={(e) => updateField('training_dislikes', e.target.value)}
-                placeholder="Co ti nevyhovuje, čeho se bojíš..."
+                placeholder="Co nemáš rád/a? Čeho se bojíš? Co ti nevyhovuje?"
                 className="bg-secondary/50 min-h-[80px]"
               />
             </div>
@@ -511,20 +719,33 @@ export function PreDiagnosticFormContent({
       case 'final':
         return (
           <div className="space-y-6">
+            <p className="text-muted-foreground text-sm">
+              Jsi skoro u konce! 🎉 Je ještě něco, co bych měl vědět?
+            </p>
+
             <div className="space-y-2">
-              <Label htmlFor="open_question" className="text-base">
-                Je něco, co bych měl vědět před prvním setkáním?
+              <Label htmlFor="open_question" className="text-base font-medium">
+                💭 Chceš mi ještě něco říct?
               </Label>
-              <p className="text-sm text-muted-foreground">
-                Cokoliv dalšího, co tě napadá – zdravotní omezení, obavy, očekávání...
-              </p>
               <Textarea
                 id="open_question"
                 value={formData.open_question || ''}
                 onChange={(e) => updateField('open_question', e.target.value)}
-                placeholder="Napiš sem cokoliv důležitého..."
+                placeholder="Cokoliv dalšího – obavy, očekávání, speciální požadavky, zdravotní omezení..."
                 className="bg-secondary/50 min-h-[150px]"
               />
+            </div>
+
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">✨</span>
+                <div>
+                  <p className="font-medium">Díky za vyplnění!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Tvé odpovědi mi pomohou připravit trénink přesně pro tebe.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -535,16 +756,15 @@ export function PreDiagnosticFormContent({
   };
 
   const currentStepData = visibleSteps[currentStep];
-  const StepIcon = currentStepData.icon;
 
   return (
     <div className="public-page pb-24">
-      {/* Header */}
+      {/* Header with visual step indicator */}
       <div className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-lg font-semibold">Diagnostika pohybu</h1>
+              <h1 className="text-lg font-semibold">Dotazník před tréninkem</h1>
               {clientName && (
                 <p className="text-sm text-muted-foreground">{clientName}</p>
               )}
@@ -556,31 +776,52 @@ export function PreDiagnosticFormContent({
               </div>
             )}
           </div>
-          <Progress value={progress} className="h-1.5" />
-          <p className="text-xs text-muted-foreground mt-1">
-            Krok {currentStep + 1} z {totalSteps}
+          
+          {/* Visual step indicators */}
+          <div className="flex items-center gap-1 mb-2">
+            {visibleSteps.map((step, index) => (
+              <div 
+                key={step.id}
+                className={cn(
+                  "flex-1 h-1.5 rounded-full transition-all",
+                  index < currentStep ? "bg-primary" :
+                  index === currentStep ? "bg-primary" : "bg-secondary"
+                )}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {currentStepData.emoji} {currentStepData.title} • Krok {currentStep + 1} z {totalSteps}
           </p>
         </div>
       </div>
 
       {/* Content */}
       <div className="container mx-auto px-4 py-6">
-        <Card className="public-card mb-6">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <StepIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{currentStepData.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">{currentStepData.description}</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {renderStep()}
-          </CardContent>
-        </Card>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Card className="public-card mb-6">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
+                    {currentStepData.emoji}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">{currentStepData.title}</h2>
+                    <p className="text-sm text-muted-foreground">{currentStepData.description}</p>
+                  </div>
+                </div>
+                {renderStep()}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Navigation */}
@@ -601,6 +842,7 @@ export function PreDiagnosticFormContent({
               onClick={handleSubmit}
               disabled={isSubmitting}
               className="gap-2 flex-1 max-w-xs"
+              size="lg"
             >
               {isSubmitting ? (
                 <>
@@ -610,7 +852,7 @@ export function PreDiagnosticFormContent({
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  Odeslat
+                  Odeslat 🎉
                 </>
               )}
             </Button>
@@ -619,6 +861,7 @@ export function PreDiagnosticFormContent({
               onClick={goNext}
               disabled={!canGoNext()}
               className="gap-2 flex-1 max-w-xs"
+              size="lg"
             >
               Pokračovat
               <ChevronRight className="w-4 h-4" />
