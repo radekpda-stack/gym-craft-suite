@@ -66,6 +66,7 @@ const MyProfile = lazy(() => import("./pages/MyProfile"));
 const PriceMigration = lazy(() => import("./pages/PriceMigration"));
 const Notes = lazy(() => import("./pages/Notes"));
 const Expenses = lazy(() => import("./pages/Expenses"));
+const FollowupsPage = lazy(() => import("./pages/FollowupsPage"));
 
 // Lazy loaded pages - Client Portal
 const ClientPortalOverview = lazy(() => import("./pages/client-portal/ClientPortalOverview"));
@@ -218,6 +219,7 @@ const App = () => (
                           <Route path="/my-profile" element={<LazyRouteWrapper><MyProfile /></LazyRouteWrapper>} />
                           <Route path="/notes" element={<LazyRouteWrapper><Notes /></LazyRouteWrapper>} />
                           <Route path="/expenses" element={<LazyRouteWrapper><Expenses /></LazyRouteWrapper>} />
+                          <Route path="/pripomenuti" element={<LazyRouteWrapper><FollowupsPage /></LazyRouteWrapper>} />
                           <Route path="/admin/user-approvals" element={<LazyRouteWrapper><UserApprovals /></LazyRouteWrapper>} />
                           <Route path="/admin/performance-import" element={<LazyRouteWrapper><PerformanceImport /></LazyRouteWrapper>} />
                           <Route path="/admin/price-migration" element={<LazyRouteWrapper><PriceMigration /></LazyRouteWrapper>} />

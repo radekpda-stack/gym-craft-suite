@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Star, ChevronRight } from 'lucide-react';
+import { Users, Star, ChevronRight, Bell } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, ClientQuickInfo } from '@/hooks/useDashboardViewModel';
@@ -9,6 +9,7 @@ import { cs } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CreditLevelIndicator } from '@/components/ui/credit-level-indicator';
+import { useUnresolvedFollowupsCount } from '@/hooks/useTrainingFollowups';
 
 interface ClientsQuickOverviewSectionProps {
   data: DashboardViewModel | undefined;
@@ -17,6 +18,7 @@ interface ClientsQuickOverviewSectionProps {
 
 const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo }) {
   const navigate = useNavigate();
+  const { data: followupCount } = useUnresolvedFollowupsCount(client.id);
   
   return (
     <button
@@ -38,6 +40,13 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
           </span>
           {client.isFavorite && (
             <Star className="w-3 h-3 text-warning fill-warning" />
+          )}
+          {/* Followup badge */}
+          {followupCount && followupCount > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full">
+              <Bell className="w-2.5 h-2.5" />
+              {followupCount}
+            </span>
           )}
         </div>
         <p className="text-xs text-muted-foreground/60">

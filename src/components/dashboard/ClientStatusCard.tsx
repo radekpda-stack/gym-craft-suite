@@ -1,10 +1,11 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Star, AlertCircle } from 'lucide-react';
+import { Users, Star, AlertCircle, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardViewModel, ClientQuickInfo } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreditLevelIndicator } from '@/components/ui/credit-level-indicator';
+import { useUnresolvedFollowupsCount } from '@/hooks/useTrainingFollowups';
 
 interface ClientStatusCardProps {
   data: DashboardViewModel | undefined;
@@ -13,6 +14,7 @@ interface ClientStatusCardProps {
 
 const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo }) {
   const navigate = useNavigate();
+  const { data: followupCount } = useUnresolvedFollowupsCount(client.id);
   
   const getStatusDot = () => {
     if (client.status === 'error') return 'bg-destructive';
@@ -39,6 +41,14 @@ const ClientRow = memo(function ClientRow({ client }: { client: ClientQuickInfo 
       {/* Favorite indicator */}
       {client.isFavorite && (
         <Star className="w-3 h-3 text-warning fill-warning shrink-0" />
+      )}
+      
+      {/* Followup badge */}
+      {followupCount && followupCount > 0 && (
+        <span className="flex items-center gap-0.5 text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full shrink-0">
+          <Bell className="w-2.5 h-2.5" />
+          {followupCount}
+        </span>
       )}
       
       {/* Credit level indicator with leaves */}
