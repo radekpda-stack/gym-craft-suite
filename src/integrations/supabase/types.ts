@@ -8967,9 +8967,11 @@ export type Database = {
           client_id: string
           content: string
           created_at: string | null
+          exercise_id: string | null
           followup_type: string | null
           id: string
           is_resolved: boolean | null
+          priority: string | null
           resolved_at: string | null
           resolved_in_training_id: string | null
           training_session_id: string | null
@@ -8979,9 +8981,11 @@ export type Database = {
           client_id: string
           content: string
           created_at?: string | null
+          exercise_id?: string | null
           followup_type?: string | null
           id?: string
           is_resolved?: boolean | null
+          priority?: string | null
           resolved_at?: string | null
           resolved_in_training_id?: string | null
           training_session_id?: string | null
@@ -8991,9 +8995,11 @@ export type Database = {
           client_id?: string
           content?: string
           created_at?: string | null
+          exercise_id?: string | null
           followup_type?: string | null
           id?: string
           is_resolved?: boolean | null
+          priority?: string | null
           resolved_at?: string | null
           resolved_in_training_id?: string | null
           training_session_id?: string | null
@@ -9013,6 +9019,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_ledger_balances"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "training_followups_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "training_followups_resolved_in_training_id_fkey"
