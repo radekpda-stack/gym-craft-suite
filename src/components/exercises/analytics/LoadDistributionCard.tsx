@@ -86,12 +86,13 @@ export function LoadDistributionCard({ data, detailData, isLoading }: LoadDistri
               width={mode === 'detail' ? 90 : 70}
             />
             <Tooltip
+              cursor={false}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload;
                   return (
-                    <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg">
-                      <p className="font-medium text-xs">{d.label}</p>
+                    <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
+                      <p className="font-medium text-xs text-foreground">{d.label}</p>
                       <p className="text-xs text-muted-foreground">
                         Výběr: {d.value}%
                       </p>
