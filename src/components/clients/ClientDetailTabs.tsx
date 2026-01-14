@@ -18,6 +18,7 @@ import {
   MessageSquare, 
   Settings,
   Activity,
+  User,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ import { ClientNotesSection } from './ClientNotesSection';
 import { ClientCommunicationLog } from './ClientCommunicationLog';
 import { ClientAdminBlock } from './ClientAdminBlock';
 import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
+import { ClientProfileTab } from './ClientProfileTab';
 import { useCommunicationMetrics, useHealthMetrics } from '@/hooks/useClientDashboardMetrics';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
 import { Client } from '@/hooks/useClients';
@@ -54,6 +56,7 @@ interface ClientDetailTabsProps {
   budgetGroupName?: string | null;
   onAddNote: (note: string) => Promise<void>;
   onArchive: () => Promise<void>;
+  onUpdateClient?: (data: Partial<Client>) => Promise<void>;
 }
 
 export function ClientDetailTabs({
@@ -65,6 +68,7 @@ export function ClientDetailTabs({
   budgetGroupName,
   onAddNote,
   onArchive,
+  onUpdateClient,
 }: ClientDetailTabsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
@@ -89,6 +93,11 @@ export function ClientDetailTabs({
   const redFlagCount = evaluation?.redFlagCount ?? 0;
 
   const tabs = [
+    {
+      id: 'profile',
+      label: 'Profil',
+      icon: User,
+    },
     { 
       id: 'trainings', 
       label: 'Tréninky', 
@@ -156,6 +165,11 @@ export function ClientDetailTabs({
           ))}
         </TabsList>
       </div>
+
+      {/* Tab: Profile */}
+      <TabsContent value="profile" className="mt-0 space-y-4">
+        <ClientProfileTab client={client} onUpdateClient={onUpdateClient} />
+      </TabsContent>
 
       {/* Tab: Trainings */}
       <TabsContent value="trainings" className="mt-0 space-y-4">
