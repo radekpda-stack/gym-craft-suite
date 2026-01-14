@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
 import { formatDate } from '@/lib/formatters';
 import {
   ClipboardList,
@@ -40,7 +38,6 @@ import { EditPreDiagnosticAnswerDialog } from '@/components/pre-diagnostic/EditP
 import { PreDiagnosticTrainerSummary } from '@/components/pre-diagnostic/PreDiagnosticTrainerSummary';
 import { exportPreDiagnosticPdf } from '@/components/pre-diagnostic/PreDiagnosticPdfExport';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 interface ClientPreDiagnosticSectionProps {
   clientId: string;

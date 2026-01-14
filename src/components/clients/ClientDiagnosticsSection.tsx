@@ -10,34 +10,16 @@ import {
   Sparkles,
   AlertTriangle,
   Activity,
-  Send,
-  FileText,
-  Loader2,
-  Copy,
-  Check,
-  Clock,
-  CheckCircle2,
-  ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { JOINT_OPTIONS, MUSCLE_OPTIONS } from '@/hooks/useDiagnostics';
 import { useDiagnosticAssessments, DiagnosticWithAssessment } from '@/hooks/useDiagnosticAssessments';
 import { DiagnosticDetailSheet } from '@/components/diagnostics/DiagnosticDetailSheet';
 import { CreateDiagnosticSheet } from '@/components/diagnostics/CreateDiagnosticSheet';
-import { TrainerDiagnosticSheet } from '@/components/pre-diagnostic/TrainerDiagnosticSheet';
 import { useClients } from '@/hooks/useClients';
-import { useClientPreDiagnostic, useCreateClientPreDiagnostic, PreDiagnosticForm } from '@/hooks/usePreDiagnosticForms';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 interface ClientDiagnosticsSectionProps {
   clientId: string;
@@ -72,55 +54,9 @@ function getSeverityFromFindings(findings: string): {
 export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnosticsSectionProps) {
   const { data: diagnosticsWithAssessments = [], isLoading } = useDiagnosticAssessments(clientId);
   const { data: clients = [] } = useClients();
-  const { data: existingPreDiagnostic, isLoading: isLoadingPreDiag } = useClientPreDiagnostic(clientId);
-  const createPreDiagnostic = useCreateClientPreDiagnostic();
   
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticWithAssessment | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [preDiagDialogOpen, setPreDiagDialogOpen] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [trainerDiagOpen, setTrainerDiagOpen] = useState(false);
-
-  const handleSendPreDiagnostic = async () => {
-    try {
-      const result = await createPreDiagnostic.mutateAsync(clientId);
-      const link = `${window.location.origin}/pre-diagnostic/${result.token}`;
-      setGeneratedLink(link);
-      setPreDiagDialogOpen(true);
-    } catch (error) {
-      console.error('Error creating pre-diagnostic:', error);
-    }
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(generatedLink);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = generatedLink;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      setCopied(true);
-      toast.success('Odkaz zkopírován');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error('Nepodařilo se zkopírovat odkaz');
-    }
-  };
-
-  // Pre-diagnostic status
-  const preDiagStatus = existingPreDiagnostic
-    ? existingPreDiagnostic.status === 'completed'
-      ? 'completed'
-      : 'pending'
-    : 'none';
 
   // Stats
   const totalDiagnostics = diagnosticsWithAssessments.length;
@@ -151,39 +87,21 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Stethoscope className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Diagnostika</h3>
+            <h3 className="font-semibold text-foreground">Fyzická diagnostika</h3>
           </div>
-          <div className="flex items-center gap-1">
-            {preDiagStatus === 'none' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={handleSendPreDiagnostic}
-                disabled={createPreDiagnostic.isPending}
-              >
-                {createPreDiagnostic.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                Poslat formulář
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1 text-xs"
-              onClick={() => setIsCreateOpen(true)}
-            >
-              <Plus className="w-4 h-4" />
-              Nová
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Nová
+          </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* Stats Grid - simplified to 3 columns */}
+        <div className="grid grid-cols-3 gap-2">
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-center">
             <p className="text-xl font-bold text-primary">{totalDiagnostics}</p>
             <p className="text-[10px] text-muted-foreground">Celkem</p>
@@ -199,27 +117,6 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
             <p className="text-xl font-bold text-warning">{recentIssues}</p>
             <p className="text-[10px] text-muted-foreground">Problémy</p>
           </div>
-          <button 
-            onClick={() => preDiagStatus === 'completed' && existingPreDiagnostic && setTrainerDiagOpen(true)}
-            disabled={preDiagStatus === 'none'}
-            className={cn(
-              'p-3 rounded-xl text-center border transition-colors',
-              preDiagStatus === 'completed' && 'bg-success/10 border-success/20 hover:bg-success/20 cursor-pointer',
-              preDiagStatus === 'pending' && 'bg-warning/10 border-warning/20',
-              preDiagStatus === 'none' && 'bg-secondary/50 border-border/50'
-            )}
-          >
-            <div className="flex items-center justify-center">
-              {preDiagStatus === 'completed' && <CheckCircle2 className="w-5 h-5 text-success" />}
-              {preDiagStatus === 'pending' && <Clock className="w-5 h-5 text-warning" />}
-              {preDiagStatus === 'none' && <FileText className="w-5 h-5 text-muted-foreground" />}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {preDiagStatus === 'completed' && 'Vyplněno'}
-              {preDiagStatus === 'pending' && 'Čeká'}
-              {preDiagStatus === 'none' && 'Formulář'}
-            </p>
-          </button>
         </div>
 
         {/* Diagnostics List */}
@@ -312,54 +209,6 @@ export function ClientDiagnosticsSection({ clientId, clientName }: ClientDiagnos
         onOpenChange={setIsCreateOpen}
         clients={clients}
         defaultClientId={clientId}
-      />
-
-      {/* Pre-diagnostic Link Dialog */}
-      <Dialog open={preDiagDialogOpen} onOpenChange={setPreDiagDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Pre-diagnostický formulář
-            </DialogTitle>
-            <DialogDescription>
-              Odkaz pro klienta {clientName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                readOnly
-                value={generatedLink}
-                className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg truncate"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={copyToClipboard}
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-success" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Odkaz je platný 7 dní. Po vyplnění najdete data v sekci pre-diagnostiky.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Trainer Diagnostic Sheet */}
-      <TrainerDiagnosticSheet
-        open={trainerDiagOpen}
-        onOpenChange={setTrainerDiagOpen}
-        form={existingPreDiagnostic || null}
-        clientName={clientName}
       />
     </>
   );

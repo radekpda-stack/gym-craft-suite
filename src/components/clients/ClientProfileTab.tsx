@@ -34,6 +34,7 @@ import {
   Hand,
   Apple,
   Pill,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -431,7 +432,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             
             <CollapsibleContent>
               <div className="px-4 pb-4 border-t border-border">
-                {/* Sync button */}
+                {/* Actions */}
                 <div className="py-3 flex flex-wrap gap-2">
                   <Button 
                     variant="outline" 
@@ -447,6 +448,9 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                     )}
                     Převzít data do karty
                   </Button>
+                  <p className="text-xs text-muted-foreground self-center">
+                    Plné detaily najdete v záložce <strong>Pre-diagnostika</strong>
+                  </p>
                 </div>
 
                 {/* Sync preview */}
