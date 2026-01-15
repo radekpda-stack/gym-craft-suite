@@ -157,22 +157,49 @@ export async function generateFinancialReportPdf(
       // Left column
       const leftX = margin;
       drawStatRow("Celkové příjmy", formatCurrency(data.summary.totalIncome), leftX, colWidth - 5);
-      drawStatRow("Počet tréninků", data.summary.totalTrainings.toString(), leftX, colWidth - 5);
+      
+      // Show breakdown if multiple sources enabled
+      if (data.summary.paymentIncome > 0 && data.summary.productIncome > 0) {
+        doc.setFontSize(FONTS.tiny);
+        doc.setTextColor(...COLORS.textLight);
+        doc.text(`  (platby: ${formatCurrency(data.summary.paymentIncome)}, prodeje: ${formatCurrency(data.summary.productIncome)})`, leftX + 3, yPos);
+        yPos += 5;
+      }
+      
+      if (data.summary.totalTrainings > 0) {
+        drawStatRow("Počet tréninků", data.summary.totalTrainings.toString(), leftX, colWidth - 5);
+      }
       drawStatRow("Počet klientů", data.summary.totalClients.toString(), leftX, colWidth - 5);
       
-      // Reset for right column
-      yPos -= 18;
+      // Right column
+      const rightStartY = yPos - (data.summary.totalTrainings > 0 ? 12 : 6);
+      yPos = rightStartY;
       const rightX = margin + colWidth;
-      drawStatRow("Průměr / trénink", formatCurrency(Math.round(data.summary.avgIncomePerTraining)), rightX, colWidth - 5);
+      
+      if (data.summary.totalTrainings > 0) {
+        drawStatRow("Průměr / trénink", formatCurrency(Math.round(data.summary.avgIncomePerTraining)), rightX, colWidth - 5);
+      }
       drawStatRow("Průměr / klient", formatCurrency(Math.round(data.summary.avgIncomePerClient)), rightX, colWidth - 5);
       yPos += 6;
       
-      // Training breakdown
+      // Training breakdown (only if trainings are included)
+      if (data.summary.totalTrainings > 0) {
+        yPos += 2;
+        doc.setFontSize(FONTS.small);
+        doc.setTextColor(...COLORS.textMuted);
+        doc.text(`Rozpad: ${data.summary.soloTrainings}× 1:1 | ${data.summary.duoTrainings}× dvojice | ${data.summary.trioTrainings}× trojice+`, margin + 3, yPos);
+        yPos += 8;
+      }
+      
+      // Product summary
+      if (data.totalProductsSold > 0) {
+        doc.setFontSize(FONTS.small);
+        doc.setTextColor(...COLORS.textMuted);
+        doc.text(`Prodáno produktů: ${data.totalProductsSold}× za ${formatCurrency(data.summary.productIncome)}`, margin + 3, yPos);
+        yPos += 8;
+      }
+      
       yPos += 2;
-      doc.setFontSize(FONTS.small);
-      doc.setTextColor(...COLORS.textMuted);
-      doc.text(`Rozpad: ${data.summary.soloTrainings}× 1:1 | ${data.summary.duoTrainings}× dvojice | ${data.summary.trioTrainings}× trojice+`, margin + 3, yPos);
-      yPos += 10;
     }
   }
 
@@ -307,7 +334,7 @@ export async function generateFinancialReportPdf(
   }
 
   // === TRAINING TYPE BREAKDOWN ===
-  if (settings.sections.trainingTypeBreakdown) {
+  if (settings.sections.trainingTypeBreakdown && data.summary.totalTrainings > 0) {
     checkPageBreak(40);
     drawSectionTitle("Rozpad typů tréninku");
     
@@ -320,6 +347,43 @@ export async function generateFinancialReportPdf(
     drawStatRow("Dvojice", `${data.summary.duoTrainings}× (${duoPercent} %)`);
     drawStatRow("Trojice a více", `${data.summary.trioTrainings}× (${trioPercent} %)`);
     yPos += 5;
+  }
+
+  // === PRODUCT SALES BREAKDOWN ===
+  if (settings.sections.productSalesBreakdown && data.products.length > 0) {
+    checkPageBreak(60);
+    drawSectionTitle("Rozpad prodejů produktů");
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Produkt', 'Prodáno', 'Tržba', 'Klientů']],
+      body: data.products.slice(0, 20).map(p => [
+        p.productName,
+        `${p.quantity}×`,
+        formatCurrency(p.totalRevenue),
+        p.clientCount.toString(),
+      ]),
+      theme: 'grid',
+      styles: {
+        font: 'Roboto',
+        fontSize: FONTS.tiny,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: COLORS.primary,
+        textColor: COLORS.white,
+        fontStyle: 'bold',
+      },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { halign: 'center', cellWidth: 25 },
+        2: { halign: 'right', cellWidth: 35 },
+        3: { halign: 'center', cellWidth: 25 },
+      },
+      margin: { left: margin, right: margin },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 8;
   }
 
   // === MANAGERIAL METRICS ===
