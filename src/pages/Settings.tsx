@@ -37,6 +37,7 @@ import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
 import { DataExport } from '@/components/settings/DataExport';
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
+import { FinancialReportSettings } from '@/components/settings/FinancialReportSettings';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
 import { PasswordChangeSettings } from '@/components/settings/PasswordChangeSettings';
 import { UserManagementSettings } from '@/components/settings/UserManagementSettings';
@@ -337,6 +338,16 @@ export default function Settings() {
               icon={Download}
             >
               <DataExport />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Finanční PDF report' : 'Financial PDF Report'}
+              description={language === 'cs' 
+                ? 'Komplexní finanční přehled ve formátu PDF' 
+                : 'Comprehensive financial overview in PDF format'}
+              icon={BarChart2}
+            >
+              <FinancialReportSettings />
             </SettingsSection>
 
             {isAdmin && (
