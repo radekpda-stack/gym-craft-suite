@@ -35,6 +35,14 @@ export interface WeeklyReportData {
   trioCount: number;
 }
 
+export interface ProductSaleData {
+  productId: string;
+  productName: string;
+  quantity: number;
+  totalRevenue: number;
+  clientCount: number;
+}
+
 export interface FinancialReportData {
   period: {
     start: Date;
@@ -45,6 +53,9 @@ export interface FinancialReportData {
   // Year summary
   summary: {
     totalIncome: number;
+    trainingIncome: number;
+    productIncome: number;
+    paymentIncome: number;
     totalTrainings: number;
     totalClients: number;
     soloTrainings: number;
@@ -63,6 +74,10 @@ export interface FinancialReportData {
   // Clients
   clients: ClientReportData[];
   topClientsRevenuePercent: number;
+  
+  // Product sales
+  products: ProductSaleData[];
+  totalProductsSold: number;
   
   // Managerial metrics
   managerial: {
@@ -133,9 +148,11 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const [
         trainingsResult,
         transactionsResult,
+        productTransactionsResult,
         clientsResult,
         participantsResult,
         lastYearTransactionsResult,
+        productsResult,
       ] = await Promise.all([
         // Trainings
         supabase
@@ -150,6 +167,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           .from('credit_transactions')
           .select('id, amount, type, client_id, created_at')
           .in('type', ['payment', 'manual'])
+          .gt('amount', 0)
+          .gte('created_at', startStr)
+          .lte('created_at', endStr),
+        
+        // Product sales transactions
+        supabase
+          .from('credit_transactions')
+          .select('id, amount, type, client_id, product_id, created_at')
+          .eq('type', 'product')
           .gt('amount', 0)
           .gte('created_at', startStr)
           .lte('created_at', endStr),
@@ -170,24 +196,42 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         // Last year transactions for YoY comparison
         supabase
           .from('credit_transactions')
-          .select('amount')
-          .in('type', ['payment', 'manual'])
+          .select('amount, type')
+          .in('type', ['payment', 'manual', 'product'])
           .gt('amount', 0)
           .gte('created_at', subYears(startDate, 1).toISOString())
           .lte('created_at', subYears(endDate, 1).toISOString()),
+        
+        // Products catalog for names
+        supabase
+          .from('products')
+          .select('id, name'),
       ]);
 
       const trainings = trainingsResult.data || [];
       const transactions = transactionsResult.data || [];
+      const productTransactions = productTransactionsResult.data || [];
       const clients = clientsResult.data || [];
       const participants = participantsResult.data || [];
       const lastYearTransactions = lastYearTransactionsResult.data || [];
+      const products = productsResult.data || [];
 
-      // Build client map
+      // Build maps
       const clientMap = new Map(clients.map(c => [c.id, c.name]));
+      const productMap = new Map(products.map(p => [p.id, p.name]));
 
-      // Calculate income from payments
-      const totalIncome = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      // Calculate income from different sources based on settings
+      const paymentIncome = settings.dataSources.clientPayments 
+        ? transactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
+        : 0;
+      const productIncome = settings.dataSources.productSales 
+        ? productTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
+        : 0;
+      const trainingIncome = settings.dataSources.trainings 
+        ? trainings.reduce((sum, t) => sum + (t.final_price || 0), 0) 
+        : 0;
+      
+      const totalIncome = paymentIncome + productIncome;
       const lastYearIncome = lastYearTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
       // Count trainings by participant count
@@ -377,7 +421,30 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const paymentsWithoutClient = transactions.filter(t => !t.client_id).length;
       const trainingsWithoutClient = trainings.filter(t => !t.client_id && (t.participant_count || 1) === 1).length;
       const trainedTotal = trainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
-      const trainedNotPaidDiff = trainedTotal - totalIncome;
+      const trainedNotPaidDiff = trainedTotal - paymentIncome;
+
+      // Product sales breakdown
+      const productSalesMap = new Map<string, { quantity: number; revenue: number; clients: Set<string> }>();
+      productTransactions.forEach(t => {
+        const productId = t.product_id || 'unknown';
+        const data = productSalesMap.get(productId) || { quantity: 0, revenue: 0, clients: new Set() };
+        data.quantity += 1;
+        data.revenue += t.amount || 0;
+        if (t.client_id) data.clients.add(t.client_id);
+        productSalesMap.set(productId, data);
+      });
+
+      const productsData: ProductSaleData[] = Array.from(productSalesMap.entries())
+        .map(([productId, data]) => ({
+          productId,
+          productName: productMap.get(productId) || 'Neznámý produkt',
+          quantity: data.quantity,
+          totalRevenue: data.revenue,
+          clientCount: data.clients.size,
+        }))
+        .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+      const totalProductsSold = productTransactions.length;
 
       return {
         period: {
@@ -387,20 +454,25 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         },
         summary: {
           totalIncome,
-          totalTrainings: trainings.length,
+          trainingIncome,
+          productIncome,
+          paymentIncome,
+          totalTrainings: settings.dataSources.trainings ? trainings.length : 0,
           totalClients,
           soloTrainings,
           duoTrainings,
           trioTrainings,
-          avgIncomePerTraining: trainings.length > 0 ? totalIncome / trainings.length : 0,
+          avgIncomePerTraining: trainings.length > 0 ? paymentIncome / trainings.length : 0,
           avgIncomePerClient: totalClients > 0 ? totalIncome / totalClients : 0,
         },
         monthly: monthlyData,
         weekly: weeklyData,
         clients: clientsData,
         topClientsRevenuePercent,
+        products: productsData,
+        totalProductsSold,
         managerial: {
-          incomePerHour: totalHours > 0 ? totalIncome / totalHours : null,
+          incomePerHour: totalHours > 0 ? paymentIncome / totalHours : null,
           groupTrainingPercent,
           bestMonth: bestMonth ? { name: bestMonth.month, income: bestMonth.income } : null,
           worstMonth: worstMonth ? { name: worstMonth.month, income: worstMonth.income } : null,

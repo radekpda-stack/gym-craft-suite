@@ -59,6 +59,13 @@ export function FinancialReportSettings() {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleDataSourceChange = (key: keyof SettingsType['dataSources'], value: boolean) => {
+    setSettings(prev => ({
+      ...prev,
+      dataSources: { ...prev.dataSources, [key]: value },
+    }));
+  };
+
   const handleSectionChange = (key: keyof SettingsType['sections'], value: boolean) => {
     setSettings(prev => ({
       ...prev,
@@ -209,6 +216,31 @@ export function FinancialReportSettings() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4">
+              {/* Data Sources */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Zdroje dat (co zahrnout)</Label>
+                <div className="grid gap-2">
+                  {[
+                    { key: 'trainings' as const, label: 'Tréninky', desc: 'Uskutečněné tréninkové lekce' },
+                    { key: 'productSales' as const, label: 'Prodej produktů', desc: 'Prodané produkty a služby' },
+                    { key: 'clientPayments' as const, label: 'Platby klientů', desc: 'Přímé platby a manuální dobití' },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between py-1">
+                      <div>
+                        <Label className="text-sm font-normal">{label}</Label>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                      <Switch
+                        checked={settings.dataSources[key]}
+                        onCheckedChange={(v) => handleDataSourceChange(key, v)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Sections */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Sekce v PDF</Label>
@@ -218,10 +250,11 @@ export function FinancialReportSettings() {
                     { key: 'monthlyOverview' as const, label: 'Měsíční přehled' },
                     { key: 'weeklyOverview' as const, label: 'Týdenní přehled' },
                     { key: 'clientsBreakdown' as const, label: 'Klienti a částky' },
-                    { key: 'trainingTypeBreakdown' as const, label: 'Rozpad typů tréninku' },
+                    { key: 'trainingTypeBreakdown' as const, label: 'Rozpad typů tréninku', show: settings.dataSources.trainings },
+                    { key: 'productSalesBreakdown' as const, label: 'Rozpad prodejů produktů', show: settings.dataSources.productSales },
                     { key: 'managerialMetrics' as const, label: 'Manažerské metriky' },
                     { key: 'dataValidation' as const, label: 'Kontrola dat' },
-                  ].map(({ key, label }) => (
+                  ].filter(s => s.show !== false).map(({ key, label }) => (
                     <div key={key} className="flex items-center justify-between py-1">
                       <Label className="text-sm font-normal">{label}</Label>
                       <Switch
@@ -318,12 +351,34 @@ export function FinancialReportSettings() {
             <div className="glass-subtle rounded-lg p-4 space-y-2">
               <p className="text-sm font-medium">Náhled dat</p>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Příjmy:</div>
+                <div className="text-muted-foreground">Celkové příjmy:</div>
                 <div className="font-medium">{reportData.summary.totalIncome.toLocaleString('cs-CZ')} Kč</div>
-                <div className="text-muted-foreground">Tréninky:</div>
-                <div className="font-medium">{reportData.summary.totalTrainings}</div>
+                {settings.dataSources.clientPayments && (
+                  <>
+                    <div className="text-muted-foreground pl-2 text-xs">↳ Platby:</div>
+                    <div className="text-xs">{reportData.summary.paymentIncome.toLocaleString('cs-CZ')} Kč</div>
+                  </>
+                )}
+                {settings.dataSources.productSales && (
+                  <>
+                    <div className="text-muted-foreground pl-2 text-xs">↳ Prodeje:</div>
+                    <div className="text-xs">{reportData.summary.productIncome.toLocaleString('cs-CZ')} Kč</div>
+                  </>
+                )}
+                {settings.dataSources.trainings && (
+                  <>
+                    <div className="text-muted-foreground">Tréninky:</div>
+                    <div className="font-medium">{reportData.summary.totalTrainings}</div>
+                  </>
+                )}
                 <div className="text-muted-foreground">Klienti:</div>
                 <div className="font-medium">{reportData.summary.totalClients}</div>
+                {settings.dataSources.productSales && (
+                  <>
+                    <div className="text-muted-foreground">Prodaných produktů:</div>
+                    <div className="font-medium">{reportData.totalProductsSold}</div>
+                  </>
+                )}
               </div>
             </div>
           )}

@@ -10,6 +10,13 @@ export interface FinancialReportSettings {
   // Default period
   defaultPeriod: 'year' | '12months' | 'custom';
   
+  // Data sources - what to include in report
+  dataSources: {
+    trainings: boolean;      // Include training sessions
+    productSales: boolean;   // Include product sales
+    clientPayments: boolean; // Include direct client payments
+  };
+  
   // Sections to include
   sections: {
     yearSummary: boolean;
@@ -17,6 +24,7 @@ export interface FinancialReportSettings {
     weeklyOverview: boolean;
     clientsBreakdown: boolean;
     trainingTypeBreakdown: boolean;
+    productSalesBreakdown: boolean;  // NEW: Product sales section
     managerialMetrics: boolean;
     dataValidation: boolean;
   };
@@ -35,12 +43,18 @@ export interface FinancialReportSettings {
 const defaultSettings: FinancialReportSettings = {
   isEnabled: true,
   defaultPeriod: 'year',
+  dataSources: {
+    trainings: true,
+    productSales: true,
+    clientPayments: true,
+  },
   sections: {
     yearSummary: true,
     monthlyOverview: true,
     weeklyOverview: false,
     clientsBreakdown: true,
     trainingTypeBreakdown: true,
+    productSalesBreakdown: true,
     managerialMetrics: true,
     dataValidation: true,
   },
@@ -70,6 +84,10 @@ export function useFinancialReportSettings() {
         return {
           ...defaultSettings,
           ...(data.value as Record<string, unknown>),
+          dataSources: {
+            ...defaultSettings.dataSources,
+            ...((data.value as Record<string, unknown>).dataSources as Record<string, unknown> || {}),
+          },
           sections: {
             ...defaultSettings.sections,
             ...((data.value as Record<string, unknown>).sections as Record<string, unknown> || {}),
