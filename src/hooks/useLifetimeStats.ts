@@ -81,6 +81,7 @@ export function useLifetimeStats() {
         financeStatsResult,
         productStatsResult,
         clientStatsResult,
+        paidTrainingsResult,
       ] = await Promise.all([
         // Training stats - only needed columns
         supabase
@@ -110,6 +111,14 @@ export function useLifetimeStats() {
           .from("clients")
           .select("id, is_archived, created_at")
           .eq("is_system", false),
+        
+        // Paid trainings - for accurate hourly rate calculation
+        // Only count trainings that have a transaction (actual revenue)
+        supabase
+          .from("credit_transactions")
+          .select("training_session_id, amount, training_sessions!inner(duration)")
+          .eq("type", "training")
+          .not("training_session_id", "is", null),
       ]);
 
       const trainings = trainingStatsResult.data || [];
@@ -117,6 +126,7 @@ export function useLifetimeStats() {
       const transactions = financeStatsResult.data || [];
       const productTransactions = productStatsResult.data || [];
       const clients = clientStatsResult.data || [];
+      const paidTrainings = paidTrainingsResult.data || [];
 
       // Calculate training stats
       const totalTrainings = trainings.length;
@@ -179,15 +189,25 @@ export function useLifetimeStats() {
       const totalProductsSold = productTransactions.length;
       const uniqueProductsSold = new Set(productTransactions.map(p => p.product_id).filter(Boolean)).size;
 
-      // Average price per training
-      const avgPricePerTraining = totalTrainings > 0 
-        ? Math.round(totalTrainingValue / totalTrainings) 
+      // Average price per training (only trainings with transactions)
+      const paidTrainingsCount = new Set(paidTrainings.map((t: any) => t.training_session_id)).size;
+      const avgPricePerTraining = paidTrainingsCount > 0 
+        ? Math.round(totalTrainingValue / paidTrainingsCount) 
         : 0;
 
-      // Average hourly rate - use precise minutes for calculation, not rounded hours
-      const preciseHours = totalMinutes / 60;
-      const avgHourlyRate = preciseHours > 0
-        ? Math.round(totalTrainingValue / preciseHours)
+      // Average hourly rate - use only paid trainings for accurate calculation
+      // Group by session to avoid counting same session multiple times (group trainings)
+      const paidSessionMinutes = new Map<string, number>();
+      paidTrainings.forEach((t: any) => {
+        if (t.training_session_id && t.training_sessions?.duration) {
+          paidSessionMinutes.set(t.training_session_id, t.training_sessions.duration);
+        }
+      });
+      const paidMinutesTotal = Array.from(paidSessionMinutes.values()).reduce((sum, min) => sum + min, 0);
+      const paidHours = paidMinutesTotal / 60;
+      
+      const avgHourlyRate = paidHours > 0
+        ? Math.round(totalTrainingValue / paidHours)
         : 0;
 
       // Client stats
