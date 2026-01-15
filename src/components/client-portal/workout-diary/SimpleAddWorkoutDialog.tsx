@@ -21,14 +21,12 @@ import {
   Send,
   Check,
   PersonStanding,
-  Plus,
   X,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExerciseAutocomplete } from './ExerciseAutocomplete';
+import { QuickExercisePicker } from './QuickExercisePicker';
 
 // Simplified workout types with large icons
 const SIMPLE_WORKOUT_TYPES = [
@@ -105,10 +103,7 @@ export function SimpleAddWorkoutDialog({
   const [paceMinPerKm, setPaceMinPerKm] = useState('');
   
   // Strength exercises
-  const [exercises, setExercises] = useState<ExerciseInput[]>([{ ...emptyExercise }]);
-  
-  // Details expansion
-  const [showDetails, setShowDetails] = useState(false);
+  const [exercises, setExercises] = useState<ExerciseInput[]>([]);
 
   const resetForm = () => {
     setStep('type');
@@ -118,8 +113,7 @@ export function SimpleAddWorkoutDialog({
     setNotes('');
     setDistanceKm('');
     setPaceMinPerKm('');
-    setExercises([{ ...emptyExercise }]);
-    setShowDetails(false);
+    setExercises([]);
   };
 
   const handleClose = () => {
@@ -174,14 +168,27 @@ export function SimpleAddWorkoutDialog({
   const isStrengthType = workoutType === 'strength';
 
   // Exercise handlers
-  const addExercise = () => {
+  const addExerciseFromQuickPick = (exercise: { id: string; name: string; name_cs: string | null }) => {
+    const displayName = exercise.name_cs || exercise.name;
+    // Check if exercise already added
+    const alreadyAdded = exercises.some(ex => ex.exerciseId === exercise.id);
+    if (alreadyAdded) return;
+    
+    setExercises([...exercises, { 
+      name: displayName, 
+      exerciseId: exercise.id, 
+      sets: '', 
+      reps: '', 
+      weight: '' 
+    }]);
+  };
+
+  const addExerciseManually = () => {
     setExercises([...exercises, { ...emptyExercise }]);
   };
 
   const removeExercise = (index: number) => {
-    if (exercises.length > 1) {
-      setExercises(exercises.filter((_, i) => i !== index));
-    }
+    setExercises(exercises.filter((_, i) => i !== index));
   };
 
   const updateExercise = (index: number, field: keyof ExerciseInput, value: string) => {
@@ -195,6 +202,9 @@ export function SimpleAddWorkoutDialog({
     updated[index] = { ...updated[index], name, exerciseId };
     setExercises(updated);
   };
+
+  // Get IDs of already selected exercises
+  const selectedExerciseIds = exercises.map(ex => ex.exerciseId).filter(Boolean) as string[];
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -257,7 +267,7 @@ export function SimpleAddWorkoutDialog({
             </motion.div>
           )}
 
-          {/* Step 2: Duration, Feeling & Details */}
+          {/* Step 2: Duration, Feeling & Details (all visible) */}
           {step === 'details' && (
             <motion.div
               key="details"
@@ -327,158 +337,162 @@ export function SimpleAddWorkoutDialog({
                 </div>
               </div>
 
-              {/* Expandable Details Section */}
-              <div className="border-t pt-4">
-                <button
-                  onClick={() => setShowDetails(!showDetails)}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                >
-                  {showDetails ? (
-                    <>
-                      <ChevronUp className="w-4 h-4" />
-                      Skrýt podrobnosti
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-4 h-4" />
-                      Přidat podrobnosti
-                    </>
-                  )}
-                </button>
+              {/* Cardio metrics - always visible */}
+              {isCardioType && (
+                <div className={cn(
+                  "p-4 rounded-lg space-y-3",
+                  selectedType?.color
+                )}>
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    {selectedType && <selectedType.icon className="w-4 h-4" />}
+                    Metriky
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Vzdálenost (km)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="5.0"
+                        value={distanceKm}
+                        onChange={(e) => setDistanceKm(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Tempo (min/km)</Label>
+                      <Input
+                        type="text"
+                        placeholder="5:30"
+                        value={paceMinPerKm}
+                        onChange={(e) => setPaceMinPerKm(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                <AnimatePresence>
-                  {showDetails && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pt-4 space-y-4">
-                        {/* Cardio metrics */}
-                        {isCardioType && (
-                          <div className={cn(
-                            "p-4 rounded-lg space-y-3",
-                            selectedType?.color
-                          )}>
-                            <div className="flex items-center gap-2 font-medium text-sm">
-                              {selectedType && <selectedType.icon className="w-4 h-4" />}
-                              Metriky
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">Vzdálenost (km)</Label>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="5.0"
-                                  value={distanceKm}
-                                  onChange={(e) => setDistanceKm(e.target.value)}
-                                  className="h-10"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">Tempo (min/km)</Label>
-                                <Input
-                                  type="text"
-                                  placeholder="5:30"
-                                  value={paceMinPerKm}
-                                  onChange={(e) => setPaceMinPerKm(e.target.value)}
-                                  className="h-10"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
+              {/* Strength exercises - always visible with quick pick */}
+              {isStrengthType && (
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center gap-2 font-medium text-sm text-warning">
+                    <Dumbbell className="w-4 h-4" />
+                    Cviky
+                  </div>
 
-                        {/* Strength exercises */}
-                        {isStrengthType && (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 font-medium text-sm text-orange-600">
-                              <Dumbbell className="w-4 h-4" />
-                              Cviky
-                            </div>
-                            
-                            {exercises.map((exercise, idx) => (
-                              <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-3 relative">
-                                {exercises.length > 1 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-6 w-6"
-                                    onClick={() => removeExercise(idx)}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                )}
-                                
-                                <ExerciseAutocomplete
-                                  value={exercise.name}
-                                  onChange={(name, exerciseId) => updateExerciseName(idx, name, exerciseId)}
-                                  placeholder="Název cviku"
-                                />
-                                
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">Série</Label>
-                                    <Input
-                                      type="number"
-                                      placeholder="3"
-                                      value={exercise.sets}
-                                      onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
-                                      className="h-9"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">Opakování</Label>
-                                    <Input
-                                      type="number"
-                                      placeholder="10"
-                                      value={exercise.reps}
-                                      onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
-                                      className="h-9"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">Váha (kg)</Label>
-                                    <Input
-                                      type="number"
-                                      step="0.5"
-                                      placeholder="50"
-                                      value={exercise.weight}
-                                      onChange={(e) => updateExercise(idx, 'weight', e.target.value)}
-                                      className="h-9"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                            
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                              onClick={addExercise}
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Přidat další cvik
-                            </Button>
-                          </div>
-                        )}
+                  {/* Quick Exercise Picker */}
+                  <QuickExercisePicker 
+                    onSelect={addExerciseFromQuickPick}
+                    selectedIds={selectedExerciseIds}
+                  />
 
-                        {/* Other types - simple note */}
-                        {!isCardioType && !isStrengthType && (
-                          <p className="text-sm text-muted-foreground text-center py-2">
-                            Další podrobnosti můžeš přidat v poznámce v dalším kroku.
-                          </p>
-                        )}
+                  {/* Search for other exercises */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Nebo vyhledej jiný cvik:</p>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <ExerciseAutocomplete
+                          value=""
+                          onChange={(name, exerciseId) => {
+                            if (name.trim()) {
+                              // Check if already added
+                              if (exerciseId && exercises.some(ex => ex.exerciseId === exerciseId)) {
+                                return;
+                              }
+                              setExercises([...exercises, { 
+                                name, 
+                                exerciseId, 
+                                sets: '', 
+                                reps: '', 
+                                weight: '' 
+                              }]);
+                            }
+                          }}
+                          placeholder="Název cviku..."
+                        />
                       </div>
-                    </motion.div>
+                    </div>
+                  </div>
+
+                  {/* Added exercises list */}
+                  {exercises.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">Přidané cviky ({exercises.length}):</p>
+                      {exercises.map((exercise, idx) => (
+                        <motion.div 
+                          key={idx} 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 bg-warning/5 border border-warning/20 rounded-lg space-y-3 relative"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeExercise(idx)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                          
+                          <div className="font-medium text-sm pr-8 text-warning">
+                            {exercise.name}
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Série</Label>
+                              <Input
+                                type="number"
+                                placeholder="3"
+                                value={exercise.sets}
+                                onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Opakování</Label>
+                              <Input
+                                type="number"
+                                placeholder="10"
+                                value={exercise.reps}
+                                onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Váha (kg)</Label>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                placeholder="50"
+                                value={exercise.weight}
+                                onChange={(e) => updateExercise(idx, 'weight', e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   )}
-                </AnimatePresence>
-              </div>
+
+                  {exercises.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Klikni na cvik výše nebo ho vyhledej
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Other types - simple note */}
+              {!isCardioType && !isStrengthType && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Další podrobnosti můžeš přidat v poznámce v dalším kroku.
+                  </p>
+                </div>
+              )}
 
               <Button 
                 className="w-full h-12 text-lg"
@@ -526,7 +540,7 @@ export function SimpleAddWorkoutDialog({
                     {exercises.filter(e => e.name.trim()).map((ex, idx) => (
                       <span 
                         key={idx} 
-                        className="text-xs bg-orange-500/10 text-orange-600 px-2 py-1 rounded-full"
+                        className="text-xs bg-warning/10 text-warning px-2 py-1 rounded-full"
                       >
                         {ex.name}
                         {ex.weight && ` ${ex.weight}kg`}
