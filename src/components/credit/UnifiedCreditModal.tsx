@@ -244,10 +244,17 @@ export function UnifiedCreditModal({
       resetForm();
       setOpen(false);
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Nepodařilo se provést transakci.';
+
       console.error('Error creating transaction:', error);
       toast({
         title: 'Chyba',
-        description: 'Nepodařilo se provést transakci.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
