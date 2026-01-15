@@ -196,18 +196,15 @@ export function useAddCreditLot() {
       queryClient.invalidateQueries({ queryKey: ['shared_budget_balance'] });
     },
     onError: (error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === 'string'
-            ? error
-            : 'Nepodařilo se přidat kredit.';
-
-      console.error('Error adding credit lot:', error);
-      toast({
-        title: 'Chyba',
-        description: message,
-        variant: 'destructive',
+      // Do not toast here – UnifiedCreditModal already shows a toast.
+      // Keeping the toast in both places causes duplicated error messages.
+      const err = error as any;
+      console.error('Error adding credit lot:', {
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
+        raw: error,
       });
     },
   });

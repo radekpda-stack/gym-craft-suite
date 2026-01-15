@@ -160,6 +160,20 @@ export function UnifiedCreditModal({
   };
 
   const processTransaction = async () => {
+    const formatErrorMessage = (error: unknown) => {
+      const err = error as any;
+      const base =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : err?.message || 'Nepodařilo se provést transakci.';
+
+      // Surface PostgREST details when present (helps pinpoint RLS / constraints / etc.)
+      const detailsParts = [err?.details, err?.hint, err?.code].filter(Boolean);
+      return detailsParts.length ? `${base} (${detailsParts.join(' | ')})` : base;
+    };
+
     setIsProcessing(true);
     try {
       const numericAmount = parseFloat(amount);
@@ -244,14 +258,18 @@ export function UnifiedCreditModal({
       resetForm();
       setOpen(false);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === 'string'
-            ? error
-            : 'Nepodařilo se provést transakci.';
+      const message = formatErrorMessage(error);
 
-      console.error('Error creating transaction:', error);
+      // Structured log for debugging in case it still fails
+      console.error('Error creating transaction (UnifiedCreditModal):', {
+        message,
+        selectedClientId,
+        paymentMethod,
+        activeTab,
+        amount,
+        raw: error,
+      });
+
       toast({
         title: 'Chyba',
         description: message,
