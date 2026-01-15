@@ -180,7 +180,14 @@ export function useAddCreditLot() {
       });
 
       if (error) throw error;
-      return data as unknown as AddCreditLotResult;
+      
+      // RPC returns {success: false, error: '...'} on failure
+      const result = data as unknown as AddCreditLotResult;
+      if (result && typeof result === 'object' && 'success' in result && result.success === false) {
+        throw new Error((result as { error?: string }).error || 'Nepodařilo se přidat kredit');
+      }
+      
+      return result;
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['credit_lots', variables.clientId] });
