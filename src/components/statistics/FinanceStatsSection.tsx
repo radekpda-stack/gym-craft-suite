@@ -21,6 +21,7 @@ import {
   Loader2,
   BarChart3,
 } from 'lucide-react';
+import { QuickFinancialReportButton } from '@/components/finance/QuickFinancialReportButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TotalIncomeModal } from './modals/TotalIncomeModal';
 import { MonthlyAverageModal } from './modals/MonthlyAverageModal';
@@ -100,6 +101,7 @@ export function FinanceStatsSection() {
           <BarChart3 className="h-4 w-4" />
           Pokročilá analytika
         </Button>
+        <QuickFinancialReportButton variant="outline" />
       </div>
 
       {/* Insight Bar */}
