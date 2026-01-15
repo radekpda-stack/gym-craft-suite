@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BarChart3, DollarSign, Users, Activity, Trophy } from 'lucide-react';
@@ -7,14 +8,17 @@ import { FinanceStatsSection } from '@/components/statistics/FinanceStatsSection
 import { ClientStatsSection } from '@/components/statistics/ClientStatsSection';
 import { TrainingStatsSection } from '@/components/statistics/TrainingStatsSection';
 import { CareerStatsSection } from '@/components/statistics/CareerStatsSection';
+import { StatsPeriodSelector, StatsPeriodRange, getDefaultPeriodRange } from '@/components/statistics/StatsPeriodSelector';
 
 export default function Statistics() {
   usePageTracking('statistics');
+  
+  const [periodRange, setPeriodRange] = useState<StatsPeriodRange>(getDefaultPeriodRange('1y'));
 
   return (
     <div className="min-h-screen animate-fade-in px-4 sm:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4 mb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4">
         <Button variant="ghost" size="icon" asChild className="shrink-0">
           <Link to="/">
             <ArrowLeft className="h-5 w-5" />
@@ -29,6 +33,11 @@ export default function Statistics() {
             Kompletní přehled vaší práce
           </p>
         </div>
+      </div>
+
+      {/* Period Selector - Global for all tabs */}
+      <div className="mb-4">
+        <StatsPeriodSelector value={periodRange} onChange={setPeriodRange} />
       </div>
 
       {/* Category Tabs - 4 categories only */}
@@ -53,19 +62,19 @@ export default function Statistics() {
         </TabsList>
 
         <TabsContent value="career" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <CareerStatsSection />
+          <CareerStatsSection periodRange={periodRange} />
         </TabsContent>
 
         <TabsContent value="finance" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <FinanceStatsSection />
+          <FinanceStatsSection periodRange={periodRange} />
         </TabsContent>
 
         <TabsContent value="trainings" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <TrainingStatsSection />
+          <TrainingStatsSection periodRange={periodRange} />
         </TabsContent>
 
         <TabsContent value="clients" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-          <ClientStatsSection />
+          <ClientStatsSection periodRange={periodRange} />
         </TabsContent>
       </Tabs>
     </div>

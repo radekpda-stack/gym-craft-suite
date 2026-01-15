@@ -12,10 +12,21 @@ import { CohortRetentionCard } from './CohortRetentionCard';
 import { ChurnRiskCard } from './ChurnRiskCard';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
-export function ClientStatsSection() {
+interface ClientStatsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
-  const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
+  
+  // Use custom period if provided
+  const { data: stats, isLoading: statsLoading } = useAnnualStats(
+    periodRange?.type === 'all' ? 'all' : periodRange?.type === 'custom' || periodRange ? 'custom' : 'year',
+    periodRange?.start,
+    periodRange?.end
+  );
 
   const isLoading = analyticsLoading || statsLoading;
 

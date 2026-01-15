@@ -30,12 +30,23 @@ import { ProductIncomeModal } from './modals/ProductIncomeModal';
 import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 import { CancellationDetailModal } from './modals/CancellationDetailModal';
 import { MonthlyIncomeDetailModal } from './modals/MonthlyIncomeDetailModal';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | 'monthly-history' | null;
 
-export function FinanceStatsSection() {
+interface FinanceStatsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   const navigate = useNavigate();
-  const { data: stats, isLoading: statsLoading } = useAnnualStats('year');
+  
+  // Use custom period if provided, otherwise default to 'year'
+  const { data: stats, isLoading: statsLoading } = useAnnualStats(
+    periodRange?.type === 'all' ? 'all' : periodRange?.type === 'custom' || periodRange ? 'custom' : 'year',
+    periodRange?.start,
+    periodRange?.end
+  );
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
   const monthlyGoal = useMonthlyIncomeGoal();
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
