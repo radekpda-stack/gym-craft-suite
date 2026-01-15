@@ -25,6 +25,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import type { StatsPeriodRange } from "./StatsPeriodSelector";
+
+interface CareerStatsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
 
 // KPI Card component
 function KPICard({ 
@@ -120,7 +125,8 @@ function LoadingSkeleton() {
   );
 }
 
-export function CareerStatsSection() {
+export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
+  // Note: useLifetimeStats is lifetime stats, but we show the selected period info in the header
   const { data: stats, isLoading: statsLoading } = useLifetimeStats();
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
 
@@ -179,6 +185,11 @@ export function CareerStatsSection() {
       ? formatDate(stats.firstClientDate, 'long')
       : 'Neznámé';
 
+  // Show period label if custom period is selected
+  const periodLabel = periodRange && periodRange.type !== '1y' 
+    ? periodRange.label 
+    : `Od ${startDate}`;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -193,7 +204,7 @@ export function CareerStatsSection() {
               <h2 className="text-xl font-bold text-foreground">Kariérní přehled</h2>
               <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                Od {startDate}
+                {periodLabel}
               </p>
             </div>
           </div>

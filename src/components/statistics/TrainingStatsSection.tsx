@@ -1,24 +1,29 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useGlobalTrainingTagStats, GlobalDateRange } from '@/hooks/useGlobalTrainingTagStats';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 import { TrainingHeroKPI } from './TrainingHeroKPI';
 import { TrainingTypeDistributionCard } from './TrainingTypeDistributionCard';
-import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { TrainingDurationCard } from './TrainingDurationCard';
+import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
-import { Loader2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
+import { differenceInDays } from 'date-fns';
 
-const DATE_RANGE_OPTIONS: { value: GlobalDateRange; label: string }[] = [
-  { value: 7, label: '7 dní' },
-  { value: 30, label: '30 dní' },
-  { value: 90, label: '3 měsíce' },
-  { value: 365, label: 'Rok' },
-  { value: 'all', label: 'Vše' },
-];
+interface TrainingStatsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
 
-export function TrainingStatsSection() {
-  const [dateRange, setDateRange] = useState<GlobalDateRange>(365);
+export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps) {
+  // Convert periodRange to GlobalDateRange (number of days or 'all')
+  const dateRange = useMemo<GlobalDateRange>(() => {
+    if (!periodRange) return 365;
+    if (periodRange.type === 'all') return 'all';
+    
+    // Calculate days from the period range
+    const days = differenceInDays(periodRange.end, periodRange.start);
+    return days as GlobalDateRange;
+  }, [periodRange]);
   
   const stats = useGlobalTrainingTagStats(dateRange);
 
@@ -39,26 +44,6 @@ export function TrainingStatsSection() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Date range selector */}
-      <div className="flex justify-center sm:justify-end">
-        <ToggleGroup
-          type="single"
-          value={String(dateRange)}
-          onValueChange={(val) => val && setDateRange(val === 'all' ? 'all' : Number(val) as GlobalDateRange)}
-          className="bg-muted/50 p-1 rounded-lg"
-        >
-          {DATE_RANGE_OPTIONS.map((option) => (
-            <ToggleGroupItem
-              key={option.value}
-              value={String(option.value)}
-              className="text-xs sm:text-sm px-2 sm:px-3 data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-            >
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
-
       {/* Hero KPI Cards */}
       <TrainingHeroKPI
         totalTrainings={stats.totalTrainings}
