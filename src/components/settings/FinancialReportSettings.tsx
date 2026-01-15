@@ -252,6 +252,7 @@ export function FinancialReportSettings() {
                     { key: 'clientsBreakdown' as const, label: 'Klienti a částky' },
                     { key: 'trainingTypeBreakdown' as const, label: 'Rozpad typů tréninku', show: settings.dataSources.trainings },
                     { key: 'productSalesBreakdown' as const, label: 'Rozpad prodejů produktů', show: settings.dataSources.productSales },
+                    { key: 'trainingsPaymentsSummary' as const, label: 'Přehled tréninků a plateb', show: settings.dataSources.trainings },
                     { key: 'managerialMetrics' as const, label: 'Manažerské metriky' },
                     { key: 'dataValidation' as const, label: 'Kontrola dat' },
                   ].filter(s => s.show !== false).map(({ key, label }) => (

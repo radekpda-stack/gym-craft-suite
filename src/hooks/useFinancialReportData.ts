@@ -55,6 +55,29 @@ export interface ProductClientData {
   orderCount: number;
 }
 
+// NEW: Training summary with accurate calculations
+export interface TrainingsSummary {
+  totalTrainings: number;
+  totalHours: number;
+  totalTrainedValue: number;         // suma final_price všech tréninků
+  paidTrainingsCount: number;        // tréninky s transakcí
+  paidHours: number;                 // hodiny zaplacených tréninků
+  paidValue: number;                 // skutečně uhrazeno za tréninky
+  avgPricePerTraining: number;       // opravený výpočet (pouze zaplacené)
+  avgHourlyRate: number;             // opravený výpočet (pouze zaplacené)
+  unpaidTrainingsCount: number;
+  unpaidValue: number;
+}
+
+// NEW: Payments summary
+export interface PaymentsSummary {
+  totalPayments: number;             // suma plateb (payment + manual)
+  trainingPayments: number;          // úhrady za tréninky (credit_transactions type=training)
+  directPayments: number;            // přímé platby (credit)
+  productPayments: number;           // platby za produkty
+  paymentTransactionCount: number;   // počet platebních transakcí
+}
+
 export interface FinancialReportData {
   period: {
     start: Date;
@@ -81,6 +104,10 @@ export interface FinancialReportData {
     totalProductMargin: number;
     totalProductMarginPercent: number;
   };
+  
+  // NEW: Trainings and payments summary
+  trainingsSummary: TrainingsSummary;
+  paymentsSummary: PaymentsSummary;
   
   // Monthly breakdown
   monthly: MonthlyReportData[];
@@ -174,6 +201,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         participantsResult,
         lastYearTransactionsResult,
         productsResult,
+        trainingTransactionsResult,
       ] = await Promise.all([
         // Trainings
         supabase
@@ -242,6 +270,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         supabase
           .from('products')
           .select('id, name, category, purchase_price'),
+        
+        // NEW: Training transactions - for accurate hourly rate and avg price calculation
+        supabase
+          .from('credit_transactions')
+          .select('id, training_session_id, amount, training_sessions!inner(duration)')
+          .eq('type', 'training')
+          .not('training_session_id', 'is', null)
+          .gte('created_at', startStr)
+          .lte('created_at', endStr),
       ]);
 
       const trainings = trainingsResult.data || [];
@@ -252,6 +289,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const participants = participantsResult.data || [];
       const lastYearTransactions = lastYearTransactionsResult.data || [];
       const products = productsResult.data || [];
+      const trainingTransactions = trainingTransactionsResult.data || [];
 
       // Build maps
       const clientMap = new Map(clients.map(c => [c.id, c.name]));
@@ -565,6 +603,66 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         }))
         .sort((a, b) => b.totalSpent - a.totalSpent);
 
+      // ========== CALCULATE ACCURATE TRAINING METRICS ==========
+      // Group training transactions by session to avoid counting same session multiple times (group trainings)
+      const paidSessionMap = new Map<string, { amount: number; duration: number }>();
+      trainingTransactions.forEach((t: any) => {
+        if (t.training_session_id && t.training_sessions?.duration) {
+          const existing = paidSessionMap.get(t.training_session_id);
+          if (existing) {
+            // For group trainings, sum up the amounts but keep the same duration
+            existing.amount += Math.abs(t.amount || 0);
+          } else {
+            paidSessionMap.set(t.training_session_id, {
+              amount: Math.abs(t.amount || 0),
+              duration: t.training_sessions.duration
+            });
+          }
+        }
+      });
+      
+      const paidTrainingsCount = paidSessionMap.size;
+      const paidTrainingValue = Array.from(paidSessionMap.values()).reduce((sum, t) => sum + t.amount, 0);
+      const paidTrainingMinutes = Array.from(paidSessionMap.values()).reduce((sum, t) => sum + t.duration, 0);
+      const paidTrainingHours = paidTrainingMinutes / 60;
+      
+      // Calculate accurate metrics (only from paid trainings)
+      const accurateAvgPricePerTraining = paidTrainingsCount > 0 
+        ? Math.round(paidTrainingValue / paidTrainingsCount) 
+        : 0;
+      const accurateHourlyRate = paidTrainingHours > 0 
+        ? Math.round(paidTrainingValue / paidTrainingHours) 
+        : null;
+      
+      // Unpaid trainings
+      const paidSessionIds = new Set(paidSessionMap.keys());
+      const unpaidTrainings = trainings.filter(t => !paidSessionIds.has(t.id));
+      const unpaidTrainingsCount = unpaidTrainings.length;
+      const unpaidValue = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
+      
+      // Build trainings summary
+      const trainingsSummary: import('./useFinancialReportData').TrainingsSummary = {
+        totalTrainings: trainings.length,
+        totalHours: totalHours,
+        totalTrainedValue: trainingIncome,
+        paidTrainingsCount,
+        paidHours: paidTrainingHours,
+        paidValue: paidTrainingValue,
+        avgPricePerTraining: accurateAvgPricePerTraining,
+        avgHourlyRate: accurateHourlyRate || 0,
+        unpaidTrainingsCount,
+        unpaidValue,
+      };
+      
+      // Build payments summary
+      const paymentsSummary: import('./useFinancialReportData').PaymentsSummary = {
+        totalPayments: paymentIncome,
+        trainingPayments: paidTrainingValue,
+        directPayments: paymentIncome, // payments from credit transactions (payment + manual)
+        productPayments: productIncome,
+        paymentTransactionCount: transactions.length,
+      };
+
       return {
         period: {
           start: startDate,
@@ -581,7 +679,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           soloTrainings,
           duoTrainings,
           trioTrainings,
-          avgIncomePerTraining: trainings.length > 0 ? paymentIncome / trainings.length : 0,
+          avgIncomePerTraining: accurateAvgPricePerTraining, // FIXED: use accurate calculation
           avgIncomePerClient: totalClients > 0 ? totalIncome / totalClients : 0,
           // Product summary
           totalProductRevenue,
@@ -589,6 +687,8 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           totalProductMargin,
           totalProductMarginPercent,
         },
+        trainingsSummary,
+        paymentsSummary,
         monthly: monthlyData,
         weekly: weeklyData,
         clients: clientsData,
@@ -597,7 +697,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         totalProductsSold,
         productClients: productClientsData,
         managerial: {
-          incomePerHour: totalHours > 0 ? paymentIncome / totalHours : null,
+          incomePerHour: accurateHourlyRate, // FIXED: use accurate calculation
           groupTrainingPercent,
           bestMonth: bestMonth ? { name: bestMonth.month, income: bestMonth.income } : null,
           worstMonth: worstMonth ? { name: worstMonth.month, income: worstMonth.income } : null,
