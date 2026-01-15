@@ -106,8 +106,9 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       switch (period) {
         case 'year':
           startDate = startOfYear(now);
-          endDate = endOfYear(now);
-          periodLabel = `Rok ${now.getFullYear()}`;
+          // Use current date if we're in the middle of the year
+          endDate = now < endOfYear(now) ? now : endOfYear(now);
+          periodLabel = `Rok ${now.getFullYear()} (do ${format(endDate, 'd.M.', { locale: cs })})`;
           break;
         case '12months':
           endDate = now;
@@ -144,11 +145,11 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           .gte('date', startStr)
           .lte('date', endStr),
         
-        // Transactions (payments)
+        // Transactions (payments + manual positive)
         supabase
           .from('credit_transactions')
           .select('id, amount, type, client_id, created_at')
-          .eq('type', 'payment')
+          .in('type', ['payment', 'manual'])
           .gt('amount', 0)
           .gte('created_at', startStr)
           .lte('created_at', endStr),
@@ -170,7 +171,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         supabase
           .from('credit_transactions')
           .select('amount')
-          .eq('type', 'payment')
+          .in('type', ['payment', 'manual'])
           .gt('amount', 0)
           .gte('created_at', subYears(startDate, 1).toISOString())
           .lte('created_at', subYears(endDate, 1).toISOString()),
@@ -329,25 +330,28 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           prevIncome = data.income;
         });
 
-      // Weekly breakdown
-      const weeklyMap = new Map<number, { trainings: number; solo: number; duo: number; trio: number }>();
+      // Weekly breakdown - use composite key for proper sorting across years
+      const weeklyMap = new Map<string, { week: number; year: number; trainings: number; solo: number; duo: number; trio: number }>();
       
       trainings.forEach(t => {
-        const week = getISOWeek(new Date(t.date));
-        const data = weeklyMap.get(week) || { trainings: 0, solo: 0, duo: 0, trio: 0 };
+        const date = new Date(t.date);
+        const week = getISOWeek(date);
+        const year = date.getFullYear();
+        const key = `${year}-W${week.toString().padStart(2, '0')}`;
+        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0 };
         data.trainings += 1;
         const pc = t.participant_count || 1;
         if (pc === 1) data.solo += 1;
         else if (pc === 2) data.duo += 1;
         else data.trio += 1;
-        weeklyMap.set(week, data);
+        weeklyMap.set(key, data);
       });
 
       const weeklyData: WeeklyReportData[] = Array.from(weeklyMap.entries())
-        .sort(([a], [b]) => a - b)
-        .map(([week, data]) => ({
-          week,
-          weekLabel: `Týden ${week}`,
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, data]) => ({
+          week: data.week,
+          weekLabel: `${data.week}. týden ${data.year}`,
           trainingCount: data.trainings,
           soloCount: data.solo,
           duoCount: data.duo,

@@ -145,27 +145,35 @@ export async function generateFinancialReportPdf(
   if (settings.sections.yearSummary) {
     drawSectionTitle("Souhrn období");
     
-    const colWidth = (pageWidth - 2 * margin) / 2;
-    
-    // Left column
-    const leftX = margin;
-    drawStatRow("Celkové příjmy", formatCurrency(data.summary.totalIncome), leftX, colWidth - 5);
-    drawStatRow("Počet tréninků", data.summary.totalTrainings.toString(), leftX, colWidth - 5);
-    drawStatRow("Počet klientů", data.summary.totalClients.toString(), leftX, colWidth - 5);
-    
-    // Reset for right column
-    yPos -= 18;
-    const rightX = margin + colWidth;
-    drawStatRow("Průměr / trénink", formatCurrency(Math.round(data.summary.avgIncomePerTraining)), rightX, colWidth - 5);
-    drawStatRow("Průměr / klient", formatCurrency(Math.round(data.summary.avgIncomePerClient)), rightX, colWidth - 5);
-    yPos += 6;
-    
-    // Training breakdown
-    yPos += 2;
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
-    doc.text(`Rozpad: ${data.summary.soloTrainings}× 1:1 | ${data.summary.duoTrainings}× dvojice | ${data.summary.trioTrainings}× trojice+`, margin + 3, yPos);
-    yPos += 10;
+    // Handle empty data case
+    if (data.summary.totalTrainings === 0 && data.summary.totalIncome === 0) {
+      doc.setFontSize(FONTS.body);
+      doc.setTextColor(...COLORS.textMuted);
+      doc.text("Za zvolené období nejsou k dispozici žádná data.", margin + 3, yPos);
+      yPos += 10;
+    } else {
+      const colWidth = (pageWidth - 2 * margin) / 2;
+      
+      // Left column
+      const leftX = margin;
+      drawStatRow("Celkové příjmy", formatCurrency(data.summary.totalIncome), leftX, colWidth - 5);
+      drawStatRow("Počet tréninků", data.summary.totalTrainings.toString(), leftX, colWidth - 5);
+      drawStatRow("Počet klientů", data.summary.totalClients.toString(), leftX, colWidth - 5);
+      
+      // Reset for right column
+      yPos -= 18;
+      const rightX = margin + colWidth;
+      drawStatRow("Průměr / trénink", formatCurrency(Math.round(data.summary.avgIncomePerTraining)), rightX, colWidth - 5);
+      drawStatRow("Průměr / klient", formatCurrency(Math.round(data.summary.avgIncomePerClient)), rightX, colWidth - 5);
+      yPos += 6;
+      
+      // Training breakdown
+      yPos += 2;
+      doc.setFontSize(FONTS.small);
+      doc.setTextColor(...COLORS.textMuted);
+      doc.text(`Rozpad: ${data.summary.soloTrainings}× 1:1 | ${data.summary.duoTrainings}× dvojice | ${data.summary.trioTrainings}× trojice+`, margin + 3, yPos);
+      yPos += 10;
+    }
   }
 
   // === MONTHLY OVERVIEW ===
