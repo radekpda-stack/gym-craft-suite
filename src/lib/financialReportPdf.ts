@@ -146,7 +146,7 @@ export async function generateFinancialReportPdf(
     drawSectionTitle("Souhrn období");
     
     // Handle empty data case
-    if (data.summary.totalTrainings === 0 && data.summary.totalIncome === 0) {
+    if (data.summary.totalTrainings === 0 && data.summary.totalIncome === 0 && data.totalProductsSold === 0) {
       doc.setFontSize(FONTS.body);
       doc.setTextColor(...COLORS.textMuted);
       doc.text("Za zvolené období nejsou k dispozici žádná data.", margin + 3, yPos);
@@ -191,11 +191,17 @@ export async function generateFinancialReportPdf(
         yPos += 8;
       }
       
-      // Product summary
+      // Product summary with margin info
       if (data.totalProductsSold > 0) {
         doc.setFontSize(FONTS.small);
         doc.setTextColor(...COLORS.textMuted);
-        doc.text(`Prodáno produktů: ${data.totalProductsSold}× za ${formatCurrency(data.summary.productIncome)}`, margin + 3, yPos);
+        doc.text(`Prodáno produktů: ${data.totalProductsSold}× za ${formatCurrency(data.summary.totalProductRevenue)}`, margin + 3, yPos);
+        yPos += 5;
+        
+        // Show margin info
+        const marginColor = data.summary.totalProductMargin >= 0 ? COLORS.success : COLORS.danger;
+        doc.setTextColor(...marginColor);
+        doc.text(`Marže: ${formatCurrency(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, margin + 3, yPos);
         yPos += 8;
       }
       
@@ -351,17 +357,33 @@ export async function generateFinancialReportPdf(
 
   // === PRODUCT SALES BREAKDOWN ===
   if (settings.sections.productSalesBreakdown && data.products.length > 0) {
-    checkPageBreak(60);
+    checkPageBreak(80);
     drawSectionTitle("Rozpad prodejů produktů");
+    
+    // Summary stats
+    doc.setFontSize(FONTS.small);
+    doc.setTextColor(...COLORS.textMuted);
+    doc.text(`Celkem: ${data.totalProductsSold}× produktů | Tržba: ${formatCurrency(data.summary.totalProductRevenue)} | Náklady: ${formatCurrency(data.summary.totalProductCost)}`, margin + 3, yPos);
+    yPos += 5;
+    
+    const marginColor = data.summary.totalProductMargin >= 0 ? COLORS.success : COLORS.danger;
+    doc.setTextColor(...marginColor);
+    doc.setFont("Roboto", "bold");
+    doc.text(`Celková marže: ${formatCurrency(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, margin + 3, yPos);
+    doc.setFont("Roboto", "normal");
+    yPos += 8;
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Produkt', 'Prodáno', 'Tržba', 'Klientů']],
-      body: data.products.slice(0, 20).map(p => [
+      head: [['Produkt', 'Kategorie', 'Ks', 'Tržba', 'Náklady', 'Marže', 'Marže %']],
+      body: data.products.slice(0, 25).map(p => [
         p.productName,
+        p.category,
         `${p.quantity}×`,
         formatCurrency(p.totalRevenue),
-        p.clientCount.toString(),
+        formatCurrency(p.totalCost),
+        formatCurrency(p.margin),
+        `${p.marginPercent.toFixed(1)} %`,
       ]),
       theme: 'grid',
       styles: {
@@ -375,15 +397,60 @@ export async function generateFinancialReportPdf(
         fontStyle: 'bold',
       },
       columnStyles: {
-        0: { cellWidth: 60 },
-        1: { halign: 'center', cellWidth: 25 },
-        2: { halign: 'right', cellWidth: 35 },
-        3: { halign: 'center', cellWidth: 25 },
+        0: { cellWidth: 40 },
+        1: { cellWidth: 25 },
+        2: { halign: 'center', cellWidth: 15 },
+        3: { halign: 'right', cellWidth: 25 },
+        4: { halign: 'right', cellWidth: 25 },
+        5: { halign: 'right', cellWidth: 25 },
+        6: { halign: 'right', cellWidth: 20 },
       },
       margin: { left: margin, right: margin },
     });
     
-    yPos = (doc as any).lastAutoTable.finalY + 8;
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+    
+    // === PRODUCT CLIENTS (who buys the most) ===
+    if (data.productClients.length > 0) {
+      checkPageBreak(60);
+      
+      doc.setFontSize(FONTS.heading);
+      doc.setTextColor(...COLORS.primaryDark);
+      doc.setFont("Roboto", "bold");
+      doc.text("Klienti podle nákupů", margin + 3, yPos);
+      yPos += 6;
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Klient', 'Utraceno', 'Produktů', 'Objednávek']],
+        body: data.productClients.slice(0, 20).map(c => [
+          c.clientName,
+          formatCurrency(c.totalSpent),
+          `${c.productCount}×`,
+          c.orderCount.toString(),
+        ]),
+        theme: 'grid',
+        styles: {
+          font: 'Roboto',
+          fontSize: FONTS.tiny,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: COLORS.primary,
+          textColor: COLORS.white,
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { halign: 'right', cellWidth: 35 },
+          2: { halign: 'center', cellWidth: 25 },
+          3: { halign: 'center', cellWidth: 25 },
+        },
+        margin: { left: margin, right: margin },
+      });
+      
+      yPos = (doc as any).lastAutoTable.finalY + 8;
+    }
   }
 
   // === MANAGERIAL METRICS ===
