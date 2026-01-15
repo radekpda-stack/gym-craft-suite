@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfYear, endOfYear, subYears, getISOWeek, startOfWeek, endOfWeek, eachWeekOfInterval, eachMonthOfInterval, startOfMonth } from "date-fns";
+import { format, startOfYear, endOfYear, subYears, getISOWeek, eachMonthOfInterval } from "date-fns";
 import { cs } from "date-fns/locale";
 import type { FinancialReportSettings } from "./useFinancialReportSettings";
 
@@ -38,9 +38,21 @@ export interface WeeklyReportData {
 export interface ProductSaleData {
   productId: string;
   productName: string;
+  category: string;
   quantity: number;
   totalRevenue: number;
+  totalCost: number;
+  margin: number;
+  marginPercent: number;
   clientCount: number;
+}
+
+export interface ProductClientData {
+  clientId: string;
+  clientName: string;
+  totalSpent: number;
+  productCount: number;
+  orderCount: number;
 }
 
 export interface FinancialReportData {
@@ -63,6 +75,11 @@ export interface FinancialReportData {
     trioTrainings: number;
     avgIncomePerTraining: number;
     avgIncomePerClient: number;
+    // Product summary
+    totalProductRevenue: number;
+    totalProductCost: number;
+    totalProductMargin: number;
+    totalProductMarginPercent: number;
   };
   
   // Monthly breakdown
@@ -78,6 +95,9 @@ export interface FinancialReportData {
   // Product sales
   products: ProductSaleData[];
   totalProductsSold: number;
+  
+  // Product clients breakdown (who buys the most)
+  productClients: ProductClientData[];
   
   // Managerial metrics
   managerial: {
@@ -148,7 +168,8 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const [
         trainingsResult,
         transactionsResult,
-        productTransactionsResult,
+        salesOrdersResult,
+        salesOrderItemsResult,
         clientsResult,
         participantsResult,
         lastYearTransactionsResult,
@@ -171,14 +192,29 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           .gte('created_at', startStr)
           .lte('created_at', endStr),
         
-        // Product sales transactions
+        // Sales orders
         supabase
-          .from('credit_transactions')
-          .select('id, amount, type, client_id, product_id, created_at')
-          .eq('type', 'product')
-          .gt('amount', 0)
+          .from('sales_orders')
+          .select('id, client_id, total_amount, payment_method, payment_status, created_at')
+          .eq('payment_status', 'completed')
           .gte('created_at', startStr)
           .lte('created_at', endStr),
+        
+        // Sales order items with product details
+        supabase
+          .from('sales_order_items')
+          .select(`
+            id, 
+            order_id, 
+            product_id, 
+            name_snapshot, 
+            unit_price, 
+            quantity, 
+            line_total,
+            line_total_after_discount,
+            product_kind,
+            products(id, name, category, purchase_price)
+          `),
         
         // Clients
         supabase
@@ -197,20 +233,21 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         supabase
           .from('credit_transactions')
           .select('amount, type')
-          .in('type', ['payment', 'manual', 'product'])
+          .in('type', ['payment', 'manual'])
           .gt('amount', 0)
           .gte('created_at', subYears(startDate, 1).toISOString())
           .lte('created_at', subYears(endDate, 1).toISOString()),
         
-        // Products catalog for names
+        // Products catalog
         supabase
           .from('products')
-          .select('id, name'),
+          .select('id, name, category, purchase_price'),
       ]);
 
       const trainings = trainingsResult.data || [];
       const transactions = transactionsResult.data || [];
-      const productTransactions = productTransactionsResult.data || [];
+      const salesOrders = salesOrdersResult.data || [];
+      const allOrderItems = salesOrderItemsResult.data || [];
       const clients = clientsResult.data || [];
       const participants = participantsResult.data || [];
       const lastYearTransactions = lastYearTransactionsResult.data || [];
@@ -218,15 +255,23 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
 
       // Build maps
       const clientMap = new Map(clients.map(c => [c.id, c.name]));
-      const productMap = new Map(products.map(p => [p.id, p.name]));
+      const productMap = new Map(products.map(p => [p.id, { name: p.name, category: p.category, purchasePrice: p.purchase_price || 0 }]));
+
+      // Filter order items to only include those from orders in our period
+      const orderIds = new Set(salesOrders.map(o => o.id));
+      const orderClientMap = new Map(salesOrders.map(o => [o.id, o.client_id]));
+      const orderItems = allOrderItems.filter(item => orderIds.has(item.order_id));
 
       // Calculate income from different sources based on settings
       const paymentIncome = settings.dataSources.clientPayments 
         ? transactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
         : 0;
+      
+      // Product income from sales_orders
       const productIncome = settings.dataSources.productSales 
-        ? productTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
+        ? salesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
         : 0;
+      
       const trainingIncome = settings.dataSources.trainings 
         ? trainings.reduce((sum, t) => sum + (t.final_price || 0), 0) 
         : 0;
@@ -423,28 +468,102 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const trainedTotal = trainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
       const trainedNotPaidDiff = trainedTotal - paymentIncome;
 
-      // Product sales breakdown
-      const productSalesMap = new Map<string, { quantity: number; revenue: number; clients: Set<string> }>();
-      productTransactions.forEach(t => {
-        const productId = t.product_id || 'unknown';
-        const data = productSalesMap.get(productId) || { quantity: 0, revenue: 0, clients: new Set() };
-        data.quantity += 1;
-        data.revenue += t.amount || 0;
-        if (t.client_id) data.clients.add(t.client_id);
+      // ========== PRODUCT SALES BREAKDOWN (from sales_order_items) ==========
+      const productSalesMap = new Map<string, { 
+        quantity: number; 
+        revenue: number; 
+        cost: number;
+        category: string;
+        clients: Set<string>;
+      }>();
+      
+      let totalProductRevenue = 0;
+      let totalProductCost = 0;
+      let totalProductsSold = 0;
+      
+      orderItems.forEach(item => {
+        const productId = item.product_id || 'unknown';
+        const productInfo = productMap.get(productId);
+        const purchasePrice = (item.products as any)?.purchase_price || productInfo?.purchasePrice || 0;
+        const category = (item.products as any)?.category || productInfo?.category || 'Ostatní';
+        const revenue = item.line_total_after_discount || item.line_total || 0;
+        const quantity = item.quantity || 1;
+        const cost = purchasePrice * quantity;
+        
+        totalProductRevenue += revenue;
+        totalProductCost += cost;
+        totalProductsSold += quantity;
+        
+        const data = productSalesMap.get(productId) || { 
+          quantity: 0, 
+          revenue: 0, 
+          cost: 0,
+          category,
+          clients: new Set() 
+        };
+        data.quantity += quantity;
+        data.revenue += revenue;
+        data.cost += cost;
+        
+        const clientId = orderClientMap.get(item.order_id);
+        if (clientId) data.clients.add(clientId);
+        
         productSalesMap.set(productId, data);
       });
 
       const productsData: ProductSaleData[] = Array.from(productSalesMap.entries())
-        .map(([productId, data]) => ({
-          productId,
-          productName: productMap.get(productId) || 'Neznámý produkt',
-          quantity: data.quantity,
-          totalRevenue: data.revenue,
-          clientCount: data.clients.size,
-        }))
+        .map(([productId, data]) => {
+          const productInfo = productMap.get(productId);
+          const margin = data.revenue - data.cost;
+          const marginPercent = data.revenue > 0 ? (margin / data.revenue) * 100 : 0;
+          
+          return {
+            productId,
+            productName: productInfo?.name || 'Neznámý produkt',
+            category: data.category,
+            quantity: data.quantity,
+            totalRevenue: data.revenue,
+            totalCost: data.cost,
+            margin,
+            marginPercent,
+            clientCount: data.clients.size,
+          };
+        })
         .sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-      const totalProductsSold = productTransactions.length;
+      const totalProductMargin = totalProductRevenue - totalProductCost;
+      const totalProductMarginPercent = totalProductRevenue > 0 ? (totalProductMargin / totalProductRevenue) * 100 : 0;
+
+      // ========== PRODUCT CLIENTS BREAKDOWN (who buys the most) ==========
+      const productClientMap = new Map<string, { 
+        spent: number; 
+        productCount: number;
+        orders: Set<string>;
+      }>();
+      
+      orderItems.forEach(item => {
+        const clientId = orderClientMap.get(item.order_id);
+        if (!clientId) return;
+        
+        const revenue = item.line_total_after_discount || item.line_total || 0;
+        const quantity = item.quantity || 1;
+        
+        const data = productClientMap.get(clientId) || { spent: 0, productCount: 0, orders: new Set() };
+        data.spent += revenue;
+        data.productCount += quantity;
+        data.orders.add(item.order_id);
+        productClientMap.set(clientId, data);
+      });
+
+      const productClientsData: ProductClientData[] = Array.from(productClientMap.entries())
+        .map(([clientId, data]) => ({
+          clientId,
+          clientName: clientMap.get(clientId) || 'Neznámý',
+          totalSpent: data.spent,
+          productCount: data.productCount,
+          orderCount: data.orders.size,
+        }))
+        .sort((a, b) => b.totalSpent - a.totalSpent);
 
       return {
         period: {
@@ -464,6 +583,11 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           trioTrainings,
           avgIncomePerTraining: trainings.length > 0 ? paymentIncome / trainings.length : 0,
           avgIncomePerClient: totalClients > 0 ? totalIncome / totalClients : 0,
+          // Product summary
+          totalProductRevenue,
+          totalProductCost,
+          totalProductMargin,
+          totalProductMarginPercent,
         },
         monthly: monthlyData,
         weekly: weeklyData,
@@ -471,6 +595,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         topClientsRevenuePercent,
         products: productsData,
         totalProductsSold,
+        productClients: productClientsData,
         managerial: {
           incomePerHour: totalHours > 0 ? paymentIncome / totalHours : null,
           groupTrainingPercent,
