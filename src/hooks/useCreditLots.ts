@@ -196,10 +196,17 @@ export function useAddCreditLot() {
       queryClient.invalidateQueries({ queryKey: ['shared_budget_balance'] });
     },
     onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Nepodařilo se přidat kredit.';
+
       console.error('Error adding credit lot:', error);
       toast({
         title: 'Chyba',
-        description: 'Nepodařilo se přidat kredit.',
+        description: message,
         variant: 'destructive',
       });
     },
