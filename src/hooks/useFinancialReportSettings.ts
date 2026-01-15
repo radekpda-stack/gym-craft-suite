@@ -24,7 +24,8 @@ export interface FinancialReportSettings {
     weeklyOverview: boolean;
     clientsBreakdown: boolean;
     trainingTypeBreakdown: boolean;
-    productSalesBreakdown: boolean;  // NEW: Product sales section
+    productSalesBreakdown: boolean;
+    trainingsPaymentsSummary: boolean;  // NEW: Trainings & payments summary
     managerialMetrics: boolean;
     dataValidation: boolean;
   };
@@ -55,6 +56,7 @@ const defaultSettings: FinancialReportSettings = {
     clientsBreakdown: true,
     trainingTypeBreakdown: true,
     productSalesBreakdown: true,
+    trainingsPaymentsSummary: true,
     managerialMetrics: true,
     dataValidation: true,
   },

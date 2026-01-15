@@ -453,6 +453,75 @@ export async function generateFinancialReportPdf(
     }
   }
 
+  // === TRAININGS & PAYMENTS SUMMARY (NEW) ===
+  if (settings.sections.trainingsPaymentsSummary && data.trainingsSummary && data.paymentsSummary) {
+    checkPageBreak(80);
+    drawSectionTitle("Přehled tréninků a plateb");
+    
+    const colWidth = (pageWidth - 2 * margin) / 2;
+    const leftX = margin;
+    const rightX = margin + colWidth;
+    
+    // Left column - Trainings
+    doc.setFontSize(FONTS.heading);
+    doc.setTextColor(...COLORS.primaryDark);
+    doc.setFont("Roboto", "bold");
+    doc.text("TRÉNINKY", leftX + 3, yPos);
+    yPos += 7;
+    
+    const ts = data.trainingsSummary;
+    drawStatRow("Celkem odtrénováno", `${ts.totalTrainings}× (${ts.totalHours.toFixed(1)} hod)`, leftX, colWidth - 5);
+    drawStatRow("Hodnota tréninků", formatCurrency(ts.totalTrainedValue), leftX, colWidth - 5);
+    drawStatRow("Průměr / trénink", formatCurrency(ts.avgPricePerTraining), leftX, colWidth - 5);
+    drawStatRow("Průměrná hod. sazba", formatCurrency(ts.avgHourlyRate), leftX, colWidth - 5);
+    
+    // Unpaid info
+    if (ts.unpaidTrainingsCount > 0) {
+      yPos += 2;
+      doc.setFontSize(FONTS.small);
+      doc.setTextColor(...COLORS.danger);
+      doc.text(`Neuhrazeno: ${ts.unpaidTrainingsCount}× za ${formatCurrency(ts.unpaidValue)}`, leftX + 3, yPos);
+      yPos += 5;
+    }
+    
+    // Right column - Payments (positioned at same level as trainings header)
+    const paymentStartY = yPos - (ts.unpaidTrainingsCount > 0 ? 32 : 25);
+    yPos = paymentStartY;
+    
+    doc.setFontSize(FONTS.heading);
+    doc.setTextColor(...COLORS.primaryDark);
+    doc.setFont("Roboto", "bold");
+    doc.text("ÚHRADY", rightX + 3, yPos);
+    yPos += 7;
+    
+    const ps = data.paymentsSummary;
+    drawStatRow("Uhrazeno za tréninky", formatCurrency(ps.trainingPayments), rightX, colWidth - 5);
+    drawStatRow("Přímé platby (kredit)", formatCurrency(ps.directPayments), rightX, colWidth - 5);
+    drawStatRow("Platby za produkty", formatCurrency(ps.productPayments), rightX, colWidth - 5);
+    
+    // Move down to align columns
+    yPos += 15;
+    
+    // Difference summary
+    const diff = ts.totalTrainedValue - ps.trainingPayments;
+    const diffColor = diff <= 0 ? COLORS.success : COLORS.danger;
+    
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, yPos - 2, pageWidth - 2 * margin, 14, 2, 2, 'F');
+    
+    doc.setFontSize(FONTS.small);
+    doc.setTextColor(...COLORS.textMuted);
+    doc.text("ROZDÍL (odtrénováno − uhrazeno za tréninky):", margin + 5, yPos + 4);
+    
+    doc.setTextColor(...diffColor);
+    doc.setFont("Roboto", "bold");
+    doc.setFontSize(FONTS.heading);
+    const diffSign = diff >= 0 ? '+' : '';
+    doc.text(`${diffSign}${formatCurrency(diff)}`, pageWidth - margin - 5, yPos + 4, { align: 'right' });
+    
+    yPos += 18;
+  }
+
   // === MANAGERIAL METRICS ===
   if (settings.sections.managerialMetrics) {
     checkPageBreak(50);
