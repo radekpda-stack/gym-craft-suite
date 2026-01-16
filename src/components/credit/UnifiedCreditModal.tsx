@@ -199,7 +199,8 @@ export function UnifiedCreditModal({
           note: description,
         });
       } else {
-        // For manual adjustments, still use old transaction system + create lot
+        // For manual adjustments, use createTransaction only (it already updates balance via applyCreditDelta)
+        // Do NOT call addCreditLot here - it would create a duplicate transaction and double the balance update
         await createTransaction.mutateAsync({
           client_id: selectedClientId,
           amount: finalAmount,
@@ -207,16 +208,6 @@ export function UnifiedCreditModal({
           description,
           clearPersonalDebt: false,
         });
-        
-        // Also create a credit lot for the adjustment
-        if (finalAmount !== 0) {
-          await addCreditLot.mutateAsync({
-            clientId: selectedClientId,
-            amountCzk: finalAmount,
-            source: 'manual_adjustment',
-            note: description,
-          });
-        }
       }
 
       // Pay selected unpaid trainings from new credit (only for add tab)
