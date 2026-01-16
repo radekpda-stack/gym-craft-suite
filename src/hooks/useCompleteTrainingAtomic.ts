@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import type { IndividualPaymentMethod } from '@/components/trainings/ParticipantPaymentCard';
 import { getServiceIdForParticipants } from '@/hooks/useCreditLots';
 import { checkTrainingStreak } from '@/components/notifications/SmartNotificationEngine';
+import { syncWorkoutEntriesToStats } from '@/hooks/useWorkoutEntries';
 
 interface ParticipantWithPayment {
   client_id: string;
@@ -207,6 +208,27 @@ export function useCompleteTrainingAtomic() {
         if (clientData?.name) {
           checkTrainingStreak(user.id, participant.client_id, clientData.name);
         }
+      }
+
+      // Auto-sync workout entries to exercise_entries for all participants
+      // This ensures exercise history is recorded for each participant individually
+      try {
+        const { data: sessionData } = await supabase
+          .from('training_sessions')
+          .select('client_id, date')
+          .eq('id', params.sessionId)
+          .single();
+        
+        if (sessionData) {
+          await syncWorkoutEntriesToStats({
+            trainingSessionId: params.sessionId,
+            clientId: sessionData.client_id,
+            trainingDate: sessionData.date,
+          });
+        }
+      } catch (syncError) {
+        console.warn('Auto-sync workout entries failed:', syncError);
+        // Don't fail the completion - sync can be done manually
       }
       
       return result;
