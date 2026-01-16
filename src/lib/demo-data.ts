@@ -4,6 +4,8 @@
 export interface DemoClient {
   id: string;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   phone: string;
   birth_date: string;
@@ -70,6 +72,8 @@ export interface DemoTag {
 const createDemoClient = (): DemoClient => ({
   id: 'demo-client-001',
   name: 'Jan Novák',
+  first_name: 'Jan',
+  last_name: 'Novák',
   email: 'jan.novak@demo.local',
   phone: '+420 777 123 456',
   birth_date: '1985-03-15',

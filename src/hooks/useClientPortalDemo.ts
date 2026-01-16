@@ -17,6 +17,8 @@ export interface DemoClientAccount {
 export interface DemoClientProfile {
   id: string;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   phone: string | null;
   credit_balance: number;
@@ -50,6 +52,8 @@ const DEMO_CLIENT_ACCOUNT: DemoClientAccount = {
 const DEMO_CLIENT_PROFILE: DemoClientProfile = {
   id: 'demo-client-id',
   name: 'Test Klient',
+  first_name: 'Test',
+  last_name: 'Klient',
   email: 'test@demo.cz',
   phone: '+420 123 456 789',
   credit_balance: 2400,
