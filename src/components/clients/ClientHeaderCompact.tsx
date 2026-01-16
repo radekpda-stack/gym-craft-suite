@@ -111,7 +111,8 @@ export function ClientHeaderCompact({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editName, setEditName] = useState(client.name);
+  const [editFirstName, setEditFirstName] = useState(client.first_name || '');
+  const [editLastName, setEditLastName] = useState(client.last_name || '');
   
   // Editable profile fields
   const [editPhone, setEditPhone] = useState(client.phone || '');
@@ -231,14 +232,22 @@ export function ClientHeaderCompact({
   };
 
   const handleStartEditName = () => {
-    setEditName(client.name);
+    setEditFirstName(client.first_name || '');
+    setEditLastName(client.last_name || '');
     setIsEditingName(true);
   };
 
   const handleSaveName = async () => {
-    const trimmedName = editName.trim();
-    if (onUpdateClient && trimmedName && trimmedName !== client.name) {
-      await onUpdateClient({ name: trimmedName });
+    const trimmedFirstName = editFirstName.trim();
+    const trimmedLastName = editLastName.trim();
+    const newFullName = [trimmedFirstName, trimmedLastName].filter(Boolean).join(' ');
+    
+    if (onUpdateClient && (trimmedFirstName !== (client.first_name || '') || trimmedLastName !== (client.last_name || ''))) {
+      await onUpdateClient({ 
+        first_name: trimmedFirstName || null,
+        last_name: trimmedLastName || null,
+        name: newFullName || client.name
+      });
       toast({ title: 'Jméno aktualizováno' });
     }
     setIsEditingName(false);
@@ -249,7 +258,8 @@ export function ClientHeaderCompact({
       handleSaveName();
     } else if (e.key === 'Escape') {
       setIsEditingName(false);
-      setEditName(client.name);
+      setEditFirstName(client.first_name || '');
+      setEditLastName(client.last_name || '');
     }
   };
 
@@ -279,27 +289,35 @@ export function ClientHeaderCompact({
         
         <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
           <AvatarFallback className="bg-primary/10 text-primary text-base sm:text-lg font-semibold">
-            {client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            {[(client.first_name || '')[0], (client.last_name || '')[0]].filter(Boolean).join('').slice(0, 2) || client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </AvatarFallback>
         </Avatar>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             {isEditingName ? (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
                 <Input
                   type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
                   onKeyDown={handleNameKeyDown}
-                  onBlur={handleSaveName}
-                  className="h-8 text-lg font-bold"
+                  placeholder="Křestní jméno"
+                  className="h-8 text-sm font-medium w-24 sm:w-28"
                   autoFocus
+                />
+                <Input
+                  type="text"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  onKeyDown={handleNameKeyDown}
+                  placeholder="Příjmení"
+                  className="h-8 text-sm font-medium w-24 sm:w-28"
                 />
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={handleSaveName}>
                   <Check className="w-4 h-4 text-success" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setIsEditingName(false); setEditName(client.name); }}>
+                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setIsEditingName(false); setEditFirstName(client.first_name || ''); setEditLastName(client.last_name || ''); }}>
                   <X className="w-4 h-4 text-destructive" />
                 </Button>
               </div>
