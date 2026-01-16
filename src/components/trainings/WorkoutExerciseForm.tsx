@@ -122,13 +122,20 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   const exerciseName = selectedExercise?.name_cs || selectedExercise?.name || '';
   const showAssistanceBands = isPullUpExercise(exerciseName);
 
+  // Helper to normalize text for search (remove diacritics)
+  const normalizeText = (text: string) => 
+    text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
   const filteredExercises = useMemo(() => {
     if (!searchQuery) return exercises.slice(0, 20);
-    const query = searchQuery.toLowerCase();
-    return exercises.filter(
-      e => e.name.toLowerCase().includes(query) || 
-           e.category.toLowerCase().includes(query)
-    ).slice(0, 20);
+    const query = normalizeText(searchQuery);
+    return exercises.filter(e => {
+      // Search in name, name_cs (Czech name), and category
+      const nameMatch = normalizeText(e.name).includes(query);
+      const nameCsMatch = e.name_cs && normalizeText(e.name_cs).includes(query);
+      const categoryMatch = normalizeText(e.category).includes(query);
+      return nameMatch || nameCsMatch || categoryMatch;
+    }).slice(0, 30); // Increased limit to show more results
   }, [exercises, searchQuery]);
 
   const handleSelectExercise = (exercise: Exercise) => {
@@ -292,21 +299,24 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                   </div>
                 </CommandEmpty>
                 <CommandGroup>
-                  {filteredExercises.map((exercise) => (
-                    <CommandItem
-                      key={exercise.id}
-                      value={exercise.name}
-                      onSelect={() => handleSelectExercise(exercise)}
-                    >
-                      <div className="flex flex-col">
-                        <span>{exercise.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {exercise.category}
-                          {exercise.muscle_groups?.length > 0 && ` • ${exercise.muscle_groups.join(', ')}`}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  ))}
+                  {filteredExercises.map((exercise) => {
+                    const displayName = exercise.name_cs || exercise.name;
+                    return (
+                      <CommandItem
+                        key={exercise.id}
+                        value={`${exercise.name} ${exercise.name_cs || ''}`}
+                        onSelect={() => handleSelectExercise(exercise)}
+                      >
+                        <div className="flex flex-col">
+                          <span>{displayName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {exercise.category}
+                            {exercise.muscle_groups?.length > 0 && ` • ${exercise.muscle_groups.join(', ')}`}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </CommandList>
             </Command>
