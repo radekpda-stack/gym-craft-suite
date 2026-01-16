@@ -7,7 +7,8 @@ import {
   Check,
   Wrench,
   Coins,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { ProductSearchAndFilters } from './ProductSearchAndFilters';
 import { CartPanel } from './CartPanel';
 import { FavoriteProducts } from './FavoriteProducts';
@@ -224,6 +226,12 @@ export function SalesRegister() {
   }, [clients]);
 
   const selectedClientData = clients.find(c => c.id === selectedClient);
+  
+  // Get shared budget info for selected client - handles both individual and shared budgets
+  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
+  
+  // Use the correct balance - shared budget takes priority over individual credit
+  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
 
   const handleNoClientToggle = useCallback(() => {
     setNoClient(!noClient);
@@ -394,7 +402,7 @@ export function SalesRegister() {
               value={selectedClient}
               onValueChange={setSelectedClient}
               placeholder="Vyhledat klienta..."
-              showCreditBalance
+              showCreditBalance={false}
               filterArchived={false}
             />
           ) : (
@@ -411,13 +419,21 @@ export function SalesRegister() {
           {selectedClientData && (
             <div className="mt-3 p-3 rounded-lg bg-secondary/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Kredit:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">Kredit:</span>
+                  {sharedBudget?.isShared && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {sharedBudget.groupName}
+                    </span>
+                  )}
+                </div>
                 <span className={cn(
                   "font-semibold",
-                  (selectedClientData.credit_balance || 0) < 0 ? "text-destructive" : 
-                  (selectedClientData.credit_balance || 0) < 500 ? "text-warning" : "text-success"
+                  effectiveBalance < 0 ? "text-destructive" : 
+                  effectiveBalance < 500 ? "text-warning" : "text-success"
                 )}>
-                  {formatCurrency(selectedClientData.credit_balance || 0)}
+                  {formatCurrency(effectiveBalance)}
                 </span>
               </div>
             </div>
