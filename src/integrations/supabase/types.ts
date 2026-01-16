@@ -3007,6 +3007,7 @@ export type Database = {
           dietary_restrictions: string[] | null
           email: string | null
           feedback_enabled: boolean | null
+          first_name: string | null
           gender: string | null
           grandfathered_at: string | null
           grandfathered_credit: number | null
@@ -3019,6 +3020,7 @@ export type Database = {
           is_favorite: boolean
           is_self_profile: boolean
           is_system: boolean
+          last_name: string | null
           lock_set_at: string | null
           lock_set_by: string | null
           locked_price_list_id: string | null
@@ -3060,6 +3062,7 @@ export type Database = {
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
+          first_name?: string | null
           gender?: string | null
           grandfathered_at?: string | null
           grandfathered_credit?: number | null
@@ -3072,6 +3075,7 @@ export type Database = {
           is_favorite?: boolean
           is_self_profile?: boolean
           is_system?: boolean
+          last_name?: string | null
           lock_set_at?: string | null
           lock_set_by?: string | null
           locked_price_list_id?: string | null
@@ -3113,6 +3117,7 @@ export type Database = {
           dietary_restrictions?: string[] | null
           email?: string | null
           feedback_enabled?: boolean | null
+          first_name?: string | null
           gender?: string | null
           grandfathered_at?: string | null
           grandfathered_credit?: number | null
@@ -3125,6 +3130,7 @@ export type Database = {
           is_favorite?: boolean
           is_self_profile?: boolean
           is_system?: boolean
+          last_name?: string | null
           lock_set_at?: string | null
           lock_set_by?: string | null
           locked_price_list_id?: string | null

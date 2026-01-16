@@ -10,7 +10,9 @@ export type PaymentMode = 'credit' | 'cash_only' | 'mixed';
 
 export interface Client {
   id: string;
-  name: string;
+  name: string; // Full display name (legacy, computed from first_name + last_name)
+  first_name: string | null; // Křestní jméno
+  last_name: string | null; // Příjmení
   email: string;
   phone: string | null;
   training_goals: string[];
@@ -69,6 +71,8 @@ export function useClients() {
         return [{
           id: demoClient.id,
           name: demoClient.name,
+          first_name: demoClient.name.split(' ')[0] || null,
+          last_name: demoClient.name.split(' ').slice(1).join(' ') || null,
           email: demoClient.email,
           phone: demoClient.phone,
           training_goals: demoClient.training_goals,
@@ -92,7 +96,7 @@ export function useClients() {
       const [clientsResult, ledgerResult] = await Promise.all([
         supabase
           .from("clients")
-          .select("id, name, email, phone, training_goals, notes, health_restrictions, credit_balance, birth_date, is_favorite, is_archived, feedback_enabled, gender, payment_mode, created_at, updated_at, user_id, training_start_date, custom_training_price, custom_price_note, custom_price_credit_limit, handedness, occupation, sitting_hours_daily, sports_history, current_activities, sleep_hours, stress_level, dietary_restrictions, supplements, height, weight, sleep_quality, pain_areas, injury_history, surgery_history, movement_frequency, daily_activity_type, training_dislikes, grandfathered_credit, grandfathered_at, use_legacy_pricing")
+          .select("id, name, first_name, last_name, email, phone, training_goals, notes, health_restrictions, credit_balance, birth_date, is_favorite, is_archived, feedback_enabled, gender, payment_mode, created_at, updated_at, user_id, training_start_date, custom_training_price, custom_price_note, custom_price_credit_limit, handedness, occupation, sitting_hours_daily, sports_history, current_activities, sleep_hours, stress_level, dietary_restrictions, supplements, height, weight, sleep_quality, pain_areas, injury_history, surgery_history, movement_frequency, daily_activity_type, training_dislikes, grandfathered_credit, grandfathered_at, use_legacy_pricing")
           .order("is_favorite", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase
@@ -174,7 +178,9 @@ export function useCreateClient() {
       if (isDemo) {
         return {
           id: 'demo-new-client',
-          name: values.name,
+          name: `${values.first_name} ${values.last_name}`.trim(),
+          first_name: values.first_name,
+          last_name: values.last_name,
           email: values.email,
           phone: values.phone,
           created_at: new Date().toISOString(),
@@ -208,7 +214,9 @@ export function useCreateClient() {
       const { data, error } = await supabase
         .from("clients")
         .insert({
-          name: values.name,
+          name: `${values.first_name} ${values.last_name}`.trim(),
+          first_name: values.first_name,
+          last_name: values.last_name,
           email: values.email,
           phone: values.phone || null,
           training_goals: values.trainingGoals,
@@ -293,7 +301,15 @@ export function useUpdateClient() {
       const updateData: Record<string, unknown> = {};
 
       // Only add fields that are explicitly provided (not undefined)
-      if (values.name !== undefined) updateData.name = values.name;
+      // Handle first_name and last_name separately, and compute name from them
+      if (values.first_name !== undefined) updateData.first_name = values.first_name;
+      if (values.last_name !== undefined) updateData.last_name = values.last_name;
+      // If either name part is updated, recompute the full name
+      if (values.first_name !== undefined || values.last_name !== undefined) {
+        const firstName = values.first_name ?? '';
+        const lastName = values.last_name ?? '';
+        updateData.name = `${firstName} ${lastName}`.trim();
+      }
       if (values.email !== undefined) updateData.email = values.email;
       if (values.phone !== undefined) updateData.phone = values.phone || null;
       if (values.trainingGoals !== undefined) updateData.training_goals = values.trainingGoals;

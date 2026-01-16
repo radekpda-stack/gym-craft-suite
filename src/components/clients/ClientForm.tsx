@@ -54,6 +54,8 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
+      first_name: defaultValues?.first_name || "",
+      last_name: defaultValues?.last_name || "",
       name: defaultValues?.name || "",
       email: defaultValues?.email || "",
       phone: defaultValues?.phone || "",
@@ -84,6 +86,8 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
   useEffect(() => {
     if (defaultValues) {
       form.reset({
+        first_name: defaultValues.first_name || "",
+        last_name: defaultValues.last_name || "",
         name: defaultValues.name || "",
         email: defaultValues.email || "",
         phone: defaultValues.phone || "",
@@ -128,24 +132,44 @@ export function ClientForm({ onSubmit, isLoading, defaultValues, submitLabel = "
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Jméno *</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Jan Novák"
-                  className="bg-secondary border-border"
-                  {...field}
-                  {...getFieldProps('name')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Křestní jméno *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Jan"
+                    className="bg-secondary border-border"
+                    {...field}
+                    {...getFieldProps('first_name')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Příjmení *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Novák"
+                    className="bg-secondary border-border"
+                    {...field}
+                    {...getFieldProps('last_name')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField

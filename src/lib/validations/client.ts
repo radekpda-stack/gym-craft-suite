@@ -1,11 +1,21 @@
 import { z } from "zod";
 
 export const clientFormSchema = z.object({
+  first_name: z
+    .string()
+    .trim()
+    .min(1, { message: "Křestní jméno je povinné" })
+    .max(50, { message: "Křestní jméno může mít maximálně 50 znaků" }),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, { message: "Příjmení je povinné" })
+    .max(50, { message: "Příjmení může mít maximálně 50 znaků" }),
+  // Legacy name field - will be computed from first_name + last_name
   name: z
     .string()
     .trim()
-    .min(2, { message: "Jméno musí mít alespoň 2 znaky" })
-    .max(100, { message: "Jméno může mít maximálně 100 znaků" }),
+    .optional(),
   email: z
     .string()
     .trim()

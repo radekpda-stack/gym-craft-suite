@@ -15,6 +15,8 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
   return {
     id: demoClient.id,
     name: demoClient.name,
+    first_name: demoClient.name.split(' ')[0] || null,
+    last_name: demoClient.name.split(' ').slice(1).join(' ') || null,
     email: demoClient.email,
     phone: demoClient.phone,
     training_goals: demoClient.training_goals,
