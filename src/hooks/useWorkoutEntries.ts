@@ -377,7 +377,7 @@ export async function syncWorkoutEntriesToStats({
     const { error: insertError } = await supabase
       .from('exercise_entries')
       .insert({
-        client_id: group.target_client_id,
+        client_id: finalClientId,
         exercise_id: group.exercise_id,
         exercise_name: group.exercise_name,
         sets: group.entries.length,
@@ -400,12 +400,12 @@ export async function syncWorkoutEntriesToStats({
       });
 
     if (insertError) {
-      console.error('Error syncing exercise entry:', insertError);
+      console.error('Error syncing exercise entry for client', finalClientId, ':', insertError);
     }
 
     // Recompute PRs for the affected scope to ensure consistency
     await recomputePRsAfterChange({
-      client_id: group.target_client_id,
+      client_id: finalClientId,
       exercise_id: group.exercise_id,
       exercise_name: group.exercise_name,
       weight_kg: bestSet.weight_kg,
