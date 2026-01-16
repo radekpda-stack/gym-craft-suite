@@ -53,7 +53,7 @@ export default function ClientPortalOverview() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold truncate">
-            Ahoj, {toVocative(clientProfile?.name?.split(' ')[0] ?? 'Klient')}!
+            Ahoj, {toVocative(clientProfile?.first_name || clientProfile?.name?.split(' ')[0] || 'Klient')}!
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Tvůj tréninkový přehled</p>
         </div>

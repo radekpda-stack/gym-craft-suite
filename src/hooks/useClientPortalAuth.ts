@@ -18,6 +18,8 @@ export interface ClientAccount {
 export interface ClientProfile {
   id: string;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   phone: string | null;
   credit_balance: number;
@@ -61,7 +63,7 @@ export function useClientPortalAuth() {
         // Get client profile
         const { data: client, error: clientError } = await supabase
           .from('clients')
-          .select('id, name, email, phone, credit_balance')
+          .select('id, name, first_name, last_name, email, phone, credit_balance')
           .eq('id', account.client_id)
           .single();
 

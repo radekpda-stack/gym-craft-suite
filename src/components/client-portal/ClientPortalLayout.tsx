@@ -200,12 +200,12 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
             <AvatarCelebration>
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-sm font-bold text-primary">
-                  {effectiveClientProfile?.name?.charAt(0) ?? 'K'}
+                  {effectiveClientProfile?.first_name?.charAt(0) || effectiveClientProfile?.name?.charAt(0) || 'K'}
                 </span>
               </div>
             </AvatarCelebration>
             <div>
-              <p className="text-sm font-medium">{effectiveClientProfile?.name ?? 'Klient'}</p>
+              <p className="text-sm font-medium">{effectiveClientProfile?.first_name || effectiveClientProfile?.name || 'Klient'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
