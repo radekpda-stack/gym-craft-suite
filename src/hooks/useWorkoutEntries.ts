@@ -314,7 +314,14 @@ export async function syncWorkoutEntriesToStats({
   }, {} as Record<string, { exercise_id: string | null; exercise_name: string; target_client_id: string; entries: WorkoutEntry[] }>);
 
   // For each exercise group (per participant), find the best set and create/update exercise_entries
+  // CRITICAL: Process sequentially to avoid race conditions
   for (const group of Object.values(exerciseGroups)) {
+    // Verify we have a valid target client
+    if (!group.target_client_id) {
+      console.error('Missing target_client_id for exercise group:', group.exercise_name);
+      continue;
+    }
+
     // Check if this is a time-based exercise
     const hasTimeData = group.entries.some(e => e.time_seconds && e.time_seconds > 0);
     const isTimeBased = hasTimeData;
@@ -342,18 +349,21 @@ export async function syncWorkoutEntriesToStats({
       }
     }
 
+    // Use the participant_client_id from the best set if available, ensuring correct attribution
+    const finalClientId = bestSet.participant_client_id || group.target_client_id;
+
     // First delete any existing entry for this exercise in this session for this client
     await supabase
       .from('exercise_entries')
       .delete()
       .eq('training_session_id', trainingSessionId)
       .eq('exercise_name', group.exercise_name)
-      .eq('client_id', group.target_client_id)
+      .eq('client_id', finalClientId)
       .eq('user_id', user.id);
 
     // Use PR Engine to prepare entry with computed fields
     const { fields } = await prepareEntryWithPR({
-      client_id: group.target_client_id,
+      client_id: finalClientId,
       exercise_id: group.exercise_id,
       exercise_name: group.exercise_name,
       weight_kg: bestSet.weight_kg,
