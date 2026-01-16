@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTags, Tag } from '@/hooks/useTags';
@@ -15,6 +15,24 @@ const TRAINING_TYPES = [
   { value: 'regeneration', label: 'Regenerace', icon: '🌿' },
   { value: 'diagnostic', label: 'Diagnostický', icon: '📊' },
 ] as const;
+
+// Konfigurace viditelnosti sekcí podle typu tréninku
+type TagVisibility = {
+  showFocus: boolean;
+  showIntensity: boolean;
+  bodyPartsMode: 'full' | 'only-full-body' | 'hidden';
+  autoSelectFullBody?: boolean;
+};
+
+const TAG_VISIBILITY_BY_TYPE: Record<string, TagVisibility> = {
+  strength: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
+  functional: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
+  hiit: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
+  cardio: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
+  regeneration: { showFocus: false, showIntensity: true, bodyPartsMode: 'hidden' },
+  mobility: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
+  diagnostic: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
+};
 
 // Hierarchie partií těla - mapování kategorií na podřazené tagy
 const BODY_PART_CATEGORIES = [
@@ -100,6 +118,21 @@ export function TrainingTagStepper({
     return { focus, intensity, bodyPart };
   }, [tags]);
 
+  // Získat aktuální nastavení viditelnosti podle typu tréninku
+  const visibility = useMemo<TagVisibility>(() => {
+    return TAG_VISIBILITY_BY_TYPE[trainingType || 'strength'] || TAG_VISIBILITY_BY_TYPE.strength;
+  }, [trainingType]);
+
+  // Automatický výběr "Celé tělo" pro HIIT/Kardio
+  useEffect(() => {
+    if (visibility.autoSelectFullBody) {
+      const fullBodyTag = tags.find((t) => t.name === 'Celé tělo' && t.tag_type === 'body_part');
+      if (fullBodyTag && !bodyPartTagIds.includes(fullBodyTag.id)) {
+        onBodyPartTagsChange([fullBodyTag.id]);
+      }
+    }
+  }, [trainingType, visibility.autoSelectFullBody, tags]);
+
   // Získat tag podle jména
   const getTagByName = (name: string): Tag | undefined => {
     return tags.find((t) => t.name === name && t.tag_type === 'body_part');
@@ -152,7 +185,7 @@ export function TrainingTagStepper({
 
   const hasAnySelection = selectedType || selectedFocusNames.length > 0 || selectedIntensityName || selectedBodyPartNames.length > 0 || coachRPE;
 
-  // Kompaktní shrnutí - jedna řádka badges
+  // Kompaktní shrnutí - jedna řádka badges (respektuje viditelnost sekcí)
   const renderCompactSummary = () => {
     if (!hasAnySelection) return null;
     
@@ -163,17 +196,17 @@ export function TrainingTagStepper({
             {selectedType.icon} {selectedType.label}
           </Badge>
         )}
-        {selectedFocusNames.map((name) => (
+        {visibility.showFocus && selectedFocusNames.map((name) => (
           <Badge key={name} variant="secondary" className="text-xs bg-accent/15 text-accent border-0">
             {name}
           </Badge>
         ))}
-        {selectedIntensityName && (
+        {visibility.showIntensity && selectedIntensityName && (
           <Badge variant="secondary" className="text-xs bg-warning/15 text-warning border-0">
             {selectedIntensityName}
           </Badge>
         )}
-        {selectedBodyPartNames.map((name) => (
+        {visibility.bodyPartsMode !== 'hidden' && selectedBodyPartNames.map((name) => (
           <Badge key={name} variant="secondary" className="text-xs bg-primary/15 text-primary border-0">
             {name}
           </Badge>
@@ -336,6 +369,20 @@ export function TrainingTagStepper({
     );
   };
 
+  // Zjednodušené zobrazení partií těla (pouze badge "Celé tělo")
+  const renderSimplifiedBodyParts = () => {
+    return (
+      <div className="flex gap-2">
+        <Badge variant="secondary" className="bg-primary/15 text-primary border-0 py-2 px-3">
+          ✓ Celé tělo
+        </Badge>
+        <span className="text-xs text-muted-foreground self-center">
+          (automaticky nastaveno pro tento typ tréninku)
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Kompaktní shrnutí */}
@@ -357,8 +404,8 @@ export function TrainingTagStepper({
         </div>
       </div>
 
-      {/* Zaměření (multi-select) */}
-      {tagsByType.focus.length > 0 && (
+      {/* Zaměření (multi-select) - pouze pokud je povoleno pro tento typ */}
+      {visibility.showFocus && tagsByType.focus.length > 0 && (
         <div>
           <SectionLabel>Zaměření</SectionLabel>
           <div className="flex flex-wrap gap-2">
@@ -375,8 +422,8 @@ export function TrainingTagStepper({
         </div>
       )}
 
-      {/* Intenzita (single-select) */}
-      {tagsByType.intensity.length > 0 && (
+      {/* Intenzita (single-select) - pouze pokud je povoleno pro tento typ */}
+      {visibility.showIntensity && tagsByType.intensity.length > 0 && (
         <div>
           <SectionLabel>Intenzita</SectionLabel>
           <div className="flex flex-wrap gap-2">
@@ -393,11 +440,13 @@ export function TrainingTagStepper({
         </div>
       )}
 
-      {/* Partie těla (hierarchický multi-select) */}
-      {tagsByType.bodyPart.length > 0 && (
+      {/* Partie těla - různé módy podle typu tréninku */}
+      {visibility.bodyPartsMode !== 'hidden' && tagsByType.bodyPart.length > 0 && (
         <div>
           <SectionLabel>Partie těla</SectionLabel>
-          {renderBodyPartSection()}
+          {visibility.bodyPartsMode === 'only-full-body' 
+            ? renderSimplifiedBodyParts() 
+            : renderBodyPartSection()}
         </div>
       )}
 
