@@ -155,7 +155,7 @@ export function useAnnualStats(
         // Credit transactions (for income)
         supabase
           .from('credit_transactions')
-          .select('id, amount, type, client_id, product_id, created_at')
+          .select('id, amount, type, client_id, product_id, created_at, training_session_id')
           .eq('user_id', user.id)
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString()),
@@ -417,9 +417,21 @@ export function useAnnualStats(
         .reduce((sum, t) => sum + t.amount, 0);
 
       // Actual average training price from credit_transactions (not planned price)
+      // IMPORTANT: Group by training_session_id to handle multi-participant trainings correctly
+      // (one training can have multiple transactions for different participants)
       const trainingOnlyCharges = creditTransactions.filter(t => t.type === 'training');
-      const avgTrainingPriceActual = trainingOnlyCharges.length > 0
-        ? trainingOnlyCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / trainingOnlyCharges.length
+      
+      // Group transactions by training_session_id and sum amounts
+      const trainingSessionTotals = new Map<string, number>();
+      trainingOnlyCharges.forEach(t => {
+        const sessionId = t.training_session_id || t.id;
+        const current = trainingSessionTotals.get(sessionId) || 0;
+        trainingSessionTotals.set(sessionId, current + Math.abs(t.amount));
+      });
+      
+      const uniqueTrainingSessions = Array.from(trainingSessionTotals.values());
+      const avgTrainingPriceActual = uniqueTrainingSessions.length > 0
+        ? uniqueTrainingSessions.reduce((sum, amount) => sum + amount, 0) / uniqueTrainingSessions.length
         : 0;
       
       // Calculate trend for average training price (this month vs last month)
@@ -430,11 +442,30 @@ export function useAnnualStats(
         format(new Date(t.created_at), 'yyyy-MM') === lastMonthStr
       );
       
-      const avgPriceThisMonth = thisMonthTrainingCharges.length > 0
-        ? thisMonthTrainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / thisMonthTrainingCharges.length
+      // Group this month's transactions by session
+      const thisMonthSessionTotals = new Map<string, number>();
+      thisMonthTrainingCharges.forEach(t => {
+        const sessionId = t.training_session_id || t.id;
+        const current = thisMonthSessionTotals.get(sessionId) || 0;
+        thisMonthSessionTotals.set(sessionId, current + Math.abs(t.amount));
+      });
+      
+      // Group last month's transactions by session
+      const lastMonthSessionTotals = new Map<string, number>();
+      lastMonthTrainingCharges.forEach(t => {
+        const sessionId = t.training_session_id || t.id;
+        const current = lastMonthSessionTotals.get(sessionId) || 0;
+        lastMonthSessionTotals.set(sessionId, current + Math.abs(t.amount));
+      });
+      
+      const thisMonthSessions = Array.from(thisMonthSessionTotals.values());
+      const lastMonthSessions = Array.from(lastMonthSessionTotals.values());
+      
+      const avgPriceThisMonth = thisMonthSessions.length > 0
+        ? thisMonthSessions.reduce((sum, amount) => sum + amount, 0) / thisMonthSessions.length
         : 0;
-      const avgPriceLastMonth = lastMonthTrainingCharges.length > 0
-        ? lastMonthTrainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / lastMonthTrainingCharges.length
+      const avgPriceLastMonth = lastMonthSessions.length > 0
+        ? lastMonthSessions.reduce((sum, amount) => sum + amount, 0) / lastMonthSessions.length
         : 0;
       
       const avgTrainingPriceTrend = avgPriceLastMonth > 0
