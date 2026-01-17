@@ -5,6 +5,7 @@ import { StatisticsCard } from './StatisticsGrid';
 import { formatCurrency } from '@/lib/formatters';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 const COLORS = [
   'hsl(var(--primary))',
@@ -12,17 +13,32 @@ const COLORS = [
   'hsl(var(--destructive))',
 ];
 
-export function RevenueBreakdownCard() {
+interface RevenueBreakdownCardProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function RevenueBreakdownCard({ periodRange }: RevenueBreakdownCardProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ['revenue-breakdown-by-source'],
+    queryKey: ['revenue-breakdown-by-source', periodRange?.start?.toISOString(), periodRange?.end?.toISOString()],
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return null;
 
-      const { data: transactions } = await supabase
+      let query = supabase
         .from('credit_transactions')
-        .select('amount, type')
-        .eq('user_id', user.user.id);
+        .select('amount, type, created_at')
+        .eq('user_id', user.user.id)
+        .in('type', ['training', 'product', 'canceled_training']);
+
+      // Apply period filter if provided
+      if (periodRange?.start) {
+        query = query.gte('created_at', periodRange.start.toISOString());
+      }
+      if (periodRange?.end) {
+        query = query.lte('created_at', periodRange.end.toISOString());
+      }
+
+      const { data: transactions } = await query;
 
       if (!transactions) return null;
 

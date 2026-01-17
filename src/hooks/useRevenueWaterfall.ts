@@ -25,9 +25,9 @@ export interface RevenueWaterfallData {
   breakdown: {
     trainingChange: number;
     productChange: number;
+    cancellationChange: number;
     newClientsRevenue: number;
     lostClientsRevenue: number;
-    priceChange: number;
   };
 }
 
@@ -100,9 +100,9 @@ const generateDemoWaterfallData = (compareType: WaterfallCompareType): RevenueWa
     breakdown: {
       trainingChange: 4200,
       productChange: 1800,
+      cancellationChange: 0,
       newClientsRevenue: 8500,
       lostClientsRevenue: -5500,
-      priceChange: 0,
     },
   };
 };
@@ -147,98 +147,91 @@ export function useRevenueWaterfall(
           compareEnd = endOfMonth(subMonths(now, 1));
       }
 
-      // Fetch data for both periods
-      const [currentResult, compareResult, currentClientsResult, compareClientsResult] = await Promise.all([
-        // Current period sessions
-        supabase
-          .from('training_sessions')
-          .select('client_id, final_price, status')
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .gte('date', currentStart.toISOString())
-          .lte('date', currentEnd.toISOString()),
-        
-        // Compare period sessions
-        supabase
-          .from('training_sessions')
-          .select('client_id, final_price, status')
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .gte('date', compareStart.toISOString())
-          .lte('date', compareEnd.toISOString()),
-        
-        // Current period product sales
+      // Fetch credit_transactions for both periods - this is the SINGLE SOURCE OF TRUTH
+      const [currentTxResult, compareTxResult] = await Promise.all([
+        // Current period credit transactions
         supabase
           .from('credit_transactions')
-          .select('amount')
+          .select('client_id, amount, type')
           .eq('user_id', user.id)
-          .eq('type', 'product')
+          .in('type', ['training', 'product', 'canceled_training'])
           .gte('created_at', currentStart.toISOString())
           .lte('created_at', currentEnd.toISOString()),
         
-        // Compare period product sales
+        // Compare period credit transactions
         supabase
           .from('credit_transactions')
-          .select('amount')
+          .select('client_id, amount, type')
           .eq('user_id', user.id)
-          .eq('type', 'product')
+          .in('type', ['training', 'product', 'canceled_training'])
           .gte('created_at', compareStart.toISOString())
           .lte('created_at', compareEnd.toISOString()),
       ]);
 
-      const currentSessions = currentResult.data || [];
-      const compareSessions = compareResult.data || [];
-      const currentProducts = currentClientsResult.data || [];
-      const compareProducts = compareClientsResult.data || [];
+      const currentTx = currentTxResult.data || [];
+      const compareTx = compareTxResult.data || [];
 
-      // Calculate totals
-      const currentTrainingRevenue = currentSessions.reduce((sum, s) => sum + (s.final_price || 0), 0);
-      const compareTrainingRevenue = compareSessions.reduce((sum, s) => sum + (s.final_price || 0), 0);
+      // Calculate totals by type
+      const calcTotals = (transactions: typeof currentTx) => {
+        let training = 0;
+        let product = 0;
+        let cancellation = 0;
+        
+        transactions.forEach(t => {
+          const absAmount = Math.abs(t.amount || 0);
+          if (t.type === 'training') training += absAmount;
+          else if (t.type === 'product') product += absAmount;
+          else if (t.type === 'canceled_training') cancellation += absAmount;
+        });
+        
+        return { training, product, cancellation, total: training + product + cancellation };
+      };
+
+      const currentTotals = calcTotals(currentTx);
+      const compareTotals = calcTotals(compareTx);
+
+      // Analyze client changes using training transactions
+      const currentTrainingTx = currentTx.filter(t => t.type === 'training');
+      const compareTrainingTx = compareTx.filter(t => t.type === 'training');
       
-      const currentProductRevenue = currentProducts.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
-      const compareProductRevenue = compareProducts.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
-
-      const currentTotal = currentTrainingRevenue + currentProductRevenue;
-      const compareTotal = compareTrainingRevenue + compareProductRevenue;
-
-      // Analyze client changes
-      const currentClientIds = new Set(currentSessions.map(s => s.client_id));
-      const compareClientIds = new Set(compareSessions.map(s => s.client_id));
+      const currentClientIds = new Set(currentTrainingTx.map(t => t.client_id).filter(Boolean));
+      const compareClientIds = new Set(compareTrainingTx.map(t => t.client_id).filter(Boolean));
       
       const newClientIds = [...currentClientIds].filter(id => !compareClientIds.has(id));
       const lostClientIds = [...compareClientIds].filter(id => !currentClientIds.has(id));
       const retainedClientIds = [...currentClientIds].filter(id => compareClientIds.has(id));
 
       // Calculate revenue changes
-      const newClientsRevenue = currentSessions
-        .filter(s => newClientIds.includes(s.client_id))
-        .reduce((sum, s) => sum + (s.final_price || 0), 0);
+      const newClientsRevenue = currentTrainingTx
+        .filter(t => t.client_id && newClientIds.includes(t.client_id))
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
 
-      const lostClientsRevenue = -compareSessions
-        .filter(s => lostClientIds.includes(s.client_id))
-        .reduce((sum, s) => sum + (s.final_price || 0), 0);
+      const lostClientsRevenue = -compareTrainingTx
+        .filter(t => t.client_id && lostClientIds.includes(t.client_id))
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
 
       // Training change from retained clients
-      const retainedCurrentRevenue = currentSessions
-        .filter(s => retainedClientIds.includes(s.client_id))
-        .reduce((sum, s) => sum + (s.final_price || 0), 0);
-      const retainedCompareRevenue = compareSessions
-        .filter(s => retainedClientIds.includes(s.client_id))
-        .reduce((sum, s) => sum + (s.final_price || 0), 0);
+      const retainedCurrentRevenue = currentTrainingTx
+        .filter(t => t.client_id && retainedClientIds.includes(t.client_id))
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+      const retainedCompareRevenue = compareTrainingTx
+        .filter(t => t.client_id && retainedClientIds.includes(t.client_id))
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
       const trainingChange = retainedCurrentRevenue - retainedCompareRevenue;
 
-      const productChange = currentProductRevenue - compareProductRevenue;
-      const netChange = currentTotal - compareTotal;
+      const productChange = currentTotals.product - compareTotals.product;
+      const cancellationChange = currentTotals.cancellation - compareTotals.cancellation;
+      const netChange = currentTotals.total - compareTotals.total;
 
       // Build waterfall segments
-      let cumulative = compareTotal;
+      let cumulative = compareTotals.total;
       const segments: WaterfallSegment[] = [
         { 
           name: format(compareStart, 'LLL yy', { locale: cs }), 
-          value: compareTotal, 
+          value: compareTotals.total, 
           type: 'start', 
-          cumulative: compareTotal,
-          tooltip: `Výchozí obrat: ${compareTotal.toLocaleString('cs-CZ')} Kč`
+          cumulative: compareTotals.total,
+          tooltip: `Výchozí obrat: ${compareTotals.total.toLocaleString('cs-CZ')} Kč`
         },
       ];
 
@@ -275,6 +268,17 @@ export function useRevenueWaterfall(
         });
       }
 
+      if (cancellationChange > 0) {
+        cumulative += cancellationChange;
+        segments.push({ 
+          name: 'Storno ↑', 
+          value: cancellationChange, 
+          type: 'increase', 
+          cumulative,
+          tooltip: `Více storno poplatků: +${cancellationChange.toLocaleString('cs-CZ')} Kč`
+        });
+      }
+
       if (lostClientsRevenue < 0) {
         cumulative += lostClientsRevenue;
         segments.push({ 
@@ -308,28 +312,39 @@ export function useRevenueWaterfall(
         });
       }
 
+      if (cancellationChange < 0) {
+        cumulative += cancellationChange;
+        segments.push({ 
+          name: 'Storno ↓', 
+          value: cancellationChange, 
+          type: 'decrease', 
+          cumulative,
+          tooltip: `Méně storno poplatků: ${cancellationChange.toLocaleString('cs-CZ')} Kč`
+        });
+      }
+
       segments.push({ 
         name: format(currentStart, 'LLL yy', { locale: cs }), 
-        value: currentTotal, 
+        value: currentTotals.total, 
         type: 'total', 
-        cumulative: currentTotal,
-        tooltip: `Celkový obrat: ${currentTotal.toLocaleString('cs-CZ')} Kč`
+        cumulative: currentTotals.total,
+        tooltip: `Celkový obrat: ${currentTotals.total.toLocaleString('cs-CZ')} Kč`
       });
 
       return {
         segments,
         currentPeriodLabel: format(currentStart, 'LLLL yyyy', { locale: cs }),
         comparePeriodLabel: format(compareStart, 'LLLL yyyy', { locale: cs }),
-        currentTotal,
-        compareTotal,
+        currentTotal: currentTotals.total,
+        compareTotal: compareTotals.total,
         netChange,
-        netChangePercent: compareTotal > 0 ? Math.round((netChange / compareTotal) * 100) : 0,
+        netChangePercent: compareTotals.total > 0 ? Math.round((netChange / compareTotals.total) * 100) : 0,
         breakdown: {
           trainingChange,
           productChange,
+          cancellationChange,
           newClientsRevenue,
           lostClientsRevenue,
-          priceChange: 0,
         },
       };
     },

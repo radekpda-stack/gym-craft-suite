@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import type { StatsPeriodRange } from '@/components/statistics/StatsPeriodSelector';
 
 export interface CancellationRecord {
   id: string;
@@ -48,18 +49,18 @@ export interface CancellationStats {
   byClient: ClientCancellationSummary[];
 }
 
-export function useCancellationStats() {
+export function useCancellationStats(periodRange?: StatsPeriodRange) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['cancellation-stats', user?.id],
+    queryKey: ['cancellation-stats', user?.id, periodRange?.start?.toISOString(), periodRange?.end?.toISOString()],
     queryFn: async (): Promise<CancellationStats> => {
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
 
-      // Fetch all canceled sessions with credit transaction info
-      const { data: canceledSessions, error: canceledError } = await supabase
+      // Build query for canceled sessions with optional period filter
+      let canceledQuery = supabase
         .from('training_sessions')
         .select(`
           id,
@@ -73,13 +74,32 @@ export function useCancellationStats() {
         .eq('status', 'canceled')
         .order('date', { ascending: false });
 
+      // Apply period filter if provided
+      if (periodRange?.start) {
+        canceledQuery = canceledQuery.gte('date', periodRange.start.toISOString().split('T')[0]);
+      }
+      if (periodRange?.end) {
+        canceledQuery = canceledQuery.lte('date', periodRange.end.toISOString().split('T')[0]);
+      }
+
+      const { data: canceledSessions, error: canceledError } = await canceledQuery;
+
       if (canceledError) throw canceledError;
 
-      // Fetch all sessions to calculate cancellation rate
-      const { count: totalSessions, error: totalError } = await supabase
+      // Build query for total sessions count with optional period filter
+      let totalQuery = supabase
         .from('training_sessions')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id);
+
+      if (periodRange?.start) {
+        totalQuery = totalQuery.gte('date', periodRange.start.toISOString().split('T')[0]);
+      }
+      if (periodRange?.end) {
+        totalQuery = totalQuery.lte('date', periodRange.end.toISOString().split('T')[0]);
+      }
+
+      const { count: totalSessions, error: totalError } = await totalQuery;
 
       if (totalError) throw totalError;
 
