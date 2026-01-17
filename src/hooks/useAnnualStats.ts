@@ -258,7 +258,17 @@ export function useAnnualStats(
       const mostActiveMonth = Object.entries(monthCounts)
         .sort(([, a], [, b]) => b - a)[0]?.[0] || '-';
 
-      // Monthly trend for chart (last 12 months sorted)
+      // Calculate monthly income from credit_transactions for consistent data
+      // Group training + canceled_training + product transactions by month
+      const monthlyTransactionIncome: Record<string, number> = {};
+      creditTransactions.forEach(tx => {
+        if (tx.type === 'training' || tx.type === 'canceled_training' || tx.type === 'product') {
+          const month = format(new Date(tx.created_at), 'yyyy-MM');
+          monthlyTransactionIncome[month] = (monthlyTransactionIncome[month] || 0) + Math.abs(tx.amount);
+        }
+      });
+
+      // Monthly trend for chart (last 12 months sorted) - use credit_transactions for income
       const monthlyTrend = Object.entries(monthCounts)
         .sort(([a], [b]) => a.localeCompare(b))
         .slice(-12)
@@ -266,7 +276,7 @@ export function useAnnualStats(
           month,
           label: format(new Date(month + '-01'), 'MMM yy'),
           trainings,
-          income: monthIncome[month] || 0,
+          income: monthlyTransactionIncome[month] || 0,
         }));
 
       // Most active day of week
