@@ -8,7 +8,10 @@ import {
   AlertCircle,
   Wallet,
   TrendingUp,
-  XCircle
+  TrendingDown,
+  XCircle,
+  CreditCard,
+  Banknote,
 } from 'lucide-react';
 import { AnnualStatsData } from '@/hooks/useAnnualStats';
 import { FinanceMode } from './FinanceModeToggle';
@@ -32,20 +35,12 @@ export function FinanceHeroKPI({
   vsLastMonth,
   onCardClick 
 }: FinanceHeroKPIProps) {
-  // Calculate total hours from completed trainings
-  // Assuming average training duration is 60 minutes if not tracked
-  const totalHours = useMemo(() => {
-    if (!stats) return 0;
-    // Use completedTrainings count * average duration (assume 60 min if not available)
-    return stats.completedTrainings;
-  }, [stats]);
-
   const currentMonthIncome = stats?.monthlyTrend?.slice(-1)[0]?.income || 0;
   const currentMonthTrainings = stats?.monthlyTrend?.slice(-1)[0]?.trainings || 0;
   
   // Calculate goal progress based on mode
   const goalProgress = mode === 'performed'
-    ? Math.min((currentMonthTrainings / (monthlyGoal / 1000)) * 100, 100) // Rough conversion
+    ? Math.min((currentMonthTrainings / (monthlyGoal / 1000)) * 100, 100)
     : Math.min((currentMonthIncome / monthlyGoal) * 100, 100);
 
   // Calculate pacing for monthly goal
@@ -63,6 +58,11 @@ export function FinanceHeroKPI({
 
   const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
   const lateCancellations = stats?.lateCancellations || 0;
+
+  // Calculate credit trend (this month vs last month)
+  const creditTrend = stats?.receivedCreditLastMonth && stats.receivedCreditLastMonth > 0
+    ? ((stats.receivedCreditThisMonth - stats.receivedCreditLastMonth) / stats.receivedCreditLastMonth) * 100
+    : 0;
 
   if (mode === 'performed') {
     // "Odtrénováno" mode - focus on trainings done
@@ -85,7 +85,7 @@ export function FinanceHeroKPI({
         <SparklineCard
           title="Celkem odtrénováno"
           value={`${stats?.completedTrainings || 0}`}
-          subtitle="tréninků tento rok"
+          subtitle="tréninků za období"
           data={sparklineData}
           trend={vsLastMonth?.trainings}
           variant="primary"
@@ -93,15 +93,24 @@ export function FinanceHeroKPI({
           onClick={() => onCardClick?.('trainings')}
         />
         
-        {/* Average per week */}
+        {/* KEY: Average training price (actual) */}
         <MetricCard
-          title="Průměr za týden"
-          value={`${stats?.avgTrainingsPerWeek || 0}`}
-          subtitle="tréninků týdně"
-          progress={(stats?.avgTrainingsPerWeek || 0) / 5 * 100} // 5 trainings/week = 100%
-          variant="blue"
-          icon={<Clock className="h-4 w-4" />}
-          onClick={() => onCardClick?.('weekly')}
+          title="Průměr za trénink"
+          value={formatCurrency(stats?.avgTrainingPriceActual || 0)}
+          subtitle={
+            stats?.avgTrainingPriceTrend !== 0 
+              ? `${stats?.avgTrainingPriceTrend > 0 ? '+' : ''}${stats?.avgTrainingPriceTrend}% oproti min. měsíci`
+              : 'skutečná cena'
+          }
+          progress={Math.min((stats?.avgTrainingPriceActual || 0) / 1000 * 100, 100)}
+          variant={stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend > 0 ? 'success' : 'blue'}
+          icon={stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend > 0 
+            ? <TrendingUp className="h-4 w-4" /> 
+            : stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend < 0 
+              ? <TrendingDown className="h-4 w-4" />
+              : <Banknote className="h-4 w-4" />
+          }
+          onClick={() => onCardClick?.('training')}
         />
 
         {/* Late cancellations warning or active days */}
@@ -131,46 +140,54 @@ export function FinanceHeroKPI({
     );
   }
 
-  // "Přijaté" mode - focus on received payments
+  // "Přijaté" mode - focus on received payments & money flow
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      {/* Main metric: Monthly goal */}
-      <GaugeCard
-        title="Měsíční cíl"
-        value={goalProgress}
-        maxValue={100}
-        displayValue={`${Math.round(goalProgress)}%`}
-        sublabel="splněno"
-        description={`${formatCurrency(currentMonthIncome)} z ${formatCurrency(monthlyGoal)}`}
-        variant={goalProgress >= 100 ? 'success' : goalProgress >= 70 ? 'primary' : 'warning'}
-        size="md"
-        onClick={() => onCardClick?.('monthly')}
-      />
-      
-      {/* Total received */}
+      {/* KEY METRIC 1: Received credit from clients */}
       <SparklineCard
-        title="Celkem přijato"
-        value={formatCurrency(stats?.totalIncome || 0)}
-        subtitle="tento rok"
+        title="Přijatý kredit"
+        value={formatCurrency(stats?.receivedCredit || 0)}
+        subtitle="celkem od klientů"
         data={sparklineData}
-        trend={vsLastMonth?.revenue}
+        trend={creditTrend !== 0 ? creditTrend : undefined}
         variant="success"
-        icon={<Wallet className="h-4 w-4" />}
+        icon={<CreditCard className="h-4 w-4" />}
         onClick={() => onCardClick?.('income')}
       />
       
-      {/* Trainings count this year */}
-      <MetricCard
-        title="Tréninků celkem"
-        value={`${stats?.completedTrainings || 0}`}
-        subtitle="tento rok"
-        progress={Math.min((stats?.completedTrainings || 0) / 200 * 100, 100)} // 200 trainings = 100%
-        variant="blue"
+      {/* KEY METRIC 2: Total earned (trainings + products) */}
+      <SparklineCard
+        title="Odtrénováno"
+        value={formatCurrency(stats?.totalIncome || 0)}
+        subtitle="vydělané služby"
+        data={sparklineData}
+        trend={vsLastMonth?.revenue}
+        variant="primary"
         icon={<Dumbbell className="h-4 w-4" />}
-        onClick={() => onCardClick?.('trainings')}
+        onClick={() => onCardClick?.('training')}
+      />
+      
+      {/* Average training price with trend */}
+      <MetricCard
+        title="Průměr za trénink"
+        value={formatCurrency(stats?.avgTrainingPriceActual || 0)}
+        subtitle={
+          stats?.avgTrainingPriceTrend !== 0 
+            ? `${stats?.avgTrainingPriceTrend > 0 ? '+' : ''}${stats?.avgTrainingPriceTrend}% vs min. měsíc`
+            : 'skutečná cena'
+        }
+        progress={Math.min((stats?.avgTrainingPriceActual || 0) / 1000 * 100, 100)}
+        variant={stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend > 0 ? 'success' : 'blue'}
+        icon={stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend > 0 
+          ? <TrendingUp className="h-4 w-4" /> 
+          : stats?.avgTrainingPriceTrend && stats.avgTrainingPriceTrend < 0 
+            ? <TrendingDown className="h-4 w-4" />
+            : <Banknote className="h-4 w-4" />
+        }
+        onClick={() => onCardClick?.('training')}
       />
 
-      {/* Pending payments or product income */}
+      {/* Pending payments or products */}
       {hasPendingPayments ? (
         <MetricCard
           title="Nezaplaceno"
@@ -188,7 +205,7 @@ export function FinanceHeroKPI({
           subtitle={`${stats?.topProducts?.length || 0} produktů`}
           progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
           variant="warning"
-          icon={<Dumbbell className="h-4 w-4" />}
+          icon={<Wallet className="h-4 w-4" />}
           onClick={() => onCardClick?.('products')}
           showProgressValue
         />
