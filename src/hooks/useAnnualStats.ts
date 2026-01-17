@@ -25,6 +25,8 @@ export interface AnnualStatsData {
   lateCancellations: number;
   avgTrainingsPerWeek: number;
   avgTrainingPrice: number;
+  avgTrainingPriceActual: number; // Actual price from credit_transactions
+  avgTrainingPriceTrend: number; // % change vs last month
   mostActiveMonth: string;
   mostActiveDay: string;
   
@@ -48,8 +50,11 @@ export interface AnnualStatsData {
   topExercises: Array<{ name: string; count: number }>;
   leastUsedExercises: Array<{ name: string; count: number }>;
   
-  // Finance
-  totalIncome: number;
+  // Finance - KEY METRICS
+  receivedCredit: number; // Total credit received from clients (payments)
+  receivedCreditThisMonth: number; // Credit received this month
+  receivedCreditLastMonth: number; // Credit received last month
+  totalIncome: number; // Total earned (trainings + products)
   trainingIncome: number;
   productIncome: number;
   avgMonthlyIncome: number;
@@ -395,6 +400,47 @@ export function useAnnualStats(
       // Total income = trainings (including cancellation fees) + products
       const totalIncome = trainingIncome + productIncome;
 
+      // KEY METRIC: Received credit from clients (payments/dobití kreditu)
+      const paymentTransactions = creditTransactions.filter(t => t.type === 'payment' && t.amount > 0);
+      const receivedCredit = paymentTransactions.reduce((sum, t) => sum + t.amount, 0);
+      
+      // Calculate received credit this month and last month
+      const currentMonthStr = format(new Date(), 'yyyy-MM');
+      const lastMonthStr = format(subMonths(new Date(), 1), 'yyyy-MM');
+      
+      const receivedCreditThisMonth = paymentTransactions
+        .filter(t => format(new Date(t.created_at), 'yyyy-MM') === currentMonthStr)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const receivedCreditLastMonth = paymentTransactions
+        .filter(t => format(new Date(t.created_at), 'yyyy-MM') === lastMonthStr)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      // Actual average training price from credit_transactions (not planned price)
+      const trainingOnlyCharges = creditTransactions.filter(t => t.type === 'training');
+      const avgTrainingPriceActual = trainingOnlyCharges.length > 0
+        ? trainingOnlyCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / trainingOnlyCharges.length
+        : 0;
+      
+      // Calculate trend for average training price (this month vs last month)
+      const thisMonthTrainingCharges = trainingOnlyCharges.filter(t => 
+        format(new Date(t.created_at), 'yyyy-MM') === currentMonthStr
+      );
+      const lastMonthTrainingCharges = trainingOnlyCharges.filter(t => 
+        format(new Date(t.created_at), 'yyyy-MM') === lastMonthStr
+      );
+      
+      const avgPriceThisMonth = thisMonthTrainingCharges.length > 0
+        ? thisMonthTrainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / thisMonthTrainingCharges.length
+        : 0;
+      const avgPriceLastMonth = lastMonthTrainingCharges.length > 0
+        ? lastMonthTrainingCharges.reduce((sum, t) => sum + Math.abs(t.amount), 0) / lastMonthTrainingCharges.length
+        : 0;
+      
+      const avgTrainingPriceTrend = avgPriceLastMonth > 0
+        ? ((avgPriceThisMonth - avgPriceLastMonth) / avgPriceLastMonth) * 100
+        : 0;
+
       const months = Math.max(1, totalDays / 30);
       const avgMonthlyIncome = totalIncome / months;
       
@@ -479,6 +525,8 @@ export function useAnnualStats(
         lateCancellations: lateCancellations.length,
         avgTrainingsPerWeek: Math.round(avgTrainingsPerWeek * 10) / 10,
         avgTrainingPrice: Math.round(avgTrainingPrice),
+        avgTrainingPriceActual: Math.round(avgTrainingPriceActual),
+        avgTrainingPriceTrend: Math.round(avgTrainingPriceTrend * 10) / 10,
         mostActiveMonth,
         mostActiveDay,
         monthlyTrend,
@@ -498,6 +546,9 @@ export function useAnnualStats(
         topExercises,
         leastUsedExercises,
         
+        receivedCredit,
+        receivedCreditThisMonth,
+        receivedCreditLastMonth,
         totalIncome,
         trainingIncome,
         productIncome,

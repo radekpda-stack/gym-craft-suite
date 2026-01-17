@@ -117,11 +117,13 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs">
-                <p className="font-medium mb-1">Jak počítáme příjmy?</p>
+                <p className="font-medium mb-1">Dva klíčové údaje</p>
                 <p className="text-xs text-muted-foreground">
-                  <strong>Odtrénováno:</strong> Počet dokončených tréninků a hodin.
+                  <strong>Přijatý kredit:</strong> Kolik peněz klienti vložili (dobití kreditu).
                   <br />
-                  <strong>Přijaté:</strong> Skutečně obdržené platby z credit_transactions (stržení kreditu za tréninky a produkty).
+                  <strong>Odtrénováno:</strong> Kolik jste vydělali za služby (tréninky + produkty).
+                  <br /><br />
+                  <strong>Průměr za trénink:</strong> Skutečná průměrná cena z credit_transactions.
                 </p>
               </TooltipContent>
             </Tooltip>
