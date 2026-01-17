@@ -93,11 +93,11 @@ export default function TrainingDetail() {
   // Submission state for double-submit protection
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Tag validation
+  // Tag validation - pass training_type to skip focus requirement for HIIT/cardio etc.
   const currentTagIds = trainingTags.map(t => t.tag_id);
   const tagValidation = useMemo(() => 
-    validateTrainingTags(currentTagIds, allTags), 
-    [currentTagIds, allTags]
+    validateTrainingTags(currentTagIds, allTags, training?.training_type), 
+    [currentTagIds, allTags, training?.training_type]
   );
 
   // Dialog states

@@ -42,6 +42,8 @@ interface TrainingTagsSelectorProps {
   className?: string;
   /** Show validation errors */
   showValidation?: boolean;
+  /** Training type for conditional validation (hiit, cardio skip focus requirement) */
+  trainingType?: string | null;
 }
 
 interface TagPreset {
@@ -124,6 +126,7 @@ export function TrainingTagsSelector({
   onChange,
   className,
   showValidation = false,
+  trainingType,
 }: TrainingTagsSelectorProps) {
   const { data: tags = [], isLoading } = useTags();
   const createTag = useCreateTag();
@@ -138,8 +141,8 @@ export function TrainingTagsSelector({
   // Derived state
   const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
   const validation = useMemo(() => 
-    validateTrainingTags(selectedTagIds, tags), 
-    [selectedTagIds, tags]
+    validateTrainingTags(selectedTagIds, tags, trainingType), 
+    [selectedTagIds, tags, trainingType]
   );
 
   // Group tags by type
