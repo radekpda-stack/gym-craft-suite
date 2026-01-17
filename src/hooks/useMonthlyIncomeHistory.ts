@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
 export interface MonthlyIncome {
   year: number;
   month: number; // 1-12
@@ -7,6 +8,7 @@ export interface MonthlyIncome {
   totalIncome: number;
   trainingIncome: number;
   productIncome: number;
+  cancellationIncome: number;
   trainingsCount: number;
   productsCount: number;
   vsLastYear: number | null; // procentuální změna
@@ -26,86 +28,82 @@ const MONTH_NAMES_CS = [
   "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"
 ];
 
+/**
+ * Hook pro načtení historie příjmů z credit_transactions
+ * Jediný zdroj pravdy = credit_transactions
+ */
 export function useMonthlyIncomeHistory() {
   return useQuery({
-    queryKey: ["monthly_income_history"],
+    queryKey: ["monthly_income_history_v2"],
     queryFn: async () => {
-      // Fetch all completed training sessions with payment
-      const { data: sessions, error: sessionsError } = await supabase
-        .from("training_sessions")
-        .select("date, final_price, participant_count")
-        .eq("status", "completed")
-        .not("final_price", "is", null)
-        .order("date", { ascending: true });
-
-      if (sessionsError) throw sessionsError;
-
-      // Fetch all product credit transactions (type = 'product', negative amounts = income)
-      const { data: transactions, error: transactionsError } = await supabase
+      // Fetch all credit transactions that represent income (training, product, canceled_training)
+      const { data: transactions, error } = await supabase
         .from("credit_transactions")
         .select("created_at, amount, type")
-        .eq("type", "product")
+        .in("type", ["training", "product", "canceled_training"])
         .order("created_at", { ascending: true });
 
-      if (transactionsError) throw transactionsError;
+      if (error) throw error;
 
-      // Determine available years
-      const allDates: Date[] = [];
-      sessions?.forEach(s => s.date && allDates.push(new Date(s.date)));
-      transactions?.forEach(t => t.created_at && allDates.push(new Date(t.created_at)));
-
-      if (allDates.length === 0) {
+      if (!transactions || transactions.length === 0) {
         return { years: [], availableYears: [] };
       }
 
+      // Determine available years
+      const allDates = transactions.map(t => new Date(t.created_at));
       const minYear = Math.min(...allDates.map(d => d.getFullYear()));
       const maxYear = new Date().getFullYear();
       const availableYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i).reverse();
 
       // Group data by year and month
-      const yearlyData: Map<number, Map<number, { trainingIncome: number; productIncome: number; trainingsCount: number; productsCount: number }>> = new Map();
+      type MonthData = { 
+        trainingIncome: number; 
+        productIncome: number; 
+        cancellationIncome: number;
+        trainingsCount: number; 
+        productsCount: number;
+      };
+      
+      const yearlyData: Map<number, Map<number, MonthData>> = new Map();
 
       // Initialize all months for all years
       availableYears.forEach(year => {
-        const monthsMap = new Map<number, { trainingIncome: number; productIncome: number; trainingsCount: number; productsCount: number }>();
+        const monthsMap = new Map<number, MonthData>();
         for (let m = 1; m <= 12; m++) {
-          monthsMap.set(m, { trainingIncome: 0, productIncome: 0, trainingsCount: 0, productsCount: 0 });
+          monthsMap.set(m, { 
+            trainingIncome: 0, 
+            productIncome: 0, 
+            cancellationIncome: 0,
+            trainingsCount: 0, 
+            productsCount: 0 
+          });
         }
         yearlyData.set(year, monthsMap);
       });
 
-      // Aggregate training sessions
-      sessions?.forEach(session => {
-        if (!session.date || !session.final_price) return;
-        const date = new Date(session.date);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-
-        const yearMap = yearlyData.get(year);
-        if (yearMap) {
-          const monthData = yearMap.get(month);
-          if (monthData) {
-            monthData.trainingIncome += session.final_price;
-            monthData.trainingsCount += 1;
-          }
-        }
-      });
-
-      // Aggregate product transactions (product sales have NEGATIVE amounts - credit deducted from client)
-      transactions?.forEach(tx => {
-        if (!tx.created_at || !tx.amount) return;
+      // Aggregate transactions by type
+      transactions.forEach(tx => {
+        if (!tx.created_at || tx.amount === null) return;
+        
         const date = new Date(tx.created_at);
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
+        const absAmount = Math.abs(tx.amount);
 
         const yearMap = yearlyData.get(year);
-        if (yearMap) {
-          const monthData = yearMap.get(month);
-          if (monthData) {
-            // Use absolute value since product sales are negative (credit deduction = income)
-            monthData.productIncome += Math.abs(tx.amount);
-            monthData.productsCount += 1;
-          }
+        if (!yearMap) return;
+        
+        const monthData = yearMap.get(month);
+        if (!monthData) return;
+
+        if (tx.type === 'training') {
+          monthData.trainingIncome += absAmount;
+          monthData.trainingsCount += 1;
+        } else if (tx.type === 'product') {
+          monthData.productIncome += absAmount;
+          monthData.productsCount += 1;
+        } else if (tx.type === 'canceled_training') {
+          monthData.cancellationIncome += absAmount;
         }
       });
 
@@ -116,7 +114,7 @@ export function useMonthlyIncomeHistory() {
 
         for (let m = 1; m <= 12; m++) {
           const data = monthsMap.get(m)!;
-          const totalIncome = data.trainingIncome + data.productIncome;
+          const totalIncome = data.trainingIncome + data.productIncome + data.cancellationIncome;
 
           // Calculate vs last year
           let vsLastYear: number | null = null;
@@ -124,7 +122,7 @@ export function useMonthlyIncomeHistory() {
           if (lastYearMap) {
             const lastYearData = lastYearMap.get(m);
             if (lastYearData) {
-              const lastYearTotal = lastYearData.trainingIncome + lastYearData.productIncome;
+              const lastYearTotal = lastYearData.trainingIncome + lastYearData.productIncome + lastYearData.cancellationIncome;
               if (lastYearTotal > 0) {
                 vsLastYear = ((totalIncome - lastYearTotal) / lastYearTotal) * 100;
               } else if (totalIncome > 0) {
@@ -140,6 +138,7 @@ export function useMonthlyIncomeHistory() {
             totalIncome,
             trainingIncome: data.trainingIncome,
             productIncome: data.productIncome,
+            cancellationIncome: data.cancellationIncome,
             trainingsCount: data.trainingsCount,
             productsCount: data.productsCount,
             vsLastYear,

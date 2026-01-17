@@ -2,13 +2,15 @@ import { XCircle, Clock, TrendingDown, CreditCard, ChevronRight } from 'lucide-r
 import { useCancellationStats } from '@/hooks/useCancellationStats';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 interface CancellationStatsCardProps {
+  periodRange?: StatsPeriodRange;
   onClick?: () => void;
 }
 
-export function CancellationStatsCard({ onClick }: CancellationStatsCardProps) {
-  const { data: stats, isLoading } = useCancellationStats();
+export function CancellationStatsCard({ periodRange, onClick }: CancellationStatsCardProps) {
+  const { data: stats, isLoading } = useCancellationStats(periodRange);
 
   if (isLoading) {
     return (
@@ -39,12 +41,12 @@ export function CancellationStatsCard({ onClick }: CancellationStatsCardProps) {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Zrušené tréninky</h3>
-            <p className="text-xs text-muted-foreground">Celková statistika</p>
+            <p className="text-xs text-muted-foreground">Ve zvoleném období</p>
           </div>
         </div>
         <div className="text-center py-6 text-muted-foreground">
           <XCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Zatím žádné zrušené tréninky</p>
+          <p className="text-sm">Žádné zrušené tréninky</p>
           <p className="text-xs">Skvělá práce!</p>
         </div>
       </div>
@@ -82,7 +84,7 @@ export function CancellationStatsCard({ onClick }: CancellationStatsCardProps) {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Zrušené tréninky</h3>
-            <p className="text-xs text-muted-foreground">Celková statistika</p>
+            <p className="text-xs text-muted-foreground">Ve zvoleném období</p>
           </div>
         </div>
         {onClick && (

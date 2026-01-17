@@ -174,7 +174,7 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
 
         {/* Stats Grid - streamlined to most important cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <RevenueBreakdownCard />
+          <RevenueBreakdownCard periodRange={periodRange} />
           <OperatingExpensesCard />
         </div>
 
@@ -184,7 +184,7 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
         {/* Monthly Income History and Cancellations */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
-          <CancellationStatsCard onClick={() => setActiveModal('cancellation')} />
+          <CancellationStatsCard periodRange={periodRange} onClick={() => setActiveModal('cancellation')} />
         </div>
 
         {/* Modals */}
