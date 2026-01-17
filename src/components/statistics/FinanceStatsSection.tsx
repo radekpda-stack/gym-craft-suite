@@ -5,8 +5,6 @@ import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
-import { RevenueByParticipantsCard } from './RevenueByParticipantsCard';
-import { AverageTrainingPriceCard } from './AverageTrainingPriceCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
 import { OperatingExpensesCard } from './OperatingExpensesCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
@@ -20,6 +18,7 @@ import {
   ShoppingBag,
   Loader2,
   BarChart3,
+  Info,
 } from 'lucide-react';
 import { QuickFinancialReportButton } from '@/components/finance/QuickFinancialReportButton';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +29,12 @@ import { ProductIncomeModal } from './modals/ProductIncomeModal';
 import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 import { CancellationDetailModal } from './modals/CancellationDetailModal';
 import { MonthlyIncomeDetailModal } from './modals/MonthlyIncomeDetailModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | 'monthly-history' | null;
@@ -99,105 +104,122 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header with mode toggle and analytics link */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <FinanceModeToggle value={financeMode} onChange={setFinanceMode} />
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => navigate('/statistics/analytics')}
-          className="gap-2"
-        >
-          <BarChart3 className="h-4 w-4" />
-          Pokročilá analytika
-        </Button>
-        <QuickFinancialReportButton variant="outline" />
-      </div>
-
-      {/* Insight Bar */}
-      {insights.length > 0 && (
-        <InsightsBar insights={insights} />
-      )}
-
-      {/* Hero KPI Cards - changes based on mode */}
-      <FinanceHeroKPI
-        mode={financeMode}
-        stats={stats}
-        monthlyGoal={monthlyGoal}
-        vsLastMonth={analytics?.vsLastMonth}
-        onCardClick={handleCardClick}
-      />
-
-      {/* Show products card if pending payments shown in KPI (only in received mode) */}
-      {financeMode === 'received' && hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <MetricCard
-            title="Produkty"
-            value={formatCurrency(stats?.productIncome || 0)}
-            subtitle={`${stats?.topProducts?.length || 0} produktů`}
-            progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
-            variant="warning"
-            orientation="horizontal"
-            icon={<ShoppingBag className="h-4 w-4" />}
-            onClick={() => setActiveModal('products')}
-          />
+    <TooltipProvider delayDuration={300}>
+      <div className="space-y-4 sm:space-y-6 animate-fade-in">
+        {/* Header with mode toggle and analytics link */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <FinanceModeToggle value={financeMode} onChange={setFinanceMode} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <p className="font-medium mb-1">Jak počítáme příjmy?</p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Odtrénováno:</strong> Počet dokončených tréninků a hodin.
+                  <br />
+                  <strong>Přijaté:</strong> Skutečně obdržené platby z credit_transactions (stržení kreditu za tréninky a produkty).
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/statistics/analytics')}
+              className="gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Pokročilá analytika
+            </Button>
+            <QuickFinancialReportButton variant="outline" />
+          </div>
         </div>
-      )}
 
-      {/* Stats Grid - simplified */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <RevenueBreakdownCard />
-        <AverageTrainingPriceCard />
-        <OperatingExpensesCard />
-      </div>
+        {/* Insight Bar */}
+        {insights.length > 0 && (
+          <InsightsBar insights={insights} />
+        )}
 
-      {/* Revenue Waterfall and Revenue by Participants */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {/* Hero KPI Cards - changes based on mode */}
+        <FinanceHeroKPI
+          mode={financeMode}
+          stats={stats}
+          monthlyGoal={monthlyGoal}
+          vsLastMonth={analytics?.vsLastMonth}
+          onCardClick={handleCardClick}
+        />
+
+        {/* Show products card if pending payments shown in KPI (only in received mode) */}
+        {financeMode === 'received' && hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <MetricCard
+              title="Produkty"
+              value={formatCurrency(stats?.productIncome || 0)}
+              subtitle={`${stats?.topProducts?.length || 0} produktů`}
+              progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
+              variant="warning"
+              orientation="horizontal"
+              icon={<ShoppingBag className="h-4 w-4" />}
+              onClick={() => setActiveModal('products')}
+            />
+          </div>
+        )}
+
+        {/* Stats Grid - streamlined to most important cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <RevenueBreakdownCard />
+          <OperatingExpensesCard />
+        </div>
+
+        {/* Revenue Waterfall - key insight card */}
         <RevenueWaterfallCard />
-        <RevenueByParticipantsCard />
-      </div>
 
-      {/* Monthly Income History */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
-        <CancellationStatsCard onClick={() => setActiveModal('cancellation')} />
-      </div>
+        {/* Monthly Income History and Cancellations */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
+          <CancellationStatsCard onClick={() => setActiveModal('cancellation')} />
+        </div>
 
-      {/* Modals */}
-      <TotalIncomeModal 
-        open={activeModal === 'income'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <MonthlyAverageModal 
-        open={activeModal === 'monthly'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <TrainingIncomeModal 
-        open={activeModal === 'training'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <ProductIncomeModal 
-        open={activeModal === 'products'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <PendingPaymentsModal 
-        open={activeModal === 'pending'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        stats={stats}
-      />
-      <CancellationDetailModal 
-        open={activeModal === 'cancellation'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-      />
-      <MonthlyIncomeDetailModal 
-        open={activeModal === 'monthly-history'} 
-        onOpenChange={(open) => !open && setActiveModal(null)}
-      />
-    </div>
+        {/* Modals */}
+        <TotalIncomeModal 
+          open={activeModal === 'income'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          stats={stats}
+        />
+        <MonthlyAverageModal 
+          open={activeModal === 'monthly'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          stats={stats}
+        />
+        <TrainingIncomeModal 
+          open={activeModal === 'training'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          stats={stats}
+        />
+        <ProductIncomeModal 
+          open={activeModal === 'products'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          stats={stats}
+        />
+        <PendingPaymentsModal 
+          open={activeModal === 'pending'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          stats={stats}
+        />
+        <CancellationDetailModal 
+          open={activeModal === 'cancellation'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+        />
+        <MonthlyIncomeDetailModal 
+          open={activeModal === 'monthly-history'} 
+          onOpenChange={(open) => !open && setActiveModal(null)}
+        />
+      </div>
+    </TooltipProvider>
   );
 }

@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfMonth, endOfMonth, format, subYears } from "date-fns";
-import { cs } from "date-fns/locale";
-
 export interface MonthlyIncome {
   year: number;
   month: number; // 1-12
@@ -43,11 +40,11 @@ export function useMonthlyIncomeHistory() {
 
       if (sessionsError) throw sessionsError;
 
-      // Fetch all payment credit transactions
+      // Fetch all product credit transactions (type = 'product', negative amounts = income)
       const { data: transactions, error: transactionsError } = await supabase
         .from("credit_transactions")
         .select("created_at, amount, type")
-        .eq("type", "payment")
+        .eq("type", "product")
         .order("created_at", { ascending: true });
 
       if (transactionsError) throw transactionsError;
@@ -94,7 +91,7 @@ export function useMonthlyIncomeHistory() {
         }
       });
 
-      // Aggregate product transactions (payments)
+      // Aggregate product transactions (product sales have NEGATIVE amounts - credit deducted from client)
       transactions?.forEach(tx => {
         if (!tx.created_at || !tx.amount) return;
         const date = new Date(tx.created_at);
@@ -105,7 +102,8 @@ export function useMonthlyIncomeHistory() {
         if (yearMap) {
           const monthData = yearMap.get(month);
           if (monthData) {
-            monthData.productIncome += tx.amount;
+            // Use absolute value since product sales are negative (credit deduction = income)
+            monthData.productIncome += Math.abs(tx.amount);
             monthData.productsCount += 1;
           }
         }
