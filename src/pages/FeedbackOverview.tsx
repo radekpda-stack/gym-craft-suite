@@ -378,12 +378,15 @@ export default function FeedbackOverview() {
   const copyFeedbackLink = async (trainingId: string, clientId: string) => {
     try {
       // Create or reuse feedback request
+      // Always use production URL for public feedback links
+      const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+      
       const result = await createFeedbackRequest.mutateAsync({
         client_id: clientId,
         training_session_id: trainingId,
       });
 
-      const feedbackUrl = `${window.location.origin}/feedback/${result.token}`.trim();
+      const feedbackUrl = `${PRODUCTION_FEEDBACK_URL}/feedback/${result.token}`.trim();
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
       const copyToClipboard = async (text: string): Promise<boolean> => {

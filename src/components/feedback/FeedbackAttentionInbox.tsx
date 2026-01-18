@@ -261,10 +261,13 @@ export function FeedbackAttentionInbox({
     refetchInterval: 60000,
   });
 
+  // Always use production URL for public feedback links
+  const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+
   const handleCopyLink = async (item: AttentionItem) => {
     if (!item.token) return;
     
-    const link = `${window.location.origin}/feedback/${item.token}`;
+    const link = `${PRODUCTION_FEEDBACK_URL}/feedback/${item.token}`;
     await navigator.clipboard.writeText(link);
     
     toast({
@@ -276,7 +279,7 @@ export function FeedbackAttentionInbox({
   const handleCopyMessage = async (item: AttentionItem) => {
     if (!item.token) return;
     
-    const link = `${window.location.origin}/feedback/${item.token}`;
+    const link = `${PRODUCTION_FEEDBACK_URL}/feedback/${item.token}`;
     const message = `Ahoj, mohl/a bys prosím vyplnit krátký feedback z tréninku? ${link}`;
     await navigator.clipboard.writeText(message);
     

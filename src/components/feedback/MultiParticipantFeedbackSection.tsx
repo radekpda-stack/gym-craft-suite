@@ -110,9 +110,12 @@ function ParticipantFeedbackRow({
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [isMarkedSent, setIsMarkedSent] = useState(!!feedbackRequest?.sent_at);
 
+  // Always use production URL for public feedback links
+  const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+  
   const linkData = feedbackRequest?.token
     ? {
-        url: `${window.location.origin}/feedback/${feedbackRequest.token}`,
+        url: `${PRODUCTION_FEEDBACK_URL}/feedback/${feedbackRequest.token}`,
         token: feedbackRequest.token,
         expiresAt: feedbackRequest.expires_at,
       }

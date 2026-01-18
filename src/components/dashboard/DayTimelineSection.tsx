@@ -257,8 +257,11 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
         .limit(1)
         .maybeSingle();
       
+      // Always use production URL for public feedback links
+      const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+      
       if (feedbackRequest?.token) {
-        const feedbackUrl = `${window.location.origin}/feedback/${feedbackRequest.token}`;
+        const feedbackUrl = `${PRODUCTION_FEEDBACK_URL}/feedback/${feedbackRequest.token}`;
         await navigator.clipboard.writeText(feedbackUrl);
         toast.success('Zkopírováno');
       } else {
@@ -282,7 +285,7 @@ export function DayTimelineSection({ data, isLoading }: DayTimelineSectionProps)
           
           if (error) throw error;
           
-          const feedbackUrl = `${window.location.origin}/feedback/${newRequest.token}`;
+          const feedbackUrl = `${PRODUCTION_FEEDBACK_URL}/feedback/${newRequest.token}`;
           await navigator.clipboard.writeText(feedbackUrl);
           toast.success('Vytvořeno a zkopírováno');
         }

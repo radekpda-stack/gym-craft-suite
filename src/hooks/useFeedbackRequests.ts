@@ -229,6 +229,9 @@ export function useCreateFeedbackRequest() {
   });
 }
 
+// Always use production URL for public feedback links
+const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+
 export function useSendFeedbackEmail() {
   const queryClient = useQueryClient();
   const logMessage = useLogMessage();
@@ -239,7 +242,7 @@ export function useSendFeedbackEmail() {
         throw new Error('Klient nemá nastavený e-mail');
       }
 
-      const feedbackUrl = `${window.location.origin}/feedback/${request.token}`;
+      const feedbackUrl = `${PRODUCTION_FEEDBACK_URL}/feedback/${request.token}`;
       
       const trainingDate = request.training_sessions?.date
         ? new Date(request.training_sessions.date).toLocaleDateString('cs-CZ', {
