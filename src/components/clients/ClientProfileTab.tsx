@@ -48,6 +48,52 @@ import { useSyncPreDiagnosticToClient, usePreviewPreDiagnosticSync } from '@/hoo
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+// Translation helper for training goals
+const translateGoal = (goal: string): string => {
+  const translations: Record<string, string> = {
+    // English keys
+    'strength': 'Síla',
+    'endurance': 'Vytrvalost',
+    'muscle_gain': 'Nárůst svalů',
+    'sport_performance': 'Sportovní výkon',
+    'weight_loss': 'Hubnutí',
+    'flexibility': 'Flexibilita',
+    'mobility': 'Mobilita',
+    'health': 'Zdraví',
+    'rehabilitation': 'Rehabilitace',
+    'posture': 'Držení těla',
+    'pain_relief': 'Úleva od bolesti',
+    'general_fitness': 'Celková kondice',
+    // Czech keys (already translated)
+    'zhubnout': 'Zhubnout',
+    'nabrat svaly': 'Nabrat svaly',
+    'zlepšit kondici': 'Zlepšit kondici',
+    'zbavit se bolesti': 'Zbavit se bolesti',
+    'lepší pohyblivost': 'Lepší pohyblivost',
+    'prevence zranění': 'Prevence zranění',
+    'sportovní výkon': 'Sportovní výkon',
+    'celkové zdraví': 'Celkové zdraví',
+  };
+  return translations[goal.toLowerCase()] || goal;
+};
+
+// Translation helper for body parts
+const translateBodyPart = (part: string): string => {
+  const translations: Record<string, string> = {
+    'neck': 'Krk',
+    'shoulder': 'Rameno',
+    'upper_back': 'Horní záda',
+    'lower_back': 'Bederní páteř',
+    'hip': 'Kyčel',
+    'knee': 'Koleno',
+    'ankle': 'Kotník',
+    'wrist': 'Zápěstí',
+    'elbow': 'Loket',
+    'other': 'Jiné',
+  };
+  return translations[part.toLowerCase()] || part;
+};
+
 interface ClientProfileTabProps {
   client: Client;
   onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
@@ -274,22 +320,45 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             </p>
           </div>
 
-          {/* Occupation - editable */}
-          <EditableField
-            label="Typ práce"
-            value={client.occupation === 'sedentary' ? 'Sedavá' :
-                   client.occupation === 'mixed' ? 'Kombinovaná' :
-                   client.occupation === 'active' ? 'Aktivní' :
-                   client.occupation}
-            icon={<Briefcase className="w-4 h-4" />}
-            isEditing={isEditing}
-            editValue={editData.occupation}
-            onEditChange={(v) => setEditData(d => ({ ...d, occupation: v }))}
-            placeholder="sedentary / mixed / active"
-          />
+        {/* Occupation - editable */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Briefcase className="w-4 h-4" />
+              <span>Typ práce</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.occupation === 'sedentary' ? 'Sedavá' :
+               client.occupation === 'combined' ? 'Kombinovaná' :
+               client.occupation === 'mixed' ? 'Kombinovaná' :
+               client.occupation === 'active' ? 'Aktivní' :
+               client.occupation === 'physical' ? 'Fyzicky náročná' :
+               client.occupation || '—'}
+            </p>
+          </div>
+
+          {/* Height */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <User className="w-4 h-4" />
+              <span>Výška</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.height ? `${client.height} cm` : '—'}
+            </p>
+          </div>
+
+          {/* Weight */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <User className="w-4 h-4" />
+              <span>Váha</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.weight ? `${client.weight} kg` : '—'}
+            </p>
+          </div>
         </div>
       </div>
-
       {/* Lifestyle Card - SINGLE SOURCE OF TRUTH */}
       <div className="bg-card border border-border rounded-2xl p-4">
         <h3 className="font-semibold flex items-center gap-2 mb-4">
@@ -308,8 +377,19 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             onEditChange={(v) => setEditData(d => ({ ...d, sleep_hours: v }))}
             type="number"
             placeholder="7"
-            suffix="h"
+            suffix=" h"
           />
+
+          {/* Sleep Quality */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Moon className="w-4 h-4" />
+              <span>Kvalita spánku</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.sleep_quality ? `${client.sleep_quality}/5` : '—'}
+            </p>
+          </div>
 
           {/* Stress */}
           <EditableField
@@ -320,8 +400,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             editValue={editData.stress_level}
             onEditChange={(v) => setEditData(d => ({ ...d, stress_level: v }))}
             type="number"
-            placeholder="1-10"
-            suffix="/10"
+            placeholder="1-5"
+            suffix="/5"
           />
 
           {/* Sitting hours */}
@@ -331,7 +411,38 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
               <span>Hodiny vsedě</span>
             </div>
             <p className="font-medium text-foreground text-sm">
-              {client.sitting_hours_daily != null ? `${client.sitting_hours_daily}h` : '—'}
+              {client.sitting_hours_daily != null ? `${client.sitting_hours_daily} h/den` : '—'}
+            </p>
+          </div>
+
+          {/* Movement Frequency */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Dumbbell className="w-4 h-4" />
+              <span>Frekvence pohybu</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.movement_frequency === 'none' ? 'Žádná' :
+               client.movement_frequency === '1-2' ? '1-2× týdně' :
+               client.movement_frequency === '3-4' ? '3-4× týdně' :
+               client.movement_frequency === '5+' ? '5+× týdně' :
+               client.movement_frequency || '—'}
+            </p>
+          </div>
+
+          {/* Daily Activity Type */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Activity className="w-4 h-4" />
+              <span>Typ denní aktivity</span>
+            </div>
+            <p className="font-medium text-foreground text-sm">
+              {client.daily_activity_type === 'sedentary' ? 'Sedavá' :
+               client.daily_activity_type === 'light' ? 'Lehká' :
+               client.daily_activity_type === 'moderate' ? 'Střední' :
+               client.daily_activity_type === 'active' ? 'Aktivní' :
+               client.daily_activity_type === 'very_active' ? 'Velmi aktivní' :
+               client.daily_activity_type || '—'}
             </p>
           </div>
         </div>
@@ -503,26 +614,75 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         </Collapsible>
       )}
 
-      {/* Health Restrictions */}
+      {/* Health Section */}
       <div className={cn(
         'bg-card border border-border rounded-2xl p-4',
-        client.health_restrictions && 'border-l-4 border-l-warning'
+        (client.health_restrictions || (client.pain_areas && client.pain_areas.length > 0)) && 'border-l-4 border-l-warning'
       )}>
         <h3 className="font-semibold flex items-center gap-2 mb-3 text-warning">
           <AlertTriangle className="w-5 h-5" />
-          Zdravotní omezení
+          Zdraví
         </h3>
-        {isEditing ? (
-          <Textarea
-            value={editData.health_restrictions}
-            onChange={(e) => setEditData(d => ({ ...d, health_restrictions: e.target.value }))}
-            placeholder="Bolesti zad, zranění kolene..."
-            className="min-h-[80px]"
-          />
-        ) : (
-          <p className="text-foreground whitespace-pre-wrap text-sm">
-            {client.health_restrictions || <span className="text-muted-foreground italic">Žádná omezení</span>}
-          </p>
+        
+        {/* Pain Areas */}
+        {client.pain_areas && client.pain_areas.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2">Bolestivá místa</p>
+            <div className="flex flex-wrap gap-1.5">
+              {client.pain_areas.map((area) => (
+                <Badge key={area} variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">
+                  {translateBodyPart(area)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Injury History */}
+        {client.injury_history && (
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-1">Historie zranění</p>
+            <p className="text-sm text-foreground">{client.injury_history}</p>
+          </div>
+        )}
+
+        {/* Surgery History */}
+        {client.surgery_history && (
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-1">Historie operací</p>
+            <p className="text-sm text-foreground">{client.surgery_history}</p>
+          </div>
+        )}
+
+        {/* Health Restrictions */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Zdravotní omezení</p>
+          {isEditing ? (
+            <Textarea
+              value={editData.health_restrictions}
+              onChange={(e) => setEditData(d => ({ ...d, health_restrictions: e.target.value }))}
+              placeholder="Bolesti zad, zranění kolene..."
+              className="min-h-[80px]"
+            />
+          ) : (
+            <p className="text-foreground whitespace-pre-wrap text-sm">
+              {client.health_restrictions || <span className="text-muted-foreground italic">Žádná omezení</span>}
+            </p>
+          )}
+        </div>
+
+        {/* Training Dislikes */}
+        {client.training_dislikes && client.training_dislikes.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">Nechci cvičit</p>
+            <div className="flex flex-wrap gap-1.5">
+              {client.training_dislikes.map((dislike) => (
+                <Badge key={dislike} variant="outline" className="text-xs">
+                  {dislike}
+                </Badge>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -536,7 +696,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
           {(client.training_goals || []).length > 0 ? (
             client.training_goals.map((goal) => (
               <Badge key={goal} className="bg-primary/10 text-primary">
-                {goal}
+                {translateGoal(goal)}
               </Badge>
             ))
           ) : (
