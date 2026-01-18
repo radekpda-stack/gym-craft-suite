@@ -165,13 +165,41 @@ export function CompleteTrainingDialog({
   };
 
   const handleParticipantPriceChange = (clientId: string, newPrice: number) => {
-    setParticipantPayments(prev => prev.map(p =>
-      p.client_id === clientId ? { 
-        ...p, 
-        price_share: newPrice,
-        // Recalculate credit balance after this payment
-      } : p
-    ));
+    setParticipantPayments(prev => {
+      const participantCount = prev.length;
+      
+      // Only auto-distribute for multi-participant trainings
+      if (participantCount <= 1) {
+        return prev.map(p =>
+          p.client_id === clientId ? { ...p, price_share: newPrice } : p
+        );
+      }
+      
+      // Get total price based on participant count (1000 for 2, 1200 for 3+)
+      const totalPrice = getTrainingPrice(participantCount, trainingPrices);
+      
+      // Calculate remaining amount for other participants
+      const remainingAmount = Math.max(0, totalPrice - newPrice);
+      const otherParticipants = prev.filter(p => p.client_id !== clientId);
+      const pricePerOther = otherParticipants.length > 0 
+        ? Math.round(remainingAmount / otherParticipants.length) 
+        : 0;
+      
+      // Distribute remaining amount evenly, with last participant getting the rounding difference
+      let distributed = 0;
+      return prev.map((p, index) => {
+        if (p.client_id === clientId) {
+          return { ...p, price_share: newPrice };
+        }
+        
+        // For the last "other" participant, give them the remainder to ensure exact total
+        const isLastOther = prev.filter(pp => pp.client_id !== clientId).indexOf(p) === otherParticipants.length - 1;
+        const share = isLastOther ? remainingAmount - distributed : pricePerOther;
+        distributed += share;
+        
+        return { ...p, price_share: share };
+      });
+    });
   };
 
   const handleComplete = async () => {
