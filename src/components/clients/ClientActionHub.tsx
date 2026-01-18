@@ -209,7 +209,9 @@ export function ClientActionHub({
 
             if (error) throw error;
 
-            const link = `${window.location.origin}/feedback/${data.token}`;
+            // Always use production URL for public feedback links
+            const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+            const link = `${PRODUCTION_FEEDBACK_URL}/feedback/${data.token}`;
             setGeneratedLink(link);
             setShowLinkDialog(true);
 

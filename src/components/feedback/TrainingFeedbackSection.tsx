@@ -68,10 +68,13 @@ export function TrainingFeedbackSection({
 
   const attemptedAutoGenerate = useRef(false);
 
+  // Always use production URL for public feedback links
+  const PRODUCTION_FEEDBACK_URL = 'https://justmoveasistent.lovable.app';
+
   const [linkData, setLinkData] = useState<LinkData | null>(
     feedbackRequest?.token
       ? {
-          url: `${window.location.origin}/feedback/${feedbackRequest.token}`,
+          url: `${PRODUCTION_FEEDBACK_URL}/feedback/${feedbackRequest.token}`,
           token: feedbackRequest.token,
           expiresAt: feedbackRequest.expires_at,
         }
@@ -100,7 +103,7 @@ export function TrainingFeedbackSection({
         body: {
           client_id: clientId,
           training_id: trainingId,
-          base_url: window.location.origin,
+          base_url: PRODUCTION_FEEDBACK_URL,
         },
       });
 
