@@ -1,10 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
-import type { TrendData, TrainingSessionRow, CreditTransactionRow, TrainingParticipantRow } from './types';
+import type { TrendData, CreditTransactionRow, TrainingParticipantRow } from './types';
+
+interface TrainingSessionRow {
+  id: string;
+  date: string;
+  status: string;
+  final_price?: number | null;
+}
 
 /**
  * Hook for fetching trend data
+ * This hook fetches yearly data and more complex aggregations not in core data
  */
 export function useDashboardTrends() {
   return useQuery({
@@ -19,7 +27,7 @@ export function useDashboardTrends() {
       const yearEnd = endOfYear(now);
       const thirtyDaysAgo = subDays(now, 30);
 
-      // Optimized: Combined queries and reduced total number of requests
+      // Optimized: Combined queries - these are specific to trends and not shared
       const [thisMonthResult, lastMonthResult, yearlyResult, activeResult, lastMonthActiveResult, newClientsResult, creditResult, lifetimeResult] = await Promise.all([
         supabase.from('training_sessions').select('id, status, final_price, date').gte('date', monthStart.toISOString()).lte('date', monthEnd.toISOString()),
         supabase.from('training_sessions').select('id, status, final_price').gte('date', lastMonthStart.toISOString()).lte('date', lastMonthEnd.toISOString()),
@@ -94,6 +102,6 @@ export function useDashboardTrends() {
         topClientName: topClients[0]?.name || 'N/A', topClientValue: topClients[0]?.value || 0, topClients,
       };
     },
-    staleTime: 120000,
+    staleTime: 120000, // 2 minutes - trends don't need frequent updates
   });
 }
