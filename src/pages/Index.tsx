@@ -12,6 +12,7 @@ import { BusinessYieldScoreCard } from '@/components/dashboard/BusinessYieldScor
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
 import { ClientsInDebtCard } from '@/components/dashboard/ClientsInDebtCard';
+import { PendingPaymentsCard } from '@/components/dashboard/PendingPaymentsCard';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
@@ -78,6 +79,11 @@ export default function Index() {
         {/* 💵 Cashflow Forecast - NEW */}
         <SectionErrorBoundary section="Cashflow" compact>
           <CashflowForecastCard />
+        </SectionErrorBoundary>
+
+        {/* 💸 Pending Payments Widget */}
+        <SectionErrorBoundary section="Čeká na platbu" compact>
+          <PendingPaymentsCard />
         </SectionErrorBoundary>
 
         {/* 💸 Clients in Debt Widget */}
