@@ -228,10 +228,11 @@ export function SalesRegister() {
   const selectedClientData = clients.find(c => c.id === selectedClient);
   
   // Get shared budget info for selected client - handles both individual and shared budgets
-  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
+  const { data: sharedBudget, isLoading: isBudgetLoading } = useSharedBudgetBalance(selectedClient || undefined);
   
   // Use the correct balance - shared budget takes priority over individual credit
-  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
+  // Only fall back to selectedClientData if sharedBudget has loaded (to avoid showing 0 during loading)
+  const effectiveBalance = sharedBudget?.displayBalance ?? (isBudgetLoading ? null : selectedClientData?.credit_balance ?? 0);
 
   const handleNoClientToggle = useCallback(() => {
     setNoClient(!noClient);
@@ -428,13 +429,17 @@ export function SalesRegister() {
                     </span>
                   )}
                 </div>
-                <span className={cn(
-                  "font-semibold",
-                  effectiveBalance < 0 ? "text-destructive" : 
-                  effectiveBalance < 500 ? "text-warning" : "text-success"
-                )}>
-                  {formatCurrency(effectiveBalance)}
-                </span>
+                {isBudgetLoading || effectiveBalance === null ? (
+                  <span className="text-sm text-muted-foreground animate-pulse">Načítám...</span>
+                ) : (
+                  <span className={cn(
+                    "font-semibold",
+                    effectiveBalance < 0 ? "text-destructive" : 
+                    effectiveBalance < 500 ? "text-warning" : "text-success"
+                  )}>
+                    {formatCurrency(effectiveBalance)}
+                  </span>
+                )}
               </div>
             </div>
           )}
