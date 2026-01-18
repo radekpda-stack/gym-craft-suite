@@ -58,6 +58,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -643,58 +644,67 @@ export function ClientHeaderCompact({
                     {/* Section: Základní informace */}
                     <div className="space-y-3">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Základní informace</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Telefon</label>
-                          <Input
-                            value={editPhone}
-                            onChange={(e) => setEditPhone(e.target.value)}
-                            placeholder="+420..."
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Email</label>
-                          <Input
-                            type="email"
-                            value={editEmail}
-                            onChange={(e) => setEditEmail(e.target.value)}
-                            placeholder="email@example.com"
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Datum narození</label>
-                          <Input
-                            type="date"
-                            value={editBirthDate}
-                            onChange={(e) => setEditBirthDate(e.target.value)}
-                            className="h-9 max-w-[160px]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Pohlaví</label>
-                          <div className="flex gap-2 justify-center max-w-[160px]">
-                            <Button
-                              type="button"
-                              variant={editGender === 'male' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => setEditGender('male')}
-                              className="px-4"
-                            >
-                              Muž
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={editGender === 'female' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => setEditGender('female')}
-                              className="px-4"
-                            >
-                              Žena
-                            </Button>
+                      <div className="space-y-3">
+                        {/* Contact info - full width on mobile */}
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Telefon</label>
+                            <Input
+                              value={editPhone}
+                              onChange={(e) => setEditPhone(e.target.value)}
+                              placeholder="+420..."
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Email</label>
+                            <Input
+                              type="email"
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                              placeholder="email@example.com"
+                              className="h-9"
+                            />
                           </div>
                         </div>
+                        
+                        {/* Birth date and gender - side by side */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Datum narození</label>
+                            <Input
+                              type="date"
+                              value={editBirthDate}
+                              onChange={(e) => setEditBirthDate(e.target.value)}
+                              className="h-9 w-full"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Pohlaví</label>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant={editGender === 'male' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setEditGender('male')}
+                                className="flex-1 px-2 text-xs"
+                              >
+                                Muž
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={editGender === 'female' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setEditGender('female')}
+                                className="flex-1 px-2 text-xs"
+                              >
+                                Žena
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Handedness - full width */}
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Dominantní ruka</label>
                           <div className="flex gap-2">
@@ -756,7 +766,8 @@ export function ClientHeaderCompact({
                     {/* Section: Životní styl */}
                     <div className="space-y-3 pt-3 border-t border-border/30">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Životní styl</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-3">
+                        {/* Occupation - full width */}
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Zaměstnání</label>
                           <Input
@@ -766,48 +777,59 @@ export function ClientHeaderCompact({
                             className="h-9"
                           />
                         </div>
+                        
+                        {/* Activity type - full width */}
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Typ denní aktivity</label>
-                          <Input
-                            value={editDailyActivityType}
-                            onChange={(e) => setEditDailyActivityType(e.target.value)}
-                            placeholder="Sedavé, aktivní..."
-                            className="h-9"
-                          />
+                          <div className="flex gap-1 flex-wrap">
+                            {[
+                              { value: 'sedentary', label: 'Sedavé' },
+                              { value: 'mixed', label: 'Kombinované' },
+                              { value: 'active', label: 'Aktivní' },
+                            ].map((type) => (
+                              <Button
+                                key={type.value}
+                                type="button"
+                                variant={editDailyActivityType === type.value ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setEditDailyActivityType(type.value)}
+                                className="flex-1 min-w-[80px] px-2 text-xs"
+                              >
+                                {type.label}
+                              </Button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Hodiny sezení denně</label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={24}
-                            value={editSittingHours ?? ''}
-                            onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
-                            placeholder="8"
-                            className="h-9"
-                          />
+                        
+                        {/* Sitting hours and sleep - side by side */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Hodiny vsedě</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={24}
+                              value={editSittingHours ?? ''}
+                              onChange={(e) => setEditSittingHours(e.target.value ? Number(e.target.value) : null)}
+                              placeholder="8"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Průměrný spánek</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={24}
+                              value={editSleepHours ?? ''}
+                              onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
+                              placeholder="7"
+                              className="h-9"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Hodiny spánku</label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={24}
-                            value={editSleepHours ?? ''}
-                            onChange={(e) => setEditSleepHours(e.target.value ? Number(e.target.value) : null)}
-                            placeholder="7"
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground">Kvalita spánku</label>
-                          <Input
-                            value={editSleepQuality}
-                            onChange={(e) => setEditSleepQuality(e.target.value)}
-                            placeholder="Dobrá, špatná..."
-                            className="h-9"
-                          />
-                        </div>
+                        
+                        {/* Stress level - full width */}
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Úroveň stresu (1-5)</label>
                           <div className="flex gap-1">
@@ -831,7 +853,7 @@ export function ClientHeaderCompact({
                     {/* Section: Sport a pohyb */}
                     <div className="space-y-3 pt-3 border-t border-border/30">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sport a pohyb</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-3">
                         <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Frekvence pohybu</label>
                           <Input
@@ -850,13 +872,14 @@ export function ClientHeaderCompact({
                             className="h-9"
                           />
                         </div>
-                        <div className="space-y-1.5 sm:col-span-2">
+                        <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Sportovní historie</label>
-                          <Input
+                          <Textarea
                             value={editSportsHistory}
                             onChange={(e) => setEditSportsHistory(e.target.value)}
-                            placeholder="Fotbal 10 let, běh..."
-                            className="h-9"
+                            placeholder="Předchozí sporty, úrazy, zkušenosti..."
+                            rows={2}
+                            className="resize-none"
                           />
                         </div>
                       </div>
@@ -864,9 +887,9 @@ export function ClientHeaderCompact({
 
                     {/* Section: Zdraví */}
                     <div className="space-y-3 pt-3 border-t border-border/30">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdraví</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5 sm:col-span-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zdravotní omezení</h4>
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
                           <label className="text-xs text-muted-foreground">Bolestivá místa</label>
                           <Input
                             value={editPainAreas}
