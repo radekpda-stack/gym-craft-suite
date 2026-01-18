@@ -19,7 +19,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const sendInviteSchema = z.object({
-  name: z.string().min(2, "Jméno musí mít alespoň 2 znaky"),
+  first_name: z.string().min(1, "Křestní jméno je povinné"),
+  last_name: z.string().min(1, "Příjmení je povinné"),
   email: z.string().email("Neplatná emailová adresa"),
   phone: z.string().optional(),
 });
@@ -43,7 +44,8 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
   const form = useForm<SendInviteFormValues>({
     resolver: zodResolver(sendInviteSchema),
     defaultValues: {
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       phone: '',
     },
@@ -54,8 +56,10 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
   const handleSubmit = async (data: SendInviteFormValues) => {
     try {
       // Create client first
+      const fullName = `${data.first_name} ${data.last_name}`.trim();
       const client = await createClient.mutateAsync({
-        name: data.name,
+        first_name: data.first_name,
+        last_name: data.last_name,
         email: data.email,
         phone: data.phone || '',
         trainingGoals: [],
@@ -81,7 +85,7 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
       const link = `${baseUrl}/pre-diagnostic/${preDiag.token}`;
       
       setGeneratedLink(link);
-      setClientName(data.name);
+      setClientName(fullName);
       setStep('success');
       
       toast.success("Klient vytvořen a odkaz vygenerován");
@@ -185,23 +189,42 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
           </div>
         </div>
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Jméno *</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Jan Novák"
-                  className="bg-secondary border-border"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Křestní jméno *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Jan"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Příjmení *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Novák"
+                    className="bg-secondary border-border"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

@@ -62,7 +62,8 @@ const PREVIOUS_ACTIVITIES = [
 
 const trainerPreDiagnosticSchema = z.object({
   // Basic info
-  name: z.string().min(2, "Jméno musí mít alespoň 2 znaky"),
+  first_name: z.string().min(1, "Křestní jméno je povinné"),
+  last_name: z.string().min(1, "Příjmení je povinné"),
   email: z.string().email("Neplatná emailová adresa").optional().or(z.literal("")),
   phone: z.string().optional(),
   birthDate: z.string().optional(),
@@ -120,7 +121,8 @@ export function TrainerPreDiagnosticClientForm({
   const form = useForm<TrainerPreDiagnosticFormValues>({
     resolver: zodResolver(trainerPreDiagnosticSchema),
     defaultValues: {
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       phone: '',
       birthDate: '',
@@ -177,7 +179,8 @@ export function TrainerPreDiagnosticClientForm({
     try {
       // 1. Create client
       const client = await createClient.mutateAsync({
-        name: data.name,
+        first_name: data.first_name,
+        last_name: data.last_name,
         email: data.email || '',
         phone: data.phone || '',
         trainingGoals: data.trainingGoals,
@@ -291,23 +294,42 @@ export function TrainerPreDiagnosticClientForm({
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         {/* Basic Info - Always visible */}
         <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Jméno *</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Jan Novák"
-                    className="bg-secondary border-border"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name="first_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Křestní jméno *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Jan"
+                      className="bg-secondary border-border"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="last_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Příjmení *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Novák"
+                      className="bg-secondary border-border"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField
