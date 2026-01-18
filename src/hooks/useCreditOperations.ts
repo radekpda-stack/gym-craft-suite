@@ -272,10 +272,10 @@ export function useSharedBudgetBalance(clientId?: string) {
           .from("clients")
           .select("credit_balance")
           .eq("id", clientId)
-          .single();
+          .maybeSingle();
 
         if (clientError) throw clientError;
-        const balance = client.credit_balance || 0;
+        const balance = client?.credit_balance || 0;
         return {
           isShared: false, groupId: null, groupName: null, sharedBalance: balance,
           displayBalance: balance, isExhausted: balance <= 0, isNegative: balance < 0, members: [],
@@ -309,6 +309,7 @@ export function useSharedBudgetBalance(clientId?: string) {
       };
     },
     enabled: !!clientId,
+    staleTime: 30 * 1000, // Cache for 30 seconds to avoid flickering on client selection
   });
 }
 
