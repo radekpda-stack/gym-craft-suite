@@ -1,23 +1,21 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
-import { OperatingExpensesCard } from './OperatingExpensesCard';
 import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
-import { RevenueWaterfallCard } from './RevenueWaterfallCard';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
+import { FinanceChartsSection } from './FinanceChartsSection';
+import { LifetimeFinanceStatsCard } from './LifetimeFinanceStatsCard';
 import { formatCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/charts';
 import { 
   ShoppingBag,
   Loader2,
-  BarChart3,
   Info,
 } from 'lucide-react';
 import { QuickFinancialReportButton } from '@/components/finance/QuickFinancialReportButton';
@@ -44,8 +42,6 @@ interface FinanceStatsSectionProps {
 }
 
 export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
-  const navigate = useNavigate();
-  
   // Use custom period if provided, otherwise default to 'year'
   const { data: stats, isLoading: statsLoading } = useAnnualStats(
     periodRange?.type === 'all' ? 'all' : periodRange?.type === 'custom' || periodRange ? 'custom' : 'year',
@@ -106,7 +102,7 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
-        {/* Header with mode toggle and analytics link */}
+        {/* Header with mode toggle */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FinanceModeToggle value={financeMode} onChange={setFinanceMode} />
@@ -128,18 +124,7 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/statistics/analytics')}
-              className="gap-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Pokročilá analytika
-            </Button>
-            <QuickFinancialReportButton variant="outline" />
-          </div>
+          <QuickFinancialReportButton variant="outline" />
         </div>
 
         {/* Insight Bar */}
@@ -172,20 +157,20 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           </div>
         )}
 
-        {/* Stats Grid - streamlined to most important cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <RevenueBreakdownCard periodRange={periodRange} />
-          <OperatingExpensesCard />
-        </div>
+        {/* Trend and Distribution Charts (from advanced analytics) */}
+        <FinanceChartsSection />
 
-        {/* Revenue Waterfall - key insight card */}
-        <RevenueWaterfallCard />
+        {/* Stats Grid - Payment Structure */}
+        <RevenueBreakdownCard periodRange={periodRange} />
 
         {/* Monthly Income History and Cancellations */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
           <CancellationStatsCard periodRange={periodRange} onClick={() => setActiveModal('cancellation')} />
         </div>
+
+        {/* Lifetime Stats Card */}
+        <LifetimeFinanceStatsCard />
 
         {/* Modals */}
         <TotalIncomeModal 
