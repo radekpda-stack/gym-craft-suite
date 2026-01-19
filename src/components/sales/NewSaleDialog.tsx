@@ -10,6 +10,7 @@ import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCart, CartItem } from '@/hooks/useSalesCart';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -38,7 +39,10 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Get shared budget balance for selected client
+  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
   const selectedClientData = clients.find(c => c.id === selectedClient);
+  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
 
   // Update cart validation when client changes
   useEffect(() => {
@@ -379,9 +383,9 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                   Nový zůstatek: {' '}
                   <span className={cn(
                     "font-medium",
-                    ((selectedClientData.credit_balance || 0) - cart.totalAmount) < 0 ? "text-destructive" : "text-foreground"
+                    (effectiveBalance - cart.totalAmount) < 0 ? "text-destructive" : "text-foreground"
                   )}>
-                    {((selectedClientData.credit_balance || 0) - cart.totalAmount).toLocaleString('cs-CZ')} Kč
+                    {(effectiveBalance - cart.totalAmount).toLocaleString('cs-CZ')} Kč
                   </span>
                 </p>
               )}

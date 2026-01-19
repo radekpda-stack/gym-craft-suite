@@ -605,7 +605,7 @@ export function SalesRegister() {
           onPaymentMethodChange={setPaymentMethod}
           saleNote={saleNote}
           onSaleNoteChange={setSaleNote}
-          selectedClientData={selectedClientData}
+          clientCreditBalance={effectiveBalance}
           hasCreditTopup={hasCreditTopup}
           isProcessing={isProcessing}
           checkoutDisabled={checkoutDisabled}
