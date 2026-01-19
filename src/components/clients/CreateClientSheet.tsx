@@ -6,7 +6,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ClientForm } from "./ClientForm";
+import { ClientFormStepper } from "./ClientFormStepper";
 import { ClientFormValues } from "@/lib/validations/client";
 import { CreateClientModeSelector, CreateClientMode, ModeSelectorHeader } from "./CreateClientModeSelector";
 import { SendInviteFlow } from "./SendInviteFlow";
@@ -87,7 +87,7 @@ export function CreateClientSheet({
           )}
           
           {mode === 'basic' && (
-            <ClientForm 
+            <ClientFormStepper 
               onSubmit={onSubmit} 
               isLoading={isLoading}
               submitLabel="Vytvořit klienta"

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 export interface ChatMessage {
   id: string;
@@ -15,7 +15,22 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+// Helper to map DB row to ChatMessage
+const mapDbRowToMessage = (m: any): ChatMessage => ({
+  id: m.id,
+  conversationId: m.conversation_id,
+  senderId: m.sender_id,
+  senderType: m.sender_type as 'trainer' | 'client',
+  clientId: m.client_id,
+  trainerId: m.trainer_id,
+  content: m.content,
+  isRead: m.is_read,
+  readAt: m.read_at,
+  createdAt: m.created_at,
+});
+
 export function useChatMessages(clientId: string | undefined, trainerId: string | undefined) {
+  const queryClient = useQueryClient();
   const conversationId = clientId && trainerId ? `${trainerId}-${clientId}` : null;
 
   const query = useQuery({
@@ -31,21 +46,38 @@ export function useChatMessages(clientId: string | undefined, trainerId: string 
 
       if (error) throw error;
 
-      return (data || []).map(m => ({
-        id: m.id,
-        conversationId: m.conversation_id,
-        senderId: m.sender_id,
-        senderType: m.sender_type as 'trainer' | 'client',
-        clientId: m.client_id,
-        trainerId: m.trainer_id,
-        content: m.content,
-        isRead: m.is_read,
-        readAt: m.read_at,
-        createdAt: m.created_at,
-      }));
+      return (data || []).map(mapDbRowToMessage);
     },
     enabled: !!conversationId,
   });
+
+  // Handle real-time updates with direct cache mutations instead of refetch
+  const handleRealtimeChange = useCallback((payload: any) => {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    queryClient.setQueryData<ChatMessage[]>(['chat-messages', conversationId], (old = []) => {
+      if (eventType === 'INSERT' && newRecord) {
+        const newMessage = mapDbRowToMessage(newRecord);
+        // Avoid duplicates
+        if (old.some(m => m.id === newMessage.id)) return old;
+        return [...old, newMessage];
+      }
+      
+      if (eventType === 'UPDATE' && newRecord) {
+        const updatedMessage = mapDbRowToMessage(newRecord);
+        return old.map(m => m.id === updatedMessage.id ? updatedMessage : m);
+      }
+      
+      if (eventType === 'DELETE' && oldRecord) {
+        return old.filter(m => m.id !== oldRecord.id);
+      }
+      
+      return old;
+    });
+    
+    // Invalidate unread count - this is lightweight
+    queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+  }, [conversationId, queryClient]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -61,16 +93,14 @@ export function useChatMessages(clientId: string | undefined, trainerId: string 
           table: 'chat_messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
-          query.refetch();
-        }
+        handleRealtimeChange
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, query]);
+  }, [conversationId, handleRealtimeChange]);
 
   return query;
 }
@@ -111,10 +141,47 @@ export function useSendMessage() {
       if (error) throw error;
       return data;
     },
+    // Optimistic update - add message to cache immediately
+    onMutate: async ({ clientId, trainerId, content, senderType }) => {
+      const conversationId = `${trainerId}-${clientId}`;
+      
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['chat-messages', conversationId] });
+      
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData<ChatMessage[]>(['chat-messages', conversationId]);
+      
+      // Optimistically add the new message
+      const optimisticMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        conversationId,
+        senderId: 'current-user',
+        senderType,
+        clientId,
+        trainerId,
+        content,
+        isRead: false,
+        readAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      
+      queryClient.setQueryData<ChatMessage[]>(['chat-messages', conversationId], (old = []) => [
+        ...old,
+        optimisticMessage,
+      ]);
+      
+      return { previousMessages, conversationId };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chat-messages', context.conversationId], context.previousMessages);
+      }
+    },
     onSuccess: (data) => {
       const conversationId = `${data.trainer_id}-${data.client_id}`;
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+      // Real-time will handle the actual update, but we invalidate conversations list
+      queryClient.invalidateQueries({ queryKey: ['trainer-conversations'] });
     },
   });
 }
@@ -136,8 +203,25 @@ export function useMarkMessagesAsRead() {
 
       if (error) throw error;
     },
+    // Optimistic update
+    onMutate: async ({ conversationId }) => {
+      await queryClient.cancelQueries({ queryKey: ['chat-messages', conversationId] });
+      
+      const previousMessages = queryClient.getQueryData<ChatMessage[]>(['chat-messages', conversationId]);
+      
+      queryClient.setQueryData<ChatMessage[]>(['chat-messages', conversationId], (old = []) =>
+        old.map(m => ({ ...m, isRead: true, readAt: new Date().toISOString() }))
+      );
+      
+      return { previousMessages, conversationId };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chat-messages', context.conversationId], context.previousMessages);
+      }
+    },
     onSuccess: (_, { conversationId }) => {
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', conversationId] });
+      // Just invalidate counts, real-time handles the rest
       queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
       queryClient.invalidateQueries({ queryKey: ['trainer-conversations'] });
     },

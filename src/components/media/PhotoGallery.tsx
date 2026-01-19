@@ -92,6 +92,8 @@ export function PhotoGallery({ photos, onCompare }: PhotoGalleryProps) {
             <img
               src={photo.file_url}
               alt={photo.description || "Fotografie"}
+              loading="lazy"
+              decoding="async"
               className="w-full h-32 object-cover"
             />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
