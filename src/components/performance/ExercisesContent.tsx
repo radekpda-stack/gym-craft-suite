@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { List, BarChart3 } from 'lucide-react';
+import { List, BarChart3, User } from 'lucide-react';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
 import { ExerciseAnalyticsView } from '@/components/exercises/ExerciseAnalyticsView';
+import { ClientExercisesView } from '@/components/exercises/ClientExercisesView';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export function ExercisesContent() {
@@ -28,19 +29,27 @@ export function ExercisesContent() {
 
       {/* Segmented Control for Views */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
+        <TabsList className="grid grid-cols-3 w-full max-w-lg">
           <TabsTrigger value="list" className="gap-2">
             <List className="w-4 h-4" />
-            <span>Seznam cviků</span>
+            <span className="hidden sm:inline">Seznam</span>
+          </TabsTrigger>
+          <TabsTrigger value="client" className="gap-2">
+            <User className="w-4 h-4" />
+            <span className="hidden sm:inline">Klient</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="w-4 h-4" />
-            <span>Analytika</span>
+            <span className="hidden sm:inline">Analytika</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-6">
           <ExerciseListView exercises={exercises} isLoading={isLoading} />
+        </TabsContent>
+
+        <TabsContent value="client" className="mt-6">
+          <ClientExercisesView />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
