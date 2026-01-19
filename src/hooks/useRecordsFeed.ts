@@ -41,7 +41,7 @@ const STORAGE_KEY = 'records-feed-filters';
 
 const DEFAULT_FILTERS: RecordsFeedFilters = {
   clientId: null,
-  period: 'week',
+  period: 'month',
   recordType: 'all',
   searchQuery: '',
   customDateRange: null,
