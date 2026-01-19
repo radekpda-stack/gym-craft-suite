@@ -164,7 +164,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
   const syncMutation = useSyncPreDiagnosticToClient();
   const previewMutation = usePreviewPreDiagnosticSync();
 
-  // Edit state
+  // Edit state - includes ALL editable fields
   const [editData, setEditData] = useState({
     occupation: client.occupation || '',
     sleep_hours: client.sleep_hours?.toString() || '',
@@ -173,6 +173,15 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     notes: client.notes || '',
     birth_date: client.birth_date || '',
     sports_history: client.sports_history || '',
+    // Additional editable fields
+    gender: client.gender as 'male' | 'female' | null,
+    handedness: client.handedness as 'left' | 'right' | 'ambidextrous' | null,
+    height: client.height?.toString() || '',
+    weight: client.weight?.toString() || '',
+    sleep_quality: client.sleep_quality?.toString() || '',
+    sitting_hours_daily: client.sitting_hours_daily?.toString() || '',
+    movement_frequency: client.movement_frequency || '',
+    daily_activity_type: client.daily_activity_type || '',
   });
 
   // Calculate age
@@ -189,6 +198,15 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       notes: client.notes || '',
       birth_date: client.birth_date || '',
       sports_history: client.sports_history || '',
+      // Additional editable fields
+      gender: client.gender as 'male' | 'female' | null,
+      handedness: client.handedness as 'left' | 'right' | 'ambidextrous' | null,
+      height: client.height?.toString() || '',
+      weight: client.weight?.toString() || '',
+      sleep_quality: client.sleep_quality?.toString() || '',
+      sitting_hours_daily: client.sitting_hours_daily?.toString() || '',
+      movement_frequency: client.movement_frequency || '',
+      daily_activity_type: client.daily_activity_type || '',
     });
     setIsEditing(true);
   };
@@ -206,6 +224,15 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         notes: editData.notes,
         birthDate: editData.birth_date || undefined,
         sports_history: editData.sports_history || undefined,
+        // Additional fields
+        gender: editData.gender,
+        handedness: editData.handedness,
+        height: editData.height ? Number(editData.height) : undefined,
+        weight: editData.weight ? Number(editData.weight) : undefined,
+        sleep_quality: editData.sleep_quality || undefined,
+        sitting_hours_daily: editData.sitting_hours_daily ? Number(editData.sitting_hours_daily) : undefined,
+        movement_frequency: editData.movement_frequency || undefined,
+        daily_activity_type: editData.daily_activity_type || undefined,
       });
       setIsEditing(false);
       toast.success('Profil aktualizován');
@@ -295,66 +322,142 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             )}
           </div>
 
-          {/* Gender - read only */}
+          {/* Gender - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <User className="w-4 h-4" />
               <span>Pohlaví</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
-            </p>
+            {isEditing ? (
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={editData.gender === 'male' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, gender: 'male' }))}
+                  className="flex-1 h-8 px-2 text-xs"
+                >
+                  Muž
+                </Button>
+                <Button
+                  type="button"
+                  variant={editData.gender === 'female' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, gender: 'female' }))}
+                  className="flex-1 h-8 px-2 text-xs"
+                >
+                  Žena
+                </Button>
+              </div>
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
+              </p>
+            )}
           </div>
 
-          {/* Handedness - read only */}
+          {/* Handedness - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Hand className="w-4 h-4" />
               <span>Dominantní ruka</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.handedness === 'right' ? 'Pravák' :
-               client.handedness === 'left' ? 'Levák' :
-               client.handedness === 'ambidextrous' ? 'Obouruký' : '—'}
-            </p>
+            {isEditing ? (
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={editData.handedness === 'right' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, handedness: 'right' }))}
+                  className="flex-1 h-8 px-2 text-xs"
+                >
+                  Pravák
+                </Button>
+                <Button
+                  type="button"
+                  variant={editData.handedness === 'left' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, handedness: 'left' }))}
+                  className="flex-1 h-8 px-2 text-xs"
+                >
+                  Levák
+                </Button>
+              </div>
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.handedness === 'right' ? 'Pravák' :
+                 client.handedness === 'left' ? 'Levák' :
+                 client.handedness === 'ambidextrous' ? 'Obouruký' : '—'}
+              </p>
+            )}
           </div>
 
-        {/* Occupation - editable */}
+          {/* Occupation - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Briefcase className="w-4 h-4" />
               <span>Typ práce</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.occupation === 'sedentary' ? 'Sedavá' :
-               client.occupation === 'combined' ? 'Kombinovaná' :
-               client.occupation === 'mixed' ? 'Kombinovaná' :
-               client.occupation === 'active' ? 'Aktivní' :
-               client.occupation === 'physical' ? 'Fyzicky náročná' :
-               client.occupation || '—'}
-            </p>
+            {isEditing ? (
+              <Input
+                value={editData.occupation}
+                onChange={(e) => setEditData(d => ({ ...d, occupation: e.target.value }))}
+                placeholder="Programátor, učitel..."
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.occupation === 'sedentary' ? 'Sedavá' :
+                 client.occupation === 'combined' ? 'Kombinovaná' :
+                 client.occupation === 'mixed' ? 'Kombinovaná' :
+                 client.occupation === 'active' ? 'Aktivní' :
+                 client.occupation === 'physical' ? 'Fyzicky náročná' :
+                 client.occupation || '—'}
+              </p>
+            )}
           </div>
 
-          {/* Height */}
+          {/* Height - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <User className="w-4 h-4" />
               <span>Výška</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.height ? `${client.height} cm` : '—'}
-            </p>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editData.height}
+                onChange={(e) => setEditData(d => ({ ...d, height: e.target.value }))}
+                placeholder="175"
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.height ? `${client.height} cm` : '—'}
+              </p>
+            )}
           </div>
 
-          {/* Weight */}
+          {/* Weight - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <User className="w-4 h-4" />
               <span>Váha</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.weight ? `${client.weight} kg` : '—'}
-            </p>
+            {isEditing ? (
+              <Input
+                type="number"
+                step="0.1"
+                value={editData.weight}
+                onChange={(e) => setEditData(d => ({ ...d, weight: e.target.value }))}
+                placeholder="70"
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.weight ? `${client.weight} kg` : '—'}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -379,15 +482,32 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             suffix=" h"
           />
 
-          {/* Sleep Quality */}
+          {/* Sleep Quality - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Moon className="w-4 h-4" />
               <span>Kvalita spánku</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.sleep_quality ? `${client.sleep_quality}/5` : '—'}
-            </p>
+            {isEditing ? (
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    variant={editData.sleep_quality === String(level) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditData(d => ({ ...d, sleep_quality: String(level) }))}
+                    className="flex-1 h-8 px-1 text-xs"
+                  >
+                    {level}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.sleep_quality ? `${client.sleep_quality}/5` : '—'}
+              </p>
+            )}
           </div>
 
           {/* Stress */}
@@ -403,46 +523,86 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             suffix="/5"
           />
 
-          {/* Sitting hours */}
+          {/* Sitting hours - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Activity className="w-4 h-4" />
               <span>Hodiny vsedě</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.sitting_hours_daily != null ? `${client.sitting_hours_daily} h/den` : '—'}
-            </p>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editData.sitting_hours_daily}
+                onChange={(e) => setEditData(d => ({ ...d, sitting_hours_daily: e.target.value }))}
+                placeholder="8"
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.sitting_hours_daily != null ? `${client.sitting_hours_daily} h/den` : '—'}
+              </p>
+            )}
           </div>
 
-          {/* Movement Frequency */}
+          {/* Movement Frequency - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Dumbbell className="w-4 h-4" />
               <span>Frekvence pohybu</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.movement_frequency === 'none' ? 'Žádná' :
-               client.movement_frequency === '1-2' ? '1-2× týdně' :
-               client.movement_frequency === '3-4' ? '3-4× týdně' :
-               client.movement_frequency === '5+' ? '5+× týdně' :
-               client.movement_frequency || '—'}
-            </p>
+            {isEditing ? (
+              <Input
+                value={editData.movement_frequency}
+                onChange={(e) => setEditData(d => ({ ...d, movement_frequency: e.target.value }))}
+                placeholder="2-3× týdně"
+                className="h-8 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.movement_frequency === 'none' ? 'Žádná' :
+                 client.movement_frequency === '1-2' ? '1-2× týdně' :
+                 client.movement_frequency === '3-4' ? '3-4× týdně' :
+                 client.movement_frequency === '5+' ? '5+× týdně' :
+                 client.movement_frequency || '—'}
+              </p>
+            )}
           </div>
 
-          {/* Daily Activity Type */}
+          {/* Daily Activity Type - editable */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Activity className="w-4 h-4" />
               <span>Typ denní aktivity</span>
             </div>
-            <p className="font-medium text-foreground text-sm">
-              {client.daily_activity_type === 'sedentary' ? 'Sedavá' :
-               client.daily_activity_type === 'light' ? 'Lehká' :
-               client.daily_activity_type === 'moderate' ? 'Střední' :
-               client.daily_activity_type === 'active' ? 'Aktivní' :
-               client.daily_activity_type === 'very_active' ? 'Velmi aktivní' :
-               client.daily_activity_type || '—'}
-            </p>
+            {isEditing ? (
+              <div className="flex gap-1 flex-wrap">
+                {[
+                  { value: 'sedentary', label: 'Sedavá' },
+                  { value: 'moderate', label: 'Střední' },
+                  { value: 'active', label: 'Aktivní' },
+                ].map((type) => (
+                  <Button
+                    key={type.value}
+                    type="button"
+                    variant={editData.daily_activity_type === type.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditData(d => ({ ...d, daily_activity_type: type.value }))}
+                    className="flex-1 h-8 min-w-[60px] px-2 text-xs"
+                  >
+                    {type.label}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.daily_activity_type === 'sedentary' ? 'Sedavá' :
+                 client.daily_activity_type === 'light' ? 'Lehká' :
+                 client.daily_activity_type === 'moderate' ? 'Střední' :
+                 client.daily_activity_type === 'active' ? 'Aktivní' :
+                 client.daily_activity_type === 'very_active' ? 'Velmi aktivní' :
+                 client.daily_activity_type || '—'}
+              </p>
+            )}
           </div>
         </div>
 
