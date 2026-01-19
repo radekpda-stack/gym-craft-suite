@@ -25,7 +25,7 @@ import { Bike, PersonStanding, TrendingUp } from 'lucide-react';
 export default function ClientPortalProgress() {
   const { clientAccount, clientId } = useClientPortal();
   const { trackPageMount } = useClientPortalPageTracking('client_portal_progress');
-  const [period, setPeriod] = useState<Period>(90);
+  const [period, setPeriod] = useState<Period>('all');
 
   const trainerId = clientAccount?.trainer_id || null;
   const months = period === 'all' ? 24 : Math.ceil(period / 30);
