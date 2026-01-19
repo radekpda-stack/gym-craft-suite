@@ -450,10 +450,11 @@ export function ExerciseDetailOverview({
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      {pr.distanceMeters ? (
-                        <span className="font-bold">{Math.round(pr.distanceMeters * 100)} cm</span>
-                      ) : pr.timeSeconds ? (
+                      {/* For time-based exercises (cardio), prefer timeSeconds over distanceMeters */}
+                      {isTimeBased && pr.timeSeconds ? (
                         <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
+                      ) : isJumpExercise && pr.distanceMeters ? (
+                        <span className="font-bold">{Math.round(pr.distanceMeters * 100)} cm</span>
                       ) : pr.weight ? (
                         <>
                           <span className="font-bold">{pr.weight} kg</span>
@@ -461,6 +462,10 @@ export function ExerciseDetailOverview({
                             <span className="text-xs text-muted-foreground ml-1">× {pr.reps}</span>
                           )}
                         </>
+                      ) : pr.timeSeconds ? (
+                        <span className="font-bold">{formatTime(pr.timeSeconds)}</span>
+                      ) : pr.distanceMeters ? (
+                        <span className="font-bold">{Math.round(pr.distanceMeters * 100)} cm</span>
                       ) : null}
                     </div>
                     <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
