@@ -76,15 +76,40 @@ export const clientFormSchema = z.object({
     .nullable(),
   // Extended fields from diagnostics (legacy)
   occupation: z.string().optional().nullable(),
-  sitting_hours_daily: z.number().optional().nullable(),
+  sitting_hours_daily: z
+    .number()
+    .min(0, { message: "Hodiny vsedě nemohou být záporné" })
+    .max(24, { message: "Hodiny vsedě nemohou přesáhnout 24" })
+    .optional()
+    .nullable(),
   current_activities: z.array(z.string()).optional().nullable(),
-  sleep_hours: z.number().optional().nullable(),
-  stress_level: z.number().optional().nullable(),
+  sleep_hours: z
+    .number()
+    .min(0, { message: "Hodiny spánku nemohou být záporné" })
+    .max(24, { message: "Hodiny spánku nemohou přesáhnout 24" })
+    .optional()
+    .nullable(),
+  stress_level: z
+    .number()
+    .min(1, { message: "Úroveň stresu musí být alespoň 1" })
+    .max(10, { message: "Úroveň stresu může být maximálně 10" })
+    .optional()
+    .nullable(),
   dietary_restrictions: z.array(z.string()).optional().nullable(),
   supplements: z.array(z.string()).optional().nullable(),
-  // Pre-diagnostic data fields
-  height: z.number().optional().nullable(),
-  weight: z.number().optional().nullable(),
+  // Pre-diagnostic data fields with range validation
+  height: z
+    .number()
+    .min(50, { message: "Výška musí být alespoň 50 cm" })
+    .max(250, { message: "Výška může být maximálně 250 cm" })
+    .optional()
+    .nullable(),
+  weight: z
+    .number()
+    .min(20, { message: "Váha musí být alespoň 20 kg" })
+    .max(300, { message: "Váha může být maximálně 300 kg" })
+    .optional()
+    .nullable(),
   sleep_quality: z.string().optional().nullable(),
   pain_areas: z.array(z.string()).optional().nullable(),
   injury_history: z.string().optional().nullable(),

@@ -102,6 +102,8 @@ export function NoteDetailSheet({
                     <img
                       src={m.url}
                       alt={m.file_name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">

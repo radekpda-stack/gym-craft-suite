@@ -85,7 +85,9 @@ export function SubmissionMediaGallery({
             ) : (
               <img
                 src={currentUrl}
-                alt={`Media ${currentIndex + 1}`}
+                alt={`Média od ${clientName} - ${currentIndex + 1} z ${mediaUrls.length}`}
+                loading="lazy"
+                decoding="async"
                 className="max-w-full max-h-full object-contain"
               />
             )}
@@ -135,7 +137,9 @@ export function SubmissionMediaGallery({
                   ) : (
                     <img
                       src={url}
-                      alt={`Thumbnail ${index + 1}`}
+                      alt={`Náhled ${index + 1}`}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                   )}

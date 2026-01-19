@@ -165,6 +165,8 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
                 <img
                   src={photo.file_url}
                   alt={photo.description || "Foto"}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 {compareMode ? (
@@ -279,6 +281,8 @@ export function DiagnosticMedia({ clientId, diagnosticId, diagnostics = [] }: Di
               <img
                 src={selectedPhoto.file_url}
                 alt={selectedPhoto.description || "Fotografie"}
+                loading="lazy"
+                decoding="async"
                 className="w-full max-h-[60vh] object-contain rounded-lg"
               />
               <div className="text-sm space-y-1">

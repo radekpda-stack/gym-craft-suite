@@ -228,6 +228,8 @@ export function NoteEditor({
                   <img
                     src={media.url}
                     alt={media.file_name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 )}
