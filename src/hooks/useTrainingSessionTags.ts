@@ -240,7 +240,7 @@ export function useUpdateTrainingSessionTags() {
       if (deleteError) throw deleteError;
 
       // Insert new tags if any
-      if (validTagIds.length === 0) return [];
+      if (validTagIds.length === 0) return { tagIds: validTagIds, trainingSessionId };
 
       const insertData = validTagIds.map(tagId => ({
         training_session_id: trainingSessionId,
@@ -253,28 +253,61 @@ export function useUpdateTrainingSessionTags() {
         .select();
 
       if (error) throw error;
-      return data;
+      return { data, tagIds: validTagIds, trainingSessionId };
     },
-    onSuccess: (_, variables) => {
-      // Invalidate all related caches
+    // Optimistic update for instant UI response
+    onMutate: async ({ trainingSessionId, tagIds }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ 
+        queryKey: trainingTagsKeys.session(trainingSessionId) 
+      });
+
+      // Snapshot the previous value
+      const previousTags = queryClient.getQueryData<TrainingSessionTag[]>(
+        trainingTagsKeys.session(trainingSessionId)
+      );
+
+      // Optimistically update the cache with new tag IDs
+      // We create placeholder TrainingSessionTag objects
+      const optimisticTags: TrainingSessionTag[] = tagIds.map(tagId => ({
+        id: `optimistic-${tagId}`,
+        training_session_id: trainingSessionId,
+        tag_id: tagId,
+        created_at: new Date().toISOString(),
+      }));
+
+      queryClient.setQueryData<TrainingSessionTag[]>(
+        trainingTagsKeys.session(trainingSessionId),
+        optimisticTags
+      );
+
+      // Return context with the previous value for rollback
+      return { previousTags, trainingSessionId };
+    },
+    onError: (error, variables, context) => {
+      console.error("Failed to update training session tags:", error);
+      
+      // Rollback to previous value on error
+      if (context?.previousTags !== undefined) {
+        queryClient.setQueryData(
+          trainingTagsKeys.session(context.trainingSessionId),
+          context.previousTags
+        );
+      }
+      
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se aktualizovat štítky.",
+        variant: "destructive",
+      });
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success to ensure server state
       queryClient.invalidateQueries({ 
         queryKey: trainingTagsKeys.session(variables.trainingSessionId) 
       });
       queryClient.invalidateQueries({ 
         queryKey: trainingTagsKeys.all 
-      });
-      
-      toast({
-        title: "Štítky aktualizovány",
-        description: "Štítky tréninku byly úspěšně uloženy.",
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to update training session tags:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se aktualizovat štítky.",
-        variant: "destructive",
       });
     },
   });

@@ -148,7 +148,8 @@ export function TrainingModeCard({
   };
 
   // Handle tag changes (stored in training_session_tags)
-  const handleTagsChange = async (updates: {
+  // Uses fire-and-forget pattern with optimistic updates for instant UI response
+  const handleTagsChange = (updates: {
     focusTagIds?: string[];
     intensityTagId?: string | null;
     bodyPartTagIds?: string[];
@@ -164,7 +165,8 @@ export function TrainingModeCard({
       ...bodyPartIds,
     ];
     
-    await updateSessionTags.mutateAsync({
+    // Fire and forget - optimistic updates handle UI immediately
+    updateSessionTags.mutate({
       trainingSessionId: session.id,
       tagIds: allTagIds,
     });
