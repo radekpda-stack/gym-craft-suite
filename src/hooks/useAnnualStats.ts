@@ -239,8 +239,13 @@ export function useAnnualStats(
 
       // Calculate days
       const totalDays = differenceInDays(endDate, startDate) + 1;
-      const trainingDates = new Set(completedTrainings.map(t => t.date));
-      const activeDays = trainingDates.size;
+      // Normalize training dates to YYYY-MM-DD format to avoid timezone issues
+      const trainingDates = new Set(completedTrainings.map(t => {
+        const dateStr = t.date?.split('T')[0] || format(new Date(t.date), 'yyyy-MM-dd');
+        return dateStr;
+      }));
+      // Ensure activeDays never exceeds totalDays
+      const activeDays = Math.min(trainingDates.size, totalDays);
 
       // Average trainings per week
       const weeks = totalDays / 7;
@@ -416,56 +421,29 @@ export function useAnnualStats(
         .filter(t => format(new Date(t.created_at), 'yyyy-MM') === lastMonthStr)
         .reduce((sum, t) => sum + t.amount, 0);
 
-      // Actual average training price from credit_transactions (not planned price)
-      // IMPORTANT: Group by training_session_id to handle multi-participant trainings correctly
-      // (one training can have multiple transactions for different participants)
-      const trainingOnlyCharges = creditTransactions.filter(t => t.type === 'training');
-      
-      // Group transactions by training_session_id and sum amounts
-      const trainingSessionTotals = new Map<string, number>();
-      trainingOnlyCharges.forEach(t => {
-        const sessionId = t.training_session_id || t.id;
-        const current = trainingSessionTotals.get(sessionId) || 0;
-        trainingSessionTotals.set(sessionId, current + Math.abs(t.amount));
-      });
-      
-      const uniqueTrainingSessions = Array.from(trainingSessionTotals.values());
-      const avgTrainingPriceActual = uniqueTrainingSessions.length > 0
-        ? uniqueTrainingSessions.reduce((sum, amount) => sum + amount, 0) / uniqueTrainingSessions.length
+      // Actual average training price - use final_price from training_sessions directly
+      // This is more accurate than credit_transactions which may include partial payments
+      const trainingsWithPrice = completedTrainings.filter(t => t.final_price && t.final_price > 0);
+      const avgTrainingPriceActual = trainingsWithPrice.length > 0
+        ? trainingsWithPrice.reduce((sum, t) => sum + (t.final_price || 0), 0) / trainingsWithPrice.length
         : 0;
       
       // Calculate trend for average training price (this month vs last month)
-      const thisMonthTrainingCharges = trainingOnlyCharges.filter(t => 
-        format(new Date(t.created_at), 'yyyy-MM') === currentMonthStr
+      const thisMonthTrainings = completedTrainings.filter(t => 
+        format(new Date(t.date), 'yyyy-MM') === currentMonthStr
       );
-      const lastMonthTrainingCharges = trainingOnlyCharges.filter(t => 
-        format(new Date(t.created_at), 'yyyy-MM') === lastMonthStr
+      const lastMonthTrainings = completedTrainings.filter(t => 
+        format(new Date(t.date), 'yyyy-MM') === lastMonthStr
       );
       
-      // Group this month's transactions by session
-      const thisMonthSessionTotals = new Map<string, number>();
-      thisMonthTrainingCharges.forEach(t => {
-        const sessionId = t.training_session_id || t.id;
-        const current = thisMonthSessionTotals.get(sessionId) || 0;
-        thisMonthSessionTotals.set(sessionId, current + Math.abs(t.amount));
-      });
+      const thisMonthWithPrice = thisMonthTrainings.filter(t => t.final_price && t.final_price > 0);
+      const lastMonthWithPrice = lastMonthTrainings.filter(t => t.final_price && t.final_price > 0);
       
-      // Group last month's transactions by session
-      const lastMonthSessionTotals = new Map<string, number>();
-      lastMonthTrainingCharges.forEach(t => {
-        const sessionId = t.training_session_id || t.id;
-        const current = lastMonthSessionTotals.get(sessionId) || 0;
-        lastMonthSessionTotals.set(sessionId, current + Math.abs(t.amount));
-      });
-      
-      const thisMonthSessions = Array.from(thisMonthSessionTotals.values());
-      const lastMonthSessions = Array.from(lastMonthSessionTotals.values());
-      
-      const avgPriceThisMonth = thisMonthSessions.length > 0
-        ? thisMonthSessions.reduce((sum, amount) => sum + amount, 0) / thisMonthSessions.length
+      const avgPriceThisMonth = thisMonthWithPrice.length > 0
+        ? thisMonthWithPrice.reduce((sum, t) => sum + (t.final_price || 0), 0) / thisMonthWithPrice.length
         : 0;
-      const avgPriceLastMonth = lastMonthSessions.length > 0
-        ? lastMonthSessions.reduce((sum, amount) => sum + amount, 0) / lastMonthSessions.length
+      const avgPriceLastMonth = lastMonthWithPrice.length > 0
+        ? lastMonthWithPrice.reduce((sum, t) => sum + (t.final_price || 0), 0) / lastMonthWithPrice.length
         : 0;
       
       const avgTrainingPriceTrend = avgPriceLastMonth > 0
