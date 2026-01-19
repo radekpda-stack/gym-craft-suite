@@ -478,18 +478,30 @@ export function useAnnualStats(
         clients: pendingClientsWithDetails,
       };
 
-      // Top products - count both with product_id and without (fallback to description)
+      // Top products - count both with product_id and without (fallback to description/amount)
       const productCounts: Record<string, { count: number; revenue: number; name: string }> = {};
       const productMap = new Map(products.map(p => [p.id, p.name]));
       
+      // Generic descriptions that should be grouped by amount instead
+      const genericDescriptions = ['Nákup z kreditu', 'Platba prodeje', 'Prodej', 'Nákup'];
+      
       productSales.forEach(t => {
-        // Use product_id if available, otherwise group by description
-        const key = t.product_id || `desc_${t.description || 'unknown'}`;
-        const name = t.product_id 
-          ? productMap.get(t.product_id) || 'Neznámý produkt'
-          : (t.description && t.description !== 'Nákup z kreditu' && t.description !== 'Platba prodeje' 
-              ? t.description 
-              : `Produkt (${Math.abs(t.amount)} Kč)`);
+        let key: string;
+        let name: string;
+        
+        if (t.product_id) {
+          // Has product_id - use it
+          key = t.product_id;
+          name = productMap.get(t.product_id) || 'Neznámý produkt';
+        } else if (t.description && !genericDescriptions.some(g => t.description?.includes(g))) {
+          // Has specific description - use it
+          key = `desc_${t.description}`;
+          name = t.description;
+        } else {
+          // Generic description - group by amount
+          key = `amount_${Math.abs(t.amount)}`;
+          name = `Položka za ${Math.abs(t.amount)} Kč`;
+        }
         
         if (!productCounts[key]) {
           productCounts[key] = { count: 0, revenue: 0, name };
@@ -500,7 +512,7 @@ export function useAnnualStats(
 
       const topProducts = Object.entries(productCounts)
         .sort(([, a], [, b]) => b.revenue - a.revenue)
-        .slice(0, 5)
+        .slice(0, 10) // Show more products
         .map(([, data]) => ({ 
           name: data.name, 
           count: data.count, 
