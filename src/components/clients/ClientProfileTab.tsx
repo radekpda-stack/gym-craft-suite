@@ -296,65 +296,71 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Birth date - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Calendar className="w-4 h-4" />
-              <span>Datum narození</span>
+        <div className="space-y-4">
+          {/* Birth date and Gender - separate rows on mobile, side by side on larger screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Birth date - editable */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <Calendar className="w-4 h-4" />
+                <span>Datum narození</span>
+              </div>
+              {isEditing ? (
+                <Input
+                  type="date"
+                  value={editData.birth_date}
+                  onChange={(e) => setEditData(d => ({ ...d, birth_date: e.target.value }))}
+                  className="h-8 text-sm w-full"
+                />
+              ) : (
+                <p className="font-medium text-foreground text-sm">
+                  {age ? `${age} let` : '—'}
+                  {client.birth_date && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
-            {isEditing ? (
-              <Input
-                type="date"
-                value={editData.birth_date}
-                onChange={(e) => setEditData(d => ({ ...d, birth_date: e.target.value }))}
-                className="h-8 text-sm"
-              />
-            ) : (
-              <p className="font-medium text-foreground text-sm">
-                {age ? `${age} let` : '—'}
-                {client.birth_date && (
-                  <span className="text-muted-foreground text-xs ml-1">
-                    (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
-                  </span>
-                )}
-              </p>
-            )}
+
+            {/* Gender - editable */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <User className="w-4 h-4" />
+                <span>Pohlaví</span>
+              </div>
+              {isEditing ? (
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant={editData.gender === 'male' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditData(d => ({ ...d, gender: 'male' }))}
+                    className="flex-1 h-8 px-3 text-xs"
+                  >
+                    Muž
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editData.gender === 'female' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditData(d => ({ ...d, gender: 'female' }))}
+                    className="flex-1 h-8 px-3 text-xs"
+                  >
+                    Žena
+                  </Button>
+                </div>
+              ) : (
+                <p className="font-medium text-foreground text-sm">
+                  {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Gender - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <User className="w-4 h-4" />
-              <span>Pohlaví</span>
-            </div>
-            {isEditing ? (
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  variant={editData.gender === 'male' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setEditData(d => ({ ...d, gender: 'male' }))}
-                  className="flex-1 h-8 px-2 text-xs"
-                >
-                  Muž
-                </Button>
-                <Button
-                  type="button"
-                  variant={editData.gender === 'female' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setEditData(d => ({ ...d, gender: 'female' }))}
-                  className="flex-1 h-8 px-2 text-xs"
-                >
-                  Žena
-                </Button>
-              </div>
-            ) : (
-              <p className="font-medium text-foreground text-sm">
-                {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
-              </p>
-            )}
-          </div>
+          {/* Other fields in grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
 
           {/* Handedness - editable */}
           <div className="space-y-1">
@@ -459,7 +465,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
               </p>
             )}
           </div>
-        </div>
+          </div> {/* Close grid */}
+        </div> {/* Close space-y-4 */}
       </div>
       {/* Lifestyle Card - SINGLE SOURCE OF TRUTH */}
       <div className="bg-card border border-border rounded-2xl p-4">
