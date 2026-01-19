@@ -60,6 +60,14 @@ export default function Records() {
       weight: data.weight,
       body_fat_percentage: data.body_fat_percentage,
       muscle_mass: data.muscle_mass,
+      basal_metabolism: data.basal_metabolism,
+      visceral_fat: data.visceral_fat,
+      bmi: data.bmi,
+      water_percent: data.water_percent,
+      chest: data.chest,
+      waist: data.waist,
+      hips: data.hips,
+      mental_state: data.mental_state ?? undefined,
       notes: data.notes,
     });
     setMeasurementSheetOpen(false);

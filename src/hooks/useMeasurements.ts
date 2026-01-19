@@ -36,6 +36,8 @@ export interface CreateMeasurementInput {
   muscle_mass?: number;
   basal_metabolism?: number;
   visceral_fat?: number;
+  bmi?: number;
+  water_percent?: number;
   chest?: number;
   waist?: number;
   hips?: number;
@@ -92,6 +94,8 @@ export function useCreateMeasurement() {
           muscle_mass: input.muscle_mass || null,
           basal_metabolism: input.basal_metabolism || null,
           visceral_fat: input.visceral_fat || null,
+          bmi: input.bmi || null,
+          water_percent: input.water_percent || null,
           chest: input.chest || null,
           waist: input.waist || null,
           hips: input.hips || null,
@@ -105,7 +109,7 @@ export function useCreateMeasurement() {
           notes: input.notes || "",
           user_id: user.id,
           source_file_url: input.source_file_url || null,
-        })
+        } as any)
         .select()
         .single();
 

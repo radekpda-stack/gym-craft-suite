@@ -26,6 +26,9 @@ const measurementFormSchema = z.object({
   body_fat_percentage: z.number().min(0).max(100, "Max 100%").optional(),
   muscle_mass: z.number().min(0.1, "Hodnota musí být kladná").optional(),
   basal_metabolism: z.number().min(1, "Hodnota musí být kladná").optional(),
+  visceral_fat: z.number().min(1).max(30, "Hodnota 1-30").optional(),
+  bmi: z.number().min(10).max(60, "Hodnota 10-60").optional(),
+  water_percent: z.number().min(20).max(80, "Hodnota 20-80%").optional(),
   waist: z.number().min(0.1, "Hodnota musí být kladná").optional(),
   chest: z.number().min(0.1, "Hodnota musí být kladná").optional(),
   hips: z.number().min(0.1, "Hodnota musí být kladná").optional(),
@@ -64,6 +67,9 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
       body_fat_percentage: undefined,
       muscle_mass: undefined,
       basal_metabolism: undefined,
+      visceral_fat: undefined,
+      bmi: undefined,
+      water_percent: undefined,
       waist: undefined,
       chest: undefined,
       hips: undefined,
@@ -160,7 +166,7 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
                   <Input
                     type="number"
                     step="0.1"
-                    placeholder="15.5"
+                    placeholder="22.9"
                     className="bg-secondary border-border"
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -181,10 +187,31 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
                   <Input
                     type="number"
                     step="0.1"
-                    placeholder="35.0"
+                    placeholder="23.6"
                     className="bg-secondary border-border"
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="visceral_fat"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Viscerální tuk (úroveň)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="1"
+                    placeholder="5"
+                    className="bg-secondary border-border"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -201,10 +228,52 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="1800"
+                    placeholder="1296"
                     className="bg-secondary border-border"
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="water_percent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Voda (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="32.4"
+                    className="bg-secondary border-border"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="bmi"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>BMI</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="21.64"
+                    className="bg-secondary border-border"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
                   />
                 </FormControl>
                 <FormMessage />

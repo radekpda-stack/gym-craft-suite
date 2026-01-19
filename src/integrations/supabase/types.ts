@@ -5391,6 +5391,7 @@ export type Database = {
           basal_metabolism: number | null
           bicep_left: number | null
           bicep_right: number | null
+          bmi: number | null
           body_fat_percentage: number | null
           calf_left: number | null
           calf_right: number | null
@@ -5409,12 +5410,14 @@ export type Database = {
           user_id: string | null
           visceral_fat: number | null
           waist: number | null
+          water_percent: number | null
           weight: number | null
         }
         Insert: {
           basal_metabolism?: number | null
           bicep_left?: number | null
           bicep_right?: number | null
+          bmi?: number | null
           body_fat_percentage?: number | null
           calf_left?: number | null
           calf_right?: number | null
@@ -5433,12 +5436,14 @@ export type Database = {
           user_id?: string | null
           visceral_fat?: number | null
           waist?: number | null
+          water_percent?: number | null
           weight?: number | null
         }
         Update: {
           basal_metabolism?: number | null
           bicep_left?: number | null
           bicep_right?: number | null
+          bmi?: number | null
           body_fat_percentage?: number | null
           calf_left?: number | null
           calf_right?: number | null
@@ -5457,6 +5462,7 @@ export type Database = {
           user_id?: string | null
           visceral_fat?: number | null
           waist?: number | null
+          water_percent?: number | null
           weight?: number | null
         }
         Relationships: [
