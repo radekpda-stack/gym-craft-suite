@@ -427,51 +427,46 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
           {/* Header row - dynamic based on measurement type */}
           {measurementUnit === 'reps' && (
             showAssistanceBands && isBodyweightOnly ? (
-              <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
                 <span className="w-8 text-center">#</span>
                 <span>Opak.</span>
                 <span>RPE</span>
-                <span className="w-10 text-center">PR</span>
                 <span className="w-8"></span>
               </div>
             ) : (
-              <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+              <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
                 <span className="w-8 text-center">#</span>
                 <span>{showAssistanceBands ? '+Váha (kg)' : 'Váha (kg)'}</span>
                 <span>Opak.</span>
                 <span>RPE</span>
-                <span className="w-10 text-center">PR</span>
                 <span className="w-8"></span>
               </div>
             )
           )}
           {measurementUnit === 'seconds' && (
-            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
               <span className="w-8 text-center">#</span>
               <span>Váha (kg)</span>
               <span>Čas (s)</span>
               <span>RPE</span>
-              <span className="w-10 text-center">PR</span>
               <span className="w-8"></span>
             </div>
           )}
           {measurementUnit === 'meters' && (
-            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
               <span className="w-8 text-center">#</span>
               <span>Vzdál. (m)</span>
               <span>Čas (s)</span>
               <span>RPE</span>
-              <span className="w-10 text-center">PR</span>
               <span className="w-8"></span>
             </div>
           )}
           {measurementUnit === 'calories' && (
-            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 text-xs text-muted-foreground">
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
               <span className="w-8 text-center">#</span>
               <span>Kalorie</span>
               <span>Čas (s)</span>
               <span>Watt</span>
-              <span className="w-10 text-center">PR</span>
               <span className="w-8"></span>
             </div>
           )}
@@ -491,26 +486,16 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                 <div className="space-y-2 p-3 bg-secondary/50 rounded-lg border border-border">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-muted-foreground">Série {index + 1}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Checkbox
-                          checked={set.is_pr}
-                          onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
-                          className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                        />
-                        <span className="text-xs text-muted-foreground">PR</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="w-6 h-6"
-                        onClick={() => handleRemoveSet(index)}
-                        disabled={sets.length === 1}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="w-6 h-6"
+                      onClick={() => handleRemoveSet(index)}
+                      disabled={sets.length === 1}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
                   </div>
                   
                   {/* Row 1: Distance, Time, Watts */}
@@ -640,7 +625,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                 /* Standard set layout */
                 showAssistanceBands && isBodyweightOnly && measurementUnit === 'reps' ? (
                   /* Bodyweight only layout - no weight column */
-                  <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center">
+                  <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center">
                     <span className="w-8 text-center text-sm text-muted-foreground">
                       {index + 1}
                     </span>
@@ -660,14 +645,6 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                       onChange={(e) => handleSetChange(index, 'rpe', e.target.value)}
                       className="bg-secondary border-border h-9"
                     />
-                    {/* PR Checkbox */}
-                    <div className="w-10 flex justify-center">
-                      <Checkbox
-                        checked={set.is_pr}
-                        onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
-                        className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                      />
-                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -681,7 +658,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                   </div>
                 ) : (
                 /* Standard set layout with weight */
-                <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto_auto] gap-2 items-center">
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-center">
                   <span className="w-8 text-center text-sm text-muted-foreground">
                     {index + 1}
                   </span>
@@ -804,15 +781,6 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                       />
                     </>
                   )}
-                  
-                  {/* PR Checkbox */}
-                  <div className="w-10 flex justify-center">
-                    <Checkbox
-                      checked={set.is_pr}
-                      onCheckedChange={(checked) => handleSetChange(index, 'is_pr', !!checked)}
-                      className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                    />
-                  </div>
                   
                   <Button
                     type="button"
