@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { motion, useAnimation, PanInfo } from 'framer-motion';
 import { addDays, subDays, isSameDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2 } from 'lucide-react';
@@ -153,6 +154,18 @@ export default function SchedulePage() {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  // Swipe gesture handling for week navigation
+  const controls = useAnimation();
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    const swipeThreshold = 50;
+    if (info.offset.x > swipeThreshold) {
+      navigateWeek('prev');
+    } else if (info.offset.x < -swipeThreshold) {
+      navigateWeek('next');
+    }
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } });
   };
 
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
@@ -325,9 +338,24 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Week Grid */}
-      <div className="px-4 py-3 border-b border-border/30">
-        <div className="grid grid-cols-7 gap-1">
+      {/* Week Grid - with swipe gesture */}
+      <motion.div 
+        className="px-4 py-3 border-b border-border/30 overflow-hidden touch-pan-y"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        style={{ cursor: 'grab' }}
+        whileDrag={{ cursor: 'grabbing' }}
+      >
+        <motion.div 
+          className="grid grid-cols-7 gap-1"
+          key={weekStart.toISOString()}
+          initial={{ opacity: 0.8 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
           {weekDays.map((day) => {
             const { own, shared, total } = getEventsForDay(day);
             const isToday = isSameDay(day, new Date());
@@ -383,8 +411,8 @@ export default function SchedulePage() {
               </button>
             );
           })}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Day Header */}
       <div className="px-4 py-3 border-b border-border/30 bg-secondary/30">
