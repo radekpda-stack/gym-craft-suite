@@ -23,6 +23,7 @@ import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCart } from '@/hooks/useSalesCart';
+import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
 import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -54,7 +55,10 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
   // Shared cart hook
   const cart = useSalesCart({ clientId: selectedClient || null });
 
+  // Get shared budget balance for selected client
+  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
   const selectedClientData = clients.find(c => c.id === selectedClient);
+  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
   const hasCreditTopup = cart.items.some(item => item.product.kind === 'credit_topup');
 
   const addToCart = useCallback(() => {
@@ -361,9 +365,9 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
                   Nový zůstatek: {' '}
                   <span className={cn(
                     "font-medium",
-                    ((selectedClientData.credit_balance || 0) - cart.totalAmount) < 0 ? "text-destructive" : "text-foreground"
+                    (effectiveBalance - cart.totalAmount) < 0 ? "text-destructive" : "text-foreground"
                   )}>
-                    {formatCurrency((selectedClientData.credit_balance || 0) - cart.totalAmount)}
+                    {formatCurrency(effectiveBalance - cart.totalAmount)}
                   </span>
                 </p>
               )}

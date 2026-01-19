@@ -33,7 +33,7 @@ interface CartPanelProps {
   onPaymentMethodChange: (method: PaymentMethod) => void;
   saleNote: string;
   onSaleNoteChange: (note: string) => void;
-  selectedClientData?: { credit_balance?: number | null } | null;
+  clientCreditBalance?: number | null;
   hasCreditTopup: boolean;
   isProcessing: boolean;
   checkoutDisabled: boolean;
@@ -48,7 +48,7 @@ export function CartPanel({
   onPaymentMethodChange,
   saleNote,
   onSaleNoteChange,
-  selectedClientData,
+  clientCreditBalance,
   hasCreditTopup,
   isProcessing,
   checkoutDisabled,
@@ -203,17 +203,17 @@ export function CartPanel({
         totals={cart.totals}
         orderDiscount={cart.orderDiscount}
         onOrderDiscountChange={cart.setOrderDiscount}
-        clientCreditBalance={selectedClientData?.credit_balance}
+        clientCreditBalance={clientCreditBalance}
         isPayingWithCredit={paymentMethod === 'credit'}
       />
 
       {/* Credit info messages */}
-      {paymentMethod !== 'credit' && !hasCreditTopup && selectedClientData && (
+      {paymentMethod !== 'credit' && !hasCreditTopup && clientCreditBalance != null && (
         <p className="text-xs text-success">
           Kredit klienta nebude ovlivněn
         </p>
       )}
-      {hasCreditTopup && paymentMethod !== 'credit' && selectedClientData && (
+      {hasCreditTopup && paymentMethod !== 'credit' && clientCreditBalance != null && (
         <p className="text-xs text-warning">
           Klientovi bude připsán kredit z dobíjecích položek
         </p>
