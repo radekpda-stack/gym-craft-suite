@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, subMonths, subDays, subWeeks } from 'date-fns';
+import { startOfMonth, subMonths, subDays, startOfWeek, subWeeks, format } from 'date-fns';
 
 export interface BusinessHealthData {
   score: number; // 0-100
@@ -22,7 +22,19 @@ export interface BusinessHealthData {
   };
 }
 
+interface HealthSnapshot {
+  score: number;
+  week_start: string;
+}
+
+// Helper to get week key
+function getWeekKey(date: Date): string {
+  return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+}
+
 export function useBusinessHealthScore() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ['business-health-score'],
     queryFn: async (): Promise<BusinessHealthData> => {
@@ -33,14 +45,17 @@ export function useBusinessHealthScore() {
       const thisMonthStart = startOfMonth(now);
       const lastMonthStart = startOfMonth(subMonths(now, 1));
       const sixtyDaysAgo = subDays(now, 60);
+      const thisWeekStart = getWeekKey(now);
+      const lastWeekStart = getWeekKey(subWeeks(now, 1));
 
-      // Parallel queries
+      // Parallel queries - include health snapshots for week comparison
       const [
         clientsResult,
         thisMonthTrainingsResult,
         lastMonthTrainingsResult,
         recentTrainingsResult,
         unpaidResult,
+        lastWeekSnapshotResult,
       ] = await Promise.all([
         supabase.from('clients').select('id, is_archived, credit_balance').eq('user_id', user.id),
         supabase
@@ -68,6 +83,14 @@ export function useBusinessHealthScore() {
           .eq('user_id', user.id)
           .eq('status', 'completed')
           .or('payment_status.is.null,payment_status.eq.pending'),
+        // Get last week's snapshot for week-over-week comparison
+        supabase
+          .from('analytics_snapshots')
+          .select('metrics')
+          .eq('user_id', user.id)
+          .eq('scope', 'business_health')
+          .eq('period_start', lastWeekStart)
+          .maybeSingle(),
       ]);
 
       const clients = clientsResult.data || [];
@@ -165,6 +188,29 @@ export function useBusinessHealthScore() {
       else if (dataPoints >= 15) confidence = 70;
       else if (dataPoints >= 5) confidence = 55;
 
+      // Week-over-week comparison
+      let weekChange = 0;
+      const lastWeekMetrics = lastWeekSnapshotResult.data?.metrics as unknown as HealthSnapshot | null;
+      if (lastWeekMetrics?.score !== undefined) {
+        weekChange = totalScore - lastWeekMetrics.score;
+      }
+
+      // Store current week's snapshot (upsert)
+      supabase
+        .from('analytics_snapshots')
+        .upsert([{
+          user_id: user.id,
+          scope: 'business_health',
+          period_start: thisWeekStart,
+          period_end: thisWeekStart,
+          metrics: { score: totalScore, week_start: thisWeekStart },
+        }], {
+          onConflict: 'user_id,scope,period_start',
+        })
+        .then(() => {
+          // Silent upsert for background storage
+        });
+
       return {
         score: totalScore,
         components: {
@@ -195,7 +241,7 @@ export function useBusinessHealthScore() {
         },
         status,
         insights,
-        weekChange: 0, // TODO: Implement week-over-week comparison with stored data
+        weekChange,
         confidence,
         creditInfo: {
           clientsWithCredit: clientsWithPositiveCredit,
