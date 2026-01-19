@@ -98,7 +98,7 @@ export function FinanceChartsSection() {
               <ToggleGroupItem
                 key={opt.value}
                 value={opt.value}
-                className="text-xs px-3 py-1 data-[state=on]:bg-background"
+                className="text-xs px-3 py-1 data-[state=on]:bg-background data-[state=on]:text-foreground"
               >
                 {opt.label}
               </ToggleGroupItem>
