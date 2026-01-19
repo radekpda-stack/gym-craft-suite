@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Search, Dumbbell, Trophy, Heart, User } from 'lucide-react';
+import { Plus, X, Search, Dumbbell, Trophy, Heart, User, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useExercises, Exercise } from '@/hooks/useExercises';
+import { usePopularExercises } from '@/hooks/usePopularExercises';
 import { cn } from '@/lib/utils';
 import { parseTimeToMs, formatTimeMs, parsePaceToMs, formatPaceMs, msToSeconds } from '@/lib/timeUtils';
 import { AssistanceBandSelector, isPullUpExercise, type BandType } from '@/components/exercises/AssistanceBandSelector';
@@ -99,6 +100,7 @@ function isRowerOrSkierg(exercise: Exercise | null): boolean {
 
 export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerciseFormProps) {
   const { exercises, isLoading: exercisesLoading } = useExercises();
+  const { data: popularExercises = [] } = usePopularExercises(15);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
@@ -126,8 +128,24 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
   const normalizeText = (text: string) => 
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+  // Get popular exercises as full Exercise objects
+  const popularExercisesFull = useMemo(() => {
+    return popularExercises
+      .map(pe => exercises.find(e => e.id === pe.id))
+      .filter((e): e is Exercise => e !== undefined);
+  }, [exercises, popularExercises]);
+
   const filteredExercises = useMemo(() => {
-    if (!searchQuery) return exercises.slice(0, 20);
+    // If no search query, show popular exercises first
+    if (!searchQuery) {
+      // Start with popular exercises, then add remaining exercises up to limit
+      const popularIds = new Set(popularExercisesFull.map(e => e.id));
+      const remainingExercises = exercises
+        .filter(e => !popularIds.has(e.id))
+        .slice(0, Math.max(0, 20 - popularExercisesFull.length));
+      return [...popularExercisesFull, ...remainingExercises];
+    }
+    
     const query = normalizeText(searchQuery);
     return exercises.filter(e => {
       // Search in name, name_cs (Czech name), and category
@@ -136,7 +154,7 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
       const categoryMatch = normalizeText(e.category).includes(query);
       return nameMatch || nameCsMatch || categoryMatch;
     }).slice(0, 30); // Increased limit to show more results
-  }, [exercises, searchQuery]);
+  }, [exercises, searchQuery, popularExercisesFull]);
 
   const handleSelectExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
@@ -298,8 +316,38 @@ export function WorkoutExerciseForm({ onAdd, onCancel, isLoading }: WorkoutExerc
                     </p>
                   </div>
                 </CommandEmpty>
-                <CommandGroup>
-                  {filteredExercises.map((exercise) => {
+                {/* Popular exercises section when no search */}
+                {!searchQuery && popularExercisesFull.length > 0 && (
+                  <CommandGroup heading={
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <TrendingUp className="w-3 h-3" />
+                      Nejčastější cviky
+                    </span>
+                  }>
+                    {popularExercisesFull.map((exercise) => {
+                      const displayName = exercise.name_cs || exercise.name;
+                      return (
+                        <CommandItem
+                          key={`popular-${exercise.id}`}
+                          value={`${exercise.name} ${exercise.name_cs || ''}`}
+                          onSelect={() => handleSelectExercise(exercise)}
+                        >
+                          <div className="flex flex-col">
+                            <span>{displayName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {exercise.category}
+                              {exercise.muscle_groups?.length > 0 && ` • ${exercise.muscle_groups.join(', ')}`}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+
+                {/* Search results or remaining exercises */}
+                <CommandGroup heading={searchQuery ? "Výsledky hledání" : "Další cviky"}>
+                  {(searchQuery ? filteredExercises : filteredExercises.filter(e => !popularExercisesFull.some(pe => pe.id === e.id))).map((exercise) => {
                     const displayName = exercise.name_cs || exercise.name;
                     return (
                       <CommandItem
