@@ -229,7 +229,15 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const handleFeedbackNotificationClick = async (notification: typeof notifications[0]) => {
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     
+    console.log('[NotificationCenter] Feedback notification clicked:', { 
+      notificationId: notification.id, 
+      entityType: notification.entity_type, 
+      entityId: notification.entity_id,
+      trainingId 
+    });
+    
     if (!trainingId) {
+      console.log('[NotificationCenter] No trainingId, navigating to feedback-overview');
       setSheetOpen(false);
       navigate('/feedback-overview');
       return;
@@ -238,13 +246,19 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     setLoadingFeedback(true);
 
     try {
-      const { data: feedback, error: feedbackError } = await supabase
+      // Get the latest feedback for this training (there may be multiple)
+      const { data: feedbacks, error: feedbackError } = await supabase
         .from('training_feedback')
         .select('*')
         .eq('training_session_id', trainingId)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      console.log('[NotificationCenter] Feedback query result:', { feedbacks, feedbackError });
 
       if (feedbackError) throw feedbackError;
+
+      const feedback = feedbacks && feedbacks.length > 0 ? feedbacks[0] : null;
 
       if (feedback) {
         const { data: training } = await supabase
@@ -263,15 +277,23 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           clientName = client?.name || clientName;
         }
 
+        console.log('[NotificationCenter] Opening feedback dialog for:', { 
+          feedbackId: feedback.id, 
+          clientName, 
+          trainingDate: training?.date 
+        });
+        
         setSelectedFeedback(feedback as TrainingFeedback);
         setFeedbackMeta({ clientName, trainingDate: training?.date });
         setFeedbackDialogOpen(true);
+        setSheetOpen(false);
       } else {
+        console.log('[NotificationCenter] No feedback found, navigating to training page');
         setSheetOpen(false);
         navigate(`/trainings/${trainingId}`);
       }
     } catch (error) {
-      console.error('Error loading feedback:', error);
+      console.error('[NotificationCenter] Error loading feedback:', error);
       setSheetOpen(false);
       navigate(`/trainings/${trainingId}`);
     } finally {
