@@ -5,18 +5,15 @@ import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
 import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
-import { FinanceModeToggle, FinanceMode } from './FinanceModeToggle';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
 import { FinanceChartsSection } from './FinanceChartsSection';
 import { LifetimeFinanceStatsCard } from './LifetimeFinanceStatsCard';
 import { formatCurrency } from '@/lib/formatters';
-import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/charts';
 import { 
   ShoppingBag,
   Loader2,
-  Info,
 } from 'lucide-react';
 import { QuickFinancialReportButton } from '@/components/finance/QuickFinancialReportButton';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,10 +25,7 @@ import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 import { CancellationDetailModal } from './modals/CancellationDetailModal';
 import { MonthlyIncomeDetailModal } from './modals/MonthlyIncomeDetailModal';
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 
@@ -51,7 +45,6 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
   const monthlyGoal = useMonthlyIncomeGoal();
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
-  const [financeMode, setFinanceMode] = useState<FinanceMode>('received');
 
   const isLoading = statsLoading || analyticsLoading;
 
@@ -102,28 +95,8 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
-        {/* Header with mode toggle */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <FinanceModeToggle value={financeMode} onChange={setFinanceMode} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs">
-                <p className="font-medium mb-1">Dva klíčové údaje</p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Přijatý kredit:</strong> Kolik peněz klienti vložili (dobití kreditu).
-                  <br />
-                  <strong>Odtrénováno:</strong> Kolik jste vydělali za služby (tréninky + produkty).
-                  <br /><br />
-                  <strong>Průměr za trénink:</strong> Skutečná průměrná cena z credit_transactions.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+        {/* Header */}
+        <div className="flex items-center justify-end">
           <QuickFinancialReportButton variant="outline" />
         </div>
 
@@ -132,17 +105,17 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           <InsightsBar insights={insights} />
         )}
 
-        {/* Hero KPI Cards - changes based on mode */}
+        {/* Hero KPI Cards - always use 'received' mode */}
         <FinanceHeroKPI
-          mode={financeMode}
+          mode="received"
           stats={stats}
           monthlyGoal={monthlyGoal}
           vsLastMonth={analytics?.vsLastMonth}
           onCardClick={handleCardClick}
         />
 
-        {/* Show products card if pending payments shown in KPI (only in received mode) */}
-        {financeMode === 'received' && hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
+        {/* Show products card if pending payments shown in KPI */}
+        {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <MetricCard
               title="Produkty"
