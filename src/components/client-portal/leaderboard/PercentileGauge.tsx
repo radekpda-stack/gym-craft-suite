@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, Sparkles, Target } from 'lucide-react';
+import { Trophy, TrendingUp, Sparkles, Target, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PercentileGaugeProps {
@@ -8,7 +8,7 @@ interface PercentileGaugeProps {
 }
 
 const ZONES = [
-  { min: 0, max: 25, label: 'Prostor pro růst', color: 'from-destructive to-destructive/80' },
+  { min: 0, max: 25, label: 'Začínáš', color: 'from-sky-500 to-sky-400' },
   { min: 25, max: 50, label: 'Průměr', color: 'from-warning to-warning/80' },
   { min: 50, max: 75, label: 'Nad průměr', color: 'from-success to-success/80' },
   { min: 75, max: 100, label: 'Špička', color: 'from-primary to-primary/80' },
@@ -31,7 +31,7 @@ function getPercentileMessage(percentile: number): { message: string; icon: Reac
   if (percentile >= 25) {
     return { message: 'Solidní základ, pokračuj!', icon: <Target className="w-4 h-4" /> };
   }
-  return { message: 'Máš prostor pro růst! 💪', icon: <Target className="w-4 h-4" /> };
+  return { message: 'Každý začátek je důležitý! Sleduj svůj pokrok 🚀', icon: <Rocket className="w-4 h-4" /> };
 }
 
 export function PercentileGauge({ percentile, className }: PercentileGaugeProps) {
@@ -57,7 +57,7 @@ export function PercentileGauge({ percentile, className }: PercentileGaugeProps)
             percentile >= 75 ? "text-primary" :
             percentile >= 50 ? "text-success" :
             percentile >= 25 ? "text-warning" :
-            "text-destructive"
+            "text-sky-500"
           )}>
             {icon}
             {zone.label}
@@ -132,7 +132,7 @@ export function PercentileGauge({ percentile, className }: PercentileGaugeProps)
           percentile >= 75 ? "bg-primary/10 text-primary" :
           percentile >= 50 ? "bg-success/10 text-success" :
           percentile >= 25 ? "bg-warning/10 text-warning" :
-          "bg-destructive/10 text-destructive"
+          "bg-sky-500/10 text-sky-500"
         )}
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}

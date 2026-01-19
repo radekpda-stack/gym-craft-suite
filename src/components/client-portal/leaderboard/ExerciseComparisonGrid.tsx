@@ -68,12 +68,12 @@ function getPercentileStyle(percentile: number | null) {
     iconColor: 'text-muted-foreground'
   };
   return { 
-    label: 'Prostor pro růst', 
-    bgColor: 'bg-gradient-to-br from-destructive/15 to-destructive/10', 
-    textColor: 'text-destructive',
-    borderColor: 'border-destructive/30',
-    gradient: 'from-destructive to-destructive',
-    iconColor: 'text-destructive'
+    label: 'Začínáš', 
+    bgColor: 'bg-gradient-to-br from-sky-500/15 to-sky-500/10', 
+    textColor: 'text-sky-500',
+    borderColor: 'border-sky-500/30',
+    gradient: 'from-sky-500 to-sky-500',
+    iconColor: 'text-sky-500'
   };
 }
 
@@ -228,7 +228,6 @@ function ExerciseCard({
 
   return (
     <motion.div
-      layout
       className={cn(
         "rounded-xl border overflow-hidden transition-all cursor-pointer group",
         style.borderColor,
@@ -335,10 +334,19 @@ function ExerciseCard({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+            animate={{ 
+              height: 'auto', 
+              opacity: 1,
+            }}
+            exit={{ 
+              height: 0, 
+              opacity: 0,
+            }}
+            transition={{ 
+              height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+              opacity: { duration: 0.2, delay: 0.05 }
+            }}
+            className="overflow-hidden will-change-[height,opacity]"
           >
             <div className="p-4 border-t border-border/50 space-y-4 bg-card/50">
               {/* Percentile Gauge - Full version when expanded */}
