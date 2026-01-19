@@ -112,16 +112,10 @@ export function ClientsInDebtCard() {
         }
       });
 
-      // Build map of client -> base credit balance (for clients with credit_history_start_at)
-      const clientBaseCreditMap = new Map<string, number>();
-      (clientsResult.data || []).forEach((c: any) => {
-        const historyStart = clientHistoryStartMap.get(c.id);
-        if (historyStart) {
-          // For clients with credit_history_start_at, we need to use their stored credit_balance
-          // as the base and add only transactions after credit_history_start_at
-          clientBaseCreditMap.set(c.id, c.credit_balance || 0);
-        }
-      });
+      // NOTE: Some legacy clients can have stored credit_balance out of sync with ledger.
+      // We keep credit_history_start_at filtering for ledger, but when history_start exists
+      // we take the safer (higher) value between stored balance and ledger balance.
+      // This prevents false negatives like stored=-800 while ledger=0 (should not show as debt).
 
       // Filter to clients with actual debt (excluding cash_only and budget group members)
       return (clientsResult.data || [])
@@ -134,15 +128,16 @@ export function ClientsInDebtCard() {
           
           return true;
         })
-        .map(c => {
-          // For clients with credit_history_start_at, use their stored credit_balance
-          // For others, use the ledger-calculated balance
+        .map((c: any) => {
           const hasHistoryStart = clientHistoryStartMap.has(c.id);
-          const effectiveBalance = hasHistoryStart
-            ? (clientBaseCreditMap.get(c.id) || 0)  // Use stored credit_balance
-            : (clientLedgerBalance.get(c.id) || 0); // Use ledger sum
+          const ledgerBalance = clientLedgerBalance.get(c.id) || 0;
+          const storedBalance = c.credit_balance || 0;
+
+          // For legacy clients with history start, stored balance can be out-of-sync.
+          // Use the safer (higher) value to avoid false debt flags.
+          const effectiveBalance = hasHistoryStart ? Math.max(storedBalance, ledgerBalance) : ledgerBalance;
           const hasDebt = effectiveBalance < 0;
-          
+
           return {
             id: c.id,
             name: c.name,
