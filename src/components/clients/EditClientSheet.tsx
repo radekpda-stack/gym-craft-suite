@@ -5,7 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ClientForm } from "./ClientForm";
+import { ClientFormStepper } from "./ClientFormStepper";
 import { ClientFormValues } from "@/lib/validations/client";
 import { Client } from "@/hooks/useClients";
 
@@ -36,7 +36,7 @@ export function EditClientSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="mt-6">
-          <ClientForm 
+          <ClientFormStepper 
             onSubmit={onSubmit} 
             isLoading={isLoading} 
             defaultValues={client}

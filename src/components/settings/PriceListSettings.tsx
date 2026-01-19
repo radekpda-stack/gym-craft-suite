@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { usePriceLists, useUpcomingPriceList, useCreatePriceList, useDeletePriceList } from '@/hooks/usePriceLists';
 import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
+import { usePriceTransition } from '@/hooks/usePriceTransition';
 import { toast } from 'sonner';
 
 interface PriceInputs {
@@ -37,6 +38,7 @@ export function PriceListSettings() {
   const updateSetting = useUpdateSetting();
   const createPriceList = useCreatePriceList();
   const deletePriceList = useDeletePriceList();
+  const { clientsOnLegacyPricing } = usePriceTransition();
 
   // Current prices from app_settings
   const currentPrices: PriceInputs = settings?.training_prices || {
@@ -75,8 +77,8 @@ export function PriceListSettings() {
   const hasUpcoming = !!upcomingPriceList;
   const daysUntil = upcomingPriceList?.days_until || 0;
 
-  // Get grandfathered clients count (from existing data)
-  const grandfatheredClientsCount = 0; // TODO: fetch from usePriceTransition
+  // Get grandfathered clients count from usePriceTransition
+  const grandfatheredClientsCount = clientsOnLegacyPricing?.length || 0;
 
   const handleCreatePriceList = async () => {
     if (!effectiveDate) {
