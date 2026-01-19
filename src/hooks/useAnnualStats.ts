@@ -155,7 +155,7 @@ export function useAnnualStats(
         // Credit transactions (for income)
         supabase
           .from('credit_transactions')
-          .select('id, amount, type, client_id, product_id, created_at, training_session_id')
+          .select('id, amount, type, client_id, product_id, created_at, training_session_id, description')
           .eq('user_id', user.id)
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString()),
@@ -478,24 +478,31 @@ export function useAnnualStats(
         clients: pendingClientsWithDetails,
       };
 
-      // Top products
-      const productCounts: Record<string, { count: number; revenue: number }> = {};
+      // Top products - count both with product_id and without (fallback to description)
+      const productCounts: Record<string, { count: number; revenue: number; name: string }> = {};
+      const productMap = new Map(products.map(p => [p.id, p.name]));
+      
       productSales.forEach(t => {
-        if (t.product_id) {
-          if (!productCounts[t.product_id]) {
-            productCounts[t.product_id] = { count: 0, revenue: 0 };
-          }
-          productCounts[t.product_id].count += 1;
-          productCounts[t.product_id].revenue += Math.abs(t.amount);
+        // Use product_id if available, otherwise group by description
+        const key = t.product_id || `desc_${t.description || 'unknown'}`;
+        const name = t.product_id 
+          ? productMap.get(t.product_id) || 'Neznámý produkt'
+          : (t.description && t.description !== 'Nákup z kreditu' && t.description !== 'Platba prodeje' 
+              ? t.description 
+              : `Produkt (${Math.abs(t.amount)} Kč)`);
+        
+        if (!productCounts[key]) {
+          productCounts[key] = { count: 0, revenue: 0, name };
         }
+        productCounts[key].count += 1;
+        productCounts[key].revenue += Math.abs(t.amount);
       });
 
-      const productMap = new Map(products.map(p => [p.id, p.name]));
       const topProducts = Object.entries(productCounts)
         .sort(([, a], [, b]) => b.revenue - a.revenue)
         .slice(0, 5)
-        .map(([id, data]) => ({ 
-          name: productMap.get(id) || 'Neznámý', 
+        .map(([, data]) => ({ 
+          name: data.name, 
           count: data.count, 
           revenue: data.revenue 
         }));
