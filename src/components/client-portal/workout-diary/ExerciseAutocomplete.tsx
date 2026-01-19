@@ -53,7 +53,7 @@ export function ExerciseAutocomplete({ value, onChange, placeholder = "Název cv
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    onChange(newValue); // Allow free text
+    // Only show dropdown, don't call onChange - user must explicitly select from dropdown
     setIsOpen(newValue.length >= 2);
   };
 
@@ -62,6 +62,8 @@ export function ExerciseAutocomplete({ value, onChange, placeholder = "Název cv
     setInputValue(displayName);
     onChange(displayName, exercise.id);
     setIsOpen(false);
+    // Clear input after selection for next search
+    setInputValue('');
   };
 
   return (

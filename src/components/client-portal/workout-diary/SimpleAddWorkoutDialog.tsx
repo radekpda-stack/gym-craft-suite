@@ -309,33 +309,6 @@ export function SimpleAddWorkoutDialog({
                 </div>
               </div>
 
-              {/* Feeling */}
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-center">Jak se cítíš po tréninku?</p>
-                <p className="text-xs text-muted-foreground text-center -mt-2">Čím víc vpravo, tím lépe</p>
-                <div className="flex justify-center gap-2">
-                  {FEELING_EMOJIS.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => setFeeling(f.value)}
-                      title={f.label}
-                      className={cn(
-                        "w-14 h-14 text-3xl rounded-xl transition-all",
-                        "hover:scale-110 active:scale-95",
-                        feeling === f.value
-                          ? "bg-primary/20 ring-2 ring-primary/50 scale-110"
-                          : "bg-muted/50 opacity-60 hover:opacity-100"
-                      )}
-                    >
-                      {f.emoji}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground px-2">
-                  <span>Hrozně</span>
-                  <span>Skvěle!</span>
-                </div>
-              </div>
 
               {/* Cardio metrics - always visible */}
               {isCardioType && (
