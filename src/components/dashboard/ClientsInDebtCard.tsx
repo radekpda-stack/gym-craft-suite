@@ -57,10 +57,10 @@ export function ClientsInDebtCard() {
       if (!user) return [];
 
       // Get all data in parallel
-      const [clientsResult, budgetMembersResult, transactionsResult, accountsResult] = await Promise.all([
+      const [clientsResult, budgetMembersResult, transactionsResult] = await Promise.all([
         supabase
           .from('clients')
-          .select('id, name, payment_mode, credit_balance')
+          .select('id, name, payment_mode')
           .eq('user_id', user.id)
           .eq('is_archived', false),
         supabase
@@ -69,22 +69,10 @@ export function ClientsInDebtCard() {
           .eq('user_id', user.id),
         supabase
           .from('credit_transactions')
-          .select('client_id, group_id, amount, created_at'),
-        supabase
-          .from('client_accounts')
-          .select('client_id, credit_history_start_at')
-          .eq('user_id', user.id),
+          .select('client_id, group_id, amount'),
       ]);
 
       if (clientsResult.error) throw clientsResult.error;
-
-      // Build map of client -> credit_history_start_at
-      const clientHistoryStartMap = new Map<string, string>();
-      (accountsResult.data || []).forEach((a: any) => {
-        if (a.credit_history_start_at) {
-          clientHistoryStartMap.set(a.client_id, a.credit_history_start_at);
-        }
-      });
 
       // Build map of client -> group info
       const clientGroupMap = new Map<string, { groupId: string; sharedBalance: number }>();
@@ -98,24 +86,13 @@ export function ClientsInDebtCard() {
       });
 
       // Calculate ledger balance per client (only for clients NOT in groups)
-      // Respecting credit_history_start_at - only count transactions after that date
+      // Use ALL transactions - the ledger is the source of truth
       const clientLedgerBalance = new Map<string, number>();
       (transactionsResult.data || []).forEach((t: any) => {
         if (!t.group_id && t.client_id) {
-          // Check if client has credit_history_start_at and if transaction is before it
-          const historyStart = clientHistoryStartMap.get(t.client_id);
-          if (historyStart && t.created_at && new Date(t.created_at) < new Date(historyStart)) {
-            // Skip transactions before credit_history_start_at
-            return;
-          }
           clientLedgerBalance.set(t.client_id, (clientLedgerBalance.get(t.client_id) || 0) + (t.amount || 0));
         }
       });
-
-      // NOTE: Some legacy clients can have stored credit_balance out of sync with ledger.
-      // We keep credit_history_start_at filtering for ledger, but when history_start exists
-      // we take the safer (higher) value between stored balance and ledger balance.
-      // This prevents false negatives like stored=-800 while ledger=0 (should not show as debt).
 
       // Filter to clients with actual debt (excluding cash_only and budget group members)
       return (clientsResult.data || [])
@@ -129,19 +106,14 @@ export function ClientsInDebtCard() {
           return true;
         })
         .map((c: any) => {
-          const hasHistoryStart = clientHistoryStartMap.has(c.id);
+          // Use ledger balance as the source of truth
           const ledgerBalance = clientLedgerBalance.get(c.id) || 0;
-          const storedBalance = c.credit_balance || 0;
-
-          // For legacy clients with history start, stored balance can be out-of-sync.
-          // Use the safer (higher) value to avoid false debt flags.
-          const effectiveBalance = hasHistoryStart ? Math.max(storedBalance, ledgerBalance) : ledgerBalance;
-          const hasDebt = effectiveBalance < 0;
+          const hasDebt = ledgerBalance < 0;
 
           return {
             id: c.id,
             name: c.name,
-            debt: hasDebt ? Math.abs(effectiveBalance) : 0,
+            debt: hasDebt ? Math.abs(ledgerBalance) : 0,
             unpaidCount: 0,
             hasNegativeCredit: hasDebt,
           };
