@@ -614,10 +614,18 @@ function EventRow({
             </Badge>
           )}
           {event.additional_clients && event.additional_clients.length > 0 && (
-            <Badge variant="outline" className="text-blue-600 shrink-0">
-              <Users className="h-3 w-3 mr-1" />
-              +{event.additional_clients.length}
-            </Badge>
+            <div className="flex gap-1 flex-wrap shrink-0">
+              {event.additional_clients.map((client, idx) => (
+                <Badge 
+                  key={client.id} 
+                  variant="outline" 
+                  className="text-blue-600"
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  {client.name}
+                </Badge>
+              ))}
+            </div>
           )}
           {showDuplicateWarning && event.potential_duplicate && (
             <Badge variant="outline" className="text-orange-600 shrink-0">

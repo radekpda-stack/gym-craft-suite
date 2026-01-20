@@ -326,13 +326,83 @@ function findClientMatches(
   return results.sort((a, b) => b.score - a.score);
 }
 
+// Parse multiple client names from event summary using separators (& , + /)
+function parseMultipleClients(summary: string): string[] {
+  // Remove #tr tag and time patterns
+  let cleaned = summary
+    .replace(/#tr/gi, '')
+    .replace(/\d{1,2}[.:]\d{2}/g, '')
+    .trim();
+  
+  // Check for common separators that indicate multiple clients
+  const separators = /\s*[&,+\/]\s*/;
+  if (separators.test(cleaned)) {
+    return cleaned
+      .split(separators)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+  
+  // Single client
+  return [cleaned];
+}
+
+// Find the best match for a single client name
+function findBestMatchForName(
+  name: string,
+  clients: Array<{ id: string; name: string }>,
+  aliasMap: Map<string, string[]>
+): ClientMatchResult | null {
+  let bestMatch: ClientMatchResult | null = null;
+  
+  for (const client of clients) {
+    const aliases = aliasMap.get(client.id) || [];
+    const match = scoreClientMatch(name, client, aliases);
+    if (match && (!bestMatch || match.score > bestMatch.score)) {
+      bestMatch = match;
+    }
+  }
+  
+  return bestMatch;
+}
+
 // Find multiple high-confidence matches (for group trainings)
+// Now explicitly parses names from summary using separators
 function findMultipleClientMatches(
   summary: string,
   clients: Array<{ id: string; name: string }>,
   aliasMap: Map<string, string[]>,
-  minScore: number = 70
+  minScore: number = 75
 ): { primary: ClientMatchResult | null; additional: ClientMatchResult[] } {
+  const parsedNames = parseMultipleClients(summary);
+  
+  // If we found multiple names via separators, match each individually
+  if (parsedNames.length > 1) {
+    const matches: ClientMatchResult[] = [];
+    const matchedClientIds = new Set<string>();
+    
+    for (const name of parsedNames) {
+      const match = findBestMatchForName(name, clients, aliasMap);
+      if (match && match.score >= minScore && !matchedClientIds.has(match.clientId)) {
+        matches.push(match);
+        matchedClientIds.add(match.clientId);
+      }
+    }
+    
+    if (matches.length === 0) {
+      return { primary: null, additional: [] };
+    }
+    
+    // Sort by score, take the best one as primary
+    matches.sort((a, b) => b.score - a.score);
+    
+    return {
+      primary: matches[0],
+      additional: matches.slice(1)
+    };
+  }
+  
+  // Single client parsing - use original matching logic
   const allMatches = findClientMatches(summary, clients, aliasMap);
   const highConfidenceMatches = allMatches.filter(m => m.score >= minScore);
   
@@ -340,9 +410,10 @@ function findMultipleClientMatches(
     return { primary: null, additional: [] };
   }
   
+  // Only take the first match as primary, don't auto-add additional clients
   return {
     primary: highConfidenceMatches[0],
-    additional: highConfidenceMatches.slice(1)
+    additional: []
   };
 }
 
