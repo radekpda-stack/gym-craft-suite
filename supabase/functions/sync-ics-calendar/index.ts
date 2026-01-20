@@ -774,9 +774,18 @@ serve(async (req) => {
       const clientNameParts = normalizeText(client.name).split(/\s+/);
       const learnedAliases: string[] = [];
 
+      // Tags and markers that should NEVER be learned as aliases
+      const forbiddenAliases = ['#tr', 'tr', '#trenink', 'trenink', '#training', 'training', 
+                                '#cviceni', 'cviceni', '#workout', 'workout', 'platit', 'zaplaceno'];
+      
       for (const token of [...new Set(tokens)]) {
         if (clientNameParts.includes(token)) continue;
         if (token.length < 2) continue;
+        
+        // Skip forbidden tags/markers
+        if (forbiddenAliases.includes(token.toLowerCase())) continue;
+        // Skip tokens starting with # (hashtags)
+        if (token.startsWith('#')) continue;
         
         let isKnownNickname = false;
         for (const nicknames of Object.values(CZECH_NICKNAMES)) {
