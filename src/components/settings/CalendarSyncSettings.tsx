@@ -522,7 +522,9 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
       setImportFilterTag('');
       setTestResult(null);
     } catch (error) {
-      toast.error('Nepodařilo se přidat kalendář');
+      console.error('[CalendarSync] Failed to create feed:', error);
+      const message = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Nepodařilo se přidat kalendář: ${message}`);
     }
   };
 
