@@ -111,14 +111,31 @@ export function useImportStats(feedId: string | null) {
         return { total: 0, readyToImport: 0, needsAssignment: 0, skipped: 0, processed: 0, potentialDuplicates: 0 };
       }
 
+      // First, get the feed's import_filter_tag for consistent filtering
+      const { data: feedData } = await supabase
+        .from('calendar_ics_feeds')
+        .select('import_filter_tag')
+        .eq('id', feedId)
+        .single();
+      
+      const filterTag = feedData?.import_filter_tag;
+
       const { data, error } = await supabase
         .from('calendar_ics_events')
-        .select('id, matched_client_id, is_processed, skip_import, import_approved, potential_duplicate_session_id')
+        .select('id, summary, matched_client_id, is_processed, skip_import, import_approved, potential_duplicate_session_id')
         .eq('feed_id', feedId);
 
       if (error) throw error;
 
-      const events = data || [];
+      // Apply filter tag to stats calculation (same logic as in useImportableEvents)
+      let events = data || [];
+      if (filterTag) {
+        const tagLower = filterTag.toLowerCase();
+        events = events.filter(e => 
+          (e.summary || '').toLowerCase().includes(tagLower)
+        );
+      }
+
       const unprocessed = events.filter(e => !e.is_processed);
       
       return {
@@ -131,6 +148,61 @@ export function useImportStats(feedId: string | null) {
       };
     },
     enabled: !!feedId,
+  });
+}
+
+export function useDeleteUnfilteredEvents() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedId: string) => {
+      // Get the feed's filter tag
+      const { data: feedData, error: feedError } = await supabase
+        .from('calendar_ics_feeds')
+        .select('import_filter_tag')
+        .eq('id', feedId)
+        .single();
+
+      if (feedError) throw feedError;
+      
+      const filterTag = feedData?.import_filter_tag;
+      if (!filterTag) {
+        throw new Error('Feed nemá nastavený filtrační tag');
+      }
+
+      // Get all unprocessed events that don't match the filter tag
+      const { data: eventsToDelete, error: fetchError } = await supabase
+        .from('calendar_ics_events')
+        .select('id, summary')
+        .eq('feed_id', feedId)
+        .eq('is_processed', false);
+
+      if (fetchError) throw fetchError;
+
+      const tagLower = filterTag.toLowerCase();
+      const idsToDelete = (eventsToDelete || [])
+        .filter(e => !(e.summary || '').toLowerCase().includes(tagLower))
+        .map(e => e.id);
+
+      if (idsToDelete.length === 0) {
+        return { deleted_count: 0 };
+      }
+
+      // Delete the events
+      const { error: deleteError } = await supabase
+        .from('calendar_ics_events')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (deleteError) throw deleteError;
+
+      return { deleted_count: idsToDelete.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+    },
   });
 }
 
