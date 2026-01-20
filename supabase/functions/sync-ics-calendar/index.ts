@@ -531,6 +531,10 @@ serve(async (req) => {
           .gte('date', syncFromDate.toISOString());
 
         let syncedCount = 0;
+        let matchedCount = 0;
+        let unmatchedCount = 0;
+        let duplicatesCount = 0;
+
         for (const event of filteredEvents) {
           const { primary, additional } = clients 
             ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
@@ -560,7 +564,15 @@ serve(async (req) => {
             
             if (duplicate) {
               potentialDuplicateId = duplicate.id;
+              duplicatesCount++;
             }
+          }
+
+          // Track match stats
+          if (primary) {
+            matchedCount++;
+          } else {
+            unmatchedCount++;
           }
 
           const { error: upsertError } = await supabase
@@ -590,24 +602,37 @@ serve(async (req) => {
           }
         }
 
+        // Build sync log for UI
+        const syncLog = {
+          total_in_ics: events.length,
+          after_date_filter: events.filter(e => e.dtstart >= syncFromDate).length,
+          after_tag_filter: filteredEvents.length,
+          matched_clients: matchedCount,
+          unmatched: unmatchedCount,
+          duplicates_found: duplicatesCount,
+          synced_at: new Date().toISOString(),
+        };
+
         await supabase
           .from('calendar_ics_feeds')
           .update({
             last_sync_at: new Date().toISOString(),
             last_sync_status: 'success',
             last_sync_error: null,
+            last_sync_log: syncLog,
             events_synced: syncedCount,
             updated_at: new Date().toISOString(),
           })
           .eq('id', feedId);
 
-        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (NO sessions created)`);
+        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (NO sessions created)`, syncLog);
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             events_synced: syncedCount,
             total_events: events.length,
+            sync_log: syncLog,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

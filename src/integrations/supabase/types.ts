@@ -586,6 +586,7 @@ export type Database = {
           is_active: boolean | null
           last_sync_at: string | null
           last_sync_error: string | null
+          last_sync_log: Json | null
           last_sync_status: string | null
           name: string
           sync_from_date: string | null
@@ -603,6 +604,7 @@ export type Database = {
           is_active?: boolean | null
           last_sync_at?: string | null
           last_sync_error?: string | null
+          last_sync_log?: Json | null
           last_sync_status?: string | null
           name?: string
           sync_from_date?: string | null
@@ -620,6 +622,7 @@ export type Database = {
           is_active?: boolean | null
           last_sync_at?: string | null
           last_sync_error?: string | null
+          last_sync_log?: Json | null
           last_sync_status?: string | null
           name?: string
           sync_from_date?: string | null
