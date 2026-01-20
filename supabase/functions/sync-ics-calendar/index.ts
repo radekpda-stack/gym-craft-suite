@@ -417,30 +417,293 @@ function findMultipleClientMatches(
   };
 }
 
-// Simple ICS parser
-function parseICS(icsContent: string): Array<{
+// ============================================
+// RRULE SUPPORT - Types and Interfaces
+// ============================================
+
+interface ParsedEvent {
   uid: string;
   summary: string;
   description?: string;
   dtstart: Date;
   dtend?: Date;
   location?: string;
-}> {
-  const events: Array<{
-    uid: string;
-    summary: string;
-    description?: string;
-    dtstart: Date;
-    dtend?: Date;
-    location?: string;
-  }> = [];
+  rrule?: string;
+  exdates?: Date[];
+}
 
-  const lines = icsContent.replace(/\r\n /g, '').split(/\r?\n/);
+interface ExpandedEvent extends ParsedEvent {
+  masterEventUid?: string;
+  recurrenceInstanceDate?: string; // YYYY-MM-DD
+  isRecurringInstance: boolean;
+}
+
+interface RRuleParams {
+  freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  interval: number;
+  byday?: string[];
+  bymonthday?: number[];
+  until?: Date;
+  count?: number;
+}
+
+// ============================================
+// RRULE PARSER
+// ============================================
+
+function parseRRule(rruleString: string): RRuleParams | null {
+  if (!rruleString) return null;
+  
+  const params: Partial<RRuleParams> = {
+    interval: 1,
+  };
+  
+  const parts = rruleString.split(';');
+  for (const part of parts) {
+    const [key, value] = part.split('=');
+    if (!key || !value) continue;
+    
+    switch (key.toUpperCase()) {
+      case 'FREQ':
+        if (['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(value.toUpperCase())) {
+          params.freq = value.toUpperCase() as RRuleParams['freq'];
+        }
+        break;
+      case 'INTERVAL':
+        params.interval = parseInt(value, 10) || 1;
+        break;
+      case 'BYDAY':
+        params.byday = value.split(',').map(d => d.trim().toUpperCase());
+        break;
+      case 'BYMONTHDAY':
+        params.bymonthday = value.split(',').map(d => parseInt(d.trim(), 10));
+        break;
+      case 'UNTIL':
+        params.until = parseICSDateSimple(value);
+        break;
+      case 'COUNT':
+        params.count = parseInt(value, 10);
+        break;
+    }
+  }
+  
+  if (!params.freq) return null;
+  return params as RRuleParams;
+}
+
+function parseICSDateSimple(value: string): Date {
+  const cleanValue = value.replace('Z', '');
+  if (cleanValue.length === 8) {
+    const year = parseInt(cleanValue.substring(0, 4));
+    const month = parseInt(cleanValue.substring(4, 6)) - 1;
+    const day = parseInt(cleanValue.substring(6, 8));
+    return new Date(year, month, day, 23, 59, 59);
+  } else if (cleanValue.length >= 15) {
+    const year = parseInt(cleanValue.substring(0, 4));
+    const month = parseInt(cleanValue.substring(4, 6)) - 1;
+    const day = parseInt(cleanValue.substring(6, 8));
+    const hour = parseInt(cleanValue.substring(9, 11));
+    const minute = parseInt(cleanValue.substring(11, 13));
+    const second = parseInt(cleanValue.substring(13, 15));
+    if (value.endsWith('Z')) {
+      return new Date(Date.UTC(year, month, day, hour, minute, second));
+    }
+    return new Date(year, month, day, hour, minute, second);
+  }
+  return new Date(value);
+}
+
+function parseExdates(exdateString: string): Date[] {
+  if (!exdateString) return [];
+  return exdateString.split(',').map(d => parseICSDateSimple(d.trim()));
+}
+
+// Map BYDAY values to day of week (0 = Sunday, 6 = Saturday)
+const BYDAY_MAP: Record<string, number> = {
+  'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+};
+
+function getNextOccurrence(current: Date, rrule: RRuleParams, originalDate: Date): Date | null {
+  const next = new Date(current);
+  
+  switch (rrule.freq) {
+    case 'DAILY':
+      next.setDate(next.getDate() + rrule.interval);
+      break;
+      
+    case 'WEEKLY':
+      if (rrule.byday && rrule.byday.length > 0) {
+        // Find next matching day of week
+        const targetDays = rrule.byday.map(d => {
+          // Handle prefixed days like "2MO" (second Monday)
+          const match = d.match(/^(-?\d)?([A-Z]{2})$/);
+          if (match) {
+            return BYDAY_MAP[match[2]] ?? -1;
+          }
+          return BYDAY_MAP[d] ?? -1;
+        }).filter(d => d >= 0);
+        
+        if (targetDays.length === 0) {
+          next.setDate(next.getDate() + 7 * rrule.interval);
+        } else {
+          let found = false;
+          for (let i = 1; i <= 7 * rrule.interval + 7; i++) {
+            const testDate = new Date(current);
+            testDate.setDate(testDate.getDate() + i);
+            if (targetDays.includes(testDate.getDay())) {
+              next.setTime(testDate.getTime());
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            next.setDate(next.getDate() + 7 * rrule.interval);
+          }
+        }
+      } else {
+        next.setDate(next.getDate() + 7 * rrule.interval);
+      }
+      break;
+      
+    case 'MONTHLY':
+      if (rrule.bymonthday && rrule.bymonthday.length > 0) {
+        // Use specific day of month
+        const targetDay = rrule.bymonthday[0];
+        next.setMonth(next.getMonth() + rrule.interval);
+        next.setDate(Math.min(targetDay, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+      } else {
+        next.setMonth(next.getMonth() + rrule.interval);
+      }
+      break;
+      
+    case 'YEARLY':
+      next.setFullYear(next.getFullYear() + rrule.interval);
+      break;
+  }
+  
+  return next;
+}
+
+function isExcluded(date: Date, exdates: Date[]): boolean {
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return exdates.some(ex => {
+    const exStr = `${ex.getFullYear()}-${String(ex.getMonth() + 1).padStart(2, '0')}-${String(ex.getDate()).padStart(2, '0')}`;
+    return dateStr === exStr;
+  });
+}
+
+// ============================================
+// EVENT EXPANSION
+// ============================================
+
+function expandRecurringEvents(
+  events: ParsedEvent[], 
+  fromDate: Date, 
+  toDate: Date,
+  maxInstancesPerEvent: number = 50
+): ExpandedEvent[] {
+  const expanded: ExpandedEvent[] = [];
+  
+  for (const event of events) {
+    if (!event.rrule) {
+      // Non-recurring event - only add if in range
+      if (event.dtstart >= fromDate && event.dtstart <= toDate) {
+        expanded.push({
+          ...event,
+          isRecurringInstance: false,
+        });
+      }
+      continue;
+    }
+    
+    // Parse RRULE
+    const rrule = parseRRule(event.rrule);
+    if (!rrule) {
+      // Invalid RRULE - treat as single event
+      if (event.dtstart >= fromDate && event.dtstart <= toDate) {
+        expanded.push({
+          ...event,
+          isRecurringInstance: false,
+        });
+      }
+      continue;
+    }
+    
+    // Calculate event duration for maintaining end time
+    const eventDuration = event.dtend ? event.dtend.getTime() - event.dtstart.getTime() : 60 * 60 * 1000;
+    
+    // Generate instances
+    let current = new Date(event.dtstart);
+    let instanceCount = 0;
+    
+    // If the original event is before fromDate, fast-forward to the first occurrence in range
+    while (current < fromDate && instanceCount < 1000) {
+      const next = getNextOccurrence(current, rrule, event.dtstart);
+      if (!next || (rrule.until && next > rrule.until)) break;
+      current = next;
+      instanceCount++;
+    }
+    
+    // Reset counter for actual instances
+    instanceCount = 0;
+    
+    while (current <= toDate && instanceCount < maxInstancesPerEvent) {
+      // Check UNTIL constraint
+      if (rrule.until && current > rrule.until) break;
+      
+      // Check COUNT constraint (approximate - we start from first in range)
+      if (rrule.count && instanceCount >= rrule.count) break;
+      
+      // Check if this date is excluded
+      if (!isExcluded(current, event.exdates || [])) {
+        // Only add if in the desired range
+        if (current >= fromDate) {
+          const instanceDate = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+          const instanceUid = `${event.uid}-${instanceDate.replace(/-/g, '')}`;
+          
+          expanded.push({
+            uid: instanceUid,
+            summary: event.summary,
+            description: event.description,
+            dtstart: new Date(current),
+            dtend: new Date(current.getTime() + eventDuration),
+            location: event.location,
+            rrule: event.rrule,
+            exdates: event.exdates,
+            masterEventUid: event.uid,
+            recurrenceInstanceDate: instanceDate,
+            isRecurringInstance: true,
+          });
+        }
+      }
+      
+      instanceCount++;
+      const next = getNextOccurrence(current, rrule, event.dtstart);
+      if (!next) break;
+      current = next;
+    }
+  }
+  
+  // Sort by start time
+  expanded.sort((a, b) => a.dtstart.getTime() - b.dtstart.getTime());
+  
+  return expanded;
+}
+
+// ============================================
+// ICS PARSER - Extended with RRULE support
+// ============================================
+
+function parseICS(icsContent: string): ParsedEvent[] {
+  const events: ParsedEvent[] = [];
+
+  // Unfold long lines (RFC 5545: lines continued with space/tab)
+  const lines = icsContent.replace(/\r\n[ \t]/g, '').replace(/\r\n/g, '\n').split('\n');
   let currentEvent: any = null;
 
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') {
-      currentEvent = {};
+      currentEvent = { exdates: [] };
     } else if (line === 'END:VEVENT' && currentEvent) {
       if (currentEvent.uid && currentEvent.dtstart) {
         events.push({
@@ -450,6 +713,8 @@ function parseICS(icsContent: string): Array<{
           dtstart: currentEvent.dtstart,
           dtend: currentEvent.dtend,
           location: currentEvent.location,
+          rrule: currentEvent.rrule,
+          exdates: currentEvent.exdates.length > 0 ? currentEvent.exdates : undefined,
         });
       }
       currentEvent = null;
@@ -479,6 +744,14 @@ function parseICS(icsContent: string): Array<{
           break;
         case 'DTEND':
           currentEvent.dtend = parseICSDate(value, keyPart);
+          break;
+        case 'RRULE':
+          currentEvent.rrule = value;
+          break;
+        case 'EXDATE':
+          // EXDATE can appear multiple times or contain comma-separated values
+          const parsedExdates = parseExdates(value);
+          currentEvent.exdates.push(...parsedExdates);
           break;
       }
     }
@@ -555,26 +828,34 @@ serve(async (req) => {
         const icsContent = await fetchIcs(fetchUrl);
         console.log(`[ICS Sync] Fetched ${icsContent.length} bytes`);
 
-        const events = parseICS(icsContent);
-        console.log(`[ICS Sync] Parsed ${events.length} events`);
+        const rawEvents = parseICS(icsContent);
+        console.log(`[ICS Sync] Parsed ${rawEvents.length} raw events`);
 
-        // Only sync future events (from current time onwards)
+        // Calculate sync horizon
         const now = new Date();
-        console.log(`[ICS Sync] Current time: ${now.toISOString()}`);
+        const syncHorizonMonths = feed.sync_horizon_months || 3;
+        const toDate = new Date(now);
+        toDate.setMonth(toDate.getMonth() + syncHorizonMonths);
         
-        // Filter to only include future events
-        let filteredEvents = events.filter(e => e.dtstart >= now);
-        console.log(`[ICS Sync] ${filteredEvents.length} future events (after ${now.toISOString()})`);
+        console.log(`[ICS Sync] Sync window: ${now.toISOString()} to ${toDate.toISOString()} (${syncHorizonMonths} months)`);
+
+        // Count events with RRULE
+        const recurringCount = rawEvents.filter(e => e.rrule).length;
+        console.log(`[ICS Sync] Found ${recurringCount} recurring events with RRULE`);
+
+        // Expand recurring events to individual instances
+        let expandedEvents = expandRecurringEvents(rawEvents, now, toDate);
+        console.log(`[ICS Sync] Expanded to ${expandedEvents.length} event instances`);
         
         // Filter by import tag if configured
         const importFilterTag = feed.import_filter_tag?.trim();
         if (importFilterTag) {
           const tagLower = importFilterTag.toLowerCase();
-          filteredEvents = filteredEvents.filter(e => {
+          expandedEvents = expandedEvents.filter(e => {
             const summary = (e.summary || '').toLowerCase();
             return summary.includes(tagLower);
           });
-          console.log(`[ICS Sync] ${filteredEvents.length} events after tag filter "${importFilterTag}"`);
+          console.log(`[ICS Sync] ${expandedEvents.length} events after tag filter "${importFilterTag}"`);
         }
 
         const { data: clients } = await supabase
@@ -606,8 +887,9 @@ serve(async (req) => {
         let matchedCount = 0;
         let unmatchedCount = 0;
         let duplicatesCount = 0;
+        let recurringInstancesCount = 0;
 
-        for (const event of filteredEvents) {
+        for (const event of expandedEvents) {
           const { primary, additional } = clients 
             ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
             : { primary: null, additional: [] };
@@ -647,6 +929,11 @@ serve(async (req) => {
             unmatchedCount++;
           }
 
+          // Track recurring instances
+          if (event.isRecurringInstance) {
+            recurringInstancesCount++;
+          }
+
           const { error: upsertError } = await supabase
             .from('calendar_ics_events')
             .upsert({
@@ -661,6 +948,9 @@ serve(async (req) => {
               additional_matched_client_ids: additionalClientIds,
               match_suggestions: suggestions,
               potential_duplicate_session_id: potentialDuplicateId,
+              rrule: event.rrule || null,
+              master_event_uid: event.masterEventUid || null,
+              recurrence_instance_date: event.recurrenceInstanceDate || null,
               updated_at: new Date().toISOString(),
             }, {
               onConflict: 'feed_id,ics_uid',
@@ -676,14 +966,18 @@ serve(async (req) => {
 
         // Build sync log for UI
         const syncLog = {
-          total_in_ics: events.length,
-          future_events: filteredEvents.length,
-          after_tag_filter: filteredEvents.length,
+          total_in_ics: rawEvents.length,
+          recurring_events: recurringCount,
+          expanded_instances: expandedEvents.length,
+          recurring_instances: recurringInstancesCount,
+          after_tag_filter: expandedEvents.length,
           matched_clients: matchedCount,
           unmatched: unmatchedCount,
           duplicates_found: duplicatesCount,
           synced_at: new Date().toISOString(),
           sync_from: now.toISOString(),
+          sync_to: toDate.toISOString(),
+          sync_horizon_months: syncHorizonMonths,
         };
 
         await supabase
@@ -698,13 +992,15 @@ serve(async (req) => {
           })
           .eq('id', feedId);
 
-        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (NO sessions created)`, syncLog);
+        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (${recurringInstancesCount} from recurring)`, syncLog);
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             events_synced: syncedCount,
-            total_events: events.length,
+            total_events: rawEvents.length,
+            recurring_events: recurringCount,
+            recurring_instances: recurringInstancesCount,
             sync_log: syncLog,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
