@@ -245,8 +245,8 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
             Import z kalendáře: {feedName}
@@ -257,7 +257,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
         </DialogHeader>
 
         {/* Stats bar */}
-        <div className="flex flex-wrap gap-2 py-2 border-b">
+        <div className="flex flex-wrap gap-2 py-2 border-b shrink-0">
           <Badge variant="outline" className="text-primary">
             Celkem: {stats?.total || 0}
           </Badge>
@@ -280,8 +280,29 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
           </Badge>
         </div>
 
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3 py-2 text-xs text-muted-foreground border-b shrink-0">
+          <span className="font-medium">Legenda:</span>
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500" />
+            Vysoká shoda (90%+)
+          </span>
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500" />
+            Střední shoda (70-89%)
+          </span>
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-orange-500/20 border border-orange-500" />
+            Nízká shoda (&lt;70%)
+          </span>
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500" />
+            Skupinový trénink
+          </span>
+        </div>
+
         {/* Search and actions */}
-        <div className="flex items-center gap-2 py-2">
+        <div className="flex items-center gap-2 py-2 shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -296,13 +317,14 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             size="sm"
             onClick={handleSync}
             disabled={isProcessing}
+            title="Znovu stáhnout události z kalendáře a přepočítat shody"
           >
             {syncFeed.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            <span className="ml-2 hidden sm:inline">Sync</span>
+            <span className="ml-2 hidden sm:inline">Sync & Přepočítat</span>
           </Button>
           <Button
             variant="ghost"
@@ -310,7 +332,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             onClick={handleDeleteUnfiltered}
             disabled={isProcessing}
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            title="Vymazat události bez #TR tagu"
+            title="Vymazat události bez filtračního tagu"
           >
             {deleteUnfiltered.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -321,8 +343,8 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
           </Button>
         </div>
 
-        {/* Events list */}
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+        {/* Events list - native scrolling */}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {eventsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -393,7 +415,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
               )}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer actions */}
         <DialogFooter className="border-t pt-4 gap-2 sm:gap-0">
@@ -597,13 +619,16 @@ function EventRow({
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium truncate">{event.summary || 'Bez názvu'}</span>
+          <span className="font-medium truncate max-w-[200px]">{event.summary || 'Bez názvu'}</span>
           {event.matched_client && (
             <Badge 
               variant="outline" 
               className={cn(
-                "shrink-0",
-                getScoreColor(matchScore)
+                "shrink-0 border-2",
+                matchScore && matchScore >= 90 && "border-green-500 bg-green-500/10 text-green-700",
+                matchScore && matchScore >= 70 && matchScore < 90 && "border-amber-500 bg-amber-500/10 text-amber-700",
+                matchScore && matchScore < 70 && "border-orange-500 bg-orange-500/10 text-orange-700",
+                !matchScore && "border-muted"
               )}
             >
               <User className="h-3 w-3 mr-1" />
@@ -613,15 +638,16 @@ function EventRow({
               )}
             </Badge>
           )}
-          {event.additional_clients && event.additional_clients.length > 0 && (
+          {/* Only show additional clients if there are explicitly parsed ones (via & , + separators) */}
+          {event.additional_clients && event.additional_clients.length > 0 && event.additional_clients.length <= 3 && (
             <div className="flex gap-1 flex-wrap shrink-0">
-              {event.additional_clients.map((client, idx) => (
+              {event.additional_clients.map((client) => (
                 <Badge 
                   key={client.id} 
                   variant="outline" 
-                  className="text-blue-600"
+                  className="border-2 border-blue-500 bg-blue-500/10 text-blue-700"
                 >
-                  <User className="h-3 w-3 mr-1" />
+                  <Users className="h-3 w-3 mr-1" />
                   {client.name}
                 </Badge>
               ))}
