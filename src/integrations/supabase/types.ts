@@ -487,9 +487,12 @@ export type Database = {
           import_approved: boolean | null
           is_processed: boolean | null
           location: string | null
+          master_event_uid: string | null
           match_suggestions: Json | null
           matched_client_id: string | null
           potential_duplicate_session_id: string | null
+          recurrence_instance_date: string | null
+          rrule: string | null
           skip_import: boolean | null
           start_at: string
           summary: string | null
@@ -507,9 +510,12 @@ export type Database = {
           import_approved?: boolean | null
           is_processed?: boolean | null
           location?: string | null
+          master_event_uid?: string | null
           match_suggestions?: Json | null
           matched_client_id?: string | null
           potential_duplicate_session_id?: string | null
+          recurrence_instance_date?: string | null
+          rrule?: string | null
           skip_import?: boolean | null
           start_at: string
           summary?: string | null
@@ -527,9 +533,12 @@ export type Database = {
           import_approved?: boolean | null
           is_processed?: boolean | null
           location?: string | null
+          master_event_uid?: string | null
           match_suggestions?: Json | null
           matched_client_id?: string | null
           potential_duplicate_session_id?: string | null
+          recurrence_instance_date?: string | null
+          rrule?: string | null
           skip_import?: boolean | null
           start_at?: string
           summary?: string | null
@@ -590,6 +599,7 @@ export type Database = {
           last_sync_status: string | null
           name: string
           sync_from_date: string | null
+          sync_horizon_months: number | null
           updated_at: string
           user_id: string
         }
@@ -608,6 +618,7 @@ export type Database = {
           last_sync_status?: string | null
           name?: string
           sync_from_date?: string | null
+          sync_horizon_months?: number | null
           updated_at?: string
           user_id: string
         }
@@ -626,6 +637,7 @@ export type Database = {
           last_sync_status?: string | null
           name?: string
           sync_from_date?: string | null
+          sync_horizon_months?: number | null
           updated_at?: string
           user_id?: string
         }
