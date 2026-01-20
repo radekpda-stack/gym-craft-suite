@@ -245,7 +245,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
@@ -322,7 +322,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
         </div>
 
         {/* Events list */}
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           {eventsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
