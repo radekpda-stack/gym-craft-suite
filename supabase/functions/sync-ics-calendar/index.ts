@@ -898,7 +898,7 @@ serve(async (req) => {
           }
 
           // Create training session
-          const { error: sessionError } = await supabase
+          const { data: newSession, error: sessionError } = await supabase
             .from('training_sessions')
             .insert({
               client_id: cId,
@@ -908,11 +908,19 @@ serve(async (req) => {
               status: 'scheduled',
               notes: event.description ? `Z kalendáře: ${event.summary}\n\n${event.description}` : `Z kalendáře: ${event.summary}`,
               source_ics_event_id: event.id,
-            });
+            })
+            .select('id')
+            .single();
 
-          if (!sessionError) {
+          if (!sessionError && newSession) {
             sessionsCreatedForEvent++;
             createdCount++;
+            
+            // Link the training session back to the ICS event
+            await supabase
+              .from('calendar_ics_events')
+              .update({ training_session_id: newSession.id })
+              .eq('id', event.id);
           }
         }
 
