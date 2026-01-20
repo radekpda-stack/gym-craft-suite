@@ -123,6 +123,48 @@ export function CalendarSyncSettings() {
         </CardContent>
       </Card>
 
+      {/* How to write events for best matching */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Jak zapisovat tréninky do kalendáře?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div className="space-y-2">
+            <p className="text-muted-foreground">
+              Aplikace automaticky rozpozná jména klientů v názvech událostí. 
+              Pro nejlepší výsledky používejte tyto formáty:
+            </p>
+            
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <p className="font-medium">Jeden klient:</p>
+              <code className="block bg-background px-2 py-1 rounded text-xs">Honza #tr</code>
+              <code className="block bg-background px-2 py-1 rounded text-xs">Novák Jan #tr</code>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <p className="font-medium">Více klientů (skupinový trénink):</p>
+              <code className="block bg-background px-2 py-1 rounded text-xs">Honza & Lucka #tr</code>
+              <code className="block bg-background px-2 py-1 rounded text-xs">Marie, Petr #tr</code>
+              <code className="block bg-background px-2 py-1 rounded text-xs">Adam + Eva #tr</code>
+              <p className="text-xs text-muted-foreground mt-2">
+                Podporované oddělovače: <strong>&</strong>, <strong>,</strong>, <strong>+</strong>, <strong>/</strong>
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-2 text-muted-foreground text-xs border-t pt-3">
+            <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <p>
+              Aplikace si pamatuje přezdívky a aliasy - stačí jednou přiřadit "Honza" k "Jan Novák" 
+              a příště se klient rozpozná automaticky.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* How to get ICS URL */}
       <Card>
         <CardHeader>
