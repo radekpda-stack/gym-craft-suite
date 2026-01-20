@@ -566,6 +566,25 @@ function EventRow({
     }
   };
 
+  // Get the match score for the currently matched client
+  const matchScore = event.matched_client_id && suggestions.length > 0
+    ? suggestions.find(s => s.client_id === event.matched_client_id)?.score 
+    : topSuggestion?.score;
+
+  // Color based on match confidence
+  const getScoreColor = (score: number | undefined) => {
+    if (!score) return 'text-muted-foreground';
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-amber-600';
+    return 'text-orange-600';
+  };
+
+  const getScoreBadgeVariant = (score: number | undefined): 'default' | 'secondary' | 'outline' => {
+    if (!score) return 'outline';
+    if (score >= 90) return 'default';
+    return 'secondary';
+  };
+
   return (
     <div className={cn(
       "flex items-center gap-3 p-3 transition-colors",
@@ -580,9 +599,18 @@ function EventRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium truncate">{event.summary || 'Bez názvu'}</span>
           {event.matched_client && (
-            <Badge variant="outline" className="text-green-600 shrink-0">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "shrink-0",
+                getScoreColor(matchScore)
+              )}
+            >
               <User className="h-3 w-3 mr-1" />
               {event.matched_client.name}
+              {matchScore && (
+                <span className="ml-1 text-xs opacity-75">({matchScore}%)</span>
+              )}
             </Badge>
           )}
           {event.additional_clients && event.additional_clients.length > 0 && (
@@ -612,20 +640,25 @@ function EventRow({
 
         {/* Suggestions for unmatched events */}
         {!event.matched_client_id && suggestions.length > 0 && !isEditing && (
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Návrhy:</span>
             {suggestions.slice(0, 3).map((s) => (
               <Button
                 key={s.client_id}
                 variant="outline"
                 size="sm"
-                className="h-6 text-xs"
+                className={cn(
+                  "h-6 text-xs",
+                  s.score >= 90 && "border-green-300 bg-green-50 hover:bg-green-100",
+                  s.score >= 70 && s.score < 90 && "border-amber-300 bg-amber-50 hover:bg-amber-100",
+                  s.score < 70 && "border-orange-300 bg-orange-50 hover:bg-orange-100"
+                )}
                 onClick={() => onAssignClient(event.id, s.client_id, true)}
                 disabled={isProcessing}
               >
-                <Sparkles className="h-3 w-3 mr-1 text-primary" />
+                <Sparkles className={cn("h-3 w-3 mr-1", getScoreColor(s.score))} />
                 {s.name}
-                <span className="ml-1 text-muted-foreground">({s.score}%)</span>
+                <span className={cn("ml-1", getScoreColor(s.score))}>({s.score}%)</span>
               </Button>
             ))}
           </div>

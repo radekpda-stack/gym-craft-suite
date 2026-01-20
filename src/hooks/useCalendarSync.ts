@@ -2,6 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
+export interface SyncLog {
+  total_in_ics: number;
+  after_date_filter: number;
+  after_tag_filter: number;
+  matched_clients: number;
+  unmatched: number;
+  duplicates_found: number;
+  synced_at: string;
+}
+
 export interface ICSFeed {
   id: string;
   user_id: string;
@@ -11,6 +21,7 @@ export interface ICSFeed {
   last_sync_at: string | null;
   last_sync_status: string | null;
   last_sync_error: string | null;
+  last_sync_log: SyncLog | null;
   events_synced: number;
   sync_from_date: string | null;
   auto_create_sessions: boolean;
@@ -18,6 +29,14 @@ export interface ICSFeed {
   import_filter_tag: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Helper to transform database row to ICSFeed with proper typing
+function transformFeed(row: any): ICSFeed {
+  return {
+    ...row,
+    last_sync_log: row.last_sync_log as SyncLog | null,
+  };
 }
 
 export interface ICSEvent {
@@ -48,7 +67,7 @@ export function useICSFeeds() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ICSFeed[];
+      return (data || []).map(transformFeed);
     },
     enabled: !!user,
   });
@@ -113,7 +132,7 @@ export function useCreateICSFeed() {
         .single();
 
       if (error) throw error;
-      return feed as ICSFeed;
+      return transformFeed(feed);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ics-feeds'] });
@@ -125,7 +144,7 @@ export function useUpdateICSFeed() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<ICSFeed> & { id: string }) => {
+    mutationFn: async ({ id, last_sync_log, ...data }: Partial<Omit<ICSFeed, 'last_sync_log'>> & { id: string; last_sync_log?: SyncLog | null }) => {
       const { error } = await supabase
         .from('calendar_ics_feeds')
         .update({
