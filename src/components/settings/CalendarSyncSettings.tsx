@@ -263,53 +263,57 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
       "border rounded-lg p-4 transition-opacity",
       !feed.is_active && "opacity-60 bg-muted/30"
     )}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span className="font-medium">{feed.name}</span>
+      {/* Header row - responsive layout */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        {/* Left side - feed info */}
+        <div className="space-y-2 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary shrink-0" />
+            <span className="font-medium truncate">{feed.name}</span>
             {!feed.is_active ? (
-              <Badge variant="outline" className="text-amber-600 border-amber-300">
+              <Badge variant="outline" className="text-amber-600 border-amber-300 shrink-0">
                 <Pause className="h-3 w-3 mr-1" />
                 Pozastaveno
               </Badge>
             ) : feed.last_sync_status === 'success' ? (
-              <Badge variant="outline" className="text-green-600">
+              <Badge variant="outline" className="text-green-600 shrink-0">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Aktivní
               </Badge>
             ) : feed.last_sync_status === 'error' ? (
-              <Badge variant="outline" className="text-destructive">
+              <Badge variant="outline" className="text-destructive shrink-0">
                 <XCircle className="h-3 w-3 mr-1" />
                 Chyba
               </Badge>
             ) : null}
             {feed.import_filter_tag && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs shrink-0">
                 Filtr: {feed.import_filter_tag}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {feed.last_sync_at && (
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
+                <Clock className="h-3 w-3 shrink-0" />
                 Sync: {formatDistanceToNow(new Date(feed.last_sync_at), { addSuffix: true, locale: cs })}
               </span>
             )}
             <span className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
+              <Users className="h-3 w-3 shrink-0" />
               {feed.events_synced} událostí
             </span>
           </div>
           {feed.last_sync_error && (
-            <p className="text-sm text-destructive flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" />
-              {feed.last_sync_error}
+            <p className="text-sm text-destructive flex items-center gap-1 break-words">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              <span className="min-w-0">{feed.last_sync_error}</span>
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        
+        {/* Right side - action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -372,11 +376,13 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
         </div>
       </div>
       
+      {/* Bottom action buttons */}
       {feed.events_synced > 0 && (
-        <div className="mt-4 pt-4 border-t flex items-center gap-3">
+        <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Button 
             onClick={onOpenImportReview}
             variant="default"
+            className="w-full sm:w-auto"
           >
             <FileCheck className="h-4 w-4 mr-2" />
             Zkontrolovat a importovat
@@ -391,6 +397,7 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
             variant="outline"
             size="sm"
             onClick={onViewEvents}
+            className="w-full sm:w-auto"
           >
             <Settings2 className="h-4 w-4 mr-1" />
             Všechny události
