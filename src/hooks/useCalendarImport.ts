@@ -45,6 +45,15 @@ export function useImportableEvents(feedId: string | null) {
     queryFn: async () => {
       if (!feedId) return [];
 
+      // First, get the feed's import_filter_tag for fallback filtering
+      const { data: feedData } = await supabase
+        .from('calendar_ics_feeds')
+        .select('import_filter_tag')
+        .eq('id', feedId)
+        .single();
+      
+      const filterTag = feedData?.import_filter_tag;
+
       const { data, error } = await supabase
         .from('calendar_ics_events')
         .select(`
@@ -60,9 +69,19 @@ export function useImportableEvents(feedId: string | null) {
 
       if (error) throw error;
 
+      // Fallback filter: only show events matching the filter tag (if set)
+      // This catches any events that slipped through before the edge function filter was set
+      let filteredData = data || [];
+      if (filterTag) {
+        const tagLower = filterTag.toLowerCase();
+        filteredData = filteredData.filter(event => 
+          (event.summary || '').toLowerCase().includes(tagLower)
+        );
+      }
+
       // Fetch additional client names for group trainings
       const eventsWithAdditionalClients = await Promise.all(
-        (data || []).map(async (event) => {
+        filteredData.map(async (event) => {
           if (event.additional_matched_client_ids && event.additional_matched_client_ids.length > 0) {
             const { data: additionalClients } = await supabase
               .from('clients')
