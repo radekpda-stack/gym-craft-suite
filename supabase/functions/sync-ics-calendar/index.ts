@@ -558,12 +558,13 @@ serve(async (req) => {
         const events = parseICS(icsContent);
         console.log(`[ICS Sync] Parsed ${events.length} events`);
 
-        const syncFromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date();
-        syncFromDate.setMonth(syncFromDate.getMonth() - 1);
+        // Only sync future events (from current time onwards)
+        const now = new Date();
+        console.log(`[ICS Sync] Current time: ${now.toISOString()}`);
         
-        // Filter by date first
-        let filteredEvents = events.filter(e => e.dtstart >= syncFromDate);
-        console.log(`[ICS Sync] ${filteredEvents.length} events after date filter`);
+        // Filter to only include future events
+        let filteredEvents = events.filter(e => e.dtstart >= now);
+        console.log(`[ICS Sync] ${filteredEvents.length} future events (after ${now.toISOString()})`);
         
         // Filter by import tag if configured
         const importFilterTag = feed.import_filter_tag?.trim();
@@ -599,7 +600,7 @@ serve(async (req) => {
           .from('training_sessions')
           .select('id, client_id, date')
           .eq('user_id', feed.user_id)
-          .gte('date', syncFromDate.toISOString());
+          .gte('date', now.toISOString());
 
         let syncedCount = 0;
         let matchedCount = 0;
@@ -676,12 +677,13 @@ serve(async (req) => {
         // Build sync log for UI
         const syncLog = {
           total_in_ics: events.length,
-          after_date_filter: events.filter(e => e.dtstart >= syncFromDate).length,
+          future_events: filteredEvents.length,
           after_tag_filter: filteredEvents.length,
           matched_clients: matchedCount,
           unmatched: unmatchedCount,
           duplicates_found: duplicatesCount,
           synced_at: new Date().toISOString(),
+          sync_from: now.toISOString(),
         };
 
         await supabase
