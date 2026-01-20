@@ -151,20 +151,33 @@ export function AgendaItem({
                   </div>
                 </div>
 
-                {/* Primary action */}
-                <div className="flex-shrink-0 flex items-center">
+                {/* Primary actions */}
+                <div className="flex-shrink-0 flex items-center gap-1">
                   {isScheduled && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onComplete?.(session);
-                      }}
-                      className="flex items-center justify-center w-10 h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
-                      title="Dokončit"
-                    >
-                      <Check className="w-5 h-5" />
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onComplete?.(session);
+                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
+                        title="Dokončit"
+                      >
+                        <Check className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onDelete?.(session);
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        title="Smazat trénink"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                   {needsPayment && (
                     <button
