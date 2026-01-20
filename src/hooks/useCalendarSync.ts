@@ -122,11 +122,15 @@ export function useCreateICSFeed() {
       default_duration?: number;
       import_filter_tag?: string;
     }) => {
+      if (!user) {
+        throw new Error('Pro přidání kalendáře musíte být přihlášeni');
+      }
+
       const { data: feed, error } = await supabase
         .from('calendar_ics_feeds')
         .insert({
           ...data,
-          user_id: user!.id,
+          user_id: user.id,
         })
         .select()
         .single();
