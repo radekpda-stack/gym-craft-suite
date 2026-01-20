@@ -5,7 +5,7 @@ import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
+import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, useDeleteTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
 import { useClients } from '@/hooks/useClients';
 import { useSharedTrainings } from '@/hooks/useSharedTrainings';
 import { useExternalCalendarEvents } from '@/hooks/useExternalCalendarEvents';
@@ -27,6 +27,16 @@ import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialo
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
 
 
@@ -81,6 +91,7 @@ export default function SchedulePage() {
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
@@ -90,6 +101,7 @@ export default function SchedulePage() {
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
   const cancelTraining = useCancelTrainingSession();
+  const deleteTraining = useDeleteTrainingSession();
   const addTrainingParticipants = useAddTrainingSessionParticipants();
   const addTrainingTags = useAddTrainingSessionTags();
   const { data: settings } = useAppSettings();
@@ -278,6 +290,16 @@ export default function SchedulePage() {
 
   const handleNote = (session: any) => {
     navigate(`/trainings/${session.id}`);
+  };
+
+  const handleDelete = (session: any) => {
+    setDeleteDialog({ open: true, session });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.session) return;
+    await deleteTraining.mutateAsync({ id: deleteDialog.session.id });
+    setDeleteDialog({ open: false, session: null });
   };
 
   const isLoading = sessionsLoading || clientsLoading;
@@ -485,6 +507,7 @@ export default function SchedulePage() {
                   onCancel={handleCancel}
                   onProgress={handleProgress}
                   onNote={handleNote}
+                  onDelete={handleDelete}
                 />
               );
             })}
@@ -539,6 +562,27 @@ export default function SchedulePage() {
           currentPaymentStatus={paymentDialog.session.payment_status || 'pending'}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, session: open ? deleteDialog.session : null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat trénink?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Trénink bude nenávratně smazán. Tato akce nebude mít žádný dopad na kredit klienta, historii ani statistiky.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Calendar Settings Dialog */}
       <Dialog open={calendarSettingsOpen} onOpenChange={setCalendarSettingsOpen}>

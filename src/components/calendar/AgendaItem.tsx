@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText } from 'lucide-react';
+import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
@@ -10,6 +10,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
@@ -21,6 +22,7 @@ interface AgendaItemProps {
   onCancel?: (session: TrainingSession) => void;
   onProgress?: (session: TrainingSession) => void;
   onNote?: (session: TrainingSession) => void;
+  onDelete?: (session: TrainingSession) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
@@ -33,6 +35,7 @@ export function AgendaItem({
   onCancel,
   onProgress,
   onNote,
+  onDelete,
 }: AgendaItemProps) {
   const sessionDate = new Date(session.date);
   const endTime = new Date(sessionDate.getTime() + session.duration * 60000);
@@ -204,10 +207,17 @@ export function AgendaItem({
             Poznámka
           </ContextMenuItem>
           {isScheduled && (
-            <ContextMenuItem onClick={() => onCancel?.(session)} className="gap-2 text-destructive">
-              <X className="w-4 h-4" />
-              Zrušit trénink
-            </ContextMenuItem>
+            <>
+              <ContextMenuItem onClick={() => onCancel?.(session)} className="gap-2 text-destructive">
+                <X className="w-4 h-4" />
+                Zrušit trénink
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => onDelete?.(session)} className="gap-2 text-destructive">
+                <Trash2 className="w-4 h-4" />
+                Smazat trénink
+              </ContextMenuItem>
+            </>
           )}
         </ContextMenuContent>
       </ContextMenu>
