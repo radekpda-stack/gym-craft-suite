@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -6,6 +6,7 @@ import {
   Loader2,
   CheckCircle,
   AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
 import { TrainingDetailSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
+import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
@@ -107,6 +109,24 @@ export default function TrainingDetail() {
   // Complete dialog state - now uses individual payments per participant
   const [completeNotes, setCompleteNotes] = useState('');
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
+  
+  // Dialog-local tag state for inline editing within complete dialog
+  const [dialogTagIds, setDialogTagIds] = useState<string[]>([]);
+  const [dialogTrainingType, setDialogTrainingType] = useState<string | null>(null);
+  
+  // Sync dialog tags when dialog opens
+  useEffect(() => {
+    if (showCompleteDialog && training) {
+      setDialogTagIds(currentTagIds);
+      setDialogTrainingType(training.training_type || null);
+    }
+  }, [showCompleteDialog, training?.id]);
+  
+  // Validation based on dialog-local tags
+  const dialogTagValidation = useMemo(() => 
+    validateTrainingTags(dialogTagIds, allTags, dialogTrainingType), 
+    [dialogTagIds, allTags, dialogTrainingType]
+  );
   
   // Cancel dialog state
   const [cancelDeductCredit, setCancelDeductCredit] = useState(true);
@@ -307,6 +327,15 @@ export default function TrainingDetail() {
     setIsSubmitting(true);
     
     try {
+      // Save dialog tags if they changed
+      const tagsChanged = dialogTagIds.sort().join(',') !== currentTagIds.sort().join(',');
+      if (tagsChanged) {
+        await updateTrainingTags.mutateAsync({
+          trainingSessionId: training.id,
+          tagIds: dialogTagIds,
+        });
+      }
+      
       const participantCount = participantPayments.length;
       const totalPrice = participantPayments.reduce((sum, p) => sum + p.price_share, 0);
       
@@ -481,8 +510,23 @@ export default function TrainingDetail() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Tag validation warning */}
-            <TagValidationAlert validation={tagValidation} compact />
+            {/* Inline tag selection - show if tags are missing OR allow viewing/editing */}
+            {!dialogTagValidation.isValid ? (
+              <div className="space-y-3 p-3 bg-secondary/30 rounded-lg border border-warning/30">
+                <div className="flex items-center gap-2 text-sm font-medium text-warning">
+                  <AlertCircle className="w-4 h-4" />
+                  Doplňte povinné tagy pro dokončení tréninku
+                </div>
+                <TrainingTagsSelector
+                  selectedTagIds={dialogTagIds}
+                  onChange={setDialogTagIds}
+                  trainingType={dialogTrainingType}
+                  showValidation={true}
+                />
+              </div>
+            ) : (
+              <TagValidationAlert validation={dialogTagValidation} compact />
+            )}
 
             {/* Participant payment cards */}
             <div className="space-y-3">
@@ -576,12 +620,12 @@ export default function TrainingDetail() {
             <Button 
               onClick={handleComplete} 
               disabled={
-                !tagValidation.isValid ||
+                !dialogTagValidation.isValid ||
                 isSubmitting ||
                 completeTrainingAtomic.isPending ||
                 participantPayments.length === 0
               }
-              title={!tagValidation.isValid ? "Doplňte povinné tagy" : undefined}
+              title={!dialogTagValidation.isValid ? "Doplňte povinné tagy" : undefined}
             >
               {(isSubmitting || completeTrainingAtomic.isPending) ? (
                 <>
