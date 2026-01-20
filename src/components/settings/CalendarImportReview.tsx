@@ -41,6 +41,7 @@ import {
   useSkipEvents,
   useCreateApprovedSessions,
   useUpdateEventClient,
+  useDeleteUnfilteredEvents,
   ImportableEvent,
 } from '@/hooks/useCalendarImport';
 import { useSyncICSFeed } from '@/hooks/useCalendarSync';
@@ -70,6 +71,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
   const skipEvents = useSkipEvents();
   const createSessions = useCreateApprovedSessions();
   const updateEventClient = useUpdateEventClient();
+  const deleteUnfiltered = useDeleteUnfilteredEvents();
 
   // Categorize events
   const categorizedEvents = useMemo(() => {
@@ -224,7 +226,22 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
     categorizedEvents.ready.some(e => e.id === id)
   ).length;
 
-  const isProcessing = syncFeed.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending;
+  const handleDeleteUnfiltered = async () => {
+    try {
+      const result = await deleteUnfiltered.mutateAsync(feedId);
+      if (result.deleted_count > 0) {
+        toast.success(`Smazáno ${result.deleted_count} nerelevantních událostí`);
+        await refetchEvents();
+        await refetchStats();
+      } else {
+        toast.info('Žádné nerelevantní události k smazání');
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Nepodařilo se smazat události');
+    }
+  };
+
+  const isProcessing = syncFeed.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
@@ -286,6 +303,21 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
               <RotateCcw className="h-4 w-4" />
             )}
             <span className="ml-2 hidden sm:inline">Sync</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteUnfiltered}
+            disabled={isProcessing}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            title="Vymazat události bez #TR tagu"
+          >
+            {deleteUnfiltered.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
+            <span className="ml-2 hidden sm:inline">Vyčistit</span>
           </Button>
         </div>
 
