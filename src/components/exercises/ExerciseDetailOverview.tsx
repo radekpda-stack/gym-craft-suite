@@ -399,10 +399,11 @@ export function ExerciseDetailOverview({
                 <p className="text-sm text-muted-foreground">{topPR.clientName}</p>
               </div>
               <div className="text-right">
-                {(topPR as any).distanceMeters ? (
-                  <span className="text-2xl font-bold text-primary">{Math.round((topPR as any).distanceMeters * 100)} cm</span>
-                ) : topPR.timeSeconds ? (
+                {/* For time-based exercises (cardio), prefer timeSeconds over distanceMeters */}
+                {isTimeBased && topPR.timeSeconds ? (
                   <span className="text-2xl font-bold text-primary">{formatTime(topPR.timeSeconds)}</span>
+                ) : isJumpExercise && (topPR as any).distanceMeters ? (
+                  <span className="text-2xl font-bold text-primary">{Math.round((topPR as any).distanceMeters * 100)} cm</span>
                 ) : topPR.weight ? (
                   <>
                     <span className="text-2xl font-bold text-primary">{topPR.weight} kg</span>
@@ -410,6 +411,10 @@ export function ExerciseDetailOverview({
                       <p className="text-sm text-muted-foreground">× {topPR.reps} opak.</p>
                     )}
                   </>
+                ) : topPR.timeSeconds ? (
+                  <span className="text-2xl font-bold text-primary">{formatTime(topPR.timeSeconds)}</span>
+                ) : (topPR as any).distanceMeters ? (
+                  <span className="text-2xl font-bold text-primary">{Math.round((topPR as any).distanceMeters * 100)} cm</span>
                 ) : null}
               </div>
             </div>
