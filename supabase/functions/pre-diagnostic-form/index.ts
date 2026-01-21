@@ -602,6 +602,8 @@ serve(async (req) => {
               .insert({
                 user_id: form.user_id,
                 name: fullName,
+                first_name: first_name || null,
+                last_name: last_name || null,
                 email,
                 phone: phone || null,
                 gender: gender || clientData.gender || null,
@@ -782,10 +784,26 @@ serve(async (req) => {
           .eq("id", formId);
 
         // Create notification for trainer
-        const clientNameForNotif = newClientData?.name || 
+        // Get client name - from newClientData OR from existing client in DB
+        let clientNameForNotif = newClientData?.name || 
           (newClientData?.first_name && newClientData?.last_name 
             ? `${newClientData.first_name} ${newClientData.last_name}` 
             : null);
+        
+        // If we don't have name from newClientData but have clientId, fetch from DB
+        if (!clientNameForNotif && clientId) {
+          const { data: clientForName } = await supabase
+            .from("clients")
+            .select("name, first_name, last_name")
+            .eq("id", clientId)
+            .single();
+          
+          if (clientForName) {
+            clientNameForNotif = clientForName.name || 
+              `${clientForName.first_name || ''} ${clientForName.last_name || ''}`.trim() ||
+              null;
+          }
+        }
         
         console.log("Creating notification for trainer:", form.user_id, "client:", clientNameForNotif);
             
