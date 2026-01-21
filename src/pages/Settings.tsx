@@ -23,6 +23,7 @@ import {
   Boxes,
   Dumbbell,
   Paintbrush,
+  Share2,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
