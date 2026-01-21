@@ -52,8 +52,10 @@ export interface PreDiagnosticFormData {
   // Open question
   open_question?: string;
   
-  // New client identification
-  name?: string;
+  // New client identification - extended
+  first_name?: string;
+  last_name?: string;
+  name?: string; // Combined first + last name
   email?: string;
   phone?: string;
   gender?: 'male' | 'female';
@@ -203,9 +205,13 @@ export default function PreDiagnosticFormPage() {
             formId: formState.id,
             answers: data,
             newClientData: isNewClientMode ? {
-              name: data.name,
+              name: data.name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+              first_name: data.first_name,
+              last_name: data.last_name,
               email: data.email,
               phone: data.phone,
+              gender: data.gender,
+              birth_date: data.birth_date,
             } : undefined,
           }),
         }

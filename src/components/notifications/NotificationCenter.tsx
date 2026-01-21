@@ -49,6 +49,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   inactivity_warning: AlertTriangle,
   training_streak: Trophy,
   diagnostic_completed: Stethoscope,
+  pre_diagnostic_completed: Stethoscope,
 };
 
 const notificationColors: Record<string, string> = {
@@ -71,6 +72,7 @@ const notificationColors: Record<string, string> = {
   package_expiring: "text-orange-500",
   inactivity_warning: "text-destructive",
   training_streak: "text-success",
+  pre_diagnostic_completed: "text-success",
 };
 
 // Category definitions for grouping
@@ -103,7 +105,7 @@ const NOTIFICATION_CATEGORIES = {
     label: "Klienti",
     icon: User,
     color: "text-blue-500",
-    types: ["birthday", "client_anniversary", "inactivity_warning"],
+    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed"],
   },
   packages: {
     label: "Balíčky & finance",
@@ -309,19 +311,25 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     const Icon = notificationIcons[notification.type] || Bell;
     const colorClass = notificationColors[notification.type] || "text-foreground";
     const isFeedbackNotification = ['feedback_received', 'feedback_red_flag', 'feedback_trend_alert'].includes(notification.type);
+    const isPreDiagnosticNotification = notification.type === 'pre_diagnostic_completed';
     const trainingId = notification.type === 'incomplete_training' 
       ? extractTrainingId(notification.message) 
       : notification.entity_type === 'training' ? notification.entity_id : null;
     const clientId = notification.client_id || 
       (notification.entity_type === 'client' ? notification.entity_id : null);
 
-    const linkTo = isFeedbackNotification 
-      ? null
-      : trainingId 
-        ? `/trainings/${trainingId}`
-        : clientId 
-          ? `/clients/${clientId}`
-          : null;
+    // Determine link destination
+    let linkTo: string | null = null;
+    if (isFeedbackNotification) {
+      linkTo = null; // Handled specially
+    } else if (isPreDiagnosticNotification) {
+      // For pre-diagnostic notifications, link to client if available, otherwise to clients page
+      linkTo = clientId ? `/clients/${clientId}` : '/clients';
+    } else if (trainingId) {
+      linkTo = `/trainings/${trainingId}`;
+    } else if (clientId) {
+      linkTo = `/clients/${clientId}`;
+    }
 
     const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
 

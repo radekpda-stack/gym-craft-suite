@@ -23,7 +23,8 @@ export type NotificationType =
   | 'package_expiring'
   | 'inactivity_warning'
   | 'training_streak'
-  | 'diagnostic_completed';
+  | 'diagnostic_completed'
+  | 'pre_diagnostic_completed';
 
 export interface Notification {
   id: string;

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Copy, Check, Link, Mail, Send } from "lucide-react";
+import { Loader2, Copy, Check, Link, Mail, Send, Zap, User } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -14,14 +14,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useCreateClient } from "@/hooks/useClients";
-import { useCreateClientPreDiagnostic } from "@/hooks/usePreDiagnosticForms";
+import { useCreateClientPreDiagnostic, useCreatePreDiagnosticInvite } from "@/hooks/usePreDiagnosticForms";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// Schema for optional pre-fill form - all fields optional
 const sendInviteSchema = z.object({
-  first_name: z.string().min(1, "Křestní jméno je povinné"),
-  last_name: z.string().min(1, "Příjmení je povinné"),
-  email: z.string().email("Neplatná emailová adresa"),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  email: z.string().email("Neplatná emailová adresa").optional().or(z.literal('')),
   phone: z.string().optional(),
 });
 
@@ -32,14 +33,17 @@ interface SendInviteFlowProps {
   onCancel: () => void;
 }
 
+type InviteMode = 'select' | 'quick' | 'prefilled' | 'success';
+
 export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
-  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [mode, setMode] = useState<InviteMode>('select');
   const [generatedLink, setGeneratedLink] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
   const [copied, setCopied] = useState(false);
   
   const createClient = useCreateClient();
   const createPreDiagnostic = useCreateClientPreDiagnostic();
+  const createInvite = useCreatePreDiagnosticInvite();
   
   const form = useForm<SendInviteFormValues>({
     resolver: zodResolver(sendInviteSchema),
@@ -51,11 +55,35 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
     },
   });
 
-  const isLoading = createClient.isPending || createPreDiagnostic.isPending;
+  const isLoading = createClient.isPending || createPreDiagnostic.isPending || createInvite.isPending;
 
-  const handleSubmit = async (data: SendInviteFormValues) => {
+  // Quick link - no client data, just generate invite
+  const handleQuickLink = async () => {
     try {
-      // Create client first
+      const preDiag = await createInvite.mutateAsync();
+      
+      const baseUrl = window.location.origin;
+      const link = `${baseUrl}/pre-diagnostic/${preDiag.token}`;
+      
+      setGeneratedLink(link);
+      setClientName('');
+      setMode('success');
+      
+      toast.success("Odkaz vygenerován");
+    } catch (error: any) {
+      toast.error(error.message || "Chyba při vytváření odkazu");
+    }
+  };
+
+  // Prefilled - create client first, then generate link
+  const handlePrefilledSubmit = async (data: SendInviteFormValues) => {
+    try {
+      // Must have at least name and email for prefilled mode
+      if (!data.first_name || !data.last_name || !data.email) {
+        toast.error("Pro předvyplnění vyplňte jméno a email");
+        return;
+      }
+      
       const fullName = `${data.first_name} ${data.last_name}`.trim();
       const client = await createClient.mutateAsync({
         first_name: data.first_name,
@@ -73,20 +101,18 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
         throw new Error("Nepodařilo se vytvořit klienta");
       }
 
-      // Create pre-diagnostic for the client
       const preDiag = await createPreDiagnostic.mutateAsync(client.id);
       
       if (!preDiag) {
         throw new Error("Nepodařilo se vytvořit pre-diagnostiku");
       }
 
-      // Generate link
       const baseUrl = window.location.origin;
       const link = `${baseUrl}/pre-diagnostic/${preDiag.token}`;
       
       setGeneratedLink(link);
       setClientName(fullName);
-      setStep('success');
+      setMode('success');
       
       toast.success("Klient vytvořen a odkaz vygenerován");
     } catch (error: any) {
@@ -105,17 +131,22 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
     }
   };
 
-  if (step === 'success') {
+  // Success screen
+  if (mode === 'success') {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
           <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
             <Check className="w-8 h-8 text-success" />
           </div>
-          <h3 className="text-lg font-medium">Klient vytvořen</h3>
-          <p className="text-sm text-muted-foreground">
-            {clientName} byl úspěšně vytvořen
-          </p>
+          <h3 className="text-lg font-medium">
+            {clientName ? 'Klient vytvořen' : 'Odkaz vytvořen'}
+          </h3>
+          {clientName && (
+            <p className="text-sm text-muted-foreground">
+              {clientName} byl úspěšně vytvořen
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -147,7 +178,9 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Platnost: 7 dní • Po vyplnění se data propojí s klientem
+            Platnost: 7 dní • {clientName 
+              ? 'Po vyplnění se data propojí s klientem'
+              : 'Klient vyplní všechny údaje sám'}
           </p>
         </div>
 
@@ -171,19 +204,76 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
     );
   }
 
+  // Mode selection
+  if (mode === 'select') {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Vyberte způsob vytvoření odkazu pro klienta.
+        </p>
+        
+        {/* Quick link option */}
+        <button
+          type="button"
+          onClick={handleQuickLink}
+          disabled={isLoading}
+          className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left"
+        >
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">Rychlý odkaz</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Vygenerovat odkaz ihned. Klient vyplní všechny údaje sám včetně jména a emailu.
+            </p>
+          </div>
+          {isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+        </button>
+
+        {/* Prefilled option */}
+        <button
+          type="button"
+          onClick={() => setMode('prefilled')}
+          disabled={isLoading}
+          className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left"
+        >
+          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+            <User className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">S předvyplněním</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Předvyplnit údaje klienta (jméno, email). Klient pak jen doplní zbylé informace.
+            </p>
+          </div>
+        </button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          onClick={onCancel}
+        >
+          Zrušit
+        </Button>
+      </div>
+    );
+  }
+
+  // Prefilled form
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+      <form onSubmit={form.handleSubmit(handlePrefilledSubmit)} className="space-y-4">
+        <div className="p-3 rounded-lg bg-secondary/50 border border-border">
           <div className="flex items-start gap-3">
-            <Mail className="w-5 h-5 text-success mt-0.5" />
+            <User className="w-5 h-5 text-muted-foreground mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-success">
-                Odkaz pro klienta
+              <p className="font-medium">
+                Předvyplnit údaje klienta
               </p>
               <p className="text-muted-foreground text-xs mt-1">
-                Klient obdrží odkaz a vyplní pre-diagnostiku sám. 
-                Po vyplnění se data automaticky propojí s jeho kartou.
+                Tyto údaje budou předvyplněny ve formuláři. Klient je uvidí a doplní zbytek.
               </p>
             </div>
           </div>
@@ -268,9 +358,9 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={onCancel}
+            onClick={() => setMode('select')}
           >
-            Zrušit
+            Zpět
           </Button>
           <Button 
             type="submit" 
@@ -285,7 +375,7 @@ export function SendInviteFlow({ onSuccess, onCancel }: SendInviteFlowProps) {
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Vytvořit a vygenerovat odkaz
+                Vytvořit odkaz
               </>
             )}
           </Button>
