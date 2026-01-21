@@ -446,36 +446,119 @@ serve(async (req) => {
 
         // If new client source and newClientData provided, check if email exists
         if (form.source === "new_client" && newClientData) {
-          const { name, email, phone } = newClientData;
+          const { name, first_name, last_name, email, phone, gender, birth_date } = newClientData;
+          
+          // Build full name from components if not provided
+          const fullName = name || `${first_name || ''} ${last_name || ''}`.trim();
 
-          if (!name || !email) {
+          if (!fullName || !email) {
             return new Response(
               JSON.stringify({ error: "Name and email are required for new clients" }),
               { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
-          // Check if email exists
+          // Check if email exists for this trainer
           const { data: existingClient } = await supabase
             .from("clients")
-            .select("id")
+            .select("id, name, email")
             .eq("email", email)
             .eq("user_id", form.user_id)
             .single();
 
           if (existingClient) {
-            // Don't auto-create, just save form for manual assignment
-            clientId = null;
+            // Client exists - update with new data (merge)
+            clientId = existingClient.id;
+            console.log("Found existing client by email:", existingClient.id, existingClient.name);
+            
+            // Merge client data with existing client (only update missing fields)
+            const { data: fullExistingClient } = await supabase
+              .from("clients")
+              .select("*")
+              .eq("id", clientId)
+              .single();
+
+            if (fullExistingClient) {
+              const updates: Record<string, any> = {};
+              
+              // Update birth_date if provided and not set
+              if (!fullExistingClient.birth_date && (birth_date || clientData.birth_date)) {
+                updates.birth_date = birth_date || clientData.birth_date;
+              }
+              // Update gender if provided and not set
+              if (!fullExistingClient.gender && (gender || clientData.gender)) {
+                updates.gender = gender || clientData.gender;
+              }
+              // Update phone if provided and not set
+              if (!fullExistingClient.phone && phone) {
+                updates.phone = phone;
+              }
+              // Apply other clientData updates for missing fields
+              if (!fullExistingClient.occupation && clientData.occupation) {
+                updates.occupation = clientData.occupation;
+              }
+              if (!fullExistingClient.sitting_hours_daily && clientData.sitting_hours_daily) {
+                updates.sitting_hours_daily = clientData.sitting_hours_daily;
+              }
+              if ((!fullExistingClient.current_activities || fullExistingClient.current_activities.length === 0) && clientData.current_activities) {
+                updates.current_activities = clientData.current_activities;
+              }
+              if (!fullExistingClient.sleep_hours && clientData.sleep_hours) {
+                updates.sleep_hours = clientData.sleep_hours;
+              }
+              if (!fullExistingClient.sports_history && clientData.sports_history) {
+                updates.sports_history = clientData.sports_history;
+              }
+              if (!fullExistingClient.stress_level && clientData.stress_level) {
+                updates.stress_level = clientData.stress_level;
+              }
+              if (!fullExistingClient.health_restrictions && clientData.health_restrictions) {
+                updates.health_restrictions = clientData.health_restrictions;
+              }
+              if ((!fullExistingClient.training_goals || fullExistingClient.training_goals.length === 0) && clientData.training_goals) {
+                updates.training_goals = clientData.training_goals;
+              }
+              if (!fullExistingClient.handedness && clientData.handedness) {
+                updates.handedness = clientData.handedness;
+              }
+              // Append notes if existing
+              if (clientData.notes) {
+                if (fullExistingClient.notes) {
+                  updates.notes = fullExistingClient.notes + '\n\n--- Z pre-diagnostiky ---\n' + clientData.notes;
+                } else {
+                  updates.notes = clientData.notes;
+                }
+              }
+
+              if (Object.keys(updates).length > 0) {
+                console.log("Updating existing client with:", updates);
+                await supabase
+                  .from("clients")
+                  .update(updates)
+                  .eq("id", clientId);
+              }
+            }
           } else {
             // Create new client with full data
             const { data: newClient, error: clientError } = await supabase
               .from("clients")
               .insert({
                 user_id: form.user_id,
-                name,
+                name: fullName,
                 email,
                 phone: phone || null,
-                ...clientData,
+                gender: gender || clientData.gender || null,
+                birth_date: birth_date || clientData.birth_date || null,
+                occupation: clientData.occupation || null,
+                sitting_hours_daily: clientData.sitting_hours_daily,
+                current_activities: clientData.current_activities || null,
+                sleep_hours: clientData.sleep_hours || null,
+                sports_history: clientData.sports_history || null,
+                stress_level: clientData.stress_level || null,
+                health_restrictions: clientData.health_restrictions || null,
+                training_goals: clientData.training_goals || null,
+                notes: clientData.notes || null,
+                handedness: clientData.handedness || null,
               })
               .select()
               .single();
@@ -485,7 +568,7 @@ serve(async (req) => {
               return new Response(
                 JSON.stringify({ error: "Failed to create client" }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+              );
             }
 
             clientId = newClient.id;
@@ -608,6 +691,11 @@ serve(async (req) => {
           .eq("id", formId);
 
         // Create notification for trainer
+        const clientNameForNotif = newClientData?.name || 
+          (newClientData?.first_name && newClientData?.last_name 
+            ? `${newClientData.first_name} ${newClientData.last_name}` 
+            : null);
+            
         await supabase
           .from("notifications")
           .insert({
@@ -615,7 +703,7 @@ serve(async (req) => {
             type: "pre_diagnostic_completed",
             title: "Pre-diagnostika dokončena",
             message: clientId 
-              ? "Klient vyplnil pre-diagnostický formulář."
+              ? `${clientNameForNotif || 'Klient'} vyplnil/a pre-diagnostický formulář.`
               : "Nový klient vyplnil pre-diagnostický formulář. Přiřaďte ho k existujícímu nebo vytvořte nového.",
             entity_type: "pre_diagnostic_form",
             entity_id: formId,

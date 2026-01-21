@@ -150,7 +150,8 @@ export function PreDiagnosticFormContent({
     const step = visibleSteps[currentStep];
     switch (step.id) {
       case 'identity':
-        return !!(formData.name && formData.email);
+        // Require first name, last name, email, and gender for new clients
+        return !!(formData.first_name && formData.last_name && formData.email && formData.gender);
       default:
         return true;
     }
@@ -195,15 +196,38 @@ export function PreDiagnosticFormContent({
               Vyplň prosím základní údaje, abychom věděli, s kým máme tu čest. 😊
             </p>
             
-            <div className="space-y-2">
-              <Label htmlFor="name">Jméno a příjmení *</Label>
-              <Input
-                id="name"
-                value={formData.name || ''}
-                onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Např. Jan Novák"
-                className="bg-secondary/50"
-              />
+            {/* First and last name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">Křestní jméno *</Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name || ''}
+                  onChange={(e) => {
+                    updateField('first_name', e.target.value);
+                    // Auto-update combined name
+                    const fullName = `${e.target.value} ${formData.last_name || ''}`.trim();
+                    updateField('name', fullName);
+                  }}
+                  placeholder="Jan"
+                  className="bg-secondary/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Příjmení *</Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name || ''}
+                  onChange={(e) => {
+                    updateField('last_name', e.target.value);
+                    // Auto-update combined name
+                    const fullName = `${formData.first_name || ''} ${e.target.value}`.trim();
+                    updateField('name', fullName);
+                  }}
+                  placeholder="Novák"
+                  className="bg-secondary/50"
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -219,7 +243,7 @@ export function PreDiagnosticFormContent({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefon (volitelné)</Label>
+              <Label htmlFor="phone">Telefon</Label>
               <Input
                 id="phone"
                 value={formData.phone || ''}
@@ -230,7 +254,7 @@ export function PreDiagnosticFormContent({
             </div>
             
             <div className="space-y-2">
-              <Label>Pohlaví</Label>
+              <Label>Pohlaví *</Label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -262,7 +286,7 @@ export function PreDiagnosticFormContent({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="birth_date">Datum narození (volitelné)</Label>
+              <Label htmlFor="birth_date">Datum narození</Label>
               <Input
                 id="birth_date"
                 type="date"
