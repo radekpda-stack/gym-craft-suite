@@ -91,18 +91,35 @@ const tools = [
     type: "function",
     function: {
       name: "query_data",
-      description: "Dotaz na data - kolik kreditů má klient, kolik tréninků proběhlo, příjmy atd.",
+      description: "Dotaz na data - kredit, tréninky, příjmy, měření, cvičení, diagnostiky, PR záznamy atd.",
       parameters: {
         type: "object",
         properties: {
           query_type: { 
             type: "string", 
-            enum: ["client_credit", "trainings_count", "income", "trainings_list", "clients_low_credit"],
+            enum: [
+              "client_credit", 
+              "trainings_count", 
+              "income", 
+              "trainings_list", 
+              "clients_low_credit",
+              "client_measurements",
+              "client_weight_progress",
+              "client_exercises",
+              "client_exercise_prs",
+              "client_cardio",
+              "client_diagnostics",
+              "client_profile",
+              "exercise_leaderboard",
+              "all_prs"
+            ],
             description: "Typ dotazu" 
           },
           client_name: { type: "string", description: "Jméno klienta (pokud je relevantní)" },
+          exercise_name: { type: "string", description: "Název cviku (pokud je relevantní)" },
           date_from: { type: "string", description: "Od data ve formátu YYYY-MM-DD" },
           date_to: { type: "string", description: "Do data ve formátu YYYY-MM-DD" },
+          limit: { type: "number", description: "Počet výsledků (default 10)" },
         },
         required: ["query_type"],
       },
@@ -328,6 +345,8 @@ async function processToolCall(
 
 // Handle data queries
 async function handleDataQuery(supabase: any, userId: string, args: any) {
+  const limit = args.limit || 10;
+  
   switch (args.query_type) {
     case "client_credit": {
       const client = await findClient(supabase, userId, args.client_name);
@@ -427,6 +446,294 @@ async function handleDataQuery(supabase: any, userId: string, args: any) {
       return { action: null, message: `⚠️ **Klienti s nízkým kreditem** (pod 1000 Kč):\n${list}` };
     }
 
+    // NEW: Client measurements (weight, body fat, circumferences)
+    case "client_measurements": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const { data: measurements } = await supabase
+        .from("measurements")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (!measurements || measurements.length === 0) {
+        return { action: null, message: `📏 Klient **${client.name}** nemá žádná měření.` };
+      }
+
+      const list = measurements.map((m: any) => {
+        const parts = [];
+        if (m.weight) parts.push(`váha: ${m.weight} kg`);
+        if (m.body_fat_percentage) parts.push(`tuk: ${m.body_fat_percentage}%`);
+        if (m.muscle_mass) parts.push(`svaly: ${m.muscle_mass} kg`);
+        return `• ${m.date}: ${parts.join(", ") || "bez dat"}`;
+      }).join("\n");
+
+      return { action: null, message: `📏 **Měření klienta ${client.name}** (posledních ${measurements.length}):\n${list}` };
+    }
+
+    // NEW: Client weight progress
+    case "client_weight_progress": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const { data: measurements } = await supabase
+        .from("measurements")
+        .select("date, weight")
+        .eq("client_id", client.id)
+        .not("weight", "is", null)
+        .order("date", { ascending: true });
+
+      if (!measurements || measurements.length < 2) {
+        return { action: null, message: `📊 Nedostatek dat pro analýzu hubnutí klienta **${client.name}**.` };
+      }
+
+      const first = measurements[0];
+      const last = measurements[measurements.length - 1];
+      const change = last.weight - first.weight;
+      const changePercent = ((change / first.weight) * 100).toFixed(1);
+
+      return { 
+        action: null, 
+        message: `📊 **Průběh hubnutí klienta ${client.name}:**\n• Počáteční váha (${first.date}): ${first.weight} kg\n• Aktuální váha (${last.date}): ${last.weight} kg\n• Změna: **${change > 0 ? "+" : ""}${change.toFixed(1)} kg** (${changePercent}%)\n• Počet měření: ${measurements.length}` 
+      };
+    }
+
+    // NEW: Client exercise entries (strength)
+    case "client_exercises": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      let query = supabase
+        .from("exercise_entries")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (args.exercise_name) {
+        query = query.ilike("exercise_name", `%${args.exercise_name}%`);
+      }
+
+      const { data: entries } = await query;
+
+      if (!entries || entries.length === 0) {
+        return { action: null, message: `🏋️ Klient **${client.name}** nemá žádné záznamy cvičení${args.exercise_name ? ` pro "${args.exercise_name}"` : ""}.` };
+      }
+
+      const list = entries.map((e: any) => {
+        const parts = [`${e.sets}x${e.reps || "?"}`];
+        if (e.weight_kg) parts.push(`${e.weight_kg} kg`);
+        if (e.time_seconds) parts.push(`${Math.floor(e.time_seconds / 60)}:${String(e.time_seconds % 60).padStart(2, "0")}`);
+        const prMark = e.is_pr ? " 🏆" : "";
+        return `• ${e.date} - **${e.exercise_name}**: ${parts.join(" @ ")}${prMark}`;
+      }).join("\n");
+
+      return { action: null, message: `🏋️ **Cvičení klienta ${client.name}**${args.exercise_name ? ` (${args.exercise_name})` : ""}:\n${list}` };
+    }
+
+    // NEW: Client exercise PRs
+    case "client_exercise_prs": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const { data: prs } = await supabase
+        .from("exercise_entries")
+        .select("exercise_name, weight_kg, reps, time_seconds, date")
+        .eq("client_id", client.id)
+        .eq("is_pr", true)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (!prs || prs.length === 0) {
+        return { action: null, message: `🏆 Klient **${client.name}** nemá žádné osobní rekordy.` };
+      }
+
+      const list = prs.map((p: any) => {
+        const value = p.weight_kg ? `${p.weight_kg} kg` : 
+                      p.time_seconds ? `${Math.floor(p.time_seconds / 60)}:${String(p.time_seconds % 60).padStart(2, "0")}` : 
+                      `${p.reps} reps`;
+        return `• **${p.exercise_name}**: ${value} (${p.date})`;
+      }).join("\n");
+
+      return { action: null, message: `🏆 **Osobní rekordy klienta ${client.name}**:\n${list}` };
+    }
+
+    // NEW: Client cardio entries
+    case "client_cardio": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const { data: cardio } = await supabase
+        .from("cardio_entries")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (!cardio || cardio.length === 0) {
+        return { action: null, message: `🚴 Klient **${client.name}** nemá žádné cardio záznamy.` };
+      }
+
+      const list = cardio.map((c: any) => {
+        const mins = Math.floor(c.duration_seconds / 60);
+        const secs = c.duration_seconds % 60;
+        const distance = c.distance_meters ? `${(c.distance_meters / 1000).toFixed(2)} km` : "";
+        const prMark = c.is_pr ? " 🏆" : "";
+        return `• ${c.date} - **${c.exercise_name}**: ${mins}:${String(secs).padStart(2, "0")} ${distance}${prMark}`;
+      }).join("\n");
+
+      return { action: null, message: `🚴 **Cardio záznamy klienta ${client.name}**:\n${list}` };
+    }
+
+    // NEW: Client diagnostics
+    case "client_diagnostics": {
+      const client = await findClient(supabase, userId, args.client_name);
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const { data: diagnostics } = await supabase
+        .from("diagnostics_entries")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (!diagnostics || diagnostics.length === 0) {
+        return { action: null, message: `🔍 Klient **${client.name}** nemá žádné diagnostiky.` };
+      }
+
+      const list = diagnostics.map((d: any) => {
+        const findings: string[] = [];
+        if (d.mobility_issues) findings.push("problémy s mobilitou");
+        if (d.posture_issues) findings.push("problémy s držením těla");
+        if (d.strength_imbalances) findings.push("svalové dysbalance");
+        return `• ${d.date}: ${findings.length > 0 ? findings.join(", ") : "bez nálezů"}${d.notes ? ` - ${d.notes.substring(0, 50)}...` : ""}`;
+      }).join("\n");
+
+      return { action: null, message: `🔍 **Diagnostiky klienta ${client.name}**:\n${list}` };
+    }
+
+    // NEW: Client full profile
+    case "client_profile": {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_archived", false)
+        .ilike("name", `%${args.client_name}%`)
+        .single();
+
+      if (!client) {
+        return { action: null, message: `Klient "${args.client_name}" nebyl nalezen.` };
+      }
+
+      const details: string[] = [];
+      details.push(`• Jméno: **${client.name}**`);
+      if (client.email) details.push(`• Email: ${client.email}`);
+      if (client.phone) details.push(`• Telefon: ${client.phone}`);
+      details.push(`• Kredit: ${(client.credit_balance || 0).toLocaleString("cs-CZ")} Kč`);
+      if (client.birth_date) details.push(`• Datum narození: ${client.birth_date}`);
+      if (client.gender) details.push(`• Pohlaví: ${client.gender === "male" ? "muž" : "žena"}`);
+      if (client.height) details.push(`• Výška: ${client.height} cm`);
+      if (client.weight) details.push(`• Váha: ${client.weight} kg`);
+      if (client.training_goals?.length > 0) details.push(`• Cíle: ${client.training_goals.join(", ")}`);
+      if (client.health_restrictions) details.push(`• Zdravotní omezení: ${client.health_restrictions}`);
+      if (client.notes) details.push(`• Poznámky: ${client.notes}`);
+      if (client.occupation) details.push(`• Povolání: ${client.occupation}`);
+      if (client.pain_areas?.length > 0) details.push(`• Bolestivá místa: ${client.pain_areas.join(", ")}`);
+      if (client.injury_history) details.push(`• Historie zranění: ${client.injury_history}`);
+
+      return { action: null, message: `👤 **Profil klienta:**\n${details.join("\n")}` };
+    }
+
+    // NEW: Exercise leaderboard
+    case "exercise_leaderboard": {
+      if (!args.exercise_name) {
+        return { action: null, message: `❌ Pro žebříček musíte zadat název cviku.` };
+      }
+
+      // Try strength exercises first
+      const { data: strengthEntries } = await supabase
+        .from("exercise_entries")
+        .select("client_id, weight_kg, reps, time_seconds, date, clients(name, gender)")
+        .eq("user_id", userId)
+        .eq("is_pr", true)
+        .ilike("exercise_name", `%${args.exercise_name}%`)
+        .not("weight_kg", "is", null)
+        .order("weight_kg", { ascending: false })
+        .limit(limit);
+
+      if (strengthEntries && strengthEntries.length > 0) {
+        const list = strengthEntries.map((e: any, i: number) => {
+          const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+          const gender = e.clients?.gender === "male" ? "♂️" : e.clients?.gender === "female" ? "♀️" : "";
+          return `${medal} ${e.clients?.name || "?"} ${gender}: **${e.weight_kg} kg** x ${e.reps || "?"} (${e.date})`;
+        }).join("\n");
+
+        return { action: null, message: `🏆 **Žebříček: ${args.exercise_name}**\n${list}` };
+      }
+
+      // Try cardio if no strength entries
+      const { data: cardioEntries } = await supabase
+        .from("cardio_entries")
+        .select("client_id, duration_seconds, distance_meters, date, clients(name, gender)")
+        .eq("user_id", userId)
+        .ilike("exercise_name", `%${args.exercise_name}%`)
+        .order("duration_seconds", { ascending: true })
+        .limit(limit);
+
+      if (cardioEntries && cardioEntries.length > 0) {
+        const list = cardioEntries.map((e: any, i: number) => {
+          const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+          const mins = Math.floor(e.duration_seconds / 60);
+          const secs = e.duration_seconds % 60;
+          const gender = e.clients?.gender === "male" ? "♂️" : e.clients?.gender === "female" ? "♀️" : "";
+          return `${medal} ${e.clients?.name || "?"} ${gender}: **${mins}:${String(secs).padStart(2, "0")}** (${e.date})`;
+        }).join("\n");
+
+        return { action: null, message: `🏆 **Žebříček: ${args.exercise_name}**\n${list}` };
+      }
+
+      return { action: null, message: `🏆 Žádné záznamy pro cvik "${args.exercise_name}".` };
+    }
+
+    // NEW: All PRs across all clients
+    case "all_prs": {
+      const { data: prs } = await supabase
+        .from("exercise_entries")
+        .select("exercise_name, weight_kg, reps, time_seconds, date, clients(name)")
+        .eq("user_id", userId)
+        .eq("is_pr", true)
+        .order("date", { ascending: false })
+        .limit(limit);
+
+      if (!prs || prs.length === 0) {
+        return { action: null, message: `🏆 Žádné osobní rekordy v databázi.` };
+      }
+
+      const list = prs.map((p: any) => {
+        const value = p.weight_kg ? `${p.weight_kg} kg` : 
+                      p.time_seconds ? `${Math.floor(p.time_seconds / 60)}:${String(p.time_seconds % 60).padStart(2, "0")}` : 
+                      `${p.reps} reps`;
+        return `• ${p.date} - **${p.clients?.name || "?"}** - ${p.exercise_name}: ${value}`;
+      }).join("\n");
+
+      return { action: null, message: `🏆 **Poslední osobní rekordy**:\n${list}` };
+    }
+
     default:
       return { action: null, message: "Neznámý typ dotazu." };
   }
@@ -520,10 +827,34 @@ ${contextInfo}
 PRAVIDLA:
 1. Odpovídej VŽDY česky
 2. Když uživatel chce provést akci (vytvořit trénink, přidat kredit, zrušit trénink, dokončit trénink), MUSÍŠ použít odpovídající tool
-3. Pro dotazy na data (kolik má klient kreditu, kolik tréninků proběhlo) použij tool query_data
+3. Pro dotazy na data použij tool query_data s odpovídajícím query_type
 4. Při nejasnostech se zeptej
 5. Při interpretaci relativních dat (zítra, příští týden, v pátek) použij dnešní datum jako referenci
 6. Buď stručný a jasný
+
+DOSTUPNÉ DOTAZY (query_data tool):
+- client_credit: Kredit klienta
+- trainings_count: Počet tréninků
+- income: Příjmy za období
+- trainings_list: Seznam tréninků
+- clients_low_credit: Klienti s nízkým kreditem
+- client_measurements: Měření klienta (váha, tuk, obvody)
+- client_weight_progress: Průběh hubnutí klienta
+- client_exercises: Historie cvičení klienta
+- client_exercise_prs: Osobní rekordy klienta
+- client_cardio: Cardio záznamy klienta
+- client_diagnostics: Diagnostiky klienta
+- client_profile: Kompletní profil klienta
+- exercise_leaderboard: Žebříček pro konkrétní cvik
+- all_prs: Všechny poslední osobní rekordy
+
+MÁŠ PŘÍSTUP K TĚMTO DATŮM:
+- Kompletní profily klientů (výška, váha, cíle, zdravotní omezení, poznámky)
+- Měření a průběh hubnutí
+- Záznamy cvičení (silové i cardio)
+- Osobní rekordy (PR)
+- Diagnostiky
+- Žebříčky podle cviků
 
 INTERPRETACE ČASU:
 - "zítra" = ${new Date(Date.now() + 24*60*60*1000).toISOString().split("T")[0]}
