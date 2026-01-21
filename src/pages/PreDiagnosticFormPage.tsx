@@ -8,10 +8,12 @@ import { PreDiagnosticLoading } from '@/components/pre-diagnostic/PreDiagnosticL
 
 export interface PreDiagnosticFormData {
   // Basic context
-  age?: number;
   height?: number;
   weight?: number;
   daily_activity_type?: 'sedentary' | 'combined' | 'physical';
+  handedness?: 'left' | 'right';
+  sports_history?: string;
+  stress_level?: number;
   
   // Movement activity
   movement_experience?: string;
@@ -19,6 +21,10 @@ export interface PreDiagnosticFormData {
   current_activities_other?: string;
   movement_frequency?: string;
   feeling_after_movement?: string;
+  
+  // Sleep
+  sleep_hours_avg?: string;
+  sleep_quality?: string;
   
   // Pain & restrictions
   has_pain?: boolean;
@@ -38,10 +44,6 @@ export interface PreDiagnosticFormData {
   movement_concerns?: string;
   health_notes?: string;
   
-  // Sleep & regeneration
-  sleep_hours_avg?: string;
-  sleep_quality?: string;
-  
   // Goals
   main_goal?: string;
   main_goal_other?: string;
@@ -52,10 +54,10 @@ export interface PreDiagnosticFormData {
   // Open question
   open_question?: string;
   
-  // New client identification - extended
+  // Client identification
   first_name?: string;
   last_name?: string;
-  name?: string; // Combined first + last name
+  name?: string;
   email?: string;
   phone?: string;
   gender?: 'male' | 'female';
@@ -83,6 +85,7 @@ export default function PreDiagnosticFormPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [trainerInfo, setTrainerInfo] = useState<any>(null);
 
   // Determine if this is a new client based on formState (after loading)
   const isNewClientMode = formState?.source === 'new_client';
@@ -222,6 +225,8 @@ export default function PreDiagnosticFormPage() {
         throw new Error(errorData.error || 'Odeslání selhalo');
       }
 
+      const result = await response.json();
+      setTrainerInfo(result.trainerInfo || null);
       setIsCompleted(true);
       toast.success('Formulář byl úspěšně odeslán');
     } catch (error) {
@@ -253,7 +258,7 @@ export default function PreDiagnosticFormPage() {
   }
 
   if (isCompleted) {
-    return <PreDiagnosticComplete />;
+    return <PreDiagnosticComplete trainerInfo={trainerInfo} />;
   }
 
   return (

@@ -420,6 +420,27 @@ serve(async (req) => {
             : answers.health_notes;
         }
 
+        // Parse sleep_hours_avg to numeric
+        const parseSleepHours = (value: string | undefined): number | null => {
+          if (!value) return null;
+          if (value.includes('méně než 5')) return 4;
+          if (value.includes('5–6') || value.includes('5-6')) return 5.5;
+          if (value.includes('6–7') || value.includes('6-7')) return 6.5;
+          if (value.includes('7–8') || value.includes('7-8')) return 7.5;
+          if (value.includes('8+') || value.includes('8h+')) return 8.5;
+          const num = parseFloat(value);
+          return isNaN(num) ? null : num;
+        };
+
+        // Parse training_dislikes from textarea to array
+        const parseTrainingDislikes = (value: string | string[] | undefined): string[] | null => {
+          if (!value) return null;
+          if (Array.isArray(value)) return value;
+          // Split by comma or newline if it's a string
+          const items = value.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
+          return items.length > 0 ? items : null;
+        };
+
         // Client data to save
         const clientData: Record<string, any> = {
           birth_date: birthDate || null,
@@ -429,9 +450,10 @@ serve(async (req) => {
           current_activities: Array.isArray(answers.current_activities) 
             ? answers.current_activities 
             : answers.current_activities ? [answers.current_activities] : null,
-          sleep_hours: answers.sleep_hours || (answers.sleep_hours_avg ? parseFloat(answers.sleep_hours_avg) : null),
+          sleep_hours: answers.sleep_hours || parseSleepHours(answers.sleep_hours_avg),
+          sleep_quality: answers.sleep_quality || null,
           sports_history: answers.exercise_experience || answers.sports_history || null,
-          stress_level: answers.stress_level || null,
+          stress_level: answers.stress_level ? parseInt(answers.stress_level) : null,
           health_restrictions: combinedHealthRestrictions || null,
           training_goals: trainingGoals.length > 0 ? trainingGoals : (answers.main_goal ? [answers.main_goal] : null),
           notes: notes || null,
@@ -442,7 +464,17 @@ serve(async (req) => {
           supplements: Array.isArray(answers.supplements)
             ? answers.supplements
             : null,
+          // New fields - proper mapping
+          height: answers.height ? parseFloat(answers.height) : null,
+          weight: answers.weight ? parseFloat(answers.weight) : null,
+          movement_frequency: answers.movement_frequency || null,
+          pain_areas: Array.isArray(answers.pain_areas) ? answers.pain_areas : null,
+          injury_history: answers.injury_details || null,
+          surgery_history: answers.surgery_details || null,
+          training_dislikes: parseTrainingDislikes(answers.training_dislikes),
         };
+        
+        console.log("Built clientData:", JSON.stringify(clientData, null, 2));
 
         // If new client source and newClientData provided, check if email exists
         if (form.source === "new_client" && newClientData) {
@@ -521,6 +553,31 @@ serve(async (req) => {
               if (!fullExistingClient.handedness && clientData.handedness) {
                 updates.handedness = clientData.handedness;
               }
+              // New fields for existing client matching by email
+              if (!fullExistingClient.height && clientData.height) {
+                updates.height = clientData.height;
+              }
+              if (!fullExistingClient.weight && clientData.weight) {
+                updates.weight = clientData.weight;
+              }
+              if (!fullExistingClient.sleep_quality && clientData.sleep_quality) {
+                updates.sleep_quality = clientData.sleep_quality;
+              }
+              if (!fullExistingClient.movement_frequency && clientData.movement_frequency) {
+                updates.movement_frequency = clientData.movement_frequency;
+              }
+              if ((!fullExistingClient.pain_areas || fullExistingClient.pain_areas.length === 0) && clientData.pain_areas) {
+                updates.pain_areas = clientData.pain_areas;
+              }
+              if (!fullExistingClient.injury_history && clientData.injury_history) {
+                updates.injury_history = clientData.injury_history;
+              }
+              if (!fullExistingClient.surgery_history && clientData.surgery_history) {
+                updates.surgery_history = clientData.surgery_history;
+              }
+              if ((!fullExistingClient.training_dislikes || fullExistingClient.training_dislikes.length === 0) && clientData.training_dislikes) {
+                updates.training_dislikes = clientData.training_dislikes;
+              }
               // Append notes if existing
               if (clientData.notes) {
                 if (fullExistingClient.notes) {
@@ -553,12 +610,21 @@ serve(async (req) => {
                 sitting_hours_daily: clientData.sitting_hours_daily,
                 current_activities: clientData.current_activities || null,
                 sleep_hours: clientData.sleep_hours || null,
+                sleep_quality: clientData.sleep_quality || null,
                 sports_history: clientData.sports_history || null,
                 stress_level: clientData.stress_level || null,
                 health_restrictions: clientData.health_restrictions || null,
                 training_goals: clientData.training_goals || null,
                 notes: clientData.notes || null,
                 handedness: clientData.handedness || null,
+                // New fields
+                height: clientData.height || null,
+                weight: clientData.weight || null,
+                movement_frequency: clientData.movement_frequency || null,
+                pain_areas: clientData.pain_areas || null,
+                injury_history: clientData.injury_history || null,
+                surgery_history: clientData.surgery_history || null,
+                training_dislikes: clientData.training_dislikes || null,
               })
               .select()
               .single();
@@ -624,6 +690,31 @@ serve(async (req) => {
             }
             if ((!existingClient.supplements || existingClient.supplements.length === 0) && clientData.supplements) {
               updates.supplements = clientData.supplements;
+            }
+            // New fields
+            if (!existingClient.height && clientData.height) {
+              updates.height = clientData.height;
+            }
+            if (!existingClient.weight && clientData.weight) {
+              updates.weight = clientData.weight;
+            }
+            if (!existingClient.sleep_quality && clientData.sleep_quality) {
+              updates.sleep_quality = clientData.sleep_quality;
+            }
+            if (!existingClient.movement_frequency && clientData.movement_frequency) {
+              updates.movement_frequency = clientData.movement_frequency;
+            }
+            if ((!existingClient.pain_areas || existingClient.pain_areas.length === 0) && clientData.pain_areas) {
+              updates.pain_areas = clientData.pain_areas;
+            }
+            if (!existingClient.injury_history && clientData.injury_history) {
+              updates.injury_history = clientData.injury_history;
+            }
+            if (!existingClient.surgery_history && clientData.surgery_history) {
+              updates.surgery_history = clientData.surgery_history;
+            }
+            if ((!existingClient.training_dislikes || existingClient.training_dislikes.length === 0) && clientData.training_dislikes) {
+              updates.training_dislikes = clientData.training_dislikes;
             }
             // Append notes if existing
             if (clientData.notes) {
@@ -710,8 +801,35 @@ serve(async (req) => {
             client_id: clientId,
           });
 
+        // Fetch trainer profile and company info for response
+        const { data: trainerProfile } = await supabase
+          .from("profiles")
+          .select("display_name, email, phone, social_links, experience_years, bio")
+          .eq("id", form.user_id)
+          .single();
+
+        // Fetch company profile from app_settings
+        const { data: companySettings } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "company_profile")
+          .eq("user_id", form.user_id)
+          .single();
+
+        const trainerInfo = {
+          name: trainerProfile?.display_name || null,
+          email: trainerProfile?.email || null,
+          phone: trainerProfile?.phone || null,
+          social_links: trainerProfile?.social_links || {},
+          experience_years: trainerProfile?.experience_years || null,
+          bio: trainerProfile?.bio || null,
+          company: companySettings?.value || null,
+        };
+
+        console.log("Returning trainer info:", JSON.stringify(trainerInfo, null, 2));
+
         return new Response(
-          JSON.stringify({ success: true, clientId }),
+          JSON.stringify({ success: true, clientId, trainerInfo }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
