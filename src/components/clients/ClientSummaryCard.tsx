@@ -119,8 +119,23 @@ export function ClientSummaryCard({
     )}>
       {/* Header Row */}
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <h2 className="text-xl font-bold text-foreground">{client.name}</h2>
+          {/* Feedback toggle - directly under name for easy access */}
+          <div className="flex items-center gap-2">
+            <Switch
+              id="feedback-toggle-header"
+              checked={client.feedback_enabled !== false}
+              onCheckedChange={(checked) => onFeedbackToggle?.(checked)}
+              className="scale-90"
+            />
+            <Label 
+              htmlFor="feedback-toggle-header" 
+              className="text-xs text-muted-foreground cursor-pointer"
+            >
+              {client.feedback_enabled !== false ? "Feedback zapnut" : "Feedback vypnut"}
+            </Label>
+          </div>
           {isSharedBudget && (
             <button
               onClick={() => setShowMembers(!showMembers)}
