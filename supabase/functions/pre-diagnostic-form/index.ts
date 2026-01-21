@@ -786,8 +786,10 @@ serve(async (req) => {
           (newClientData?.first_name && newClientData?.last_name 
             ? `${newClientData.first_name} ${newClientData.last_name}` 
             : null);
+        
+        console.log("Creating notification for trainer:", form.user_id, "client:", clientNameForNotif);
             
-        await supabase
+        const { data: notifData, error: notifError } = await supabase
           .from("notifications")
           .insert({
             user_id: form.user_id,
@@ -799,7 +801,15 @@ serve(async (req) => {
             entity_type: "pre_diagnostic_form",
             entity_id: formId,
             client_id: clientId,
-          });
+          })
+          .select()
+          .single();
+        
+        if (notifError) {
+          console.error("Failed to create notification:", notifError);
+        } else {
+          console.log("Notification created successfully:", notifData?.id);
+        }
 
         // Fetch trainer profile and company info for response
         const { data: trainerProfile } = await supabase
