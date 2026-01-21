@@ -24,6 +24,7 @@ import {
   Dumbbell,
   Paintbrush,
   Share2,
+  Sparkles,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -50,6 +51,7 @@ import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { SocialMediaExport } from '@/components/settings/SocialMediaExport';
+import { AIAssistantSettings } from '@/components/settings/AIAssistantSettings';
 // CalendarSyncSettings moved to SchedulePage
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -111,6 +113,15 @@ export default function Settings() {
         : 'Visual summaries for sharing',
       icon: Share2,
       iconColor: 'text-pink-500',
+    },
+    {
+      id: 'ai',
+      title: language === 'cs' ? 'AI Asistent' : 'AI Assistant',
+      description: language === 'cs' 
+        ? 'Inteligentní pomocník s přístupem k datům' 
+        : 'Smart assistant with data access',
+      icon: Sparkles,
+      iconColor: 'text-violet-500',
     },
     {
       id: 'admin',
@@ -397,6 +408,19 @@ export default function Settings() {
             icon={Share2}
           >
             <SocialMediaExport />
+          </SettingsSection>
+        );
+
+      case 'ai':
+        return (
+          <SettingsSection
+            title={language === 'cs' ? 'AI Asistent' : 'AI Assistant'}
+            description={language === 'cs' 
+              ? 'Inteligentní pomocník s plným přístupem k datům aplikace. Může číst a zapisovat data, vytvářet tréninky, spravovat kredit i generovat příspěvky.' 
+              : 'Smart assistant with full access to application data. Can read and write data, create trainings, manage credit and generate posts.'}
+            icon={Sparkles}
+          >
+            <AIAssistantSettings />
           </SettingsSection>
         );
 
