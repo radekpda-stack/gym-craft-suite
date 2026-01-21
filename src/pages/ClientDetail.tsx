@@ -158,6 +158,9 @@ export default function ClientDetail() {
         onUpdateTrainingStartDate={handleUpdateTrainingStartDate}
         redFlagCount={redFlagCount}
         lastPortalLogin={portalAccess?.last_portal_login}
+        onFeedbackToggle={async (enabled) => {
+          await updateClient.mutateAsync({ id: client.id, values: { feedbackEnabled: enabled } });
+        }}
       />
 
       {/* SECTION 2: Health Alert (if any) */}
