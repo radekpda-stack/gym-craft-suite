@@ -362,15 +362,48 @@ export function PreDiagnosticFormContent({
               </div>
             </div>
 
+            {/* Handedness - new field */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">✋ Jsi pravák nebo levák?</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateField('handedness', 'right')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.handedness === 'right' 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">👋</span>
+                  <span className="text-sm font-medium">Pravák</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField('handedness', 'left')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-center",
+                    formData.handedness === 'left' 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl mb-1 block">🤚</span>
+                  <span className="text-sm font-medium">Levák</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sports history - new field */}
             <div className="space-y-2">
-              <Label htmlFor="age">🎂 Věk</Label>
-              <Input
-                id="age"
-                type="number"
-                value={formData.age || ''}
-                onChange={(e) => updateField('age', parseInt(e.target.value) || undefined)}
-                placeholder="35"
-                className="bg-secondary/50"
+              <Label htmlFor="sports_history">🏅 Sportovní historie</Label>
+              <Textarea
+                id="sports_history"
+                value={formData.sports_history || ''}
+                onChange={(e) => updateField('sports_history', e.target.value)}
+                placeholder="Jaké sporty jsi dříve dělal/a? Jak dlouho? Na jaké úrovni?"
+                className="bg-secondary/50 min-h-[80px]"
               />
             </div>
           </div>
@@ -480,6 +513,31 @@ export function PreDiagnosticFormContent({
                   >
                     {hours}
                   </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Stress level - new field */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="text-base font-medium">😓 Jaká je tvá úroveň stresu?</Label>
+              <p className="text-sm text-muted-foreground">1 = minimální stres, 10 = extrémní stres</p>
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => updateField('stress_level', level)}
+                    className={cn(
+                      "w-10 h-10 rounded-lg border-2 transition-all font-medium",
+                      formData.stress_level === level 
+                        ? level <= 3 ? "border-green-500 bg-green-500/20 text-green-700" :
+                          level <= 6 ? "border-yellow-500 bg-yellow-500/20 text-yellow-700" :
+                          "border-red-500 bg-red-500/20 text-red-700"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    {level}
+                  </button>
                 ))}
               </div>
             </div>
