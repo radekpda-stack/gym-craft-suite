@@ -34,6 +34,8 @@ import {
   Hand,
   Apple,
   Pill,
+  Ruler,
+  Scale,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,62 +95,68 @@ const translateBodyPart = (part: string): string => {
   return translations[part.toLowerCase()] || part;
 };
 
+// Translation helper for occupation
+const translateOccupation = (occ: string | null | undefined): string => {
+  if (!occ) return '—';
+  const translations: Record<string, string> = {
+    'sedentary': 'Sedavé zaměstnání',
+    'sedave': 'Sedavé zaměstnání',
+    'combined': 'Kombinované zaměstnání',
+    'kombinované zaměstnání': 'Kombinované zaměstnání',
+    'mixed': 'Kombinované zaměstnání',
+    'active': 'Aktivní zaměstnání',
+    'physical': 'Fyzicky náročné',
+  };
+  return translations[occ.toLowerCase()] || occ;
+};
+
+// Translation helper for movement frequency
+const translateMovementFrequency = (freq: string | null | undefined): string => {
+  if (!freq) return '—';
+  const translations: Record<string, string> = {
+    'none': 'Žádná',
+    '1-2': '1-2× týdně',
+    '3-4': '3-4× týdně',
+    '5+': '5+× týdně',
+  };
+  return translations[freq] || freq;
+};
+
+// Translation helper for daily activity
+const translateDailyActivity = (activity: string | null | undefined): string => {
+  if (!activity) return '—';
+  const translations: Record<string, string> = {
+    'sedentary': 'Sedavá',
+    'light': 'Lehká',
+    'moderate': 'Střední',
+    'active': 'Aktivní',
+    'very_active': 'Velmi aktivní',
+    'combined': 'Kombinovaná',
+  };
+  return translations[activity.toLowerCase()] || activity;
+};
+
 interface ClientProfileTabProps {
   client: Client;
   onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
 }
 
-interface EditableFieldProps {
+// Unified field component for consistent styling
+interface ProfileFieldProps {
   label: string;
-  value: string | number | null | undefined;
+  value: React.ReactNode;
   icon: React.ReactNode;
-  isEditing: boolean;
-  editValue: string;
-  onEditChange: (value: string) => void;
-  type?: 'text' | 'number' | 'textarea';
-  placeholder?: string;
-  suffix?: string;
+  className?: string;
 }
 
-function EditableField({
-  label,
-  value,
-  icon,
-  isEditing,
-  editValue,
-  onEditChange,
-  type = 'text',
-  placeholder,
-  suffix,
-}: EditableFieldProps) {
-  const displayValue = value != null ? (suffix ? `${value}${suffix}` : String(value)) : '—';
-
+function ProfileField({ label, value, icon, className }: ProfileFieldProps) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+    <div className={cn("space-y-1.5", className)}>
+      <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
         {icon}
         <span>{label}</span>
       </div>
-      {isEditing ? (
-        type === 'textarea' ? (
-          <Textarea
-            value={editValue}
-            onChange={(e) => onEditChange(e.target.value)}
-            placeholder={placeholder}
-            className="min-h-[60px] text-sm"
-          />
-        ) : (
-          <Input
-            type={type}
-            value={editValue}
-            onChange={(e) => onEditChange(e.target.value)}
-            placeholder={placeholder}
-            className="h-8 text-sm"
-          />
-        )
-      ) : (
-        <p className="font-medium text-foreground text-sm">{displayValue}</p>
-      )}
+      <p className="font-medium text-foreground text-sm">{value || '—'}</p>
     </div>
   );
 }
@@ -164,7 +172,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
   const syncMutation = useSyncPreDiagnosticToClient();
   const previewMutation = usePreviewPreDiagnosticSync();
 
-  // Edit state - includes ALL editable fields
+  // Edit state
   const [editData, setEditData] = useState({
     occupation: client.occupation || '',
     sleep_hours: client.sleep_hours?.toString() || '',
@@ -173,7 +181,6 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     notes: client.notes || '',
     birth_date: client.birth_date || '',
     sports_history: client.sports_history || '',
-    // Additional editable fields
     gender: client.gender as 'male' | 'female' | null,
     handedness: client.handedness as 'left' | 'right' | 'ambidextrous' | null,
     height: client.height?.toString() || '',
@@ -198,7 +205,6 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       notes: client.notes || '',
       birth_date: client.birth_date || '',
       sports_history: client.sports_history || '',
-      // Additional editable fields
       gender: client.gender as 'male' | 'female' | null,
       handedness: client.handedness as 'left' | 'right' | 'ambidextrous' | null,
       height: client.height?.toString() || '',
@@ -215,7 +221,6 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
     if (!onUpdateClient) return;
     
     try {
-      // Use camelCase to match ClientFormValues schema
       await onUpdateClient({
         occupation: editData.occupation || undefined,
         sleep_hours: editData.sleep_hours ? Number(editData.sleep_hours) : undefined,
@@ -224,7 +229,6 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         notes: editData.notes,
         birthDate: editData.birth_date || undefined,
         sports_history: editData.sports_history || undefined,
-        // Additional fields
         gender: editData.gender,
         handedness: editData.handedness,
         height: editData.height ? Number(editData.height) : undefined,
@@ -271,9 +275,9 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
   return (
     <div className="space-y-4">
       {/* Basic Info Card */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold flex items-center gap-2 text-base">
             <User className="w-5 h-5 text-primary" />
             Základní informace
           </h3>
@@ -296,76 +300,73 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
           )}
         </div>
 
-        <div className="space-y-4">
-          {/* Birth date and Gender - separate rows on mobile, side by side on larger screens */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Birth date - editable */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <Calendar className="w-4 h-4" />
-                <span>Datum narození</span>
-              </div>
-              {isEditing ? (
-                <Input
-                  type="date"
-                  value={editData.birth_date}
-                  onChange={(e) => setEditData(d => ({ ...d, birth_date: e.target.value }))}
-                  className="h-8 text-sm w-full"
-                />
-              ) : (
+        {/* Consistent grid layout */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-5">
+          {/* Birth date */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Datum narození</span>
+            </div>
+            {isEditing ? (
+              <Input
+                type="date"
+                value={editData.birth_date}
+                onChange={(e) => setEditData(d => ({ ...d, birth_date: e.target.value }))}
+                className="h-9 text-sm"
+              />
+            ) : (
+              <div>
                 <p className="font-medium text-foreground text-sm">
                   {age ? `${age} let` : '—'}
-                  {client.birth_date && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
-                    </span>
-                  )}
                 </p>
-              )}
-            </div>
-
-            {/* Gender - editable */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <User className="w-4 h-4" />
-                <span>Pohlaví</span>
+                {client.birth_date && (
+                  <span className="text-muted-foreground text-xs">
+                    (nar. {format(new Date(client.birth_date), 'd.M.yyyy')})
+                  </span>
+                )}
               </div>
-              {isEditing ? (
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant={editData.gender === 'male' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEditData(d => ({ ...d, gender: 'male' }))}
-                    className="flex-1 h-8 px-3 text-xs"
-                  >
-                    Muž
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={editData.gender === 'female' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEditData(d => ({ ...d, gender: 'female' }))}
-                    className="flex-1 h-8 px-3 text-xs"
-                  >
-                    Žena
-                  </Button>
-                </div>
-              ) : (
-                <p className="font-medium text-foreground text-sm">
-                  {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
-                </p>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Other fields in grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {/* Gender */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <User className="w-3.5 h-3.5" />
+              <span>Pohlaví</span>
+            </div>
+            {isEditing ? (
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={editData.gender === 'male' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, gender: 'male' }))}
+                  className="flex-1 h-9 text-xs"
+                >
+                  Muž
+                </Button>
+                <Button
+                  type="button"
+                  variant={editData.gender === 'female' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditData(d => ({ ...d, gender: 'female' }))}
+                  className="flex-1 h-9 text-xs"
+                >
+                  Žena
+                </Button>
+              </div>
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.gender === 'male' ? 'Muž' : client.gender === 'female' ? 'Žena' : '—'}
+              </p>
+            )}
+          </div>
 
-          {/* Handedness - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Hand className="w-4 h-4" />
+          {/* Handedness */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Hand className="w-3.5 h-3.5" />
               <span>Dominantní ruka</span>
             </div>
             {isEditing ? (
@@ -375,18 +376,18 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                   variant={editData.handedness === 'right' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setEditData(d => ({ ...d, handedness: 'right' }))}
-                  className="flex-1 h-8 px-2 text-xs"
+                  className="flex-1 h-9 text-xs"
                 >
-                  Pravák
+                  P
                 </Button>
                 <Button
                   type="button"
                   variant={editData.handedness === 'left' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setEditData(d => ({ ...d, handedness: 'left' }))}
-                  className="flex-1 h-8 px-2 text-xs"
+                  className="flex-1 h-9 text-xs"
                 >
-                  Levák
+                  L
                 </Button>
               </div>
             ) : (
@@ -398,35 +399,30 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             )}
           </div>
 
-          {/* Occupation - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Briefcase className="w-4 h-4" />
+          {/* Occupation */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Briefcase className="w-3.5 h-3.5" />
               <span>Typ práce</span>
             </div>
             {isEditing ? (
               <Input
                 value={editData.occupation}
                 onChange={(e) => setEditData(d => ({ ...d, occupation: e.target.value }))}
-                placeholder="Programátor, učitel..."
-                className="h-8 text-sm"
+                placeholder="Programátor..."
+                className="h-9 text-sm"
               />
             ) : (
               <p className="font-medium text-foreground text-sm">
-                {client.occupation === 'sedentary' ? 'Sedavá' :
-                 client.occupation === 'combined' ? 'Kombinovaná' :
-                 client.occupation === 'mixed' ? 'Kombinovaná' :
-                 client.occupation === 'active' ? 'Aktivní' :
-                 client.occupation === 'physical' ? 'Fyzicky náročná' :
-                 client.occupation || '—'}
+                {translateOccupation(client.occupation)}
               </p>
             )}
           </div>
 
-          {/* Height - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <User className="w-4 h-4" />
+          {/* Height */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Ruler className="w-3.5 h-3.5" />
               <span>Výška</span>
             </div>
             {isEditing ? (
@@ -435,7 +431,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                 value={editData.height}
                 onChange={(e) => setEditData(d => ({ ...d, height: e.target.value }))}
                 placeholder="175"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
               />
             ) : (
               <p className="font-medium text-foreground text-sm">
@@ -444,10 +440,10 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             )}
           </div>
 
-          {/* Weight - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <User className="w-4 h-4" />
+          {/* Weight */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Scale className="w-3.5 h-3.5" />
               <span>Váha</span>
             </div>
             {isEditing ? (
@@ -457,7 +453,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                 value={editData.weight}
                 onChange={(e) => setEditData(d => ({ ...d, weight: e.target.value }))}
                 placeholder="70"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
               />
             ) : (
               <p className="font-medium text-foreground text-sm">
@@ -465,34 +461,42 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
               </p>
             )}
           </div>
-          </div> {/* Close grid */}
-        </div> {/* Close space-y-4 */}
+        </div>
       </div>
-      {/* Lifestyle Card - SINGLE SOURCE OF TRUTH */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <h3 className="font-semibold flex items-center gap-2 mb-4">
+
+      {/* Lifestyle Card */}
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <h3 className="font-semibold flex items-center gap-2 mb-5 text-base">
           <Activity className="w-5 h-5 text-primary" />
           Životní styl
         </h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {/* Sleep */}
-          <EditableField
-            label="Průměrný spánek"
-            value={client.sleep_hours}
-            icon={<Moon className="w-4 h-4" />}
-            isEditing={isEditing}
-            editValue={editData.sleep_hours}
-            onEditChange={(v) => setEditData(d => ({ ...d, sleep_hours: v }))}
-            type="number"
-            placeholder="7"
-            suffix=" h"
-          />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-5">
+          {/* Sleep hours */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Moon className="w-3.5 h-3.5" />
+              <span>Průměrný spánek</span>
+            </div>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editData.sleep_hours}
+                onChange={(e) => setEditData(d => ({ ...d, sleep_hours: e.target.value }))}
+                placeholder="7"
+                className="h-9 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.sleep_hours ? `${client.sleep_hours} h` : '—'}
+              </p>
+            )}
+          </div>
 
-          {/* Sleep Quality - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Moon className="w-4 h-4" />
+          {/* Sleep Quality */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Moon className="w-3.5 h-3.5" />
               <span>Kvalita spánku</span>
             </div>
             {isEditing ? (
@@ -504,7 +508,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                     variant={editData.sleep_quality === String(level) ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEditData(d => ({ ...d, sleep_quality: String(level) }))}
-                    className="flex-1 h-8 px-1 text-xs"
+                    className="flex-1 h-9 px-1 text-xs"
                   >
                     {level}
                   </Button>
@@ -518,22 +522,32 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
           </div>
 
           {/* Stress */}
-          <EditableField
-            label="Úroveň stresu"
-            value={client.stress_level}
-            icon={<Heart className="w-4 h-4" />}
-            isEditing={isEditing}
-            editValue={editData.stress_level}
-            onEditChange={(v) => setEditData(d => ({ ...d, stress_level: v }))}
-            type="number"
-            placeholder="1-5"
-            suffix="/5"
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Heart className="w-3.5 h-3.5" />
+              <span>Úroveň stresu</span>
+            </div>
+            {isEditing ? (
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={editData.stress_level}
+                onChange={(e) => setEditData(d => ({ ...d, stress_level: e.target.value }))}
+                placeholder="1-10"
+                className="h-9 text-sm"
+              />
+            ) : (
+              <p className="font-medium text-foreground text-sm">
+                {client.stress_level ? `${client.stress_level}/10` : '—'}
+              </p>
+            )}
+          </div>
 
-          {/* Sitting hours - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Activity className="w-4 h-4" />
+          {/* Sitting hours */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Activity className="w-3.5 h-3.5" />
               <span>Hodiny vsedě</span>
             </div>
             {isEditing ? (
@@ -542,7 +556,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                 value={editData.sitting_hours_daily}
                 onChange={(e) => setEditData(d => ({ ...d, sitting_hours_daily: e.target.value }))}
                 placeholder="8"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
               />
             ) : (
               <p className="font-medium text-foreground text-sm">
@@ -551,10 +565,10 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
             )}
           </div>
 
-          {/* Movement Frequency - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Dumbbell className="w-4 h-4" />
+          {/* Movement Frequency */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Dumbbell className="w-3.5 h-3.5" />
               <span>Frekvence pohybu</span>
             </div>
             {isEditing ? (
@@ -562,23 +576,19 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                 value={editData.movement_frequency}
                 onChange={(e) => setEditData(d => ({ ...d, movement_frequency: e.target.value }))}
                 placeholder="2-3× týdně"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
               />
             ) : (
               <p className="font-medium text-foreground text-sm">
-                {client.movement_frequency === 'none' ? 'Žádná' :
-                 client.movement_frequency === '1-2' ? '1-2× týdně' :
-                 client.movement_frequency === '3-4' ? '3-4× týdně' :
-                 client.movement_frequency === '5+' ? '5+× týdně' :
-                 client.movement_frequency || '—'}
+                {translateMovementFrequency(client.movement_frequency)}
               </p>
             )}
           </div>
 
-          {/* Daily Activity Type - editable */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <Activity className="w-4 h-4" />
+          {/* Daily Activity Type */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+              <Activity className="w-3.5 h-3.5" />
               <span>Typ denní aktivity</span>
             </div>
             {isEditing ? (
@@ -594,7 +604,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
                     variant={editData.daily_activity_type === type.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEditData(d => ({ ...d, daily_activity_type: type.value }))}
-                    className="flex-1 h-8 min-w-[60px] px-2 text-xs"
+                    className="flex-1 h-9 min-w-[50px] text-xs"
                   >
                     {type.label}
                   </Button>
@@ -602,12 +612,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
               </div>
             ) : (
               <p className="font-medium text-foreground text-sm">
-                {client.daily_activity_type === 'sedentary' ? 'Sedavá' :
-                 client.daily_activity_type === 'light' ? 'Lehká' :
-                 client.daily_activity_type === 'moderate' ? 'Střední' :
-                 client.daily_activity_type === 'active' ? 'Aktivní' :
-                 client.daily_activity_type === 'very_active' ? 'Velmi aktivní' :
-                 client.daily_activity_type || '—'}
+                {translateDailyActivity(client.daily_activity_type)}
               </p>
             )}
           </div>
@@ -615,9 +620,9 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
 
         {/* Current Activities */}
         {client.current_activities && client.current_activities.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-              <Dumbbell className="w-4 h-4" />
+          <div className="mt-5 pt-5 border-t border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium mb-2">
+              <Dumbbell className="w-3.5 h-3.5" />
               <span>Aktuální aktivity</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -632,9 +637,9 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
 
         {/* Supplements */}
         {client.supplements && client.supplements.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-              <Pill className="w-4 h-4" />
+          <div className="mt-5 pt-5 border-t border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium mb-2">
+              <Pill className="w-3.5 h-3.5" />
               <span>Doplňky stravy</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -649,9 +654,9 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
 
         {/* Dietary restrictions */}
         {client.dietary_restrictions && client.dietary_restrictions.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-              <Apple className="w-4 h-4" />
+          <div className="mt-5 pt-5 border-t border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium mb-2">
+              <Apple className="w-3.5 h-3.5" />
               <span>Stravovací omezení</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -664,10 +669,10 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
           </div>
         )}
 
-        {/* Sports History - editable */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-            <Dumbbell className="w-4 h-4" />
+        {/* Sports History */}
+        <div className="mt-5 pt-5 border-t border-border">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium mb-2">
+            <Dumbbell className="w-3.5 h-3.5" />
             <span>Sportovní historie</span>
           </div>
           {isEditing ? (
@@ -782,10 +787,10 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
 
       {/* Health Section */}
       <div className={cn(
-        'bg-card border border-border rounded-2xl p-4',
+        'bg-card border border-border rounded-2xl p-4 sm:p-5',
         (client.health_restrictions || (client.pain_areas && client.pain_areas.length > 0)) && 'border-l-4 border-l-warning'
       )}>
-        <h3 className="font-semibold flex items-center gap-2 mb-3 text-warning">
+        <h3 className="font-semibold flex items-center gap-2 mb-4 text-base text-warning">
           <AlertTriangle className="w-5 h-5" />
           Zdraví
         </h3>
@@ -793,7 +798,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         {/* Pain Areas */}
         {client.pain_areas && client.pain_areas.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-2">Bolestivá místa</p>
+            <p className="text-xs text-muted-foreground font-medium mb-2">Bolestivá místa</p>
             <div className="flex flex-wrap gap-1.5">
               {client.pain_areas.map((area) => (
                 <Badge key={area} variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">
@@ -807,7 +812,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         {/* Injury History */}
         {client.injury_history && (
           <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-1">Historie zranění</p>
+            <p className="text-xs text-muted-foreground font-medium mb-1">Historie zranění</p>
             <p className="text-sm text-foreground">{client.injury_history}</p>
           </div>
         )}
@@ -815,14 +820,14 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         {/* Surgery History */}
         {client.surgery_history && (
           <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-1">Historie operací</p>
+            <p className="text-xs text-muted-foreground font-medium mb-1">Historie operací</p>
             <p className="text-sm text-foreground">{client.surgery_history}</p>
           </div>
         )}
 
         {/* Health Restrictions */}
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Zdravotní omezení</p>
+          <p className="text-xs text-muted-foreground font-medium mb-1">Zdravotní omezení</p>
           {isEditing ? (
             <Textarea
               value={editData.health_restrictions}
@@ -840,7 +845,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
         {/* Training Dislikes */}
         {client.training_dislikes && client.training_dislikes.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">Nechci cvičit</p>
+            <p className="text-xs text-muted-foreground font-medium mb-2">Nechci cvičit</p>
             <div className="flex flex-wrap gap-1.5">
               {client.training_dislikes.map((dislike) => (
                 <Badge key={dislike} variant="outline" className="text-xs">
@@ -853,8 +858,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       </div>
 
       {/* Training Goals */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <h3 className="font-semibold flex items-center gap-2 mb-3">
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <h3 className="font-semibold flex items-center gap-2 mb-4 text-base">
           <Target className="w-5 h-5 text-primary" />
           Tréninkové cíle
         </h3>
@@ -872,8 +877,8 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       </div>
 
       {/* Notes */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <h3 className="font-semibold mb-3">Poznámky trenéra</h3>
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <h3 className="font-semibold mb-4 text-base">Poznámky trenéra</h3>
         {isEditing ? (
           <Textarea
             value={editData.notes}
