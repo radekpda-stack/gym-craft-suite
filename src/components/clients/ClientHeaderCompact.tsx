@@ -363,7 +363,7 @@ export function ClientHeaderCompact({
                   htmlFor="feedback-toggle-header" 
                   className="text-[10px] sm:text-xs text-muted-foreground cursor-pointer"
                 >
-                  FB
+                  Feedback
                 </Label>
               </div>
             )}
