@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 interface TrainerProfile {
   id: string;
   display_name: string | null;
+  email: string | null;
   avatar_url: string | null;
   bio: string | null;
   specializations: string[];
@@ -53,6 +54,7 @@ export function TrainerProfileSettings() {
   const [profile, setProfile] = useState<TrainerProfile>({
     id: '',
     display_name: '',
+    email: '',
     avatar_url: null,
     bio: '',
     specializations: [],
@@ -89,6 +91,7 @@ export function TrainerProfileSettings() {
       setProfile({
         id: existingProfile.id,
         display_name: existingProfile.display_name || '',
+        email: existingProfile.email || '',
         avatar_url: existingProfile.avatar_url,
         bio: existingProfile.bio || '',
         specializations: existingProfile.specializations || [],
@@ -108,6 +111,7 @@ export function TrainerProfileSettings() {
         .from('profiles')
         .update({
           display_name: profile.display_name || null,
+          email: profile.email || null,
           avatar_url: profile.avatar_url,
           bio: profile.bio || null,
           specializations: profile.specializations,
@@ -295,6 +299,20 @@ export function TrainerProfileSettings() {
           }))}
           placeholder="5"
           className="w-32"
+        />
+      </div>
+
+      {/* Email */}
+      <div className="space-y-2">
+        <Label htmlFor="email">
+          {language === 'cs' ? 'E-mail' : 'Email'}
+        </Label>
+        <Input
+          id="email"
+          type="email"
+          value={profile.email || ''}
+          onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+          placeholder="vas@email.cz"
         />
       </div>
 
