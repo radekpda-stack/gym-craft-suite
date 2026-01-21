@@ -40,7 +40,8 @@ import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
-import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
+import { CompactTagSelector } from '@/components/trainings/CompactTagSelector';
+import { Badge } from '@/components/ui/badge';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
@@ -500,37 +501,53 @@ export default function TrainingDetail() {
         />
       )}
 
-      {/* Complete Training Dialog */}
+      {/* Complete Training Dialog - Compact mobile-optimized */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Dokončit trénink</DialogTitle>
-            <DialogDescription>
-              Zkontrolujte účastníky a způsob platby.
-            </DialogDescription>
+        <DialogContent className="max-w-md p-0 gap-0 max-h-[80vh] flex flex-col">
+          <DialogHeader className="px-4 pt-4 pb-2 shrink-0">
+            <DialogTitle className="text-base">Dokončit trénink</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Inline tag selection - show if tags are missing OR allow viewing/editing */}
-            {!dialogTagValidation.isValid ? (
-              <div className="space-y-3 p-3 bg-secondary/30 rounded-lg border border-warning/30">
-                <div className="flex items-center gap-2 text-sm font-medium text-warning">
-                  <AlertCircle className="w-4 h-4" />
-                  Doplňte povinné tagy pro dokončení tréninku
-                </div>
-                <TrainingTagsSelector
+          
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+            {/* Compact tag selection */}
+            {!dialogTagValidation.isValid && (
+              <div className="space-y-2 p-2.5 bg-warning/5 rounded-lg border border-warning/20">
+                <p className="text-xs font-medium text-warning flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Doplňte povinné tagy
+                </p>
+                <CompactTagSelector
                   selectedTagIds={dialogTagIds}
                   onChange={setDialogTagIds}
                   trainingType={dialogTrainingType}
-                  showValidation={true}
+                  missingTypes={dialogTagValidation.missingTypes}
                 />
               </div>
-            ) : (
-              <TagValidationAlert validation={dialogTagValidation} compact />
+            )}
+            
+            {dialogTagValidation.isValid && (
+              <div className="flex flex-wrap gap-1 py-1">
+                {allTags.filter(t => dialogTagIds.includes(t.id)).map(tag => (
+                  <Badge
+                    key={tag.id}
+                    variant="secondary"
+                    className="text-[10px] py-0 px-1.5"
+                    style={{ 
+                      backgroundColor: `${tag.color}20`,
+                      borderColor: tag.color,
+                      color: tag.color 
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+              </div>
             )}
 
-            {/* Participant payment cards */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">
+            {/* Participants - compact */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">
                 Účastníci ({participantPayments.length})
               </Label>
               {participantPayments.map((participant) => (
@@ -545,76 +562,38 @@ export default function TrainingDetail() {
               ))}
             </div>
 
-            {/* Payment summary */}
+            {/* Payment summary - condensed */}
             {paymentSummary.length > 0 && (
-              <div className="p-3 rounded-lg bg-secondary/50 border space-y-1">
-                {paymentSummary.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.method} className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Icon className="w-4 h-4" />
-                        {item.label}:
-                      </span>
-                      <span className="font-medium">
-                        {item.total} Kč ({item.count} {item.count === 1 ? 'os.' : 'os.'})
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className="border-t pt-2 mt-2 flex items-center justify-between">
-                  <span className="font-medium">Celkem:</span>
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
-                    {participantPayments.length === 1 && 
-                     clients.find(c => c.id === participantPayments[0].client_id)?.custom_training_price != null && (
-                      <div className="text-xs text-muted-foreground">(vlastní cena)</div>
-                    )}
-                  </div>
+              <div className="p-2.5 rounded-lg bg-secondary/50 border text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Celkem:</span>
+                  <span className="text-base font-bold text-primary">{getExpectedPrice()} Kč</span>
                 </div>
               </div>
             )}
 
-            {/* Custom price exhausted warning */}
-            {participantPayments.length === 1 && (() => {
-              const clientData = clients.find(c => c.id === participantPayments[0].client_id);
-              if (!clientData?.custom_training_price || clientData.custom_price_credit_limit === null) return null;
-              
-              const participant = participantPayments[0];
-              if (participant.payment_method !== 'credit') return null;
-              
-              const newBalance = participant.credit_balance - participant.price_share;
-              const willExhaust = newBalance <= clientData.custom_price_credit_limit;
-              
-              if (!willExhaust) return null;
-              
-              return (
-                <Alert className="border-amber-500/30 bg-amber-500/10">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-600 dark:text-amber-400">
-                    <strong>Předplacený kredit bude vyčerpán!</strong>
-                    <br />
-                    <span className="text-sm">
-                      Po dokončení bude kredit {newBalance} Kč (limit: {clientData.custom_price_credit_limit} Kč).
-                      Zvažte vypnutí vlastního ceníku - další tréninky budou za standardní cenu.
-                    </span>
-                  </AlertDescription>
-                </Alert>
-              );
-            })()}
-
-            <div className="space-y-2">
-              <Label>Poznámky (volitelné)</Label>
+            {/* Notes - smaller */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Poznámky</Label>
               <Textarea
                 value={completeNotes}
                 onChange={(e) => setCompleteNotes(e.target.value)}
-                placeholder="Poznámky k tréninku..."
+                placeholder="Volitelné poznámky..."
                 rows={2}
+                className="text-sm resize-none"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCompleteDialog(false)} disabled={isSubmitting || completeTrainingAtomic.isPending}>
+
+          {/* Fixed footer */}
+          <div className="shrink-0 border-t px-4 py-3 flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCompleteDialog(false)} 
+              disabled={isSubmitting || completeTrainingAtomic.isPending}
+              className="flex-1"
+              size="sm"
+            >
               Zrušit
             </Button>
             <Button 
@@ -625,21 +604,22 @@ export default function TrainingDetail() {
                 completeTrainingAtomic.isPending ||
                 participantPayments.length === 0
               }
-              title={!dialogTagValidation.isValid ? "Doplňte povinné tagy" : undefined}
+              className="flex-1 bg-success hover:bg-success/90"
+              size="sm"
             >
               {(isSubmitting || completeTrainingAtomic.isPending) ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Dokončuji...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Dokončit trénink
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                  Dokončit
                 </>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
