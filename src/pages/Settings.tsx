@@ -49,6 +49,7 @@ import { QuickActionSettings } from '@/components/settings/QuickActionSettings';
 import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
+import { SocialMediaExport } from '@/components/settings/SocialMediaExport';
 // CalendarSyncSettings moved to SchedulePage
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -101,6 +102,15 @@ export default function Settings() {
         : 'Data export and technical functions',
       icon: Wrench,
       iconColor: 'text-muted-foreground',
+    },
+    {
+      id: 'social-export',
+      title: language === 'cs' ? 'Export pro sítě' : 'Social Media Export',
+      description: language === 'cs' 
+        ? 'Vizuální přehledy pro sdílení' 
+        : 'Visual summaries for sharing',
+      icon: Share2,
+      iconColor: 'text-pink-500',
     },
     {
       id: 'admin',
@@ -375,6 +385,19 @@ export default function Settings() {
               </SettingsSection>
             )}
           </>
+        );
+
+      case 'social-export':
+        return (
+          <SettingsSection
+            title={language === 'cs' ? 'Export pro sociální sítě' : 'Social Media Export'}
+            description={language === 'cs' 
+              ? 'Vytvořte vizuální přehledy statistik pro sdílení na sociálních sítích' 
+              : 'Create visual statistics summaries for sharing on social media'}
+            icon={Share2}
+          >
+            <SocialMediaExport />
+          </SettingsSection>
         );
 
       case 'admin':

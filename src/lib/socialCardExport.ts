@@ -1,5 +1,5 @@
 import html2canvas from 'html2canvas';
-import type { ExportFormat, ExportDimensions, EXPORT_FORMATS } from '@/types/socialExport';
+import type { ExportFormat, ExportDimensions } from '@/types/socialExport';
 
 interface ExportOptions {
   format: ExportFormat;
