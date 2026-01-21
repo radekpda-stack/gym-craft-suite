@@ -56,6 +56,8 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -86,6 +88,7 @@ interface ClientHeaderCompactProps {
   onUpdateTrainingStartDate?: (date: string | null) => Promise<void>;
   redFlagCount?: number;
   lastPortalLogin?: string | null;
+  onFeedbackToggle?: (enabled: boolean) => void;
 }
 
 export function ClientHeaderCompact({ 
@@ -94,6 +97,7 @@ export function ClientHeaderCompact({
   onUpdateTrainingStartDate,
   redFlagCount = 0,
   lastPortalLogin,
+  onFeedbackToggle,
 }: ClientHeaderCompactProps) {
   // Check if client is in a budget group
   const { data: budgetGroup } = useQuery({
@@ -339,12 +343,31 @@ export function ClientHeaderCompact({
               </>
             )}
           </div>
-          {birthYear && (
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{birthYear}</span>
-              {age && <span className="text-[10px] sm:text-xs">({age} let)</span>}
-            </div>
-          )}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            {birthYear && (
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{birthYear}</span>
+                {age && <span className="text-[10px] sm:text-xs">({age} let)</span>}
+              </div>
+            )}
+            {/* Feedback toggle - easily accessible */}
+            {onFeedbackToggle && (
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="feedback-toggle-header"
+                  checked={client.feedback_enabled !== false}
+                  onCheckedChange={onFeedbackToggle}
+                  className="scale-75"
+                />
+                <Label 
+                  htmlFor="feedback-toggle-header" 
+                  className="text-[10px] sm:text-xs text-muted-foreground cursor-pointer"
+                >
+                  FB
+                </Label>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Desktop: PDF + Badges + Indicators */}
