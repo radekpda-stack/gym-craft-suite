@@ -203,6 +203,8 @@ export function useSyncICSFeed() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ics-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
     },
   });
 }
