@@ -4,7 +4,7 @@ import { cs } from 'date-fns/locale';
 import {
   CheckCircle2, XCircle, AlertTriangle, User, Users,
   ChevronDown, ChevronUp, Check, X, Loader2, Search,
-  Calendar, Clock, ArrowRight, Sparkles, RotateCcw
+  Calendar, Clock, ArrowRight, Sparkles, RotateCcw, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,8 @@ import {
   useCreateApprovedSessions,
   useUpdateEventClient,
   useDeleteUnfilteredEvents,
+  useAcceptAllSuggestions,
+  useAutoImportReady,
   ImportableEvent,
 } from '@/hooks/useCalendarImport';
 import { useSyncICSFeed, useRematchClients } from '@/hooks/useCalendarSync';
@@ -73,6 +75,8 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
   const createSessions = useCreateApprovedSessions();
   const updateEventClient = useUpdateEventClient();
   const deleteUnfiltered = useDeleteUnfilteredEvents();
+  const acceptAllSuggestions = useAcceptAllSuggestions();
+  const autoImportReady = useAutoImportReady();
 
   // Categorize events
   const categorizedEvents = useMemo(() => {
@@ -91,6 +95,14 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
       duplicates: filtered.filter(e => e.matched_client_id && e.potential_duplicate_session_id),
     };
   }, [events, searchQuery]);
+
+  // Count events with high-confidence suggestions
+  const highConfidenceSuggestionCount = useMemo(() => {
+    return categorizedEvents.needs_assignment.filter(e => {
+      const suggestions = e.match_suggestions || [];
+      return suggestions.length > 0 && suggestions[0].score >= 70;
+    }).length;
+  }, [categorizedEvents.needs_assignment]);
 
   const toggleSection = (section: EventCategory) => {
     setExpandedSections(prev => {
@@ -153,6 +165,34 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
       }
     } catch (error) {
       toast.error('Nepodařilo se přepárovat');
+    }
+  };
+
+  const handleAcceptAllSuggestions = async () => {
+    try {
+      const result = await acceptAllSuggestions.mutateAsync({ feedId, minScore: 70 });
+      await refetchEvents();
+      await refetchStats();
+      toast.success(`Přijato ${result.accepted_count} návrhů`);
+    } catch (error) {
+      toast.error('Nepodařilo se přijmout návrhy');
+    }
+  };
+
+  const handleQuickImportAll = async () => {
+    try {
+      const result = await autoImportReady.mutateAsync(feedId);
+      toast.success(
+        `Vytvořeno ${result.sessions_created} tréninků` +
+        (result.duplicates_skipped > 0 ? `, přeskočeno ${result.duplicates_skipped} duplikátů` : '')
+      );
+      await refetchEvents();
+      await refetchStats();
+      if (result.sessions_created > 0) {
+        onClose();
+      }
+    } catch (error) {
+      toast.error('Nepodařilo se vytvořit tréninky');
     }
   };
 
@@ -257,7 +297,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
     }
   };
 
-  const isProcessing = syncFeed.isPending || rematchClients.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending;
+  const isProcessing = syncFeed.isPending || rematchClients.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending || acceptAllSuggestions.isPending || autoImportReady.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
@@ -318,8 +358,8 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
         </div>
 
         {/* Search and actions */}
-        <div className="flex items-center gap-2 py-2 shrink-0">
-          <div className="relative flex-1">
+        <div className="flex items-center gap-2 py-2 shrink-0 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Hledat události..."
@@ -356,6 +396,23 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             )}
             <span className="ml-2 hidden sm:inline">Přepárovat</span>
           </Button>
+          {highConfidenceSuggestionCount > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAcceptAllSuggestions}
+              disabled={isProcessing}
+              title={`Přijmout všechny návrhy se shodou 70%+ (${highConfidenceSuggestionCount} událostí)`}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
+            >
+              {acceptAllSuggestions.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
+              )}
+              <span className="ml-2">Přijmout návrhy ({highConfidenceSuggestionCount})</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -448,7 +505,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
         </div>
 
         {/* Footer actions */}
-        <DialogFooter className="border-t pt-4 gap-2 sm:gap-0">
+        <DialogFooter className="border-t pt-4 gap-2 flex-wrap">
           <div className="flex items-center gap-2 mr-auto text-sm text-muted-foreground">
             {selectedEvents.size > 0 && (
               <span>Vybráno: {selectedEvents.size}</span>
@@ -466,7 +523,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
           </Button>
           
           <Button
-            variant="default"
+            variant="outline"
             size="sm"
             onClick={handleImport}
             disabled={selectedReadyCount === 0 || isProcessing}
@@ -476,8 +533,25 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             ) : (
               <ArrowRight className="h-4 w-4 mr-1" />
             )}
-            Importovat ({selectedReadyCount})
+            Importovat vybrané ({selectedReadyCount})
           </Button>
+          
+          {categorizedEvents.ready.length > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleQuickImportAll}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {autoImportReady.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 mr-1" />
+              )}
+              Importovat vše připravené ({categorizedEvents.ready.length})
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
