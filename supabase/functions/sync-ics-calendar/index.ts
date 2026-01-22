@@ -1414,8 +1414,48 @@ serve(async (req) => {
 
       console.log(`[ICS Sync] Learned ${learnedAliases.length} aliases for client ${clientId}: ${learnedAliases.join(', ')}`);
 
+      // Auto-apply the same client to all other unmatched events with the same summary
+      const normalizedSummary = normalizeText(event.summary);
+      
+      // Get all unmatched events from the same feed with similar summary
+      const { data: similarEvents } = await supabase
+        .from('calendar_ics_events')
+        .select('id, summary, feed_id')
+        .is('matched_client_id', null)
+        .eq('is_processed', false)
+        .neq('id', eventId);
+      
+      let autoMatchedCount = 0;
+      if (similarEvents && similarEvents.length > 0) {
+        const eventsToUpdate: string[] = [];
+        
+        for (const evt of similarEvents) {
+          // Check if the summary matches (normalized comparison)
+          const evtNormalized = normalizeText(evt.summary);
+          if (evtNormalized === normalizedSummary) {
+            eventsToUpdate.push(evt.id);
+          }
+        }
+        
+        if (eventsToUpdate.length > 0) {
+          const { error: updateError } = await supabase
+            .from('calendar_ics_events')
+            .update({
+              matched_client_id: clientId,
+              import_approved: true,
+              updated_at: new Date().toISOString(),
+            })
+            .in('id', eventsToUpdate);
+          
+          if (!updateError) {
+            autoMatchedCount = eventsToUpdate.length;
+            console.log(`[ICS Sync] Auto-matched ${autoMatchedCount} similar events to client ${clientId}`);
+          }
+        }
+      }
+
       return new Response(
-        JSON.stringify({ success: true, learned_aliases: learnedAliases }),
+        JSON.stringify({ success: true, learned_aliases: learnedAliases, auto_matched: autoMatchedCount }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
