@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Calendar, Plus, RefreshCw, Trash2, CheckCircle2, XCircle, 
   Clock, Users, ExternalLink, Loader2, AlertTriangle, Settings2,
-  GraduationCap, Sparkles, Pause, Play, FileCheck
+  GraduationCap, Sparkles, Pause, Play, FileCheck, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ import { useImportStats } from '@/hooks/useCalendarImport';
 import { useClients } from '@/hooks/useClients';
 import { ClientMatchSuggestions, MatchSuggestion } from './ClientMatchSuggestions';
 import { CalendarImportReview } from './CalendarImportReview';
+import { CalendarQuickImport } from './CalendarQuickImport';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -62,6 +63,7 @@ export function CalendarSyncSettings() {
   const { data: feeds, isLoading } = useICSFeeds();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedFeed, setSelectedFeed] = useState<ICSFeed | null>(null);
+  const [quickImportFeed, setQuickImportFeed] = useState<ICSFeed | null>(null);
   const [eventsDialogFeedId, setEventsDialogFeedId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -115,6 +117,7 @@ export function CalendarSyncSettings() {
                   key={feed.id} 
                   feed={feed} 
                   onOpenImportReview={() => setSelectedFeed(feed)}
+                  onQuickImport={() => setQuickImportFeed(feed)}
                   onViewEvents={() => setEventsDialogFeedId(feed.id)}
                 />
               ))}
@@ -203,6 +206,19 @@ export function CalendarSyncSettings() {
           onClose={() => setSelectedFeed(null)}
         />
       )}
+
+      {/* Quick Import dialog */}
+      {quickImportFeed && (
+        <Dialog open={!!quickImportFeed} onOpenChange={(open) => !open && setQuickImportFeed(null)}>
+          <DialogContent className="max-w-md">
+            <CalendarQuickImport
+              feedId={quickImportFeed.id}
+              feedName={quickImportFeed.name}
+              onClose={() => setQuickImportFeed(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
       
       {/* Legacy events dialog for viewing all events */}
       {eventsDialogFeedId && (
@@ -216,7 +232,7 @@ export function CalendarSyncSettings() {
   );
 }
 
-function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; onOpenImportReview: () => void; onViewEvents: () => void }) {
+function FeedCard({ feed, onOpenImportReview, onQuickImport, onViewEvents }: { feed: ICSFeed; onOpenImportReview: () => void; onQuickImport: () => void; onViewEvents: () => void }) {
   const { data: stats } = useImportStats(feed.id);
   const syncFeed = useSyncICSFeed();
   const deleteFeed = useDeleteICSFeed();
@@ -380,21 +396,30 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
       {feed.events_synced > 0 && (
         <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Button 
-            onClick={onOpenImportReview}
+            onClick={onQuickImport}
             variant="default"
             className="w-full sm:w-auto"
           >
-            <FileCheck className="h-4 w-4 mr-2" />
-            Zkontrolovat a importovat
-            {stats && stats.readyToImport > 0 && (
+            <Zap className="h-4 w-4 mr-2" />
+            Smart Import
+            {stats && (stats.readyToImport + stats.needsAssignment) > 0 && (
               <Badge variant="secondary" className="ml-2">
-                {stats.readyToImport}
+                {stats.readyToImport + stats.needsAssignment}
               </Badge>
             )}
           </Button>
           
-          <Button
+          <Button 
+            onClick={onOpenImportReview}
             variant="outline"
+            className="w-full sm:w-auto"
+          >
+            <FileCheck className="h-4 w-4 mr-2" />
+            Ruční kontrola
+          </Button>
+          
+          <Button
+            variant="ghost"
             size="sm"
             onClick={onViewEvents}
             className="w-full sm:w-auto"

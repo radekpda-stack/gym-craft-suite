@@ -1770,6 +1770,312 @@ serve(async (req) => {
     }
 
     // ===========================================
+    // ACTION: smart_import - One-click import: sync, rematch, accept suggestions, create sessions
+    // ===========================================
+    if (action === 'smart_import') {
+      const { 
+        autoAcceptMinScore = 70,
+        learnAliases = true,
+        autoCreateSessions = true,
+      } = body;
+      
+      const { data: feed, error: feedError } = await supabase
+        .from('calendar_ics_feeds')
+        .select('*')
+        .eq('id', feedId)
+        .single();
+
+      if (feedError || !feed) {
+        return new Response(
+          JSON.stringify({ error: 'feed_not_found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const userId = feed.user_id;
+      const results = {
+        synced: 0,
+        matched: 0,
+        accepted: 0,
+        imported: 0,
+        learned_aliases: 0,
+        needs_manual: [] as Array<{ id: string; summary: string; suggestions: any[] }>,
+        duplicates_skipped: 0,
+      };
+
+      // Step 1: Sync new events from calendar
+      console.log(`[Smart Import] Step 1: Syncing events for feed ${feedId}`);
+      try {
+        const icsContent = await fetchIcs(feed.ics_url);
+        const rawEvents = parseICS(icsContent);
+        
+        const syncHorizonMonths = feed.sync_horizon_months || 3;
+        const now = new Date();
+        const fromDate = feed.sync_from_date ? new Date(feed.sync_from_date) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const toDate = new Date(now.getTime() + syncHorizonMonths * 30 * 24 * 60 * 60 * 1000);
+        
+        const expandedEvents = expandRecurringEvents(rawEvents, fromDate, toDate);
+        
+        const processResult = await processEvents(
+          supabase, feedId, userId, expandedEvents, rawEvents.length, 
+          rawEvents.filter(e => e.rrule).length, syncHorizonMonths, fromDate, toDate
+        );
+        
+        results.synced = processResult.events_synced;
+        console.log(`[Smart Import] Synced ${results.synced} events`);
+      } catch (syncError) {
+        console.error(`[Smart Import] Sync error:`, syncError);
+        // Continue with existing events even if sync fails
+      }
+
+      // Step 2: Load clients and aliases for matching
+      console.log(`[Smart Import] Step 2: Loading clients and aliases`);
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('user_id', userId)
+        .eq('is_archived', false);
+
+      const { data: aliasesData } = await supabase
+        .from('client_name_aliases')
+        .select('client_id, alias')
+        .eq('user_id', userId);
+
+      const aliasMap = new Map<string, string[]>();
+      for (const aliasRow of aliasesData || []) {
+        const existing = aliasMap.get(aliasRow.client_id) || [];
+        existing.push(aliasRow.alias);
+        aliasMap.set(aliasRow.client_id, existing);
+      }
+
+      // Step 3: Get all unprocessed events and rematch them
+      console.log(`[Smart Import] Step 3: Rematching events`);
+      const { data: eventsToProcess, error: eventsError } = await supabase
+        .from('calendar_ics_events')
+        .select('id, summary, matched_client_id, match_suggestions')
+        .eq('feed_id', feedId)
+        .eq('is_processed', false)
+        .eq('skip_import', false);
+
+      if (eventsError) {
+        return new Response(
+          JSON.stringify({ error: 'fetch_events_failed', details: eventsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 4: For each unmatched event, try to match and accept
+      console.log(`[Smart Import] Step 4: Processing ${eventsToProcess?.length || 0} events`);
+      const eventsToApprove: string[] = [];
+      const aliasesToLearn: Array<{ clientId: string; alias: string }> = [];
+      const processedSummaries = new Set<string>();
+
+      for (const event of eventsToProcess || []) {
+        // If already matched, just add to approval list
+        if (event.matched_client_id) {
+          eventsToApprove.push(event.id);
+          results.matched++;
+          continue;
+        }
+
+        // Try to find a match
+        const summary = event.summary || '';
+        const matches = findMultipleClientMatches(summary, clients || [], aliasMap, 50);
+        
+        if (matches.primary && matches.primary.score >= autoAcceptMinScore) {
+          // High confidence - auto-accept
+          const { error: updateError } = await supabase
+            .from('calendar_ics_events')
+            .update({
+              matched_client_id: matches.primary.clientId,
+              additional_matched_client_ids: matches.additional.length > 0 
+                ? matches.additional.map(m => m.clientId) 
+                : null,
+              match_suggestions: [matches.primary, ...matches.additional.slice(0, 2)],
+              import_approved: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', event.id);
+
+          if (!updateError) {
+            results.accepted++;
+            eventsToApprove.push(event.id);
+            
+            // Learn alias if enabled and summary is new
+            if (learnAliases) {
+              const normalized = normalizeText(summary);
+              if (!processedSummaries.has(normalized)) {
+                processedSummaries.add(normalized);
+                
+                const extractedName = extractNameFromTimePattern(summary);
+                if (extractedName) {
+                  const normalizedExtracted = normalizeText(extractedName);
+                  const clientNameParts = normalizeText(matches.primary.clientName).split(/\s+/);
+                  
+                  if (!clientNameParts.includes(normalizedExtracted) && normalizedExtracted.length >= 2) {
+                    aliasesToLearn.push({ 
+                      clientId: matches.primary.clientId, 
+                      alias: normalizedExtracted 
+                    });
+                  }
+                }
+              }
+            }
+          }
+        } else if (matches.primary) {
+          // Low confidence - add to needs_manual with suggestions
+          results.needs_manual.push({
+            id: event.id,
+            summary,
+            suggestions: [matches.primary, ...matches.additional.slice(0, 2)],
+          });
+          
+          // Update suggestions in DB for UI display
+          await supabase
+            .from('calendar_ics_events')
+            .update({
+              match_suggestions: [matches.primary, ...matches.additional.slice(0, 2)],
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', event.id);
+        } else {
+          // No match found
+          results.needs_manual.push({
+            id: event.id,
+            summary,
+            suggestions: [],
+          });
+        }
+      }
+
+      // Step 5: Learn aliases in bulk
+      if (learnAliases && aliasesToLearn.length > 0) {
+        console.log(`[Smart Import] Step 5: Learning ${aliasesToLearn.length} aliases`);
+        const forbiddenAliases = ['#tr', 'tr', '#trenink', 'trenink', '#training', 'training', 
+                                  '#cviceni', 'cviceni', '#workout', 'workout', 'platit', 'zaplaceno'];
+        
+        for (const { clientId, alias } of aliasesToLearn) {
+          if (forbiddenAliases.includes(alias.toLowerCase())) continue;
+          if (alias.startsWith('#')) continue;
+          
+          const { error } = await supabase
+            .from('client_name_aliases')
+            .upsert({
+              client_id: clientId,
+              alias,
+              source: 'smart_import',
+              user_id: userId,
+            }, {
+              onConflict: 'client_id,alias',
+            });
+          
+          if (!error) {
+            results.learned_aliases++;
+          }
+        }
+      }
+
+      // Step 6: Create training sessions for approved events
+      if (autoCreateSessions && eventsToApprove.length > 0) {
+        console.log(`[Smart Import] Step 6: Creating sessions for ${eventsToApprove.length} approved events`);
+        
+        const { data: approvedEvents } = await supabase
+          .from('calendar_ics_events')
+          .select('*, feed:calendar_ics_feeds(user_id, default_duration)')
+          .eq('feed_id', feedId)
+          .in('id', eventsToApprove)
+          .eq('is_processed', false)
+          .not('matched_client_id', 'is', null);
+
+        for (const event of approvedEvents || []) {
+          const eventFeed = event.feed as any;
+          
+          let duration = eventFeed?.default_duration || 60;
+          if (event.end_at && event.start_at) {
+            const start = new Date(event.start_at);
+            const end = new Date(event.end_at);
+            duration = Math.round((end.getTime() - start.getTime()) / 60000);
+          }
+
+          const allClientIds: string[] = [event.matched_client_id];
+          if (event.additional_matched_client_ids && Array.isArray(event.additional_matched_client_ids)) {
+            allClientIds.push(...event.additional_matched_client_ids);
+          }
+
+          for (const cId of allClientIds) {
+            // Check for duplicate
+            const { data: existingSession } = await supabase
+              .from('training_sessions')
+              .select('id')
+              .eq('client_id', cId)
+              .eq('date', event.start_at)
+              .single();
+
+            if (existingSession) {
+              results.duplicates_skipped++;
+              continue;
+            }
+
+            const { error: sessionError } = await supabase
+              .from('training_sessions')
+              .insert({
+                client_id: cId,
+                user_id: userId,
+                date: event.start_at,
+                duration,
+                status: 'scheduled',
+                notes: event.description 
+                  ? `Z kalendáře: ${event.summary}\n\n${event.description}` 
+                  : `Z kalendáře: ${event.summary}`,
+                source_ics_event_id: event.id,
+              });
+
+            if (!sessionError) {
+              results.imported++;
+            }
+          }
+
+          await supabase
+            .from('calendar_ics_events')
+            .update({
+              is_processed: true,
+              import_approved: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', event.id);
+        }
+      }
+
+      // Update feed sync status
+      await supabase
+        .from('calendar_ics_feeds')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          last_sync_status: 'success',
+          last_sync_log: {
+            action: 'smart_import',
+            synced: results.synced,
+            matched: results.matched,
+            accepted: results.accepted,
+            imported: results.imported,
+            needs_manual: results.needs_manual.length,
+          },
+        })
+        .eq('id', feedId);
+
+      console.log(`[Smart Import] Complete:`, results);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          ...results,
+          needs_manual_count: results.needs_manual.length,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
     // ACTION: accept_all_suggestions - Bulk accept high-confidence suggestions
     // ===========================================
     if (action === 'accept_all_suggestions') {
