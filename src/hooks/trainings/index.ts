@@ -19,3 +19,4 @@ export { useTrainingTrend } from '../useTrainingTrend';
 export { usePreviousTraining } from '../usePreviousTraining';
 export { useLastTraining } from '../useLastTraining';
 export { useSharedTrainings } from '../useSharedTrainings';
+export { usePrefetchTrainingDetail } from '../usePrefetchTrainingDetail';
