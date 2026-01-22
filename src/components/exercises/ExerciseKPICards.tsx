@@ -2,6 +2,7 @@ import { Trophy, TrendingUp, Activity, Zap, Timer, Gauge, Heart, Target } from '
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import { formatPaceKmDisplay } from '@/lib/timeUtils';
 
 interface StrengthKPIs {
   maxWeight: number | null;
@@ -36,12 +37,7 @@ const TrendBadge = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
   return <Badge variant="secondary" className="text-muted-foreground">— Stabil</Badge>;
 };
 
-const formatPace = (seconds: number | null) => {
-  if (!seconds) return '-';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')} /km`;
-};
+const formatPace = formatPaceKmDisplay;
 
 export function ExerciseKPICards({ exerciseType, strengthKPIs, cardioKPIs, clientName }: ExerciseKPICardsProps) {
   if (exerciseType === 'strength' || exerciseType === 'mixed') {

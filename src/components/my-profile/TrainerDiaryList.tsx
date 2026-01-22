@@ -16,6 +16,7 @@ import {
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useTrainerDiaryEntries, useDeleteDiaryEntry, type TrainerDiaryEntry } from '@/hooks/useTrainerDiary';
+import { formatDuration, formatPaceKmDisplay } from '@/lib/timeUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,22 +58,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   other: 'Jiné',
 };
 
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  }
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-}
-
-function formatPace(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${String(secs).padStart(2, '0')} /km`;
-}
+const formatPace = formatPaceKmDisplay;
 
 // Calculate pace per km from time and distance if not stored
 function calculatePacePerKm(entry: TrainerDiaryEntry): number | null {

@@ -226,7 +226,8 @@ export function parsePaceToMs(paceStr: string): number | null {
 }
 
 /**
- * Format pace from seconds
+ * Format pace from seconds (no unit suffix)
+ * For axis labels and compact displays: "5:30"
  */
 export function formatPace(totalSeconds: number | null): string {
   if (totalSeconds === null || totalSeconds <= 0) return '';
@@ -238,6 +239,40 @@ export function formatPace(totalSeconds: number | null): string {
  */
 export function formatPaceMs(ms: number | null | undefined): string {
   return formatTimeMs(ms);
+}
+
+/**
+ * Format pace with /km suffix
+ * For displaying pace: "5:30 /km"
+ */
+export function formatPaceKmDisplay(paceSeconds: number | null | undefined): string {
+  if (!paceSeconds || paceSeconds <= 0) return '-';
+  const mins = Math.floor(paceSeconds / 60);
+  const secs = Math.round(paceSeconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')} /km`;
+}
+
+/**
+ * Format pace as simple mm:ss (for charts/axis)
+ * "5:30" without any suffix
+ */
+export function formatPaceSimple(paceSeconds: number | null | undefined): string {
+  if (!paceSeconds || paceSeconds <= 0) return '-';
+  const mins = Math.floor(paceSeconds / 60);
+  const secs = Math.round(paceSeconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Calculate and format pace from time and distance
+ * @param totalSeconds - Total time in seconds
+ * @param distanceKm - Distance in kilometers
+ * @returns Formatted pace string like "5:30 /km"
+ */
+export function formatPaceFromDistance(totalSeconds: number, distanceKm: number): string {
+  if (distanceKm === 0 || totalSeconds <= 0) return '—';
+  const paceSecondsPerKm = totalSeconds / distanceKm;
+  return formatPaceKmDisplay(paceSecondsPerKm);
 }
 
 /**
