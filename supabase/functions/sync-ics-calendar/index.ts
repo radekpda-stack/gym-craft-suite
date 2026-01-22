@@ -889,6 +889,9 @@ serve(async (req) => {
         let duplicatesCount = 0;
         let recurringInstancesCount = 0;
 
+        // Prepare all events for batch upsert
+        const eventsToUpsert: any[] = [];
+        
         for (const event of expandedEvents) {
           const { primary, additional } = clients 
             ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
@@ -934,35 +937,43 @@ serve(async (req) => {
             recurringInstancesCount++;
           }
 
-          const { error: upsertError } = await supabase
+          eventsToUpsert.push({
+            feed_id: feedId,
+            ics_uid: event.uid,
+            summary: event.summary,
+            description: event.description,
+            start_at: event.dtstart.toISOString(),
+            end_at: event.dtend?.toISOString() || null,
+            location: event.location || null,
+            matched_client_id: primary?.clientId || null,
+            additional_matched_client_ids: additionalClientIds,
+            match_suggestions: suggestions,
+            potential_duplicate_session_id: potentialDuplicateId,
+            rrule: event.rrule || null,
+            master_event_uid: event.masterEventUid || null,
+            recurrence_instance_date: event.recurrenceInstanceDate || null,
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        // Batch upsert in chunks of 100 to avoid payload limits
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < eventsToUpsert.length; i += BATCH_SIZE) {
+          const batch = eventsToUpsert.slice(i, i + BATCH_SIZE);
+          const { error: upsertError, data } = await supabase
             .from('calendar_ics_events')
-            .upsert({
-              feed_id: feedId,
-              ics_uid: event.uid,
-              summary: event.summary,
-              description: event.description,
-              start_at: event.dtstart.toISOString(),
-              end_at: event.dtend?.toISOString(),
-              location: event.location,
-              matched_client_id: primary?.clientId || null,
-              additional_matched_client_ids: additionalClientIds,
-              match_suggestions: suggestions,
-              potential_duplicate_session_id: potentialDuplicateId,
-              rrule: event.rrule || null,
-              master_event_uid: event.masterEventUid || null,
-              recurrence_instance_date: event.recurrenceInstanceDate || null,
-              updated_at: new Date().toISOString(),
-            }, {
+            .upsert(batch, {
               onConflict: 'feed_id,ics_uid',
             });
 
           if (!upsertError) {
-            syncedCount++;
-            if (potentialDuplicateId) {
-              console.log(`[ICS Sync] Event "${event.summary}" has potential duplicate`);
-            }
+            syncedCount += batch.length;
+          } else {
+            console.error(`[ICS Sync] Batch upsert error:`, upsertError);
           }
         }
+        
+        console.log(`[ICS Sync] Processed ${eventsToUpsert.length} events in ${Math.ceil(eventsToUpsert.length / BATCH_SIZE)} batches`);
 
         // Build sync log for UI
         const syncLog = {
