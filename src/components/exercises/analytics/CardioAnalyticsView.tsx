@@ -11,17 +11,9 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Timer, Route, Zap, Heart, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AnalyticsPeriod } from '@/hooks/useExerciseAnalyticsComplete';
+import { formatTimeWithUnit, formatDistance } from '@/lib/timeUtils';
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
-}
+const formatDuration = formatTimeWithUnit;
 
 export function CardioAnalyticsView() {
   const { user } = useAuth();

@@ -5,6 +5,7 @@ import { Trophy, ChevronRight, Dumbbell, Timer, Ruler } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { formatDuration, formatDistanceCompact } from '@/lib/timeUtils';
 
 interface CompactPRsSectionProps {
   clientId: string;
@@ -24,31 +25,7 @@ interface PREntry {
   distance_meters?: number | null;
 }
 
-// Format duration in seconds to MM:SS or HH:MM:SS
-function formatDuration(seconds: number): string {
-  if (seconds < 0 || isNaN(seconds)) return '-';
-  
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Format distance in meters to readable format
-function formatDistance(meters: number): string {
-  if (meters >= 1000) {
-    return `${(meters / 1000).toFixed(1)}km`;
-  }
-  if (meters >= 1) {
-    return `${Math.round(meters)}m`;
-  }
-  // For small values (like jump distances), show in cm
-  return `${Math.round(meters * 100)}cm`;
-}
+const formatDistance = formatDistanceCompact;
 
 // Determine exercise type based on available data
 function determineExerciseType(entry: {

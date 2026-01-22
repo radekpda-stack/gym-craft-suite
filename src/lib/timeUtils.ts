@@ -388,3 +388,51 @@ export function averageTime(timesMs: (number | null | undefined)[]): number | nu
   if (validTimes.length === 0) return null;
   return Math.round(validTimes.reduce((a, b) => a + b, 0) / validTimes.length);
 }
+
+// ============================================================================
+// DISTANCE FORMATTING
+// ============================================================================
+
+/**
+ * Format distance in meters to readable format
+ * Automatically chooses between km, m, and cm based on value
+ * 
+ * @example
+ * formatDistance(5000) // => "5.0 km"
+ * formatDistance(500)  // => "500 m"
+ * formatDistance(0.5)  // => "50 cm"
+ */
+export function formatDistance(meters: number | null | undefined): string {
+  if (meters === null || meters === undefined) return '-';
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+  if (meters >= 1) return `${Math.round(meters)} m`;
+  return `${Math.round(meters * 100)} cm`;
+}
+
+/**
+ * Format distance with more precision (2 decimal places for km)
+ * 
+ * @example
+ * formatDistancePrecise(5123) // => "5.12 km"
+ * formatDistancePrecise(500)  // => "500 m"
+ */
+export function formatDistancePrecise(meters: number | null | undefined): string {
+  if (meters === null || meters === undefined) return '-';
+  if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
+  if (meters >= 1) return `${meters.toFixed(2)} m`;
+  return `${Math.round(meters * 100)} cm`;
+}
+
+/**
+ * Format distance compactly without spaces
+ * 
+ * @example
+ * formatDistanceCompact(5000) // => "5.0km"
+ * formatDistanceCompact(500)  // => "500m"
+ */
+export function formatDistanceCompact(meters: number | null | undefined): string {
+  if (meters === null || meters === undefined) return '-';
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)}km`;
+  if (meters >= 1) return `${Math.round(meters)}m`;
+  return `${Math.round(meters * 100)}cm`;
+}
