@@ -315,22 +315,24 @@ export function useAnnualStats(
       // Top clients by trainings - combine training_sessions.client_id + training_participants
       const clientTrainingCounts: Record<string, number> = {};
       const clientSpent: Record<string, number> = {};
-      const processedTrainingIds = new Set<string>();
       
-      // First: count trainings from training_sessions.client_id (single-client trainings)
+      // For each completed training, determine who participated and how much they spent
       completedTrainings.forEach((t: any) => {
-        if (t.client_id) {
+        // Find participants for this training
+        const trainingParticipants = participants.filter(
+          (p: any) => p.training_session_id === t.id
+        );
+        
+        if (trainingParticipants.length > 0) {
+          // Multi-participant training - use price_share from each participant
+          trainingParticipants.forEach((p: any) => {
+            clientTrainingCounts[p.client_id] = (clientTrainingCounts[p.client_id] || 0) + 1;
+            clientSpent[p.client_id] = (clientSpent[p.client_id] || 0) + (p.price_share || 0);
+          });
+        } else if (t.client_id) {
+          // Single-client training - use final_price from session
           clientTrainingCounts[t.client_id] = (clientTrainingCounts[t.client_id] || 0) + 1;
           clientSpent[t.client_id] = (clientSpent[t.client_id] || 0) + (t.final_price || 0);
-          processedTrainingIds.add(t.id);
-        }
-      });
-      
-      // Second: add multi-client trainings from training_participants (avoid double counting)
-      participants.forEach((p: any) => {
-        if (p.training_sessions?.status === 'completed' && !processedTrainingIds.has(p.training_sessions?.id)) {
-          clientTrainingCounts[p.client_id] = (clientTrainingCounts[p.client_id] || 0) + 1;
-          clientSpent[p.client_id] = (clientSpent[p.client_id] || 0) + (p.price_share || 0);
         }
       });
 
