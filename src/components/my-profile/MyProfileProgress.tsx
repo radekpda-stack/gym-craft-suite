@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { 
   useClientWeightProgress, 
   useClientBodyFatProgress,
@@ -9,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WeightChart } from '@/components/client-portal/progress/WeightChart';
 import { BodyFatChart } from '@/components/client-portal/progress/BodyFatChart';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dumbbell } from 'lucide-react';
 
 interface MyProfileProgressProps {
@@ -18,11 +16,10 @@ interface MyProfileProgressProps {
 }
 
 export function MyProfileProgress({ clientId, trainerId }: MyProfileProgressProps) {
-  const [period, setPeriod] = useState<number>(6);
-  
   const { data: settings, isLoading: settingsLoading } = useClientPortalProgressSettings(trainerId);
-  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId, period);
-  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId, period);
+  // Load all history - no time limit for weight/body fat graphs
+  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId);
+  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId);
   const { data: exerciseData, isLoading: exerciseLoading } = useClientTrackedExercises(clientId);
 
   const isLoading = settingsLoading || weightLoading || bodyFatLoading || exerciseLoading;
@@ -45,19 +42,6 @@ export function MyProfileProgress({ clientId, trainerId }: MyProfileProgressProp
 
   return (
     <div className="space-y-6">
-      {/* Period Filter */}
-      <div className="flex justify-end">
-        <Select value={period.toString()} onValueChange={(v) => setPeriod(Number(v))}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Období" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="3">3 měsíce</SelectItem>
-            <SelectItem value="6">6 měsíců</SelectItem>
-            <SelectItem value="12">12 měsíců</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Charts Grid */}
       <div className="grid md:grid-cols-2 gap-6">
