@@ -9,6 +9,7 @@ import { useClientPaceTrend, PaceDataPoint } from '@/hooks/useClientPaceTrend';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { formatPaceSimple } from '@/lib/timeUtils';
 
 interface ClientPaceTrendCardProps {
   clientId: string;
@@ -38,11 +39,7 @@ const CATEGORY_CONFIG = {
   },
 };
 
-function formatPaceForAxis(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+const formatPaceForAxis = formatPaceSimple;
 
 function TrendBadge({ trend }: { trend: 'improving' | 'declining' | 'stable' | null }) {
   if (!trend) return null;

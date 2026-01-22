@@ -7,6 +7,7 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingDown, TrendingUp, Minus, Trophy, Waves, Wind, Footprints, ChevronRight, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatPaceSimple } from '@/lib/timeUtils';
 
 type CardioCategory = 'rower' | 'skierg' | 'treadmill';
 
@@ -32,11 +33,7 @@ const CATEGORY_CONFIG: Record<CardioCategory, {
   },
 };
 
-function formatPaceDisplay(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+const formatPaceDisplay = formatPaceSimple;
 
 function calculateImprovement(data: { paceNormalized: number; date: string }[]): number | null {
   if (data.length < 2) return null;

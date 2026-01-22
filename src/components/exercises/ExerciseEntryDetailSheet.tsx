@@ -33,7 +33,7 @@ import {
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { formatTimeMs } from '@/lib/timeUtils';
+import { formatTimeMs, formatPaceSimple } from '@/lib/timeUtils';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { EditEntryDialog } from '@/components/progress/EditEntryDialog';
 import { ExerciseEntry } from '@/hooks/useExerciseEntries';
@@ -52,11 +52,7 @@ function formatTime(seconds: number, ms?: number | null): string {
   return formatTimeMs(seconds * 1000);
 }
 
-function formatPace(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+const formatPace = formatPaceSimple;
 
 export function ExerciseEntryDetailSheet({ 
   entryId, 

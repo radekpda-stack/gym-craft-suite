@@ -2,24 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useCardioStatsNew } from '@/hooks/useCardioStatsNew';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Clock, Heart, Flame, Route, Timer } from 'lucide-react';
+import { formatDuration, formatPaceFromDistance } from '@/lib/timeUtils';
 
-function formatTime(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
-
-function formatPace(totalSeconds: number, distanceKm: number): string {
-  if (distanceKm === 0) return '—';
-  const paceSecondsPerKm = totalSeconds / distanceKm;
-  const paceMin = Math.floor(paceSecondsPerKm / 60);
-  const paceSec = Math.round(paceSecondsPerKm % 60);
-  return `${paceMin}:${paceSec.toString().padStart(2, '0')} /km`;
-}
+const formatTime = formatDuration;
 
 interface CardioDetailModalProps {
   open: boolean;
@@ -43,7 +28,7 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
   }
 
   const avgPace = data?.totalDistance && data?.totalTime 
-    ? formatPace(data.totalTime, data.totalDistance) 
+    ? formatPaceFromDistance(data.totalTime, data.totalDistance) 
     : '—';
 
   const avgDuration = data?.sessionCount && data?.totalTime
