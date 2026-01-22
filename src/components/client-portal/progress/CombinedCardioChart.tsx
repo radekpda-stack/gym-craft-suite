@@ -5,6 +5,7 @@ import { cs } from 'date-fns/locale';
 import { Timer, Bike, PersonStanding } from 'lucide-react';
 import { CardioDataPoint } from '@/hooks/useClientProgressData';
 import { LucideIcon } from 'lucide-react';
+import { formatTimeMs } from '@/lib/timeUtils';
 
 interface CombinedCardioChartProps {
   data500: CardioDataPoint[];
@@ -60,15 +61,7 @@ export function CombinedCardioChart({
     );
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    const hasDecimals = secs % 1 !== 0;
-    if (hasDecimals) {
-      return `${mins}:${secs.toFixed(2).padStart(5, '0')}`;
-    }
-    return `${mins}:${Math.floor(secs).toString().padStart(2, '0')}`;
-  };
+  const formatTime = (seconds: number) => formatTimeMs(seconds * 1000);
 
   // Merge data by date
   const dateMap = new Map<string, { date: string; time500?: number; time1000?: number; pace500?: string; pace1000?: string }>();

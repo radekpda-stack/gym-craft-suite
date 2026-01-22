@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTimeWithCentiseconds } from '@/lib/timeUtils';
 
 export interface ExercisePR {
   id: string;
@@ -14,19 +15,8 @@ export interface ExercisePR {
   side: 'left' | 'right' | 'both' | 'none' | null;
 }
 
-/**
- * Format seconds to m:ss.SS with centiseconds for consistent display
- * Examples: "1:41.35", "0:59.00", "2:05.70"
- */
-function formatTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  // Always show 2 decimal places for consistency
-  const secsFormatted = secs.toFixed(2);
-  // Pad the integer part of seconds to 2 digits (e.g., "5.00" -> "05.00")
-  const paddedSecs = secs < 10 ? `0${secsFormatted}` : secsFormatted;
-  return `${minutes}:${paddedSecs}`;
-}
+// Alias for backwards compatibility
+const formatTime = formatTimeWithCentiseconds;
 
 /**
  * Fetches personal records from exercise_entries for a client.

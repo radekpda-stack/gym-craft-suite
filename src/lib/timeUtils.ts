@@ -154,6 +154,59 @@ export function formatTime(totalSeconds: number | null): string {
   return formatTimeMs(totalSeconds * 1000);
 }
 
+/**
+ * Format seconds to mm:ss (simple format, no decimals)
+ * For UI elements like voice recorders, media uploads
+ */
+export function formatTimeSimple(seconds: number): string {
+  if (seconds < 0) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Format seconds to human-readable duration with units
+ * For notifications and exports: "1:30 min" or "45 s"
+ */
+export function formatTimeWithUnit(seconds: number): string {
+  if (seconds < 0) return '0 s';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  if (mins > 0) {
+    return `${mins}:${secs.toString().padStart(2, '0')} min`;
+  }
+  return `${secs} s`;
+}
+
+/**
+ * Format seconds to duration like "1h 30m" or "45m"
+ * For stats cards showing total duration
+ */
+export function formatDuration(seconds: number): string {
+  if (seconds < 0) return '0m';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
+/**
+ * Format seconds with always 2 decimal places (for PRs and precise timing)
+ * Example: "1:41.35", "0:05.00"
+ */
+export function formatTimeWithCentiseconds(seconds: number): string {
+  if (seconds < 0) return '0:00.00';
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  const secsFormatted = secs.toFixed(2);
+  const paddedSecs = secs < 10 ? `0${secsFormatted}` : secsFormatted;
+  return `${minutes}:${paddedSecs}`;
+}
+
 // ============================================================================
 // PACE UTILITIES
 // ============================================================================

@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { loadPdfFonts, registerInterFont } from "./pdfFonts";
 import { getPdfColorsFromTheme } from "./pdfTheme";
+import { formatTimeSimple } from "./timeUtils";
 import type { PerformanceExportData, PerformanceExportOptions } from "@/types/performance-export";
 
 const translations = {
@@ -54,10 +55,9 @@ function sanitizeFilename(text: string): string {
   return text.split('').map(char => map[char] || char).join('');
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+function formatTimeForExport(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  return formatTimeSimple(seconds);
 }
 
 export async function generatePerformancePdf(
@@ -277,7 +277,7 @@ export async function generatePerformancePdf(
         : entry.distanceMeters
           ? `${Math.round(entry.distanceMeters * 100)} cm`
           : entry.timeSeconds 
-            ? formatTime(entry.timeSeconds)
+            ? formatTimeForExport(entry.timeSeconds)
             : '-';
       
       return [

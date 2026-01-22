@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { formatTimeWithUnit } from '@/lib/timeUtils';
 
 interface PRNotificationParams {
   trainerId: string;
@@ -62,11 +63,5 @@ export async function notifyAboutPR({
   }
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  if (mins > 0) {
-    return `${mins}:${secs.toString().padStart(2, '0')} min`;
-  }
-  return `${secs} s`;
-}
+// Alias for backwards compatibility
+const formatTime = formatTimeWithUnit;
