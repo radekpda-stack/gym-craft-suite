@@ -849,6 +849,241 @@ function parseICSDate(value: string, keyPart: string): Date {
   return new Date(value);
 }
 
+// Declare EdgeRuntime type for TypeScript
+declare const EdgeRuntime: {
+  waitUntil: (promise: Promise<any>) => void;
+} | undefined;
+
+// Shared helper function to process events
+async function processEvents(
+  supabase: any,
+  feedId: string,
+  userId: string,
+  expandedEvents: ExpandedEvent[],
+  totalRawEvents: number,
+  recurringCount: number,
+  syncHorizonMonths: number,
+  fromDate: Date,
+  toDate: Date
+): Promise<{
+  success: boolean;
+  events_synced: number;
+  total_events: number;
+  recurring_events: number;
+  recurring_instances: number;
+  sync_log: any;
+}> {
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('is_archived', false);
+
+  const { data: aliasesData } = await supabase
+    .from('client_name_aliases')
+    .select('client_id, alias')
+    .eq('user_id', userId);
+
+  const aliasMap = new Map<string, string[]>();
+  for (const aliasRow of aliasesData || []) {
+    const existing = aliasMap.get(aliasRow.client_id) || [];
+    existing.push(aliasRow.alias);
+    aliasMap.set(aliasRow.client_id, existing);
+  }
+
+  // Check for potential duplicates
+  const { data: existingSessions } = await supabase
+    .from('training_sessions')
+    .select('id, client_id, date')
+    .eq('user_id', userId)
+    .gte('date', fromDate.toISOString());
+
+  let syncedCount = 0;
+  let matchedCount = 0;
+  let unmatchedCount = 0;
+  let duplicatesCount = 0;
+  let recurringInstancesCount = 0;
+
+  // Process events in batches to avoid CPU timeout
+  const BATCH_SIZE = 50;
+  const eventBatches: ExpandedEvent[][] = [];
+  for (let i = 0; i < expandedEvents.length; i += BATCH_SIZE) {
+    eventBatches.push(expandedEvents.slice(i, i + BATCH_SIZE));
+  }
+
+  console.log(`[ICS Sync] Processing ${expandedEvents.length} events in ${eventBatches.length} batches of ${BATCH_SIZE}`);
+
+  for (const batch of eventBatches) {
+    const eventsToUpsert: any[] = [];
+    
+    for (const event of batch) {
+      // Simplified matching - skip suggestions for large syncs
+      const { primary, additional } = clients 
+        ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
+        : { primary: null, additional: [] };
+      
+      // Only compute suggestions for small batches (performance optimization)
+      let suggestions: any[] = [];
+      if (expandedEvents.length <= 200 && clients) {
+        const allMatches = findClientMatches(event.summary, clients, aliasMap);
+        suggestions = allMatches.slice(0, 3).map(m => ({
+          client_id: m.clientId,
+          name: m.clientName,
+          score: m.score,
+          match_type: m.matchType,
+        }));
+      }
+
+      const additionalClientIds = additional.map(m => m.clientId);
+
+      // Check for potential duplicate session (simplified for performance)
+      let potentialDuplicateId: string | null = null;
+      if (primary && existingSessions && existingSessions.length < 1000) {
+        const eventTime = event.dtstart.getTime();
+        const thirtyMinutes = 30 * 60 * 1000;
+        
+        const duplicate = existingSessions.find((s: any) => {
+          if (s.client_id !== primary.clientId) return false;
+          const sessionTime = new Date(s.date).getTime();
+          return Math.abs(sessionTime - eventTime) <= thirtyMinutes;
+        });
+        
+        if (duplicate) {
+          potentialDuplicateId = duplicate.id;
+          duplicatesCount++;
+        }
+      }
+
+      if (primary) matchedCount++;
+      else unmatchedCount++;
+      if (event.isRecurringInstance) recurringInstancesCount++;
+
+      eventsToUpsert.push({
+        feed_id: feedId,
+        ics_uid: event.uid,
+        summary: event.summary,
+        description: event.description,
+        start_at: event.dtstart.toISOString(),
+        end_at: event.dtend?.toISOString() || null,
+        location: event.location || null,
+        matched_client_id: primary?.clientId || null,
+        additional_matched_client_ids: additionalClientIds,
+        match_suggestions: suggestions.length > 0 ? suggestions : null,
+        potential_duplicate_session_id: potentialDuplicateId,
+        rrule: event.rrule || null,
+        master_event_uid: event.masterEventUid || null,
+        recurrence_instance_date: event.recurrenceInstanceDate || null,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    const { error: upsertError } = await supabase
+      .from('calendar_ics_events')
+      .upsert(eventsToUpsert, { onConflict: 'feed_id,ics_uid' });
+
+    if (!upsertError) {
+      syncedCount += eventsToUpsert.length;
+    } else {
+      console.error(`[ICS Sync] Batch upsert error:`, upsertError);
+    }
+  }
+
+  const syncLog = {
+    total_in_ics: totalRawEvents,
+    recurring_events: recurringCount,
+    expanded_instances: expandedEvents.length,
+    recurring_instances: recurringInstancesCount,
+    after_tag_filter: expandedEvents.length,
+    matched_clients: matchedCount,
+    unmatched: unmatchedCount,
+    duplicates_found: duplicatesCount,
+    synced_at: new Date().toISOString(),
+    sync_from: fromDate.toISOString(),
+    sync_to: toDate.toISOString(),
+    sync_horizon_months: syncHorizonMonths,
+  };
+
+  await supabase
+    .from('calendar_ics_feeds')
+    .update({
+      last_sync_at: new Date().toISOString(),
+      last_sync_status: 'success',
+      last_sync_error: null,
+      last_sync_log: syncLog,
+      events_synced: syncedCount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', feedId);
+
+  console.log(`[ICS Sync] Successfully synced ${syncedCount} events`);
+
+  return {
+    success: true,
+    events_synced: syncedCount,
+    total_events: totalRawEvents,
+    recurring_events: recurringCount,
+    recurring_instances: recurringInstancesCount,
+    sync_log: syncLog,
+  };
+}
+
+// Background processing wrapper
+async function processEventsInBackground(
+  supabase: any,
+  feedId: string,
+  userId: string,
+  expandedEvents: ExpandedEvent[],
+  totalRawEvents: number,
+  recurringCount: number,
+  syncHorizonMonths: number,
+  fromDate: Date,
+  toDate: Date
+): Promise<void> {
+  await processEvents(
+    supabase,
+    feedId,
+    userId,
+    expandedEvents,
+    totalRawEvents,
+    recurringCount,
+    syncHorizonMonths,
+    fromDate,
+    toDate
+  );
+}
+
+// Synchronous processing wrapper
+async function processEventsSynchronously(
+  supabase: any,
+  feedId: string,
+  userId: string,
+  expandedEvents: ExpandedEvent[],
+  totalRawEvents: number,
+  recurringCount: number,
+  syncHorizonMonths: number,
+  fromDate: Date,
+  toDate: Date
+): Promise<{
+  success: boolean;
+  events_synced: number;
+  total_events: number;
+  recurring_events: number;
+  recurring_instances: number;
+  sync_log: any;
+}> {
+  return processEvents(
+    supabase,
+    feedId,
+    userId,
+    expandedEvents,
+    totalRawEvents,
+    recurringCount,
+    syncHorizonMonths,
+    fromDate,
+    toDate
+  );
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -922,162 +1157,84 @@ serve(async (req) => {
           console.log(`[ICS Sync] ${expandedEvents.length} events after tag filter "${importFilterTag}"`);
         }
 
-        const { data: clients } = await supabase
-          .from('clients')
-          .select('id, name')
-          .eq('user_id', feed.user_id)
-          .eq('is_archived', false);
-
-        const { data: aliasesData } = await supabase
-          .from('client_name_aliases')
-          .select('client_id, alias')
-          .eq('user_id', feed.user_id);
-
-        const aliasMap = new Map<string, string[]>();
-        for (const aliasRow of aliasesData || []) {
-          const existing = aliasMap.get(aliasRow.client_id) || [];
-          existing.push(aliasRow.alias);
-          aliasMap.set(aliasRow.client_id, existing);
-        }
-
-        // Check for potential duplicates
-        const { data: existingSessions } = await supabase
-          .from('training_sessions')
-          .select('id, client_id, date')
-          .eq('user_id', feed.user_id)
-          .gte('date', now.toISOString());
-
-        let syncedCount = 0;
-        let matchedCount = 0;
-        let unmatchedCount = 0;
-        let duplicatesCount = 0;
-        let recurringInstancesCount = 0;
-
-        // Prepare all events for batch upsert
-        const eventsToUpsert: any[] = [];
+        // For large event counts, use background processing
+        const eventCount = expandedEvents.length;
+        const isLargeSync = eventCount > 200;
         
-        for (const event of expandedEvents) {
-          const { primary, additional } = clients 
-            ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
-            : { primary: null, additional: [] };
+        if (isLargeSync) {
+          console.log(`[ICS Sync] Large sync detected (${eventCount} events), using background processing`);
           
-          const allMatches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
-          const suggestions = allMatches.slice(0, 5).map(m => ({
-            client_id: m.clientId,
-            name: m.clientName,
-            score: m.score,
-            match_type: m.matchType,
-          }));
-
-          const additionalClientIds = additional.map(m => m.clientId);
-
-          // Check for potential duplicate session
-          let potentialDuplicateId: string | null = null;
-          if (primary && existingSessions) {
-            const eventTime = event.dtstart.getTime();
-            const thirtyMinutes = 30 * 60 * 1000;
-            
-            const duplicate = existingSessions.find(s => {
-              if (s.client_id !== primary.clientId) return false;
-              const sessionTime = new Date(s.date).getTime();
-              return Math.abs(sessionTime - eventTime) <= thirtyMinutes;
-            });
-            
-            if (duplicate) {
-              potentialDuplicateId = duplicate.id;
-              duplicatesCount++;
+          // Mark as syncing
+          await supabase
+            .from('calendar_ics_feeds')
+            .update({
+              last_sync_status: 'syncing',
+              last_sync_error: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', feedId);
+          
+          // Process in background
+          const backgroundTask = async () => {
+            try {
+              await processEventsInBackground(
+                supabase, 
+                feedId, 
+                feed.user_id, 
+                expandedEvents, 
+                rawEvents.length, 
+                recurringCount,
+                syncHorizonMonths,
+                now,
+                toDate
+              );
+            } catch (bgError) {
+              console.error('[ICS Sync] Background task error:', bgError);
+              await supabase
+                .from('calendar_ics_feeds')
+                .update({
+                  last_sync_status: 'error',
+                  last_sync_error: bgError instanceof Error ? bgError.message : 'Background processing failed',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', feedId);
             }
-          }
-
-          // Track match stats
-          if (primary) {
-            matchedCount++;
+          };
+          
+          // Use EdgeRuntime.waitUntil if available, otherwise just start the task
+          if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+            EdgeRuntime.waitUntil(backgroundTask());
           } else {
-            unmatchedCount++;
+            // Fallback - start task but don't await
+            backgroundTask();
           }
-
-          // Track recurring instances
-          if (event.isRecurringInstance) {
-            recurringInstancesCount++;
-          }
-
-          eventsToUpsert.push({
-            feed_id: feedId,
-            ics_uid: event.uid,
-            summary: event.summary,
-            description: event.description,
-            start_at: event.dtstart.toISOString(),
-            end_at: event.dtend?.toISOString() || null,
-            location: event.location || null,
-            matched_client_id: primary?.clientId || null,
-            additional_matched_client_ids: additionalClientIds,
-            match_suggestions: suggestions,
-            potential_duplicate_session_id: potentialDuplicateId,
-            rrule: event.rrule || null,
-            master_event_uid: event.masterEventUid || null,
-            recurrence_instance_date: event.recurrenceInstanceDate || null,
-            updated_at: new Date().toISOString(),
-          });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              processing: 'background',
+              message: `Syncing ${eventCount} events in background. Check back in a few moments.`,
+              events_found: eventCount,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
-        // Batch upsert in chunks of 100 to avoid payload limits
-        const BATCH_SIZE = 100;
-        for (let i = 0; i < eventsToUpsert.length; i += BATCH_SIZE) {
-          const batch = eventsToUpsert.slice(i, i + BATCH_SIZE);
-          const { error: upsertError, data } = await supabase
-            .from('calendar_ics_events')
-            .upsert(batch, {
-              onConflict: 'feed_id,ics_uid',
-            });
-
-          if (!upsertError) {
-            syncedCount += batch.length;
-          } else {
-            console.error(`[ICS Sync] Batch upsert error:`, upsertError);
-          }
-        }
-        
-        console.log(`[ICS Sync] Processed ${eventsToUpsert.length} events in ${Math.ceil(eventsToUpsert.length / BATCH_SIZE)} batches`);
-
-        // Build sync log for UI
-        const syncLog = {
-          total_in_ics: rawEvents.length,
-          recurring_events: recurringCount,
-          expanded_instances: expandedEvents.length,
-          recurring_instances: recurringInstancesCount,
-          after_tag_filter: expandedEvents.length,
-          matched_clients: matchedCount,
-          unmatched: unmatchedCount,
-          duplicates_found: duplicatesCount,
-          synced_at: new Date().toISOString(),
-          sync_from: now.toISOString(),
-          sync_to: toDate.toISOString(),
-          sync_horizon_months: syncHorizonMonths,
-        };
-
-        await supabase
-          .from('calendar_ics_feeds')
-          .update({
-            last_sync_at: new Date().toISOString(),
-            last_sync_status: 'success',
-            last_sync_error: null,
-            last_sync_log: syncLog,
-            events_synced: syncedCount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', feedId);
-
-        console.log(`[ICS Sync] Successfully synced ${syncedCount} events (${recurringInstancesCount} from recurring)`, syncLog);
+        // For smaller syncs, process immediately
+        const result = await processEventsSynchronously(
+          supabase, 
+          feedId, 
+          feed.user_id, 
+          expandedEvents, 
+          rawEvents.length, 
+          recurringCount,
+          syncHorizonMonths,
+          now,
+          toDate
+        );
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            events_synced: syncedCount,
-            total_events: rawEvents.length,
-            recurring_events: recurringCount,
-            recurring_instances: recurringInstancesCount,
-            sync_log: syncLog,
-          }),
+          JSON.stringify(result),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
