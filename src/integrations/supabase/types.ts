@@ -10672,6 +10672,7 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: Json
       }
+      rpc_get_balance_discrepancies: { Args: never; Returns: Json }
       rpc_get_client_credit_summary: {
         Args: { p_client_id: string; p_user_id: string }
         Returns: Json
@@ -10709,6 +10710,15 @@ export type Database = {
         Returns: Json
       }
       rpc_process_sale: { Args: { payload: Json }; Returns: Json }
+      rpc_recalculate_all_balances: { Args: never; Returns: Json }
+      rpc_recalculate_client_balance: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
+      rpc_recalculate_group_balance: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
       rpc_refund_sale: {
         Args: { p_order_id: string; p_user_id: string }
         Returns: Json
