@@ -1552,6 +1552,116 @@ serve(async (req) => {
     }
 
     // ===========================================
+    // ACTION: rematch_clients - Run client matching on unmatched events
+    // ===========================================
+    if (action === 'rematch_clients') {
+      const { data: feed, error: feedError } = await supabase
+        .from('calendar_ics_feeds')
+        .select('user_id')
+        .eq('id', feedId)
+        .single();
+
+      if (feedError || !feed) {
+        return new Response(
+          JSON.stringify({ error: 'feed_not_found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get unmatched events for this feed
+      const { data: unmatchedEvents, error: eventsError } = await supabase
+        .from('calendar_ics_events')
+        .select('id, summary')
+        .eq('feed_id', feedId)
+        .is('matched_client_id', null)
+        .eq('is_processed', false)
+        .eq('skip_import', false);
+
+      if (eventsError) {
+        return new Response(
+          JSON.stringify({ error: 'fetch_events_failed', details: eventsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!unmatchedEvents || unmatchedEvents.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, matched_count: 0, message: 'No unmatched events' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch clients
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('user_id', feed.user_id)
+        .eq('is_archived', false);
+
+      const clients = clientsData || [];
+
+      // Fetch aliases
+      const { data: aliasesData } = await supabase
+        .from('client_name_aliases')
+        .select('client_id, alias')
+        .eq('user_id', feed.user_id);
+
+      const aliasMap = new Map<string, string[]>();
+      for (const aliasRow of aliasesData || []) {
+        const existing = aliasMap.get(aliasRow.client_id) || [];
+        existing.push(aliasRow.alias);
+        aliasMap.set(aliasRow.client_id, existing);
+      }
+
+      let matchedCount = 0;
+      const BATCH_SIZE = 50;
+
+      console.log(`[ICS Sync] Re-matching ${unmatchedEvents.length} unmatched events`);
+
+      for (let i = 0; i < unmatchedEvents.length; i += BATCH_SIZE) {
+        const batch = unmatchedEvents.slice(i, i + BATCH_SIZE);
+        
+        for (const event of batch) {
+          const { primary, additional } = findMultipleClientMatches(event.summary, clients, aliasMap, 70);
+          const allMatches = findClientMatches(event.summary, clients, aliasMap);
+          const suggestions = allMatches.slice(0, 3).map((m) => ({
+            client_id: m.clientId,
+            name: m.clientName,
+            score: m.score,
+            match_type: m.matchType,
+          }));
+
+          if (primary || suggestions.length > 0) {
+            const additionalClientIds = additional.map((m) => m.clientId);
+
+            await supabase
+              .from('calendar_ics_events')
+              .update({
+                matched_client_id: primary?.clientId || null,
+                additional_matched_client_ids: additionalClientIds.length > 0 ? additionalClientIds : null,
+                match_suggestions: suggestions.length > 0 ? suggestions : null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', event.id);
+
+            if (primary) matchedCount++;
+          }
+        }
+      }
+
+      console.log(`[ICS Sync] Re-matched ${matchedCount} events`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          matched_count: matchedCount,
+          total_unmatched: unmatchedEvents.length,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
     // ACTION: approve_events - Mark specific events as approved for import
     // ===========================================
     if (action === 'approve_events') {

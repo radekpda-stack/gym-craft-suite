@@ -209,6 +209,28 @@ export function useSyncICSFeed() {
   });
 }
 
+export function useRematchClients() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedId: string) => {
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: {
+          action: 'rematch_clients',
+          feedId,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
+    },
+  });
+}
+
 export function useCreateSessionsFromEvents() {
   const queryClient = useQueryClient();
 
