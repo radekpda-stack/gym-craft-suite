@@ -565,44 +565,66 @@ export default function FeedbackOverview() {
                               </p>
                             </div>
 
-                            {/* Actions */}
+                            {/* Actions - different for completed vs pending */}
                             <div className="flex items-center gap-2 shrink-0">
-                              {/* Feedback toggle */}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center">
-                                    <Switch
-                                      checked={true}
-                                      onCheckedChange={() => handleFeedbackToggle(training.client_id, training.client_name, true)}
-                                      disabled={toggleClientFeedback.isPending}
-                                      className="scale-75"
-                                    />
+                              {training.feedback_status === 'completed' ? (
+                                // Completed feedback - show green success indicator
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/20 text-success">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Vyplněno</span>
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>Vypnout feedback pro {training.client_name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1.5"
-                                onClick={() => copyFeedbackLink(training.id, training.client_id)}
-                                disabled={createFeedbackRequest.isPending}
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Kopírovat</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                              >
-                                <Link to={`/trainings/${training.id}`}>
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </Link>
-                              </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    asChild
+                                  >
+                                    <Link to={`/trainings/${training.id}`}>
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </Link>
+                                  </Button>
+                                </div>
+                              ) : (
+                                // Pending feedback - show actions
+                                <>
+                                  {/* Feedback toggle */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center">
+                                        <Switch
+                                          checked={true}
+                                          onCheckedChange={() => handleFeedbackToggle(training.client_id, training.client_name, true)}
+                                          disabled={toggleClientFeedback.isPending}
+                                          className="scale-75"
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <p>Vypnout feedback pro {training.client_name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1.5"
+                                    onClick={() => copyFeedbackLink(training.id, training.client_id)}
+                                    disabled={createFeedbackRequest.isPending}
+                                  >
+                                    <Copy className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Kopírovat</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    asChild
+                                  >
+                                    <Link to={`/trainings/${training.id}`}>
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </Link>
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

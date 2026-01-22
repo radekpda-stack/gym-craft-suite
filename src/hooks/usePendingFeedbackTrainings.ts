@@ -142,8 +142,13 @@ export function usePendingFeedbackTrainings() {
         });
       }
 
-      // Filter out completed ones - we only want pending
-      return result.filter(r => r.feedback_status !== 'completed');
+      // Return all results including completed ones
+      // Sort: completed last, then by hours since training (oldest first for pending)
+      return result.sort((a, b) => {
+        if (a.feedback_status === 'completed' && b.feedback_status !== 'completed') return 1;
+        if (a.feedback_status !== 'completed' && b.feedback_status === 'completed') return -1;
+        return b.hours_since_training - a.hours_since_training;
+      });
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
