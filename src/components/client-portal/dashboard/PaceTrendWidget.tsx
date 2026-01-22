@@ -33,7 +33,7 @@ const CATEGORY_CONFIG: Record<CardioCategory, {
   },
 };
 
-const formatPaceDisplay = formatPaceSimple;
+
 
 function calculateImprovement(data: { paceNormalized: number; date: string }[]): number | null {
   if (data.length < 2) return null;
@@ -135,7 +135,7 @@ export function PaceTrendWidget() {
                 <div className="flex items-center gap-2 mb-2">
                   <Trophy className="h-4 w-4 text-warning" />
                   <span className="text-lg font-bold text-foreground">
-                    {formatPaceDisplay(bestPace.paceNormalized)}
+                    {formatPaceSimple(bestPace.paceNormalized)}
                   </span>
                   <span className="text-xs text-muted-foreground">nejlepší</span>
                 </div>
