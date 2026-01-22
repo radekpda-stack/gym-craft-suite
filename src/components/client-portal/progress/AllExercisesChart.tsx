@@ -8,18 +8,15 @@ import { ClientExerciseProgress } from '@/hooks/useClientAllExercises';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { formatTimeSimple } from '@/lib/timeUtils';
 
 interface AllExercisesChartProps {
   exercises: ClientExerciseProgress[];
   isLoading?: boolean;
 }
 
-// Format seconds to mm:ss
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-}
+// Alias for backwards compatibility
+const formatTime = formatTimeSimple;
 
 export function AllExercisesChart({ exercises, isLoading }: AllExercisesChartProps) {
   const [selectedExercise, setSelectedExercise] = useState<string>('');

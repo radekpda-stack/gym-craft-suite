@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTimeSimple } from "@/lib/timeUtils";
 import { Diagnostic } from "@/hooks/useDiagnostics";
 
 interface VoiceRecorderProps {
@@ -147,11 +148,7 @@ export function VoiceRecorder({ clientId, diagnosticId, diagnostics = [], onSucc
     setSelectedDiagnosticId(diagnosticId || "");
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const formatTime = formatTimeSimple;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>

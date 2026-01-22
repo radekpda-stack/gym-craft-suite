@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { formatTimeWithUnit } from "@/lib/timeUtils";
+
 // Trainer's client_id (Trenér Radek)
 const TRAINER_CLIENT_ID = "29d2692d-ece4-43f5-a770-fe46bc592917";
 
@@ -34,14 +36,8 @@ const CLIENT_BEAT_TRAINER_TIME_MESSAGES = [
   "Neuvěřitelné! Předběhl/a jsi trenéra na {exercise}! 🏆",
 ];
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  if (mins > 0) {
-    return `${mins}:${secs.toString().padStart(2, "0")} min`;
-  }
-  return `${secs} s`;
-}
+// Alias for backwards compatibility in this file
+const formatTime = formatTimeWithUnit;
 
 function getRandomMessage(messages: string[]): string {
   return messages[Math.floor(Math.random() * messages.length)];

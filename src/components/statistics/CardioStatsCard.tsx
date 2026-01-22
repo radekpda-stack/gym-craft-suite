@@ -5,16 +5,7 @@ import { useCardioStatsNew } from '@/hooks/useCardioStatsNew';
 import { Activity, Clock, Heart, Flame, ChevronRight } from 'lucide-react';
 import { StatInfoTooltip } from './StatInfoTooltip';
 import { CardioDetailModal } from './modals/CardioDetailModal';
-
-function formatTime(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
+import { formatDuration } from '@/lib/timeUtils';
 
 export function CardioStatsCard() {
   const { data, isLoading } = useCardioStatsNew(3);
@@ -85,7 +76,7 @@ export function CardioStatsCard() {
                 <span className="text-xs">Celkový čas</span>
               </div>
               <div className="text-xl font-bold">
-                {formatTime(data.totalTime)}
+                {formatDuration(data.totalTime)}
               </div>
             </div>
 

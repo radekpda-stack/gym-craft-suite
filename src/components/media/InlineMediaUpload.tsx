@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Mic, X, Play, Pause, Square, Upload, Image, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTimeSimple } from "@/lib/timeUtils";
 
 interface PendingMedia {
   id: string;
@@ -101,11 +102,7 @@ export function InlineMediaUpload({
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const formatTime = formatTimeSimple;
 
   const photos = pendingMedia.filter(m => m.type === 'photo');
   const audios = pendingMedia.filter(m => m.type === 'audio');
