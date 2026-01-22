@@ -873,13 +873,42 @@ async function processEvents(
   recurring_instances: number;
   sync_log: any;
 }> {
-  // Performance mode: for large syncs, skip all client matching + duplicate detection.
-  // These can be recomputed later (e.g. on-demand per event) but are too expensive for big imports.
+  // Performance mode: for large syncs, skip client matching but STILL do duplicate detection
   const fastMode = expandedEvents.length > 200;
 
   let clients: Array<{ id: string; name: string }> | null = null;
   let aliasMap = new Map<string, string[]>();
-  let existingSessions: Array<{ id: string; client_id: string; date: string }> | null = null;
+  
+  // Always fetch existing sessions for duplicate detection - this is critical to prevent duplicates!
+  // Build a time-based lookup map for efficient duplicate detection
+  const { data: existingSessionsData } = await supabase
+    .from('training_sessions')
+    .select('id, client_id, date')
+    .eq('user_id', userId)
+    .gte('date', fromDate.toISOString())
+    .lte('date', toDate.toISOString())
+    .order('date', { ascending: true });
+  
+  const existingSessions = existingSessionsData || [];
+  
+  // Create a time-based map for quick duplicate lookup (within 30 min window)
+  // Key: rounded timestamp (to 30-min intervals), Value: array of sessions in that window
+  const sessionTimeMap = new Map<number, Array<{ id: string; client_id: string; date: string }>>();
+  const THIRTY_MINUTES = 30 * 60 * 1000;
+  
+  for (const session of existingSessions) {
+    const sessionTime = new Date(session.date).getTime();
+    const roundedTime = Math.floor(sessionTime / THIRTY_MINUTES) * THIRTY_MINUTES;
+    
+    // Add to current and adjacent time slots for fuzzy matching
+    for (const slot of [roundedTime - THIRTY_MINUTES, roundedTime, roundedTime + THIRTY_MINUTES]) {
+      const existing = sessionTimeMap.get(slot) || [];
+      existing.push(session);
+      sessionTimeMap.set(slot, existing);
+    }
+  }
+  
+  console.log(`[ICS Sync] Loaded ${existingSessions.length} existing sessions for duplicate detection`);
 
   if (!fastMode) {
     const { data: clientsData } = await supabase
@@ -900,13 +929,6 @@ async function processEvents(
       existing.push(aliasRow.alias);
       aliasMap.set(aliasRow.client_id, existing);
     }
-
-    const { data: existingSessionsData } = await supabase
-      .from('training_sessions')
-      .select('id, client_id, date')
-      .eq('user_id', userId)
-      .gte('date', fromDate.toISOString());
-    existingSessions = existingSessionsData || null;
   }
 
   let syncedCount = 0;
@@ -933,7 +955,24 @@ async function processEvents(
       if (event.isRecurringInstance) recurringInstancesCount++;
 
       if (fastMode) {
-        // Minimal payload, fastest possible
+        // Fast mode: skip client matching but STILL detect duplicates by time
+        // This uses the efficient time-based lookup map
+        const eventTime = event.dtstart.getTime();
+        const roundedTime = Math.floor(eventTime / THIRTY_MINUTES) * THIRTY_MINUTES;
+        const potentialSessions = sessionTimeMap.get(roundedTime) || [];
+        
+        // Find any session within 30 minutes of this event (regardless of client)
+        // We'll show these as potential duplicates for manual review
+        let potentialDuplicateId: string | null = null;
+        for (const session of potentialSessions) {
+          const sessionTime = new Date(session.date).getTime();
+          if (Math.abs(sessionTime - eventTime) <= THIRTY_MINUTES) {
+            potentialDuplicateId = session.id;
+            duplicatesCount++;
+            break;
+          }
+        }
+
         eventsToUpsert.push({
           feed_id: feedId,
           ics_uid: event.uid,
@@ -945,7 +984,7 @@ async function processEvents(
           matched_client_id: null,
           additional_matched_client_ids: null,
           match_suggestions: null,
-          potential_duplicate_session_id: null,
+          potential_duplicate_session_id: potentialDuplicateId,
           rrule: event.rrule || null,
           master_event_uid: event.masterEventUid || null,
           recurrence_instance_date: event.recurrenceInstanceDate || null,
@@ -970,19 +1009,21 @@ async function processEvents(
       const additionalClientIds = additional.map((m) => m.clientId);
 
       let potentialDuplicateId: string | null = null;
-      if (primary && existingSessions && existingSessions.length < 1000) {
+      if (primary) {
+        // Use efficient time-based lookup for duplicate detection
         const eventTime = event.dtstart.getTime();
-        const thirtyMinutes = 30 * 60 * 1000;
-
-        const duplicate = existingSessions.find((s: any) => {
-          if (s.client_id !== primary.clientId) return false;
-          const sessionTime = new Date(s.date).getTime();
-          return Math.abs(sessionTime - eventTime) <= thirtyMinutes;
-        });
-
-        if (duplicate) {
-          potentialDuplicateId = duplicate.id;
-          duplicatesCount++;
+        const roundedTime = Math.floor(eventTime / THIRTY_MINUTES) * THIRTY_MINUTES;
+        const potentialSessions = sessionTimeMap.get(roundedTime) || [];
+        
+        // Find session for this specific client within 30 minutes
+        for (const session of potentialSessions) {
+          if (session.client_id !== primary.clientId) continue;
+          const sessionTime = new Date(session.date).getTime();
+          if (Math.abs(sessionTime - eventTime) <= THIRTY_MINUTES) {
+            potentialDuplicateId = session.id;
+            duplicatesCount++;
+            break;
+          }
         }
       }
 
