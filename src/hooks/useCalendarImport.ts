@@ -277,6 +277,8 @@ export function useCreateApprovedSessions() {
       queryClient.invalidateQueries({ queryKey: ['ics-events'] });
       queryClient.invalidateQueries({ queryKey: ['ics-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['training-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['training_sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-core'] });
     },
   });
 }
