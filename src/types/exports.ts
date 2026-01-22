@@ -63,7 +63,3 @@ export type {
   DateRange,
   SortConfig
 } from './common';
-
-// Re-export legacy types for backwards compatibility
-// These will be deprecated in favor of specific imports
-export * from './index-legacy';
