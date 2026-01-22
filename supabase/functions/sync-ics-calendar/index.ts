@@ -1770,6 +1770,161 @@ serve(async (req) => {
     }
 
     // ===========================================
+    // ACTION: accept_all_suggestions - Bulk accept high-confidence suggestions
+    // ===========================================
+    if (action === 'accept_all_suggestions') {
+      const { minScore = 70 } = body;
+      
+      const { data: feed, error: feedError } = await supabase
+        .from('calendar_ics_feeds')
+        .select('user_id')
+        .eq('id', feedId)
+        .single();
+
+      if (feedError || !feed) {
+        return new Response(
+          JSON.stringify({ error: 'feed_not_found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get all unmatched events with suggestions
+      const { data: unmatchedEvents, error: eventsError } = await supabase
+        .from('calendar_ics_events')
+        .select('id, summary, match_suggestions')
+        .eq('feed_id', feedId)
+        .is('matched_client_id', null)
+        .eq('is_processed', false)
+        .eq('skip_import', false);
+
+      if (eventsError) {
+        return new Response(
+          JSON.stringify({ error: 'fetch_events_failed', details: eventsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let acceptedCount = 0;
+      let learnedAliasCount = 0;
+      const eventsToUpdate: Array<{ id: string; clientId: string; summary: string }> = [];
+
+      for (const event of unmatchedEvents || []) {
+        const suggestions = event.match_suggestions as Array<{
+          client_id: string;
+          name: string;
+          score: number;
+          match_type: string;
+        }> | null;
+
+        if (!suggestions || suggestions.length === 0) continue;
+
+        const topSuggestion = suggestions[0];
+        if (topSuggestion.score >= minScore) {
+          eventsToUpdate.push({
+            id: event.id,
+            clientId: topSuggestion.client_id,
+            summary: event.summary || '',
+          });
+        }
+      }
+
+      // Group events by normalized summary to learn aliases efficiently
+      const summaryGroups = new Map<string, Array<{ id: string; clientId: string }>>();
+      for (const evt of eventsToUpdate) {
+        const normalized = normalizeText(evt.summary);
+        const existing = summaryGroups.get(normalized) || [];
+        existing.push({ id: evt.id, clientId: evt.clientId });
+        summaryGroups.set(normalized, existing);
+      }
+
+      // Update all events with their matched clients
+      for (const evt of eventsToUpdate) {
+        const { error } = await supabase
+          .from('calendar_ics_events')
+          .update({
+            matched_client_id: evt.clientId,
+            import_approved: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', evt.id);
+
+        if (!error) {
+          acceptedCount++;
+        }
+      }
+
+      // Learn aliases for unique summary patterns (one per group)
+      const processedSummaries = new Set<string>();
+      for (const evt of eventsToUpdate) {
+        const normalized = normalizeText(evt.summary);
+        if (processedSummaries.has(normalized)) continue;
+        processedSummaries.add(normalized);
+
+        // Extract tokens to learn as aliases
+        const tokens = extractNameTokens(evt.summary);
+        const extractedName = extractNameFromTimePattern(evt.summary);
+        if (extractedName) {
+          const extractedTokens = normalizeText(extractedName).split(/\s+/);
+          tokens.push(...extractedTokens);
+        }
+
+        const { data: client } = await supabase
+          .from('clients')
+          .select('name')
+          .eq('id', evt.clientId)
+          .single();
+
+        if (!client) continue;
+
+        const clientNameParts = normalizeText(client.name).split(/\s+/);
+        const forbiddenAliases = ['#tr', 'tr', '#trenink', 'trenink', '#training', 'training', 
+                                  '#cviceni', 'cviceni', '#workout', 'workout', 'platit', 'zaplaceno'];
+
+        for (const token of [...new Set(tokens)]) {
+          if (clientNameParts.includes(token)) continue;
+          if (token.length < 2) continue;
+          if (forbiddenAliases.includes(token.toLowerCase())) continue;
+          if (token.startsWith('#')) continue;
+
+          let isKnownNickname = false;
+          for (const nicknames of Object.values(CZECH_NICKNAMES)) {
+            if (nicknames.map(normalizeText).includes(token)) {
+              isKnownNickname = true;
+              break;
+            }
+          }
+          if (isKnownNickname) continue;
+
+          const { error } = await supabase
+            .from('client_name_aliases')
+            .upsert({
+              client_id: evt.clientId,
+              alias: token,
+              source: 'bulk_accept',
+              user_id: feed.user_id,
+            }, {
+              onConflict: 'client_id,alias',
+            });
+
+          if (!error) {
+            learnedAliasCount++;
+          }
+        }
+      }
+
+      console.log(`[ICS Sync] Bulk accepted ${acceptedCount} suggestions, learned ${learnedAliasCount} aliases`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          accepted_count: acceptedCount,
+          learned_aliases: learnedAliasCount,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===========================================
     // ACTION: create_sessions_from_events (legacy - for backwards compatibility)
     // ===========================================
     if (action === 'create_sessions_from_events') {

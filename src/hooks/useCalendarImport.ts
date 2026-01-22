@@ -327,3 +327,91 @@ export function useUpdateEventClient() {
     },
   });
 }
+
+/**
+ * Bulk accept all high-confidence suggestions (score >= threshold)
+ * This approves events and learns aliases in one action
+ */
+export function useAcceptAllSuggestions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ feedId, minScore = 70 }: { feedId: string; minScore?: number }) => {
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: {
+          action: 'accept_all_suggestions',
+          feedId,
+          minScore,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data as { 
+        success: boolean; 
+        accepted_count: number; 
+        learned_aliases: number;
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['client-aliases'] });
+    },
+  });
+}
+
+/**
+ * Auto-import all ready events in one click
+ */
+export function useAutoImportReady() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedId: string) => {
+      // First, approve all matched events that aren't approved yet
+      const { data: eventsToApprove } = await supabase
+        .from('calendar_ics_events')
+        .select('id')
+        .eq('feed_id', feedId)
+        .eq('is_processed', false)
+        .eq('skip_import', false)
+        .not('matched_client_id', 'is', null)
+        .or('import_approved.is.null,import_approved.eq.false');
+
+      if (eventsToApprove && eventsToApprove.length > 0) {
+        await supabase.functions.invoke('sync-ics-calendar', {
+          body: {
+            action: 'approve_events',
+            eventIds: eventsToApprove.map(e => e.id),
+          },
+        });
+      }
+
+      // Then create sessions
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: {
+          action: 'create_approved_sessions',
+          feedId,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data as {
+        success: boolean;
+        sessions_created: number;
+        events_processed: number;
+        duplicates_skipped: number;
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['training-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['training_sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-core'] });
+    },
+  });
+}
