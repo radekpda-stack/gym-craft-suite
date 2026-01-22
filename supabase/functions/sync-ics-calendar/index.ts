@@ -873,30 +873,41 @@ async function processEvents(
   recurring_instances: number;
   sync_log: any;
 }> {
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('id, name')
-    .eq('user_id', userId)
-    .eq('is_archived', false);
+  // Performance mode: for large syncs, skip all client matching + duplicate detection.
+  // These can be recomputed later (e.g. on-demand per event) but are too expensive for big imports.
+  const fastMode = expandedEvents.length > 200;
 
-  const { data: aliasesData } = await supabase
-    .from('client_name_aliases')
-    .select('client_id, alias')
-    .eq('user_id', userId);
+  let clients: Array<{ id: string; name: string }> | null = null;
+  let aliasMap = new Map<string, string[]>();
+  let existingSessions: Array<{ id: string; client_id: string; date: string }> | null = null;
 
-  const aliasMap = new Map<string, string[]>();
-  for (const aliasRow of aliasesData || []) {
-    const existing = aliasMap.get(aliasRow.client_id) || [];
-    existing.push(aliasRow.alias);
-    aliasMap.set(aliasRow.client_id, existing);
+  if (!fastMode) {
+    const { data: clientsData } = await supabase
+      .from('clients')
+      .select('id, name')
+      .eq('user_id', userId)
+      .eq('is_archived', false);
+    clients = clientsData || null;
+
+    const { data: aliasesData } = await supabase
+      .from('client_name_aliases')
+      .select('client_id, alias')
+      .eq('user_id', userId);
+
+    aliasMap = new Map<string, string[]>();
+    for (const aliasRow of aliasesData || []) {
+      const existing = aliasMap.get(aliasRow.client_id) || [];
+      existing.push(aliasRow.alias);
+      aliasMap.set(aliasRow.client_id, existing);
+    }
+
+    const { data: existingSessionsData } = await supabase
+      .from('training_sessions')
+      .select('id, client_id, date')
+      .eq('user_id', userId)
+      .gte('date', fromDate.toISOString());
+    existingSessions = existingSessionsData || null;
   }
-
-  // Check for potential duplicates
-  const { data: existingSessions } = await supabase
-    .from('training_sessions')
-    .select('id, client_id, date')
-    .eq('user_id', userId)
-    .gte('date', fromDate.toISOString());
 
   let syncedCount = 0;
   let matchedCount = 0;
@@ -911,43 +922,64 @@ async function processEvents(
     eventBatches.push(expandedEvents.slice(i, i + BATCH_SIZE));
   }
 
-  console.log(`[ICS Sync] Processing ${expandedEvents.length} events in ${eventBatches.length} batches of ${BATCH_SIZE}`);
+  console.log(
+    `[ICS Sync] Processing ${expandedEvents.length} events in ${eventBatches.length} batches of ${BATCH_SIZE} (fastMode=${fastMode})`
+  );
 
   for (const batch of eventBatches) {
     const eventsToUpsert: any[] = [];
     
     for (const event of batch) {
-      // Simplified matching - skip suggestions for large syncs
-      const { primary, additional } = clients 
-        ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
-        : { primary: null, additional: [] };
-      
-      // Only compute suggestions for small batches (performance optimization)
-      let suggestions: any[] = [];
-      if (expandedEvents.length <= 200 && clients) {
-        const allMatches = findClientMatches(event.summary, clients, aliasMap);
-        suggestions = allMatches.slice(0, 3).map(m => ({
-          client_id: m.clientId,
-          name: m.clientName,
-          score: m.score,
-          match_type: m.matchType,
-        }));
+      if (event.isRecurringInstance) recurringInstancesCount++;
+
+      if (fastMode) {
+        // Minimal payload, fastest possible
+        eventsToUpsert.push({
+          feed_id: feedId,
+          ics_uid: event.uid,
+          summary: event.summary,
+          description: event.description,
+          start_at: event.dtstart.toISOString(),
+          end_at: event.dtend?.toISOString() || null,
+          location: event.location || null,
+          matched_client_id: null,
+          additional_matched_client_ids: null,
+          match_suggestions: null,
+          potential_duplicate_session_id: null,
+          rrule: event.rrule || null,
+          master_event_uid: event.masterEventUid || null,
+          recurrence_instance_date: event.recurrenceInstanceDate || null,
+          updated_at: new Date().toISOString(),
+        });
+        continue;
       }
 
-      const additionalClientIds = additional.map(m => m.clientId);
+      // Full (small) sync: do matching + suggestions + duplicates
+      const { primary, additional } = clients
+        ? findMultipleClientMatches(event.summary, clients, aliasMap, 70)
+        : { primary: null, additional: [] };
 
-      // Check for potential duplicate session (simplified for performance)
+      const allMatches = clients ? findClientMatches(event.summary, clients, aliasMap) : [];
+      const suggestions = allMatches.slice(0, 3).map((m) => ({
+        client_id: m.clientId,
+        name: m.clientName,
+        score: m.score,
+        match_type: m.matchType,
+      }));
+
+      const additionalClientIds = additional.map((m) => m.clientId);
+
       let potentialDuplicateId: string | null = null;
       if (primary && existingSessions && existingSessions.length < 1000) {
         const eventTime = event.dtstart.getTime();
         const thirtyMinutes = 30 * 60 * 1000;
-        
+
         const duplicate = existingSessions.find((s: any) => {
           if (s.client_id !== primary.clientId) return false;
           const sessionTime = new Date(s.date).getTime();
           return Math.abs(sessionTime - eventTime) <= thirtyMinutes;
         });
-        
+
         if (duplicate) {
           potentialDuplicateId = duplicate.id;
           duplicatesCount++;
@@ -956,7 +988,6 @@ async function processEvents(
 
       if (primary) matchedCount++;
       else unmatchedCount++;
-      if (event.isRecurringInstance) recurringInstancesCount++;
 
       eventsToUpsert.push({
         feed_id: feedId,
