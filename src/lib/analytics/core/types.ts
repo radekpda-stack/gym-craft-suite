@@ -27,7 +27,11 @@ export type EventCategory =
   | 'challenges'
   | 'exercises'
   | 'gamification'
-  | 'client-portal';
+  | 'client-portal'
+  | 'pre-diagnostic'
+  | 'performance'
+  | 'errors'
+  | 'calendar-import';
 
 export type ErrorCode = 
   | 'VALIDATION'

@@ -22,7 +22,14 @@ export type EventCategory =
   | 'export'
   | 'reminders'
   | 'system'
-  | 'client-portal';
+  | 'challenges'
+  | 'exercises'
+  | 'gamification'
+  | 'client-portal'
+  | 'pre-diagnostic'
+  | 'performance'
+  | 'errors'
+  | 'calendar-import';
 
 export interface TrackEventOptions {
   metadata?: Record<string, any>;
