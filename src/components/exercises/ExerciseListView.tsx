@@ -4,6 +4,8 @@ import {
   Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
   CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star 
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,6 +94,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const [sortBy, setSortBy] = useState<string>('alphabetical');
   const [showFilters, setShowFilters] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [onlyUsed, setOnlyUsed] = useState(false);
   
   // Bulk edit mode
   const [bulkEditMode, setBulkEditMode] = useState(false);
@@ -126,6 +129,9 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
     const normalizedQuery = normalizeText(searchQuery);
     
     return activeExercises.filter((exercise) => {
+      // Filter only used exercises if toggle is on
+      if (onlyUsed && exercise.usageCount === 0) return false;
+      
       if (normalizedQuery) {
         const name = normalizeText(exercise.name_cs || exercise.name);
         if (!name.includes(normalizedQuery)) return false;
@@ -135,7 +141,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
       if (difficultyFilter !== 'all' && exercise.difficulty !== difficultyFilter) return false;
       return true;
     });
-  }, [activeExercises, searchQuery, categoryFilter, patternFilter, difficultyFilter]);
+  }, [activeExercises, searchQuery, categoryFilter, patternFilter, difficultyFilter, onlyUsed]);
 
   // Sort exercises
   const sortedExercises = useMemo(() => {
@@ -347,19 +353,32 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
               </Select>
             </div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <SortAsc className="w-4 h-4 text-muted-foreground" />
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Řazení" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Sort and Only Used toggle */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <SortAsc className="w-4 h-4 text-muted-foreground" />
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Řazení" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="only-used"
+                  checked={onlyUsed}
+                  onCheckedChange={setOnlyUsed}
+                />
+                <Label htmlFor="only-used" className="text-sm cursor-pointer">
+                  Pouze použité
+                </Label>
+              </div>
             </div>
           </div>
         )}
