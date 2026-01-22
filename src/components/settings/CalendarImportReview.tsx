@@ -44,7 +44,7 @@ import {
   useDeleteUnfilteredEvents,
   ImportableEvent,
 } from '@/hooks/useCalendarImport';
-import { useSyncICSFeed } from '@/hooks/useCalendarSync';
+import { useSyncICSFeed, useRematchClients } from '@/hooks/useCalendarSync';
 import { useClients } from '@/hooks/useClients';
 
 interface CalendarImportReviewProps {
@@ -67,6 +67,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
   const { data: clients = [] } = useClients();
   
   const syncFeed = useSyncICSFeed();
+  const rematchClients = useRematchClients();
   const approveEvents = useApproveEvents();
   const skipEvents = useSkipEvents();
   const createSessions = useCreateApprovedSessions();
@@ -137,6 +138,21 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
       toast.success('Události synchronizovány');
     } catch (error) {
       toast.error('Nepodařilo se synchronizovat');
+    }
+  };
+
+  const handleRematch = async () => {
+    try {
+      const result = await rematchClients.mutateAsync(feedId);
+      await refetchEvents();
+      await refetchStats();
+      if (result.matched_count > 0) {
+        toast.success(`Spárováno ${result.matched_count} událostí`);
+      } else {
+        toast.info('Žádné nové shody nenalezeny');
+      }
+    } catch (error) {
+      toast.error('Nepodařilo se přepárovat');
     }
   };
 
@@ -241,7 +257,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
     }
   };
 
-  const isProcessing = syncFeed.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending;
+  const isProcessing = syncFeed.isPending || rematchClients.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
@@ -317,14 +333,28 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             size="sm"
             onClick={handleSync}
             disabled={isProcessing}
-            title="Znovu stáhnout události z kalendáře a přepočítat shody"
+            title="Znovu stáhnout události z kalendáře"
           >
             {syncFeed.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            <span className="ml-2 hidden sm:inline">Sync & Přepočítat</span>
+            <span className="ml-2 hidden sm:inline">Sync</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRematch}
+            disabled={isProcessing || categorizedEvents.needs_assignment.length === 0}
+            title="Zkusit znovu spárovat nespárované události s klienty"
+          >
+            {rematchClients.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            <span className="ml-2 hidden sm:inline">Přepárovat</span>
           </Button>
           <Button
             variant="ghost"
