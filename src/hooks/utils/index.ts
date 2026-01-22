@@ -9,7 +9,6 @@ export { useKeyboardShortcuts, useAppShortcuts } from '../useKeyboardShortcuts';
 export { useSwipeGesture } from '../useSwipeGesture';
 export { useUnsavedChanges } from '../useUnsavedChanges';
 export { useAutoSaveField } from '../useAutoSaveField';
-export { useRenderTracker } from '../useRenderTracker';
 export { useLayoutPreferences } from '../useLayoutPreferences';
 export { useIsMobile } from '../use-mobile';
 export { useToast, toast } from '../use-toast';
