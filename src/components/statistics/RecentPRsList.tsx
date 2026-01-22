@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { startOfMonth } from 'date-fns';
+import { formatTimeSimple, formatDistancePrecise } from '@/lib/timeUtils';
 
 interface RecentPRsListProps {
   onViewAll?: () => void;
@@ -60,22 +61,9 @@ export function RecentPRsList({ onViewAll, limit = 5 }: RecentPRsListProps) {
     },
   });
 
-  // Helper function to format time
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Helper function to format distance (input is in meters)
-  const formatDistance = (meters: number) => {
-    if (meters >= 1) {
-      // Show in meters with 2 decimal places for values >= 1m
-      return `${meters.toFixed(2)} m`;
-    }
-    // Show in cm for values < 1m
-    return `${Math.round(meters * 100)} cm`;
-  };
+  // Helper aliases
+  const formatTime = formatTimeSimple;
+  const formatDistance = formatDistancePrecise;
 
   // Render appropriate PR value based on metric type
   const renderPRValue = (pr: { weight?: number | null; reps?: number | null; distance?: number | null; time?: number | null; exercise: string }) => {

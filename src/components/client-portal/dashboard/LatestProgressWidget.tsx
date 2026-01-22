@@ -8,18 +8,9 @@ import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useClientLatestProgress, type LatestPR } from '@/hooks/useClientLatestProgress';
 import { cn } from '@/lib/utils';
+import { formatTimeSimple, formatDistance } from '@/lib/timeUtils';
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  if (mins === 0) return `${secs}s`;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${meters} m`;
-}
+const formatDuration = formatTimeSimple;
 
 interface LatestProgressWidgetProps {
   className?: string;
