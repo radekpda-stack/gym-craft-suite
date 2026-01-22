@@ -760,14 +760,64 @@ function parseICS(icsContent: string): ParsedEvent[] {
   return events;
 }
 
+// Get timezone offset in hours for common European timezones
+function getTimezoneOffset(tzid: string, date: Date): number {
+  // Simplified DST calculation for Europe/Prague (CET/CEST)
+  // DST starts last Sunday of March at 2:00, ends last Sunday of October at 3:00
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  
+  // Find last Sunday of March
+  const marchLast = new Date(year, 2, 31);
+  const dstStart = 31 - ((marchLast.getDay() + 7) % 7);
+  
+  // Find last Sunday of October
+  const octoberLast = new Date(year, 9, 31);
+  const dstEnd = 31 - ((octoberLast.getDay() + 7) % 7);
+  
+  // Check if we're in DST period
+  const isDST = (month > 2 && month < 9) || // April to September
+    (month === 2 && day >= dstStart) || // After DST start in March
+    (month === 9 && day < dstEnd); // Before DST end in October
+  
+  const tzLower = tzid.toLowerCase();
+  
+  // Handle common European timezones
+  if (tzLower.includes('prague') || tzLower.includes('europe/prague') || 
+      tzLower.includes('cet') || tzLower.includes('cest') ||
+      tzLower.includes('berlin') || tzLower.includes('paris') ||
+      tzLower.includes('amsterdam') || tzLower.includes('vienna') ||
+      tzLower.includes('warsaw') || tzLower.includes('budapest') ||
+      tzLower.includes('bratislava') || tzLower.includes('central european')) {
+    return isDST ? 2 : 1; // CEST = UTC+2, CET = UTC+1
+  }
+  
+  // Handle UTC/GMT
+  if (tzLower === 'utc' || tzLower === 'gmt' || tzLower === 'z') {
+    return 0;
+  }
+  
+  // Default to CET for unknown European timezones
+  return isDST ? 2 : 1;
+}
+
 function parseICSDate(value: string, keyPart: string): Date {
   const cleanValue = value.replace('Z', '');
   
+  // Extract TZID from keyPart like "DTSTART;TZID=Europe/Prague"
+  let tzid: string | null = null;
+  const tzidMatch = keyPart.match(/TZID=([^;:]+)/i);
+  if (tzidMatch) {
+    tzid = tzidMatch[1];
+  }
+  
   if (cleanValue.length === 8) {
+    // All-day event (date only, no time)
     const year = parseInt(cleanValue.substring(0, 4));
     const month = parseInt(cleanValue.substring(4, 6)) - 1;
     const day = parseInt(cleanValue.substring(6, 8));
-    return new Date(year, month, day);
+    return new Date(Date.UTC(year, month, day, 0, 0, 0));
   } else if (cleanValue.length >= 15) {
     const year = parseInt(cleanValue.substring(0, 4));
     const month = parseInt(cleanValue.substring(4, 6)) - 1;
@@ -776,10 +826,24 @@ function parseICSDate(value: string, keyPart: string): Date {
     const minute = parseInt(cleanValue.substring(11, 13));
     const second = parseInt(cleanValue.substring(13, 15));
     
+    // If ends with Z, it's already UTC
     if (value.endsWith('Z')) {
       return new Date(Date.UTC(year, month, day, hour, minute, second));
     }
-    return new Date(year, month, day, hour, minute, second);
+    
+    // If we have a TZID, convert from that timezone to UTC
+    if (tzid) {
+      const tempDate = new Date(year, month, day);
+      const offsetHours = getTimezoneOffset(tzid, tempDate);
+      // Subtract the offset to convert local time to UTC
+      return new Date(Date.UTC(year, month, day, hour - offsetHours, minute, second));
+    }
+    
+    // No timezone info - assume it's already in local timezone (Europe/Prague)
+    // This handles Apple Calendar exports without explicit TZID
+    const tempDate = new Date(year, month, day);
+    const offsetHours = getTimezoneOffset('Europe/Prague', tempDate);
+    return new Date(Date.UTC(year, month, day, hour - offsetHours, minute, second));
   }
   
   return new Date(value);
