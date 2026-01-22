@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Clock, Heart, Flame, Route, Timer } from 'lucide-react';
 import { formatDuration, formatPaceFromDistance } from '@/lib/timeUtils';
 
-const formatTime = formatDuration;
+
 
 interface CardioDetailModalProps {
   open: boolean;
@@ -32,7 +32,7 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
     : '—';
 
   const avgDuration = data?.sessionCount && data?.totalTime
-    ? formatTime(data.totalTime / data.sessionCount)
+    ? formatDuration(data.totalTime / data.sessionCount)
     : '—';
 
   return (
@@ -62,7 +62,7 @@ export function CardioDetailModal({ open, onOpenChange }: CardioDetailModalProps
                 <Clock className="h-4 w-4" />
                 <span className="text-sm font-medium">Celkový čas</span>
               </div>
-              <p className="text-3xl font-bold">{formatTime(data?.totalTime || 0)}</p>
+              <p className="text-3xl font-bold">{formatDuration(data?.totalTime || 0)}</p>
               <p className="text-xs text-muted-foreground mt-1">aktivního kardia</p>
             </div>
 
