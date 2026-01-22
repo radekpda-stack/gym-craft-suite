@@ -418,6 +418,26 @@ export const ALL_FEATURES = [
   { name: 'portal_achievement_unlocked', category: 'client-portal', label: 'Portál - Odemčení achievementu' },
   
   // ==============================
+  // PRE-DIAGNOSTIC
+  // ==============================
+  { name: 'prediagnostic_form_open', category: 'pre-diagnostic', label: 'Pre-diagnostika - Otevření' },
+  { name: 'prediagnostic_form_submit', category: 'pre-diagnostic', label: 'Pre-diagnostika - Odeslání' },
+  { name: 'prediagnostic_form_submit_error', category: 'pre-diagnostic', label: 'Pre-diagnostika - Chyba odeslání' },
+  { name: 'prediagnostic_link_create', category: 'pre-diagnostic', label: 'Pre-diagnostika - Vytvoření odkazu' },
+  { name: 'prediagnostic_link_copy', category: 'pre-diagnostic', label: 'Pre-diagnostika - Kopírování odkazu' },
+  { name: 'prediagnostic_assign_to_client', category: 'pre-diagnostic', label: 'Pre-diagnostika - Přiřazení ke klientovi' },
+  
+  // ==============================
+  // CALENDAR IMPORT
+  // ==============================
+  { name: 'calendar_import_feed_add', category: 'calendar-import', label: 'Import kalendáře - Přidání feedu' },
+  { name: 'calendar_import_feed_sync', category: 'calendar-import', label: 'Import kalendáře - Synchronizace' },
+  { name: 'calendar_import_events_approve', category: 'calendar-import', label: 'Import kalendáře - Schválení událostí' },
+  { name: 'calendar_import_events_skip', category: 'calendar-import', label: 'Import kalendáře - Přeskočení událostí' },
+  { name: 'calendar_import_sessions_create', category: 'calendar-import', label: 'Import kalendáře - Vytvoření tréninků' },
+  { name: 'calendar_import_client_assign', category: 'calendar-import', label: 'Import kalendáře - Přiřazení klienta' },
+  
+  // ==============================
   // SYSTEM
   // ==============================
   { name: 'app_install_prompt', category: 'system', label: 'Výzva k instalaci PWA' },
@@ -425,6 +445,13 @@ export const ALL_FEATURES = [
   { name: 'notification_permission_granted', category: 'system', label: 'Povolení notifikací' },
   { name: 'offline_mode_activated', category: 'system', label: 'Offline režim aktivován' },
   { name: 'error_boundary_triggered', category: 'system', label: 'Error boundary spuštěn' },
+  
+  // ==============================
+  // PERFORMANCE
+  // ==============================
+  { name: 'performance_page_load', category: 'performance', label: 'Načtení stránky' },
+  { name: 'performance_api_latency', category: 'performance', label: 'Latence API' },
+  { name: 'performance_slow_render', category: 'performance', label: 'Pomalé vykreslení' },
 ] as const;
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -450,6 +477,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
   exercises: 'Cviky',
   gamification: 'Gamifikace',
   'client-portal': 'Klientská zóna',
+  'pre-diagnostic': 'Pre-diagnostika',
+  'calendar-import': 'Import z kalendáře',
+  performance: 'Výkon',
+  errors: 'Chyby',
 };
 
 function getPeriodStartDate(period: StatsPeriod): Date | null {

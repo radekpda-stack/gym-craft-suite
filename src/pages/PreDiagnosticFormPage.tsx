@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PreDiagnosticFormContent } from '@/components/pre-diagnostic/PreDiagnosticFormContent';
 import { PreDiagnosticComplete } from '@/components/pre-diagnostic/PreDiagnosticComplete';
 import { PreDiagnosticExpired } from '@/components/pre-diagnostic/PreDiagnosticExpired';
 import { PreDiagnosticLoading } from '@/components/pre-diagnostic/PreDiagnosticLoading';
+import { trackEvent } from '@/lib/analytics/trackEvent';
 
 export interface PreDiagnosticFormData {
   // Basic context
@@ -87,6 +88,10 @@ export default function PreDiagnosticFormPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [trainerInfo, setTrainerInfo] = useState<any>(null);
 
+  // Analytics tracking
+  const hasTrackedOpen = useRef(false);
+  const formOpenTime = useRef<number>(0);
+
   // Determine if this is a new client based on formState (after loading)
   const isNewClientMode = formState?.source === 'new_client';
 
@@ -129,6 +134,19 @@ export default function PreDiagnosticFormPage() {
 
         setFormState(result.form);
         setFormData(result.answers || {});
+        
+        // Track form open (only once)
+        if (!hasTrackedOpen.current) {
+          hasTrackedOpen.current = true;
+          formOpenTime.current = Date.now();
+          trackEvent('prediagnostic_form_open', 'pre-diagnostic', {
+            metadata: {
+              token_hash: token?.substring(0, 8),
+              source: result.form.source,
+              is_new_client: result.form.source === 'new_client',
+            }
+          });
+        }
         
         // Pre-fill from client data if exists
         if (result.form.client) {
@@ -225,12 +243,37 @@ export default function PreDiagnosticFormPage() {
         throw new Error(errorData.error || 'Odeslání selhalo');
       }
 
+      const completionTimeMs = formOpenTime.current ? Date.now() - formOpenTime.current : undefined;
+      
+      // Track successful submission
+      trackEvent('prediagnostic_form_submit', 'pre-diagnostic', {
+        metadata: {
+          token_hash: token?.substring(0, 8),
+          is_new_client: isNewClientMode,
+          has_pain: data.has_pain,
+          has_injury: data.has_injury,
+        },
+        duration_ms: completionTimeMs,
+        success: true,
+      });
+      
       const result = await response.json();
       setTrainerInfo(result.trainerInfo || null);
       setIsCompleted(true);
       toast.success('Formulář byl úspěšně odeslán');
     } catch (error) {
       console.error('Submit error:', error);
+      
+      // Track error
+      trackEvent('prediagnostic_form_submit_error', 'pre-diagnostic', {
+        metadata: {
+          token_hash: token?.substring(0, 8),
+          is_new_client: isNewClientMode,
+        },
+        success: false,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      
       toast.error(error instanceof Error ? error.message : 'Nepodařilo se odeslat formulář');
     } finally {
       setIsSubmitting(false);
