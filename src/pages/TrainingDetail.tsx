@@ -72,19 +72,28 @@ export default function TrainingDetail() {
   usePageTracking('training_detail');
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: training, isLoading: trainingLoading } = useTrainingSession(id);
-  const { data: client, isLoading: clientLoading } = useClient(training?.client_id);
-  const { data: clients = [] } = useClients();
   
-  // Get fresh client credit balance - fallback to clients list if single client query not ready
-  const clientCreditBalance = client?.credit_balance ?? 
-    clients.find(c => c.id === training?.client_id)?.credit_balance ?? 0;
+  // Core training data - this is prefetched from AgendaItem
+  const { data: training, isLoading: trainingLoading } = useTrainingSession(id);
+  
+  // Client data - depends on training but prefetched, so should be instant
+  const { data: client } = useClient(training?.client_id);
+  
+  // Get fresh client credit balance from client object
+  const clientCreditBalance = client?.credit_balance ?? 0;
+  
+  // Related data - all prefetched from AgendaItem hover/touch
   const { data: trainingTags = [] } = useTrainingSessionTags(id);
   const { data: allTags = [] } = useTags();
   const { data: existingParticipants = [] } = useTrainingParticipants(id);
   const { data: budgetGroups = [] } = useBudgetGroups();
   const { data: existingFeedback } = useTrainingFeedback(id);
   const { data: feedbackRequest } = useFeedbackRequest(id);
+  
+  // Clients list - needed for participant payment dialog (already cached from SchedulePage)
+  const { data: clients = [] } = useClients();
+  
+  // Mutations
   const updateTraining = useUpdateTrainingSession();
   const deleteTraining = useDeleteTrainingSession();
   const cancelTraining = useCancelTrainingSession();

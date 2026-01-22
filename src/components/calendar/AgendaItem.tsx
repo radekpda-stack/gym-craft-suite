@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { usePrefetchTrainingDetail } from '@/hooks/usePrefetchTrainingDetail';
 
 interface AgendaItemProps {
   session: TrainingSession;
@@ -41,6 +42,15 @@ export function AgendaItem({
   const endTime = new Date(sessionDate.getTime() + session.duration * 60000);
   const x = useMotionValue(0);
   const [isDragging, setIsDragging] = useState(false);
+  const prefetchedRef = useRef(false);
+  const { prefetchTraining } = usePrefetchTrainingDetail();
+  
+  // Prefetch on touch/hover - only once per card mount
+  const handlePrefetch = useCallback(() => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    prefetchTraining(session.id, session.client_id);
+  }, [session.id, session.client_id, prefetchTraining]);
   
   // Background colors for swipe actions
   const rightBgOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
@@ -103,6 +113,8 @@ export function AgendaItem({
             onDragEnd={handleDragEnd}
             style={{ x }}
             className="relative"
+            onTouchStart={handlePrefetch}
+            onMouseEnter={handlePrefetch}
           >
             <Link
               to={isDragging ? '#' : `/trainings/${session.id}`}
