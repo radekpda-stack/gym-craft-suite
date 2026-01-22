@@ -33,12 +33,14 @@ export default function ClientPortalProgress() {
   // Fetch visibility settings
   const { data: visibilitySettings, isLoading: settingsLoading } = useClientPortalProgressSettings(trainerId);
 
-  // Fetch progress data with period
-  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId, months);
-  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId, months);
+  // Weight and body fat - always show ALL history (no time filter)
+  const { data: weightData, isLoading: weightLoading } = useClientWeightProgress(clientId);
+  const { data: bodyFatData, isLoading: bodyFatLoading } = useClientBodyFatProgress(clientId);
+  
+  // Exercises - can use period filter
   const { data: allExercises, isLoading: exercisesLoading } = useClientAllExercises(clientId, months);
   
-  // Cardio data
+  // Cardio data - can use period filter
   const { data: rowing500Data, isLoading: rowing500Loading } = useClientCardioProgress(clientId, 'veslo', 500, months);
   const { data: rowing1000Data, isLoading: rowing1000Loading } = useClientCardioProgress(clientId, 'veslo', 1000, months);
   const { data: running500Data, isLoading: running500Loading } = useClientCardioProgress(clientId, 'běh', 500, months);

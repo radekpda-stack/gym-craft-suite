@@ -24,19 +24,20 @@ export interface TrackedExerciseProgress {
   }[];
 }
 
-export function useClientWeightProgress(clientId: string | null, months = 6) {
+/**
+ * Fetch all weight measurements for a client
+ * No time limit - shows complete history from first measurement to now
+ */
+export function useClientWeightProgress(clientId: string | null) {
   return useQuery({
-    queryKey: ['client-weight-progress', clientId, months],
+    queryKey: ['client-weight-progress', clientId],
     queryFn: async () => {
       if (!clientId) return [];
-      
-      const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('measurements')
         .select('date, weight')
         .eq('client_id', clientId)
-        .gte('date', startDate)
         .not('weight', 'is', null)
         .order('date', { ascending: true });
       
@@ -51,19 +52,20 @@ export function useClientWeightProgress(clientId: string | null, months = 6) {
   });
 }
 
-export function useClientBodyFatProgress(clientId: string | null, months = 6) {
+/**
+ * Fetch all body fat measurements for a client
+ * No time limit - shows complete history from first measurement to now
+ */
+export function useClientBodyFatProgress(clientId: string | null) {
   return useQuery({
-    queryKey: ['client-bodyfat-progress', clientId, months],
+    queryKey: ['client-bodyfat-progress', clientId],
     queryFn: async () => {
       if (!clientId) return [];
-      
-      const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('measurements')
         .select('date, body_fat_percentage')
         .eq('client_id', clientId)
-        .gte('date', startDate)
         .not('body_fat_percentage', 'is', null)
         .order('date', { ascending: true });
       
