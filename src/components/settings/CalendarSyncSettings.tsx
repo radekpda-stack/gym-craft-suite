@@ -411,6 +411,7 @@ function FeedCard({ feed, onOpenImportReview, onViewEvents }: { feed: ICSFeed; o
 function FeedSettingsDialog({ feed, open, onOpenChange }: { feed: ICSFeed; open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState(feed.name);
   const [importFilterTag, setImportFilterTag] = useState(feed.import_filter_tag || '');
+  const [syncHorizonMonths, setSyncHorizonMonths] = useState(String(feed.sync_horizon_months || 3));
   const updateFeed = useUpdateICSFeed();
 
   const handleSave = async () => {
@@ -419,6 +420,7 @@ function FeedSettingsDialog({ feed, open, onOpenChange }: { feed: ICSFeed; open:
         id: feed.id,
         name,
         import_filter_tag: importFilterTag.trim() || null,
+        sync_horizon_months: parseInt(syncHorizonMonths, 10),
       });
       toast.success('Nastavení uloženo');
       onOpenChange(false);
@@ -433,7 +435,7 @@ function FeedSettingsDialog({ feed, open, onOpenChange }: { feed: ICSFeed; open:
         <DialogHeader>
           <DialogTitle>Nastavení kalendáře</DialogTitle>
           <DialogDescription>
-            Upravte název a filtrační značku pro tento kalendář
+            Upravte název a nastavení synchronizace pro tento kalendář
           </DialogDescription>
         </DialogHeader>
 
@@ -459,6 +461,23 @@ function FeedSettingsDialog({ feed, open, onOpenChange }: { feed: ICSFeed; open:
             <p className="text-xs text-muted-foreground">
               Pokud je vyplněno, importují se pouze události obsahující tuto značku v názvu.
               Nechte prázdné pro import všech událostí.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="syncHorizon">Synchronizovat dopředu</Label>
+            <Select value={syncHorizonMonths} onValueChange={setSyncHorizonMonths}>
+              <SelectTrigger id="syncHorizon">
+                <SelectValue placeholder="Vyberte období" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 měsíce</SelectItem>
+                <SelectItem value="6">6 měsíců</SelectItem>
+                <SelectItem value="12">12 měsíců (rok dopředu)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Jak daleko dopředu synchronizovat opakující se události z kalendáře.
             </p>
           </div>
         </div>
@@ -521,6 +540,7 @@ function AddFeedDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
         name,
         ics_url: icsUrl,
         import_filter_tag: importFilterTag.trim() || undefined,
+        sync_horizon_months: 12, // Default to 12 months for new feeds
       });
       toast.success('Kalendář přidán');
       onOpenChange(false);

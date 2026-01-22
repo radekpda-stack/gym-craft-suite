@@ -24,6 +24,7 @@ export interface ICSFeed {
   last_sync_log: SyncLog | null;
   events_synced: number;
   sync_from_date: string | null;
+  sync_horizon_months: number;
   auto_create_sessions: boolean;
   default_duration: number;
   import_filter_tag: string | null;
@@ -118,6 +119,7 @@ export function useCreateICSFeed() {
       name: string;
       ics_url: string;
       sync_from_date?: string;
+      sync_horizon_months?: number;
       auto_create_sessions?: boolean;
       default_duration?: number;
       import_filter_tag?: string;
