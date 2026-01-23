@@ -364,6 +364,19 @@ export default function ClientPortalNutritionTab() {
         onDaySelect={setSelectedDate}
       />
 
+      {/* Add Food Button - Prominent CTA */}
+      <Button 
+        onClick={() => {
+          setPrefilledMealType(undefined);
+          setShowAddForm(true);
+        }}
+        className="w-full gap-2 h-12"
+        size="lg"
+      >
+        <Plus className="w-5 h-5" />
+        Přidat stravu
+      </Button>
+
       {/* Quick Stats Row */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-muted/50 rounded-xl p-3 text-center">

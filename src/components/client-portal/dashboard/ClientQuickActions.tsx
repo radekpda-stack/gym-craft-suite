@@ -24,7 +24,7 @@ const quickActions: QuickAction[] = [
   },
   {
     id: 'chat',
-    label: 'Chat',
+    label: 'S trenérem',
     icon: <MessageCircle className="w-5 h-5" />,
     path: '/chat',
     color: 'text-accent',
