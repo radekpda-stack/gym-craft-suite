@@ -10,6 +10,8 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
+  Heart,
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +30,7 @@ import {
 } from '@/components/ui/collapsible';
 import { ProgressChart } from './ProgressChart';
 import { ProgressList } from './ProgressList';
-import { useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { useAllExerciseEntries, type UnifiedExerciseEntry } from '@/hooks/useAllExerciseEntries';
 import { exportProgressToPDF, exportProgressToCSV } from '@/lib/export';
 
 type Period = 'week' | 'month' | '3months' | '6months' | 'year' | 'all';
@@ -43,7 +45,7 @@ export function ClientProgressTab({ clientId, clientName }: ClientProgressTabPro
   const [period, setPeriod] = useState<Period>('month');
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   
-  const { entries, isLoading } = useExerciseEntries(clientId);
+  const { data: entries = [], isLoading } = useAllExerciseEntries(clientId);
 
   // Get unique exercises
   const uniqueExercises = useMemo(() => {
@@ -95,11 +97,39 @@ export function ClientProgressTab({ clientId, clientName }: ClientProgressTabPro
   const prsCount = useMemo(() => entries.filter((e) => e.is_pr).length, [entries]);
 
   const handleExportPDF = () => {
-    exportProgressToPDF({ clientName, entries: filteredEntries });
+    // Only export strength entries (they have the required fields)
+    const strengthEntries = filteredEntries
+      .filter(e => e.entry_type === 'strength')
+      .map(e => ({
+        ...e,
+        sets: e.sets || 0,
+        reps: e.reps || null,
+        weight_kg: e.weight_kg || null,
+        is_bodyweight: e.is_bodyweight || false,
+        tempo: e.tempo || null,
+        time_seconds: e.time_seconds || null,
+        notes: e.notes || null,
+        is_pr: e.is_pr || false,
+      }));
+    exportProgressToPDF({ clientName, entries: strengthEntries });
   };
 
   const handleExportCSV = () => {
-    exportProgressToCSV({ clientName, entries: filteredEntries });
+    // Only export strength entries (they have the required fields)
+    const strengthEntries = filteredEntries
+      .filter(e => e.entry_type === 'strength')
+      .map(e => ({
+        ...e,
+        sets: e.sets || 0,
+        reps: e.reps || null,
+        weight_kg: e.weight_kg || null,
+        is_bodyweight: e.is_bodyweight || false,
+        tempo: e.tempo || null,
+        time_seconds: e.time_seconds || null,
+        notes: e.notes || null,
+        is_pr: e.is_pr || false,
+      }));
+    exportProgressToCSV({ clientName, entries: strengthEntries });
   };
 
   if (isLoading) {

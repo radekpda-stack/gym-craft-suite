@@ -250,10 +250,13 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditEntry(entry)}>
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Upravit
-                          </DropdownMenuItem>
+                          {/* Edit only available for strength entries */}
+                          {entry.entry_type === 'strength' && (
+                            <DropdownMenuItem onClick={() => setEditEntry(entry)}>
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Upravit
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => setDeleteId(entry.id)}
@@ -292,11 +295,14 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
         </AlertDialogContent>
       </AlertDialog>
 
-      <EditEntryDialog
-        entry={editEntry}
-        open={!!editEntry}
-        onOpenChange={(open) => !open && setEditEntry(null)}
-      />
+      {/* Only show edit dialog for strength entries */}
+      {editEntry && editEntry.entry_type === 'strength' && (
+        <EditEntryDialog
+          entry={editEntry as any}
+          open={!!editEntry}
+          onOpenChange={(open) => !open && setEditEntry(null)}
+        />
+      )}
     </>
   );
 }
